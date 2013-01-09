@@ -73,29 +73,26 @@ import java.util.concurrent.TimeUnit;
  * <pre>
  * // BAD - NEVER DO THIS
  * {@code @Override}
- * public void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
- *     if (e.getMessage() instanceof ShutdownMessage) {
- *         {@link ChannelGroup} allChannels = MyServer.getAllChannels();
- *         {@link ChannelGroupFuture} future = allChannels.close();
- *         future.awaitUninterruptibly();
- *         // Perform post-shutdown operation
- *         // ...
- *     }
+ * public void messageReceived({@link ChannelHandlerContext} ctx, ShutdownMessage msg) {
+ *     {@link ChannelGroup} allChannels = MyServer.getAllChannels();
+ *     {@link ChannelGroupFuture} future = allChannels.close();
+ *     future.awaitUninterruptibly();
+ *     // Perform post-shutdown operation
+ *     // ...
+ *
  * }
  *
  * // GOOD
  * {@code @Override}
- * public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
- *     if (e.getMessage() instanceof ShutdownMessage) {
- *         {@link ChannelGroup} allChannels = MyServer.getAllChannels();
- *         {@link ChannelGroupFuture} future = allChannels.close();
- *         future.addListener(new {@link ChannelGroupFutureListener}() {
- *             public void operationComplete({@link ChannelGroupFuture} future) {
- *                 // Perform post-closure operation
- *                 // ...
- *             }
- *         });
- *     }
+ * public void messageReceived(ChannelHandlerContext ctx, ShutdownMessage msg) {
+ *     {@link ChannelGroup} allChannels = MyServer.getAllChannels();
+ *     {@link ChannelGroupFuture} future = allChannels.close();
+ *     future.addListener(new {@link ChannelGroupFutureListener}() {
+ *         public void operationComplete({@link ChannelGroupFuture} future) {
+ *             // Perform post-closure operation
+ *             // ...
+ *         }
+ *     });
  * }
  * </pre>
  * <p>

@@ -15,11 +15,42 @@
  */
 package io.netty.util;
 
+/**
+ * An attribute which allows to store an value reference. It may be updated atomically and so is thread-safe.
+ *
+ * @param <T>   the type of the value it holds.
+ */
 public interface Attribute<T> {
+    /**
+     * Returns the current value, which may be {@code null}
+     */
     T get();
+
+    /**
+     * Sets the value
+     */
     void set(T value);
+
+    /**
+     *  Atomically sets to the given value and returns the old value which may be {@code null} if non was set before.
+     */
     T getAndSet(T value);
+
+    /**
+     *  Atomically sets to the given value if this {@link Attribute} does not contain a value at the moment.
+     *  If it was not possible to set the value as it contains a value it will just return the current value.
+     */
     T setIfAbsent(T value);
+
+    /**
+     * Atomically sets the value to the given updated value if the current value == the expected value.
+     * If it the set was successful it returns {@code true} otherwise {@code false}.
+     */
     boolean compareAndSet(T oldValue, T newValue);
+
+    /**
+     * Remove the current value which is stored in this {@link Attribute}, which means after this call {@link #get()}
+     * will return {@code null}.
+     */
     void remove();
 }

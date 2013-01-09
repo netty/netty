@@ -78,7 +78,7 @@ public class CompatibleObjectEncoder extends MessageToByteEncoder<Object> {
     }
 
     @Override
-    public void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
         Attribute<ObjectOutputStream> oosAttr = ctx.attr(OOS);
         ObjectOutputStream oos = oosAttr.get();
         if (oos == null) {
@@ -95,9 +95,6 @@ public class CompatibleObjectEncoder extends MessageToByteEncoder<Object> {
                 writtenObjects ++;
                 if (writtenObjects % resetInterval == 0) {
                     oos.reset();
-
-                    // Also discard the byproduct to avoid OOM on the sending side.
-                    out.discardSomeReadBytes();
                 }
             }
 

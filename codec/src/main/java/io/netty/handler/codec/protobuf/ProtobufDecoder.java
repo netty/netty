@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.MessageToMessageDecoder;
@@ -32,7 +33,7 @@ import com.google.protobuf.MessageLite;
  * Decodes a received {@link ByteBuf} into a
  * <a href="http://code.google.com/p/protobuf/">Google Protocol Buffers</a>
  * {@link Message} and {@link MessageLite}.  Please note that this decoder must
- * be used with a proper {@link FrameDecoder} such as {@link ProtobufVarint32FrameDecoder}
+ * be used with a proper {@link ByteToMessageDecoder} such as {@link ProtobufVarint32FrameDecoder}
  * or {@link LengthFieldBasedFrameDecoder} if you are using a stream-based
  * transport such as TCP/IP.  A typical setup for TCP/IP would be:
  * <pre>
@@ -51,8 +52,7 @@ import com.google.protobuf.MessageLite;
  * and then you can use a {@code MyMessage} instead of a {@link ByteBuf}
  * as a message:
  * <pre>
- * void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
- *     MyMessage req = (MyMessage) e.getMessage();
+ * void messageReceived({@link ChannelHandlerContext} ctx, MyMessage req) {
  *     MyMessage res = MyMessage.newBuilder().setText(
  *                               "Did you say '" + req.getText() + "'?").build();
  *     ch.write(res);
@@ -61,7 +61,7 @@ import com.google.protobuf.MessageLite;
  * @apiviz.landmark
  */
 @Sharable
-public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf, MessageLite> {
+public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
 
     private final MessageLite prototype;
     private final ExtensionRegistry extensionRegistry;
@@ -84,7 +84,7 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf, MessageLit
     }
 
     @Override
-    public MessageLite decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+    protected Object decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
         if (msg.hasArray()) {
             final int offset = msg.readerIndex();
             if (extensionRegistry == null) {

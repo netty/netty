@@ -79,7 +79,7 @@ public final class YammerMonitorRegistry implements MonitorRegistry {
      */
     @Override
     public EventRateMonitor newEventRateMonitor(final MonitorName monitorName, final TimeUnit rateUnit) {
-        final Meter meter = delegate.newMeter(Utils.toMetricName(monitorName), monitorName.getName(), rateUnit);
+        final Meter meter = delegate.newMeter(Utils.toMetricName(monitorName), monitorName.name(), rateUnit);
         return new YammerEventRateMonitor(meter);
     }
 

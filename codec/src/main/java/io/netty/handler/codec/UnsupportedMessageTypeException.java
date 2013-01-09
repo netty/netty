@@ -15,6 +15,9 @@
  */
 package io.netty.handler.codec;
 
+/**
+ * Thrown if an unsupported message is received by an codec.
+ */
 public class UnsupportedMessageTypeException extends CodecException {
 
     private static final long serialVersionUID = 2799598826487038726L;

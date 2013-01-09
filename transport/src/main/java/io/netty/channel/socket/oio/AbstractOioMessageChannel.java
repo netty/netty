@@ -21,49 +21,52 @@ import io.netty.channel.ChannelPipeline;
 
 import java.io.IOException;
 
-abstract class AbstractOioMessageChannel extends AbstractOioChannel {
+/**
+ * Abstract base class for OIO which reads and writes objects from/to a Socket
+ */
+public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
 
+    /**
+     * @see AbstractOioChannel#AbstractOioChannel(Channel, Integer)
+     */
     protected AbstractOioMessageChannel(Channel parent, Integer id) {
         super(parent, id);
     }
 
     @Override
-    protected OioMessageUnsafe newUnsafe() {
-        return new OioMessageUnsafe();
-    }
-
-    private final class OioMessageUnsafe extends AbstractOioUnsafe {
-        @Override
-        public void read() {
-            assert eventLoop().inEventLoop();
-
-            final ChannelPipeline pipeline = pipeline();
-            final MessageBuf<Object> msgBuf = pipeline.inboundMessageBuffer();
-            boolean closed = false;
-            boolean read = false;
-            try {
-                int localReadAmount = doReadMessages(msgBuf);
-                if (localReadAmount > 0) {
-                    read = true;
-                } else if (localReadAmount < 0) {
-                    closed = true;
-                }
-            } catch (Throwable t) {
-                if (read) {
-                    read = false;
-                    pipeline.fireInboundBufferUpdated();
-                }
-                pipeline().fireExceptionCaught(t);
-                if (t instanceof IOException) {
-                    close(voidFuture());
-                }
-            } finally {
-                if (read) {
-                    pipeline.fireInboundBufferUpdated();
-                }
-                if (closed && isOpen()) {
-                    close(voidFuture());
-                }
+    protected void doRead() {
+        final ChannelPipeline pipeline = pipeline();
+        final MessageBuf<Object> msgBuf = pipeline.inboundMessageBuffer();
+        boolean closed = false;
+        boolean read = false;
+        boolean firedInboundBufferSuspended = false;
+        try {
+            int localReadAmount = doReadMessages(msgBuf);
+            if (localReadAmount > 0) {
+                read = true;
+            } else if (localReadAmount < 0) {
+                closed = true;
+            }
+        } catch (Throwable t) {
+            if (read) {
+                read = false;
+                pipeline.fireInboundBufferUpdated();
+            }
+            firedInboundBufferSuspended = true;
+            pipeline.fireInboundBufferSuspended();
+            pipeline.fireExceptionCaught(t);
+            if (t instanceof IOException) {
+                unsafe().close(unsafe().voidFuture());
+            }
+        } finally {
+            if (read) {
+                pipeline.fireInboundBufferUpdated();
+            }
+            if (!firedInboundBufferSuspended) {
+                pipeline.fireInboundBufferSuspended();
+            }
+            if (closed && isOpen()) {
+                unsafe().close(unsafe().voidFuture());
             }
         }
     }
@@ -75,6 +78,21 @@ abstract class AbstractOioMessageChannel extends AbstractOioChannel {
         }
     }
 
+    /**
+     * Read Objects from the underlying Socket.
+     *
+     * @param buf           the {@link MessageBuf} into which the read objects will be written
+     * @return amount       the number of objects read. This may return a negative amount if the underlying
+     *                      Socket was closed
+     * @throws Exception    is thrown if an error accoured
+     */
     protected abstract int doReadMessages(MessageBuf<Object> buf) throws Exception;
+
+    /**
+     * Write the Objects which is hold by the {@link MessageBuf} to the underlying Socket.
+     *
+     * @param buf           the {@link MessageBuf} which holds the data to transfer
+     * @throws Exception    is thrown if an error accoured
+     */
     protected abstract void doWriteMessages(MessageBuf<Object> buf) throws Exception;
 }

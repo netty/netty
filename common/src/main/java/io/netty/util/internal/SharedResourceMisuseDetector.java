@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Warn when user creates too many instances to avoid {@link OutOfMemoryError}.
  */
-public class SharedResourceMisuseDetector {
+public final class SharedResourceMisuseDetector {
 
     private static final int MAX_ACTIVE_INSTANCES = 256;
     private static final InternalLogger logger =
@@ -41,6 +41,9 @@ public class SharedResourceMisuseDetector {
         this.type = type;
     }
 
+    /**
+     * Increase the use-count of the instance
+     */
     public void increase() {
         if (activeInstances.incrementAndGet() > MAX_ACTIVE_INSTANCES) {
             if (logger.isWarnEnabled()) {
@@ -55,6 +58,9 @@ public class SharedResourceMisuseDetector {
         }
     }
 
+    /**
+     * Decrease the use-count of the instance
+     */
     public void decrease() {
         activeInstances.decrementAndGet();
     }

@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 
 /**
@@ -22,14 +23,20 @@ import io.netty.buffer.ByteBufAllocator;
  */
 interface ChannelPropertyAccess {
 
+    /**
+     * Return the assigned {@link ChannelPipeline}
+     */
     ChannelPipeline pipeline();
 
+    /**
+     * Return the assigned {@link ByteBufAllocator} which will be used for allocate {@link ByteBuf}s.
+     */
     ByteBufAllocator alloc();
 
     /**
-     * Create a new {@link ChannelFuture}
+     * Create a new {@link ChannelPromise}
      */
-    ChannelFuture newFuture();
+    ChannelPromise newPromise();
 
     /**
      * Create a new {@link ChannelFuture} which is marked as successes already. So {@link ChannelFuture#isSuccess()}

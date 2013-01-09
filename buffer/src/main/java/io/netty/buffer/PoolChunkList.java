@@ -38,20 +38,20 @@ final class PoolChunkList<T> {
         this.maxUsage = maxUsage;
     }
 
-    boolean allocate(PooledByteBuf<T> buf, int capacity) {
+    boolean allocate(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
         if (head == null) {
             return false;
         }
 
         for (PoolChunk<T> cur = head;;) {
-            long handle = cur.allocate(capacity);
+            long handle = cur.allocate(normCapacity);
             if (handle < 0) {
                 cur = cur.next;
                 if (cur == null) {
                     return false;
                 }
             } else {
-                cur.initBuf(buf, handle);
+                cur.initBuf(buf, handle, reqCapacity);
                 if (cur.usage() >= maxUsage) {
                     remove(cur);
                     nextList.add(cur);

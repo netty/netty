@@ -15,7 +15,6 @@
  */
 package io.netty.handler.stream;
 
-import io.netty.buffer.Buf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -27,6 +26,7 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
@@ -60,7 +60,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * Some {@link ChunkedInput} generates a chunk on a certain event or timing.
  * Such {@link ChunkedInput} implementation often returns {@code null} on
- * {@link ChunkedInput#nextChunk()}, resulting in the indefinitely suspended
+ * {@link ChunkedInput#readChunk(Object)}, resulting in the indefinitely suspended
  * transfer.  To resume the transfer when a new chunk is available, you have to
  * call {@link #resumeTransfer()}.
  * @apiviz.landmark
@@ -97,8 +97,8 @@ public class ChunkedWriteHandler
     }
 
     @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-        // Nothing to free
+    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        queue.free();
     }
 
     private boolean isWritable() {
@@ -140,8 +140,13 @@ public class ChunkedWriteHandler
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
-        queue.add(future);
+    public void read(ChannelHandlerContext ctx) {
+        ctx.read();
+    }
+
+    @Override
+    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        queue.add(promise);
         if (isWritable() || !ctx.channel().isActive()) {
             doFlush(ctx);
         }
@@ -181,8 +186,8 @@ public class ChunkedWriteHandler
                     logger.warn(ChunkedInput.class.getSimpleName() + ".isEndOfInput() failed", e);
                 }
                 closeInput(in);
-            } else if (currentEvent instanceof ChannelFuture) {
-                ChannelFuture f = (ChannelFuture) currentEvent;
+            } else if (currentEvent instanceof ChannelPromise) {
+                ChannelPromise f = (ChannelPromise) currentEvent;
                 if (!success) {
                     fireExceptionCaught = true;
                     if (cause == null) {
@@ -216,9 +221,9 @@ public class ChunkedWriteHandler
             }
 
             final Object currentEvent = this.currentEvent;
-            if (currentEvent instanceof ChannelFuture) {
+            if (currentEvent instanceof ChannelPromise) {
                 this.currentEvent = null;
-                ctx.flush((ChannelFuture) currentEvent);
+                ctx.flush((ChannelPromise) currentEvent);
             } else if (currentEvent instanceof ChunkedInput) {
                 final ChunkedInput<?> chunks = (ChunkedInput<?>) currentEvent;
                 boolean read;

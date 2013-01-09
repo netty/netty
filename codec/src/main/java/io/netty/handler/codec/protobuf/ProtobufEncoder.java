@@ -47,8 +47,7 @@ import com.google.protobuf.MessageLite;
  * and then you can use a {@code MyMessage} instead of a {@link ByteBuf}
  * as a message:
  * <pre>
- * void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
- *     MyMessage req = (MyMessage) e.getMessage();
+ * void messageReceived({@link ChannelHandlerContext} ctx, MyMessage req) {
  *     MyMessage res = MyMessage.newBuilder().setText(
  *                               "Did you say '" + req.getText() + "'?").build();
  *     ch.write(res);
@@ -57,14 +56,14 @@ import com.google.protobuf.MessageLite;
  * @apiviz.landmark
  */
 @Sharable
-public class ProtobufEncoder extends MessageToMessageEncoder<Object, ByteBuf> {
+public class ProtobufEncoder extends MessageToMessageEncoder<Object> {
 
     public ProtobufEncoder() {
         super(MessageLite.class, MessageLite.Builder.class);
     }
 
     @Override
-    public ByteBuf encode(ChannelHandlerContext ctx, Object msg) throws Exception {
+    protected Object encode(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof MessageLite) {
             return wrappedBuffer(((MessageLite) msg).toByteArray());
         }

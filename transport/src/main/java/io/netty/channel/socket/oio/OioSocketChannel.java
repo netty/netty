@@ -21,6 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
@@ -39,6 +40,9 @@ import java.nio.channels.Channels;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.WritableByteChannel;
 
+/**
+ * A {@link SocketChannel} which is using Old-Blocking-IO
+ */
 public class OioSocketChannel extends AbstractOioByteChannel
                               implements SocketChannel {
 
@@ -53,18 +57,34 @@ public class OioSocketChannel extends AbstractOioByteChannel
     private OutputStream os;
     private WritableByteChannel outChannel;
 
+    /**
+     * Create a new instance with an new {@link Socket}
+     */
     public OioSocketChannel() {
         this(new Socket());
     }
 
+    /**
+     * Create a new instance from the given {@link Socket}
+     *
+     * @param socket    the {@link Socket} which is used by this instance
+     */
     public OioSocketChannel(Socket socket) {
         this(null, null, socket);
     }
 
+    /**
+     * Create a new instance from the given {@link Socket}
+     *
+     * @param parent    the parent {@link Channel} which was used to create this instance. This can be null if the
+     *                  {@link} has no parent as it was created by your self.
+     * @param id        the id which should be used for this instance or {@code null} if a new one should be generated
+     * @param socket    the {@link Socket} which is used by this instance
+     */
     public OioSocketChannel(Channel parent, Integer id, Socket socket) {
         super(parent, id);
         this.socket = socket;
-        config = new DefaultSocketChannelConfig(socket);
+        config = new DefaultSocketChannelConfig(this, socket);
 
         boolean success = false;
         try {
@@ -119,11 +139,11 @@ public class OioSocketChannel extends AbstractOioByteChannel
 
     @Override
     public ChannelFuture shutdownOutput() {
-        return shutdownOutput(newFuture());
+        return shutdownOutput(newPromise());
     }
 
     @Override
-    public ChannelFuture shutdownOutput(final ChannelFuture future) {
+    public ChannelFuture shutdownOutput(final ChannelPromise future) {
         EventLoop loop = eventLoop();
         if (loop.inEventLoop()) {
             try {
@@ -203,15 +223,6 @@ public class OioSocketChannel extends AbstractOioByteChannel
             return -1;
         }
 
-        if (readSuspended) {
-            try {
-                Thread.sleep(SO_TIMEOUT);
-            } catch (InterruptedException e) {
-                // ignore
-            }
-            return 0;
-        }
-
         try {
             return buf.writeBytes(is, buf.writableBytes());
         } catch (SocketTimeoutException e) {
@@ -229,7 +240,7 @@ public class OioSocketChannel extends AbstractOioByteChannel
     }
 
     @Override
-    protected void doFlushFileRegion(FileRegion region, ChannelFuture future) throws Exception {
+    protected void doFlushFileRegion(FileRegion region, ChannelPromise promise) throws Exception {
         OutputStream os = this.os;
         if (os == null) {
             throw new NotYetConnectedException();
@@ -244,12 +255,12 @@ public class OioSocketChannel extends AbstractOioByteChannel
             if (localWritten == -1) {
                 checkEOF(region, written);
                 region.close();
-                future.setSuccess();
+                promise.setSuccess();
                 return;
             }
             written += localWritten;
             if (written >= region.count()) {
-                future.setSuccess();
+                promise.setSuccess();
                 return;
             }
         }

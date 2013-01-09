@@ -57,6 +57,19 @@ public interface ChannelFutureListener extends EventListener {
     };
 
     /**
+     * A {@link ChannelFutureListener} that forwards the {@link Throwable} of the {@link ChannelFuture} into the
+     * {@link ChannelPipeline}. This mimics the old behavior of Netty 3.
+     */
+    ChannelFutureListener FIRE_EXCEPTION_ON_FAILURE = new ChannelFutureListener() {
+        @Override
+        public void operationComplete(ChannelFuture future) {
+            if (!future.isSuccess()) {
+                future.channel().pipeline().fireExceptionCaught(future.cause());
+            }
+        }
+    };
+
+    /**
      * Invoked when the I/O operation associated with the {@link ChannelFuture}
      * has been completed.
      *

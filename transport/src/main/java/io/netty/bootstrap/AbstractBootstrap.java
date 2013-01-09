@@ -21,6 +21,7 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.AttributeKey;
 
@@ -102,21 +103,21 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
     }
 
     /**
-     * See {@link #localAddress(SocketAddress)}
+     * @see {@link #localAddress(SocketAddress)}
      */
     public B localAddress(int port) {
         return localAddress(new InetSocketAddress(port));
     }
 
     /**
-     * See {@link #localAddress(SocketAddress)}
+     * @see {@link #localAddress(SocketAddress)}
      */
     public B localAddress(String host, int port) {
         return localAddress(new InetSocketAddress(host, port));
     }
 
     /**
-     * See {@link #localAddress(SocketAddress)}
+     * @see {@link #localAddress(SocketAddress)}
      */
     public B localAddress(InetAddress host, int port) {
         return localAddress(new InetSocketAddress(host, port));
@@ -195,7 +196,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
     public ChannelFuture bind() {
         validate();
         Channel channel = factory().newChannel();
-        return bind(channel.newFuture());
+        return bind(channel.newPromise());
     }
 
     /**
@@ -210,7 +211,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
         return (B) this;
     }
 
-    protected static boolean ensureOpen(ChannelFuture future) {
+    protected static boolean ensureOpen(ChannelPromise future) {
         if (!future.channel().isOpen()) {
             // Registration was successful but the channel was closed due to some failure in
             // handler.
@@ -223,7 +224,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
     /**
      * Bind the {@link Channel} of the given {@link ChannelFactory}.
      */
-    public abstract ChannelFuture bind(ChannelFuture future);
+    public abstract ChannelFuture bind(ChannelPromise future);
 
     protected final SocketAddress localAddress() {
         return localAddress;
@@ -249,6 +250,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
         return attrs;
     }
 
+    @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
         buf.append(getClass().getSimpleName());
@@ -308,6 +310,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
             }
         }
 
+        @Override
         public String toString() {
             return clazz.getSimpleName() + ".class";
         }

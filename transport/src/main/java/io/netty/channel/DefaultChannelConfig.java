@@ -33,13 +33,23 @@ public class DefaultChannelConfig implements ChannelConfig {
     private static final ByteBufAllocator DEFAULT_ALLOCATOR = PooledByteBufAllocator.DEFAULT;
     private static final int DEFAULT_CONNECT_TIMEOUT = 30000;
 
+    protected final Channel channel;
+
     private volatile ByteBufAllocator allocator = DEFAULT_ALLOCATOR;
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
     private volatile int writeSpinCount = 16;
+    private volatile boolean autoRead = true;
+
+    public DefaultChannelConfig(Channel channel) {
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
+        this.channel = channel;
+    }
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(null, CONNECT_TIMEOUT_MILLIS, WRITE_SPIN_COUNT, ALLOCATOR);
+        return getOptions(null, CONNECT_TIMEOUT_MILLIS, WRITE_SPIN_COUNT, ALLOCATOR, AUTO_READ);
     }
 
     protected Map<ChannelOption<?>, Object> getOptions(
@@ -70,8 +80,8 @@ public class DefaultChannelConfig implements ChannelConfig {
         return setAllOptions;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
+    @SuppressWarnings("unchecked")
     public <T> T getOption(ChannelOption<T> option) {
         if (option == null) {
             throw new NullPointerException("option");
@@ -85,6 +95,9 @@ public class DefaultChannelConfig implements ChannelConfig {
         }
         if (option == ALLOCATOR) {
             return (T) getAllocator();
+        }
+        if (option == AUTO_READ) {
+            return (T) Boolean.valueOf(isAutoRead());
         }
 
         return null;
@@ -100,6 +113,8 @@ public class DefaultChannelConfig implements ChannelConfig {
             setWriteSpinCount((Integer) value);
         } else if (option == ALLOCATOR) {
             setAllocator((ByteBufAllocator) value);
+        } else if (option == AUTO_READ) {
+            setAutoRead((Boolean) value);
         } else {
             return false;
         }
@@ -155,6 +170,21 @@ public class DefaultChannelConfig implements ChannelConfig {
             throw new NullPointerException("allocator");
         }
         this.allocator = allocator;
+        return this;
+    }
+
+    @Override
+    public boolean isAutoRead() {
+        return autoRead;
+    }
+
+    @Override
+    public ChannelConfig setAutoRead(boolean autoRead) {
+        boolean oldAutoRead = this.autoRead;
+        this.autoRead = autoRead;
+        if (autoRead && !oldAutoRead) {
+            channel.read();
+        }
         return this;
     }
 }

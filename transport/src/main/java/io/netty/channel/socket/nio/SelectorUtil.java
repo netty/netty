@@ -24,6 +24,9 @@ import java.nio.channels.CancelledKeyException;
 import java.nio.channels.Selector;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Utility class for operate on a {@link Selector}
+ */
 final class SelectorUtil {
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(SelectorUtil.class);

@@ -15,7 +15,6 @@
  */
 package io.netty.testsuite.transport.socket;
 
-import static org.junit.Assert.*;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -23,12 +22,13 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 public class SocketEchoTest extends AbstractSocketTest {
 
@@ -82,7 +82,7 @@ public class SocketEchoTest extends AbstractSocketTest {
             }
 
             try {
-                Thread.sleep(1);
+                Thread.sleep(50);
             } catch (InterruptedException e) {
                 // Ignore.
             }
@@ -97,7 +97,7 @@ public class SocketEchoTest extends AbstractSocketTest {
             }
 
             try {
-                Thread.sleep(1);
+                Thread.sleep(50);
             } catch (InterruptedException e) {
                 // Ignore.
             }

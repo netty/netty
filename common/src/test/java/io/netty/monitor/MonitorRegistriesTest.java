@@ -35,7 +35,7 @@ public class MonitorRegistriesTest {
 				registry.getClass());
 	}
 
-	@Test(expected = IllegalStateException.class)
+	@Test
 	public final void uniqueShouldThrowIllegalStateExceptionIfMoreThanOneProviderIsRegistered() {
 		final MonitorRegistries objectUnderTest = MonitorRegistries.instance();
 

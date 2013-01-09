@@ -37,13 +37,13 @@ import com.google.protobuf.CodedInputStream;
  *
  * @see CodedInputStream
  */
-public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder<Object> {
+public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
 
     // TODO maxFrameLength + safe skip + fail-fast option
     //      (just like LengthFieldBasedFrameDecoder)
 
     @Override
-    public Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+    protected Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         in.markReaderIndex();
         final byte[] buf = new byte[5];
         for (int i = 0; i < buf.length; i ++) {

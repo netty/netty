@@ -27,15 +27,14 @@ import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.AttributeKey;
-import io.netty.util.NetworkConstants;
 
-import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -48,7 +47,6 @@ import java.util.Map.Entry;
 public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ServerBootstrap.class);
-    private static final InetSocketAddress DEFAULT_LOCAL_ADDR = new InetSocketAddress(NetworkConstants.LOCALHOST, 0);
 
     private final ChannelHandler acceptor = new ChannelInitializer<Channel>() {
         @Override
@@ -119,6 +117,10 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
         return this;
     }
 
+    /**
+     * Set the specific {@link AttributeKey} with the given value on every child {@link Channel}. If the value is
+     * {@code null} the {@link AttributeKey} is removed
+     */
     public <T> ServerBootstrap childAttr(AttributeKey<T> childKey, T value) {
         if (childKey == null) {
             throw new NullPointerException("childKey");
@@ -143,7 +145,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
     }
 
     @Override
-    public ChannelFuture bind(ChannelFuture future) {
+    public ChannelFuture bind(ChannelPromise future) {
         validate(future);
         Channel channel = future.channel();
         if (channel.isActive()) {
@@ -207,13 +209,12 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
         if (childHandler == null) {
             throw new IllegalStateException("childHandler not set");
         }
+        if (localAddress() == null) {
+            throw new IllegalStateException("localAddress not set");
+        }
         if (childGroup == null) {
             logger.warn("childGroup is not set. Using parentGroup instead.");
             childGroup = group();
-        }
-        if (localAddress() == null) {
-            logger.warn("localAddress is not set. Using " + DEFAULT_LOCAL_ADDR + " instead.");
-            localAddress(DEFAULT_LOCAL_ADDR);
         }
     }
 
@@ -225,8 +226,8 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
             return Unpooled.messageBuffer();
         }
 
-        @SuppressWarnings("unchecked")
         @Override
+        @SuppressWarnings("unchecked")
         public void inboundBufferUpdated(ChannelHandlerContext ctx) {
             MessageBuf<Channel> in = ctx.inboundMessageBuffer();
             for (;;) {

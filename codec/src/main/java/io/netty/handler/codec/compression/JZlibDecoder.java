@@ -81,7 +81,7 @@ public class JZlibDecoder extends ZlibDecoder {
     }
 
     @Override
-    public void decode(
+    protected void decode(
             ChannelHandlerContext ctx,
             ByteBuf in, ByteBuf out) throws Exception {
 

@@ -35,24 +35,6 @@
       <version>${project.version}</version>
     </dependency>
   </dependencies>
-
-  <build>
-    <plugins>
-    
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-        <configuration>
-          <excludes>
-            <!-- dont want to include com.sun in here -->
-            <exclude>com/**</exclude>
-          </excludes>
-        </configuration>
-      </plugin>
-      
-    </plugins>
-  
-  </build>
   
 </project>
 

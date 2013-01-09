@@ -16,8 +16,8 @@
 package io.netty.handler.codec;
 
 /**
- * An {@link Exception} which is thrown when the length of the frame
- * decoded by {@link DelimiterBasedFrameDecoder} is greater than the maximum.
+ * An {@link DecoderException} which is thrown when the length of the frame
+ * decoded is greater than the allowed maximum.
  *
  * @apiviz.exclude
  */

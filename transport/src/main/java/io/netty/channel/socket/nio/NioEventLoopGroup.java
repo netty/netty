@@ -15,6 +15,7 @@
  */
 package io.netty.channel.socket.nio;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelTaskScheduler;
 import io.netty.channel.EventExecutor;
 import io.netty.channel.MultithreadEventLoopGroup;
@@ -23,20 +24,39 @@ import java.nio.channels.Selector;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.concurrent.ThreadFactory;
 
+/**
+ * {@link MultithreadEventLoopGroup} implementations which is used for NIO {@link Selector} based {@link Channel}s.
+ */
 public class NioEventLoopGroup extends MultithreadEventLoopGroup {
 
+    /**
+     * Create a new instance using {@link #DEFAULT_POOL_SIZE} number of threads, the default {@link ThreadFactory} and
+     * the  {@link SelectorProvider} which is returned by {@link SelectorProvider#provider()}.
+     */
     public NioEventLoopGroup() {
         this(0);
     }
 
+    /**
+     * Create a new instance using nThreads number of threads, {@link ThreadFactory} and the
+     * {@link SelectorProvider} which is returned by {@link SelectorProvider#provider()}.
+     */
     public NioEventLoopGroup(int nThreads) {
         this(nThreads, null);
     }
 
+    /**
+     * Create a new instance using nThreads number of threads, the given {@link ThreadFactory} and the
+     * {@link SelectorProvider} which is returned by {@link SelectorProvider#provider()}.
+     */
     public NioEventLoopGroup(int nThreads, ThreadFactory threadFactory) {
-        super(nThreads, threadFactory);
+        this(nThreads, threadFactory, SelectorProvider.provider());
     }
 
+    /**
+     * Create a new instance using nThreads number of threads, the given {@link ThreadFactory} and the given
+     * {@link SelectorProvider}.
+     */
     public NioEventLoopGroup(
             int nThreads, ThreadFactory threadFactory, final SelectorProvider selectorProvider) {
         super(nThreads, threadFactory, selectorProvider);
@@ -55,12 +75,6 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
     @Override
     protected EventExecutor newChild(
             ThreadFactory threadFactory, ChannelTaskScheduler scheduler, Object... args) throws Exception {
-        SelectorProvider selectorProvider;
-        if (args == null || args.length == 0 || args[0] == null) {
-            selectorProvider = SelectorProvider.provider();
-        } else {
-            selectorProvider = (SelectorProvider) args[0];
-        }
-        return new NioEventLoop(this, threadFactory, scheduler, selectorProvider);
+        return new NioEventLoop(this, threadFactory, scheduler, (SelectorProvider) args[0]);
     }
 }

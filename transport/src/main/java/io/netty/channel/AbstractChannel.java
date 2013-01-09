@@ -79,10 +79,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final Unsafe unsafe;
     private final DefaultChannelPipeline pipeline;
     private final ChannelFuture succeededFuture = new SucceededChannelFuture(this);
-    private final ChannelFuture voidFuture = new VoidChannelFuture(this);
+    private final VoidChannelPromise voidPromise = new VoidChannelPromise(this);
     private final CloseFuture closeFuture = new CloseFuture(this);
 
-    protected final ChannelFlushFutureNotifier flushFutureNotifier = new ChannelFlushFutureNotifier();
+    protected final ChannelFlushPromiseNotifier flushFutureNotifier = new ChannelFlushPromiseNotifier();
 
     private volatile SocketAddress localAddress;
     private volatile SocketAddress remoteAddress;
@@ -195,6 +195,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return remoteAddress;
     }
 
+    /**
+     * Reset the stored remoteAddress
+     */
     protected void invalidateRemoteAddress() {
         remoteAddress = null;
     }
@@ -245,33 +248,33 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelFuture bind(SocketAddress localAddress, ChannelFuture future) {
-        return pipeline.bind(localAddress, future);
+    public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
+        return pipeline.bind(localAddress, promise);
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, ChannelFuture future) {
-        return pipeline.connect(remoteAddress, future);
+    public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
+        return pipeline.connect(remoteAddress, promise);
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) {
-        return pipeline.connect(remoteAddress, localAddress, future);
+    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+        return pipeline.connect(remoteAddress, localAddress, promise);
     }
 
     @Override
-    public ChannelFuture disconnect(ChannelFuture future) {
-        return pipeline.disconnect(future);
+    public ChannelFuture disconnect(ChannelPromise promise) {
+        return pipeline.disconnect(promise);
     }
 
     @Override
-    public ChannelFuture close(ChannelFuture future) {
-        return pipeline.close(future);
+    public ChannelFuture close(ChannelPromise promise) {
+        return pipeline.close(promise);
     }
 
     @Override
-    public ChannelFuture deregister(ChannelFuture future) {
-        return pipeline.deregister(future);
+    public ChannelFuture deregister(ChannelPromise promise) {
+        return pipeline.deregister(promise);
     }
 
     @Override
@@ -286,18 +289,23 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelFuture flush(ChannelFuture future) {
-        return pipeline.flush(future);
+    public void read() {
+        pipeline.read();
     }
 
     @Override
-    public ChannelFuture write(Object message, ChannelFuture future) {
-        return pipeline.write(message, future);
+    public ChannelFuture flush(ChannelPromise promise) {
+        return pipeline.flush(promise);
     }
 
     @Override
-    public ChannelFuture newFuture() {
-        return new DefaultChannelFuture(this, false);
+    public ChannelFuture write(Object message, ChannelPromise promise) {
+        return pipeline.write(message, promise);
+    }
+
+    @Override
+    public ChannelPromise newPromise() {
+        return new DefaultChannelPromise(this);
     }
 
     @Override
@@ -326,11 +334,43 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelFuture sendFile(FileRegion region, ChannelFuture future) {
-        return pipeline.sendFile(region, future);
+    public ChannelFuture sendFile(FileRegion region, ChannelPromise promise) {
+        return pipeline.sendFile(region, promise);
     }
 
-    protected abstract Unsafe newUnsafe();
+    // 0 - not expanded because the buffer is writable
+    // 1 - expanded because the buffer was not writable
+    // 2 - could not expand because the buffer was at its maximum although the buffer is not writable.
+    protected static int expandReadBuffer(ByteBuf byteBuf) {
+        final int writerIndex = byteBuf.writerIndex();
+        final int capacity = byteBuf.capacity();
+        if (capacity != writerIndex) {
+            return 0;
+        }
+
+        final int maxCapacity = byteBuf.maxCapacity();
+        if (capacity == maxCapacity) {
+            return 2;
+        }
+
+        // FIXME: Magic number
+        final int increment = 4096;
+
+        if (writerIndex + increment > maxCapacity) {
+            // Expand to maximum capacity.
+            byteBuf.capacity(maxCapacity);
+        } else {
+            // Expand by the increment.
+            byteBuf.ensureWritableBytes(increment);
+        }
+
+        return 1;
+    }
+
+    /**
+     * Create a new {@link AbstractUnsafe} instance which will be used for the life-time of the {@link Channel}
+     */
+    protected abstract AbstractUnsafe newUnsafe();
 
     /**
      * Returns the ID of this channel.
@@ -393,17 +433,20 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return strVal;
     }
 
+    /**
+     * {@link Unsafe} implementation which sub-classes must extend and use.
+     */
     protected abstract class AbstractUnsafe implements Unsafe {
 
         private final class FlushTask {
             final FileRegion region;
-            final ChannelFuture future;
+            final ChannelPromise promise;
             FlushTask next;
 
-            FlushTask(FileRegion region, ChannelFuture future) {
+            FlushTask(FileRegion region, ChannelPromise promise) {
                 this.region = region;
-                this.future = future;
-                future.addListener(new ChannelFutureListener() {
+                this.promise = promise;
+                promise.addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {
                         flushTaskInProgress = next;
@@ -413,13 +456,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                                 if (region == null) {
                                     // no region present means the next flush task was to directly flush
                                     // the outbound buffer
-                                    flushNotifierAndFlush(future);
+                                    flushNotifierAndFlush(next.promise);
                                 } else {
                                     // flush the region now
-                                    doFlushFileRegion(region, future);
+                                    doFlushFileRegion(region, next.promise);
                                 }
                             } catch (Throwable cause) {
-                                future.setFailure(cause);
+                                next.promise.setFailure(cause);
                             }
                         } else {
                             // notify the flush futures
@@ -430,6 +473,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
         }
 
+        private final Runnable beginReadTask = new Runnable() {
+            @Override
+            public void run() {
+                beginRead();
+            }
+        };
+
         private final Runnable flushLaterTask = new Runnable() {
             @Override
             public void run() {
@@ -439,39 +489,39 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         };
 
         @Override
-        public final void sendFile(final FileRegion region, final ChannelFuture future) {
+        public final void sendFile(final FileRegion region, final ChannelPromise promise) {
 
             if (eventLoop().inEventLoop()) {
                 if (outboundBufSize() > 0) {
-                    flushNotifier(newFuture()).addListener(new ChannelFutureListener() {
+                    flushNotifier(newPromise()).addListener(new ChannelFutureListener() {
                         @Override
                         public void operationComplete(ChannelFuture cf) throws Exception {
-                            sendFile0(region, future);
+                            sendFile0(region, promise);
                         }
                     });
                 } else {
                     // nothing pending try to send the fileRegion now!
-                    sendFile0(region, future);
+                    sendFile0(region, promise);
                 }
             } else {
                 eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
-                        sendFile(region, future);
+                        sendFile(region, promise);
                     }
                 });
             }
         }
 
-        private void sendFile0(FileRegion region, ChannelFuture future) {
+        private void sendFile0(FileRegion region, ChannelPromise promise) {
             if (flushTaskInProgress == null) {
-                flushTaskInProgress = new FlushTask(region, future);
+                flushTaskInProgress = new FlushTask(region, promise);
                 try {
                     // the first FileRegion to flush so trigger it now!
-                    doFlushFileRegion(region, future);
+                    doFlushFileRegion(region, promise);
                 } catch (Throwable cause) {
                     region.close();
-                    future.setFailure(cause);
+                    promise.setFailure(cause);
                 }
                 return;
             }
@@ -485,7 +535,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 task = next;
             }
             // there is something that needs to get flushed first so add it as next in the chain
-            task.next = new FlushTask(region, future);
+            task.next = new FlushTask(region, promise);
         }
 
         @Override
@@ -494,8 +544,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final ChannelFuture voidFuture() {
-            return voidFuture;
+        public final ChannelPromise voidFuture() {
+            return voidPromise;
         }
 
         @Override
@@ -509,7 +559,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void register(EventLoop eventLoop, final ChannelFuture future) {
+        public final void register(EventLoop eventLoop, final ChannelPromise promise) {
             if (eventLoop == null) {
                 throw new NullPointerException("eventLoop");
             }
@@ -524,7 +574,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             assert eventLoop().inEventLoop();
 
-            if (!ensureOpen(future)) {
+            if (!ensureOpen(promise)) {
                 return;
             }
 
@@ -534,22 +584,22 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             //
             // See https://github.com/netty/netty/issues/654
             if (eventLoop.inEventLoop()) {
-                register0(future);
+                register0(promise);
             } else {
                 eventLoop.execute(new Runnable() {
                     @Override
                     public void run() {
-                        register0(future);
+                        register0(promise);
                     }
                 });
             }
         }
 
-        private void register0(ChannelFuture future) {
+        private void register0(ChannelPromise promise) {
             try {
                 Runnable postRegisterTask = doRegister();
                 registered = true;
-                future.setSuccess();
+                promise.setSuccess();
                 pipeline.fireChannelRegistered();
                 if (postRegisterTask != null) {
                     postRegisterTask.run();
@@ -565,15 +615,15 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     logger.warn("Failed to close a channel", t2);
                 }
 
-                future.setFailure(t);
+                promise.setFailure(t);
                 closeFuture.setClosed();
             }
         }
 
         @Override
-        public final void bind(final SocketAddress localAddress, final ChannelFuture future) {
+        public final void bind(final SocketAddress localAddress, final ChannelPromise promise) {
             if (eventLoop().inEventLoop()) {
-                if (!ensureOpen(future)) {
+                if (!ensureOpen(promise)) {
                     return;
                 }
 
@@ -594,58 +644,58 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     }
 
                     doBind(localAddress);
-                    future.setSuccess();
+                    promise.setSuccess();
                     if (!wasActive && isActive()) {
                         pipeline.fireChannelActive();
                     }
                 } catch (Throwable t) {
-                    future.setFailure(t);
+                    promise.setFailure(t);
                     closeIfClosed();
                 }
             } else {
                 eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
-                        bind(localAddress, future);
+                        bind(localAddress, promise);
                     }
                 });
             }
         }
 
         @Override
-        public final void disconnect(final ChannelFuture future) {
+        public final void disconnect(final ChannelPromise promise) {
             if (eventLoop().inEventLoop()) {
                 try {
                     boolean wasActive = isActive();
                     doDisconnect();
-                    future.setSuccess();
+                    promise.setSuccess();
                     if (wasActive && !isActive()) {
                         pipeline.fireChannelInactive();
                     }
                 } catch (Throwable t) {
-                    future.setFailure(t);
+                    promise.setFailure(t);
                     closeIfClosed();
                 }
             } else {
                 eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
-                        disconnect(future);
+                        disconnect(promise);
                     }
                 });
             }
         }
 
         @Override
-        public final void close(final ChannelFuture future) {
+        public final void close(final ChannelPromise promise) {
             if (eventLoop().inEventLoop()) {
                 boolean wasActive = isActive();
                 if (closeFuture.setClosed()) {
                     try {
                         doClose();
-                        future.setSuccess();
+                        promise.setSuccess();
                     } catch (Throwable t) {
-                        future.setFailure(t);
+                        promise.setFailure(t);
                     }
 
                     if (closedChannelException != null) {
@@ -661,13 +711,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     deregister(voidFuture());
                 } else {
                     // Closed already.
-                    future.setSuccess();
+                    promise.setSuccess();
                 }
             } else {
                 eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
-                        close(future);
+                        close(promise);
                     }
                 });
             }
@@ -683,10 +733,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void deregister(final ChannelFuture future) {
+        public final void deregister(final ChannelPromise promise) {
             if (eventLoop().inEventLoop()) {
                 if (!registered) {
-                    future.setSuccess();
+                    promise.setSuccess();
                     return;
                 }
 
@@ -697,27 +747,41 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 } finally {
                     if (registered) {
                         registered = false;
-                        future.setSuccess();
+                        promise.setSuccess();
                         pipeline.fireChannelUnregistered();
                     } else {
                         // Some transports like local and AIO does not allow the deregistration of
                         // an open channel.  Their doDeregister() calls close().  Consequently,
                         // close() calls deregister() again - no need to fire channelUnregistered.
-                        future.setSuccess();
+                        promise.setSuccess();
                     }
                 }
             } else {
                 eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
-                        deregister(future);
+                        deregister(promise);
                     }
                 });
             }
         }
 
         @Override
-        public void flush(final ChannelFuture future) {
+        public void beginRead() {
+            if (eventLoop().inEventLoop()) {
+                try {
+                    doBeginRead();
+                } catch (Exception e) {
+                    pipeline().fireExceptionCaught(e);
+                    close(unsafe().voidFuture());
+                }
+            } else {
+                eventLoop().execute(beginReadTask);
+            }
+        }
+
+        @Override
+        public void flush(final ChannelPromise promise) {
             if (eventLoop().inEventLoop()) {
 
                 if (flushTaskInProgress != null) {
@@ -731,23 +795,23 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         }
                         task = t.next;
                     }
-                    task.next = new FlushTask(null, future);
+                    task.next = new FlushTask(null, promise);
 
                     return;
                 }
-                flushNotifierAndFlush(future);
+                flushNotifierAndFlush(promise);
             } else {
                 eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
-                        flush(future);
+                        flush(promise);
                     }
                 });
             }
         }
 
-        private void flushNotifierAndFlush(ChannelFuture future) {
-            flushNotifier(future);
+        private void flushNotifierAndFlush(ChannelPromise promise) {
+            flushNotifier(promise);
             flush0();
         }
 
@@ -762,12 +826,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             return bufSize;
         }
 
-        private ChannelFuture flushNotifier(ChannelFuture future) {
+        private ChannelFuture flushNotifier(ChannelPromise promise) {
             // Append flush future to the notification list.
-            if (future != voidFuture) {
-                flushFutureNotifier.addFlushFuture(future, outboundBufSize());
+            if (promise != voidPromise) {
+                flushFutureNotifier.addFlushFuture(promise, outboundBufSize());
             }
-            return future;
+            return promise;
         }
 
         private void flush0() {
@@ -782,10 +846,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     flushFutureNotifier.notifyFlushFutures(t);
                     if (t instanceof IOException) {
                         close(voidFuture());
-                    }
-                } finally {
-                    if (!isActive()) {
-                        close(unsafe().voidFuture());
                     }
                 }
             } else {
@@ -813,14 +873,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     } catch (Throwable t) {
                         cause = t;
                     } finally {
-                        final int newSize = out.readableBytes();
-                        final int writtenBytes = oldSize - newSize;
-                        if (writtenBytes > 0) {
-                            flushFutureNotifier.increaseWriteCounter(writtenBytes);
-                            if (newSize == 0) {
-                                out.discardReadBytes();
-                            }
-                        }
+                        flushFutureNotifier.increaseWriteCounter(oldSize - out.readableBytes());
                     }
                 } else {
                     MessageBuf<Object> out = ctx.outboundMessageBuffer();
@@ -847,13 +900,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
         }
 
-        protected final boolean ensureOpen(ChannelFuture future) {
+        protected final boolean ensureOpen(ChannelPromise promise) {
             if (isOpen()) {
                 return true;
             }
 
             Exception e = new ClosedChannelException();
-            future.setFailure(e);
+            promise.setFailure(e);
             return false;
         }
 
@@ -865,28 +918,92 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
     }
 
+    /**
+     * Return {@code true} if the given {@link EventLoop} is compatible with this instance.
+     */
     protected abstract boolean isCompatible(EventLoop loop);
 
+    /**
+     * Returns the {@link SocketAddress} which is bound locally.
+     */
     protected abstract SocketAddress localAddress0();
+
+    /**
+     * Return the {@link SocketAddress} which the {@link Channel} is connected to.
+     */
     protected abstract SocketAddress remoteAddress0();
 
-    protected abstract Runnable doRegister() throws Exception;
+    /**
+     * Is called after the {@link Channel} is registered with its {@link EventLoop} as part of the register process.
+     * You can return a {@link Runnable} which will be run as post-task of the registration process.
+     *
+     * Sub-classes may override this method as it will just return {@code null}
+     */
+    protected Runnable doRegister() throws Exception {
+        return null;
+    }
+
+    /**
+     * Bind the {@link Channel} to the {@link SocketAddress}
+     */
     protected abstract void doBind(SocketAddress localAddress) throws Exception;
+
+    /**
+     * Disconnect this {@link Channel} from its remote peer
+     */
     protected abstract void doDisconnect() throws Exception;
+
+    /**
+     * Will be called before the actual close operation will be performed. Sub-classes may override this as the default
+     * is to do nothing.
+     */
     protected void doPreClose() throws Exception {
         // NOOP by default
     }
 
+    /**
+     * Close the {@link Channel}
+     */
     protected abstract void doClose() throws Exception;
-    protected abstract void doDeregister() throws Exception;
+
+    /**
+     * Deregister the {@link Channel} from its {@link EventLoop}.
+     *
+     * Sub-classes may override this method
+     */
+    protected void doDeregister() throws Exception {
+        // NOOP
+    }
+
+    /**
+     * Schedule a read operation.
+     */
+    protected abstract void doBeginRead() throws Exception;
+
+    /**
+     * Flush the content of the given {@link ByteBuf} to the remote peer.
+     *
+     * Sub-classes may override this as this implementation will just thrown an {@link UnsupportedOperationException}
+     */
     protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
         throw new UnsupportedOperationException();
     }
+
+    /**
+     * Flush the content of the given {@link MessageBuf} to the remote peer.
+     *
+     * Sub-classes may override this as this implementation will just thrown an {@link UnsupportedOperationException}
+     */
     protected void doFlushMessageBuffer(MessageBuf<Object> buf) throws Exception {
         throw new UnsupportedOperationException();
     }
 
-    protected void doFlushFileRegion(FileRegion region, ChannelFuture future) throws Exception {
+    /**
+     * Flush the content of the given {@link FileRegion} to the remote peer.
+     *
+     * Sub-classes may override this as this implementation will just thrown an {@link UnsupportedOperationException}
+     */
+    protected void doFlushFileRegion(FileRegion region, ChannelPromise promise) throws Exception {
         throw new UnsupportedOperationException();
     }
 
@@ -898,21 +1015,34 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
     }
 
+    /**
+     * Return {@code true} if a flush to the {@link Channel} is currently pending.
+     */
     protected abstract boolean isFlushPending();
 
-    private final class CloseFuture extends DefaultChannelFuture implements ChannelFuture.Unsafe {
+    private final class CloseFuture extends DefaultChannelPromise implements ChannelFuture.Unsafe {
 
         CloseFuture(AbstractChannel ch) {
-            super(ch, false);
+            super(ch);
         }
 
         @Override
-        public boolean setSuccess() {
+        public void setSuccess() {
             throw new IllegalStateException();
         }
 
         @Override
-        public boolean setFailure(Throwable cause) {
+        public void setFailure(Throwable cause) {
+            throw new IllegalStateException();
+        }
+
+        @Override
+        public boolean trySuccess() {
+            throw new IllegalStateException();
+        }
+
+        @Override
+        public boolean tryFailure(Throwable cause) {
             throw new IllegalStateException();
         }
 
@@ -922,7 +1052,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             } catch (Exception e) {
                 logger.warn("doPreClose() raised an exception.", e);
             }
-            return super.setSuccess();
+            return super.trySuccess();
         }
     }
 }

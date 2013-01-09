@@ -20,7 +20,6 @@ import io.netty.buffer.MessageBuf;
 
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.channels.Channels;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -28,7 +27,7 @@ import java.util.NoSuchElementException;
 
 /**
  * A list of {@link ChannelHandler}s which handles or intercepts
- * {@link ChannelEvent}s of a {@link Channel}.  {@link ChannelPipeline}
+ * inbound and outbount operations of a {@link Channel}.  {@link ChannelPipeline}
  * implements an advanced form of the
  * <a href="http://java.sun.com/blueprints/corej2eepatterns/Patterns/InterceptingFilter.html">Intercepting
  * Filter</a> pattern to give a user full control over how an event is handled
@@ -36,69 +35,64 @@ import java.util.NoSuchElementException;
  *
  * <h3>Creation of a pipeline</h3>
  *
- * For each new channel, a new pipeline must be created and attached to the
+ * For each new channel, a new pipeline iscreated and attached to the
  * channel.  Once attached, the coupling between the channel and the pipeline
  * is permanent; the channel cannot attach another pipeline to it nor detach
- * the current pipeline from it.
+ * the current pipeline from it. All of this is handled for you and you not need
+ * to take care of this.
  * <p>
- * The recommended way to create a new pipeline is to use the helper methods in
- * {@link Channels} rather than calling an individual implementation's
- * constructor:
- * <pre>
- * import static io.netty.channel.{@link Channels}.*;
- * {@link ChannelPipeline} pipeline = pipeline(); // same with Channels.pipeline()
- * </pre>
+ *
  *
  * <h3>How an event flows in a pipeline</h3>
  *
- * The following diagram describes how {@link ChannelEvent}s are processed by
+ * The following diagram describes how I/O is processed by
  * {@link ChannelHandler}s in a {@link ChannelPipeline} typically.
- * A {@link ChannelEvent} can be handled by either a {@link ChannelUpstreamHandler}
- * or a {@link ChannelDownstreamHandler} and be forwarded to the closest
- * handler by calling {@link ChannelHandlerContext#sendUpstream(ChannelEvent)}
- * or {@link ChannelHandlerContext#sendDownstream(ChannelEvent)}.  The meaning
- * of the event is interpreted somewhat differently depending on whether it is
- * going upstream or going downstream. Please refer to {@link ChannelEvent} for
- * more information.
+ * A I/O-operation can be handled by either a {@link ChannelInboundHandler}
+ * or a {@link ChannelOutboundHandler} and be forwarded to the closest
+ * handler by calling either one of the methods defined in the
+ * {@link ChannelInboundInvoker} interface for inbound I/O or by one
+ * of the methods defined in the {@link ChannelOutboundInvoker} interface
+ * for outbound I/O. {@link ChannelPipeline} extends both of them.
+ *
  * <pre>
- *                                       I/O Request
- *                                     via {@link Channel} or
- *                                 {@link ChannelHandlerContext}
- *                                           |
- *  +----------------------------------------+---------------+
- *  |                  ChannelPipeline       |               |
- *  |                                       \|/              |
- *  |  +----------------------+  +-----------+------------+  |
- *  |  | Upstream Handler  N  |  | Downstream Handler  1  |  |
- *  |  +----------+-----------+  +-----------+------------+  |
- *  |            /|\                         |               |
- *  |             |                         \|/              |
- *  |  +----------+-----------+  +-----------+------------+  |
- *  |  | Upstream Handler N-1 |  | Downstream Handler  2  |  |
- *  |  +----------+-----------+  +-----------+------------+  |
- *  |            /|\                         .               |
- *  |             .                          .               |
- *  |     [ sendUpstream() ]        [ sendDownstream() ]     |
- *  |     [ + VAL_INBOUND data ]        [ + VAL_OUTBOUND data  ]     |
- *  |             .                          .               |
- *  |             .                         \|/              |
- *  |  +----------+-----------+  +-----------+------------+  |
- *  |  | Upstream Handler  2  |  | Downstream Handler M-1 |  |
- *  |  +----------+-----------+  +-----------+------------+  |
- *  |            /|\                         |               |
- *  |             |                         \|/              |
- *  |  +----------+-----------+  +-----------+------------+  |
- *  |  | Upstream Handler  1  |  | Downstream Handler  M  |  |
- *  |  +----------+-----------+  +-----------+------------+  |
- *  |            /|\                         |               |
- *  +-------------+--------------------------+---------------+
- *                |                         \|/
- *  +-------------+--------------------------+---------------+
- *  |             |                          |               |
- *  |     [ Socket.read() ]          [ Socket.write() ]      |
- *  |                                                        |
- *  |  Netty Internal I/O Threads (Transport Implementation) |
- *  +--------------------------------------------------------+
+ *                                                  I/O Request
+ *                                             via {@link Channel} or
+ *                                         {@link ChannelHandlerContext}
+ *                                                       |
+ *  +----------------------------------------------------+-----------------+
+ *  |                           ChannelPipeline          |                 |
+ *  |                                                   \|/                |
+ *  |    +----------------------+            +-----------+------------+    |
+ *  |    | Inbound Handler  N   |            | Outbound Handler  1    |    |
+ *  |    +----------+-----------+            +-----------+------------+    |
+ *  |              /|\                                   |                 |
+ *  |               |                                   \|/                |
+ *  |    +----------+-----------+            +-----------+------------+    |
+ *  |    | Inbound Handler N-1  |            |   Outbound Handler  2  |    |
+ *  |    +----------+-----------+            +-----------+------------+    |
+ *  |              /|\                                   .                 |
+ *  |               .                                    .                 |
+ *  | [{@link ChannelInboundInvoker}]   [{@link ChannelOutboundInvoker}()] |
+ *  |        [ method call]                    [method call]               |
+ *  |               .                                    .                 |
+ *  |               .                                   \|/                |
+ *  |    +----------+-----------+            +-----------+------------+    |
+ *  |    | Inbound Handler  2   |            | Outbound Handler M-1   |    |
+ *  |    +----------+-----------+            +-----------+------------+    |
+ *  |              /|\                                   |                 |
+ *  |               |                                   \|/                |
+ *  |    +----------+-----------+            +-----------+------------+    |
+ *  |    | Inbound Handler  1   |            | Outbound Handler  M    |    |
+ *  |    +----------+-----------+            +-----------+------------+    |
+ *  |              /|\                                   |                 |
+ *  +---------------+------------------------------------+-----------------+
+ *                  |                                   \|/
+ *  +---------------+------------------------------------+-----------------+
+ *  |               |                                    |                 |
+ *  |       [ Socket.read() ]                     [ Socket.write() ]       |
+ *  |                                                                      |
+ *  |  Netty Internal I/O Threads (Transport Implementation)               |
+ *  +----------------------------------------------------------------------+
  * </pre>
  * An upstream event is handled by the upstream handlers in the bottom-up
  * direction as shown on the left side of the diagram.  An upstream handler
@@ -117,12 +111,12 @@ import java.util.NoSuchElementException;
  * <p>
  * For example, let us assume that we created the following pipeline:
  * <pre>
- * {@link ChannelPipeline} p = {@link Channels}.pipeline();
- * p.addLast("1", new UpstreamHandlerA());
- * p.addLast("2", new UpstreamHandlerB());
- * p.addLast("3", new DownstreamHandlerA());
- * p.addLast("4", new DownstreamHandlerB());
- * p.addLast("5", new UpstreamHandlerX());
+ * {@link ChannelPipeline} p = ...;
+ * p.addLast("1", new InboundHandlerA());
+ * p.addLast("2", new InboundHandlerB());
+ * p.addLast("3", new OutboundHandlerA());
+ * p.addLast("4", new OutboundHandlerB());
+ * p.addLast("5", new InboundOutboundHandlerX());
  * </pre>
  * In the example above, the class whose name starts with {@code Upstream} means
  * it is an upstream handler.  The class whose name starts with
@@ -133,13 +127,13 @@ import java.util.NoSuchElementException;
  * is 5, 4, 3, 2, 1.  On top of this principle, {@link ChannelPipeline} skips
  * the evaluation of certain handlers to shorten the stack depth:
  * <ul>
- * <li>3 and 4 don't implement {@link ChannelUpstreamHandler}, and therefore the
+ * <li>3 and 4 don't implement {@link ChannelInboundHandler}, and therefore the
  *     actual evaluation order of an upstream event will be: 1, 2, and 5.</li>
- * <li>1, 2, and 5 don't implement {@link ChannelDownstreamHandler}, and
+ * <li>1, 2, and 5 don't implement {@link ChannelOutboundHandler}, and
  *     therefore the actual evaluation order of a downstream event will be:
  *     4 and 3.</li>
- * <li>If 5 extended {@link SimpleChannelHandler} which implements both
- *     {@link ChannelUpstreamHandler} and {@link ChannelDownstreamHandler}, the
+ * <li>If 5 implements both
+ *     {@link ChannelInboundHandler} and {@link ChannelOutboundHandler}, the
  *     evaluation order of an upstream and a downstream event could be 125 and
  *     543 respectively.</li>
  * </ul>
@@ -164,7 +158,7 @@ import java.util.NoSuchElementException;
  * and it could be represented as shown in the following example:
  *
  * <pre>
- * {@link ChannelPipeline} pipeline = {@link Channels#pipeline() Channels.pipeline()};
+ * {@link ChannelPipeline} pipeline = ...;
  * pipeline.addLast("decoder", new MyProtocolDecoder());
  * pipeline.addLast("encoder", new MyProtocolEncoder());
  * pipeline.addLast("executor", new ExecutionHandler(...));
@@ -178,27 +172,6 @@ import java.util.NoSuchElementException;
  * encryption handler when sensitive information is about to be exchanged,
  * and remove it after the exchange.
  *
- * <h3>Pitfall</h3>
- * <p>
- * Due to the internal implementation detail of the current default
- * {@link ChannelPipeline}, the following code does not work as expected if
- * <tt>FirstHandler</tt> is the last handler in the pipeline:
- * <pre>
- * public class FirstHandler extends {@link SimpleChannelUpstreamHandler} {
- *
- *     {@code @Override}
- *     public void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
- *         // Remove this handler from the pipeline,
- *         ctx.getPipeline().remove(this);
- *         // And let SecondHandler handle the current event.
- *         ctx.getPipeline().addLast("2nd", new SecondHandler());
- *         ctx.sendUpstream(e);
- *     }
- * }
- * </pre>
- * To implement the expected behavior, you have to add <tt>SecondHandler</tt>
- * before the removal or make sure there is at least one more handler between
- * <tt>FirstHandler</tt> and <tt>SecondHandler</tt>.
  * @apiviz.landmark
  * @apiviz.composedOf io.netty.channel.ChannelHandlerContext
  * @apiviz.owns       io.netty.channel.ChannelHandler

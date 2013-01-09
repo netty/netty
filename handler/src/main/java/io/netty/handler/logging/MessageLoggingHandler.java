@@ -15,13 +15,12 @@
  */
 package io.netty.handler.logging;
 
-import io.netty.buffer.Buf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelOutboundMessageHandler;
+import io.netty.channel.ChannelPromise;
 
 public class MessageLoggingHandler
         extends LoggingHandler
@@ -48,10 +47,6 @@ public class MessageLoggingHandler
     public MessageLoggingHandler(String name) {
         super(name);
     }
-    @Override
-    public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return Unpooled.messageBuffer();
-    }
 
     @Override
     public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
@@ -59,12 +54,17 @@ public class MessageLoggingHandler
     }
 
     @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
+    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         // Nothing to free
     }
 
     @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
+    public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return Unpooled.messageBuffer();
+    }
+
+    @Override
+    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         // Nothing to free
     }
 
@@ -88,7 +88,7 @@ public class MessageLoggingHandler
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelFuture future)
+    public void flush(ChannelHandlerContext ctx, ChannelPromise promise)
             throws Exception {
         MessageBuf<Object> buf = ctx.outboundMessageBuffer();
         if (logger.isEnabled(internalLevel)) {
@@ -103,7 +103,7 @@ public class MessageLoggingHandler
             }
             out.add(o);
         }
-        ctx.flush(future);
+        ctx.flush(promise);
     }
 
     protected String formatBuffer(String message, MessageBuf<Object> buf) {

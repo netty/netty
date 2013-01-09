@@ -39,7 +39,7 @@ import io.netty.channel.ChannelHandlerContext;
  * | ABC\nDEF\r\n |
  * +--------------+
  * </pre>
- * a {@link DelimiterBasedFrameDecoder}{@code (}{@link Delimiters#lineDelimiter() Delimiters.lineDelimiter()}{@code )}
+ * a {@link DelimiterBasedFrameDecoder}({@link Delimiters#lineDelimiter() Delimiters.lineDelimiter()})
  * will choose {@code '\n'} as the first delimiter and produce two frames:
  * <pre>
  * +-----+-----+
@@ -54,7 +54,7 @@ import io.netty.channel.ChannelHandlerContext;
  * </pre>
  * @apiviz.uses io.netty.handler.codec.Delimiters - - useful
  */
-public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder<Object> {
+public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder {
 
     private final ByteBuf[] delimiters;
     private final int maxFrameLength;
@@ -209,8 +209,9 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder<Object> {
     private boolean isSubclass() {
         return getClass() != DelimiterBasedFrameDecoder.class;
     }
+
     @Override
-    public Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+    protected Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
         if (lineBasedDecoder != null) {
             return lineBasedDecoder.decode(ctx, buffer);
         }

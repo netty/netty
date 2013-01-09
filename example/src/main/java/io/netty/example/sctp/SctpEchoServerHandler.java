@@ -19,7 +19,7 @@ import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
-import io.netty.channel.socket.SctpMessage;
+import io.netty.channel.socket.sctp.SctpMessage;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;

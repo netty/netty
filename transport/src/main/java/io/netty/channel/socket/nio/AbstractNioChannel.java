@@ -18,7 +18,7 @@ package io.netty.channel.socket.nio;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -34,39 +34,36 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Abstract base class for {@link Channel} implementations which use a Selector based approach.
+ */
 public abstract class AbstractNioChannel extends AbstractChannel {
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(AbstractNioChannel.class);
 
     private final SelectableChannel ch;
-    private final int readInterestOp;
+    protected final int readInterestOp;
     private volatile SelectionKey selectionKey;
     private volatile boolean inputShutdown;
     final Queue<NioTask<SelectableChannel>> writableTasks = new ConcurrentLinkedQueue<NioTask<SelectableChannel>>();
-
-    final Runnable suspendReadTask = new Runnable() {
-        @Override
-        public void run() {
-            selectionKey().interestOps(selectionKey().interestOps() & ~readInterestOp);
-        }
-    };
-
-    final Runnable resumeReadTask = new Runnable() {
-        @Override
-        public void run() {
-            selectionKey().interestOps(selectionKey().interestOps() | readInterestOp);
-        }
-    };
 
     /**
      * The future of the current connection attempt.  If not null, subsequent
      * connection attempts will fail.
      */
-    private ChannelFuture connectFuture;
+    private ChannelPromise connectPromise;
     private ScheduledFuture<?> connectTimeoutFuture;
     private ConnectException connectTimeoutException;
 
+    /**
+     * Create a new instance
+     *
+     * @param parent            the parent {@link Channel} by which this instance was created. May be {@code null}
+     * @param id                the id of this instance or {@code null} if one should be generated
+     * @param ch                the underlying {@link SelectableChannel} on which it operates
+     * @param readInterestOp    the ops to set to receive data from the {@link SelectableChannel}
+     */
     protected AbstractNioChannel(
             Channel parent, Integer id, SelectableChannel ch, int readInterestOp) {
         super(parent, id);
@@ -117,22 +114,45 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         return (NioEventLoop) super.eventLoop();
     }
 
+    /**
+     * Return the current {@link SelectionKey}
+     */
     protected SelectionKey selectionKey() {
         assert selectionKey != null;
         return selectionKey;
     }
 
+    /**
+     * Return {@code true} if the input of this {@link Channel} is shutdown
+     */
     boolean isInputShutdown() {
         return inputShutdown;
     }
 
+    /**
+     * Shutdown the input of this {@link Channel}.
+     */
     void setInputShutdown() {
         inputShutdown = true;
     }
 
+    /**
+     * Special {@link Unsafe} sub-type which allows to access the underlying {@link SelectableChannel}
+     */
     public interface NioUnsafe extends Unsafe {
+        /**
+         * Return underlying {@link SelectableChannel}
+         */
         SelectableChannel ch();
+
+        /**
+         * Finish connect
+         */
         void finishConnect();
+
+        /**
+         * Read from underlying {@link SelectableChannel}
+         */
         void read();
     }
 
@@ -145,25 +165,25 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
         @Override
         public void connect(
-                final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelFuture future) {
+                final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
             if (eventLoop().inEventLoop()) {
-                if (!ensureOpen(future)) {
+                if (!ensureOpen(promise)) {
                     return;
                 }
 
                 try {
-                    if (connectFuture != null) {
+                    if (connectPromise != null) {
                         throw new IllegalStateException("connection attempt already made");
                     }
 
                     boolean wasActive = isActive();
                     if (doConnect(remoteAddress, localAddress)) {
-                        future.setSuccess();
+                        promise.setSuccess();
                         if (!wasActive && isActive()) {
                             pipeline().fireChannelActive();
                         }
                     } else {
-                        connectFuture = future;
+                        connectPromise = promise;
 
                         // Schedule connect timeout.
                         int connectTimeoutMillis = config().getConnectTimeoutMillis();
@@ -174,8 +194,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                                     if (connectTimeoutException == null) {
                                         connectTimeoutException = new ConnectException("connection timed out");
                                     }
-                                    ChannelFuture connectFuture = AbstractNioChannel.this.connectFuture;
-                                    if (connectFuture != null && connectFuture.setFailure(connectTimeoutException)) {
+                                    ChannelPromise connectFuture = AbstractNioChannel.this.connectPromise;
+                                    if (connectFuture != null && connectFuture.tryFailure(connectTimeoutException)) {
                                         close(voidFuture());
                                     }
                                 }
@@ -183,14 +203,14 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                         }
                     }
                 } catch (Throwable t) {
-                    future.setFailure(t);
+                    promise.setFailure(t);
                     closeIfClosed();
                 }
             } else {
                 eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
-                        connect(remoteAddress, localAddress, future);
+                        connect(remoteAddress, localAddress, promise);
                     }
                 });
             }
@@ -199,44 +219,20 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         @Override
         public void finishConnect() {
             assert eventLoop().inEventLoop();
-            assert connectFuture != null;
+            assert connectPromise != null;
             try {
                 boolean wasActive = isActive();
                 doFinishConnect();
-                connectFuture.setSuccess();
+                connectPromise.setSuccess();
                 if (!wasActive && isActive()) {
                     pipeline().fireChannelActive();
                 }
             } catch (Throwable t) {
-                connectFuture.setFailure(t);
+                connectPromise.setFailure(t);
                 closeIfClosed();
             } finally {
                 connectTimeoutFuture.cancel(false);
-                connectFuture = null;
-            }
-        }
-
-        @Override
-        public void suspendRead() {
-            EventLoop loop = eventLoop();
-            if (loop.inEventLoop()) {
-                suspendReadTask.run();
-            } else {
-                loop.execute(suspendReadTask);
-            }
-        }
-
-        @Override
-        public void resumeRead() {
-            if (inputShutdown) {
-                return;
-            }
-
-            EventLoop loop = eventLoop();
-            if (loop.inEventLoop()) {
-                resumeReadTask.run();
-            } else {
-                loop.execute(resumeReadTask);
+                connectPromise = null;
             }
         }
     }
@@ -254,17 +250,41 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     @Override
     protected Runnable doRegister() throws Exception {
-        NioEventLoop loop = (NioEventLoop) eventLoop();
-        selectionKey = javaChannel().register(
-                loop.selector, isActive() && !inputShutdown ? readInterestOp : 0, this);
+        selectionKey = javaChannel().register(eventLoop().selector, 0, this);
         return null;
     }
 
     @Override
     protected void doDeregister() throws Exception {
-        ((NioEventLoop) eventLoop()).cancel(selectionKey());
+        eventLoop().cancel(selectionKey());
     }
 
+    @Override
+    protected void doBeginRead() throws Exception {
+        if (inputShutdown) {
+            return;
+        }
+
+        final SelectionKey selectionKey = this.selectionKey;
+        if (!selectionKey.isValid()) {
+            return;
+        }
+
+        final int interestOps = selectionKey.interestOps();
+        if ((interestOps & readInterestOp) != 0) {
+            return;
+        }
+
+        this.selectionKey.interestOps(interestOps | readInterestOp);
+    }
+
+    /**
+     * Conect to the remote peer
+     */
     protected abstract boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception;
+
+    /**
+     * Finish the connect
+     */
     protected abstract void doFinishConnect() throws Exception;
 }

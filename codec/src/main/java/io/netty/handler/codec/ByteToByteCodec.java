@@ -15,14 +15,43 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.buffer.Buf;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelOutboundByteHandler;
+import io.netty.channel.ChannelPromise;
 
+/**
+ * A Codec for on-the-fly encoding/decoding of bytes.
+ *
+ * This can be though of an combination of {@link ByteToByteDecoder} and {@link ByteToByteEncoder}.
+ *
+ * Here is an example of a {@link ByteToByteCodec} which just square {@link Integer} read from a {@link ByteBuf}.
+ * <pre>
+ *     public class SquareCodec extends {@link ByteToByteCodec} {
+ *         {@code @Override}
+ *         public void decode({@link ChannelHandlerContext} ctx, {@link ByteBuf} in, {@link ByteBuf} out)
+ *                 throws {@link Exception} {
+ *             if (in.readableBytes() < 4) {
+ *                 return;
+ *             }
+ *             int value = in.readInt();
+ *             out.writeInt(value * value);
+ *         }
+ *
+ *         {@code @Overrride}
+ *         public void encode({@link ChannelHandlerContext} ctx, {@link ByteBuf} in, {@link ByteBuf} out)
+ *                 throws {@link Exception} {
+ *             if (in.readableBytes() < 4) {
+ *                 return;
+ *             }
+ *             int value = in.readInt();
+ *             out.writeInt(value / value);
+ *         }
+ *     }
+ * </pre>
+ */
 public abstract class ByteToByteCodec
         extends ChannelHandlerAdapter
         implements ChannelInboundByteHandler, ChannelOutboundByteHandler {
@@ -38,10 +67,13 @@ public abstract class ByteToByteCodec
 
     private final ByteToByteDecoder decoder = new ByteToByteDecoder() {
         @Override
-        public void decode(
-                ChannelHandlerContext ctx,
-                ByteBuf in, ByteBuf out) throws Exception {
+        public void decode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
             ByteToByteCodec.this.decode(ctx, in, out);
+        }
+
+        @Override
+        protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
+            ByteToByteCodec.this.decodeLast(ctx, in, out);
         }
     };
 
@@ -62,25 +94,44 @@ public abstract class ByteToByteCodec
 
     @Override
     public void flush(
-            ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
-        encoder.flush(ctx, future);
+            ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        encoder.flush(ctx, promise);
     }
 
     @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-        decoder.freeInboundBuffer(ctx, buf);
+    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+        decoder.discardInboundReadBytes(ctx);
     }
 
     @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-        encoder.freeOutboundBuffer(ctx, buf);
+    public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+        encoder.discardOutboundReadBytes(ctx);
     }
 
-    public abstract void encode(
-            ChannelHandlerContext ctx,
-            ByteBuf in, ByteBuf out) throws Exception;
+    @Override
+    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        decoder.freeInboundBuffer(ctx);
+    }
 
-    public abstract void decode(
-            ChannelHandlerContext ctx,
-            ByteBuf in, ByteBuf out) throws Exception;
+    @Override
+    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        encoder.freeOutboundBuffer(ctx);
+    }
+
+    /**
+     * @see {@link ByteToByteEncoder#encode(ChannelHandlerContext, ByteBuf, ByteBuf)}
+     */
+    protected abstract void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception;
+
+    /**
+     * @see {@link ByteToByteDecoder#decode(ChannelHandlerContext, ByteBuf, ByteBuf)}
+     */
+    protected abstract void decode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception;
+
+    /**
+     * @see {@link ByteToByteDecoder#decodeLast(ChannelHandlerContext, ByteBuf, ByteBuf)}
+     */
+    protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
+        decode(ctx, in, out);
+    }
 }

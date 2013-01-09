@@ -16,12 +16,10 @@
 package io.netty.channel.local;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.Buf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandler;
@@ -30,6 +28,7 @@ import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundByteHandler;
 import io.netty.channel.ChannelOutboundMessageHandler;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultEventExecutorGroup;
 import io.netty.channel.EventExecutorGroup;
 import io.netty.channel.EventLoopGroup;
@@ -344,17 +343,17 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
+        public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            // Nothing to free
+        }
+
+        @Override
         public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return Unpooled.messageBuffer();
         }
 
         @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-            // Nothing to free
-        }
-
-        @Override
-        public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) {
+        public void freeOutboundBuffer(ChannelHandlerContext ctx) {
             // Nothing to free
         }
 
@@ -367,8 +366,13 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
+        public void read(ChannelHandlerContext ctx) {
+            ctx.read();
+        }
+
+        @Override
         public void flush(ChannelHandlerContext ctx,
-                ChannelFuture future) throws Exception {
+                          ChannelPromise future) throws Exception {
             ctx.outboundMessageBuffer().clear();
             outboundThreadNames.add(Thread.currentThread().getName());
             ctx.flush(future);
@@ -401,18 +405,23 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
+        public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            // Nothing to free
+        }
+
+        @Override
         public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return ctx.alloc().buffer();
         }
 
         @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-            // Nothing to free
+        public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+            // NOOP
         }
 
         @Override
-        public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) {
-            buf.free();
+        public void freeOutboundBuffer(ChannelHandlerContext ctx) {
+            ctx.outboundByteBuffer().free();
         }
 
         @Override
@@ -447,8 +456,13 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
+        public void read(ChannelHandlerContext ctx) {
+            ctx.read();
+        }
+
+        @Override
         public void flush(ChannelHandlerContext ctx,
-                ChannelFuture future) throws Exception {
+                ChannelPromise future) throws Exception {
             Assert.assertSame(t, Thread.currentThread());
 
             // Don't let the write request go to the server-side channel - just swallow.
@@ -500,18 +514,23 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
+        public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+            ctx.inboundByteBuffer().discardSomeReadBytes();
+        }
+
+        @Override
+        public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            ctx.inboundByteBuffer().free();
+        }
+
+        @Override
         public MessageBuf<Integer> newOutboundBuffer(
                 ChannelHandlerContext ctx) throws Exception {
             return Unpooled.messageBuffer();
         }
 
         @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-            buf.free();
-        }
-
-        @Override
-        public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) {
+        public void freeOutboundBuffer(ChannelHandlerContext ctx) {
             // Nothing to free
         }
 
@@ -538,8 +557,13 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
+        public void read(ChannelHandlerContext ctx) {
+            ctx.read();
+        }
+
+        @Override
         public void flush(final ChannelHandlerContext ctx,
-                ChannelFuture future) throws Exception {
+                ChannelPromise future) throws Exception {
             Assert.assertSame(t, Thread.currentThread());
 
             MessageBuf<Integer> in = ctx.outboundMessageBuffer();
@@ -592,17 +616,17 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
+        public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            // Nothing to free
+        }
+
+        @Override
         public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return Unpooled.messageBuffer();
         }
 
         @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-            // Nothing to free
-        }
-
-        @Override
-        public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) {
+        public void freeOutboundBuffer(ChannelHandlerContext ctx) {
             // Nothing to free
         }
 
@@ -631,8 +655,13 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
+        public void read(ChannelHandlerContext ctx) {
+            ctx.read();
+        }
+
+        @Override
         public void flush(ChannelHandlerContext ctx,
-                ChannelFuture future) throws Exception {
+                ChannelPromise future) throws Exception {
             Assert.assertSame(t, Thread.currentThread());
 
             MessageBuf<Object> in = ctx.outboundMessageBuffer();
@@ -677,17 +706,17 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
+        public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            // Nothing to free
+        }
+
+        @Override
         public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return Unpooled.messageBuffer();
         }
 
         @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-            // Nothing to free
-        }
-
-        @Override
-        public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) {
+        public void freeOutboundBuffer(ChannelHandlerContext ctx) {
             // Nothing to free
         }
 
@@ -712,8 +741,13 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
+        public void read(ChannelHandlerContext ctx) {
+            ctx.read();
+        }
+
+        @Override
         public void flush(ChannelHandlerContext ctx,
-                ChannelFuture future) throws Exception {
+                ChannelPromise future) throws Exception {
             Assert.assertSame(t, Thread.currentThread());
 
             MessageBuf<Object> in = ctx.outboundMessageBuffer();

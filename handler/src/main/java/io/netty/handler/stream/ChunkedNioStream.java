@@ -48,7 +48,7 @@ public class ChunkedNioStream implements ChunkedByteInput {
      * Creates a new instance that fetches data from the specified channel.
      *
      * @param chunkSize the number of bytes to fetch on each
-     *                  {@link #nextChunk()} call
+     *                  {@link #readChunk(ByteBuf)} call
      */
     public ChunkedNioStream(ReadableByteChannel in, int chunkSize) {
         if (in == null) {
@@ -67,7 +67,7 @@ public class ChunkedNioStream implements ChunkedByteInput {
     /**
      * Returns the number of transferred bytes.
      */
-    public long getTransferredBytes() {
+    public long transferredBytes() {
         return offset;
     }
 

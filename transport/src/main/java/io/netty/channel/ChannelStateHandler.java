@@ -21,11 +21,32 @@ package io.netty.channel;
  */
 public interface ChannelStateHandler extends ChannelHandler {
 
+    /**
+     * The {@link Channel} of the {@link ChannelHandlerContext} was registered with its {@link EventLoop}
+     */
     void channelRegistered(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * The {@link Channel} of the {@link ChannelHandlerContext} was unregistered from its {@link EventLoop}
+     */
     void channelUnregistered(ChannelHandlerContext ctx) throws Exception;
 
+    /**
+     * The {@link Channel} of the {@link ChannelHandlerContext} is now active
+     */
     void channelActive(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * The {@link Channel} of the {@link ChannelHandlerContext} was registered is now inactive and reached its
+     * end of lifetime.
+     */
     void channelInactive(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * Invoked when a {@link ChannelHandlerContext#read()} is finished and the inbound buffer of this handler will not
+     * be updated until another {@link ChannelHandlerContext#read()} request is issued.
+     */
+    void channelReadSuspended(ChannelHandlerContext ctx) throws Exception;
 
     /**
      * The inbound buffer of the {@link ChannelHandlerContext} was updated with new data.

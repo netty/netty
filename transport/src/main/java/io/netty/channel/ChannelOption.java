@@ -25,6 +25,14 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+/**
+ * A {@link ChannelOption} allows to configure a {@link ChannelConfig} in a type-safe
+ * way. Which {@link ChannelOption} is supported depends on the actual implementation
+ * of {@link ChannelConfig} and may depend on the nature of the transport it belongs
+ * to.
+ *
+ * @param <T>   the type of the value which is valid for the {@link ChannelOption}
+ */
 public class ChannelOption<T> extends UniqueName {
 
     private static final ConcurrentMap<String, Boolean> names = new ConcurrentHashMap<String, Boolean>();
@@ -36,6 +44,8 @@ public class ChannelOption<T> extends UniqueName {
             new ChannelOption<Integer>("WRITE_SPIN_COUNT");
     public static final ChannelOption<Boolean> ALLOW_HALF_CLOSURE =
             new ChannelOption<Boolean>("ALLOW_HALF_CLOSURE");
+    public static final ChannelOption<Boolean> AUTO_READ =
+            new ChannelOption<Boolean>("AUTO_READ");
 
     public static final ChannelOption<Boolean> SO_BROADCAST =
             new ChannelOption<Boolean>("SO_BROADCAST");
@@ -103,10 +113,20 @@ public class ChannelOption<T> extends UniqueName {
     public static final ChannelOption<Long> AIO_WRITE_TIMEOUT =
             new ChannelOption<Long>("AIO_WRITE_TIMEOUT");
 
+    /**
+     * Create a new {@link ChannelOption} with the given name. The name needs to be
+     * unique.
+     *
+     */
     public ChannelOption(String name) {
         super(names, name);
     }
 
+    /**
+     * Validate the value which is set for the {@link ChannelOption}. Sub-classes
+     * may override this for special checks.
+     *
+     */
     public void validate(T value) {
         if (value == null) {
             throw new NullPointerException("value");

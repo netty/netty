@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedMessageChannel;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
@@ -138,7 +139,7 @@ public class WebSocketServerProtocolHandlerTest {
 
     private static class MockOutboundHandler extends ChannelOutboundMessageHandlerAdapter<Object> {
         @Override
-        public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+        public void flush(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
             //NoOp
         }
     }

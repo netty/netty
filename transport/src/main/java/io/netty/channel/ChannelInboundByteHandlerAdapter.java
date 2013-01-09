@@ -22,7 +22,7 @@ import io.netty.buffer.ByteBuf;
  * Abstract base class for {@link ChannelInboundHandlerAdapter} which should be extended by the user to
  * get notified once more data is ready to get consumed from the inbound {@link ByteBuf}.
  *
- * This implementation is a good starting point for must users.
+ * This implementation is a good starting point for most users.
  */
 public abstract class ChannelInboundByteHandlerAdapter
         extends ChannelInboundHandlerAdapter implements ChannelInboundByteHandler {
@@ -37,15 +37,18 @@ public abstract class ChannelInboundByteHandlerAdapter
     }
 
     @Override
+    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+        ctx.inboundByteBuffer().discardSomeReadBytes();
+    }
+
+    @Override
+    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        ctx.inboundByteBuffer().free();
+    }
+
+    @Override
     public final void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-        ByteBuf in = ctx.inboundByteBuffer();
-        try {
-            inboundBufferUpdated(ctx, in);
-        } finally {
-            if (!in.readable()) {
-                in.discardReadBytes();
-            }
-        }
+        inboundBufferUpdated(ctx, ctx.inboundByteBuffer());
     }
 
     /**
@@ -53,5 +56,5 @@ public abstract class ChannelInboundByteHandlerAdapter
      * with the data at this point is up to the implementation.
      * Implementations may choose to read it or just let it in the buffer to read it later.
      */
-    public abstract void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception;
+    protected abstract void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception;
 }

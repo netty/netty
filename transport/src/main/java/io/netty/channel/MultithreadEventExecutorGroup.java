@@ -22,6 +22,9 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import io.netty.monitor.CounterMonitor;
+import io.netty.monitor.MonitorName;
+import io.netty.monitor.MonitorRegistries;
 /**
  * Abstract base class for {@link EventExecutorGroup} implementations that handles their tasks with multiple threads at
  * the same time.
@@ -30,19 +33,21 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
 
     public static final int DEFAULT_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 2;
     private static final AtomicInteger poolId = new AtomicInteger();
+    private final CounterMonitor threadCounter = MonitorRegistries.instance()
+            .unique().newCounterMonitor(new MonitorName(getClass(), "total-threads"));
 
     final ChannelTaskScheduler scheduler;
     private final EventExecutor[] children;
     private final AtomicInteger childIndex = new AtomicInteger();
 
     /**
-     * Create a new intance
+     * Create a new instance.
      *
      * @param nThreads          the number of threads that will be used by this instance. Use 0 for the default number
      *                          of {@link #DEFAULT_POOL_SIZE}
      * @param threadFactory     the ThreadFactory to use, or {@code null} if the default should be used.
      * @param args              arguments which will passed to each
-     *                          {@link #newChild(java.util.concurrent.ThreadFactory, ChannelTaskScheduler, Object...)}
+     *                          {@link #newChild(ThreadFactory, ChannelTaskScheduler, Object...)}
      *                          call.
      */
     protected MultithreadEventExecutorGroup(int nThreads, ThreadFactory threadFactory, Object... args) {
@@ -57,6 +62,7 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
         if (threadFactory == null) {
             threadFactory = new DefaultThreadFactory();
         }
+        threadCounter.increment(nThreads);
 
         scheduler = new ChannelTaskScheduler(threadFactory);
 
@@ -83,6 +89,9 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
         return children[Math.abs(childIndex.getAndIncrement() % children.length)];
     }
 
+    /**
+     * Return a safe-copy of all of the children of this group.
+     */
     protected Set<EventExecutor> children() {
         Set<EventExecutor> children = Collections.newSetFromMap(new LinkedHashMap<EventExecutor, Boolean>());
         Collections.addAll(children, this.children);

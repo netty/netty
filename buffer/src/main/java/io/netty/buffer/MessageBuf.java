@@ -19,11 +19,26 @@ import java.util.Collection;
 import java.util.Queue;
 
 /**
- * Buf which operates on messages
+ * Buf which operates on messages.
  *
- * @param <T>
+ * @param <T>   the type of the messages that are hold by this {@link MessageBuf}
  */
 public interface MessageBuf<T> extends Buf, Queue<T> {
+
+    /**
+     * Drain the content of te {@link MessageBuf} to the given {@link Collection}.
+     *
+     * @param c         the {@link Collection} to drain the content to
+     * @return number   the number of objects which was transfered
+     */
     int drainTo(Collection<? super T> c);
+
+    /**
+     * Drain the content of te {@link MessageBuf} to the given {@link Collection}.
+     *
+     * @param c             the {@link Collection} to drain the content to
+     * @param maxElements   the max number of elements to drain
+     * @return number       the number of objects which was transfered
+     */
     int drainTo(Collection<? super T> c, int maxElements);
 }

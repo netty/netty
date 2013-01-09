@@ -16,22 +16,52 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.MessageBuf;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
 import io.netty.channel.ChannelHandlerUtil;
+import io.netty.channel.ChannelOutboundMessageHandler;
+import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.PartialFlushException;
 
-public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessageHandlerAdapter<I> {
+/**
+ * {@link ChannelOutboundMessageHandlerAdapter} which encodes from one message to an other message
+ *
+ * For example here is an implementation which decodes an {@link Integer} to an {@link String}.
+ *
+ * <pre>
+ *     public class IntegerToStringEncoder extends
+ *             {@link MessageToMessageEncoder}&lt;{@link Integer}&gt; {
+ *         public StringToIntegerDecoder() {
+ *             super(String.class);
+ *         }
+ *
+ *         {@code @Override}
+ *         public {@link Object} encode({@link ChannelHandlerContext} ctx, {@link Integer} message)
+ *                 throws {@link Exception} {
+ *             return message.toString();
+ *         }
+ *     }
+ * </pre>
+ *
+ */
+public abstract class MessageToMessageEncoder<I> extends ChannelOutboundMessageHandlerAdapter<I> {
 
     private final Class<?>[] acceptedMsgTypes;
 
+    /**
+     * The types which will be accepted by the decoder. If a received message is an other type it will be just forwared
+     * to the next {@link ChannelOutboundMessageHandler} in the {@link ChannelPipeline}
+     */
     protected MessageToMessageEncoder(Class<?>... acceptedMsgTypes) {
         this.acceptedMsgTypes = ChannelHandlerUtil.acceptedMessageTypes(acceptedMsgTypes);
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         MessageBuf<I> in = ctx.outboundMessageBuffer();
+        boolean encoded = false;
+
         for (;;) {
             try {
                 Object msg = in.poll();
@@ -46,24 +76,39 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
 
                 @SuppressWarnings("unchecked")
                 I imsg = (I) msg;
-                O omsg = encode(ctx, imsg);
-                if (omsg == null) {
-                    // encode() might be waiting for more inbound messages to generate
-                    // an aggregated message - keep polling.
-                    continue;
+                boolean free = true;
+                try {
+                    Object omsg = encode(ctx, imsg);
+                    if (omsg == null) {
+                        // encode() might be waiting for more inbound messages to generate
+                        // an aggregated message - keep polling.
+                        continue;
+                    }
+                    if (omsg == imsg) {
+                        free = false;
+                    }
+                    encoded = true;
+                    ChannelHandlerUtil.unfoldAndAdd(ctx, omsg, false);
+                } finally {
+                    if (free) {
+                        freeOutboundMessage(imsg);
+                    }
                 }
-
-                ChannelHandlerUtil.unfoldAndAdd(ctx, omsg, false);
             } catch (Throwable t) {
+                Throwable cause;
                 if (t instanceof CodecException) {
-                    ctx.fireExceptionCaught(t);
+                    cause = t;
                 } else {
-                    ctx.fireExceptionCaught(new EncoderException(t));
+                    cause = new EncoderException(t);
                 }
+                if (encoded) {
+                    cause = new PartialFlushException("Unable to encoded all messages", cause);
+                }
+                promise.setFailure(cause);
+                return;
             }
         }
-
-        ctx.flush(future);
+        ctx.flush(promise);
     }
 
     /**
@@ -75,5 +120,24 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
         return ChannelHandlerUtil.acceptMessage(acceptedMsgTypes, msg);
     }
 
-    public abstract O encode(ChannelHandlerContext ctx, I msg) throws Exception;
+    /**
+     * Encode from one message to an other. This method will be called till either the {@link MessageBuf} has nothing
+     * left or till this method returns {@code null}.
+     *
+     * @param ctx           the {@link ChannelHandlerContext} which this {@link MessageToMessageEncoder} belongs to
+     * @param msg           the message to encode to an other one
+     * @return message      the encoded message or {@code null} if more messages are needed be cause the implementation
+     *                      needs to do some kind of aggragation
+     * @throws Exception    is thrown if an error accour
+     */
+    protected abstract Object encode(ChannelHandlerContext ctx, I msg) throws Exception;
+
+    /**
+     * Is called after a message was processed via {@link #encode(ChannelHandlerContext, Object)} to free
+     * up any resources that is held by the inbound message. You may want to override this if your implementation
+     * just pass-through the input message or need it for later usage.
+     */
+    protected void freeOutboundMessage(I msg) throws Exception {
+        ChannelHandlerUtil.freeMessage(msg);
+    }
 }

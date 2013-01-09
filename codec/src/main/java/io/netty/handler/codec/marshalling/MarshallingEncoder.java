@@ -50,7 +50,7 @@ public class MarshallingEncoder extends MessageToByteEncoder<Object> {
     }
 
     @Override
-    public void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
         Marshaller marshaller = provider.getMarshaller(ctx);
         int lengthPos = out.writerIndex();
         out.writeBytes(LENGTH_PLACEHOLDER);

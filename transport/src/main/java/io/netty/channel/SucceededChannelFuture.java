@@ -15,16 +15,12 @@
  */
 package io.netty.channel;
 
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-
 /**
  * The {@link CompleteChannelFuture} which is succeeded already.  It is
  * recommended to use {@link Channel#newSucceededFuture()} instead of
  * calling the constructor of this future.
  */
-public class SucceededChannelFuture extends CompleteChannelFuture {
+final class SucceededChannelFuture extends CompleteChannelFuture {
 
     /**
      * Creates a new instance.
@@ -46,7 +42,7 @@ public class SucceededChannelFuture extends CompleteChannelFuture {
     }
 
     @Override
-    public ChannelFuture sync() throws InterruptedException {
+    public ChannelFuture sync() {
         return this;
     }
 
@@ -54,16 +50,4 @@ public class SucceededChannelFuture extends CompleteChannelFuture {
     public ChannelFuture syncUninterruptibly() {
         return this;
     }
-
-    @Override
-    public Void get() throws InterruptedException, ExecutionException {
-        return null;
-    }
-
-    @Override
-    public Void get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException,
-            TimeoutException {
-        return null;
-    }
-
 }

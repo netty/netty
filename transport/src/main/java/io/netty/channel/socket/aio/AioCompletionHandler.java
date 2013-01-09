@@ -22,8 +22,6 @@ import java.nio.channels.CompletionHandler;
 
 /**
  * Special {@link CompletionHandler} which makes sure that the callback methods gets executed in the {@link EventLoop}
- *
- *
  */
 abstract class AioCompletionHandler<V, A extends Channel> implements CompletionHandler<V, A> {
 

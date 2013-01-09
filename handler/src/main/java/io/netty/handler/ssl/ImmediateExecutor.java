@@ -20,7 +20,7 @@ import java.util.concurrent.Executor;
 /**
  * {@link Executor} which executes the command in the caller thread.
  */
-final class ImmediateExecutor implements Executor {
+public final class ImmediateExecutor implements Executor {
 
     /**
      * The default instance.
@@ -30,5 +30,8 @@ final class ImmediateExecutor implements Executor {
     @Override
     public void execute(Runnable command) {
         command.run();
+    }
+
+    private ImmediateExecutor() {
     }
 }

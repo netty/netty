@@ -59,7 +59,10 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
     public PooledByteBufAllocator(
             boolean directByDefault, int nHeapArena, int nDirectArena, int pageSize, int maxOrder) {
-        super(validateAndCalculateChunkSize(pageSize, maxOrder), directByDefault);
+        super(directByDefault);
+
+        final int chunkSize = validateAndCalculateChunkSize(pageSize, maxOrder);
+
         if (nHeapArena <= 0) {
             throw new IllegalArgumentException("nHeapArena: " + nHeapArena + " (expected: 1+)");
         }
@@ -68,7 +71,6 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         }
 
         int pageShifts = validateAndCalculatePageShifts(pageSize);
-        int chunkSize = bufferMaxCapacity();
 
         heapArenas = newArenaArray(nHeapArena);
         for (int i = 0; i < heapArenas.length; i ++) {
@@ -147,9 +149,15 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     public String toString() {
         StringBuilder buf = new StringBuilder();
         buf.append(heapArenas.length);
-        buf.append(" arena(s):");
+        buf.append(" heap arena(s):");
         buf.append(StringUtil.NEWLINE);
         for (PoolArena<byte[]> a: heapArenas) {
+            buf.append(a);
+        }
+        buf.append(directArenas.length);
+        buf.append(" direct arena(s):");
+        buf.append(StringUtil.NEWLINE);
+        for (PoolArena<ByteBuffer> a: directArenas) {
             buf.append(a);
         }
         return buf.toString();

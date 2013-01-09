@@ -37,43 +37,43 @@ public interface CounterMonitor {
         }
 
         @Override
-        public void inc(long delta) {
+        public void increment(long delta) {
         }
 
         @Override
-        public void inc() {
+        public void increment() {
         }
 
         @Override
-        public void decr(long delta) {
+        public void decrement(long delta) {
         }
 
         @Override
-        public void decr() {
+        public void decrement() {
         }
     };
 
     /**
      * Increment this counter by 1.
      */
-    void inc();
+    void increment();
 
     /**
      * Increment this counter by the supplied {@code delta}.
      * @param delta The delta to apply
      */
-    void inc(long delta);
+    void increment(long delta);
 
     /**
      * Decrement this counter by 1.
      */
-    void decr();
+    void decrement();
 
     /**
      * Decrement this counter by the supplied {@code delta}.
      * @param delta The delta to apply
      */
-    void decr(long delta);
+    void decrement(long delta);
 
     /**
      * Reset this counter to its initial state.

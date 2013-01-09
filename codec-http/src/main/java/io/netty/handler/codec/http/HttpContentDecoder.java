@@ -24,7 +24,7 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 /**
  * Decodes the content of the received {@link HttpRequest} and {@link HttpChunk}.
  * The original content is replaced with the new content decoded by the
- * {@link DecoderEmbedder}, which is created by {@link #newContentDecoder(String)}.
+ * {@link EmbeddedByteChannel}, which is created by {@link #newContentDecoder(String)}.
  * Once decoding is finished, the value of the <tt>'Content-Encoding'</tt>
  * header is set to the target content encoding, as returned by {@link #getTargetContentEncoding(String)}.
  * Also, the <tt>'Content-Length'</tt> header is updated to the length of the
@@ -40,7 +40,7 @@ import io.netty.handler.codec.MessageToMessageDecoder;
  * so that this handler can intercept HTTP requests after {@link HttpMessageDecoder}
  * converts {@link ByteBuf}s into HTTP requests.
  */
-public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object, Object> {
+public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object> {
 
     private EmbeddedByteChannel decoder;
 
@@ -52,7 +52,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
     }
 
     @Override
-    public Object decode(ChannelHandlerContext ctx, Object msg) throws Exception {
+    protected Object decode(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().getCode() == 100) {
             // 100-continue response must be passed through.
             return msg;
@@ -75,9 +75,14 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
             if (hasContent && (decoder = newContentDecoder(contentEncoding)) != null) {
                 // Decode the content and remove or replace the existing headers
                 // so that the message looks like a decoded message.
-                m.setHeader(
-                        HttpHeaders.Names.CONTENT_ENCODING,
-                        getTargetContentEncoding(contentEncoding));
+                String targetContentEncoding = getTargetContentEncoding(contentEncoding);
+                if (HttpHeaders.Values.IDENTITY.equals(targetContentEncoding)) {
+                    // Do NOT set the 'Content-Encoding' header if the target encoding is 'identity'
+                    // as per: http://tools.ietf.org/html/rfc2616#section-14.11
+                    m.removeHeader(HttpHeaders.Names.CONTENT_ENCODING);
+                } else {
+                    m.setHeader(HttpHeaders.Names.CONTENT_ENCODING, targetContentEncoding);
+                }
 
                 if (m.getTransferEncoding().isSingle()) {
                     ByteBuf content = m.getContent();
@@ -127,11 +132,11 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
     }
 
     /**
-     * Returns a new {@link DecoderEmbedder} that decodes the HTTP message
+     * Returns a new {@link EmbeddedByteChannel} that decodes the HTTP message
      * content encoded in the specified <tt>contentEncoding</tt>.
      *
      * @param contentEncoding the value of the {@code "Content-Encoding"} header
-     * @return a new {@link DecoderEmbedder} if the specified encoding is supported.
+     * @return a new {@link EmbeddedByteChannel} if the specified encoding is supported.
      *         {@code null} otherwise (alternatively, you can throw an exception
      *         to block unknown encoding).
      */
@@ -145,6 +150,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object,
      * @param contentEncoding the value of the {@code "Content-Encoding"} header
      * @return the expected content encoding of the new content
      */
+    @SuppressWarnings("unused")
     protected String getTargetContentEncoding(String contentEncoding) throws Exception {
         return HttpHeaders.Values.IDENTITY;
     }

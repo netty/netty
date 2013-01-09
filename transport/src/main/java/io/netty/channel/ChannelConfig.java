@@ -80,12 +80,12 @@ public interface ChannelConfig {
      * Sets a configuration property with the specified name and value.
      * To override this method properly, you must call the super class:
      * <pre>
-     * public boolean setOption(String name, Object value) {
-     *     if (super.setOption(name, value)) {
+     * public boolean setOption(ChannelOption&lt;T&gt; option, T value) {
+     *     if (super.setOption(option, value)) {
      *         return true;
      *     }
      *
-     *     if (name.equals("additionalOption")) {
+     *     if (option.equals(additionalOption)) {
      *         ....
      *         return true;
      *     }
@@ -149,4 +149,16 @@ public interface ChannelConfig {
      * to allocate buffers.
      */
     ChannelConfig setAllocator(ByteBufAllocator allocator);
+
+    /**
+     * Returns {@code true} if and only if {@link ChannelHandlerContext#read()} will be invoked automatically so that
+     * a user application doesn't need to call it at all. The default value is {@code true}.
+     */
+    boolean isAutoRead();
+
+    /**
+     * Sets if {@link ChannelHandlerContext#read()} will be invoked automatically so that a user application doesn't
+     * need to call it at all. The default value is {@code true}.
+     */
+    ChannelConfig setAutoRead(boolean autoRead);
 }

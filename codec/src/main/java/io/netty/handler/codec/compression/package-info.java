@@ -16,8 +16,9 @@
 
 /**
  * Encoder and decoder which compresses and decompresses {@link io.netty.buffer.ByteBuf}s
- * in a compression format such as <a href="http://en.wikipedia.org/wiki/Zlib">zlib</a>
- * and <a href="http://en.wikipedia.org/wiki/Gzip">gzip</a>.
+ * in a compression format such as <a href="http://en.wikipedia.org/wiki/Zlib">zlib</a>,
+ * <a href="http://en.wikipedia.org/wiki/Gzip">gzip</a>, and
+ * <a href="http://code.google.com/p/snappy/">Snappy</a>.
  *
  * @apiviz.exclude \.codec\.(?!compression)[a-z0-9]+\.
  * @apiviz.exclude ^java\.lang\.

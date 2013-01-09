@@ -24,7 +24,7 @@ import io.netty.util.CharsetUtil;
  * Decodes {@link ByteBuf}s into {@link SocksAuthRequest}.
  * Before returning SocksRequest decoder removes itself from pipeline.
  */
-public class SocksAuthRequestDecoder extends ReplayingDecoder<SocksRequest, SocksAuthRequestDecoder.State> {
+public class SocksAuthRequestDecoder extends ReplayingDecoder<SocksAuthRequestDecoder.State> {
     private static final String name = "SOCKS_AUTH_REQUEST_DECODER";
 
     public static String getName() {
@@ -42,7 +42,7 @@ public class SocksAuthRequestDecoder extends ReplayingDecoder<SocksRequest, Sock
     }
 
     @Override
-    public SocksRequest decode(ChannelHandlerContext ctx, ByteBuf byteBuf) throws Exception {
+    public Object decode(ChannelHandlerContext ctx, ByteBuf byteBuf) throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
                 version = SocksMessage.SubnegotiationVersion.fromByte(byteBuf.readByte());

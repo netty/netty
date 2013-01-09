@@ -19,23 +19,24 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
-import io.netty.handler.codec.Delimiters;
+import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.MessageToMessageDecoder;
 
 import java.nio.charset.Charset;
 
 /**
  * Decodes a received {@link ByteBuf} into a {@link String}.  Please
- * note that this decoder must be used with a proper {@link FrameDecoder}
- * such as {@link DelimiterBasedFrameDecoder} if you are using a stream-based
- * transport such as TCP/IP.  A typical setup for a text-based line protocol
- * in a TCP/IP socket would be:
+ * note that this decoder must be used with a proper {@link ByteToMessageDecoder}
+ * such as {@link DelimiterBasedFrameDecoder} or {@link LineBasedFrameDecoder}
+ * if you are using a stream-based transport such as TCP/IP.  A typical setup for a
+ * text-based line protocol in a TCP/IP socket would be:
  * <pre>
  * {@link ChannelPipeline} pipeline = ...;
  *
  * // Decoders
- * pipeline.addLast("frameDecoder", new {@link DelimiterBasedFrameDecoder}(80, {@link Delimiters#lineDelimiter()}));
+ * pipeline.addLast("frameDecoder", new {@link LineBasedFrameDecoder}(80));
  * pipeline.addLast("stringDecoder", new {@link StringDecoder}(CharsetUtil.UTF_8));
  *
  * // Encoder
@@ -44,15 +45,14 @@ import java.nio.charset.Charset;
  * and then you can use a {@link String} instead of a {@link ByteBuf}
  * as a message:
  * <pre>
- * void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
- *     String msg = (String) e.getMessage();
+ * void messageReceived({@link ChannelHandlerContext} ctx, {@link String} msg) {
  *     ch.write("Did you say '" + msg + "'?\n");
  * }
  * </pre>
  * @apiviz.landmark
  */
 @Sharable
-public class StringDecoder extends MessageToMessageDecoder<ByteBuf, String> {
+public class StringDecoder extends MessageToMessageDecoder<ByteBuf> {
 
     // TODO Use CharsetDecoder instead.
     private final Charset charset;
@@ -77,7 +77,7 @@ public class StringDecoder extends MessageToMessageDecoder<ByteBuf, String> {
     }
 
     @Override
-    public String decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+    protected Object decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
         return msg.toString(charset);
     }
 }

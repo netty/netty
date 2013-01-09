@@ -21,6 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.SocketChannelConfig;
@@ -32,6 +33,9 @@ import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 
+/**
+ * {@link io.netty.channel.socket.SocketChannel} which uses NIO selector based implementation.
+ */
 public class NioSocketChannel extends AbstractNioByteChannel implements io.netty.channel.socket.SocketChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.BYTE, false);
@@ -48,14 +52,27 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         }
     }
 
+    /**
+     * Create a new instance
+     */
     public NioSocketChannel() {
         this(newSocket());
     }
 
+    /**
+     * Create a new instance using the given {@link SocketChannel}.
+     */
     public NioSocketChannel(SocketChannel socket) {
         this(null, null, socket);
     }
 
+    /**
+     * Create a new instance
+     *
+     * @param parent    the {@link Channel} which created this instance or {@code null} if it was created by the user
+     * @param id        the id to use for this instance or {@code null} if a new one should be generated
+     * @param socket    the {@link SocketChannel} which will be used
+     */
     public NioSocketChannel(Channel parent, Integer id, SocketChannel socket) {
         super(parent, id, socket);
         try {
@@ -73,7 +90,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             throw new ChannelException("Failed to enter non-blocking mode.", e);
         }
 
-        config = new DefaultSocketChannelConfig(socket.socket());
+        config = new DefaultSocketChannelConfig(this, socket.socket());
     }
 
     @Override
@@ -109,28 +126,28 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     @Override
     public ChannelFuture shutdownOutput() {
-        return shutdownOutput(newFuture());
+        return shutdownOutput(newPromise());
     }
 
     @Override
-    public ChannelFuture shutdownOutput(final ChannelFuture future) {
+    public ChannelFuture shutdownOutput(final ChannelPromise promise) {
         EventLoop loop = eventLoop();
         if (loop.inEventLoop()) {
             try {
                 javaChannel().socket().shutdownOutput();
-                future.setSuccess();
+                promise.setSuccess();
             } catch (Throwable t) {
-                future.setFailure(t);
+                promise.setFailure(t);
             }
         } else {
             loop.execute(new Runnable() {
                 @Override
                 public void run() {
-                    shutdownOutput(future);
+                    shutdownOutput(promise);
                 }
             });
         }
-        return future;
+        return promise;
     }
 
     @Override
@@ -157,9 +174,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         boolean success = false;
         try {
             boolean connected = javaChannel().connect(remoteAddress);
-            if (connected) {
-                selectionKey().interestOps(SelectionKey.OP_READ);
-            } else {
+            if (!connected) {
                 selectionKey().interestOps(SelectionKey.OP_CONNECT);
             }
             success = true;
@@ -176,7 +191,6 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         if (!javaChannel().finishConnect()) {
             throw new Error();
         }
-        selectionKey().interestOps(SelectionKey.OP_READ);
     }
 
     @Override
@@ -197,10 +211,6 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     @Override
     protected int doWriteBytes(ByteBuf buf, boolean lastSpin) throws Exception {
         final int expectedWrittenBytes = buf.readableBytes();
-
-        // FIXME: This is not as efficient as Netty 3's SendBufferPool if heap buffer is used
-        //        because of potentially unwanted repetitive memory copy in case of
-        //        a slow connection or a large output buffer that triggers OP_WRITE.
         final int writtenBytes = buf.readBytes(javaChannel(), expectedWrittenBytes);
 
         final SelectionKey key = selectionKey();

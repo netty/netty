@@ -23,12 +23,19 @@ import io.netty.channel.Channel;
  * @apiviz.landmark
  * @apiviz.has io.netty.handler.timeout.IdleState oneway - -
  */
-public class IdleStateEvent {
+public final class IdleStateEvent {
 
     private final IdleState state;
     private final int count;
     private final long durationMillis;
 
+    /**
+     * Create a new instance
+     *
+     * @param state             the detailed idle state.
+     * @param count             the count how often this kind of {@IdleStateEvent} was fired before
+     * @param durationMillis    the duration which caused the {@link IdleStateEvent} to get fired in milliseconds
+     */
     public IdleStateEvent(IdleState state, int count, long durationMillis) {
         if (state == null) {
             throw new NullPointerException("state");
@@ -53,10 +60,16 @@ public class IdleStateEvent {
         return state;
     }
 
+    /**
+     * Return the count how often this kind of {@IdleStateEvent} was fired before.
+     */
     public int count() {
         return count;
     }
 
+    /**
+     * Return the duration which caused the {@link IdleStateEvent} to get fired in milliseconds.
+     */
     public long durationMillis() {
         return durationMillis;
     }

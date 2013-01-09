@@ -17,18 +17,32 @@ package io.netty.channel.socket.oio;
 
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
-abstract class AbstractOioChannel extends AbstractChannel {
+/**
+ * Abstract base class for {@link Channel} implementations that use Old-Blocking-IO
+ */
+public abstract class AbstractOioChannel extends AbstractChannel {
 
-    static final int SO_TIMEOUT = 1000;
+    protected static final int SO_TIMEOUT = 1000;
 
-    protected volatile boolean readSuspended;
+    private boolean readInProgress;
 
+    private final Runnable readTask = new Runnable() {
+        @Override
+        public void run() {
+            readInProgress = false;
+            doRead();
+        }
+    };
+
+    /**
+     * @see AbstractChannel#AbstractChannel(Channel, Integer)
+     */
     protected AbstractOioChannel(Channel parent, Integer id) {
         super(parent, id);
     }
@@ -44,53 +58,39 @@ abstract class AbstractOioChannel extends AbstractChannel {
     }
 
     @Override
-    public OioUnsafe unsafe() {
-        return (OioUnsafe) super.unsafe();
+    protected AbstractUnsafe newUnsafe() {
+        return new DefaultOioUnsafe();
     }
 
-    public interface OioUnsafe extends Unsafe {
-        void read();
-    }
-
-    abstract class AbstractOioUnsafe extends AbstractUnsafe implements OioUnsafe {
+    private final class DefaultOioUnsafe extends AbstractUnsafe {
         @Override
         public void connect(
                 final SocketAddress remoteAddress,
-                final SocketAddress localAddress, final ChannelFuture future) {
+                final SocketAddress localAddress, final ChannelPromise promise) {
             if (eventLoop().inEventLoop()) {
-                if (!ensureOpen(future)) {
+                if (!ensureOpen(promise)) {
                     return;
                 }
 
                 try {
                     boolean wasActive = isActive();
                     doConnect(remoteAddress, localAddress);
-                    future.setSuccess();
+                    promise.setSuccess();
                     if (!wasActive && isActive()) {
                         pipeline().fireChannelActive();
                     }
                 } catch (Throwable t) {
-                    future.setFailure(t);
+                    promise.setFailure(t);
                     closeIfClosed();
                 }
             } else {
                 eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
-                        connect(remoteAddress, localAddress, future);
+                        connect(remoteAddress, localAddress, promise);
                     }
                 });
             }
-        }
-
-        @Override
-        public void suspendRead() {
-            readSuspended = true;
-        }
-
-        @Override
-        public void resumeRead() {
-            readSuspended = false;
         }
     }
 
@@ -100,21 +100,25 @@ abstract class AbstractOioChannel extends AbstractChannel {
     }
 
     @Override
-    protected Runnable doRegister() throws Exception {
-        // NOOP
-        return null;
-    }
-
-    @Override
-    protected void doDeregister() throws Exception {
-        // NOOP
-    }
-
-    @Override
     protected boolean isFlushPending() {
         return false;
     }
 
+    /**
+     * Connect to the remote peer using the given localAddress if one is specified or {@code null} otherwise.
+     */
     protected abstract void doConnect(
             SocketAddress remoteAddress, SocketAddress localAddress) throws Exception;
+
+    @Override
+    protected void doBeginRead() throws Exception {
+        if (readInProgress) {
+            return;
+        }
+
+        readInProgress = true;
+        eventLoop().execute(readTask);
+    }
+
+    protected abstract void doRead();
 }

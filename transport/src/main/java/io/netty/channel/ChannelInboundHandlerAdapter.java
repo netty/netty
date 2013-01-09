@@ -18,17 +18,26 @@ package io.netty.channel;
 
 import io.netty.buffer.Buf;
 
+/**
+ * Abstract base class for a {@link ChannelHandler} that handles inbound data.
+ *
+ * Most of the times you either want to extend {@link ChannelInboundByteHandlerAdapter} or
+ * {@link ChannelInboundMessageHandlerAdapter}.
+ */
 public abstract class ChannelInboundHandlerAdapter
         extends ChannelStateHandlerAdapter implements ChannelInboundHandler {
 
-    @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-        buf.free();
-    }
-
     /**
-     * Does nothing by default. Sub-classes may override this if needed.
+     * Calls {@link Buf#free()} to free the buffer, sub-classes may override this.
+     *
+     * When doing so be aware that you will need to handle all the resource management by your own.
      */
     @Override
-    public abstract void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception;
+    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        if (ctx.hasInboundByteBuffer()) {
+            ctx.inboundByteBuffer().free();
+        } else {
+            ctx.inboundMessageBuffer().free();
+        }
+    }
 }

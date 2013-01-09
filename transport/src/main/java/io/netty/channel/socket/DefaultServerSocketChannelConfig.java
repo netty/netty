@@ -15,17 +15,17 @@
  */
 package io.netty.channel.socket;
 
-import static io.netty.channel.ChannelOption.*;
-
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
-import io.netty.util.NetworkConstants;
+import io.netty.util.NetUtil;
 
 import java.net.ServerSocket;
 import java.net.SocketException;
 import java.util.Map;
+
+import static io.netty.channel.ChannelOption.*;
 
 /**
  * The default {@link ServerSocketChannelConfig} implementation.
@@ -33,17 +33,18 @@ import java.util.Map;
 public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
                                               implements ServerSocketChannelConfig {
 
-    private final ServerSocket socket;
-    private volatile int backlog = NetworkConstants.SOMAXCONN;
+    private final ServerSocket javaSocket;
+    private volatile int backlog = NetUtil.SOMAXCONN;
 
     /**
      * Creates a new instance.
      */
-    public DefaultServerSocketChannelConfig(ServerSocket socket) {
-        if (socket == null) {
-            throw new NullPointerException("socket");
+    public DefaultServerSocketChannelConfig(ServerSocketChannel channel, ServerSocket javaSocket) {
+        super(channel);
+        if (javaSocket == null) {
+            throw new NullPointerException("javaSocket");
         }
-        this.socket = socket;
+        this.javaSocket = javaSocket;
     }
 
     @Override
@@ -87,7 +88,7 @@ public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
     @Override
     public boolean isReuseAddress() {
         try {
-            return socket.getReuseAddress();
+            return javaSocket.getReuseAddress();
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
@@ -96,7 +97,7 @@ public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
     @Override
     public ServerSocketChannelConfig setReuseAddress(boolean reuseAddress) {
         try {
-            socket.setReuseAddress(reuseAddress);
+            javaSocket.setReuseAddress(reuseAddress);
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
@@ -106,7 +107,7 @@ public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
     @Override
     public int getReceiveBufferSize() {
         try {
-            return socket.getReceiveBufferSize();
+            return javaSocket.getReceiveBufferSize();
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
@@ -115,7 +116,7 @@ public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
     @Override
     public ServerSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         try {
-            socket.setReceiveBufferSize(receiveBufferSize);
+            javaSocket.setReceiveBufferSize(receiveBufferSize);
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
@@ -124,7 +125,7 @@ public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public ServerSocketChannelConfig setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
-        socket.setPerformancePreferences(connectionTime, latency, bandwidth);
+        javaSocket.setPerformancePreferences(connectionTime, latency, bandwidth);
         return this;
     }
 
@@ -155,5 +156,10 @@ public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
     @Override
     public ServerSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
         return (ServerSocketChannelConfig) super.setAllocator(allocator);
+    }
+
+    @Override
+    public ServerSocketChannelConfig setAutoRead(boolean autoRead) {
+        return (ServerSocketChannelConfig) super.setAutoRead(autoRead);
     }
 }

@@ -17,83 +17,157 @@ package io.netty.channel;
 
 import java.net.SocketAddress;
 
-public class ChannelOperationHandlerAdapter implements ChannelOperationHandler {
+public abstract class ChannelOperationHandlerAdapter implements ChannelOperationHandler {
 
+    /**
+     * Do nothing by default, sub-classes may override this method.
+     */
     @Override
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
         // NOOP
     }
 
+    /**
+     * Do nothing by default, sub-classes may override this method.
+     */
     @Override
     public void afterAdd(ChannelHandlerContext ctx) throws Exception {
         // NOOP
     }
 
+    /**
+     * Do nothing by default, sub-classes may override this method.
+     */
     @Override
     public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
         // NOOP
     }
 
+    /**
+     * Do nothing by default, sub-classes may override this method.
+     */
     @Override
     public void afterRemove(ChannelHandlerContext ctx) throws Exception {
         // NOOP
     }
 
+    /**
+     * Calls {@link ChannelHandlerContext#fireExceptionCaught(Throwable)} to forward
+     * to the next {@link ChannelHandler} in the {@link ChannelPipeline}.
+     *
+     * Sub-classes may override this method to change behavior.
+     */
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
             throws Exception {
         ctx.fireExceptionCaught(cause);
     }
 
+    /**
+     * Calls {@link ChannelHandlerContext#fireUserEventTriggered(Object)} to forward
+     * to the next {@link ChannelHandler} in the {@link ChannelPipeline}.
+     *
+     * Sub-classes may override this method to change behavior.
+     */
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt)
             throws Exception {
         ctx.fireUserEventTriggered(evt);
     }
 
+    /**
+     * Calls {@link ChannelHandlerContext#bind(SocketAddress, ChannelPromise)} to forward
+     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
+     *
+     * Sub-classes may override this method to change behavior.
+     */
     @Override
     public void bind(ChannelHandlerContext ctx, SocketAddress localAddress,
-            ChannelFuture future) throws Exception {
-        ctx.bind(localAddress, future);
+            ChannelPromise promise) throws Exception {
+        ctx.bind(localAddress, promise);
     }
 
+    /**
+     * Calls {@link ChannelHandlerContext#connect(SocketAddress, SocketAddress, ChannelPromise)} to forward
+     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
+     *
+     * Sub-classes may override this method to change behavior.
+     */
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-            SocketAddress localAddress, ChannelFuture future) throws Exception {
-        ctx.connect(remoteAddress, localAddress, future);
+            SocketAddress localAddress, ChannelPromise promise) throws Exception {
+        ctx.connect(remoteAddress, localAddress, promise);
     }
 
+    /**
+     * Calls {@link ChannelHandlerContext#disconnect(ChannelPromise)} to forward
+     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
+     *
+     * Sub-classes may override this method to change behavior.
+     */
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelFuture future)
+    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise)
             throws Exception {
-        ctx.disconnect(future);
+        ctx.disconnect(promise);
     }
 
+    /**
+     * Calls {@link ChannelHandlerContext#close(ChannelPromise)} to forward
+     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
+     *
+     * Sub-classes may override this method to change behavior.
+     */
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelFuture future)
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise)
             throws Exception {
-        ctx.close(future);
+        ctx.close(promise);
     }
 
+    /**
+     * Calls {@link ChannelHandlerContext#close(ChannelPromise)} to forward
+     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
+     *
+     * Sub-classes may override this method to change behavior.
+     */
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelFuture future)
+    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise)
             throws Exception {
-        ctx.deregister(future);
+        ctx.deregister(promise);
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelFuture future)
+    public void read(ChannelHandlerContext ctx) {
+        ctx.read();
+    }
+
+    /**
+     * Calls {@link ChannelHandlerContext#flush(ChannelPromise)} to forward
+     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
+     *
+     * Sub-classes may override this method to change behavior.
+     *
+     * Be aware that if your class also implement {@link ChannelOutboundHandler} it need to {@code override} this
+     * method!
+     */
+    @Override
+    public void flush(ChannelHandlerContext ctx, ChannelPromise promise)
             throws Exception {
         if (this instanceof ChannelOutboundHandler) {
             throw new IllegalStateException(
                     "flush(...) must be overridden by " + getClass().getName() +
                     ", which implements " + ChannelOutboundHandler.class.getSimpleName());
         }
-        ctx.flush(future);
+        ctx.flush(promise);
     }
 
+    /**
+     * Calls {@link ChannelHandlerContext#sendFile(FileRegion, ChannelPromise)} to forward
+     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
+     *
+     * Sub-classes may override this method to change behavior.
+     */
     @Override
-    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelFuture future) throws Exception {
-        ctx.sendFile(region, future);
+    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise promise) throws Exception {
+        ctx.sendFile(region, promise);
     }
 }

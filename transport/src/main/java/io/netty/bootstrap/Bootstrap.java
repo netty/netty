@@ -20,6 +20,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.AttributeKey;
@@ -50,7 +51,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap> {
     }
 
     /**
-     * See {@link #remoteAddress(SocketAddress)}
+     * @see {@link #remoteAddress(SocketAddress)}
      */
     public Bootstrap remoteAddress(String host, int port) {
         remoteAddress = new InetSocketAddress(host, port);
@@ -58,7 +59,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap> {
     }
 
     /**
-     * See {@link #remoteAddress(SocketAddress)}
+     * @see {@link #remoteAddress(SocketAddress)}
      */
     public Bootstrap remoteAddress(InetAddress host, int port) {
         remoteAddress = new InetSocketAddress(host, port);
@@ -66,7 +67,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap> {
     }
 
     @Override
-    public ChannelFuture bind(ChannelFuture future) {
+    public ChannelFuture bind(ChannelPromise future) {
         validate(future);
         if (localAddress() == null) {
             throw new IllegalStateException("localAddress not set");
@@ -92,13 +93,13 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap> {
     public ChannelFuture connect() {
         validate();
         Channel channel = factory().newChannel();
-        return connect(channel.newFuture());
+        return connect(channel.newPromise());
     }
 
     /**
-     * See {@link #connect()}
+     * @see {@link #connect()}
      */
-    public ChannelFuture connect(ChannelFuture future) {
+    public ChannelFuture connect(ChannelPromise future) {
         validate(future);
         if (remoteAddress == null) {
             throw new IllegalStateException("remoteAddress not set");
@@ -166,6 +167,8 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap> {
     /**
      * Create a new {@link Bootstrap} which has the identical configuration with this {@link Bootstrap}.
      * This method is useful when you make multiple connections with similar settings.
+     *
+     * Be aware that if you call {@link #shutdown()} on one of them it will shutdown shared resources.
      */
     public Bootstrap duplicate() {
         validate();

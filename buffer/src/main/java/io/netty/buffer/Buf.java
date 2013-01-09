@@ -15,22 +15,12 @@
  */
 package io.netty.buffer;
 
-public interface Buf {
+/**
+ * A buffer to operate on
+ */
+public interface Buf extends Freeable {
     /**
      * The BufType which will be handled by the Buf implementation
      */
     BufType type();
-
-    /**
-     * Returns {@code true} if and only if this buffer has been deallocated by {@link #free()}.
-     */
-    boolean isFreed();
-
-    /**
-     * Deallocates the internal memory block of this buffer or returns it to the allocator or pool it came from.
-     * The result of accessing a released buffer is unspecified and can even cause JVM crash.
-     *
-     * @throws UnsupportedOperationException if this buffer is derived
-     */
-    void free();
 }

@@ -15,14 +15,12 @@
  */
 package io.netty.channel.socket.aio;
 
-import static io.netty.channel.ChannelOption.*;
-
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.socket.ServerSocketChannelConfig;
-import io.netty.util.NetworkConstants;
+import io.netty.util.NetUtil;
 
 import java.io.IOException;
 import java.net.SocketOption;
@@ -32,24 +30,37 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.netty.channel.ChannelOption.*;
+
 /**
  * The Async {@link ServerSocketChannelConfig} implementation.
  */
 final class AioServerSocketChannelConfig extends DefaultChannelConfig
                                               implements ServerSocketChannelConfig {
 
-    private final AtomicReference<AsynchronousServerSocketChannel> channel
+    private final AtomicReference<AsynchronousServerSocketChannel> javaChannel
             = new AtomicReference<AsynchronousServerSocketChannel>();
-    private volatile int backlog = NetworkConstants.SOMAXCONN;
+    private volatile int backlog = NetUtil.SOMAXCONN;
     private Map<SocketOption<?>, Object> options = new ConcurrentHashMap<SocketOption<?>, Object>();
     private static final int DEFAULT_SND_BUF_SIZE = 32 * 1024;
     private static final boolean DEFAULT_SO_REUSEADDR = false;
 
-    AioServerSocketChannelConfig() {
+    /**
+     * Creates a new instance with no {@link AsynchronousServerSocketChannel} assigned to it.
+     *
+     * You should call {@link #assign(AsynchronousServerSocketChannel)} to assign a
+     * {@link AsynchronousServerSocketChannel} to it and have the configuration set on it.
+     */
+    AioServerSocketChannelConfig(AioServerSocketChannel channel) {
+        super(channel);
     }
 
-    AioServerSocketChannelConfig(AsynchronousServerSocketChannel channel) {
-        this.channel.set(channel);
+    /**
+     * Creates a new instance with the given {@link AsynchronousServerSocketChannel} assigned to it.
+     */
+    AioServerSocketChannelConfig(AioServerSocketChannel channel, AsynchronousServerSocketChannel javaChannel) {
+        super(channel);
+        this.javaChannel.set(javaChannel);
     }
 
     @Override
@@ -131,8 +142,9 @@ final class AioServerSocketChannelConfig extends DefaultChannelConfig
         return this;
     }
 
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     private Object getOption(SocketOption option, Object defaultValue) {
-        if (channel.get() == null) {
+        if (javaChannel.get() == null) {
             Object value = options.get(option);
             if (value == null) {
                 return defaultValue;
@@ -142,39 +154,44 @@ final class AioServerSocketChannelConfig extends DefaultChannelConfig
         }
 
         try {
-            return channel.get().getOption(option);
+            return javaChannel.get().getOption(option);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     private void setOption(SocketOption option, Object defaultValue) {
-        if (channel.get() == null) {
+        if (javaChannel.get() == null) {
             options.put(option, defaultValue);
             return;
         }
         try {
-            channel.get().setOption(option, defaultValue);
+            javaChannel.get().setOption(option, defaultValue);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    void active(AsynchronousServerSocketChannel channel) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
+    /**
+     * Assing the given {@link AsynchronousServerSocketChannel} to this instance
+     */
+    void assign(AsynchronousServerSocketChannel javaChannel) {
+        if (javaChannel == null) {
+            throw new NullPointerException("javaChannel");
         }
-        if (this.channel.compareAndSet(null, channel)) {
+        if (this.javaChannel.compareAndSet(null, javaChannel)) {
             propagateOptions();
         }
     }
 
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     private void propagateOptions() {
         for (SocketOption option: options.keySet()) {
             Object value = options.remove(option);
             if (value != null) {
                 try {
-                    channel.get().setOption(option, value);
+                    javaChannel.get().setOption(option, value);
                 } catch (IOException e) {
                     throw new ChannelException(e);
                 }
@@ -197,5 +214,10 @@ final class AioServerSocketChannelConfig extends DefaultChannelConfig
     @Override
     public ServerSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
         return (ServerSocketChannelConfig) super.setAllocator(allocator);
+    }
+
+    @Override
+    public ServerSocketChannelConfig setAutoRead(boolean autoRead) {
+        return (ServerSocketChannelConfig) super.setAutoRead(autoRead);
     }
 }

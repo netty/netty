@@ -26,6 +26,9 @@ import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
 
+/**
+ * Utility class for operate on a {@link ByteBuf}
+ */
 public final class ByteBufUtil {
 
     private static final char[] HEXDUMP_TABLE = new char[256 * 4];

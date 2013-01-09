@@ -17,12 +17,18 @@ package io.netty.channel;
 
 import io.netty.buffer.Buf;
 
+/**
+ * {@link ChannelOperationHandler} which handles outbound data.
+ */
 public interface ChannelOutboundHandler extends ChannelOperationHandler {
+    /**
+     * Return the {@link Buf} which will be used for outbound data for the given {@link ChannelHandlerContext}.
+     */
     Buf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception;
 
     /**
      * Invoked when this handler is not allowed to send any outbound message anymore and thus it's safe to
      * deallocate its outbound buffer.
      */
-    void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception;
+    void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception;
 }

@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
  * A skeletal {@link ChannelFuture} implementation which represents a
  * {@link ChannelFuture} which has been completed already.
  */
-public abstract class CompleteChannelFuture implements ChannelFuture {
+abstract class CompleteChannelFuture implements ChannelFuture {
 
     private final Channel channel;
 
@@ -42,7 +42,7 @@ public abstract class CompleteChannelFuture implements ChannelFuture {
         if (listener == null) {
             throw new NullPointerException("listener");
         }
-        DefaultChannelFuture.notifyListener(this, listener);
+        DefaultChannelPromise.notifyListener(this, listener);
         return this;
     }
 
@@ -55,7 +55,7 @@ public abstract class CompleteChannelFuture implements ChannelFuture {
             if (l == null) {
                 break;
             }
-            DefaultChannelFuture.notifyListener(this, l);
+            DefaultChannelPromise.notifyListener(this, l);
         }
         return this;
     }
@@ -119,35 +119,5 @@ public abstract class CompleteChannelFuture implements ChannelFuture {
     @Override
     public boolean isDone() {
         return true;
-    }
-
-    @Override
-    public boolean setProgress(long amount, long current, long total) {
-        return false;
-    }
-
-    @Override
-    public boolean setFailure(Throwable cause) {
-        return false;
-    }
-
-    @Override
-    public boolean setSuccess() {
-        return false;
-    }
-
-    @Override
-    public boolean cancel() {
-        return false;
-    }
-
-    @Override
-    public boolean cancel(boolean mayInterruptIfRunning) {
-        return false;
-    }
-
-    @Override
-    public boolean isCancelled() {
-        return false;
     }
 }

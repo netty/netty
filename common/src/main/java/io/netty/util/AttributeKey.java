@@ -18,10 +18,22 @@ package io.netty.util;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+/**
+ * Key which can be used to access {@link Attribute} out of the {@link AttributeMap}. Be aware that it is not be
+ * possible to have multiple keys with the same name.
+ *
+ *
+ * @param <T>   the type of the {@link Attribute} which can be accessed via this {@link AttributeKey}.
+ */
 public final class AttributeKey<T> extends UniqueName {
 
     private static final ConcurrentMap<String, Boolean> names = new ConcurrentHashMap<String, Boolean>();
 
+    /**
+     * Create a new instance
+     *
+     * @param name  the name under which the {@link AttributeKey} will be registered
+     */
     public AttributeKey(String name) {
         super(names, name);
     }

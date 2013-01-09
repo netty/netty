@@ -76,8 +76,8 @@ import java.util.List;
  * </pre>
  * triggers {@link HttpRequestDecoder} to generate 4 objects:
  * <ol>
- * <li>An {@link HttpRequest} whose {@link HttpMessage#isChunked() chunked}
- *     property is {@code true},</li>
+ * <li>An {@link HttpRequest} whose {@link HttpMessage#getTransferEncoding()}
+ *     property is {@link HttpTransferEncoding#CHUNKED},</li>
  * <li>The first {@link HttpChunk} whose content is {@code 'abcdefghijklmnopqrstuvwxyz'},</li>
  * <li>The second {@link HttpChunk} whose content is {@code '1234567890abcdef'}, and</li>
  * <li>An {@link HttpChunkTrailer} which marks the end of the content.</li>
@@ -98,7 +98,7 @@ import java.util.List;
  * implement all abstract methods properly.
  * @apiviz.landmark
  */
-public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMessageDecoder.State> {
+public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDecoder.State> {
 
     private final int maxInitialLineLength;
     private final int maxHeaderSize;
@@ -168,7 +168,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
     }
 
     @Override
-    public Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+    protected Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
         switch (state()) {
         case SKIP_CONTROL_CHARS: {
             try {
@@ -271,8 +271,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
             return readFixedLengthContent(buffer);
         }
         case READ_FIXED_LENGTH_CONTENT_AS_CHUNKS: {
-            assert chunkSize <= Integer.MAX_VALUE;
-            int chunkSize = (int) this.chunkSize;
+            long chunkSize = this.chunkSize;
             int readLimit = actualReadableBytes();
 
             // Check if the buffer is readable first as we use the readable byte count
@@ -285,12 +284,12 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
                 return null;
             }
 
-            int toRead = chunkSize;
+            int toRead = readLimit;
             if (toRead > maxChunkSize) {
                 toRead = maxChunkSize;
             }
-            if (toRead > readLimit) {
-                toRead = readLimit;
+            if (toRead > chunkSize) {
+                toRead = (int) chunkSize;
             }
             HttpChunk chunk = new DefaultHttpChunk(buffer.readBytes(toRead));
             if (chunkSize > toRead) {
@@ -496,37 +495,17 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<Object, HttpMe
         if (length < contentRead) {
             if (message.getTransferEncoding() != HttpTransferEncoding.STREAMED) {
                 message.setTransferEncoding(HttpTransferEncoding.STREAMED);
-                return new Object[] {message, new DefaultHttpChunk(read(buffer, toRead))};
+                return new Object[] {message, new DefaultHttpChunk(buffer.readBytes(toRead))};
             } else {
-                return new DefaultHttpChunk(read(buffer, toRead));
+                return new DefaultHttpChunk(buffer.readBytes(toRead));
             }
         }
         if (content == null) {
-            content = read(buffer, (int) length);
+            content = buffer.readBytes((int) length);
         } else {
-            content.writeBytes(buffer.readBytes((int) length));
+            content.writeBytes(buffer, (int) length);
         }
         return reset();
-    }
-
-    /**
-     * Try to do an optimized "read" of len from the given {@link ByteBuf}.
-     *
-     * This is part of #412 to safe byte copies
-     *
-     */
-    private ByteBuf read(ByteBuf buffer, int len) {
-        ByteBuf internal = internalBuffer();
-        if (internal.readableBytes() >= len) {
-            int index = internal.readerIndex();
-            ByteBuf buf = internal.slice(index, len);
-
-            // update the readerindex so an the next read its on the correct position
-            buffer.readerIndex(index + len);
-            return buf;
-        } else {
-            return buffer.readBytes(len);
-        }
     }
 
     private State readHeaders(ByteBuf buffer) {

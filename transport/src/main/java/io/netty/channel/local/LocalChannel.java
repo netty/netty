@@ -21,9 +21,9 @@ import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.SingleThreadEventExecutor;
@@ -43,7 +43,7 @@ public class LocalChannel extends AbstractChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
 
-    private final ChannelConfig config = new DefaultChannelConfig();
+    private final ChannelConfig config = new DefaultChannelConfig(this);
     private final Runnable shutdownHook = new Runnable() {
         @Override
         public void run() {
@@ -55,7 +55,8 @@ public class LocalChannel extends AbstractChannel {
     private volatile LocalChannel peer;
     private volatile LocalAddress localAddress;
     private volatile LocalAddress remoteAddress;
-    private volatile ChannelFuture connectFuture;
+    private volatile ChannelPromise connectPromise;
+    private volatile boolean readInProgress;
 
     public LocalChannel() {
         this(null);
@@ -108,7 +109,7 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected Unsafe newUnsafe() {
+    protected AbstractUnsafe newUnsafe() {
         return new LocalUnsafe();
     }
 
@@ -148,7 +149,7 @@ public class LocalChannel extends AbstractChannel {
                     peerEventLoop.execute(new Runnable() {
                         @Override
                         public void run() {
-                            peer.connectFuture.setSuccess();
+                            peer.connectPromise.setSuccess();
                             peer.pipeline().fireChannelActive();
                         }
                     });
@@ -208,6 +209,23 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
+    protected void doBeginRead() throws Exception {
+        if (readInProgress) {
+            return;
+        }
+
+        ChannelPipeline pipeline = pipeline();
+        MessageBuf<Object> buf = pipeline.inboundMessageBuffer();
+        if (buf.isEmpty()) {
+            readInProgress = true;
+            return;
+        }
+
+        pipeline.fireInboundBufferUpdated();
+        pipeline.fireInboundBufferSuspended();
+    }
+
+    @Override
     protected void doFlushMessageBuffer(MessageBuf<Object> buf) throws Exception {
         if (state < 2) {
             throw new NotYetConnectedException();
@@ -222,7 +240,7 @@ public class LocalChannel extends AbstractChannel {
 
         if (peerLoop == eventLoop()) {
             buf.drainTo(peerPipeline.inboundMessageBuffer());
-            peerPipeline.fireInboundBufferUpdated();
+            finishPeerRead(peer, peerPipeline);
         } else {
             final Object[] msgs = buf.toArray();
             buf.clear();
@@ -231,9 +249,17 @@ public class LocalChannel extends AbstractChannel {
                 public void run() {
                     MessageBuf<Object> buf = peerPipeline.inboundMessageBuffer();
                     Collections.addAll(buf, msgs);
-                    peerPipeline.fireInboundBufferUpdated();
+                    finishPeerRead(peer, peerPipeline);
                 }
             });
+        }
+    }
+
+    private static void finishPeerRead(LocalChannel peer, ChannelPipeline peerPipeline) {
+        if (peer.readInProgress) {
+            peer.readInProgress = false;
+            peerPipeline.fireInboundBufferUpdated();
+            peerPipeline.fireInboundBufferSuspended();
         }
     }
 
@@ -246,24 +272,24 @@ public class LocalChannel extends AbstractChannel {
 
         @Override
         public void connect(final SocketAddress remoteAddress,
-                SocketAddress localAddress, final ChannelFuture future) {
+                SocketAddress localAddress, final ChannelPromise promise) {
             if (eventLoop().inEventLoop()) {
-                if (!ensureOpen(future)) {
+                if (!ensureOpen(promise)) {
                     return;
                 }
 
                 if (state == 2) {
                     Exception cause = new AlreadyConnectedException();
-                    future.setFailure(cause);
+                    promise.setFailure(cause);
                     pipeline().fireExceptionCaught(cause);
                     return;
                 }
 
-                if (connectFuture != null) {
+                if (connectPromise != null) {
                     throw new ConnectionPendingException();
                 }
 
-                connectFuture = future;
+                connectPromise = promise;
 
                 if (state != 1) {
                     // Not bound yet and no localAddress specified - get one.
@@ -276,7 +302,7 @@ public class LocalChannel extends AbstractChannel {
                     try {
                         doBind(localAddress);
                     } catch (Throwable t) {
-                        future.setFailure(t);
+                        promise.setFailure(t);
                         pipeline().fireExceptionCaught(t);
                         close(voidFuture());
                         return;
@@ -287,7 +313,7 @@ public class LocalChannel extends AbstractChannel {
                 if (!(boundChannel instanceof LocalServerChannel)) {
                     Exception cause =
                             new ChannelException("connection refused");
-                    future.setFailure(cause);
+                    promise.setFailure(cause);
                     pipeline().fireExceptionCaught(cause);
                     close(voidFuture());
                     return;
@@ -300,20 +326,10 @@ public class LocalChannel extends AbstractChannel {
                 eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
-                        connect(remoteAddress, localAddress0, future);
+                        connect(remoteAddress, localAddress0, promise);
                     }
                 });
             }
-        }
-
-        @Override
-        public void suspendRead() {
-            // TODO: Implement me
-        }
-
-        @Override
-        public void resumeRead() {
-            // TODO: Implement me
         }
     }
 }

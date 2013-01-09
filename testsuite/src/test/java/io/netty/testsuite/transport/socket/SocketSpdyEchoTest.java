@@ -15,7 +15,6 @@
  */
 package io.netty.testsuite.transport.socket;
 
-import static org.junit.Assert.*;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -29,14 +28,15 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.spdy.SpdyConstants;
 import io.netty.handler.codec.spdy.SpdyFrameDecoder;
 import io.netty.handler.codec.spdy.SpdyFrameEncoder;
-import io.netty.util.NetworkConstants;
+import io.netty.util.NetUtil;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 public class SocketSpdyEchoTest extends AbstractSocketTest {
 
@@ -180,7 +180,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         ByteBuf frames = createFrames(version);
 
         final SpdyEchoTestServerHandler sh = new SpdyEchoTestServerHandler();
-        final SpdyEchoTestClientHandler ch = new SpdyEchoTestClientHandler(frames);
+        final SpdyEchoTestClientHandler ch = new SpdyEchoTestClientHandler(frames.copy());
 
         sb.childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
@@ -197,7 +197,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         Channel sc = sb.localAddress(0).bind().sync().channel();
         int port = ((InetSocketAddress) sc.localAddress()).getPort();
 
-        Channel cc = cb.remoteAddress(NetworkConstants.LOCALHOST, port).connect().sync().channel();
+        Channel cc = cb.remoteAddress(NetUtil.LOCALHOST, port).connect().sync().channel();
         cc.write(frames);
 
         while (ch.counter < frames.writerIndex() - ignoredBytes) {
@@ -209,7 +209,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
             }
 
             try {
-                Thread.sleep(1);
+                Thread.sleep(50);
             } catch (InterruptedException e) {
                 // Ignore.
             }

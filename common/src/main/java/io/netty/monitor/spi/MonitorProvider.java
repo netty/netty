@@ -30,7 +30,7 @@ public final class MonitorProvider implements Serializable, Comparable<MonitorPr
     /**
      * Create a new {@code MonitorProvider} instance having the supplied
      * {@code name}.
-     * @param name The new {@code MonitorProvider}'s {@link #getName() name}.
+     * @param name The new {@code MonitorProvider}'s {@link #name() name}.
      * @return A new {@code MonitorProvider} instance having the supplied
      *         {@code name}
      */
@@ -54,7 +54,7 @@ public final class MonitorProvider implements Serializable, Comparable<MonitorPr
      * This {@code MonitorProvider}'s unique name.
      * @return This {@code MonitorProvider}'s unique name
      */
-    public String getName() {
+    public String name() {
         return name;
     }
 

@@ -17,21 +17,45 @@ package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelHandlerUtil;
+import io.netty.channel.ChannelPromise;
 
+
+/**
+ * {@link ChannelOutboundMessageHandlerAdapter} which encodes message in a stream-like fashion from one message to an
+ * {@link ByteBuf}.
+ *
+ *
+ * Example implementation which encodes {@link Integer}s to a {@link ByteBuf}.
+ *
+ * <pre>
+ *     public class IntegerEncoder extends {@link MessageToByteEncoder}&lt;{@link Integer}&gt; {
+ *         {@code @Override}
+ *         public void encode({@link ChannelHandlerContext} ctx, {@link Integer} msg, {@link ByteBuf} out)
+ *                 throws {@link Exception} {
+ *             out.writeInt(msg);
+ *         }
+ *     }
+ * </pre>
+ */
 public abstract class MessageToByteEncoder<I> extends ChannelOutboundMessageHandlerAdapter<I> {
 
     private final Class<?>[] acceptedMsgTypes;
 
+    /**
+     * The types which will be accepted by the encoder. If a received message is an other type it will be just forwared
+     * to the next {@link ChannelOutboundMessageHandler} in the {@link ChannelPipeline}
+     */
     protected MessageToByteEncoder(Class<?>... acceptedMsgTypes) {
         this.acceptedMsgTypes = ChannelHandlerUtil.acceptedMessageTypes(acceptedMsgTypes);
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         MessageBuf<I> in = ctx.outboundMessageBuffer();
         ByteBuf out = ctx.nextOutboundByteBuffer();
 
@@ -59,7 +83,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundMessageHand
             }
         }
 
-        ctx.flush(future);
+        ctx.flush(promise);
     }
 
     /**
@@ -71,5 +95,14 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundMessageHand
         return ChannelHandlerUtil.acceptMessage(acceptedMsgTypes, msg);
     }
 
-    public abstract void encode(ChannelHandlerContext ctx, I msg, ByteBuf out) throws Exception;
+    /**
+     * Encode a message into a {@link ByteBuf}. This method will be called till the {@link MessageBuf} has
+     * nothing left.
+     *
+     * @param ctx           the {@link ChannelHandlerContext} which this {@link MessageToByteEncoder} belongs to
+     * @param msg           the message to encode
+     * @param out           the {@link ByteBuf} into which the encoded message will be written
+     * @throws Exception    is thrown if an error accour
+     */
+    protected abstract void encode(ChannelHandlerContext ctx, I msg, ByteBuf out) throws Exception;
 }

@@ -43,7 +43,7 @@ public interface HttpRequest extends HttpMessage {
     /**
      * Sets the {@link HttpMethod} of this {@link HttpRequest}.
      *
-     * @param The {@link HttpMethod} to set
+     * @param method The {@link HttpMethod} to set
      */
     void setMethod(HttpMethod method);
 

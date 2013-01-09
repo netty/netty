@@ -15,8 +15,10 @@
  */
 package io.netty.channel.local;
 
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.AbstractServerChannel;
 import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.ServerChannel;
@@ -26,11 +28,11 @@ import io.netty.channel.SingleThreadEventLoop;
 import java.net.SocketAddress;
 
 /**
- * A {@link ServerChannel} for the local transport.
+ * A {@link ServerChannel} for the local transport which allows in VM communication.
  */
 public class LocalServerChannel extends AbstractServerChannel {
 
-    private final ChannelConfig config = new DefaultChannelConfig();
+    private final ChannelConfig config = new DefaultChannelConfig(this);
     private final Runnable shutdownHook = new Runnable() {
         @Override
         public void run() {
@@ -40,11 +42,20 @@ public class LocalServerChannel extends AbstractServerChannel {
 
     private volatile int state; // 0 - open, 1 - active, 2 - closed
     private volatile LocalAddress localAddress;
+    private volatile boolean acceptInProgress;
 
+    /**
+     * Creates a new instance
+     */
     public LocalServerChannel() {
         this(null);
     }
 
+    /**
+     * Create a new instance
+     *
+     * @param id    the id to use or {@code null} if a new id should be generated
+     */
     public LocalServerChannel(Integer id) {
         super(id);
     }
@@ -119,6 +130,23 @@ public class LocalServerChannel extends AbstractServerChannel {
         ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
     }
 
+    @Override
+    protected void doBeginRead() throws Exception {
+        if (acceptInProgress) {
+            return;
+        }
+
+        ChannelPipeline pipeline = pipeline();
+        MessageBuf<Object> buf = pipeline.inboundMessageBuffer();
+        if (buf.isEmpty()) {
+            acceptInProgress = true;
+            return;
+        }
+
+        pipeline.fireInboundBufferUpdated();
+        pipeline.fireInboundBufferSuspended();
+    }
+
     LocalChannel serve(final LocalChannel peer) {
         LocalChannel child = new LocalChannel(this, peer);
         serve0(child);
@@ -127,8 +155,13 @@ public class LocalServerChannel extends AbstractServerChannel {
 
     private void serve0(final LocalChannel child) {
         if (eventLoop().inEventLoop()) {
-            pipeline().inboundMessageBuffer().add(child);
-            pipeline().fireInboundBufferUpdated();
+            final ChannelPipeline pipeline = pipeline();
+            pipeline.inboundMessageBuffer().add(child);
+            if (acceptInProgress) {
+                acceptInProgress = false;
+                pipeline.fireInboundBufferUpdated();
+                pipeline.fireInboundBufferSuspended();
+            }
         } else {
             eventLoop().execute(new Runnable() {
                 @Override
@@ -136,24 +169,6 @@ public class LocalServerChannel extends AbstractServerChannel {
                     serve0(child);
                 }
             });
-        }
-    }
-
-    @Override
-    protected Unsafe newUnsafe() {
-        return new LocalServerUnsafe();
-    }
-
-    private final class LocalServerUnsafe extends AbstractServerUnsafe {
-
-        @Override
-        public void suspendRead() {
-            // TODO: Implement me
-        }
-
-        @Override
-        public void resumeRead() {
-            // TODO: Implement me
         }
     }
 }

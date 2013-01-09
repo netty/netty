@@ -17,8 +17,14 @@ package io.netty.channel.socket.aio;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.socket.SocketChannelConfig;
+
 import java.nio.channels.InterruptedByTimeoutException;
 
+
+/**
+ * Special {@link SocketChannelConfig} which is used for the {@link AioSocketChannel} to expose extra configuration
+ * possiblilites.
+ */
 public interface AioSocketChannelConfig extends SocketChannelConfig {
     @Override
     AioSocketChannelConfig setTcpNoDelay(boolean tcpNoDelay);
@@ -55,6 +61,9 @@ public interface AioSocketChannelConfig extends SocketChannelConfig {
 
     @Override
     AioSocketChannelConfig setAllocator(ByteBufAllocator allocator);
+
+    @Override
+    AioSocketChannelConfig setAutoRead(boolean autoRead);
 
     /**
      * Return the read timeout in milliseconds after which a {@link InterruptedByTimeoutException} will get thrown.

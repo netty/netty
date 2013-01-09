@@ -15,11 +15,9 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.buffer.ByteBuf;
-
 /**
- * An {@link Exception} which is thrown when a user calls an unsupported
- * operation on a {@link ByteBuf} in a {@link ReplayingDecoder}
+ * An {@link UnsupportedOperationException} which is thrown when a user calls an unsupported
+ * operation on a {@link ReplayingDecoderBuffer} in a {@link ReplayingDecoder}
  * implementation.
  */
 public class UnreplayableOperationException extends UnsupportedOperationException {

@@ -17,11 +17,11 @@ package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInputShutdownEvent;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.FileRegion;
+import io.netty.channel.socket.ChannelInputShutdownEvent;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
@@ -29,8 +29,18 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.WritableByteChannel;
 
-abstract class AbstractNioByteChannel extends AbstractNioChannel {
+/**
+ * {@link AbstractNioChannel} base class for {@link Channel}s that operate on bytes.
+ */
+public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
+    /**
+     * Create a new instance
+     *
+     * @param parent            the parent {@link Channel} by which this instance was created. May be {@code null}
+     * @param id                the id of this instance or {@code null} if one should be generated
+     * @param ch                the underlying {@link SelectableChannel} on which it operates
+     */
     protected AbstractNioByteChannel(
             Channel parent, Integer id, SelectableChannel ch) {
         super(parent, id, ch, SelectionKey.OP_READ);
@@ -45,11 +55,14 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
         @Override
         public void read() {
             assert eventLoop().inEventLoop();
+            final SelectionKey key = selectionKey();
+            key.interestOps(key.interestOps() & ~readInterestOp);
 
             final ChannelPipeline pipeline = pipeline();
             final ByteBuf byteBuf = pipeline.inboundByteBuffer();
             boolean closed = false;
             boolean read = false;
+            boolean firedInboundBufferSuspended = false;
             try {
                 expandReadBuffer(byteBuf);
                 loop: for (;;) {
@@ -86,24 +99,30 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     read = false;
                     pipeline.fireInboundBufferUpdated();
                 }
-                pipeline().fireExceptionCaught(t);
+
                 if (t instanceof IOException) {
-                    close(voidFuture());
+                    closed = true;
+                } else if (!closed) {
+                    firedInboundBufferSuspended = true;
+                    pipeline.fireInboundBufferSuspended();
                 }
+                pipeline().fireExceptionCaught(t);
             } finally {
                 if (read) {
                     pipeline.fireInboundBufferUpdated();
                 }
+
                 if (closed) {
                     setInputShutdown();
                     if (isOpen()) {
                         if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
-                            suspendReadTask.run();
                             pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                         } else {
                             close(voidFuture());
                         }
                     }
+                } else if (!firedInboundBufferSuspended) {
+                    pipeline.fireInboundBufferSuspended();
                 }
             }
         }
@@ -131,9 +150,9 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
     }
 
     @Override
-    protected void doFlushFileRegion(final FileRegion region, final ChannelFuture future) throws Exception {
+    protected void doFlushFileRegion(final FileRegion region, final ChannelPromise promise) throws Exception {
         if (javaChannel() instanceof WritableByteChannel) {
-            TransferTask transferTask = new TransferTask(region, (WritableByteChannel) javaChannel(), future);
+            TransferTask transferTask = new TransferTask(region, (WritableByteChannel) javaChannel(), promise);
             transferTask.transfer();
         } else {
             throw new UnsupportedOperationException("Underlying Channel is not of instance "
@@ -145,15 +164,15 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
         private long writtenBytes;
         private final FileRegion region;
         private final WritableByteChannel wch;
-        private final ChannelFuture future;
+        private final ChannelPromise promise;
 
-        TransferTask(FileRegion region, WritableByteChannel wch, ChannelFuture future) {
+        TransferTask(FileRegion region, WritableByteChannel wch, ChannelPromise promise) {
             this.region = region;
             this.wch = wch;
-            this.future = future;
+            this.promise = promise;
         }
 
-        public void transfer() {
+        void transfer() {
             try {
                 for (;;) {
                     long localWrittenBytes = region.transferTo(wch, writtenBytes);
@@ -164,20 +183,20 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
                         return;
                     } else if (localWrittenBytes == -1) {
                         checkEOF(region, writtenBytes);
-                        future.setSuccess();
+                        promise.setSuccess();
                         return;
                     } else {
                         writtenBytes += localWrittenBytes;
                         if (writtenBytes >= region.count()) {
                             region.close();
-                            future.setSuccess();
+                            promise.setSuccess();
                             return;
                         }
                     }
                 }
             } catch (Throwable cause) {
                 region.close();
-                future.setFailure(cause);
+                promise.setFailure(cause);
             }
         }
 
@@ -189,55 +208,34 @@ abstract class AbstractNioByteChannel extends AbstractNioChannel {
         @Override
         public void channelUnregistered(SelectableChannel ch, Throwable cause) throws Exception {
             if (cause != null) {
-                future.setFailure(cause);
+                promise.setFailure(cause);
                 return;
             }
 
             if (writtenBytes < region.count()) {
                 region.close();
                 if (!isOpen()) {
-                    future.setFailure(new ClosedChannelException());
+                    promise.setFailure(new ClosedChannelException());
                 } else {
-                    future.setFailure(new IllegalStateException(
+                    promise.setFailure(new IllegalStateException(
                             "Channel was unregistered before the region could be fully written"));
                 }
             }
         }
     }
 
+    /**
+     * Read bytes into the given {@link ByteBuf} and return the amount.
+     */
     protected abstract int doReadBytes(ByteBuf buf) throws Exception;
+
+    /**
+     * Write bytes form the given {@link ByteBuf} to the underlying {@link java.nio.channels.Channel}.
+     * @param buf           the {@link ByteBuf} from which the bytes should be written
+     * @param lastSpin      {@code true} if this is the last write try
+     * @return amount       the amount of written bytes
+     * @throws Exception    thrown if an error accour
+     */
     protected abstract int doWriteBytes(ByteBuf buf, boolean lastSpin) throws Exception;
 
-    // 0 - not expanded because the buffer is writable
-    // 1 - expanded because the buffer was not writable
-    // 2 - could not expand because the buffer was at its maximum although the buffer is not writable.
-    private static int expandReadBuffer(ByteBuf byteBuf) {
-        final int writerIndex = byteBuf.writerIndex();
-        final int capacity = byteBuf.capacity();
-        if (capacity != writerIndex) {
-            return 0;
-        }
-
-        final int maxCapacity = byteBuf.maxCapacity();
-        if (capacity == maxCapacity) {
-            if (byteBuf.readerIndex() != 0) {
-                byteBuf.discardReadBytes();
-                return 0;
-            }
-            return 2;
-        }
-
-        // FIXME: Magic number
-        final int increment = 4096;
-
-        if (writerIndex + increment > maxCapacity) {
-            // Expand to maximum capacity.
-            byteBuf.capacity(maxCapacity);
-        } else {
-            // Expand by the increment.
-            byteBuf.ensureWritableBytes(increment);
-        }
-
-        return 1;
-    }
 }

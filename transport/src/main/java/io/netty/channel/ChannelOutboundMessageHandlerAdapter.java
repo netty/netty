@@ -18,10 +18,21 @@ package io.netty.channel;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 
+/**
+ * Abstract base class which handles messages of a specific type.
+ *
+ * @param <I>   The type of the messages to handle
+ */
 public abstract class ChannelOutboundMessageHandlerAdapter<I>
         extends ChannelOutboundHandlerAdapter implements ChannelOutboundMessageHandler<I> {
+
     @Override
     public MessageBuf<I> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return Unpooled.messageBuffer();
+    }
+
+    @Override
+    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        ctx.outboundMessageBuffer().free();
     }
 }

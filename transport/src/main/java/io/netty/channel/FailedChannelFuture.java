@@ -15,17 +15,12 @@
  */
 package io.netty.channel;
 
-import java.nio.channels.Channels;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-
 /**
  * The {@link CompleteChannelFuture} which is failed already.  It is
  * recommended to use {@link Channel#newFailedFuture(Throwable)}
  * instead of calling the constructor of this future.
  */
-public class FailedChannelFuture extends CompleteChannelFuture {
+final class FailedChannelFuture extends CompleteChannelFuture {
 
     private final Throwable cause;
 
@@ -54,7 +49,7 @@ public class FailedChannelFuture extends CompleteChannelFuture {
     }
 
     @Override
-    public ChannelFuture sync() throws InterruptedException {
+    public ChannelFuture sync() {
         return rethrow();
     }
 
@@ -73,16 +68,5 @@ public class FailedChannelFuture extends CompleteChannelFuture {
         }
 
         throw new ChannelException(cause);
-    }
-
-    @Override
-    public Void get() throws InterruptedException, ExecutionException {
-        throw new ExecutionException(cause);
-    }
-
-    @Override
-    public Void get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException,
-            TimeoutException {
-        throw new ExecutionException(cause);
     }
 }

@@ -19,8 +19,12 @@ import io.netty.buffer.Buf;
 
 import java.net.SocketAddress;
 
-public class CombinedChannelHandler
-        extends ChannelHandlerAdapter implements ChannelInboundHandler, ChannelOutboundHandler {
+/**
+ *  Combines a {@link ChannelInboundHandler} and a {@link ChannelOutboundHandler} into one {@link ChannelHandler}.
+ *
+ */
+public class CombinedChannelHandler extends ChannelStateHandlerAdapter implements ChannelInboundHandler,
+        ChannelOutboundHandler {
 
     private ChannelOutboundHandler out;
     private ChannelInboundHandler in;
@@ -29,13 +33,20 @@ public class CombinedChannelHandler
         // User will call init in the subclass constructor.
     }
 
+    /**
+     * Combine the given {@link ChannelInboundHandler} and {@link ChannelOutboundHandler}.
+     */
     public CombinedChannelHandler(
             ChannelInboundHandler inboundHandler, ChannelOutboundHandler outboundHandler) {
         init(inboundHandler, outboundHandler);
     }
 
-    protected void init(
-            ChannelInboundHandler inboundHandler, ChannelOutboundHandler outboundHandler) {
+    /**
+     * Needs to get called before the handler can be added to the {@link ChannelPipeline}.
+     * Otherwise it will trigger a {@link IllegalStateException} later.
+     *
+     */
+    protected void init(ChannelInboundHandler inboundHandler, ChannelOutboundHandler outboundHandler) {
         if (inboundHandler == null) {
             throw new NullPointerException("inboundHandler");
         }
@@ -62,25 +73,23 @@ public class CombinedChannelHandler
     }
 
     @Override
-    public Buf newInboundBuffer(
-            ChannelHandlerContext ctx) throws Exception {
+    public Buf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return in.newInboundBuffer(ctx);
     }
 
     @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-        in.freeInboundBuffer(ctx, buf);
+    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        in.freeInboundBuffer(ctx);
     }
 
     @Override
-    public Buf newOutboundBuffer(
-            ChannelHandlerContext ctx) throws Exception {
+    public Buf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return out.newOutboundBuffer(ctx);
     }
 
     @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-        out.freeOutboundBuffer(ctx, buf);
+    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        out.freeOutboundBuffer(ctx);
     }
 
     @Override
@@ -157,44 +166,60 @@ public class CombinedChannelHandler
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
         in.inboundBufferUpdated(ctx);
+        if (in instanceof ChannelInboundByteHandler) {
+            ((ChannelInboundByteHandler) in).discardInboundReadBytes(ctx);
+        }
     }
 
     @Override
     public void bind(
             ChannelHandlerContext ctx,
-            SocketAddress localAddress, ChannelFuture future) throws Exception {
-        out.bind(ctx, localAddress, future);
+            SocketAddress localAddress, ChannelPromise promise) throws Exception {
+        out.bind(ctx, localAddress, promise);
     }
 
     @Override
     public void connect(
             ChannelHandlerContext ctx,
             SocketAddress remoteAddress, SocketAddress localAddress,
-            ChannelFuture future) throws Exception {
-        out.connect(ctx, remoteAddress, localAddress, future);
+            ChannelPromise promise) throws Exception {
+        out.connect(ctx, remoteAddress, localAddress, promise);
     }
 
     @Override
     public void disconnect(
-            ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
-        out.disconnect(ctx, future);
+            ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        out.disconnect(ctx, promise);
     }
 
     @Override
     public void close(
-            ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
-        out.close(ctx, future);
+            ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        out.close(ctx, promise);
     }
 
     @Override
     public void deregister(
-            ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
-        out.deregister(ctx, future);
+            ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        out.deregister(ctx, promise);
+    }
+
+    @Override
+    public void read(ChannelHandlerContext ctx) {
+        out.read(ctx);
     }
 
     @Override
     public void flush(
-            ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
-        out.flush(ctx, future);
+            ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        out.flush(ctx, promise);
+        if (out instanceof ChannelOutboundByteHandler) {
+            ((ChannelOutboundByteHandler) out).discardOutboundReadBytes(ctx);
+        }
+    }
+
+    @Override
+    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise promise) throws Exception {
+        out.sendFile(ctx, region, promise);
     }
 }

@@ -24,12 +24,12 @@ import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpResponse;
 
 /**
- * {@link MessageToMessageCodec} that takes care of adding the right {@link SpdyHttpHeaders#Names#STREAM_ID} to the
+ * {@link MessageToMessageCodec} that takes care of adding the right {@link SpdyHttpHeaders.Names#STREAM_ID} to the
  * {@link HttpResponse} if one is not present. This makes it possible to just re-use plan handlers current used
  * for HTTP.
  */
 public class SpdyHttpResponseStreamIdHandler extends
-        MessageToMessageCodec<Object, Object, HttpMessage, HttpMessage> {
+        MessageToMessageCodec<Object, HttpMessage> {
     private static final Integer NO_ID = -1;
     private final Queue<Integer> ids = new LinkedList<Integer>();
 
@@ -38,7 +38,7 @@ public class SpdyHttpResponseStreamIdHandler extends
     }
 
     @Override
-    public HttpMessage encode(ChannelHandlerContext ctx, HttpMessage msg) throws Exception {
+    protected Object encode(ChannelHandlerContext ctx, HttpMessage msg) throws Exception {
         Integer id = ids.poll();
         if (id != null && id.intValue() != NO_ID && !msg.containsHeader(SpdyHttpHeaders.Names.STREAM_ID)) {
             SpdyHttpHeaders.setStreamId(msg, id);
@@ -47,7 +47,7 @@ public class SpdyHttpResponseStreamIdHandler extends
     }
 
     @Override
-    public Object decode(ChannelHandlerContext ctx, Object msg) throws Exception {
+    protected Object decode(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof HttpMessage) {
             boolean contains = ((HttpMessage) msg).containsHeader(SpdyHttpHeaders.Names.STREAM_ID);
             if (!contains) {

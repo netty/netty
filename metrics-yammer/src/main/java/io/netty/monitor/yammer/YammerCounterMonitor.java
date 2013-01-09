@@ -36,22 +36,22 @@ class YammerCounterMonitor implements CounterMonitor {
     }
 
     @Override
-    public void inc() {
+    public void increment() {
         delegate.inc();
     }
 
     @Override
-    public void inc(final long delta) {
+    public void increment(final long delta) {
         delegate.inc(delta);
     }
 
     @Override
-    public void decr() {
+    public void decrement() {
         delegate.dec();
     }
 
     @Override
-    public void decr(final long delta) {
+    public void decrement(final long delta) {
         delegate.dec(delta);
     }
 

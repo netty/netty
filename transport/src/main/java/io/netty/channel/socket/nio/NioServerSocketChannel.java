@@ -29,6 +29,10 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
+/**
+ * A {@link io.netty.channel.socket.ServerSocketChannel} implementation which uses
+ * NIO selector based implementation to accept new connections.
+ */
 public class NioServerSocketChannel extends AbstractNioMessageChannel
                              implements io.netty.channel.socket.ServerSocketChannel {
 
@@ -45,9 +49,12 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
 
     private final ServerSocketChannelConfig config;
 
+    /**
+     * Create a new instance
+     */
     public NioServerSocketChannel() {
         super(null, null, newSocket(), SelectionKey.OP_ACCEPT);
-        config = new DefaultServerSocketChannelConfig(javaChannel().socket());
+        config = new DefaultServerSocketChannelConfig(this, javaChannel().socket());
     }
 
     @Override
@@ -83,8 +90,6 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
         javaChannel().socket().bind(localAddress, config.getBacklog());
-        SelectionKey selectionKey = selectionKey();
-        selectionKey.interestOps(selectionKey.interestOps() | SelectionKey.OP_ACCEPT);
     }
 
     @Override

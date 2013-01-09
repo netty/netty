@@ -15,8 +15,10 @@
  */
 package io.netty.channel;
 
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+
+import io.netty.bootstrap.Bootstrap;
+
 
 /**
  * The result of an asynchronous {@link Channel} I/O operation.
@@ -90,34 +92,30 @@ import java.util.concurrent.TimeUnit;
  * <pre>
  * // BAD - NEVER DO THIS
  * {@code @Override}
- * public void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
- *     if (e.getMessage() instanceof GoodByeMessage) {
- *         {@link ChannelFuture} future = e.getChannel().close();
- *         future.awaitUninterruptibly();
- *         // Perform post-closure operation
- *         // ...
- *     }
+ * public void messageReceived({@link ChannelHandlerContext} ctx, GoodByeMessage msg) {
+ *     {@link ChannelFuture} future = ctx.channel().close();
+ *     future.awaitUninterruptibly();
+ *     // Perform post-closure operation
+ *     // ...
  * }
  *
  * // GOOD
  * {@code @Override}
- * public void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
- *     if (e.getMessage() instanceof GoodByeMessage) {
- *         {@link ChannelFuture} future = e.getChannel().close();
- *         future.addListener(new {@link ChannelFutureListener}() {
- *             public void operationComplete({@link ChannelFuture} future) {
- *                 // Perform post-closure operation
- *                 // ...
- *             }
- *         });
- *     }
+ * public void messageReceived({@link ChannelHandlerContext} ctx,  GoodByeMessage msg) {
+ *     {@link ChannelFuture} future = ctx.channel().close();
+ *     future.addListener(new {@link ChannelFutureListener}() {
+ *         public void operationComplete({@link ChannelFuture} future) {
+ *             // Perform post-closure operation
+ *             // ...
+ *         }
+ *     });
  * }
  * </pre>
  * <p>
  * In spite of the disadvantages mentioned above, there are certainly the cases
  * where it is more convenient to call {@link #await()}. In such a case, please
  * make sure you do not call {@link #await()} in an I/O thread.  Otherwise,
- * {@link IllegalStateException} will be raised to prevent a dead lock.
+ * {@link BlockingOperationException} will be raised to prevent a dead lock.
  *
  * <h3>Do not confuse I/O timeout and await timeout</h3>
  *
@@ -145,7 +143,7 @@ import java.util.concurrent.TimeUnit;
  * // GOOD
  * {@link Bootstrap} b = ...;
  * // Configure the connect timeout option.
- * <b>b.setOption("connectTimeoutMillis", 10000);</b>
+ * <b>b.setOption({@link ChannelOption}.CONNECT_TIMEOUT_MILLIS, 10000);</b>
  * {@link ChannelFuture} f = b.connect(...);
  * f.awaitUninterruptibly();
  *
@@ -163,7 +161,7 @@ import java.util.concurrent.TimeUnit;
  * @apiviz.landmark
  * @apiviz.owns io.netty.channel.ChannelFutureListener - - notifies
  */
-public interface ChannelFuture extends Future<Void> {
+public interface ChannelFuture {
 
     /**
      * Returns a channel where the I/O operation associated with this
@@ -173,18 +171,9 @@ public interface ChannelFuture extends Future<Void> {
 
     /**
      * Returns {@code true} if and only if this future is
-     * complete, regardless of whether the operation was successful, failed,
-     * or cancelled.
+     * complete, regardless of whether the operation was successful or failed.
      */
-    @Override
     boolean isDone();
-
-    /**
-     * Returns {@code true} if and only if this future was
-     * cancelled by a {@link #cancel()} method.
-     */
-    @Override
-    boolean isCancelled();
 
     /**
      * Returns {@code true} if and only if the I/O operation was completed
@@ -201,46 +190,6 @@ public interface ChannelFuture extends Future<Void> {
      *         completed yet.
      */
     Throwable cause();
-
-    /**
-     * Cancels the I/O operation associated with this future
-     * and notifies all listeners if canceled successfully.
-     *
-     * @return {@code true} if and only if the operation has been canceled.
-     *         {@code false} if the operation can't be canceled or is already
-     *         completed.
-     */
-    boolean cancel();
-
-    /**
-     * Marks this future as a success and notifies all
-     * listeners.
-     *
-     * @return {@code true} if and only if successfully marked this future as
-     *         a success. Otherwise {@code false} because this future is
-     *         already marked as either a success or a failure.
-     */
-    boolean setSuccess();
-
-    /**
-     * Marks this future as a failure and notifies all
-     * listeners.
-     *
-     * @return {@code true} if and only if successfully marked this future as
-     *         a failure. Otherwise {@code false} because this future is
-     *         already marked as either a success or a failure.
-     */
-    boolean setFailure(Throwable cause);
-
-    /**
-     * Notifies the progress of the operation to the listeners that implements
-     * {@link ChannelFutureProgressListener}. Please note that this method will
-     * not do anything and return {@code false} if this future is complete
-     * already.
-     *
-     * @return {@code true} if and only if notification was made.
-     */
-    boolean setProgress(long amount, long current, long total);
 
     /**
      * Adds the specified listener to this future.  The

@@ -22,6 +22,9 @@ import java.nio.channels.WritableByteChannel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
+/**
+ * Default {@link FileRegion} implementation which transfer data from a {@link FileChannel}.
+ */
 public class DefaultFileRegion implements FileRegion {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultFileRegion.class);
@@ -30,7 +33,23 @@ public class DefaultFileRegion implements FileRegion {
     private final long position;
     private final long count;
 
+    /**
+     * Create a new instance
+     *
+     * @param file      the {@link FileChannel} which should be transfered
+     * @param position  the position from which the transfer should start
+     * @param count     the number of bytes to transfer
+     */
     public DefaultFileRegion(FileChannel file, long position, long count) {
+        if (file == null) {
+            throw new NullPointerException("file");
+        }
+        if (position < 0) {
+            throw new IllegalArgumentException("position must be >= 0 but was " + position);
+        }
+        if (count <= 0) {
+            throw new IllegalArgumentException("count must be >= 0 but was " + count);
+        }
         this.file = file;
         this.position = position;
         this.count = count;

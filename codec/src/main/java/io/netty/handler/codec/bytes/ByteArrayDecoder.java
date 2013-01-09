@@ -41,20 +41,19 @@ import io.netty.handler.codec.MessageToMessageDecoder;
  * and then you can use an array of bytes instead of a {@link ByteBuf}
  * as a message:
  * <pre>
- * void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
- *     byte[] bytes = (byte[]) e.getMessage();
+ * void messageReceived({@link ChannelHandlerContext} ctx, byte[] bytes) {
  *     ...
  * }
  * </pre>
  */
-public class ByteArrayDecoder extends MessageToMessageDecoder<ByteBuf, byte[]> {
+public class ByteArrayDecoder extends MessageToMessageDecoder<ByteBuf> {
 
     public ByteArrayDecoder() {
         super(ByteBuf.class);
     }
 
     @Override
-    public byte[] decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+    protected Object decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
         byte[] array;
         if (msg.hasArray()) {
             if (msg.arrayOffset() == 0 && msg.readableBytes() == msg.capacity()) {

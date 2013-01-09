@@ -17,8 +17,9 @@ package io.netty.channel.socket.aio;
 
 import io.netty.buffer.BufType;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.ServerSocketChannelConfig;
 import io.netty.logging.InternalLogger;
@@ -30,8 +31,12 @@ import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
-import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * {@link ServerSocketChannel} implementation which uses NIO2.
+ *
+ * NIO2 is only supported on Java 7+.
+ */
 public class AioServerSocketChannel extends AbstractAioChannel implements ServerSocketChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
@@ -41,16 +46,8 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
             InternalLoggerFactory.getInstance(AioServerSocketChannel.class);
 
     private final AioServerSocketChannelConfig config;
+    private boolean acceptInProgress;
     private boolean closed;
-    private final AtomicBoolean readSuspended = new AtomicBoolean();
-
-    private final Runnable acceptTask = new Runnable() {
-
-        @Override
-        public void run() {
-            doAccept();
-        }
-    };
 
     private static AsynchronousServerSocketChannel newSocket(AsynchronousChannelGroup group) {
         try {
@@ -60,14 +57,24 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
         }
     }
 
+    /**
+     * Create a new instance which has not yet attached an {@link AsynchronousServerSocketChannel}. The
+     * {@link AsynchronousServerSocketChannel} will be attached after it was this instance was registered to an
+     * {@link EventLoop}.
+     */
     public AioServerSocketChannel() {
         super(null, null, null);
-        config = new AioServerSocketChannelConfig();
+        config = new AioServerSocketChannelConfig(this);
     }
 
+    /**
+     * Create a new instance from the given {@link AsynchronousServerSocketChannel}.
+     *
+     * @param channel    the {@link AsynchronousServerSocketChannel} which is used by this instance
+     */
     public AioServerSocketChannel(AsynchronousServerSocketChannel channel) {
         super(null, null, channel);
-        config = new AioServerSocketChannelConfig(channel);
+        config = new AioServerSocketChannelConfig(this, channel);
     }
 
     @Override
@@ -106,13 +113,15 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     protected void doBind(SocketAddress localAddress) throws Exception {
         AsynchronousServerSocketChannel ch = javaChannel();
         ch.bind(localAddress, config.getBacklog());
-        doAccept();
     }
 
-    private void doAccept() {
-        if (readSuspended.get()) {
+    @Override
+    protected void doBeginRead() {
+        if (acceptInProgress) {
             return;
         }
+
+        acceptInProgress = true;
         javaChannel().accept(this, ACCEPT_HANDLER);
     }
 
@@ -131,8 +140,8 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
 
     @Override
     protected void doConnect(
-            SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) {
-        future.setFailure(new UnsupportedOperationException());
+            SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override
@@ -146,7 +155,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
         if (ch == null) {
             AsynchronousServerSocketChannel channel = newSocket(((AioEventLoopGroup) eventLoop().parent()).group);
             ch = channel;
-            config.active(channel);
+            config.assign(channel);
         }
         return task;
     }
@@ -156,17 +165,17 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
 
         @Override
         protected void completed0(AsynchronousSocketChannel ch, AioServerSocketChannel channel) {
-            // register again this handler to accept new connections
-            channel.doAccept();
-
+            channel.acceptInProgress = false;
             // create the socket add it to the buffer and fire the event
             channel.pipeline().inboundMessageBuffer().add(
                     new AioSocketChannel(channel, null, ch));
             channel.pipeline().fireInboundBufferUpdated();
+            channel.pipeline().fireInboundBufferSuspended();
         }
 
         @Override
         protected void failed0(Throwable t, AioServerSocketChannel channel) {
+            channel.acceptInProgress = false;
             boolean asyncClosed = false;
             if (t instanceof AsynchronousCloseException) {
                 asyncClosed = true;
@@ -183,29 +192,5 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     @Override
     public ServerSocketChannelConfig config() {
         return config;
-    }
-
-    @Override
-    protected Unsafe newUnsafe() {
-        return new AioServerSocketUnsafe();
-    }
-
-    private final class AioServerSocketUnsafe extends AbstractAioUnsafe {
-
-        @Override
-        public void suspendRead() {
-            readSuspended.set(true);
-        }
-
-        @Override
-        public void resumeRead() {
-            if (readSuspended.compareAndSet(true, false)) {
-                if (eventLoop().inEventLoop()) {
-                    doAccept();
-                } else {
-                    eventLoop().execute(acceptTask);
-                }
-            }
-        }
     }
 }

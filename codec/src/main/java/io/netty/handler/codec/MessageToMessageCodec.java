@@ -15,43 +15,77 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.buffer.Buf;
 import io.netty.buffer.MessageBuf;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelOutboundMessageHandler;
+import io.netty.channel.ChannelPromise;
 
-public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN, OUTBOUND_OUT>
+/**
+ * A Codec for on-the-fly encoding/decoding of message.
+ *
+ * This can be though of an combination of {@link MessageToMessageDecoder} and {@link MessageToMessageEncoder}.
+ *
+ * Here is an example of a {@link MessageToMessageCodec} which just decode from {@link Integer} to {@link Long}
+ * and encode from {@link Long} to {@link Integer}.
+ *
+ * <pre>
+ *     public class NumberCodec extends
+ *             {@link MessageToMessageCodec}&lt;{@link Integer}, {@link Long}, {@link Long}, {@link Integer}&gt; {
+ *         {@code @Override}
+ *         public {@link Long} decode({@link ChannelHandlerContext} ctx, {@link Integer} msg)
+ *                 throws {@link Exception} {
+ *             return msg.longValue();
+ *         }
+ *
+ *         {@code @Overrride}
+ *         public {@link Integer} encode({@link ChannelHandlerContext} ctx, {@link Long} msg)
+ *                 throws {@link Exception} {
+ *             return msg.intValue();
+ *         }
+ *     }
+ * </pre>
+ */
+public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
         extends ChannelHandlerAdapter
         implements ChannelInboundMessageHandler<INBOUND_IN>,
                    ChannelOutboundMessageHandler<OUTBOUND_IN> {
 
-    private final MessageToMessageEncoder<OUTBOUND_IN, OUTBOUND_OUT> encoder =
-            new MessageToMessageEncoder<OUTBOUND_IN, OUTBOUND_OUT>() {
+    private final MessageToMessageEncoder<OUTBOUND_IN> encoder =
+            new MessageToMessageEncoder<OUTBOUND_IN>() {
         @Override
         public boolean isEncodable(Object msg) throws Exception {
             return MessageToMessageCodec.this.isEncodable(msg);
         }
 
         @Override
-        public OUTBOUND_OUT encode(ChannelHandlerContext ctx, OUTBOUND_IN msg) throws Exception {
+        public Object encode(ChannelHandlerContext ctx, OUTBOUND_IN msg) throws Exception {
             return MessageToMessageCodec.this.encode(ctx, msg);
+        }
+
+        @Override
+        protected void freeOutboundMessage(OUTBOUND_IN msg) throws Exception {
+            MessageToMessageCodec.this.freeOutboundMessage(msg);
         }
     };
 
-    private final MessageToMessageDecoder<INBOUND_IN, INBOUND_OUT> decoder =
-            new MessageToMessageDecoder<INBOUND_IN, INBOUND_OUT>() {
+    private final MessageToMessageDecoder<INBOUND_IN> decoder =
+            new MessageToMessageDecoder<INBOUND_IN>() {
         @Override
         public boolean isDecodable(Object msg) throws Exception {
             return MessageToMessageCodec.this.isDecodable(msg);
         }
 
         @Override
-        public INBOUND_OUT decode(ChannelHandlerContext ctx, INBOUND_IN msg) throws Exception {
+        public Object decode(ChannelHandlerContext ctx, INBOUND_IN msg) throws Exception {
             return MessageToMessageCodec.this.decode(ctx, msg);
+        }
+
+        @Override
+        protected void freeInboundMessage(INBOUND_IN msg) throws Exception {
+            MessageToMessageCodec.this.freeInboundMessage(msg);
         }
     };
 
@@ -74,8 +108,18 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
     }
 
     @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-        buf.free();
+    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        decoder.freeInboundBuffer(ctx);
+    }
+
+    @Override
+    public MessageBuf<OUTBOUND_IN> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return encoder.newOutboundBuffer(ctx);
+    }
+
+    @Override
+    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        encoder.freeOutboundBuffer(ctx);
     }
 
     @Override
@@ -85,17 +129,7 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
     }
 
     @Override
-    public MessageBuf<OUTBOUND_IN> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return encoder.newOutboundBuffer(ctx);
-    }
-
-    @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-        buf.free();
-    }
-
-    @Override
-    public void flush(ChannelHandlerContext ctx, ChannelFuture future) throws Exception {
+    public void flush(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
         encoder.flush(ctx, future);
     }
 
@@ -117,6 +151,14 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
         return ChannelHandlerUtil.acceptMessage(acceptedOutboundMsgTypes, msg);
     }
 
-    public abstract OUTBOUND_OUT encode(ChannelHandlerContext ctx, OUTBOUND_IN msg) throws Exception;
-    public abstract INBOUND_OUT decode(ChannelHandlerContext ctx, INBOUND_IN msg) throws Exception;
+    protected abstract Object encode(ChannelHandlerContext ctx, OUTBOUND_IN msg) throws Exception;
+    protected abstract Object decode(ChannelHandlerContext ctx, INBOUND_IN msg) throws Exception;
+
+    protected void freeInboundMessage(INBOUND_IN msg) throws Exception {
+        ChannelHandlerUtil.freeMessage(msg);
+    }
+
+    protected void freeOutboundMessage(OUTBOUND_IN msg) throws Exception {
+        ChannelHandlerUtil.freeMessage(msg);
+    }
 }
