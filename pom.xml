@@ -88,7 +88,6 @@
     <module>testsuite</module>
     <module>all</module>
     <module>tarball</module>
-    <module>netty-transport-rxtx</module>
   </modules>
 
   <dependencyManagement>
