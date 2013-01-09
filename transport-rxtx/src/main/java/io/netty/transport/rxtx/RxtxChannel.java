@@ -47,7 +47,7 @@ public class RxtxChannel extends AbstractOioByteChannel {
     private InputStream in;
     private OutputStream out;
 
-    RxtxChannel() {
+    public RxtxChannel() {
         super(null, null);
         
         config = new RxtxChannelConfig(this);
@@ -65,12 +65,12 @@ public class RxtxChannel extends AbstractOioByteChannel {
     
     @Override
     public boolean isOpen() {
-        return out != null;
+        return true;
     }
 
     @Override
     public boolean isActive() {
-        return isOpen();
+        return in != null && out != null;
     }
 
     @Override
