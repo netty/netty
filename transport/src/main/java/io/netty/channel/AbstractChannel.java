@@ -768,6 +768,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public void beginRead() {
+            if (!isActive()) {
+                return;
+            }
+
             if (eventLoop().inEventLoop()) {
                 try {
                     doBeginRead();
