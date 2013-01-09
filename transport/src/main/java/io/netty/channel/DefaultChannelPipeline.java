@@ -65,8 +65,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
         this.channel = channel;
 
-        tail = new DefaultChannelHandlerContext(
-                this, null, null, null, generateName(TAIL_HANDLER), TAIL_HANDLER);
+        tail = new DefaultChannelHandlerContext(this, null, generateName(TAIL_HANDLER), TAIL_HANDLER);
 
         HeadHandler headHandler;
         switch (channel.metadata().bufferType()) {
@@ -80,8 +79,9 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             throw new Error("unknown buffer type: " + channel.metadata().bufferType());
         }
 
-        head = new DefaultChannelHandlerContext(
-                this, null, null, tail, generateName(headHandler), headHandler);
+        head = new DefaultChannelHandlerContext(this, null, generateName(headHandler), headHandler);
+
+        head.next = tail;
         tail.prev = head;
 
         unsafe = channel.unsafe();
@@ -103,7 +103,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         synchronized (this) {
             checkDuplicateName(name);
-            newCtx = new DefaultChannelHandlerContext(this, group, null, null, name, handler);
+            newCtx = new DefaultChannelHandlerContext(this, group, name, handler);
 
             if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
                 addFirst0(name, newCtx);
@@ -154,7 +154,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         synchronized (this) {
             checkDuplicateName(name);
 
-            newCtx = new DefaultChannelHandlerContext(this, group, null, null, name, handler);
+            newCtx = new DefaultChannelHandlerContext(this, group, name, handler);
             if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
                 addLast0(name, newCtx);
                 return this;
@@ -207,7 +207,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         synchronized (this) {
             ctx = getContextOrDie(baseName);
             checkDuplicateName(name);
-            newCtx = new DefaultChannelHandlerContext(this, group, null, null, name, handler);
+            newCtx = new DefaultChannelHandlerContext(this, group, name, handler);
 
             if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
                 addBefore0(name, ctx, newCtx);
@@ -259,7 +259,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         synchronized (this) {
             ctx = getContextOrDie(baseName);
             checkDuplicateName(name);
-            newCtx = new DefaultChannelHandlerContext(this, group, null, null, name, handler);
+            newCtx = new DefaultChannelHandlerContext(this, group, name, handler);
 
             if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
                 addAfter0(name, ctx, newCtx);
@@ -466,7 +466,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             }
 
             final DefaultChannelHandlerContext newCtx =
-                    new DefaultChannelHandlerContext(this, ctx.executor, null, null, newName, newHandler);
+                    new DefaultChannelHandlerContext(this, ctx.executor, newName, newHandler);
 
             if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
                 replace0(ctx, newName, newCtx);

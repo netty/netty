@@ -235,7 +235,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @SuppressWarnings("unchecked")
     DefaultChannelHandlerContext(
             DefaultChannelPipeline pipeline, EventExecutorGroup group,
-            DefaultChannelHandlerContext prev, DefaultChannelHandlerContext next,
             String name, ChannelHandler handler) {
 
         if (name == null) {
@@ -266,9 +265,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             }
         }
         this.type = Collections.unmodifiableSet(type);
-
-        this.prev = prev;
-        this.next = next;
 
         channel = pipeline.channel;
         this.pipeline = pipeline;
