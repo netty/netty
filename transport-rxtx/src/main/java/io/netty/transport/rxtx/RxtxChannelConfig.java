@@ -145,17 +145,17 @@ public class RxtxChannelConfig extends DefaultChannelConfig {
         }
     }
 
-    private int baudrate = 115200;
+    private volatile int baudrate = 115200;
 
-    private boolean dtr;
+    private volatile boolean dtr;
 
-    private boolean rts;
+    private volatile boolean rts;
 
-    private Stopbits stopbits = Stopbits.STOPBITS_1;
+    private volatile Stopbits stopbits = Stopbits.STOPBITS_1;
 
-    private Databits databits = Databits.DATABITS_8;
+    private volatile Databits databits = Databits.DATABITS_8;
 
-    private Paritybit paritybit = Paritybit.NONE;
+    private volatile Paritybit paritybit = Paritybit.NONE;
 
     public RxtxChannelConfig(RxtxChannel channel) {
         super(channel);
