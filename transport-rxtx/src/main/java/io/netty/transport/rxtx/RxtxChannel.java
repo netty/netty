@@ -15,63 +15,163 @@
  */
 package io.netty.transport.rxtx;
 
+import static io.netty.transport.rxtx.RxtxChannelOptions.*;
 
-import java.net.SocketAddress;
-
-import io.netty.channel.AbstractChannel;
-import io.netty.channel.Channel;
+import io.netty.buffer.BufType;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelSink;
+import io.netty.channel.ChannelMetadata;
+import io.netty.channel.socket.oio.AbstractOioByteChannel;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.SocketAddress;
+import java.net.SocketTimeoutException;
+import java.nio.channels.NotYetConnectedException;
+
+import gnu.io.CommPort;
+import gnu.io.CommPortIdentifier;
+import gnu.io.SerialPort;
 
 /**
  * A channel to a serial device using the RXTX library.
  */
-public class RxtxChannel extends AbstractChannel {
+public class RxtxChannel extends AbstractOioByteChannel {
+    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.BYTE, true);
+    
+    private final ChannelConfig config;
+    
+    private RxtxDeviceAddress deviceAddress;
+    private SerialPort serialPort;
+    private InputStream in;
+    private OutputStream out;
 
-    RxtxChannel(final Channel parent, final ChannelFactory factory, final ChannelPipeline pipeline,
-                final ChannelSink sink) {
-        super(parent, factory, pipeline, sink);
+    RxtxChannel() {
+        super(null, null);
+        
+        config = new RxtxChannelConfig(this);
     }
 
     @Override
-    public ChannelConfig getConfig() {
-        return ((RxtxChannelSink) getPipeline().getSink()).getConfig();
+    public ChannelConfig config() {
+        return config;
     }
 
     @Override
-    public boolean isBound() {
-        return ((RxtxChannelSink) getPipeline().getSink()).isBound();
+    public ChannelMetadata metadata() {
+        return METADATA;
+    }
+    
+    @Override
+    public boolean isOpen() {
+        return out != null;
     }
 
     @Override
-    public boolean isConnected() {
-        return ((RxtxChannelSink) getPipeline().getSink()).isConnected();
+    public boolean isActive() {
+        return isOpen();
     }
 
     @Override
-    public SocketAddress getLocalAddress() {
+    protected int available() {
+        try {
+            return in.available();
+        } catch (IOException e) {
+            return 0;
+        }
+    }
+
+    @Override
+    protected int doReadBytes(ByteBuf buf) throws Exception {
+        try {
+            return buf.writeBytes(in, buf.writableBytes());
+        } catch (SocketTimeoutException e) {
+            return 0;
+        }
+    }
+
+    @Override
+    protected void doWriteBytes(ByteBuf buf) throws Exception {
+        if (out == null) {
+            throw new NotYetConnectedException();
+        }
+        buf.readBytes(out, buf.readableBytes());
+    }
+
+    @Override
+    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+        final CommPortIdentifier cpi =
+                CommPortIdentifier.getPortIdentifier(((RxtxDeviceAddress)remoteAddress).getDeviceAddress());
+        final CommPort commPort = cpi.open(this.getClass().getName(), 1000);
+        
+        deviceAddress = (RxtxDeviceAddress) remoteAddress;
+        
+        serialPort = (SerialPort) commPort;
+        serialPort.setSerialPortParams(
+            config().getOption(BAUD_RATE),
+            config().getOption(DATA_BITS).getValue(),
+            config().getOption(STOP_BITS).getValue(),
+            config().getOption(PARITY_BIT).getValue()
+        );
+        serialPort.setDTR(config().getOption(DTR));
+        serialPort.setRTS(config().getOption(RTS));
+        
+        out = serialPort.getOutputStream();
+        in = serialPort.getInputStream();
+    }
+
+    @Override
+    protected SocketAddress localAddress0() {
         return null;
     }
 
     @Override
-    public SocketAddress getRemoteAddress() {
-        return ((RxtxChannelSink) getPipeline().getSink()).getRemoteAddress();
+    protected SocketAddress remoteAddress0() {
+        return deviceAddress;
     }
 
     @Override
-    public ChannelFuture bind(final SocketAddress localAddress) {
+    protected void doBind(SocketAddress localAddress) throws Exception {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public ChannelFuture unbind() {
-        throw new UnsupportedOperationException();
+    protected void doDisconnect() throws Exception {
+        doClose();
     }
 
-    void doSetClosed() {
-        setClosed();
+    @Override
+    protected void doClose() throws Exception {
+        IOException ex = null;
+        
+        try {
+            if (in != null) {
+                in.close();
+            }
+        } catch (IOException e) {
+            ex = e;
+        }
+        
+        try {
+            if (out != null) {
+                out.close();
+            }
+        } catch (IOException e) {
+            ex = e;
+        }
+        
+        if (serialPort != null) {
+            serialPort.removeEventListener();
+            serialPort.close();
+        }
+        
+        in = null;
+        out = null;
+        serialPort = null;
+        
+        if (ex != null) {
+            throw ex;
+        }
     }
 }

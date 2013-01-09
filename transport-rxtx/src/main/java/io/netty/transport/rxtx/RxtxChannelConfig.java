@@ -15,10 +15,14 @@
  */
 package io.netty.transport.rxtx;
 
-import gnu.io.SerialPort;
+import static io.netty.transport.rxtx.RxtxChannelOptions.*;
 
+import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
-import io.netty.util.internal.ConversionUtil;
+
+import java.util.Map;
+
+import gnu.io.SerialPort;
 
 /**
  * A configuration class for RXTX device connections.
@@ -112,43 +116,68 @@ public class RxtxChannelConfig extends DefaultChannelConfig {
 
     private boolean rts;
 
-    private Stopbits stopbits = RxtxChannelConfig.Stopbits.STOPBITS_1;
+    private Stopbits stopbits = Stopbits.STOPBITS_1;
 
-    private Databits databits = RxtxChannelConfig.Databits.DATABITS_8;
+    private Databits databits = Databits.DATABITS_8;
 
-    private Paritybit paritybit = RxtxChannelConfig.Paritybit.NONE;
+    private Paritybit paritybit = Paritybit.NONE;
 
-    public RxtxChannelConfig() {
-        // work with defaults ...
+    public RxtxChannelConfig(RxtxChannel channel) {
+        super(channel);
     }
-
-    public RxtxChannelConfig(final int baudrate, final boolean dtr, final boolean rts, final Stopbits stopbits,
-                             final Databits databits, final Paritybit paritybit) {
-        this.baudrate = baudrate;
-        this.dtr = dtr;
-        this.rts = rts;
-        this.stopbits = stopbits;
-        this.databits = databits;
-        this.paritybit = paritybit;
-    }
-
+    
     @Override
-    public boolean setOption(final String key, final Object value) {
-        if (key.equals("baudrate")) {
-            setBaudrate(ConversionUtil.toInt(value));
-            return true;
-        } else if (key.equals("stopbits")) {
-            setStopbits((Stopbits) value);
-            return true;
-        } else if (key.equals("databits")) {
-            setDatabits((Databits) value);
-            return true;
-        } else if (key.equals("paritybit")) {
-            setParitybit((Paritybit) value);
-            return true;
-        } else {
-            return super.setOption(key, value);
+    public Map<ChannelOption<?>, Object> getOptions() {
+        return getOptions(super.getOptions(),
+                          BAUD_RATE, DTR, RTS, STOP_BITS, DATA_BITS, PARITY_BIT);
+    }
+    
+    @SuppressWarnings("unchecked")
+    @Override
+    public <T> T getOption(ChannelOption<T> option) {
+        if (option == BAUD_RATE) {
+            return (T) Integer.valueOf(getBaudrate());
         }
+        if (option == DTR) {
+            return (T) Boolean.valueOf(isDtr());
+        }
+        if (option == RTS) {
+            return (T) Boolean.valueOf(isRts());
+        }
+        if (option == STOP_BITS) {
+            return (T) getStopbits();
+        }
+        if (option == DATA_BITS) {
+            return (T) getDatabits();
+        }
+        if (option == PARITY_BIT) {
+            return (T) getParitybit();
+        }
+        
+        return super.getOption(option);
+    }
+    
+    @Override
+    public <T> boolean setOption(ChannelOption<T> option, T value) {
+        validate(option, value);
+        
+        if (option == BAUD_RATE) {
+            setBaudrate((Integer) value);
+        } else if (option == DTR) {
+            setDtr((Boolean) value);
+        } else if (option == RTS) {
+            setRts((Boolean) value);
+        } else if (option == STOP_BITS) {
+            setStopbits((Stopbits) value);
+        } else if (option == DATA_BITS) {
+            setDatabits((Databits) value);
+        } else if (option == PARITY_BIT) {
+            setParitybit((Paritybit) value);
+        } else {
+            return super.setOption(option, value);
+        }
+        
+        return true;
     }
 
     public void setBaudrate(final int baudrate) {
@@ -163,7 +192,7 @@ public class RxtxChannelConfig extends DefaultChannelConfig {
         this.databits = databits;
     }
 
-    private void setParitybit(final Paritybit paritybit) {
+    public void setParitybit(final Paritybit paritybit) {
         this.paritybit = paritybit;
     }
 
