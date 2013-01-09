@@ -17,9 +17,9 @@ package io.netty.handler.codec;
 
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
-import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.PartialFlushException;
@@ -91,7 +91,7 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
                     ChannelHandlerUtil.unfoldAndAdd(ctx, omsg, false);
                 } finally {
                     if (free) {
-                        freeInboundMessage(imsg);
+                        freeOutboundMessage(imsg);
                     }
                 }
             } catch (Throwable t) {
@@ -137,7 +137,7 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
      * up any resources that is held by the inbound message. You may want to override this if your implementation
      * just pass-through the input message or need it for later usage.
      */
-    protected void freeInboundMessage(I msg) throws Exception {
+    protected void freeOutboundMessage(I msg) throws Exception {
         ChannelHandlerUtil.freeMessage(msg);
     }
 }
