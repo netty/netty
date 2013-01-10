@@ -26,7 +26,7 @@ import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.CharsetUtil;
 
-import javax.swing.*;
+import javax.swing.JApplet;
 
 /**
  * {@link JApplet} which starts up a Server that receive data and discard it.
