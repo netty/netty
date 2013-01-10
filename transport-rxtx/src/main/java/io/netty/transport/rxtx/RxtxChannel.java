@@ -15,8 +15,9 @@
  */
 package io.netty.transport.rxtx;
 
-import static io.netty.transport.rxtx.RxtxChannelOptions.*;
-
+import gnu.io.CommPort;
+import gnu.io.CommPortIdentifier;
+import gnu.io.SerialPort;
 import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelConfig;
@@ -30,9 +31,7 @@ import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.nio.channels.NotYetConnectedException;
 
-import gnu.io.CommPort;
-import gnu.io.CommPortIdentifier;
-import gnu.io.SerialPort;
+import static io.netty.transport.rxtx.RxtxChannelOptions.*;
 
 /**
  * A channel to a serial device using the RXTX library.
@@ -111,9 +110,9 @@ public class RxtxChannel extends AbstractOioByteChannel {
         serialPort = (SerialPort) commPort;
         serialPort.setSerialPortParams(
             config().getOption(BAUD_RATE),
-            config().getOption(DATA_BITS).getValue(),
-            config().getOption(STOP_BITS).getValue(),
-            config().getOption(PARITY_BIT).getValue()
+            config().getOption(DATA_BITS).value(),
+            config().getOption(STOP_BITS).value(),
+            config().getOption(PARITY_BIT).value()
         );
         serialPort.setDTR(config().getOption(DTR));
         serialPort.setRTS(config().getOption(RTS));
