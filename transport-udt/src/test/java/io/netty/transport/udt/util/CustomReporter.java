@@ -16,15 +16,6 @@
 
 package io.netty.transport.udt.util;
 
-import java.io.PrintStream;
-import java.text.DateFormat;
-import java.util.Date;
-import java.util.Locale;
-import java.util.Map.Entry;
-import java.util.SortedMap;
-import java.util.TimeZone;
-import java.util.concurrent.TimeUnit;
-
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Clock;
 import com.yammer.metrics.core.Counter;
@@ -39,6 +30,15 @@ import com.yammer.metrics.core.MetricsRegistry;
 import com.yammer.metrics.core.Timer;
 import com.yammer.metrics.reporting.AbstractPollingReporter;
 import com.yammer.metrics.stats.Snapshot;
+
+import java.io.PrintStream;
+import java.text.DateFormat;
+import java.util.Date;
+import java.util.Locale;
+import java.util.Map.Entry;
+import java.util.SortedMap;
+import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A simple reporters which prints out application metrics to a
@@ -123,7 +123,7 @@ public class CustomReporter extends AbstractPollingReporter implements
             final String dateTime = format.format(new Date(clock.time()));
             out.print(dateTime);
             out.print(' ');
-            for (int i = 0; i < (CONSOLE_WIDTH - dateTime.length() - 1); i++) {
+            for (int i = 0; i < CONSOLE_WIDTH - dateTime.length() - 1; i++) {
                 out.print('=');
             }
             out.println();
@@ -227,7 +227,7 @@ public class CustomReporter extends AbstractPollingReporter implements
                 snapshot.get999thPercentile(), durationUnit);
     }
 
-    private String abbrev(final TimeUnit unit) {
+    private static String abbrev(final TimeUnit unit) {
         switch (unit) {
         case NANOSECONDS:
             return "ns";

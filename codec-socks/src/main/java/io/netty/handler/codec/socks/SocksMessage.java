@@ -216,7 +216,7 @@ public abstract class SocksMessage {
 
         private final byte b;
 
-        private SubnegotiationVersion(byte b) {
+        SubnegotiationVersion(byte b) {
             this.b = b;
         }
 
@@ -245,9 +245,6 @@ public abstract class SocksMessage {
 
     /**
      * Encode socks message into its byte representation and write it into byteBuf
-     *
-     * @param byteBuf
-     * @see ByteBuf
      */
     public abstract void encodeAsByteBuf(ByteBuf byteBuf);
 }

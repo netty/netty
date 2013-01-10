@@ -15,14 +15,12 @@
  */
 package io.netty.example.udt.echo.message;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.transport.udt.UdtMessage;
 import io.netty.transport.udt.nio.NioUdtProvider;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,7 +50,6 @@ public class MsgEchoServerHandler extends
     @Override
     protected void messageReceived(final ChannelHandlerContext ctx,
             final UdtMessage message) throws Exception {
-        final ByteBuf byteBuf = message.data();
         final MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
         out.add(message);
         ctx.flush();

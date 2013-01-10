@@ -65,7 +65,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         }
     }
 
-    private DefaultAioSocketChannelConfig config;
+    private final DefaultAioSocketChannelConfig config;
     private volatile boolean inputShutdown;
     private volatile boolean outputShutdown;
 

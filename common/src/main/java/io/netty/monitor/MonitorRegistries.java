@@ -47,7 +47,8 @@ public final class MonitorRegistries implements Iterable<MonitorRegistry> {
     private static final int SUCCESSFUL_INITIALIZATION = 2;
     private static final int NOP_FALLBACK_INITIALIZATION = 3;
 
-    private static int INITIALIZATION_STATE = UNINITIALIZED;
+    @SuppressWarnings("RedundantFieldInitialization")
+    private static int initState = UNINITIALIZED;
     private static MonitorRegistry selectedRegistry;
 
     /**
@@ -107,11 +108,11 @@ public final class MonitorRegistries implements Iterable<MonitorRegistry> {
      */
     public MonitorRegistry unique() {
         //Implementation based on SLF4J's
-        if (INITIALIZATION_STATE == UNINITIALIZED) {
-            INITIALIZATION_STATE = ONGOING_INITIALIZATION;
+        if (initState == UNINITIALIZED) {
+            initState = ONGOING_INITIALIZATION;
             performInitialization();
         }
-        switch (INITIALIZATION_STATE) {
+        switch (initState) {
             case SUCCESSFUL_INITIALIZATION:
                 return selectedRegistry;
             case NOP_FALLBACK_INITIALIZATION:
@@ -125,14 +126,14 @@ public final class MonitorRegistries implements Iterable<MonitorRegistry> {
         final Iterator<MonitorRegistry> registries = iterator();
         if (registries.hasNext()) {
             selectedRegistry = registries.next();
-            INITIALIZATION_STATE = SUCCESSFUL_INITIALIZATION;
+            initState = SUCCESSFUL_INITIALIZATION;
         }
         if (selectedRegistry != null && registries.hasNext()) {
             logger.warn(String.format("Multiple metrics implementations found. " +
                     "Selected %s, ignoring other implementations", selectedRegistry.getClass().getName()));
         }
         if (selectedRegistry == null) {
-            INITIALIZATION_STATE = NOP_FALLBACK_INITIALIZATION;
+            initState = NOP_FALLBACK_INITIALIZATION;
             logger.debug("No metrics implementation found on the classpath.");
         }
     }

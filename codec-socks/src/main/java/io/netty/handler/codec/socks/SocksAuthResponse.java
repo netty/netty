@@ -27,12 +27,6 @@ public final class SocksAuthResponse extends SocksResponse {
     private static final SubnegotiationVersion SUBNEGOTIATION_VERSION = SubnegotiationVersion.AUTH_PASSWORD;
     private final AuthStatus authStatus;
 
-    /**
-     *
-     * @param authStatus
-     * @throws NullPointerException
-     */
-
     public SocksAuthResponse(AuthStatus authStatus) {
         super(SocksResponseType.AUTH);
         if (authStatus == null) {

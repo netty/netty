@@ -26,7 +26,7 @@ import java.util.concurrent.ThreadFactory;
  *
  */
 public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor implements EventLoop {
-    protected CounterMonitor channelCounter = MonitorRegistries.instance()
+    protected final CounterMonitor channelCounter = MonitorRegistries.instance()
             .unique().newCounterMonitor(new MonitorName(getClass(), "total-channels-registered"));
 
     /**

@@ -42,7 +42,7 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
      *          the {@link ByteBuf} to add
      * @return self
      *          this instance
-     * @thows {@link IndexOutOfBoundsException}
+     * @throws {@link IndexOutOfBoundsException}
      *          if the index is invalid
      */
     CompositeByteBuf addComponent(int cIndex, ByteBuf buffer);
@@ -72,7 +72,7 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
      *          the {@link ByteBuf}s to add
      * @return self
      *          this instance
-     * @thows {@link IndexOutOfBoundsException}
+     * @throws {@link IndexOutOfBoundsException}
      *          if the index is invalid
      *
      */
@@ -87,7 +87,7 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
      *          the {@link ByteBuf}s to add
      * @return self
      *          this instance
-     * @thows {@link IndexOutOfBoundsException}
+     * @throws {@link IndexOutOfBoundsException}
      *          if the index is invalid
      */
     CompositeByteBuf addComponents(int cIndex, Iterable<ByteBuf> buffers);
@@ -99,7 +99,7 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
      *          the index on from which the {@link ByteBuf} will be remove
      * @return self
      *          this instance
-     * @thows {@link IndexOutOfBoundsException}
+     * @throws {@link IndexOutOfBoundsException}
      *          if the index is invalid
      */
     CompositeByteBuf removeComponent(int cIndex);
@@ -113,7 +113,7 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
      *          the number of components to remove
      * @return self
      *          this instance
-     * @thows {@link IndexOutOfBoundsException}
+     * @throws {@link IndexOutOfBoundsException}
      *          if the index is invalid
      */
     CompositeByteBuf removeComponents(int cIndex, int numComponents);
@@ -135,7 +135,7 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
      *          the index for which the {@link ByteBuf} should be returned
      * @return buf
      *          the {@link ByteBuf} on the specified index
-     * @thows {@link IndexOutOfBoundsException}
+     * @throws {@link IndexOutOfBoundsException}
      *          if the index is invalid
      */
     ByteBuf component(int cIndex);
@@ -147,7 +147,7 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
      *          the offset for which the {@link ByteBuf} should be returned
      * @return buf
      *          the {@link ByteBuf} on the specified index
-     * @thows {@link IndexOutOfBoundsException}
+     * @throws {@link IndexOutOfBoundsException}
      *          if the offset is invalid
      */
     ByteBuf componentAtOffset(int offset);
@@ -175,7 +175,7 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
      *          the number of components to compose
      * @return self
      *          this instance
-     * @thows {@link IndexOutOfBoundsException}
+     * @throws {@link IndexOutOfBoundsException}
      *          if the offset is invalid
      */
     CompositeByteBuf consolidate(int cIndex, int numComponents);

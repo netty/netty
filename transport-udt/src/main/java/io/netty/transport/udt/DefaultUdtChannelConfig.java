@@ -15,16 +15,16 @@
  */
 package io.netty.transport.udt;
 
-import static io.netty.channel.ChannelOption.*;
+import com.barchart.udt.OptionUDT;
+import com.barchart.udt.SocketUDT;
+import com.barchart.udt.nio.ChannelUDT;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
 
 import java.io.IOException;
 import java.util.Map;
 
-import com.barchart.udt.OptionUDT;
-import com.barchart.udt.SocketUDT;
-import com.barchart.udt.nio.ChannelUDT;
+import static io.netty.channel.ChannelOption.*;
 
 /**
  * The default {@link UdtChannelConfig} implementation.
@@ -38,8 +38,8 @@ public class DefaultUdtChannelConfig extends DefaultChannelConfig implements
     private volatile int protocolReceiveBuferSize = 10 * M;
     private volatile int protocolSendBuferSize = 10 * M;
 
-    private volatile int systemReceiveBufferSize = 1 * M;
-    private volatile int systemSendBuferSize = 1 * M;
+    private volatile int systemReceiveBufferSize = M;
+    private volatile int systemSendBuferSize = M;
 
     private volatile int allocatorReceiveBufferSize = 128 * K;
     private volatile int allocatorSendBufferSize = 128 * K;
@@ -149,8 +149,8 @@ public class DefaultUdtChannelConfig extends DefaultChannelConfig implements
     }
 
     @Override
-    public UdtChannelConfig setProtocolReceiveBufferSize(final int allocator) {
-        this.protocolReceiveBuferSize = allocator;
+    public UdtChannelConfig setProtocolReceiveBufferSize(final int protocolReceiveBuferSize) {
+        this.protocolReceiveBuferSize = protocolReceiveBuferSize;
         return this;
     }
 

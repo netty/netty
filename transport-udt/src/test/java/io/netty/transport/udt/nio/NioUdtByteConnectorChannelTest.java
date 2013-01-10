@@ -16,12 +16,12 @@
 
 package io.netty.transport.udt.nio;
 
-import static org.junit.Assert.*;
 import io.netty.buffer.BufType;
-
 import org.junit.Test;
 
-public class TestNioUdtMessageConnectorChannel extends TestAny {
+import static org.junit.Assert.*;
+
+public class NioUdtByteConnectorChannelTest extends TestAny {
 
     /**
      * verify channel meta data
@@ -29,8 +29,8 @@ public class TestNioUdtMessageConnectorChannel extends TestAny {
     @Test
     public void metadata() throws Exception {
 
-        assertEquals(BufType.MESSAGE, new NioUdtMessageConnectorChannel()
-                .metadata().bufferType());
+        assertEquals(BufType.BYTE, new NioUdtByteConnectorChannel().metadata()
+                .bufferType());
 
     }
 

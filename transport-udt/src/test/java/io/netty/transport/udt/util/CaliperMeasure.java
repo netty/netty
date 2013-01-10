@@ -16,13 +16,6 @@
 
 package io.netty.transport.udt.util;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.caliper.Measurement;
 import com.google.caliper.MeasurementSet;
 import com.google.caliper.Run;
@@ -33,15 +26,16 @@ import com.yammer.metrics.core.Meter;
 import com.yammer.metrics.core.MetricsRegistry;
 import com.yammer.metrics.core.Timer;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
 /**
  * Caliper measure with Metrics provider.
  * <p>
  * measure up to 3 values: {@link #rate()}, {@link #time()}, {@link #size()}
  */
 public class CaliperMeasure {
-
-    private final static Logger log = LoggerFactory
-            .getLogger(CaliperMeasure.class);
 
     /**
      * Gauge any double value
@@ -55,8 +49,8 @@ public class CaliperMeasure {
             return size;
         }
 
-        public void value(final double number) {
-            this.size = number;
+        public void value(final double size) {
+            this.size = size;
         }
     }
 
@@ -134,7 +128,7 @@ public class CaliperMeasure {
     /**
      * Workaround: zero breaks gwt web app.
      */
-    private double filter(final double value) {
+    private static double filter(final double value) {
         if (value <= 0.0) {
             return 1.0;
         } else {
@@ -179,8 +173,8 @@ public class CaliperMeasure {
         return variables;
     }
 
-    private MeasurementSet measurementSet(final Map<Long, Measurement> map) {
-        final Measurement[] array = map.values().toArray(new Measurement[0]);
+    private static MeasurementSet measurementSet(final Map<Long, Measurement> map) {
+        final Measurement[] array = map.values().toArray(new Measurement[map.size()]);
         final MeasurementSet set = new MeasurementSet(array);
         return set;
     }

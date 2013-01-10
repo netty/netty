@@ -15,12 +15,12 @@
  */
 package io.netty.channel;
 
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
+
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
-
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 
 /**
  * Default {@link FileRegion} implementation which transfer data from a {@link FileChannel}.
@@ -71,7 +71,7 @@ public class DefaultFileRegion implements FileRegion {
         if (count < 0 || position < 0) {
             throw new IllegalArgumentException(
                     "position out of range: " + position +
-                    " (expected: 0 - " + (this.count - 1) + ")");
+                    " (expected: 0 - " + (this.count - 1) + ')');
         }
         if (count == 0) {
             return 0L;

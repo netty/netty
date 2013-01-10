@@ -16,6 +16,7 @@
 package io.netty.util.internal;
 
 import sun.misc.Cleaner;
+import sun.misc.Unsafe;
 
 import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
@@ -119,7 +120,7 @@ public final class DetectionUtil {
     }
 
     /**
-     * Return {@code true} if {@link sun.misc.Unsafe} was found on the classpath and can be used.
+     * Return {@code true} if {@link Unsafe} was found on the classpath and can be used.
      */
     public static boolean hasUnsafe() {
         return HAS_UNSAFE;

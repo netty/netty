@@ -35,6 +35,5 @@ public class UtilThreadFactory implements ThreadFactory {
     @Override
     public Thread newThread(final Runnable runnable) {
         return new Thread(runnable, name + "-" + counter.getAndIncrement());
-    };
-
+    }
 }
