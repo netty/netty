@@ -25,6 +25,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
+import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.logging.InternalLogger;
@@ -106,6 +107,11 @@ public class OioSocketChannel extends AbstractOioByteChannel
                 }
             }
         }
+    }
+
+    @Override
+    public ServerSocketChannel parent() {
+        return (ServerSocketChannel) super.parent();
     }
 
     @Override

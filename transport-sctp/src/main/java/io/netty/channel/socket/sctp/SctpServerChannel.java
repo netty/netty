@@ -17,7 +17,7 @@ package io.netty.channel.socket.sctp;
 
 import io.netty.channel.ServerChannel;
 
-import java.net.SocketAddress;
+import java.net.InetSocketAddress;
 import java.util.Set;
 
 /**
@@ -45,11 +45,11 @@ public interface SctpServerChannel extends ServerChannel {
      * with SctpStandardSocketOption.SCTP_PRIMARY_ADDR option).
      */
     @Override
-    SocketAddress localAddress();
+    InetSocketAddress localAddress();
 
     /**
      * Return all local addresses of the SCTP server channel.
      * Please note that, it will return more than one address if this channel is using multi-homing
      */
-    Set<SocketAddress> allLocalAddresses();
+    Set<InetSocketAddress> allLocalAddresses();
 }

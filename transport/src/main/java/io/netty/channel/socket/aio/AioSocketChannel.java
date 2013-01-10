@@ -26,6 +26,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 
 import java.io.IOException;
@@ -99,6 +100,11 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             AioServerSocketChannel parent, Integer id, AsynchronousSocketChannel ch) {
         super(parent, id, ch);
         config = new DefaultAioSocketChannelConfig(this, ch);
+    }
+
+    @Override
+    public ServerSocketChannel parent() {
+        return (ServerSocketChannel) super.parent();
     }
 
     @Override
