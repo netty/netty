@@ -15,14 +15,13 @@
  */
 package io.netty.transport.rxtx;
 
-import static io.netty.transport.rxtx.RxtxChannelOptions.*;
-
+import gnu.io.SerialPort;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
 
 import java.util.Map;
 
-import gnu.io.SerialPort;
+import static io.netty.transport.rxtx.RxtxChannelOptions.*;
 
 /**
  * A configuration class for RXTX device connections.
@@ -49,17 +48,17 @@ public class RxtxChannelConfig extends DefaultChannelConfig {
             this.value = value;
         }
 
-        public int getValue() {
+        public int value() {
             return value;
         }
 
-        public static Stopbits ofValue(int value) {
+        public static Stopbits valueOf(int value) {
             for (Stopbits stopbit : Stopbits.values()) {
                 if (stopbit.value == value) {
                     return stopbit;
                 }
             }
-            throw new IllegalArgumentException("Unknown value for Stopbits: " + value + '.');
+            throw new IllegalArgumentException("unknown " + Stopbits.class.getSimpleName() + " value: " + value);
         }
     }
 
@@ -87,17 +86,17 @@ public class RxtxChannelConfig extends DefaultChannelConfig {
             this.value = value;
         }
 
-        public int getValue() {
+        public int value() {
             return value;
         }
 
-        public static Databits ofValue(int value) {
+        public static Databits valueOf(int value) {
             for (Databits databit : Databits.values()) {
                 if (databit.value == value) {
                     return databit;
                 }
             }
-            throw new IllegalArgumentException("Unknown value for Databits: " + value + '.');
+            throw new IllegalArgumentException("unknown " + Databits.class.getSimpleName() + " value: " + value);
         }
     }
 
@@ -131,30 +130,25 @@ public class RxtxChannelConfig extends DefaultChannelConfig {
             this.value = value;
         }
 
-        public int getValue() {
+        public int value() {
             return value;
         }
 
-        public static Paritybit ofValue(int value) {
+        public static Paritybit valueOf(int value) {
             for (Paritybit paritybit : Paritybit.values()) {
                 if (paritybit.value == value) {
                     return paritybit;
                 }
             }
-            throw new IllegalArgumentException("Unknown value for paritybit: " + value + '.');
+            throw new IllegalArgumentException("unknown " + Paritybit.class.getSimpleName() + " value: " + value);
         }
     }
 
     private volatile int baudrate = 115200;
-
     private volatile boolean dtr;
-
     private volatile boolean rts;
-
     private volatile Stopbits stopbits = Stopbits.STOPBITS_1;
-
     private volatile Databits databits = Databits.DATABITS_8;
-
     private volatile Paritybit paritybit = Paritybit.NONE;
 
     public RxtxChannelConfig(RxtxChannel channel) {
@@ -163,8 +157,7 @@ public class RxtxChannelConfig extends DefaultChannelConfig {
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(),
-                          BAUD_RATE, DTR, RTS, STOP_BITS, DATA_BITS, PARITY_BIT);
+        return getOptions(super.getOptions(), BAUD_RATE, DTR, RTS, STOP_BITS, DATA_BITS, PARITY_BIT);
     }
 
     @SuppressWarnings("unchecked")
