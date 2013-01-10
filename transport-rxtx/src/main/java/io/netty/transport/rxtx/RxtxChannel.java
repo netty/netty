@@ -101,18 +101,17 @@ public class RxtxChannel extends AbstractOioByteChannel {
     @Override
     protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         RxtxDeviceAddress remote = (RxtxDeviceAddress) remoteAddress;
-        final CommPortIdentifier cpi =
-                CommPortIdentifier.getPortIdentifier(remote.getDeviceAddress());
+        final CommPortIdentifier cpi = CommPortIdentifier.getPortIdentifier(remote.getDeviceAddress());
         final CommPort commPort = cpi.open(getClass().getName(), 1000);
 
         deviceAddress = remote;
 
         serialPort = (SerialPort) commPort;
         serialPort.setSerialPortParams(
-            config().getOption(BAUD_RATE),
-            config().getOption(DATA_BITS).value(),
-            config().getOption(STOP_BITS).value(),
-            config().getOption(PARITY_BIT).value()
+                config().getOption(BAUD_RATE),
+                config().getOption(DATA_BITS).value(),
+                config().getOption(STOP_BITS).value(),
+                config().getOption(PARITY_BIT).value()
         );
         serialPort.setDTR(config().getOption(DTR));
         serialPort.setRTS(config().getOption(RTS));
