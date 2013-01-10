@@ -24,12 +24,11 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.transport.udt.UdtChannel;
 import io.netty.transport.udt.nio.NioUdtProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.ThreadFactory;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * UDT Message Flow Peer
@@ -46,8 +45,7 @@ public abstract class MsgEchoPeerBase {
     protected final InetSocketAddress self;
     protected final InetSocketAddress peer;
 
-    public MsgEchoPeerBase(final InetSocketAddress self,
-            final InetSocketAddress peer, final int messageSize) {
+    protected MsgEchoPeerBase(final InetSocketAddress self, final InetSocketAddress peer, final int messageSize) {
         this.messageSize = messageSize;
         this.self = self;
         this.peer = peer;

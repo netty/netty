@@ -17,6 +17,20 @@
 
 package io.netty.transport.udt.util;
 
+import com.google.caliper.ConfiguredBenchmark;
+import com.google.caliper.Environment;
+import com.google.caliper.EnvironmentGetter;
+import com.google.caliper.Json;
+import com.google.caliper.Result;
+import com.google.caliper.Run;
+import com.google.caliper.Runner;
+import com.google.caliper.Scenario;
+import com.google.caliper.ScenarioResult;
+import com.google.caliper.SimpleBenchmark;
+import com.yammer.metrics.core.TimerContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -30,21 +44,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.caliper.ConfiguredBenchmark;
-import com.google.caliper.Environment;
-import com.google.caliper.EnvironmentGetter;
-import com.google.caliper.Json;
-import com.google.caliper.Result;
-import com.google.caliper.Run;
-import com.google.caliper.Runner;
-import com.google.caliper.Scenario;
-import com.google.caliper.ScenarioResult;
-import com.google.caliper.SimpleBenchmark;
-import com.yammer.metrics.core.TimerContext;
 
 /**
  * Custom caliper runner for {@link CaliperBench}.
@@ -69,9 +68,8 @@ public final class CaliperRunner {
      */
     public static void execute(final Class<? extends CaliperBench> klaz)
             throws Exception {
-        Run run;
-        run = execute("WARMUP", klaz);
-        run = execute("REPORT", klaz);
+        execute("WARMUP", klaz);
+        Run run = execute("REPORT", klaz);
         publish(newResult(run));
     }
 
@@ -226,7 +224,7 @@ public final class CaliperRunner {
         final Run run = newRun("test-main");
         for (int param = 0; param < 5; param++) {
             final CaliperMeasure measure = new CaliperMeasure();
-            measure.variables().put("param", "" + param);
+            measure.variables().put("param", String.valueOf(param));
             for (int step = 0; step < 5; step++) {
                 measure.rate().mark(50 + step);
                 final TimerContext time = measure.time().time();

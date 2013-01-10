@@ -27,7 +27,7 @@ import java.util.concurrent.ThreadFactory;
 /**
  * Bootstrap utilities.
  */
-public class BootHelp {
+public final class BootHelp {
 
     /**
      * bootstrap for byte rendezvous peer
@@ -70,4 +70,5 @@ public class BootHelp {
 
     }
 
+    private BootHelp() { }
 }

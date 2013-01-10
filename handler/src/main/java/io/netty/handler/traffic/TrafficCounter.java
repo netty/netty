@@ -86,7 +86,7 @@ public class TrafficCounter {
     /**
      * Delay between two captures
      */
-    AtomicLong checkInterval = new AtomicLong(
+    final AtomicLong checkInterval = new AtomicLong(
             AbstractTrafficShapingHandler.DEFAULT_CHECK_INTERVAL);
 
     // default 1 s
@@ -117,7 +117,7 @@ public class TrafficCounter {
     /**
      * Is Monitor active
      */
-    AtomicBoolean monitorActive = new AtomicBoolean();
+    final AtomicBoolean monitorActive = new AtomicBoolean();
 
     /**
      * Class to implement monitoring at fix delay

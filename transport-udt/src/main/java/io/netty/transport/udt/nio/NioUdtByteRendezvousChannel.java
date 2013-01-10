@@ -15,23 +15,13 @@
  */
 package io.netty.transport.udt.nio;
 
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
-import io.netty.transport.udt.UdtChannel;
-
 import com.barchart.udt.TypeUDT;
 
 /**
  * Byte Channel Rendezvous for UDT Streams.
  */
-public class NioUdtByteRendezvousChannel extends NioUdtByteConnectorChannel
-        implements UdtChannel {
-
-    private static final InternalLogger logger = InternalLoggerFactory
-            .getInstance(NioUdtByteRendezvousChannel.class);
-
+public class NioUdtByteRendezvousChannel extends NioUdtByteConnectorChannel {
     public NioUdtByteRendezvousChannel() {
         super(NioUdtProvider.newRendezvousChannelUDT(TypeUDT.STREAM));
     }
-
 }

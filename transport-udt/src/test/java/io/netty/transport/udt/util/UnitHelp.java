@@ -16,6 +16,11 @@
 
 package io.netty.transport.udt.util;
 
+import com.barchart.udt.SocketUDT;
+import com.barchart.udt.StatusUDT;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -25,12 +30,7 @@ import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.barchart.udt.SocketUDT;
-import com.barchart.udt.StatusUDT;
+import java.util.regex.Pattern;
 
 /**
  * Unit test helper.
@@ -38,6 +38,7 @@ import com.barchart.udt.StatusUDT;
 public final class UnitHelp {
 
     private static final Logger log = LoggerFactory.getLogger(UnitHelp.class);
+    private static final Pattern SPACES = Pattern.compile("\\s+");
 
     /**
      * Zero out buffer.
@@ -80,7 +81,7 @@ public final class UnitHelp {
      * Invoke external process and wait for completion.
      */
     public static void process(final String command) throws Exception {
-        final ProcessBuilder builder = new ProcessBuilder(command.split("\\s+"));
+        final ProcessBuilder builder = new ProcessBuilder(SPACES.split(command));
         final Process process = builder.start();
         process.waitFor();
     }
@@ -215,11 +216,11 @@ public final class UnitHelp {
     }
 
     public static String randomString() {
-        return "" + System.currentTimeMillis();
+        return String.valueOf(System.currentTimeMillis());
     }
 
     public static String randomSuffix(final String name) {
-        return name + "-" + System.currentTimeMillis();
+        return name + '-' + System.currentTimeMillis();
     }
 
     /**

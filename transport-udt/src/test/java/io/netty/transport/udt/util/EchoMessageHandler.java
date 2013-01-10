@@ -16,6 +16,7 @@
 
 package io.netty.transport.udt.util;
 
+import com.yammer.metrics.core.Meter;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
@@ -23,11 +24,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.transport.udt.UdtMessage;
 import io.netty.transport.udt.nio.NioUdtProvider;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.yammer.metrics.core.Meter;
 
 /**
  * Handler implementation for the echo peer. It initiates the ping-pong traffic
@@ -59,7 +57,7 @@ public class EchoMessageHandler extends
             byteBuf.writeByte((byte) i);
         }
 
-        this.message = new UdtMessage(byteBuf);
+        message = new UdtMessage(byteBuf);
 
     }
 

@@ -16,23 +16,22 @@
 
 package io.netty.transport.udt.nio;
 
-import static org.junit.Assert.*;
+import com.yammer.metrics.Metrics;
+import com.yammer.metrics.core.Meter;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.BufType;
 import io.netty.channel.ChannelFuture;
 import io.netty.transport.udt.util.BootHelp;
-import io.netty.transport.udt.util.EchoMessageHandler;
+import io.netty.transport.udt.util.EchoByteHandler;
 import io.netty.transport.udt.util.UnitHelp;
+import org.junit.Test;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.Test;
+import static org.junit.Assert.*;
 
-import com.yammer.metrics.Metrics;
-import com.yammer.metrics.core.Meter;
-
-public class TestNioUdtMessageRendezvousChannel extends TestAny {
+public class NioUdtByteRendezvousChannelTest extends TestAny {
 
     /**
      * verify channel meta data
@@ -40,13 +39,13 @@ public class TestNioUdtMessageRendezvousChannel extends TestAny {
     @Test
     public void metadata() throws Exception {
 
-        assertEquals(BufType.MESSAGE, new NioUdtMessageRendezvousChannel()
-                .metadata().bufferType());
+        assertEquals(BufType.BYTE, new NioUdtByteRendezvousChannel().metadata()
+                .bufferType());
 
     }
 
     /**
-     * verify basic echo message rendezvous
+     * verify basic echo byte rendezvous
      */
     @Test(timeout = 10 * 1000)
     public void basicEcho() throws Exception {
@@ -55,25 +54,21 @@ public class TestNioUdtMessageRendezvousChannel extends TestAny {
         final int transferLimit = messageSize * 16;
 
         final Meter rate1 = Metrics.newMeter(
-                TestNioUdtMessageRendezvousChannel.class, "send rate", "bytes",
+                NioUdtMessageRendezvousChannelTest.class, "send rate", "bytes",
                 TimeUnit.SECONDS);
 
         final Meter rate2 = Metrics.newMeter(
-                TestNioUdtMessageRendezvousChannel.class, "send rate", "bytes",
+                NioUdtMessageRendezvousChannelTest.class, "send rate", "bytes",
                 TimeUnit.SECONDS);
 
         final InetSocketAddress addr1 = UnitHelp.localSocketAddress();
         final InetSocketAddress addr2 = UnitHelp.localSocketAddress();
 
-        final EchoMessageHandler handler1 = new EchoMessageHandler(rate1,
-                messageSize);
-        final EchoMessageHandler handler2 = new EchoMessageHandler(rate2,
-                messageSize);
+        final EchoByteHandler handler1 = new EchoByteHandler(rate1, messageSize);
+        final EchoByteHandler handler2 = new EchoByteHandler(rate2, messageSize);
 
-        final Bootstrap boot1 = BootHelp
-                .messagePeerBoot(addr1, addr2, handler1);
-        final Bootstrap boot2 = BootHelp
-                .messagePeerBoot(addr2, addr1, handler2);
+        final Bootstrap boot1 = BootHelp.bytePeerBoot(addr1, addr2, handler1);
+        final Bootstrap boot2 = BootHelp.bytePeerBoot(addr2, addr1, handler2);
 
         final ChannelFuture connectFuture1 = boot1.connect();
         final ChannelFuture connectFuture2 = boot2.connect();

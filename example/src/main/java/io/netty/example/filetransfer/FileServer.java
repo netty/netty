@@ -21,10 +21,10 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.channel.DefaultFileRegion;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
@@ -95,14 +95,14 @@ public class FileServer {
             File file = new File(msg);
             if (file.exists()) {
                 if (!file.isFile()) {
-                    ctx.write("Not a file: " + file + "\n");
+                    ctx.write("Not a file: " + file + '\n');
                     return;
                 }
-                ctx.write(file + " " + file.length() + "\n");
+                ctx.write(file + " " + file.length() + '\n');
                 ctx.sendFile(new DefaultFileRegion(new FileInputStream(file).getChannel(), 0, file.length()));
                 ctx.write("\n");
             } else {
-                ctx.write("File not found: " + file + "\n");
+                ctx.write("File not found: " + file + '\n');
             }
         }
 
