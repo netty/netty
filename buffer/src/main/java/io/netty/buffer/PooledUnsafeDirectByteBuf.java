@@ -110,10 +110,8 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     @Override
     public short getShort(int index) {
         checkIndex(index, 2);
-        if (NATIVE_ORDER) {
-            return UNSAFE.getShort(addr(index));
-        }
-        return Short.reverseBytes(UNSAFE.getShort(addr(index)));
+        short v = UNSAFE.getShort(addr(index));
+        return NATIVE_ORDER? v : Short.reverseBytes(v);
     }
 
     @Override
@@ -127,19 +125,15 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     @Override
     public int getInt(int index) {
         checkIndex(index, 4);
-        if (NATIVE_ORDER) {
-            return UNSAFE.getInt(addr(index));
-        }
-        return Integer.reverseBytes(UNSAFE.getInt(addr(index)));
+        int v = UNSAFE.getInt(addr(index));
+        return NATIVE_ORDER? v : Integer.reverseBytes(v);
     }
 
     @Override
     public long getLong(int index) {
         checkIndex(index, 8);
-        if (NATIVE_ORDER) {
-            return UNSAFE.getLong(addr(index));
-        }
-        return Long.reverseBytes(UNSAFE.getLong(addr(index)));
+        long v = UNSAFE.getLong(addr(index));
+        return NATIVE_ORDER? v : Long.reverseBytes(v);
     }
 
     @Override
