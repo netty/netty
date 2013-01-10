@@ -15,12 +15,12 @@
  */
 package io.netty.buffer;
 
-import sun.misc.Cleaner;
+import io.netty.util.internal.DetectionUtil;
+import io.netty.util.internal.DirectByteBufUtil;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.ClosedChannelException;
@@ -36,37 +36,6 @@ import java.util.Queue;
  */
 @SuppressWarnings("restriction")
 final class UnpooledDirectByteBuf extends AbstractByteBuf {
-
-    private static final Field CLEANER_FIELD;
-
-    static {
-        ByteBuffer direct = ByteBuffer.allocateDirect(1);
-        Field cleanerField;
-        try {
-            cleanerField = direct.getClass().getDeclaredField("cleaner");
-            cleanerField.setAccessible(true);
-            Cleaner cleaner = (Cleaner) cleanerField.get(direct);
-            cleaner.clean();
-        } catch (Throwable t) {
-            cleanerField = null;
-        }
-        CLEANER_FIELD = cleanerField;
-    }
-
-    static void freeDirect(ByteBuffer buffer) {
-        if (CLEANER_FIELD == null) {
-            // Doomed to wait for GC.
-            return;
-        }
-
-        Cleaner cleaner;
-        try {
-            cleaner = (Cleaner) CLEANER_FIELD.get(buffer);
-            cleaner.clean();
-        } catch (Throwable t) {
-            // Nothing we can do here.
-        }
-    }
 
     private final ByteBufAllocator alloc;
     private ByteBuffer buffer;
@@ -531,5 +500,11 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
     @Override
     public ByteBuf unwrap() {
         return null;
+    }
+
+    static void freeDirect(ByteBuffer buffer) {
+        if (DetectionUtil.canFreeDirectBuffer()) {
+            DirectByteBufUtil.freeDirect(buffer);
+        }
     }
 }
