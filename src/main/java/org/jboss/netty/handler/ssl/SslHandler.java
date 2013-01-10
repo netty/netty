@@ -402,76 +402,75 @@ public class SslHandler extends FrameDecoder
      *         succeeds or fails.
      */
     public ChannelFuture handshake() {
-        if (handshaken && !isEnableRenegotiation()) {
-            throw new IllegalStateException("renegotiation disabled");
-        }
-
-        final ChannelHandlerContext ctx = this.ctx;
-        final Channel channel = ctx.getChannel();
-        ChannelFuture handshakeFuture;
-        Exception exception = null;
-
         synchronized (handshakeLock) {
+            if (handshaken && !isEnableRenegotiation()) {
+                throw new IllegalStateException("renegotiation disabled");
+            }
+
+            final ChannelHandlerContext ctx = this.ctx;
+            final Channel channel = ctx.getChannel();
+            ChannelFuture handshakeFuture;
+            Exception exception = null;
+
             if (handshaking) {
                 return this.handshakeFuture;
-            } else {
-                handshaking = true;
-                try {
-                    engine.beginHandshake();
-                    runDelegatedTasks();
-                    handshakeFuture = this.handshakeFuture = future(channel);
-                    if (handshakeTimeoutInMillis > 0) {
-                        handshakeTimeout = timer.newTimeout(new TimerTask() {
-                            public void run(Timeout timeout) throws Exception {
-                                ChannelFuture future = SslHandler.this.handshakeFuture;
-                                if (future != null && future.isDone()) {
-                                    return;
-                                }
-
-                                setHandshakeFailure(channel, new SSLException("Handshake did not complete within " +
-                                                handshakeTimeoutInMillis + "ms"));
-                            }
-                        }, handshakeTimeoutInMillis, TimeUnit.MILLISECONDS);
-                    }
-                } catch (Exception e) {
-                    handshakeFuture = this.handshakeFuture = failedFuture(channel, e);
-                    exception = e;
-                }
             }
-        }
 
-        if (exception == null) { // Began handshake successfully.
+            handshaking = true;
             try {
-                final ChannelFuture hsFuture = handshakeFuture;
-                wrapNonAppData(ctx, channel).addListener(new ChannelFutureListener() {
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        if (!future.isSuccess()) {
-                            Throwable cause = future.getCause();
-                            hsFuture.setFailure(cause);
+                engine.beginHandshake();
+                runDelegatedTasks();
+                handshakeFuture = this.handshakeFuture = future(channel);
+                if (handshakeTimeoutInMillis > 0) {
+                    handshakeTimeout = timer.newTimeout(new TimerTask() {
+                            public void run(Timeout timeout) throws Exception {
+                            ChannelFuture future = SslHandler.this.handshakeFuture;
+                            if (future != null && future.isDone()) {
+                                return;
+                            }
 
-                            fireExceptionCaught(ctx, cause);
-                            if (closeOnSSLException) {
-                                Channels.close(ctx, future(channel));
+                            setHandshakeFailure(channel, new SSLException("Handshake did not complete within " +
+                                            handshakeTimeoutInMillis + "ms"));
+                        }
+                        }, handshakeTimeoutInMillis, TimeUnit.MILLISECONDS);
+                }
+            } catch (Exception e) {
+                handshakeFuture = this.handshakeFuture = failedFuture(channel, e);
+                exception = e;
+            }
+
+            if (exception == null) { // Began handshake successfully.
+                try {
+                    final ChannelFuture hsFuture = handshakeFuture;
+                    wrapNonAppData(ctx, channel).addListener(new ChannelFutureListener() {
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                            if (!future.isSuccess()) {
+                                Throwable cause = future.getCause();
+                                hsFuture.setFailure(cause);
+
+                                fireExceptionCaught(ctx, cause);
+                                if (closeOnSSLException) {
+                                    Channels.close(ctx, future(channel));
+                                }
                             }
                         }
-                    }
-                });
-            } catch (SSLException e) {
-                handshakeFuture.setFailure(e);
+                    });
+                } catch (SSLException e) {
+                    handshakeFuture.setFailure(e);
 
-                fireExceptionCaught(ctx, e);
+                    fireExceptionCaught(ctx, e);
+                    if (closeOnSSLException) {
+                        Channels.close(ctx, future(channel));
+                    }
+                }
+            } else { // Failed to initiate handshake.
+                fireExceptionCaught(ctx, exception);
                 if (closeOnSSLException) {
                     Channels.close(ctx, future(channel));
                 }
             }
-        } else { // Failed to initiate handshake.
-            fireExceptionCaught(ctx, exception);
-            if (closeOnSSLException) {
-                Channels.close(ctx, future(channel));
-            }
+            return handshakeFuture;
         }
-
-        return handshakeFuture;
     }
 
     /**
@@ -1282,19 +1281,19 @@ public class SslHandler extends FrameDecoder
     }
 
     private void handleRenegotiation(HandshakeStatus handshakeStatus) {
-        if (handshakeStatus == HandshakeStatus.NOT_HANDSHAKING ||
-            handshakeStatus == HandshakeStatus.FINISHED) {
-            // Not handshaking
-            return;
-        }
-
-        if (!handshaken) {
-            // Not renegotiation
-            return;
-        }
-
-        final boolean renegotiate;
         synchronized (handshakeLock) {
+            if (handshakeStatus == HandshakeStatus.NOT_HANDSHAKING ||
+                handshakeStatus == HandshakeStatus.FINISHED) {
+                // Not handshaking
+                return;
+            }
+
+            if (!handshaken) {
+                // Not renegotiation
+                return;
+            }
+
+            final boolean renegotiate;
             if (handshaking) {
                 // Renegotiation in progress or failed already.
                 // i.e. Renegotiation check has been done already below.
@@ -1315,20 +1314,20 @@ public class SslHandler extends FrameDecoder
                 // Prevent reentrance of this method.
                 handshaking = true;
             }
-        }
 
-        if (renegotiate) {
-            // Renegotiate.
-            handshake();
-        } else {
-            // Raise an exception.
-            fireExceptionCaught(
-                    ctx, new SSLException(
-                            "renegotiation attempted by peer; " +
-                            "closing the connection"));
+            if (renegotiate) {
+                // Renegotiate.
+                handshake();
+            } else {
+                // Raise an exception.
+                fireExceptionCaught(
+                        ctx, new SSLException(
+                                "renegotiation attempted by peer; " +
+                                "closing the connection"));
 
-            // Close the connection to stop renegotiation.
-            Channels.close(ctx, succeededFuture(ctx.getChannel()));
+                // Close the connection to stop renegotiation.
+                Channels.close(ctx, succeededFuture(ctx.getChannel()));
+            }
         }
     }
 
