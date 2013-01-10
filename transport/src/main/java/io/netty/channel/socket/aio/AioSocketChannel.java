@@ -357,6 +357,10 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             channel.writeInProgress = false;
 
             ByteBuf buf = channel.unsafe().directOutboundContext().outboundByteBuffer();
+            if (buf.isFreed()) {
+                return;
+            }
+
             buf.resumeIntermediaryDeallocations();
 
             int writtenBytes = result.intValue();
