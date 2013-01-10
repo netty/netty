@@ -16,11 +16,9 @@
 package org.jboss.netty.handler.codec.frame;
 
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.Channels;
-import org.jboss.netty.handler.codec.serialization.ObjectDecoder;
 
 /**
  * A decoder that splits the received {@link ChannelBuffer}s dynamically by the

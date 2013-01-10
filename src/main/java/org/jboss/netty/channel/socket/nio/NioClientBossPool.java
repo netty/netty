@@ -35,7 +35,7 @@ public class NioClientBossPool extends AbstractNioBossPool<NioClientBoss> {
      * @param bossExecutor  the Executor to use for server the {@link NioClientBoss}
      * @param bossCount     the number of {@link NioClientBoss} instances this {@link NioClientBossPool} will hold
      * @param timer         the Timer to use for handle connect timeouts
-     * @param determiner    the {@link ThreadNameDeterminer} to use for name the threads. Use <code>null</code>
+     * @param determiner    the {@link ThreadNameDeterminer} to use for name the threads. Use {@code null}
      *                      if you not want to set one explicit.
      */
     public NioClientBossPool(Executor bossExecutor, int bossCount, Timer timer, ThreadNameDeterminer determiner) {

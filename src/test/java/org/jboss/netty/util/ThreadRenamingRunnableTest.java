@@ -15,16 +15,14 @@
  */
 package org.jboss.netty.util;
 
-import static org.easymock.EasyMock.*;
-import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
+import org.junit.AfterClass;
+import org.junit.Test;
 
 import java.security.Permission;
 import java.util.concurrent.Executor;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Test;
+import static org.easymock.EasyMock.*;
+import static org.junit.Assert.*;
 
 public class ThreadRenamingRunnableTest {
 

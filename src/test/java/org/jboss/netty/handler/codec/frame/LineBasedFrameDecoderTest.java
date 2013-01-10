@@ -17,7 +17,6 @@ package org.jboss.netty.handler.codec.frame;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.embedder.CodecEmbedderException;
 import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
 import org.jboss.netty.util.CharsetUtil;
 import org.junit.Assert;

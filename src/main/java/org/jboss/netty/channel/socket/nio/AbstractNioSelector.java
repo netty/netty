@@ -32,7 +32,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.ConcurrentModificationException;
-import java.util.Iterator;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
@@ -297,8 +296,8 @@ abstract class AbstractNioSelector implements NioSelector {
                     // process one time again
                     processTaskQueue();
 
-                    for (Iterator<SelectionKey> i = selector.keys().iterator(); i.hasNext();) {
-                        close(i.next());
+                    for (SelectionKey k: selector.keys()) {
+                        close(k);
                     }
 
                     try {

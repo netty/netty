@@ -31,7 +31,7 @@ public class NioServerBossPool extends AbstractNioBossPool<NioServerBoss> {
      *
      * @param bossExecutor  the {@link Executor} to use for server the {@link NioServerBoss}
      * @param bossCount     the number of {@link NioServerBoss} instances this {@link NioServerBossPool} will hold
-     * @param determiner    the {@link ThreadNameDeterminer} to use for name the threads. Use <code>null</code>
+     * @param determiner    the {@link ThreadNameDeterminer} to use for name the threads. Use {@code null}
      *                      if you not want to set one explicit.
      */
     public NioServerBossPool(Executor bossExecutor, int bossCount, ThreadNameDeterminer determiner) {

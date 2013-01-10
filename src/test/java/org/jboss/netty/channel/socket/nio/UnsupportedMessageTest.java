@@ -24,24 +24,20 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.util.TestUtil;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class UnsupportedMessageTest {
 
 
     // Test for https://github.com/netty/netty/issues/734
-    @Test()
+    @Test
     public void testUnsupported() throws Throwable {
         ServerBootstrap sb = new ServerBootstrap(new NioServerSocketChannelFactory());
         ClientBootstrap cb = new ClientBootstrap(new NioClientSocketChannelFactory());

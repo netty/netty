@@ -67,7 +67,7 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
     private boolean discardingTooLongFrame;
     private int tooLongFrameLength;
     /** Set only when decoding with "\n" and "\r\n" as the delimiter.  */
-    private LineBasedFrameDecoder lineBasedDecoder;
+    private final LineBasedFrameDecoder lineBasedDecoder;
 
     /**
      * Creates a new instance.
@@ -173,7 +173,9 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
         }
         if (delimiters.length == 0) {
             throw new IllegalArgumentException("empty delimiters");
-        } else if (isLineBased(delimiters) && !isSubclass()) {
+        }
+
+        if (isLineBased(delimiters) && !isSubclass()) {
             lineBasedDecoder = new LineBasedFrameDecoder(maxFrameLength, stripDelimiter, failFast);
             this.delimiters = null;
         } else {
@@ -207,10 +209,10 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
     }
 
     /**
-     * Return <code>true</code> if the current instance is a subclass of DelimiterBasedFrameDecoder
+     * Return {@code true} if the current instance is a subclass of DelimiterBasedFrameDecoder
      */
     private boolean isSubclass() {
-        return this.getClass() != DelimiterBasedFrameDecoder.class;
+        return getClass() != DelimiterBasedFrameDecoder.class;
     }
 
     @Override

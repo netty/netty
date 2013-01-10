@@ -74,7 +74,7 @@ public final class NioClientBoss extends AbstractNioSelector implements Boss {
     }
 
     @Override
-    protected void process(Selector selector) throws IOException {
+    protected void process(Selector selector) {
         processSelectedKeys(selector.selectedKeys());
 
         // Handle connection timeout every 10 milliseconds approximately.
