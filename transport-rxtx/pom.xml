@@ -26,7 +26,7 @@
   <artifactId>netty-transport-rxtx</artifactId>
   <packaging>jar</packaging>
 
-  <name>Netty/RXTX Transport</name>
+  <name>Netty/Transport/RXTX</name>
 
   <dependencies>
     <dependency>
