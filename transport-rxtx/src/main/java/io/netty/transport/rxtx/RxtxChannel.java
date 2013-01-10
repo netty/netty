@@ -20,7 +20,6 @@ import gnu.io.CommPortIdentifier;
 import gnu.io.SerialPort;
 import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.socket.oio.AbstractOioByteChannel;
 
@@ -37,10 +36,13 @@ import static io.netty.transport.rxtx.RxtxChannelOptions.*;
  * A channel to a serial device using the RXTX library.
  */
 public class RxtxChannel extends AbstractOioByteChannel {
+
+    private static final RxtxDeviceAddress LOCAL_ADDRESS = new RxtxDeviceAddress("localhost");
     private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.BYTE, true);
 
-    private final ChannelConfig config;
+    private final RxtxChannelConfig config;
 
+    private boolean open = true;
     private RxtxDeviceAddress deviceAddress;
     private SerialPort serialPort;
     private InputStream in;
@@ -53,7 +55,7 @@ public class RxtxChannel extends AbstractOioByteChannel {
     }
 
     @Override
-    public ChannelConfig config() {
+    public RxtxChannelConfig config() {
         return config;
     }
 
@@ -64,7 +66,7 @@ public class RxtxChannel extends AbstractOioByteChannel {
 
     @Override
     public boolean isOpen() {
-        return true;
+        return open;
     }
 
     @Override
@@ -121,12 +123,22 @@ public class RxtxChannel extends AbstractOioByteChannel {
     }
 
     @Override
-    protected SocketAddress localAddress0() {
-        return null;
+    public RxtxDeviceAddress localAddress() {
+        return (RxtxDeviceAddress) super.localAddress();
     }
 
     @Override
-    protected SocketAddress remoteAddress0() {
+    public RxtxDeviceAddress remoteAddress() {
+        return (RxtxDeviceAddress) super.remoteAddress();
+    }
+
+    @Override
+    protected RxtxDeviceAddress localAddress0() {
+        return LOCAL_ADDRESS;
+    }
+
+    @Override
+    protected RxtxDeviceAddress remoteAddress0() {
         return deviceAddress;
     }
 
@@ -142,6 +154,8 @@ public class RxtxChannel extends AbstractOioByteChannel {
 
     @Override
     protected void doClose() throws Exception {
+        open = false;
+
         IOException ex = null;
 
         try {
