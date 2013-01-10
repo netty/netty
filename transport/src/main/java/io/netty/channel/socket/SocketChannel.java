@@ -30,6 +30,9 @@ import java.net.Socket;
  */
 public interface SocketChannel extends Channel {
     @Override
+    ServerSocketChannel parent();
+
+    @Override
     SocketChannelConfig config();
     @Override
     InetSocketAddress localAddress();

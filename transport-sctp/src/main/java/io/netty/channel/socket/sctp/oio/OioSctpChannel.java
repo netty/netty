@@ -32,18 +32,20 @@ import io.netty.channel.socket.sctp.DefaultSctpChannelConfig;
 import io.netty.channel.socket.sctp.SctpChannelConfig;
 import io.netty.channel.socket.sctp.SctpMessage;
 import io.netty.channel.socket.sctp.SctpNotificationHandler;
+import io.netty.channel.socket.sctp.SctpServerChannel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
@@ -130,6 +132,11 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                 }
             }
         }
+    }
+
+    @Override
+    public SctpServerChannel parent() {
+        return (SctpServerChannel) super.parent();
     }
 
     @Override
@@ -270,12 +277,12 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    public Set<SocketAddress> allLocalAddresses() {
+    public Set<InetSocketAddress> allLocalAddresses() {
         try {
             final Set<SocketAddress> allLocalAddresses = ch.getAllLocalAddresses();
-            final Set<SocketAddress> addresses = new HashSet<SocketAddress>(allLocalAddresses.size());
+            final Set<InetSocketAddress> addresses = new LinkedHashSet<InetSocketAddress>(allLocalAddresses.size());
             for (SocketAddress socketAddress : allLocalAddresses) {
-                addresses.add(socketAddress);
+                addresses.add((InetSocketAddress) socketAddress);
             }
             return addresses;
         } catch (Throwable t) {
@@ -297,12 +304,12 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    public Set<SocketAddress> allRemoteAddresses() {
+    public Set<InetSocketAddress> allRemoteAddresses() {
         try {
             final Set<SocketAddress> allLocalAddresses = ch.getRemoteAddresses();
-            final Set<SocketAddress> addresses = new HashSet<SocketAddress>(allLocalAddresses.size());
+            final Set<InetSocketAddress> addresses = new LinkedHashSet<InetSocketAddress>(allLocalAddresses.size());
             for (SocketAddress socketAddress : allLocalAddresses) {
-                addresses.add(socketAddress);
+                addresses.add((InetSocketAddress) socketAddress);
             }
             return addresses;
         } catch (Throwable t) {
