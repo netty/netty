@@ -293,6 +293,7 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
             HttpResponse httpResponse = (HttpResponse) httpMessage;
             SpdyHeaders.setStatus(spdyVersion, spdySynStreamFrame, httpResponse.getStatus());
             SpdyHeaders.setUrl(spdyVersion, spdySynStreamFrame, URL);
+            SpdyHeaders.setVersion(spdyVersion, spdySynStreamFrame, httpMessage.getProtocolVersion());
             spdySynStreamFrame.setUnidirectional(true);
         }
 
