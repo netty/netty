@@ -100,7 +100,7 @@ final class PlatformDependent0 {
     }
 
     static long directBufferAddress(ByteBuffer buffer) {
-        if (isUnaligned()) {
+        if (!isUnaligned()) {
             throw new Error();
         }
 
