@@ -30,7 +30,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      * Creates a new empty close frame.
      */
     public CloseWebSocketFrame() {
-        setBinaryData(Unpooled.EMPTY_BUFFER);
+        super(Unpooled.EMPTY_BUFFER);
     }
 
     /**
@@ -72,9 +72,10 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      *            Reason text. Set to null if no text.
      */
     public CloseWebSocketFrame(boolean finalFragment, int rsv, int statusCode, String reasonText) {
-        setFinalFragment(finalFragment);
-        setRsv(rsv);
+        super(finalFragment, rsv, newBinaryData(statusCode, reasonText));
+    }
 
+    private static ByteBuf newBinaryData(int statusCode, String reasonText) {
         byte[] reasonBytes = EMTPY_REASON;
         if (reasonText != null) {
             reasonBytes = reasonText.getBytes(CharsetUtil.UTF_8);
@@ -87,7 +88,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
         }
 
         binaryData.readerIndex(0);
-        setBinaryData(binaryData);
+        return binaryData;
     }
 
     /**
@@ -101,13 +102,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      *            the content of the frame. Must be 2 byte integer followed by optional UTF-8 encoded string.
      */
     public CloseWebSocketFrame(boolean finalFragment, int rsv, ByteBuf binaryData) {
-        setFinalFragment(finalFragment);
-        setRsv(rsv);
-        if (binaryData == null) {
-            setBinaryData(Unpooled.EMPTY_BUFFER);
-        } else {
-            setBinaryData(binaryData);
-        }
+        super(finalFragment, rsv, binaryData);
     }
 
     /**
@@ -142,6 +137,11 @@ public class CloseWebSocketFrame extends WebSocketFrame {
         binaryData.readerIndex(0);
 
         return reasonText;
+    }
+
+    @Override
+    public CloseWebSocketFrame copy() {
+        return new CloseWebSocketFrame(isFinalFragment(), getRsv(), data().copy());
     }
 
     @Override

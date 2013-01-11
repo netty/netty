@@ -16,40 +16,39 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.DefaultByteBufHolder;
 
 /**
  * Base class for web socket frames
  */
-public abstract class WebSocketFrame {
+public abstract class WebSocketFrame extends DefaultByteBufHolder {
 
     /**
      * Flag to indicate if this frame is the final fragment in a message. The first fragment (frame) may also be the
      * final fragment.
      */
-    private boolean finalFragment = true;
+    private final boolean finalFragment;
 
     /**
      * RSV1, RSV2, RSV3 used for extensions
      */
-    private int rsv;
+    private final int rsv;
 
-    /**
-     * Contents of this frame
-     */
-    private ByteBuf binaryData;
+    protected WebSocketFrame(ByteBuf binaryData) {
+        this(true, 0, binaryData);
+    }
+
+    protected WebSocketFrame(boolean finalFragment, int rsv, ByteBuf binaryData) {
+        super(binaryData);
+        this.finalFragment = finalFragment;
+        this.rsv = rsv;
+    }
 
     /**
      * Returns binary data
      */
     public ByteBuf getBinaryData() {
-        return binaryData;
-    }
-
-    /**
-     * Sets the binary data for this frame
-     */
-    public void setBinaryData(ByteBuf binaryData) {
-        this.binaryData = binaryData;
+        return data();
     }
 
     /**
@@ -60,10 +59,6 @@ public abstract class WebSocketFrame {
         return finalFragment;
     }
 
-    public void setFinalFragment(boolean finalFragment) {
-        this.finalFragment = finalFragment;
-    }
-
     /**
      * Bits used for extensions to the standard.
      */
@@ -71,8 +66,6 @@ public abstract class WebSocketFrame {
         return rsv;
     }
 
-    public void setRsv(int rsv) {
-        this.rsv = rsv;
-    }
-
+    @Override
+    public abstract WebSocketFrame copy();
 }

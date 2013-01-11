@@ -27,7 +27,7 @@ public class BinaryWebSocketFrame extends WebSocketFrame {
      * Creates a new empty binary frame.
      */
     public BinaryWebSocketFrame() {
-        setBinaryData(Unpooled.EMPTY_BUFFER);
+        super(Unpooled.EMPTY_BUFFER);
     }
 
     /**
@@ -37,7 +37,7 @@ public class BinaryWebSocketFrame extends WebSocketFrame {
      *            the content of the frame.
      */
     public BinaryWebSocketFrame(ByteBuf binaryData) {
-        setBinaryData(binaryData);
+        super(binaryData);
     }
 
     /**
@@ -51,9 +51,12 @@ public class BinaryWebSocketFrame extends WebSocketFrame {
      *            the content of the frame.
      */
     public BinaryWebSocketFrame(boolean finalFragment, int rsv, ByteBuf binaryData) {
-        setFinalFragment(finalFragment);
-        setRsv(rsv);
-        setBinaryData(binaryData);
+        super(finalFragment, rsv, binaryData);
+    }
+
+    @Override
+    public BinaryWebSocketFrame copy() {
+        return new BinaryWebSocketFrame(isFinalFragment(), getRsv(), data().copy());
     }
 
     @Override

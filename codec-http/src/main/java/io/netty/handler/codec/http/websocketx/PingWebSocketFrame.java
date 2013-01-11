@@ -27,8 +27,7 @@ public class PingWebSocketFrame extends WebSocketFrame {
      * Creates a new empty ping frame.
      */
     public PingWebSocketFrame() {
-        setFinalFragment(true);
-        setBinaryData(Unpooled.EMPTY_BUFFER);
+        super(true, 0, Unpooled.EMPTY_BUFFER);
     }
 
     /**
@@ -38,7 +37,7 @@ public class PingWebSocketFrame extends WebSocketFrame {
      *            the content of the frame.
      */
     public PingWebSocketFrame(ByteBuf binaryData) {
-        setBinaryData(binaryData);
+        super(binaryData);
     }
 
     /**
@@ -52,9 +51,12 @@ public class PingWebSocketFrame extends WebSocketFrame {
      *            the content of the frame.
      */
     public PingWebSocketFrame(boolean finalFragment, int rsv, ByteBuf binaryData) {
-        setFinalFragment(finalFragment);
-        setRsv(rsv);
-        setBinaryData(binaryData);
+        super(finalFragment, rsv, binaryData);
+    }
+
+    @Override
+    public PingWebSocketFrame copy() {
+        return new PingWebSocketFrame(isFinalFragment(), getRsv(), data().copy());
     }
 
     @Override

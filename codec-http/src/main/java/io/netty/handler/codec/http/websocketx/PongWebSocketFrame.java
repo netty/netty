@@ -27,7 +27,7 @@ public class PongWebSocketFrame extends WebSocketFrame {
      * Creates a new empty pong frame.
      */
     public PongWebSocketFrame() {
-        setBinaryData(Unpooled.EMPTY_BUFFER);
+        super(Unpooled.EMPTY_BUFFER);
     }
 
     /**
@@ -37,7 +37,7 @@ public class PongWebSocketFrame extends WebSocketFrame {
      *            the content of the frame.
      */
     public PongWebSocketFrame(ByteBuf binaryData) {
-        setBinaryData(binaryData);
+        super(binaryData);
     }
 
     /**
@@ -51,9 +51,12 @@ public class PongWebSocketFrame extends WebSocketFrame {
      *            the content of the frame.
      */
     public PongWebSocketFrame(boolean finalFragment, int rsv, ByteBuf binaryData) {
-        setFinalFragment(finalFragment);
-        setRsv(rsv);
-        setBinaryData(binaryData);
+        super(finalFragment, rsv, binaryData);
+    }
+
+    @Override
+    public PongWebSocketFrame copy() {
+        return new PongWebSocketFrame(isFinalFragment(), getRsv(), data().copy());
     }
 
     @Override
