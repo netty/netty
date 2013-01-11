@@ -100,6 +100,15 @@ public class WebSocketServerProtocolHandler extends ChannelInboundMessageHandler
         }
     }
 
+    @Override
+    protected void freeInboundMessage(WebSocketFrame msg) throws Exception {
+        if (msg instanceof PingWebSocketFrame || msg instanceof CloseWebSocketFrame) {
+            // Will be freed once wrote back
+            return;
+        }
+        super.freeInboundMessage(msg);
+    }
+
     static WebSocketServerHandshaker getHandshaker(ChannelHandlerContext ctx) {
         return ctx.attr(HANDSHAKER_ATTR_KEY).get();
     }

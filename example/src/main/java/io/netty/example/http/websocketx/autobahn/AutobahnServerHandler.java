@@ -136,4 +136,14 @@ public class AutobahnServerHandler extends ChannelInboundMessageHandlerAdapter<O
     private static String getWebSocketLocation(FullHttpRequest req) {
         return "ws://" + req.headers().get(HttpHeaders.Names.HOST);
     }
+
+    @Override
+    protected void freeInboundMessage(Object msg) throws Exception {
+        if (!(msg instanceof PongWebSocketFrame) && msg instanceof WebSocketFrame) {
+            // will be freed once written by the encoder
+            return;
+        }
+
+        super.freeInboundMessage(msg);
+    }
 }
