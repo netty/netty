@@ -23,7 +23,7 @@ public class CustomTextFrameHandler extends ChannelInboundMessageHandlerAdapter<
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, TextWebSocketFrame frame) throws Exception {
-        String request = frame.getText();
+        String request = frame.text();
         ctx.channel().write(new TextWebSocketFrame(request.toUpperCase()));
     }
 

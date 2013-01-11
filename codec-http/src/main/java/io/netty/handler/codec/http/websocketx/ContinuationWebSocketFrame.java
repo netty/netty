@@ -31,7 +31,7 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
      * Creates a new empty continuation frame.
      */
     public ContinuationWebSocketFrame() {
-        setBinaryData(Unpooled.EMPTY_BUFFER);
+        super(Unpooled.buffer(0));
     }
 
     /**
@@ -41,7 +41,7 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
      * @param binaryData the content of the frame.
      */
     public ContinuationWebSocketFrame(ByteBuf binaryData) {
-        setBinaryData(binaryData);
+        super(binaryData);
     }
 
     /**
@@ -55,9 +55,7 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
      *            the content of the frame.
      */
     public ContinuationWebSocketFrame(boolean finalFragment, int rsv, ByteBuf binaryData) {
-        setFinalFragment(finalFragment);
-        setRsv(rsv);
-        setBinaryData(binaryData);
+        super(finalFragment, rsv, binaryData);
     }
 
     /**
@@ -75,9 +73,7 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
      */
     public ContinuationWebSocketFrame(
             boolean finalFragment, int rsv, ByteBuf binaryData, String aggregatedText) {
-        setFinalFragment(finalFragment);
-        setRsv(rsv);
-        setBinaryData(binaryData);
+        super(finalFragment, rsv, binaryData);
         this.aggregatedText = aggregatedText;
     }
 
@@ -92,19 +88,14 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
      *            text content of the frame.
      */
     public ContinuationWebSocketFrame(boolean finalFragment, int rsv, String text) {
-        setFinalFragment(finalFragment);
-        setRsv(rsv);
-        setText(text);
+        this(finalFragment, rsv, fromText(text), null);
     }
 
     /**
      * Returns the text data in this frame
      */
-    public String getText() {
-        if (getBinaryData() == null) {
-            return null;
-        }
-        return getBinaryData().toString(CharsetUtil.UTF_8);
+    public String text() {
+        return data().toString(CharsetUtil.UTF_8);
     }
 
     /**
@@ -113,28 +104,24 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
      * @param text
      *            text to store
      */
-    public void setText(String text) {
+    private static ByteBuf fromText(String text) {
         if (text == null || text.isEmpty()) {
-            setBinaryData(Unpooled.EMPTY_BUFFER);
+            return Unpooled.EMPTY_BUFFER;
         } else {
-            setBinaryData(Unpooled.copiedBuffer(text, CharsetUtil.UTF_8));
+            return Unpooled.copiedBuffer(text, CharsetUtil.UTF_8);
         }
-    }
-
-    @Override
-    public String toString() {
-        return getClass().getSimpleName() + "(data: " + getBinaryData() + ')';
     }
 
     /**
      * Aggregated text returned by decoder on the final continuation frame of a fragmented text message
      */
-    public String getAggregatedText() {
+    public String aggregatedText() {
         return aggregatedText;
     }
 
-    public void setAggregatedText(String aggregatedText) {
-        this.aggregatedText = aggregatedText;
+    @Override
+    public ContinuationWebSocketFrame copy() {
+        return new ContinuationWebSocketFrame(isFinalFragment(), rsv(), data().copy(), aggregatedText());
     }
 
 }

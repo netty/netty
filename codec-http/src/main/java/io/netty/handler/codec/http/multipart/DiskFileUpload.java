@@ -15,9 +15,12 @@
  */
 package io.netty.handler.codec.http.multipart;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelException;
 import io.netty.handler.codec.http.HttpHeaders;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.charset.Charset;
 
 /**
@@ -158,5 +161,20 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
     @Override
     protected String getPrefix() {
         return prefix;
+    }
+
+    @Override
+    public DiskFileUpload copy() {
+        DiskFileUpload upload = new DiskFileUpload(getName(),
+                getFilename(), getContentType(), getContentTransferEncoding(), getCharset(), size);
+        ByteBuf buf = data();
+        if (buf != null) {
+            try {
+                upload.setContent(buf.copy());
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+        return upload;
     }
 }

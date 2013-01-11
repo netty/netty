@@ -81,7 +81,7 @@ public class WebSocketServerProtocolHandler extends ChannelInboundMessageHandler
             return;
         }
         if (frame instanceof PingWebSocketFrame) {
-            ctx.channel().write(new PongWebSocketFrame(frame.getBinaryData()));
+            ctx.channel().write(new PongWebSocketFrame(frame.data()));
             return;
         }
 
@@ -98,6 +98,15 @@ public class WebSocketServerProtocolHandler extends ChannelInboundMessageHandler
         } else {
             ctx.close();
         }
+    }
+
+    @Override
+    protected void freeInboundMessage(WebSocketFrame msg) throws Exception {
+        if (msg instanceof PingWebSocketFrame || msg instanceof CloseWebSocketFrame) {
+            // Will be freed once wrote back
+            return;
+        }
+        super.freeInboundMessage(msg);
     }
 
     static WebSocketServerHandshaker getHandshaker(ChannelHandlerContext ctx) {

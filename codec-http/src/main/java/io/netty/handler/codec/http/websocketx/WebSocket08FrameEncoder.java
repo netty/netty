@@ -100,7 +100,7 @@ public class WebSocket08FrameEncoder extends MessageToByteEncoder<WebSocketFrame
 
         byte[] mask;
 
-        ByteBuf data = msg.getBinaryData();
+        ByteBuf data = msg.data();
         if (data == null) {
             data = Unpooled.EMPTY_BUFFER;
         }
@@ -132,7 +132,7 @@ public class WebSocket08FrameEncoder extends MessageToByteEncoder<WebSocketFrame
         if (msg.isFinalFragment()) {
             b0 |= 1 << 7;
         }
-        b0 |= msg.getRsv() % 8 << 4;
+        b0 |= msg.rsv() % 8 << 4;
         b0 |= opcode % 128;
 
         if (opcode == OPCODE_PING && length > 125) {

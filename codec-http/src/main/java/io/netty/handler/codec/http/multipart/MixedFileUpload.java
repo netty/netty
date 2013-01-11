@@ -224,4 +224,23 @@ public class MixedFileUpload implements FileUpload {
         return fileUpload.getFile();
     }
 
+    @Override
+    public FileUpload copy() {
+        return fileUpload.copy();
+    }
+
+    @Override
+    public ByteBuf data() {
+        return fileUpload.data();
+    }
+
+    @Override
+    public void free() {
+        fileUpload.free();
+    }
+
+    @Override
+    public boolean isFreed() {
+        return fileUpload.isFreed();
+    }
 }
