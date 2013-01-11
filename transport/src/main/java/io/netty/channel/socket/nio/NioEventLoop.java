@@ -233,7 +233,6 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         long minSelectTimeout = SelectorUtil.SELECT_TIMEOUT_NANOS / 100 * 80;
 
         for (;;) {
-
             wakenUp.set(false);
 
             try {
@@ -418,6 +417,12 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 processWritable(k, ch);
             }
             if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
+                // remove OP_CONNECT as otherwise Selector.select(..) will always return without blocking
+                // See https://github.com/netty/netty/issues/924
+                int ops = k.interestOps();
+                ops &= ~SelectionKey.OP_CONNECT;
+                k.interestOps(ops);
+
                 unsafe.finishConnect();
             }
         } catch (CancelledKeyException e) {
