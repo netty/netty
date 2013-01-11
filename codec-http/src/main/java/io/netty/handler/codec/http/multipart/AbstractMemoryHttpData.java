@@ -226,4 +226,9 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
     public File getFile() throws IOException {
         throw new IOException("Not represented by a file");
     }
+
+    @Override
+    public boolean isFreed() {
+        return data().isFreed();
+    }
 }
