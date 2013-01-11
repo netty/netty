@@ -16,14 +16,14 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.util.internal.DetectionUtil;
+import io.netty.util.internal.PlatformDependent;
 
 abstract class SpdyHeaderBlockCompressor {
 
     static SpdyHeaderBlockCompressor newInstance(
             int version, int compressionLevel, int windowBits, int memLevel) {
 
-        if (DetectionUtil.javaVersion() >= 7) {
+        if (PlatformDependent.javaVersion() >= 7) {
             return new SpdyHeaderBlockZlibCompressor(
                     version, compressionLevel);
         } else {
