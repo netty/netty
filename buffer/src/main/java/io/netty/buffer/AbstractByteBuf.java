@@ -55,6 +55,44 @@ public abstract class AbstractByteBuf implements ByteBuf {
         }
     }
 
+    private static void reportLeak() {
+        // Detect and report previous leaks.
+        WeakBufRef ref = (WeakBufRef) bufRefQueue.poll();
+        if (ref == null) {
+            return;
+        }
+
+        boolean removed = bufRefs.remove(ref);
+        assert removed;
+
+        if (ref.freed) {
+            return;
+        }
+
+        StackTraceElement[] stackTrace = ref.stackTrace;
+        StringBuilder msgBuf = new StringBuilder(4096);
+        msgBuf.append("ByteBuf has been GC'd before being freed: ");
+        msgBuf.append(ref.bufType.getName());
+
+        if (stackTrace == null || stackTrace.length == 0) {
+            msgBuf.append(" (no stack trace available)");
+        } else {
+            for (StackTraceElement e: stackTrace) {
+                if (e == null) {
+                    break;
+                }
+                msgBuf.append(System.lineSeparator());
+                msgBuf.append("    ");
+                msgBuf.append(e);
+            }
+        }
+
+        String msg = msgBuf.toString();
+        if (reportedLeaks.putIfAbsent(msg, Boolean.TRUE) == null) {
+            System.err.println(msg);
+        }
+    }
+
     private int readerIndex;
     private int writerIndex;
     private int markedReaderIndex;
@@ -79,42 +117,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
             }
 
             selfRef = new WeakBufRef(this, Thread.currentThread().getStackTrace());
-
-            // Detect and report previous leaks.
-            WeakBufRef ref = (WeakBufRef) bufRefQueue.poll();
-            if (ref == null) {
-                return;
-            }
-
-            boolean removed = bufRefs.remove(ref);
-            assert removed;
-
-            if (ref.freed) {
-                return;
-            }
-
-            StackTraceElement[] stackTrace = ref.stackTrace;
-            StringBuilder msgBuf = new StringBuilder(4096);
-            msgBuf.append("ByteBuf has been GC'd before being freed: ");
-            msgBuf.append(ref.bufType.getName());
-
-            if (stackTrace == null || stackTrace.length == 0) {
-                msgBuf.append(" (no stack trace available)");
-            } else {
-                for (StackTraceElement e: stackTrace) {
-                    if (e == null) {
-                        break;
-                    }
-                    msgBuf.append(System.lineSeparator());
-                    msgBuf.append("    ");
-                    msgBuf.append(e);
-                }
-            }
-
-            String msg = msgBuf.toString();
-            if (reportedLeaks.putIfAbsent(msg, Boolean.TRUE) == null) {
-                System.err.println(msg);
-            }
+            reportLeak();
         }
     }
 
