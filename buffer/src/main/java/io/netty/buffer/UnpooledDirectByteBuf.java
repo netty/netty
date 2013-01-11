@@ -67,6 +67,7 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
 
         this.alloc = alloc;
         setByteBuffer(ByteBuffer.allocateDirect(initialCapacity));
+        enableDebugLeak();
     }
 
     /**
@@ -99,6 +100,7 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
         doNotFree = true;
         setByteBuffer(initialBuffer.slice().order(ByteOrder.BIG_ENDIAN));
         writerIndex(initialCapacity);
+        enableDebugLeak();
     }
 
     private void setByteBuffer(ByteBuffer buffer) {
@@ -457,7 +459,7 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public void free() {
+    protected void doFree() {
         ByteBuffer buffer = this.buffer;
         if (buffer == null) {
             return;

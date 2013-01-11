@@ -61,6 +61,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         this.alloc = alloc;
         this.direct = direct;
         this.maxNumComponents = maxNumComponents;
+        enableDebugLeak();
     }
 
     public DefaultCompositeByteBuf(ByteBufAllocator alloc, boolean direct, int maxNumComponents, ByteBuf... buffers) {
@@ -80,6 +81,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         addComponents0(0, buffers);
         consolidateIfNeeded();
         setIndex(0, capacity());
+        enableDebugLeak();
     }
 
     public DefaultCompositeByteBuf(
@@ -99,6 +101,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         addComponents0(0, buffers);
         consolidateIfNeeded();
         setIndex(0, capacity());
+        enableDebugLeak();
     }
 
     @Override
@@ -1534,11 +1537,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     }
 
     @Override
-    public void free() {
-        if (freed) {
-            return;
-        }
-
+    protected void doFree() {
         freed = true;
         resumeIntermediaryDeallocations();
         for (Component c: components) {

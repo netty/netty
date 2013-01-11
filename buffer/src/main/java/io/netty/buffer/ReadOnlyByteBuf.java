@@ -236,7 +236,7 @@ public class ReadOnlyByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public void free() {
+    protected void doFree() {
         throw new UnsupportedOperationException("derived");
     }
 

@@ -35,6 +35,7 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf {
 
     protected PooledByteBuf(int maxCapacity) {
         super(maxCapacity);
+        enableDebugLeak();
     }
 
     void init(PoolChunk<T> chunk, long handle, int offset, int length, int maxLength) {
@@ -173,7 +174,7 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf {
     }
 
     @Override
-    public final void free() {
+    protected void doFree() {
         if (handle >= 0) {
             resumeIntermediaryDeallocations();
             final long handle = this.handle;
