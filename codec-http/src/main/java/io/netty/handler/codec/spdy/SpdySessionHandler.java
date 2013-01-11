@@ -207,8 +207,8 @@ public class SpdySessionHandler
                 // Send data frames upstream in initialReceiveWindowSize chunks
                 if (newWindowSize < 0) {
                     while (spdyDataFrame.getData().readableBytes() > initialReceiveWindowSize) {
-                        SpdyDataFrame partialDataFrame = new DefaultSpdyDataFrame(streamID);
-                        partialDataFrame.setData(spdyDataFrame.getData().readSlice(initialReceiveWindowSize));
+                        SpdyDataFrame partialDataFrame = new DefaultSpdyDataFrame(streamID,
+                                spdyDataFrame.getData().readSlice(initialReceiveWindowSize));
                         ctx.nextOutboundMessageBuffer().add(partialDataFrame);
                         ctx.flush();
                     }
@@ -524,8 +524,8 @@ public class SpdySessionHandler
                         spdySession.updateSendWindowSize(streamID, -1 * sendWindowSize);
 
                         // Create a partial data frame whose length is the current window size
-                        SpdyDataFrame partialDataFrame = new DefaultSpdyDataFrame(streamID);
-                        partialDataFrame.setData(spdyDataFrame.getData().readSlice(sendWindowSize));
+                        SpdyDataFrame partialDataFrame = new DefaultSpdyDataFrame(streamID,
+                                spdyDataFrame.getData().readSlice(sendWindowSize));
 
                         // Enqueue the remaining data (will be the first frame queued)
                         spdySession.putPendingWrite(streamID, spdyDataFrame);
@@ -848,8 +848,8 @@ public class SpdySessionHandler
                     spdySession.updateSendWindowSize(streamID, -1 * newWindowSize);
 
                     // Create a partial data frame whose length is the current window size
-                    SpdyDataFrame partialDataFrame = new DefaultSpdyDataFrame(streamID);
-                    partialDataFrame.setData(spdyDataFrame.getData().readSlice(newWindowSize));
+                    SpdyDataFrame partialDataFrame = new DefaultSpdyDataFrame(streamID,
+                            spdyDataFrame.getData().readSlice(newWindowSize));
 
                     // The transfer window size is pre-decremented when sending a data frame downstream.
                     // Close the stream on write failures that leaves the transfer window in a corrupt state.

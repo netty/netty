@@ -281,8 +281,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
                 return null;
             }
 
-            SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(streamID);
-            spdyDataFrame.setData(buffer.readBytes(dataLength));
+            SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(streamID, buffer.readBytes(dataLength));
             length -= dataLength;
 
             if (length == 0) {
