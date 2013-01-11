@@ -20,6 +20,7 @@ import sun.misc.Unsafe;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 
 /**
@@ -29,6 +30,7 @@ final class PlatformDependent0 {
 
     private static final Unsafe UNSAFE;
     private static final Field CLEANER_FIELD;
+    private static final Field ADDRESS_FIELD;
     private static final boolean UNALIGNED;
 
     static {
@@ -63,6 +65,29 @@ final class PlatformDependent0 {
         } catch (Throwable t) {
             unaligned = false;
         }
+
+        if (unaligned) {
+            Field addressField = null;
+            try {
+                addressField = Buffer.class.getDeclaredField("address");
+                addressField.setAccessible(true);
+                if (addressField.getLong(ByteBuffer.allocate(1)) != 0) {
+                    unaligned = false;
+                } else {
+                    ByteBuffer directBuf = ByteBuffer.allocateDirect(1);
+                    if (addressField.getLong(directBuf) == 0) {
+                        unaligned = false;
+                    }
+                    PlatformDependent.freeDirectBuffer(directBuf);
+                }
+            } catch (Throwable t) {
+                unaligned = false;
+            }
+            ADDRESS_FIELD = addressField;
+        } else {
+            ADDRESS_FIELD = null;
+        }
+
         UNALIGNED = unaligned;
     }
 
@@ -72,6 +97,18 @@ final class PlatformDependent0 {
 
     static boolean canFreeDirectBuffer() {
         return CLEANER_FIELD != null;
+    }
+
+    static long directBufferAddress(ByteBuffer buffer) {
+        if (isUnaligned()) {
+            throw new Error();
+        }
+
+        try {
+            return ADDRESS_FIELD.getLong(buffer);
+        } catch (IllegalAccessException e) {
+            throw new Error(e);
+        }
     }
 
     static void freeDirectBuffer(ByteBuffer buffer) {
@@ -94,6 +131,42 @@ final class PlatformDependent0 {
 
     static long objectFieldOffset(Field field) {
         return UNSAFE.objectFieldOffset(field);
+    }
+
+    static byte getByte(long address) {
+        return UNSAFE.getByte(address);
+    }
+
+    static short getShort(long address) {
+        return UNSAFE.getShort(address);
+    }
+
+    static int getInt(long address) {
+        return UNSAFE.getInt(address);
+    }
+
+    static long getLong(long address) {
+        return UNSAFE.getLong(address);
+    }
+
+    static void putByte(long address, byte value) {
+        UNSAFE.putByte(address, value);
+    }
+
+    static void putShort(long address, short value) {
+        UNSAFE.putShort(address, value);
+    }
+
+    static void putInt(long address, int value) {
+        UNSAFE.putInt(address, value);
+    }
+
+    static void putLong(long address, long value) {
+        UNSAFE.putLong(address, value);
+    }
+
+    static void copyMemory(long srcAddr, long dstAddr, long length) {
+        UNSAFE.copyMemory(srcAddr, dstAddr, length);
     }
 
 
