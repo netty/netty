@@ -15,8 +15,7 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.internal.DetectionUtil;
-import io.netty.util.internal.DirectByteBufUtil;
+import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -109,7 +108,7 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
                 doNotFree = false;
             } else {
                 if (suspendedDeallocations == null) {
-                    freeDirect(oldBuffer);
+                    PlatformDependent.freeDirectBuffer(oldBuffer);
                 } else {
                     suspendedDeallocations.add(oldBuffer);
                 }
@@ -471,7 +470,7 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
         }
 
         resumeIntermediaryDeallocations();
-        freeDirect(buffer);
+        PlatformDependent.freeDirectBuffer(buffer);
     }
 
     @Override
@@ -492,7 +491,7 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
         this.suspendedDeallocations = null;
 
         for (ByteBuffer buf: suspendedDeallocations) {
-            freeDirect(buf);
+            PlatformDependent.freeDirectBuffer(buf);
         }
         return this;
     }
@@ -500,11 +499,5 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
     @Override
     public ByteBuf unwrap() {
         return null;
-    }
-
-    static void freeDirect(ByteBuffer buffer) {
-        if (DetectionUtil.canFreeDirectBuffer()) {
-            DirectByteBufUtil.freeDirect(buffer);
-        }
     }
 }

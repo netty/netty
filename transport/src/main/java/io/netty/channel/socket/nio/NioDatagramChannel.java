@@ -25,7 +25,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
-import io.netty.util.internal.DetectionUtil;
+import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -69,7 +69,7 @@ public final class NioDatagramChannel
             return newSocket();
         }
 
-        if (DetectionUtil.javaVersion() < 7) {
+        if (PlatformDependent.javaVersion() < 7) {
             throw new UnsupportedOperationException();
         }
 
@@ -309,7 +309,7 @@ public final class NioDatagramChannel
     public ChannelFuture joinGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface,
             InetAddress source, ChannelPromise promise) {
-        if (DetectionUtil.javaVersion() >= 7) {
+        if (PlatformDependent.javaVersion() >= 7) {
             if (multicastAddress == null) {
                 throw new NullPointerException("multicastAddress");
             }
@@ -384,7 +384,7 @@ public final class NioDatagramChannel
     public ChannelFuture leaveGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source,
             ChannelPromise promise) {
-        if (DetectionUtil.javaVersion() < 7) {
+        if (PlatformDependent.javaVersion() < 7) {
             throw new UnsupportedOperationException();
         }
         if (multicastAddress == null) {
@@ -438,7 +438,7 @@ public final class NioDatagramChannel
     public ChannelFuture block(
             InetAddress multicastAddress, NetworkInterface networkInterface,
             InetAddress sourceToBlock, ChannelPromise promise) {
-        if (DetectionUtil.javaVersion() < 7) {
+        if (PlatformDependent.javaVersion() < 7) {
             throw new UnsupportedOperationException();
         } else {
             if (multicastAddress == null) {

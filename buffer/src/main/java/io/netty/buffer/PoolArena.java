@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.nio.ByteBuffer;
@@ -370,7 +371,7 @@ abstract class PoolArena<T> {
 
         @Override
         protected void destroyChunk(PoolChunk<ByteBuffer> chunk) {
-            UnpooledDirectByteBuf.freeDirect(chunk.memory);
+            PlatformDependent.freeDirectBuffer(chunk.memory);
         }
 
         @Override

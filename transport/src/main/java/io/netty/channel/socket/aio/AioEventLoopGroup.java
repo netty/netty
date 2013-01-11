@@ -22,7 +22,7 @@ import io.netty.channel.EventLoopException;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.internal.DetectionUtil;
+import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
 import java.nio.channels.AsynchronousChannelGroup;
@@ -44,7 +44,7 @@ public class AioEventLoopGroup extends MultithreadEventLoopGroup {
     static {
         AioChannelFinder finder;
         try {
-            if (DetectionUtil.hasUnsafe()) {
+            if (PlatformDependent.hasUnsafe()) {
                 finder = new UnsafeAioChannelFinder();
             } else {
                 finder = new ReflectiveAioChannelFinder();
