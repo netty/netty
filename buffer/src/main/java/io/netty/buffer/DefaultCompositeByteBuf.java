@@ -15,7 +15,7 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.internal.DetectionUtil;
+import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -699,7 +699,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     @Override
     public int getBytes(int index, GatheringByteChannel out, int length)
             throws IOException {
-        if (DetectionUtil.javaVersion() < 7) {
+        if (PlatformDependent.javaVersion() < 7) {
             // XXX Gathering write is not supported because of a known issue.
             //     See http://bugs.sun.com/view_bug.do?bug_id=6210541
             return out.write(copiedNioBuffer(index, length));

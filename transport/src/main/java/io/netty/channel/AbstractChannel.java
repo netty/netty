@@ -21,7 +21,7 @@ import io.netty.buffer.MessageBuf;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.DefaultAttributeMap;
-import io.netty.util.internal.DetectionUtil;
+import io.netty.util.internal.PlatformDependent;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -631,7 +631,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     boolean wasActive = isActive();
 
                     // See: https://github.com/netty/netty/issues/576
-                    if (!DetectionUtil.isWindows() && !DetectionUtil.isRoot() &&
+                    if (!PlatformDependent.isWindows() && !PlatformDependent.isRoot() &&
                         Boolean.TRUE.equals(config().getOption(ChannelOption.SO_BROADCAST)) &&
                         localAddress instanceof InetSocketAddress &&
                         !((InetSocketAddress) localAddress).getAddress().isAnyLocalAddress()) {

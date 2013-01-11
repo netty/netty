@@ -21,7 +21,7 @@ import io.netty.monitor.EventRateMonitor;
 import io.netty.monitor.MonitorName;
 import io.netty.monitor.MonitorRegistry;
 import io.netty.monitor.ValueDistributionMonitor;
-import io.netty.util.internal.DetectionUtil;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SharedResourceMisuseDetector;
 
 import java.util.ArrayList;
@@ -548,7 +548,7 @@ public class HashedWheelTimer implements Timer {
                 // the JVM if it runs on windows.
                 //
                 // See https://github.com/netty/netty/issues/356
-                if (DetectionUtil.isWindows()) {
+                if (PlatformDependent.isWindows()) {
                     sleepTime = sleepTime / 10 * 10;
                 }
 

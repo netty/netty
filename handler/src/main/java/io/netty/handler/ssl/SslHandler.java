@@ -30,7 +30,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.internal.DetectionUtil;
+import io.netty.util.internal.PlatformDependent;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -659,7 +659,7 @@ public class SslHandler
                     }
 
                     // also match against SctpChannel via String matching as it may not present.
-                    if (DetectionUtil.javaVersion() >= 7
+                    if (PlatformDependent.javaVersion() >= 7
                             && "com.sun.nio.sctp.SctpChannel".equals(clazz.getSuperclass().getName())) {
                         return true;
                     }
