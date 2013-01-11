@@ -29,8 +29,8 @@ import java.nio.ByteBuffer;
 final class PlatformDependent0 {
 
     private static final Unsafe UNSAFE;
-    private static final Field CLEANER_FIELD;
-    private static final Field ADDRESS_FIELD;
+    private static final long CLEANER_FIELD_OFFSET;
+    private static final long ADDRESS_FIELD_OFFSET;
     private static final boolean UNALIGNED;
 
     static {
@@ -44,51 +44,57 @@ final class PlatformDependent0 {
         }
         UNSAFE = unsafe;
 
-        ByteBuffer direct = ByteBuffer.allocateDirect(1);
-        Field cleanerField;
-        try {
-            cleanerField = direct.getClass().getDeclaredField("cleaner");
-            cleanerField.setAccessible(true);
-            Cleaner cleaner = (Cleaner) cleanerField.get(direct);
-            cleaner.clean();
-        } catch (Throwable t) {
-            cleanerField = null;
-        }
-        CLEANER_FIELD = cleanerField;
-
-        boolean unaligned;
-        try {
-            Class<?> bitsClass = Class.forName("java.nio.Bits", false, ClassLoader.getSystemClassLoader());
-            Method unalignedMethod = bitsClass.getDeclaredMethod("unaligned");
-            unalignedMethod.setAccessible(true);
-            unaligned = Boolean.TRUE.equals(unalignedMethod.invoke(null));
-        } catch (Throwable t) {
-            unaligned = false;
-        }
-
-        if (unaligned) {
-            Field addressField = null;
+        if (unsafe == null) {
+            CLEANER_FIELD_OFFSET = -1;
+            ADDRESS_FIELD_OFFSET = -1;
+            UNALIGNED = false;
+        } else {
+            ByteBuffer direct = ByteBuffer.allocateDirect(1);
+            Field cleanerField;
             try {
-                addressField = Buffer.class.getDeclaredField("address");
-                addressField.setAccessible(true);
-                if (addressField.getLong(ByteBuffer.allocate(1)) != 0) {
-                    unaligned = false;
-                } else {
-                    ByteBuffer directBuf = ByteBuffer.allocateDirect(1);
-                    if (addressField.getLong(directBuf) == 0) {
-                        unaligned = false;
-                    }
-                    PlatformDependent.freeDirectBuffer(directBuf);
-                }
+                cleanerField = direct.getClass().getDeclaredField("cleaner");
+                cleanerField.setAccessible(true);
+                Cleaner cleaner = (Cleaner) cleanerField.get(direct);
+                cleaner.clean();
+            } catch (Throwable t) {
+                cleanerField = null;
+            }
+            CLEANER_FIELD_OFFSET = cleanerField != null? objectFieldOffset(cleanerField) : -1;
+
+            boolean unaligned;
+            try {
+                Class<?> bitsClass = Class.forName("java.nio.Bits", false, ClassLoader.getSystemClassLoader());
+                Method unalignedMethod = bitsClass.getDeclaredMethod("unaligned");
+                unalignedMethod.setAccessible(true);
+                unaligned = Boolean.TRUE.equals(unalignedMethod.invoke(null));
             } catch (Throwable t) {
                 unaligned = false;
             }
-            ADDRESS_FIELD = addressField;
-        } else {
-            ADDRESS_FIELD = null;
-        }
 
-        UNALIGNED = unaligned;
+            if (unaligned) {
+                Field addressField = null;
+                try {
+                    addressField = Buffer.class.getDeclaredField("address");
+                    addressField.setAccessible(true);
+                    if (addressField.getLong(ByteBuffer.allocate(1)) != 0) {
+                        unaligned = false;
+                    } else {
+                        ByteBuffer directBuf = ByteBuffer.allocateDirect(1);
+                        if (addressField.getLong(directBuf) == 0) {
+                            unaligned = false;
+                        }
+                        PlatformDependent.freeDirectBuffer(directBuf);
+                    }
+                } catch (Throwable t) {
+                    unaligned = false;
+                }
+                ADDRESS_FIELD_OFFSET = addressField != null? objectFieldOffset(addressField) : -1;
+            } else {
+                ADDRESS_FIELD_OFFSET = -1;
+            }
+
+            UNALIGNED = unaligned;
+        }
     }
 
     static boolean hasUnsafe() {
@@ -96,7 +102,7 @@ final class PlatformDependent0 {
     }
 
     static boolean canFreeDirectBuffer() {
-        return CLEANER_FIELD != null;
+        return ADDRESS_FIELD_OFFSET >= 0;
     }
 
     static long directBufferAddress(ByteBuffer buffer) {
@@ -104,17 +110,13 @@ final class PlatformDependent0 {
             throw new Error();
         }
 
-        try {
-            return ADDRESS_FIELD.getLong(buffer);
-        } catch (IllegalAccessException e) {
-            throw new Error(e);
-        }
+        return getLong(buffer, ADDRESS_FIELD_OFFSET);
     }
 
     static void freeDirectBuffer(ByteBuffer buffer) {
         Cleaner cleaner;
         try {
-            cleaner = (Cleaner) CLEANER_FIELD.get(buffer);
+            cleaner = (Cleaner) getObject(buffer, CLEANER_FIELD_OFFSET);
             cleaner.clean();
         } catch (Throwable t) {
             // Nothing we can do here.
@@ -127,6 +129,10 @@ final class PlatformDependent0 {
 
     static Object getObject(Object object, long fieldOffset) {
         return UNSAFE.getObject(object, fieldOffset);
+    }
+
+    private static long getLong(Object object, long fieldOffset) {
+        return UNSAFE.getLong(object, fieldOffset);
     }
 
     static long objectFieldOffset(Field field) {

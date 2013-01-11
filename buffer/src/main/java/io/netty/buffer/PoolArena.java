@@ -389,12 +389,18 @@ abstract class PoolArena<T> {
                 return;
             }
 
-            // We must duplicate the NIO buffers because they may be accessed by other Netty buffers.
-            src = src.duplicate();
-            dst = dst.duplicate();
-            src.position(srcOffset).limit(srcOffset + length);
-            dst.position(dstOffset);
-            dst.put(src);
+            if (PlatformDependent.isUnaligned()) {
+                PlatformDependent.copyMemory(
+                        PlatformDependent.directBufferAddress(src) + srcOffset,
+                        PlatformDependent.directBufferAddress(dst) + dstOffset, length);
+            } else {
+                // We must duplicate the NIO buffers because they may be accessed by other Netty buffers.
+                src = src.duplicate();
+                dst = dst.duplicate();
+                src.position(srcOffset).limit(srcOffset + length);
+                dst.position(dstOffset);
+                dst.put(src);
+            }
         }
     }
 }
