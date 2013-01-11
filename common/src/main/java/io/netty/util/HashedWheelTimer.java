@@ -22,7 +22,6 @@ import io.netty.monitor.MonitorName;
 import io.netty.monitor.MonitorRegistry;
 import io.netty.monitor.ValueDistributionMonitor;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SharedResourceMisuseDetector;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -84,14 +83,16 @@ public class HashedWheelTimer implements Timer {
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(HashedWheelTimer.class);
 
-    private static final SharedResourceMisuseDetector misuseDetector =
-        new SharedResourceMisuseDetector(HashedWheelTimer.class);
+    private static final ResourceLeakDetector<HashedWheelTimer> leakDetector =
+            new ResourceLeakDetector<HashedWheelTimer>(
+                    HashedWheelTimer.class, 1, Runtime.getRuntime().availableProcessors() * 4);
 
     private static final MonitorName TIMEOUT_EXPIRATION_TIME_DEVIATION_MN = new MonitorName(HashedWheelTimer.class,
             "timeout-expiration-time-deviation");
     private static final MonitorName TIMEOUTS_PER_SECOND_MN = new MonitorName(HashedWheelTimer.class,
             "timeouts-per-second");
 
+    private final ResourceLeak leak = leakDetector.open(this);
     private final Worker worker = new Worker();
     final Thread workerThread;
     final AtomicInteger workerState = new AtomicInteger(); // 0 - init, 1 - started, 2 - shut down
@@ -306,9 +307,6 @@ public class HashedWheelTimer implements Timer {
                 monitorRegistry.newValueDistributionMonitor(timeoutExpirationTimeDeviationMonitorName);
         timeoutsPerSecond =
                 monitorRegistry.newEventRateMonitor(timeoutsPerSecondMonitorName, TimeUnit.SECONDS);
-
-        // Misuse check
-        misuseDetector.increase();
     }
 
     @SuppressWarnings("unchecked")
@@ -391,7 +389,7 @@ public class HashedWheelTimer implements Timer {
             Thread.currentThread().interrupt();
         }
 
-        misuseDetector.decrease();
+        leak.close();
 
         Set<Timeout> unprocessedTimeouts = new HashSet<Timeout>();
         for (Set<HashedWheelTimeout> bucket: wheel) {

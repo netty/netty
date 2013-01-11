@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.ResourceLeakDetector;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -29,6 +31,8 @@ import java.nio.charset.Charset;
  * A skeletal implementation of a buffer.
  */
 public abstract class AbstractByteBuf implements ByteBuf {
+
+    static final ResourceLeakDetector<ByteBuf> leakDetector = new ResourceLeakDetector<ByteBuf>(ByteBuf.class);
 
     private int readerIndex;
     private int writerIndex;
