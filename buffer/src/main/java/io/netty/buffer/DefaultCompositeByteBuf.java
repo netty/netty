@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.ResourceLeak;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -43,6 +44,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
     private static final ByteBuffer[] EMPTY_NIOBUFFERS = new ByteBuffer[0];
 
+    private final ResourceLeak leak = leakDetector.open(this);
     private final ByteBufAllocator alloc;
     private final boolean direct;
     private final List<Component> components = new ArrayList<Component>();
@@ -1544,6 +1546,8 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         for (Component c: components) {
             c.freeIfNecessary();
         }
+
+        leak.close();
     }
 
     @Override
