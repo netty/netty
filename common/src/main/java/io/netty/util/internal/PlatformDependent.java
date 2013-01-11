@@ -97,7 +97,6 @@ public final class PlatformDependent {
         return IS_UNALIGNED;
     }
 
-
     public static long directBufferAddress(ByteBuffer buffer) {
         return PlatformDependent0.directBufferAddress(buffer);
     }
