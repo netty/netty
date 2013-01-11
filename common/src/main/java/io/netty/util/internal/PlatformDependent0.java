@@ -96,7 +96,6 @@ final class PlatformDependent0 {
         return UNSAFE.objectFieldOffset(field);
     }
 
-
     private PlatformDependent0() {
     }
 }
