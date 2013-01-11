@@ -145,7 +145,6 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
     private void writeResponse(ChannelHandlerContext ctx, HttpObject currentObj) {
         // Decide whether to close the connection or not.
         boolean keepAlive = isKeepAlive(request);
-
         // Build the response object.
         FullHttpResponse response = new DefaultFullHttpResponse(
                 HTTP_1_1, currentObj.decoderResult().isSuccess()? OK : BAD_REQUEST,

@@ -55,4 +55,7 @@ public interface FileUpload extends HttpData {
      * @return the Content-Transfer-Encoding
      */
     String getContentTransferEncoding();
+
+    @Override
+    FileUpload copy();
 }

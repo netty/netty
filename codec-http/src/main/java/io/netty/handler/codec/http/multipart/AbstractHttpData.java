@@ -15,8 +15,11 @@
  */
 package io.netty.handler.codec.http.multipart;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelException;
 import io.netty.handler.codec.http.HttpConstants;
 
+import java.io.IOException;
 import java.nio.charset.Charset;
 
 /**
@@ -96,4 +99,19 @@ public abstract class AbstractHttpData implements HttpData {
     public long length() {
         return size;
     }
+
+    @Override
+    public ByteBuf data() {
+        try {
+            return getByteBuf();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    @Override
+    public void free() {
+        delete();
+    }
+
 }

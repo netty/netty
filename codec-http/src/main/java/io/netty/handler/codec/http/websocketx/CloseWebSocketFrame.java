@@ -30,7 +30,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      * Creates a new empty close frame.
      */
     public CloseWebSocketFrame() {
-        setBinaryData(Unpooled.EMPTY_BUFFER);
+        super(Unpooled.buffer(0));
     }
 
     /**
@@ -72,9 +72,10 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      *            Reason text. Set to null if no text.
      */
     public CloseWebSocketFrame(boolean finalFragment, int rsv, int statusCode, String reasonText) {
-        setFinalFragment(finalFragment);
-        setRsv(rsv);
+        super(finalFragment, rsv, newBinaryData(statusCode, reasonText));
+    }
 
+    private static ByteBuf newBinaryData(int statusCode, String reasonText) {
         byte[] reasonBytes = EMTPY_REASON;
         if (reasonText != null) {
             reasonBytes = reasonText.getBytes(CharsetUtil.UTF_8);
@@ -87,7 +88,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
         }
 
         binaryData.readerIndex(0);
-        setBinaryData(binaryData);
+        return binaryData;
     }
 
     /**
@@ -101,21 +102,15 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      *            the content of the frame. Must be 2 byte integer followed by optional UTF-8 encoded string.
      */
     public CloseWebSocketFrame(boolean finalFragment, int rsv, ByteBuf binaryData) {
-        setFinalFragment(finalFragment);
-        setRsv(rsv);
-        if (binaryData == null) {
-            setBinaryData(Unpooled.EMPTY_BUFFER);
-        } else {
-            setBinaryData(binaryData);
-        }
+        super(finalFragment, rsv, binaryData);
     }
 
     /**
      * Returns the closing status code as per <a href="http://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. If
      * a status code is set, -1 is returned.
      */
-    public int getStatusCode() {
-        ByteBuf binaryData = getBinaryData();
+    public int statusCode() {
+        ByteBuf binaryData = data();
         if (binaryData == null || binaryData.capacity() == 0) {
             return -1;
         }
@@ -131,8 +126,8 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      * Returns the reason text as per <a href="http://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a> If a reason
      * text is not supplied, an empty string is returned.
      */
-    public String getReasonText() {
-        ByteBuf binaryData = getBinaryData();
+    public String reasonText() {
+        ByteBuf binaryData = data();
         if (binaryData == null || binaryData.capacity() <= 2) {
             return "";
         }
@@ -145,7 +140,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
     }
 
     @Override
-    public String toString() {
-        return getClass().getSimpleName();
+    public CloseWebSocketFrame copy() {
+        return new CloseWebSocketFrame(isFinalFragment(), rsv(), data().copy());
     }
 }

@@ -61,4 +61,13 @@ public class SpdyHttpResponseStreamIdHandler extends
         return msg;
     }
 
+    @Override
+    protected void freeInboundMessage(Object msg) throws Exception {
+        // just pass through so no free
+    }
+
+    @Override
+    protected void freeOutboundMessage(HttpMessage msg) throws Exception {
+        // just pass through so no free
+    }
 }

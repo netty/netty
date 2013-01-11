@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,7 +26,7 @@ import java.nio.charset.Charset;
 /**
  * Extended interface for InterfaceHttpData
  */
-public interface HttpData extends InterfaceHttpData {
+public interface HttpData extends InterfaceHttpData, ByteBufHolder {
     /**
      * Set the content from the ChannelBuffer (erase any previous data)
      *
@@ -176,4 +177,6 @@ public interface HttpData extends InterfaceHttpData {
      */
     File getFile() throws IOException;
 
+    @Override
+    HttpData copy();
 }
