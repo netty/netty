@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -74,16 +74,16 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     @Override
     void init(PoolChunk<ByteBuffer> chunk, long handle, int offset, int length, int maxLength) {
         super.init(chunk, handle, offset, length, maxLength);
-        initiMemoryAddress();
+        initMemoryAddress();
     }
 
     @Override
     void initUnpooled(PoolChunk<ByteBuffer> chunk, int length) {
         super.initUnpooled(chunk, length);
-        initiMemoryAddress();
+        initMemoryAddress();
     }
 
-    private void initiMemoryAddress() {
+    private void initMemoryAddress() {
         ByteBuffer memory = this.memory;
         try {
             memoryAddress = ADDRESS_FIELD.getLong(memory) + offset;
