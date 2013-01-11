@@ -169,7 +169,6 @@ final class PlatformDependent0 {
         UNSAFE.copyMemory(srcAddr, dstAddr, length);
     }
 
-
     private PlatformDependent0() {
     }
 }
