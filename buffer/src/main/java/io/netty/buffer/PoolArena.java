@@ -19,7 +19,6 @@ package io.netty.buffer;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -355,22 +354,6 @@ abstract class PoolArena<T> {
 
     static final class DirectArena extends PoolArena<ByteBuffer> {
 
-        private static final boolean UNALIGNED;
-
-        static {
-            boolean unaligned = false;
-            try {
-                Class<?> bitsClass = Class.forName("java.nio.Bits", false, ClassLoader.getSystemClassLoader());
-                Method unalignedMethod = bitsClass.getDeclaredMethod("unaligned");
-                unalignedMethod.setAccessible(true);
-                unaligned = Boolean.TRUE.equals(unalignedMethod.invoke(null));
-            } catch (Throwable t) {
-                // Ignore
-            }
-
-            UNALIGNED = unaligned;
-        }
-
         DirectArena(PooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
             super(parent, pageSize, maxOrder, pageShifts, chunkSize);
         }
@@ -393,7 +376,7 @@ abstract class PoolArena<T> {
 
         @Override
         protected PooledByteBuf<ByteBuffer> newByteBuf(int maxCapacity) {
-            if (UNALIGNED) {
+            if (PlatformDependent.isUnaligned()) {
                 return new PooledUnsafeDirectByteBuf(maxCapacity);
             } else {
                 return new PooledDirectByteBuf(maxCapacity);
