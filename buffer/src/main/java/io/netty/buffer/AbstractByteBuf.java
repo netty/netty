@@ -47,7 +47,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
     private static final class WeakBufRef extends WeakReference<AbstractByteBuf> {
         private final Class<?> bufType;
         private final StackTraceElement[] stackTrace;
-        private boolean freed;
+        private volatile boolean freed;
 
         public WeakBufRef(AbstractByteBuf referent, StackTraceElement[] stackTrace) {
             super(referent, bufRefQueue);
