@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.internal.StringUtil;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -81,7 +83,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
                 if (e == null) {
                     break;
                 }
-                msgBuf.append(System.lineSeparator());
+                msgBuf.append(StringUtil.NEWLINE);
                 msgBuf.append("    ");
                 msgBuf.append(e);
             }
