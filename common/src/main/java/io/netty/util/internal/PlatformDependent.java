@@ -97,6 +97,10 @@ public final class PlatformDependent {
         return IS_UNALIGNED;
     }
 
+    public static long directBufferAddress(ByteBuffer buffer) {
+        return PlatformDependent0.directBufferAddress(buffer);
+    }
+
     /**
      * Try to deallocate the specified direct {@link ByteBuffer}.  Please note this method does nothing if
      * the current platform does not support this operation or the specified buffer is not a direct buffer.
@@ -113,6 +117,42 @@ public final class PlatformDependent {
 
     public static long objectFieldOffset(Field field) {
         return PlatformDependent0.objectFieldOffset(field);
+    }
+
+    public static byte getByte(long address) {
+        return PlatformDependent0.getByte(address);
+    }
+
+    public static short getShort(long address) {
+        return PlatformDependent0.getShort(address);
+    }
+
+    public static int getInt(long address) {
+        return PlatformDependent0.getInt(address);
+    }
+
+    public static long getLong(long address) {
+        return PlatformDependent0.getLong(address);
+    }
+
+    public static void putByte(long address, byte value) {
+        PlatformDependent0.putByte(address, value);
+    }
+
+    public static void putShort(long address, short value) {
+        PlatformDependent0.putShort(address, value);
+    }
+
+    public static void putInt(long address, int value) {
+        PlatformDependent0.putInt(address, value);
+    }
+
+    public static void putLong(long address, long value) {
+        PlatformDependent0.putLong(address, value);
+    }
+
+    public static void copyMemory(long srcAddr, long dstAddr, long length) {
+        PlatformDependent0.copyMemory(srcAddr, dstAddr, length);
     }
 
     private static boolean isAndroid0() {

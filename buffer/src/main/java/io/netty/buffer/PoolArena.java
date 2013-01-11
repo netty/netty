@@ -376,7 +376,11 @@ abstract class PoolArena<T> {
 
         @Override
         protected PooledByteBuf<ByteBuffer> newByteBuf(int maxCapacity) {
-            return new PooledDirectByteBuf(maxCapacity);
+            if (PlatformDependent.isUnaligned()) {
+                return new PooledUnsafeDirectByteBuf(maxCapacity);
+            } else {
+                return new PooledDirectByteBuf(maxCapacity);
+            }
         }
 
         @Override
