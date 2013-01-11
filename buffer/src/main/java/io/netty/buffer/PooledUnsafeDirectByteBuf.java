@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+import io.netty.util.internal.PlatformDependent;
 import sun.misc.Unsafe;
 
 import java.io.IOException;
@@ -57,7 +58,7 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
             if (addressField.getLong(directBuf) == 0) {
                 throw new Error("direct buffer address must be non-zero");
             }
-            UnpooledDirectByteBuf.freeDirect(directBuf);
+            PlatformDependent.freeDirectBuffer(directBuf);
         } catch (Throwable t) {
             throw new Error(t);
         }
@@ -120,7 +121,7 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     public int getUnsignedMedium(int index) {
         checkIndex(index, 3);
         long addr = addr(index);
-        return (UNSAFE.getByte(addr) & 0xff) << 16 |(UNSAFE.getByte(addr + 1) & 0xff) << 8 |
+        return (UNSAFE.getByte(addr) & 0xff) << 16 | (UNSAFE.getByte(addr + 1) & 0xff) << 8 |
                 UNSAFE.getByte(addr + 2) & 0xff;
     }
 
