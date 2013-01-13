@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.socket.sctp;
+package io.netty.channel.sctp;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;

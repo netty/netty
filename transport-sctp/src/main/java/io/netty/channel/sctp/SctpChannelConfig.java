@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.socket.sctp;
+package io.netty.channel.sctp;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
@@ -21,40 +21,41 @@ import io.netty.channel.ChannelConfig;
 import static com.sun.nio.sctp.SctpStandardSocketOptions.*;
 
 /**
- * A {@link ChannelConfig} for a {@link SctpServerChannelConfig}.
+ * A {@link ChannelConfig} for a {@link SctpChannel}.
  * <p/>
  * <h3>Available options</h3>
  * <p/>
  * In addition to the options provided by {@link ChannelConfig},
- * {@link SctpServerChannelConfig} allows the following options in the
- * option map:
+ * {@link SctpChannelConfig} allows the following options in the option map:
  * <p/>
  * <table border="1" cellspacing="0" cellpadding="6">
  * <tr>
  * <th>Name</th><th>Associated setter method</th>
  * </tr><tr>
- * <td>{@code "backlog"}</td><td>{@link #setBacklog(int)}</td>
+ * <td>{@code "sctpNoDelay"}</td><td>{@link #setSctpNoDelay(boolean)}}</td>
  * </tr><tr>
- * * <td>{@code "receiveBufferSize"}</td><td>{@link #setReceiveBufferSize(int)}</td>
+ * <td>{@code "receiveBufferSize"}</td><td>{@link #setReceiveBufferSize(int)}</td>
  * </tr><tr>
  * <td>{@code "sendBufferSize"}</td><td>{@link #setSendBufferSize(int)}</td>
  * </tr><tr>
  * <td>{@code "sctpInitMaxStreams"}</td>
- * <td>{@link #setInitMaxStreams(InitMaxStreams)} (int)}}</td>
+ * <td>{@link #setInitMaxStreams(InitMaxStreams)}</td>
  * </tr>
  * </table>
  */
-public interface SctpServerChannelConfig extends ChannelConfig {
+public interface SctpChannelConfig extends ChannelConfig {
 
     /**
-     * Gets the backlog value to specify when the channel binds to a local address.
+     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
+     *     {@code SCTP_NODELAY}</a> option.
      */
-    int getBacklog();
+    boolean isSctpNoDelay();
 
     /**
-     * Sets the backlog value to specify when the channel binds to a local address.
+     * Sets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
+     *     {@code SCTP_NODELAY}</a> option.
      */
-    SctpServerChannelConfig setBacklog(int backlog);
+    SctpChannelConfig setSctpNoDelay(boolean sctpNoDelay);
 
     /**
      * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
@@ -66,7 +67,7 @@ public interface SctpServerChannelConfig extends ChannelConfig {
      * Sets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
      *     {@code SO_SNDBUF}</a> option.
      */
-    SctpServerChannelConfig setSendBufferSize(int sendBufferSize);
+    SctpChannelConfig setSendBufferSize(int sendBufferSize);
 
     /**
      * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
@@ -78,7 +79,7 @@ public interface SctpServerChannelConfig extends ChannelConfig {
      * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
      *     {@code SO_RCVBUF}</a> option.
      */
-    SctpServerChannelConfig setReceiveBufferSize(int receiveBufferSize);
+    SctpChannelConfig setReceiveBufferSize(int receiveBufferSize);
 
     /**
      * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
@@ -90,17 +91,17 @@ public interface SctpServerChannelConfig extends ChannelConfig {
      * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
      *     {@code SCTP_INIT_MAXSTREAMS}</a> option.
      */
-    SctpServerChannelConfig setInitMaxStreams(InitMaxStreams initMaxStreams);
+    SctpChannelConfig setInitMaxStreams(InitMaxStreams initMaxStreams);
 
     @Override
-    SctpServerChannelConfig setWriteSpinCount(int writeSpinCount);
+    SctpChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
 
     @Override
-    SctpServerChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
+    SctpChannelConfig setWriteSpinCount(int writeSpinCount);
 
     @Override
-    SctpServerChannelConfig setAllocator(ByteBufAllocator allocator);
+    SctpChannelConfig setAllocator(ByteBufAllocator allocator);
 
     @Override
-    SctpServerChannelConfig setAutoRead(boolean autoRead);
+    SctpChannelConfig setAutoRead(boolean autoRead);
 }
