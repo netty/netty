@@ -25,7 +25,11 @@ import java.net.SocketAddress;
 import java.util.Set;
 
 /**
- * A SCTP/IP  {@link Channel}
+ * A SCTP/IP  {@link Channel} interface for single SCTP association.
+ *
+ * <p>
+ * The SctpChannel is a message-oriented, connected transport which supports multi-streaming and multi-homing.
+ * </p>
  */
 public interface SctpChannel extends Channel {
     /**
@@ -87,9 +91,9 @@ public interface SctpChannel extends Channel {
      * Bind a address to the already bound channel to enable multi-homing.
      * The Channel bust be bound and yet to be connected.
      *
-     * The given {@link ChannelFuture} will be notified and also returned.
+     * Will notify the given {@link ChannelPromise} and return a {@link ChannelFuture}
      */
-    ChannelFuture bindAddress(InetAddress localAddress, ChannelPromise future);
+    ChannelFuture bindAddress(InetAddress localAddress, ChannelPromise promise);
 
     /**
      *  Unbind the address from channel's multi-homing address list.
@@ -101,7 +105,7 @@ public interface SctpChannel extends Channel {
      *  Unbind the address from channel's multi-homing address list.
      *  The address should be added already in multi-homing address list.
      *
-     * The given {@link ChannelFuture} will be notified and also returned.
+     * Will notify the given {@link ChannelPromise} and return a {@link ChannelFuture}
      */
-    ChannelFuture unbindAddress(InetAddress localAddress, ChannelPromise future);
+    ChannelFuture unbindAddress(InetAddress localAddress, ChannelPromise promise);
 }
