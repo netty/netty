@@ -21,4 +21,4 @@
  * @apiviz.exclude \.socket\.[a-z]+\.
  * @apiviz.exclude \.channel\.[A-Z]
  */
-package io.netty.channel.socket.sctp;
+package io.netty.channel.sctp;

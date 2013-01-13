@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.testsuite.transport.socket;
+package io.netty.testsuite.transport.sctp;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
@@ -23,7 +23,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.socket.sctp.SctpChannel;
+import io.netty.channel.sctp.SctpChannel;
 import io.netty.handler.codec.sctp.SctpInboundByteStreamHandler;
 import io.netty.handler.codec.sctp.SctpMessageCompletionHandler;
 import io.netty.handler.codec.sctp.SctpOutboundByteStreamHandler;
