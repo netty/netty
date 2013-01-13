@@ -13,13 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.testsuite.transport.socket;
+package io.netty.testsuite.transport.sctp;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
-import io.netty.testsuite.transport.socket.SocketTestPermutation.Factory;
+import io.netty.testsuite.transport.sctp.SctpTestPermutation;
+import io.netty.testsuite.transport.sctp.SctpTestPermutation.Factory;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.NetUtil;
 import org.junit.Rule;
@@ -34,7 +35,7 @@ import java.util.Map.Entry;
 public abstract class AbstractSctpTest {
 
     private static final List<Entry<Factory<ServerBootstrap>, Factory<Bootstrap>>> COMBO =
-            SocketTestPermutation.sctpChannel();
+            SctpTestPermutation.sctpChannel();
 
     @Rule
     public final TestName testName = new TestName();

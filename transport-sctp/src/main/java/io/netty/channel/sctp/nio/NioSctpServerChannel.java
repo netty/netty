@@ -13,19 +13,22 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.socket.sctp.nio;
+package io.netty.channel.sctp.nio;
 
 import com.sun.nio.sctp.SctpChannel;
 import com.sun.nio.sctp.SctpServerChannel;
 import io.netty.buffer.BufType;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.nio.AbstractNioMessageChannel;
-import io.netty.channel.socket.sctp.DefaultSctpServerChannelConfig;
-import io.netty.channel.socket.sctp.SctpServerChannelConfig;
+import io.netty.channel.sctp.DefaultSctpServerChannelConfig;
+import io.netty.channel.sctp.SctpServerChannelConfig;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
@@ -35,14 +38,14 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
- * {@link io.netty.channel.socket.sctp.SctpServerChannel} implementation which use non-blocking mode to accept new
+ * {@link io.netty.channel.sctp.SctpServerChannel} implementation which use non-blocking mode to accept new
  * connections and create the {@link NioSctpChannel} for them.
  *
  * Be aware that not all operations systems support SCTP. Please refer to the documentation of your operation system,
  * to understand what you need to do to use it. Also this feature is only supported on Java 7+.
  */
 public class NioSctpServerChannel extends AbstractNioMessageChannel
-        implements io.netty.channel.socket.sctp.SctpServerChannel {
+        implements io.netty.channel.sctp.SctpServerChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
 
     private static SctpServerChannel newSocket() {
@@ -134,6 +137,56 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
         }
         buf.add(new NioSctpChannel(this, null, ch));
         return 1;
+    }
+
+    @Override
+    public ChannelFuture bindAddress(InetAddress localAddress) {
+        return bindAddress(localAddress, newPromise());
+    }
+
+    @Override
+    public ChannelFuture bindAddress(final InetAddress localAddress, final ChannelPromise promise) {
+        if (eventLoop().inEventLoop()) {
+            try {
+                javaChannel().bindAddress(localAddress);
+                promise.setSuccess();
+            } catch (Throwable t) {
+                promise.setFailure(t);
+            }
+        } else {
+            eventLoop().execute(new Runnable() {
+                @Override
+                public void run() {
+                    bindAddress(localAddress, promise);
+                }
+            });
+        }
+        return promise;
+    }
+
+    @Override
+    public ChannelFuture unbindAddress(InetAddress localAddress) {
+        return unbindAddress(localAddress, newPromise());
+    }
+
+    @Override
+    public ChannelFuture unbindAddress(final InetAddress localAddress, final ChannelPromise promise) {
+        if (eventLoop().inEventLoop()) {
+            try {
+                javaChannel().unbindAddress(localAddress);
+                promise.setSuccess();
+            } catch (Throwable t) {
+                promise.setFailure(t);
+            }
+        } else {
+            eventLoop().execute(new Runnable() {
+                @Override
+                public void run() {
+                    unbindAddress(localAddress, promise);
+                }
+            });
+        }
+        return promise;
     }
 
     // Unnecessary stuff

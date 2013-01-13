@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.socket.sctp.oio;
+package io.netty.channel.sctp.oio;
 
 import com.sun.nio.sctp.Association;
 import com.sun.nio.sctp.MessageInfo;
@@ -28,11 +28,11 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.oio.AbstractOioMessageChannel;
-import io.netty.channel.socket.sctp.DefaultSctpChannelConfig;
-import io.netty.channel.socket.sctp.SctpChannelConfig;
-import io.netty.channel.socket.sctp.SctpMessage;
-import io.netty.channel.socket.sctp.SctpNotificationHandler;
-import io.netty.channel.socket.sctp.SctpServerChannel;
+import io.netty.channel.sctp.DefaultSctpChannelConfig;
+import io.netty.channel.sctp.SctpChannelConfig;
+import io.netty.channel.sctp.SctpMessage;
+import io.netty.channel.sctp.SctpNotificationHandler;
+import io.netty.channel.sctp.SctpServerChannel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
@@ -49,14 +49,14 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
- * {@link io.netty.channel.socket.sctp.SctpChannel} implementation which use blocking mode and allows to read / write
+ * {@link io.netty.channel.sctp.SctpChannel} implementation which use blocking mode and allows to read / write
  * {@link SctpMessage}s to the underlying {@link SctpChannel}.
  *
  * Be aware that not all operations systems support SCTP. Please refer to the documentation of your operation system,
  * to understand what you need to do to use it. Also this feature is only supported on Java 7+.
  */
 public class OioSctpChannel extends AbstractOioMessageChannel
-        implements io.netty.channel.socket.sctp.SctpChannel {
+        implements io.netty.channel.sctp.SctpChannel {
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(OioSctpChannel.class);
@@ -169,9 +169,9 @@ public class OioSctpChannel extends AbstractOioMessageChannel
             return readMessages;
         }
 
-        Set<SelectionKey> reableKeys = readSelector.selectedKeys();
+        Set<SelectionKey> readableKeys = readSelector.selectedKeys();
         try {
-            for (SelectionKey ignored : reableKeys) {
+            for (SelectionKey ignored : readableKeys) {
                 ByteBuf buffer = alloc().directBuffer(config().getReceiveBufferSize());
                 boolean free = true;
 
@@ -204,7 +204,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                 }
             }
         } finally {
-            reableKeys.clear();
+            readableKeys.clear();
         }
 
         return readMessages;
