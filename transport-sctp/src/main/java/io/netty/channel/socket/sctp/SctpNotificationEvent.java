@@ -21,8 +21,17 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 
 /**
- * Will be passed to {@link ChannelPipeline#fireUserEventTriggered(Object)} method and so forwarded to the added
- * {@link ChannelHandler#userEventTriggered(ChannelHandlerContext, Object)}  method.
+ * A Notification event which carries a {@link Notification} from the SCTP stack to a SCTP {@link ChannelPipeline}.
+ * <p>
+ * Following notifications may be supported by a {@link SctpChannel};
+ * AssociationChangeNotification, PeerAddressChangeNotification, SendFailedNotification, ShutdownNotification and
+ * additional implementation specific notifications.
+ *</p>
+ *
+ * <p>
+ * User can handle the notification events of a {@link SctpChannel} by override the following method
+ * {@link ChannelHandler#userEventTriggered(ChannelHandlerContext, Object)}.
+ * </p>
  */
 public final class SctpNotificationEvent {
     private final Notification notification;
