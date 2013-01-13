@@ -18,6 +18,8 @@ package io.netty.transport.udt;
 import io.netty.channel.Channel;
 import io.netty.transport.udt.nio.NioUdtProvider;
 
+import java.net.InetSocketAddress;
+
 /**
  * UDT {@link Channel}.
  * <p>
@@ -30,5 +32,10 @@ public interface UdtChannel extends Channel {
      */
     @Override
     UdtChannelConfig config();
+
+    @Override
+    InetSocketAddress localAddress();
+    @Override
+    InetSocketAddress remoteAddress();
 
 }

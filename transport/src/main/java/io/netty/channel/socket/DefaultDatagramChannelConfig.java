@@ -21,7 +21,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.internal.DetectionUtil;
+import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
 import java.net.DatagramSocket;
@@ -146,7 +146,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
         try {
             // See: https://github.com/netty/netty/issues/576
             if (broadcast &&
-                !DetectionUtil.isWindows() && !DetectionUtil.isRoot() &&
+                !PlatformDependent.isWindows() && !PlatformDependent.isRoot() &&
                 !javaSocket.getLocalAddress().isAnyLocalAddress()) {
                 // Warn a user about the fact that a non-root user can't receive a
                 // broadcast packet on *nix if the socket is bound on non-wildcard address.

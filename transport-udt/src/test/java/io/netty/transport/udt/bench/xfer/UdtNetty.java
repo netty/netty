@@ -16,6 +16,9 @@
 
 package io.netty.transport.udt.bench.xfer;
 
+import com.yammer.metrics.Metrics;
+import com.yammer.metrics.core.Counter;
+import com.yammer.metrics.core.Meter;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
@@ -26,17 +29,12 @@ import io.netty.transport.udt.util.CustomReporter;
 import io.netty.transport.udt.util.EchoMessageHandler;
 import io.netty.transport.udt.util.TrafficControl;
 import io.netty.transport.udt.util.UnitHelp;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.yammer.metrics.Metrics;
-import com.yammer.metrics.core.Counter;
-import com.yammer.metrics.core.Meter;
 
 /**
  * perform two way netty send/recv
@@ -118,12 +116,12 @@ public final class UdtNetty {
 
         isOn.set(false);
 
-        Thread.sleep(1 * 1000);
+        Thread.sleep(1000);
 
         peerFuture1.channel().close().sync();
         peerFuture2.channel().close().sync();
 
-        Thread.sleep(1 * 1000);
+        Thread.sleep(1000);
 
         peerBoot1.shutdown();
         peerBoot2.shutdown();

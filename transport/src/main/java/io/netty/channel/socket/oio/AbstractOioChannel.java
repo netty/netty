@@ -20,7 +20,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 /**
@@ -45,16 +44,6 @@ public abstract class AbstractOioChannel extends AbstractChannel {
      */
     protected AbstractOioChannel(Channel parent, Integer id) {
         super(parent, id);
-    }
-
-    @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
-    }
-
-    @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
     }
 
     @Override

@@ -36,8 +36,8 @@ import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
@@ -150,12 +150,12 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    public Set<SocketAddress> allLocalAddresses() {
+    public Set<InetSocketAddress> allLocalAddresses() {
         try {
             final Set<SocketAddress> allLocalAddresses = sch.getAllLocalAddresses();
-            final Set<SocketAddress> addresses = new HashSet<SocketAddress>(allLocalAddresses.size());
+            final Set<InetSocketAddress> addresses = new LinkedHashSet<InetSocketAddress>(allLocalAddresses.size());
             for (SocketAddress socketAddress : allLocalAddresses) {
-                addresses.add(socketAddress);
+                addresses.add((InetSocketAddress) socketAddress);
             }
             return addresses;
         } catch (Throwable t) {

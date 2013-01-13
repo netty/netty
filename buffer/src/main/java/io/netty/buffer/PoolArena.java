@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.nio.ByteBuffer;
@@ -370,12 +371,16 @@ abstract class PoolArena<T> {
 
         @Override
         protected void destroyChunk(PoolChunk<ByteBuffer> chunk) {
-            UnpooledDirectByteBuf.freeDirect(chunk.memory);
+            PlatformDependent.freeDirectBuffer(chunk.memory);
         }
 
         @Override
         protected PooledByteBuf<ByteBuffer> newByteBuf(int maxCapacity) {
-            return new PooledDirectByteBuf(maxCapacity);
+            if (PlatformDependent.isUnaligned()) {
+                return new PooledUnsafeDirectByteBuf(maxCapacity);
+            } else {
+                return new PooledDirectByteBuf(maxCapacity);
+            }
         }
 
         @Override
@@ -384,12 +389,18 @@ abstract class PoolArena<T> {
                 return;
             }
 
-            // We must duplicate the NIO buffers because they may be accessed by other Netty buffers.
-            src = src.duplicate();
-            dst = dst.duplicate();
-            src.position(srcOffset).limit(srcOffset + length);
-            dst.position(dstOffset);
-            dst.put(src);
+            if (PlatformDependent.isUnaligned()) {
+                PlatformDependent.copyMemory(
+                        PlatformDependent.directBufferAddress(src) + srcOffset,
+                        PlatformDependent.directBufferAddress(dst) + dstOffset, length);
+            } else {
+                // We must duplicate the NIO buffers because they may be accessed by other Netty buffers.
+                src = src.duplicate();
+                dst = dst.duplicate();
+                src.position(srcOffset).limit(srcOffset + length);
+                dst.position(dstOffset);
+                dst.put(src);
+            }
         }
     }
 }

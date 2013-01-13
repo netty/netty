@@ -33,7 +33,7 @@ public final class IdleStateEvent {
      * Create a new instance
      *
      * @param state             the detailed idle state.
-     * @param count             the count how often this kind of {@IdleStateEvent} was fired before
+     * @param count             the count how often this kind of {@link IdleStateEvent} was fired before
      * @param durationMillis    the duration which caused the {@link IdleStateEvent} to get fired in milliseconds
      */
     public IdleStateEvent(IdleState state, int count, long durationMillis) {
@@ -61,7 +61,7 @@ public final class IdleStateEvent {
     }
 
     /**
-     * Return the count how often this kind of {@IdleStateEvent} was fired before.
+     * Return the count how often this kind of {@link IdleStateEvent} was fired before.
      */
     public int count() {
         return count;

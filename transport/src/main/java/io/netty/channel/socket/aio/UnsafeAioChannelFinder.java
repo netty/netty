@@ -15,19 +15,16 @@
  */
 package io.netty.channel.socket.aio;
 
+import io.netty.util.internal.PlatformDependent;
+
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 
-import sun.misc.Unsafe;
-
 /**
- * {@link AioChannelFinder} implementation which will use {@link Unsafe}.
+ * {@link AioChannelFinder} implementation which uses {@code sun.misc.Unsafe}.
  */
-@SuppressWarnings("restriction")
 final class UnsafeAioChannelFinder implements AioChannelFinder {
-    private static final Unsafe UNSAFE = getUnsafe();
-
     private static volatile Map<Class<?>, Long> offsetCache = new HashMap<Class<?>, Long>();
 
     @Override
@@ -38,7 +35,7 @@ final class UnsafeAioChannelFinder implements AioChannelFinder {
             if (offset == null) {
                 return null;
             }
-            Object next = UNSAFE.getObject(command, offset);
+            Object next = PlatformDependent.getObject(command, offset);
             if (next instanceof AbstractAioChannel) {
                 return (AbstractAioChannel) next;
             }
@@ -56,7 +53,7 @@ final class UnsafeAioChannelFinder implements AioChannelFinder {
 
         for (Field f: commandType.getDeclaredFields()) {
             if (f.getType() == Runnable.class) {
-                res = UNSAFE.objectFieldOffset(f);
+                res = PlatformDependent.objectFieldOffset(f);
                 put(offsetCache, commandType, res);
                 return res;
             }
@@ -65,7 +62,7 @@ final class UnsafeAioChannelFinder implements AioChannelFinder {
                 f.setAccessible(true);
                 Object candidate = f.get(command);
                 if (candidate instanceof AbstractAioChannel) {
-                    res = UNSAFE.objectFieldOffset(f);
+                    res = PlatformDependent.objectFieldOffset(f);
                     put(offsetCache, commandType, res);
                     return res;
                 }
@@ -79,15 +76,5 @@ final class UnsafeAioChannelFinder implements AioChannelFinder {
         newCache.putAll(oldCache);
         newCache.put(key, value);
         offsetCache = newCache;
-    }
-
-    private static Unsafe getUnsafe() {
-        try {
-            Field singleoneInstanceField = Unsafe.class.getDeclaredField("theUnsafe");
-            singleoneInstanceField.setAccessible(true);
-            return (Unsafe) singleoneInstanceField.get(null);
-        } catch (Throwable cause) {
-            throw new RuntimeException("Error while obtaining sun.misc.Unsafe", cause);
-        }
     }
 }

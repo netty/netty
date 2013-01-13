@@ -218,7 +218,7 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
         checkIndex(index, length);
         ByteBuf copy = alloc().heapBuffer(length, maxCapacity());
         copy.writeBytes(memory, idx(index), length);
-        return copy();
+        return copy;
     }
 
     @Override

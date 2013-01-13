@@ -16,7 +16,10 @@
 
 package io.netty.transport.udt.bench.xfer;
 
-import static io.netty.transport.udt.util.UnitHelp.*;
+import com.barchart.udt.SocketUDT;
+import com.barchart.udt.StatusUDT;
+import com.barchart.udt.TypeUDT;
+import com.google.caliper.Param;
 import io.netty.transport.udt.bench.BenchXfer;
 import io.netty.transport.udt.util.CaliperRunner;
 import io.netty.transport.udt.util.TrafficControl;
@@ -29,10 +32,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.barchart.udt.SocketUDT;
-import com.barchart.udt.StatusUDT;
-import com.barchart.udt.TypeUDT;
-import com.google.caliper.Param;
+import static io.netty.transport.udt.util.UnitHelp.*;
 
 /**
  * perform two way native UDT socket send/recv
@@ -210,7 +210,7 @@ public class UdtNative extends BenchXfer {
                 if (count != message) {
                     throw new Exception("count");
                 }
-                if (this.sequence++ != buffer.getLong(0)) {
+                if (sequence ++ != buffer.getLong(0)) {
                     throw new Exception("sequence");
                 }
             }
@@ -241,7 +241,7 @@ public class UdtNative extends BenchXfer {
                 if (count != message) {
                     throw new Exception("count");
                 }
-                if (this.sequence++ != buffer.getLong(0)) {
+                if (sequence ++ != buffer.getLong(0)) {
                     throw new Exception("sequence");
                 }
             }

@@ -21,7 +21,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
 
 import java.net.InetAddress;
-import java.net.SocketAddress;
+import java.net.InetSocketAddress;
 import java.util.Set;
 
 /**
@@ -32,6 +32,9 @@ import java.util.Set;
  * </p>
  */
 public interface SctpChannel extends Channel {
+    @Override
+    SctpServerChannel parent();
+
     /**
      * Returns the underlying SCTP association.
      */
@@ -48,13 +51,13 @@ public interface SctpChannel extends Channel {
      * with SctpStandardSocketOption.SCTP_PRIMARY_ADDR option).
      */
     @Override
-    SocketAddress localAddress();
+    InetSocketAddress localAddress();
 
     /**
      * Return all local addresses of the SCTP  channel.
      * Please note that, it will return more than one address if this channel is using multi-homing
      */
-    Set<SocketAddress> allLocalAddresses();
+    Set<InetSocketAddress> allLocalAddresses();
 
     /**
      * Returns the {@link SctpChannelConfig} configuration of the channel.
@@ -73,13 +76,13 @@ public interface SctpChannel extends Channel {
      * calling the local SCTP stack with SctpStandardSocketOption.SCTP_SET_PEER_PRIMARY_ADDR option)
      */
     @Override
-    SocketAddress remoteAddress();
+    InetSocketAddress remoteAddress();
 
     /**
      * Return all remote addresses of the SCTP server channel.
      * Please note that, it will return more than one address if the remote is using multi-homing.
      */
-    Set<SocketAddress> allRemoteAddresses();
+    Set<InetSocketAddress> allRemoteAddresses();
 
     /**
      * Bind a address to the already bound channel to enable multi-homing.

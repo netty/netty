@@ -32,7 +32,11 @@ import javax.swing.JApplet;
  * {@link JApplet} which starts up a Server that receive data and discard it.
  */
 public class AppletDiscardServer extends JApplet {
+
+    private static final long serialVersionUID = -7824894101960583175L;
+
     private ServerBootstrap bootstrap;
+
     @Override
     public void init() {
         try {

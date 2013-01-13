@@ -49,7 +49,7 @@ public interface SctpServerChannel extends ServerChannel {
      * with SctpStandardSocketOption.SCTP_PRIMARY_ADDR option).
      */
     @Override
-    SocketAddress localAddress();
+    InetSocketAddress localAddress();
 
     /**
      * Return all local addresses of the SCTP server channel.

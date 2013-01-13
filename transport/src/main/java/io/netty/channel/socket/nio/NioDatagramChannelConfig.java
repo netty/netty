@@ -18,7 +18,7 @@ package io.netty.channel.socket.nio;
 import io.netty.channel.ChannelException;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DefaultDatagramChannelConfig;
-import io.netty.util.internal.DetectionUtil;
+import io.netty.util.internal.PlatformDependent;
 
 import java.lang.reflect.Method;
 import java.net.InetAddress;
@@ -162,7 +162,7 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
     }
 
     private Object getOption0(Object option) {
-        if (DetectionUtil.javaVersion() < 7) {
+        if (PlatformDependent.javaVersion() < 7) {
             throw new UnsupportedOperationException();
         } else {
             try {
@@ -174,7 +174,7 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
     }
 
     private void setOption0(Object option, Object value) {
-        if (DetectionUtil.javaVersion() < 7) {
+        if (PlatformDependent.javaVersion() < 7) {
             throw new UnsupportedOperationException();
         } else {
             try {
