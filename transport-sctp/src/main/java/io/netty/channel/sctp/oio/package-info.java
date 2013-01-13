@@ -15,7 +15,7 @@
  */
 
 /**
- * <a href="http://en.wikipedia.org/wiki/New_I/O">NIO</a>-based SCTP Channel
- * API implementation - recommended for a large number of connections (&gt;= 1000).
+ * Old blocking I/O based SCTP channel API implementation - recommended for
+ * a small number of connections (&lt; 1000).
  */
-package io.netty.channel.socket.sctp.nio;
+package io.netty.channel.sctp.oio;

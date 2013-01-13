@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.socket.sctp;
+package io.netty.channel.sctp;
 
 import com.sun.nio.sctp.SctpChannel;
 import com.sun.nio.sctp.SctpStandardSocketOptions;
@@ -34,7 +34,7 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
 
     private final SctpChannel javaChannel;
 
-    public DefaultSctpChannelConfig(io.netty.channel.socket.sctp.SctpChannel channel, SctpChannel javaChannel) {
+    public DefaultSctpChannelConfig(io.netty.channel.sctp.SctpChannel channel, SctpChannel javaChannel) {
         super(channel);
         if (javaChannel == null) {
             throw new NullPointerException("javaChannel");
