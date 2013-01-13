@@ -20,7 +20,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.ServerChannel;
 
 import java.net.InetAddress;
-import java.net.SocketAddress;
+import java.net.InetSocketAddress;
 import java.util.Set;
 
 /**
@@ -55,7 +55,7 @@ public interface SctpServerChannel extends ServerChannel {
      * Return all local addresses of the SCTP server channel.
      * Please note that, it will return more than one address if this channel is using multi-homing
      */
-    Set<SocketAddress> allLocalAddresses();
+    Set<InetSocketAddress> allLocalAddresses();
 
     /**
      * Bind a address to the already bound channel to enable multi-homing.
