@@ -598,9 +598,27 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private static void callAfterRemove(ChannelHandlerContext ctx) {
+    private void callAfterRemove(ChannelHandlerContext ctx) {
+        // Free all buffers before completing removal.
+        ChannelHandler handler = ctx.handler();
+        if (handler instanceof ChannelInboundHandler) {
+            try {
+                ((ChannelInboundHandler) handler).freeInboundBuffer(ctx);
+            } catch (Exception e) {
+                notifyHandlerException(e);
+            }
+        }
+        if (handler instanceof ChannelOutboundHandler) {
+            try {
+                ((ChannelOutboundHandler) handler).freeOutboundBuffer(ctx);
+            } catch (Exception e) {
+                notifyHandlerException(e);
+            }
+        }
+
+        // Notify the complete removal.
         try {
-            ctx.handler().afterRemove(ctx);
+            handler.afterRemove(ctx);
         } catch (Throwable t) {
             throw new ChannelPipelineException(
                     ctx.handler().getClass().getName() +
