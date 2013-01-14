@@ -347,10 +347,6 @@ final class SpdyCodecUtil {
         if (value == null) {
             throw new NullPointerException("value");
         }
-        if (value.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "value cannot be length zero");
-        }
         for (int i = 0; i < value.length(); i ++) {
             char c = value.charAt(i);
             if (c == 0) {

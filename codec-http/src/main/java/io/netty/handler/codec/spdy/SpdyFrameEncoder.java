@@ -309,17 +309,28 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
             writeLengthField(version, headerBlock, valueLength);
             for (String value: headerFrame.getHeaders(name)) {
                 byte[] valueBytes = value.getBytes(CharsetUtil.UTF_8);
-                headerBlock.writeBytes(valueBytes);
-                headerBlock.writeByte(0);
-                valueLength += valueBytes.length + 1;
+                if (valueBytes.length > 0) {
+                    headerBlock.writeBytes(valueBytes);
+                    headerBlock.writeByte(0);
+                    valueLength += valueBytes.length + 1;
+                }
             }
-            valueLength --;
+            if (valueLength == 0) {
+                if (version < 3) {
+                    throw new IllegalArgumentException(
+                            "header value cannot be empty: " + name);
+                }
+            } else {
+                valueLength --;
+            }
             if (valueLength > SPDY_MAX_NV_LENGTH) {
                 throw new IllegalArgumentException(
                         "header exceeds allowable length: " + name);
             }
-            setLengthField(version, headerBlock, savedIndex, valueLength);
-            headerBlock.writerIndex(headerBlock.writerIndex() - 1);
+            if (valueLength > 0) {
+                setLengthField(version, headerBlock, savedIndex, valueLength);
+                headerBlock.writerIndex(headerBlock.writerIndex() - 1);
+            }
         }
         return headerBlock;
     }
