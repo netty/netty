@@ -598,23 +598,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private void callAfterRemove(ChannelHandlerContext ctx) {
-        // Free all buffers before completing removal.
-        ChannelHandler handler = ctx.handler();
-        if (handler instanceof ChannelInboundHandler) {
-            try {
-                ((ChannelInboundHandler) handler).freeInboundBuffer(ctx);
-            } catch (Exception e) {
-                notifyHandlerException(e);
-            }
-        }
-        if (handler instanceof ChannelOutboundHandler) {
-            try {
-                ((ChannelOutboundHandler) handler).freeOutboundBuffer(ctx);
-            } catch (Exception e) {
-                notifyHandlerException(e);
-            }
-        }
+    private void callAfterRemove(final ChannelHandlerContext ctx) {
+        final ChannelHandler handler = ctx.handler();
 
         // Notify the complete removal.
         try {
@@ -624,6 +609,27 @@ final class DefaultChannelPipeline implements ChannelPipeline {
                     ctx.handler().getClass().getName() +
                     ".afterRemove() has thrown an exception.", t);
         }
+
+        // Free all buffers before completing removal.
+        ctx.executor().execute(new Runnable() {
+            @Override
+            public void run() {
+                if (handler instanceof ChannelInboundHandler) {
+                    try {
+                        ((ChannelInboundHandler) handler).freeInboundBuffer(ctx);
+                    } catch (Exception e) {
+                        notifyHandlerException(e);
+                    }
+                }
+                if (handler instanceof ChannelOutboundHandler) {
+                    try {
+                        ((ChannelOutboundHandler) handler).freeOutboundBuffer(ctx);
+                    } catch (Exception e) {
+                        notifyHandlerException(e);
+                    }
+                }
+            }
+        });
     }
 
     @Override
