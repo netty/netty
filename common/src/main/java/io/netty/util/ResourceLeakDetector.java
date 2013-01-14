@@ -32,6 +32,11 @@ public final class ResourceLeakDetector<T> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ResourceLeakDetector.class);
 
+    static {
+        if (ENABLED) {
+            logger.debug("Resource leak detection enabled.");
+        }
+    }
     private static final int DEFAULT_SAMPLING_INTERVAL = 113;
 
     private static final ResourceLeak NOOP = new ResourceLeak() {
@@ -150,6 +155,7 @@ public final class ResourceLeakDetector<T> {
                 exception = new ResourceLeakException(
                         referent.getClass().getName() + '@' + Integer.toHexString(System.identityHashCode(referent)));
 
+                // TODO: Use CAS to update the list.
                 synchronized (head) {
                     prev = head;
                     next = head.next;
