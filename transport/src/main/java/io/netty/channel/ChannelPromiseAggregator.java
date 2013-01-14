@@ -46,23 +46,19 @@ public final class ChannelPromiseAggregator implements ChannelFutureListener {
     }
 
     @Override
-    public void operationComplete(ChannelFuture future)
-            throws Exception {
-
-        synchronized (this) {
-            if (pendingPromises == null) {
-                aggregatePromise.setSuccess();
+    public synchronized void operationComplete(ChannelFuture future) throws Exception {
+        if (pendingPromises == null) {
+            aggregatePromise.setSuccess();
+        } else {
+            pendingPromises.remove(future);
+            if (!future.isSuccess()) {
+                aggregatePromise.setFailure(future.cause());
+                for (ChannelPromise pendingFuture : pendingPromises) {
+                    pendingFuture.setFailure(future.cause());
+                }
             } else {
-                pendingPromises.remove(future);
-                if (!future.isSuccess()) {
-                    aggregatePromise.setFailure(future.cause());
-                    for (ChannelPromise pendingFuture: pendingPromises) {
-                        pendingFuture.setFailure(future.cause());
-                    }
-                } else {
-                    if (pendingPromises.isEmpty()) {
-                        aggregatePromise.setSuccess();
-                    }
+                if (pendingPromises.isEmpty()) {
+                    aggregatePromise.setSuccess();
                 }
             }
         }

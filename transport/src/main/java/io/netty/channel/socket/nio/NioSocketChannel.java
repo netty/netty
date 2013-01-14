@@ -24,6 +24,7 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
+import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -91,6 +92,11 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         }
 
         config = new DefaultSocketChannelConfig(this, socket.socket());
+    }
+
+    @Override
+    public ServerSocketChannel parent() {
+        return (ServerSocketChannel) super.parent();
     }
 
     @Override

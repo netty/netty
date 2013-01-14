@@ -21,7 +21,7 @@ import io.netty.buffer.MessageBuf;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.DefaultAttributeMap;
-import io.netty.util.internal.DetectionUtil;
+import io.netty.util.internal.PlatformDependent;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -350,10 +350,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         final int maxCapacity = byteBuf.maxCapacity();
         if (capacity == maxCapacity) {
-            if (byteBuf.readerIndex() != 0) {
-                byteBuf.discardReadBytes();
-                return 0;
-            }
             return 2;
         }
 
@@ -635,7 +631,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     boolean wasActive = isActive();
 
                     // See: https://github.com/netty/netty/issues/576
-                    if (!DetectionUtil.isWindows() && !DetectionUtil.isRoot() &&
+                    if (!PlatformDependent.isWindows() && !PlatformDependent.isRoot() &&
                         Boolean.TRUE.equals(config().getOption(ChannelOption.SO_BROADCAST)) &&
                         localAddress instanceof InetSocketAddress &&
                         !((InetSocketAddress) localAddress).getAddress().isAnyLocalAddress()) {
@@ -772,6 +768,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public void beginRead() {
+            if (!isActive()) {
+                return;
+            }
+
             if (eventLoop().inEventLoop()) {
                 try {
                     doBeginRead();
@@ -851,10 +851,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     if (t instanceof IOException) {
                         close(voidFuture());
                     }
-                } finally {
-                    if (!isActive()) {
-                        close(unsafe().voidFuture());
-                    }
                 }
             } else {
                 if (!flushNowPending) {
@@ -881,14 +877,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     } catch (Throwable t) {
                         cause = t;
                     } finally {
-                        final int newSize = out.readableBytes();
-                        final int writtenBytes = oldSize - newSize;
-                        if (writtenBytes > 0) {
-                            flushFutureNotifier.increaseWriteCounter(writtenBytes);
-                            if (newSize == 0) {
-                                out.discardReadBytes();
-                            }
-                        }
+                        flushFutureNotifier.increaseWriteCounter(oldSize - out.readableBytes());
                     }
                 } else {
                     MessageBuf<Object> out = ctx.outboundMessageBuffer();

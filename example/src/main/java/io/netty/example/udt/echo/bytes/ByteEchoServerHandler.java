@@ -20,7 +20,7 @@ import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelOption;
-import io.netty.transport.udt.nio.NioUdtProvider;
+import io.netty.channel.udt.nio.NioUdtProvider;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

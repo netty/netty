@@ -25,6 +25,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
+import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.logging.InternalLogger;
@@ -33,6 +34,7 @@ import io.netty.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
@@ -108,6 +110,11 @@ public class OioSocketChannel extends AbstractOioByteChannel
     }
 
     @Override
+    public ServerSocketChannel parent() {
+        return (ServerSocketChannel) super.parent();
+    }
+
+    @Override
     public ChannelMetadata metadata() {
         return METADATA;
     }
@@ -161,6 +168,16 @@ public class OioSocketChannel extends AbstractOioByteChannel
             });
         }
         return future;
+    }
+
+    @Override
+    public InetSocketAddress localAddress() {
+        return (InetSocketAddress) super.localAddress();
+    }
+
+    @Override
+    public InetSocketAddress remoteAddress() {
+        return (InetSocketAddress) super.remoteAddress();
     }
 
     @Override

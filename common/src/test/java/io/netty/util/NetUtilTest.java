@@ -15,17 +15,17 @@
  */
 package io.netty.util;
 
-import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import static org.junit.Assert.*;
 
 public class NetUtilTest {
     private final static Map<String, byte[]> validIpV4Hosts = new HashMap<String, byte[]>() {
+        private static final long serialVersionUID = 2629792739366724032L;
         {
             put("192.168.1.0", new byte[]{
                     (byte) 0xc0, (byte) 0xa8, 0x01, 0x00}
@@ -46,6 +46,7 @@ public class NetUtilTest {
         }
     };
     private final static Map<String, byte[]> invalidIpV4Hosts = new HashMap<String, byte[]>() {
+        private static final long serialVersionUID = 1299215199895717282L;
         {
             put("1.256.3.4", null);
             put("256.0.0.1", null);
@@ -53,6 +54,7 @@ public class NetUtilTest {
         }
     };
     private final static Map<String, byte[]> validIpV6Hosts = new HashMap<String, byte[]>() {
+        private static final long serialVersionUID = 3999763170377573184L;
         {
             put("::ffff:5.6.7.8", new byte[]{
                     0x00, 0x00, 0x00, 0x00,
@@ -164,6 +166,7 @@ public class NetUtilTest {
         }
     };
     private final static Map<String, byte[]> invalidIpV6Hosts = new HashMap<String, byte[]>() {
+        private static final long serialVersionUID = -5870810805409009696L;
         {
             // Test method with garbage.
             put("Obvious Garbage", null);
@@ -278,17 +281,17 @@ public class NetUtilTest {
 
     @Test
     public void testCreateByteArrayFromIpAddressString() {
-        for (String host : validIpV4Hosts.keySet()) {
-            assertTrue(Arrays.equals(validIpV4Hosts.get(host), NetUtil.createByteArrayFromIpAddressString(host)));
+        for (Entry<String, byte[]> stringEntry : validIpV4Hosts.entrySet()) {
+            assertArrayEquals(stringEntry.getValue(), NetUtil.createByteArrayFromIpAddressString(stringEntry.getKey()));
         }
-        for (String host : invalidIpV4Hosts.keySet()) {
-            assertTrue(Arrays.equals(invalidIpV4Hosts.get(host), NetUtil.createByteArrayFromIpAddressString(host)));
+        for (Entry<String, byte[]> stringEntry : invalidIpV4Hosts.entrySet()) {
+            assertArrayEquals(stringEntry.getValue(), NetUtil.createByteArrayFromIpAddressString(stringEntry.getKey()));
         }
-        for (String host : validIpV6Hosts.keySet()) {
-            assertTrue(Arrays.equals(validIpV6Hosts.get(host), NetUtil.createByteArrayFromIpAddressString(host)));
+        for (Entry<String, byte[]> stringEntry : validIpV6Hosts.entrySet()) {
+            assertArrayEquals(stringEntry.getValue(), NetUtil.createByteArrayFromIpAddressString(stringEntry.getKey()));
         }
-        for (String host : invalidIpV6Hosts.keySet()) {
-            assertTrue(Arrays.equals(invalidIpV6Hosts.get(host), NetUtil.createByteArrayFromIpAddressString(host)));
+        for (Entry<String, byte[]> stringEntry : invalidIpV6Hosts.entrySet()) {
+            assertArrayEquals(stringEntry.getValue(), NetUtil.createByteArrayFromIpAddressString(stringEntry.getKey()));
         }
     }
 }

@@ -21,7 +21,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundByteHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.socket.sctp.SctpMessage;
+import io.netty.channel.sctp.SctpMessage;
 import io.netty.handler.codec.EncoderException;
 
 /**
@@ -51,7 +51,6 @@ public class SctpOutboundByteStreamHandler extends ChannelOutboundByteHandlerAda
             ByteBuf payload = Unpooled.buffer(in.readableBytes());
             payload.writeBytes(in);
             out.add(new SctpMessage(streamIdentifier, protocolIdentifier, payload));
-            in.discardReadBytes();
         } catch (Throwable t) {
             ctx.fireExceptionCaught(new EncoderException(t));
         }

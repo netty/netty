@@ -29,7 +29,7 @@ import io.netty.handler.codec.http.HttpResponse;
  * for HTTP.
  */
 public class SpdyHttpResponseStreamIdHandler extends
-        MessageToMessageCodec<Object, Object, HttpMessage, HttpMessage> {
+        MessageToMessageCodec<Object, HttpMessage> {
     private static final Integer NO_ID = -1;
     private final Queue<Integer> ids = new LinkedList<Integer>();
 
@@ -38,7 +38,7 @@ public class SpdyHttpResponseStreamIdHandler extends
     }
 
     @Override
-    protected HttpMessage encode(ChannelHandlerContext ctx, HttpMessage msg) throws Exception {
+    protected Object encode(ChannelHandlerContext ctx, HttpMessage msg) throws Exception {
         Integer id = ids.poll();
         if (id != null && id.intValue() != NO_ID && !msg.containsHeader(SpdyHttpHeaders.Names.STREAM_ID)) {
             SpdyHttpHeaders.setStreamId(msg, id);

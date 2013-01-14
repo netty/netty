@@ -248,7 +248,7 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
         checkIndex(index, length);
         ByteBuf copy = alloc().directBuffer(capacity(), maxCapacity());
         copy.writeBytes(this, index, length);
-        return copy();
+        return copy;
     }
 
     @Override

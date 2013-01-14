@@ -119,7 +119,7 @@ import java.util.Map;
  * All pushed resources should be sent before sending the response
  * that corresponds to the initial request.
  */
-public class SpdyHttpEncoder extends MessageToMessageEncoder<Object, Object> {
+public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
 
     private final int spdyVersion;
     private volatile int currentStreamId;
@@ -249,6 +249,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object, Object> {
             HttpResponse httpResponse = (HttpResponse) httpMessage;
             SpdyHeaders.setStatus(spdyVersion, spdySynStreamFrame, httpResponse.getStatus());
             SpdyHeaders.setUrl(spdyVersion, spdySynStreamFrame, URL);
+            SpdyHeaders.setVersion(spdyVersion, spdySynStreamFrame, httpMessage.getProtocolVersion());
             spdySynStreamFrame.setUnidirectional(true);
         }
 

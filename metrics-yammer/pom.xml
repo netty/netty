@@ -29,17 +29,14 @@
   <name>Netty/Yammer Metrics Provider</name>
 
   <dependencies>
-  	<dependency>
-		<groupId>io.netty</groupId>
-        <artifactId>netty-common</artifactId>
-		<scope>compile</scope>
-		<version>${project.version}</version>
-	</dependency>
-	<dependency>
-		<groupId>com.yammer.metrics</groupId>
-		<artifactId>metrics-core</artifactId>
-		<scope>compile</scope>
-	</dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-common</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.yammer.metrics</groupId>
+      <artifactId>metrics-core</artifactId>
+    </dependency>
   </dependencies>
-      
 </project>

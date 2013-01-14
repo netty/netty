@@ -123,16 +123,18 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         @Override
         public void run() {
             DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
+            ChannelStateHandler handler = (ChannelStateHandler) ctx.handler;
             flushBridge();
             try {
-                ((ChannelStateHandler) ctx.handler).inboundBufferUpdated(ctx);
+                handler.inboundBufferUpdated(ctx);
             } catch (Throwable t) {
                 pipeline.notifyHandlerException(t);
             } finally {
-                ByteBuf buf = inByteBuf;
-                if (buf != null) {
-                    if (!buf.readable()) {
-                        buf.discardReadBytes();
+                if (handler instanceof ChannelInboundByteHandler) {
+                    try {
+                        ((ChannelInboundByteHandler) handler).discardInboundReadBytes(ctx);
+                    } catch (Throwable t) {
+                        pipeline.notifyHandlerException(t);
                     }
                 }
             }
@@ -141,7 +143,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private final Runnable nextCtxFireInboundBufferUpdatedTask = new Runnable() {
         @Override
         public void run() {
-            DefaultChannelHandlerContext next = nextContext(
+            DefaultChannelHandlerContext next = findContextInbound(
                     DefaultChannelHandlerContext.this.next, FLAG_STATE_HANDLER);
             if (next != null) {
                 next.fillBridge();
@@ -159,7 +161,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         public void run() {
             DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
             try {
-                ((ChannelStateHandler) ctx.handler).inboundBufferSuspended(ctx);
+                ((ChannelStateHandler) ctx.handler).channelReadSuspended(ctx);
             } catch (Throwable t) {
                 pipeline.notifyHandlerException(t);
             }
@@ -174,11 +176,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 try {
                     if (ctx.hasInboundByteBuffer()) {
                         if (ctx.inByteBuf != null) {
-                            h.freeInboundBuffer(ctx, ctx.inByteBuf);
+                            h.freeInboundBuffer(ctx);
                         }
                     } else {
                         if (ctx.inMsgBuf != null) {
-                            h.freeInboundBuffer(ctx, ctx.inMsgBuf);
+                            h.freeInboundBuffer(ctx);
                         }
                     }
                 } catch (Throwable t) {
@@ -186,7 +188,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 }
             }
 
-            DefaultChannelHandlerContext nextCtx = nextContext(ctx.next, FLAG_STATE_HANDLER);
+            DefaultChannelHandlerContext nextCtx = findContextInbound(ctx.next, FLAG_STATE_HANDLER);
             if (nextCtx != null) {
                 nextCtx.callFreeInboundBuffer();
             } else {
@@ -204,11 +206,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 try {
                     if (ctx.hasOutboundByteBuffer()) {
                         if (ctx.outByteBuf != null) {
-                            h.freeOutboundBuffer(ctx, ctx.outByteBuf);
+                            h.freeOutboundBuffer(ctx);
                         }
                     } else {
                         if (ctx.outMsgBuf != null) {
-                            h.freeOutboundBuffer(ctx, ctx.outMsgBuf);
+                            h.freeOutboundBuffer(ctx);
                         }
                     }
                 } catch (Throwable t) {
@@ -216,7 +218,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 }
             }
 
-            DefaultChannelHandlerContext nextCtx = prevContext(ctx.prev, FLAG_OPERATION_HANDLER);
+            DefaultChannelHandlerContext nextCtx = findContextOutbound(ctx.prev, FLAG_OPERATION_HANDLER);
             if (nextCtx != null) {
                 nextCtx.callFreeOutboundBuffer();
             }
@@ -233,7 +235,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @SuppressWarnings("unchecked")
     DefaultChannelHandlerContext(
             DefaultChannelPipeline pipeline, EventExecutorGroup group,
-            DefaultChannelHandlerContext prev, DefaultChannelHandlerContext next,
             String name, ChannelHandler handler) {
 
         if (name == null) {
@@ -264,9 +265,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             }
         }
         this.type = Collections.unmodifiableSet(type);
-
-        this.prev = prev;
-        this.next = next;
 
         channel = pipeline.channel;
         this.pipeline = pipeline;
@@ -939,17 +937,17 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ByteBuf nextOutboundByteBuffer() {
-        return pipeline.nextOutboundByteBuffer(prev);
+        return pipeline.findOutboundByteBuffer(prev);
     }
 
     @Override
     public MessageBuf<Object> nextOutboundMessageBuffer() {
-        return pipeline.nextOutboundMessageBuffer(prev);
+        return pipeline.findOutboundMessageBuffer(prev);
     }
 
     @Override
     public void fireChannelRegistered() {
-        DefaultChannelHandlerContext next = nextContext(this.next, FLAG_STATE_HANDLER);
+        DefaultChannelHandlerContext next = findContextInbound(this.next, FLAG_STATE_HANDLER);
         if (next != null) {
             EventExecutor executor = next.executor();
             if (executor.inEventLoop()) {
@@ -962,7 +960,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public void fireChannelUnregistered() {
-        DefaultChannelHandlerContext next = nextContext(this.next, FLAG_STATE_HANDLER);
+        DefaultChannelHandlerContext next = findContextInbound(this.next, FLAG_STATE_HANDLER);
         if (next != null) {
             EventExecutor executor = next.executor();
             if (executor.inEventLoop() && prev != null) {
@@ -975,7 +973,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public void fireChannelActive() {
-        DefaultChannelHandlerContext next = nextContext(this.next, FLAG_STATE_HANDLER);
+        DefaultChannelHandlerContext next = findContextInbound(this.next, FLAG_STATE_HANDLER);
         if (next != null) {
             EventExecutor executor = next.executor();
             if (executor.inEventLoop()) {
@@ -988,7 +986,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public void fireChannelInactive() {
-        DefaultChannelHandlerContext next = nextContext(this.next, FLAG_STATE_HANDLER);
+        DefaultChannelHandlerContext next = findContextInbound(this.next, FLAG_STATE_HANDLER);
         if (next != null) {
             EventExecutor executor = next.executor();
             if (executor.inEventLoop() && prev != null) {
@@ -1083,7 +1081,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public void fireInboundBufferSuspended() {
-        DefaultChannelHandlerContext next = nextContext(this.next, FLAG_STATE_HANDLER);
+        DefaultChannelHandlerContext next = findContextInbound(this.next, FLAG_STATE_HANDLER);
         if (next != null) {
             EventExecutor executor = next.executor();
             if (executor.inEventLoop() && prev != null) {
@@ -1136,7 +1134,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-        return pipeline.bind(prevContext(prev, FLAG_OPERATION_HANDLER), localAddress, promise);
+        return pipeline.bind(findContextOutbound(prev, FLAG_OPERATION_HANDLER), localAddress, promise);
     }
 
     @Override
@@ -1146,34 +1144,35 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-        return pipeline.connect(prevContext(prev, FLAG_OPERATION_HANDLER), remoteAddress, localAddress, promise);
+        return pipeline.connect(
+                findContextOutbound(prev, FLAG_OPERATION_HANDLER), remoteAddress, localAddress, promise);
     }
 
     @Override
     public ChannelFuture disconnect(ChannelPromise promise) {
-        return pipeline.disconnect(prevContext(prev, FLAG_OPERATION_HANDLER), promise);
+        return pipeline.disconnect(findContextOutbound(prev, FLAG_OPERATION_HANDLER), promise);
     }
 
     @Override
     public ChannelFuture close(ChannelPromise promise) {
-        return pipeline.close(prevContext(prev, FLAG_OPERATION_HANDLER), promise);
+        return pipeline.close(findContextOutbound(prev, FLAG_OPERATION_HANDLER), promise);
     }
 
     @Override
     public ChannelFuture deregister(ChannelPromise promise) {
-        return pipeline.deregister(prevContext(prev, FLAG_OPERATION_HANDLER), promise);
+        return pipeline.deregister(findContextOutbound(prev, FLAG_OPERATION_HANDLER), promise);
     }
 
     @Override
     public void read() {
-        pipeline.read(prevContext(prev, FLAG_OPERATION_HANDLER));
+        pipeline.read(findContextOutbound(prev, FLAG_OPERATION_HANDLER));
     }
 
     @Override
     public ChannelFuture flush(final ChannelPromise promise) {
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            DefaultChannelHandlerContext prev = prevContext(this.prev, FLAG_OPERATION_HANDLER);
+            DefaultChannelHandlerContext prev = findContextOutbound(this.prev, FLAG_OPERATION_HANDLER);
             prev.fillBridge();
             pipeline.flush(prev, promise);
         } else {
@@ -1308,11 +1307,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelFuture sendFile(FileRegion region) {
-        return pipeline.sendFile(prevContext(prev, FLAG_OPERATION_HANDLER), region, newPromise());
+        return pipeline.sendFile(findContextOutbound(prev, FLAG_OPERATION_HANDLER), region, newPromise());
     }
 
     @Override
     public ChannelFuture sendFile(FileRegion region, ChannelPromise promise) {
-        return pipeline.sendFile(prevContext(prev, FLAG_OPERATION_HANDLER), region, promise);
+        return pipeline.sendFile(findContextOutbound(prev, FLAG_OPERATION_HANDLER), region, promise);
     }
 }

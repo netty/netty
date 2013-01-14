@@ -15,12 +15,11 @@
  */
 package io.netty.buffer;
 
-import sun.misc.Cleaner;
+import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.ClosedChannelException;
@@ -36,37 +35,6 @@ import java.util.Queue;
  */
 @SuppressWarnings("restriction")
 final class UnpooledDirectByteBuf extends AbstractByteBuf {
-
-    private static final Field CLEANER_FIELD;
-
-    static {
-        ByteBuffer direct = ByteBuffer.allocateDirect(1);
-        Field cleanerField;
-        try {
-            cleanerField = direct.getClass().getDeclaredField("cleaner");
-            cleanerField.setAccessible(true);
-            Cleaner cleaner = (Cleaner) cleanerField.get(direct);
-            cleaner.clean();
-        } catch (Throwable t) {
-            cleanerField = null;
-        }
-        CLEANER_FIELD = cleanerField;
-    }
-
-    static void freeDirect(ByteBuffer buffer) {
-        if (CLEANER_FIELD == null) {
-            // Doomed to wait for GC.
-            return;
-        }
-
-        Cleaner cleaner;
-        try {
-            cleaner = (Cleaner) CLEANER_FIELD.get(buffer);
-            cleaner.clean();
-        } catch (Throwable t) {
-            // Nothing we can do here.
-        }
-    }
 
     private final ByteBufAllocator alloc;
     private ByteBuffer buffer;
@@ -140,7 +108,7 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
                 doNotFree = false;
             } else {
                 if (suspendedDeallocations == null) {
-                    freeDirect(oldBuffer);
+                    PlatformDependent.freeDirectBuffer(oldBuffer);
                 } else {
                     suspendedDeallocations.add(oldBuffer);
                 }
@@ -502,7 +470,7 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
         }
 
         resumeIntermediaryDeallocations();
-        freeDirect(buffer);
+        PlatformDependent.freeDirectBuffer(buffer);
     }
 
     @Override
@@ -523,7 +491,7 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
         this.suspendedDeallocations = null;
 
         for (ByteBuffer buf: suspendedDeallocations) {
-            freeDirect(buf);
+            PlatformDependent.freeDirectBuffer(buf);
         }
         return this;
     }

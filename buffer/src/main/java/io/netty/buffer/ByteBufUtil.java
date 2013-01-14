@@ -241,7 +241,7 @@ public final class ByteBufUtil {
      * Toggles the endianness of the specified 16-bit short integer.
      */
     public static short swapShort(short value) {
-        return (short) (value << 8 | value >>> 8 & 0xff);
+        return Short.reverseBytes(value);
     }
 
     /**
@@ -259,16 +259,14 @@ public final class ByteBufUtil {
      * Toggles the endianness of the specified 32-bit integer.
      */
     public static int swapInt(int value) {
-        return swapShort((short) value) <<  16 |
-               swapShort((short) (value >>> 16)) & 0xffff;
+        return Integer.reverseBytes(value);
     }
 
     /**
      * Toggles the endianness of the specified 64-bit long integer.
      */
     public static long swapLong(long value) {
-        return (long) swapInt((int) value) <<  32 |
-                      swapInt((int) (value >>> 32)) & 0xffffffffL;
+        return Long.reverseBytes(value);
     }
 
     private static int firstIndexOf(ByteBuf buffer, int fromIndex, int toIndex, byte value) {

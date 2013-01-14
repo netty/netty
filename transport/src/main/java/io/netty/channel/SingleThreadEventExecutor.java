@@ -242,7 +242,6 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
 
     /**
      * Poll all tasks from the task queue and run them via {@link Runnable#run()} method.
-     * @return
      */
     protected boolean runAllTasks() {
         boolean ran = false;

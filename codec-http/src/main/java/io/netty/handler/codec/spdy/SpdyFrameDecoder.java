@@ -15,17 +15,18 @@
  */
 package io.netty.handler.codec.spdy;
 
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
+
 /**
  * Decodes {@link ByteBuf}s into SPDY Data and Control Frames.
  */
-public class SpdyFrameDecoder extends ByteToMessageDecoder<Object> {
+public class SpdyFrameDecoder extends ByteToMessageDecoder {
 
     private final int spdyVersion;
     private final int maxChunkSize;
@@ -625,10 +626,24 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder<Object> {
             int valueLength = readLengthField();
 
             // Recipients of illegal value fields must issue a stream error
-            if (valueLength <= 0) {
+            if (valueLength < 0) {
                 spdyHeaderBlock.setInvalid();
                 return;
             }
+
+            // SPDY/3 allows zero-length (empty) header values
+            if (valueLength == 0) {
+                if (version < 3) {
+                    spdyHeaderBlock.setInvalid();
+                    return;
+                } else {
+                    spdyHeaderBlock.addHeader(name, "");
+                    numHeaders --;
+                    this.headerSize = headerSize;
+                    continue;
+                }
+            }
+
             headerSize += valueLength;
             if (headerSize > maxHeaderSize) {
                 throw new TooLongFrameException(

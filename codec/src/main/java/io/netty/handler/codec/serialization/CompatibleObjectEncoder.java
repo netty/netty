@@ -95,9 +95,6 @@ public class CompatibleObjectEncoder extends MessageToByteEncoder<Object> {
                 writtenObjects ++;
                 if (writtenObjects % resetInterval == 0) {
                     oos.reset();
-
-                    // Also discard the byproduct to avoid OOM on the sending side.
-                    out.discardSomeReadBytes();
                 }
             }
 

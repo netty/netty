@@ -33,7 +33,11 @@ public abstract class ChannelInboundHandlerAdapter
      * When doing so be aware that you will need to handle all the resource management by your own.
      */
     @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-        buf.free();
+    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        if (ctx.hasInboundByteBuffer()) {
+            ctx.inboundByteBuffer().free();
+        } else {
+            ctx.inboundMessageBuffer().free();
+        }
     }
 }

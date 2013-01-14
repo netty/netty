@@ -37,7 +37,7 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf {
         super(maxCapacity);
     }
 
-    final void init(PoolChunk<T> chunk, long handle, int offset, int length, int maxLength) {
+    void init(PoolChunk<T> chunk, long handle, int offset, int length, int maxLength) {
         assert handle >= 0;
         assert chunk != null;
 
@@ -51,7 +51,7 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf {
         tmpNioBuf = null;
     }
 
-    final void initUnpooled(PoolChunk<T> chunk, int length) {
+    void initUnpooled(PoolChunk<T> chunk, int length) {
         assert chunk != null;
 
         this.chunk = chunk;

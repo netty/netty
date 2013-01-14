@@ -37,15 +37,18 @@ public abstract class ChannelInboundByteHandlerAdapter
     }
 
     @Override
+    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+        ctx.inboundByteBuffer().discardSomeReadBytes();
+    }
+
+    @Override
+    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        ctx.inboundByteBuffer().free();
+    }
+
+    @Override
     public final void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-        ByteBuf in = ctx.inboundByteBuffer();
-        try {
-            inboundBufferUpdated(ctx, in);
-        } finally {
-            if (!in.readable()) {
-                in.discardReadBytes();
-            }
-        }
+        inboundBufferUpdated(ctx, ctx.inboundByteBuffer());
     }
 
     /**

@@ -17,9 +17,9 @@ package io.netty.handler.codec;
 
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
-import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.PartialFlushException;
@@ -31,13 +31,13 @@ import io.netty.channel.PartialFlushException;
  *
  * <pre>
  *     public class IntegerToStringEncoder extends
- *             {@link MessageToMessageEncoder}&lt;{@link Integer},{@link String}&gt; {
+ *             {@link MessageToMessageEncoder}&lt;{@link Integer}&gt; {
  *         public StringToIntegerDecoder() {
  *             super(String.class);
  *         }
  *
  *         {@code @Override}
- *         public {@link String} encode({@link ChannelHandlerContext} ctx, {@link Integer} message)
+ *         public {@link Object} encode({@link ChannelHandlerContext} ctx, {@link Integer} message)
  *                 throws {@link Exception} {
  *             return message.toString();
  *         }
@@ -45,7 +45,7 @@ import io.netty.channel.PartialFlushException;
  * </pre>
  *
  */
-public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessageHandlerAdapter<I> {
+public abstract class MessageToMessageEncoder<I> extends ChannelOutboundMessageHandlerAdapter<I> {
 
     private final Class<?>[] acceptedMsgTypes;
 
@@ -78,7 +78,7 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
                 I imsg = (I) msg;
                 boolean free = true;
                 try {
-                    O omsg = encode(ctx, imsg);
+                    Object omsg = encode(ctx, imsg);
                     if (omsg == null) {
                         // encode() might be waiting for more inbound messages to generate
                         // an aggregated message - keep polling.
@@ -91,7 +91,7 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
                     ChannelHandlerUtil.unfoldAndAdd(ctx, omsg, false);
                 } finally {
                     if (free) {
-                        freeInboundMessage(imsg);
+                        freeOutboundMessage(imsg);
                     }
                 }
             } catch (Throwable t) {
@@ -130,14 +130,14 @@ public abstract class MessageToMessageEncoder<I, O> extends ChannelOutboundMessa
      *                      needs to do some kind of aggragation
      * @throws Exception    is thrown if an error accour
      */
-    protected abstract O encode(ChannelHandlerContext ctx, I msg) throws Exception;
+    protected abstract Object encode(ChannelHandlerContext ctx, I msg) throws Exception;
 
     /**
      * Is called after a message was processed via {@link #encode(ChannelHandlerContext, Object)} to free
      * up any resources that is held by the inbound message. You may want to override this if your implementation
      * just pass-through the input message or need it for later usage.
      */
-    protected void freeInboundMessage(I msg) throws Exception {
+    protected void freeOutboundMessage(I msg) throws Exception {
         ChannelHandlerUtil.freeMessage(msg);
     }
 }

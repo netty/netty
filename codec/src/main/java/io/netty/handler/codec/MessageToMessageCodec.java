@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.buffer.Buf;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
@@ -49,34 +48,44 @@ import io.netty.channel.ChannelPromise;
  *     }
  * </pre>
  */
-public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN, OUTBOUND_OUT>
+public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
         extends ChannelHandlerAdapter
         implements ChannelInboundMessageHandler<INBOUND_IN>,
                    ChannelOutboundMessageHandler<OUTBOUND_IN> {
 
-    private final MessageToMessageEncoder<OUTBOUND_IN, OUTBOUND_OUT> encoder =
-            new MessageToMessageEncoder<OUTBOUND_IN, OUTBOUND_OUT>() {
+    private final MessageToMessageEncoder<OUTBOUND_IN> encoder =
+            new MessageToMessageEncoder<OUTBOUND_IN>() {
         @Override
         public boolean isEncodable(Object msg) throws Exception {
             return MessageToMessageCodec.this.isEncodable(msg);
         }
 
         @Override
-        public OUTBOUND_OUT encode(ChannelHandlerContext ctx, OUTBOUND_IN msg) throws Exception {
+        public Object encode(ChannelHandlerContext ctx, OUTBOUND_IN msg) throws Exception {
             return MessageToMessageCodec.this.encode(ctx, msg);
+        }
+
+        @Override
+        protected void freeOutboundMessage(OUTBOUND_IN msg) throws Exception {
+            MessageToMessageCodec.this.freeOutboundMessage(msg);
         }
     };
 
-    private final MessageToMessageDecoder<INBOUND_IN, INBOUND_OUT> decoder =
-            new MessageToMessageDecoder<INBOUND_IN, INBOUND_OUT>() {
+    private final MessageToMessageDecoder<INBOUND_IN> decoder =
+            new MessageToMessageDecoder<INBOUND_IN>() {
         @Override
         public boolean isDecodable(Object msg) throws Exception {
             return MessageToMessageCodec.this.isDecodable(msg);
         }
 
         @Override
-        public INBOUND_OUT decode(ChannelHandlerContext ctx, INBOUND_IN msg) throws Exception {
+        public Object decode(ChannelHandlerContext ctx, INBOUND_IN msg) throws Exception {
             return MessageToMessageCodec.this.decode(ctx, msg);
+        }
+
+        @Override
+        protected void freeInboundMessage(INBOUND_IN msg) throws Exception {
+            MessageToMessageCodec.this.freeInboundMessage(msg);
         }
     };
 
@@ -99,14 +108,8 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
     }
 
     @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-        buf.free();
-    }
-
-    @Override
-    public void inboundBufferUpdated(
-            ChannelHandlerContext ctx) throws Exception {
-        decoder.inboundBufferUpdated(ctx);
+    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        decoder.freeInboundBuffer(ctx);
     }
 
     @Override
@@ -115,8 +118,14 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
     }
 
     @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
-        buf.free();
+    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        encoder.freeOutboundBuffer(ctx);
+    }
+
+    @Override
+    public void inboundBufferUpdated(
+            ChannelHandlerContext ctx) throws Exception {
+        decoder.inboundBufferUpdated(ctx);
     }
 
     @Override
@@ -142,6 +151,14 @@ public abstract class MessageToMessageCodec<INBOUND_IN, INBOUND_OUT, OUTBOUND_IN
         return ChannelHandlerUtil.acceptMessage(acceptedOutboundMsgTypes, msg);
     }
 
-    protected abstract OUTBOUND_OUT encode(ChannelHandlerContext ctx, OUTBOUND_IN msg) throws Exception;
-    protected abstract INBOUND_OUT decode(ChannelHandlerContext ctx, INBOUND_IN msg) throws Exception;
+    protected abstract Object encode(ChannelHandlerContext ctx, OUTBOUND_IN msg) throws Exception;
+    protected abstract Object decode(ChannelHandlerContext ctx, INBOUND_IN msg) throws Exception;
+
+    protected void freeInboundMessage(INBOUND_IN msg) throws Exception {
+        ChannelHandlerUtil.freeMessage(msg);
+    }
+
+    protected void freeOutboundMessage(OUTBOUND_IN msg) throws Exception {
+        ChannelHandlerUtil.freeMessage(msg);
+    }
 }

@@ -167,7 +167,7 @@ import io.netty.util.internal.Signal;
  * }
  *
  * public class IntegerHeaderFrameDecoder
- *      extends {@link ReplayingDecoder}&lt;{@link ByteBuf}, <strong>MyDecoderState</strong>&gt; {
+ *      extends {@link ReplayingDecoder}&lt;<strong>MyDecoderState</strong>&gt; {
  *
  *   private int length;
  *
@@ -177,7 +177,7 @@ import io.netty.util.internal.Signal;
  *   }
  *
  *   {@code @Override}
- *   protected {@link ByteBuf} decode({@link ChannelHandlerContext} ctx,
+ *   protected {@link Object} decode({@link ChannelHandlerContext} ctx,
  *                           {@link ByteBuf} in) throws Exception {
  *     switch (state()) {
  *     case READ_LENGTH:
@@ -199,13 +199,13 @@ import io.netty.util.internal.Signal;
  * An alternative way to manage the decoder state is to manage it by yourself.
  * <pre>
  * public class IntegerHeaderFrameDecoder
- *      extends {@link ReplayingDecoder}&lt;{@link ByteBuf},<strong>{@link Void}</strong>&gt; {
+ *      extends {@link ReplayingDecoder}&lt;<strong>{@link Void}</strong>&gt; {
  *
  *   <strong>private boolean readLength;</strong>
  *   private int length;
  *
  *   {@code @Override}
- *   protected {@link ByteBuf} decode({@link ChannelHandlerContext} ctx,
+ *   protected {@link Object} decode({@link ChannelHandlerContext} ctx,
  *                           {@link ByteBuf} in) throws Exception {
  *     if (!readLength) {
  *       length = buf.readInt();
@@ -233,7 +233,7 @@ import io.netty.util.internal.Signal;
  * {@link ChannelPipeline#replace(ChannelHandler, String, ChannelHandler)}, but
  * some additional steps are required:
  * <pre>
- * public class FirstDecoder extends {@link ReplayingDecoder}&lt;{@link Object}, {@link Void}&gt; {
+ * public class FirstDecoder extends {@link ReplayingDecoder}&lt;{@link Void}&gt; {
  *
  *     {@code @Override}
  *     protected Object decode({@link ChannelHandlerContext} ctx,
@@ -264,7 +264,7 @@ import io.netty.util.internal.Signal;
  * @apiviz.landmark
  * @apiviz.has io.netty.handler.codec.UnreplayableOperationException oneway - - throws
  */
-public abstract class ReplayingDecoder<O, S> extends ByteToMessageDecoder<O> {
+public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
 
     static final Signal REPLAY = new Signal(ReplayingDecoder.class.getName() + ".REPLAY");
 
@@ -349,6 +349,15 @@ public abstract class ReplayingDecoder<O, S> extends ByteToMessageDecoder<O> {
     }
 
     @Override
+    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+        ByteBuf in = ctx.inboundByteBuffer();
+        final int oldReaderIndex = in.readerIndex();
+        super.discardInboundReadBytes(ctx);
+        final int newReaderIndex = in.readerIndex();
+        checkpoint -= oldReaderIndex - newReaderIndex;
+    }
+
+    @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         replayable.terminate();
         ByteBuf in = cumulation;
@@ -358,7 +367,7 @@ public abstract class ReplayingDecoder<O, S> extends ByteToMessageDecoder<O> {
 
         try {
             if (ChannelHandlerUtil.unfoldAndAdd(ctx, decodeLast(ctx, replayable), true)) {
-                fireInboundBufferUpdated(ctx, in);
+                ctx.fireInboundBufferUpdated();
             }
         } catch (Signal replay) {
             // Ignore
@@ -427,7 +436,7 @@ public abstract class ReplayingDecoder<O, S> extends ByteToMessageDecoder<O> {
             } catch (Throwable t) {
                 if (decoded) {
                     decoded = false;
-                    fireInboundBufferUpdated(ctx, in);
+                    ctx.fireInboundBufferUpdated();
                 }
 
                 if (t instanceof CodecException) {
@@ -439,15 +448,7 @@ public abstract class ReplayingDecoder<O, S> extends ByteToMessageDecoder<O> {
         }
 
         if (decoded) {
-            fireInboundBufferUpdated(ctx, in);
+            ctx.fireInboundBufferUpdated();
         }
-    }
-
-    private void fireInboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) {
-        final int oldReaderIndex = in.readerIndex();
-        in.discardSomeReadBytes();
-        final int newReaderIndex = in.readerIndex();
-        checkpoint -= oldReaderIndex - newReaderIndex;
-        ctx.fireInboundBufferUpdated();
     }
 }

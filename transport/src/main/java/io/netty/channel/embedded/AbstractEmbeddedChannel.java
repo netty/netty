@@ -331,7 +331,7 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
         }
 
         @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
+        public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
             // Do NOT free the buffer.
         }
 
@@ -354,7 +354,7 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
         }
 
         @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx, Buf buf) throws Exception {
+        public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
             // Do NOT free the buffer.
         }
 
