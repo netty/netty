@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.spdy;
 
+import io.netty.handler.codec.http.HttpHeader;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpMessage;
 
 /**
  * Provides the constants for the header names and the utility methods
@@ -60,28 +60,28 @@ public final class SpdyHttpHeaders {
     /**
      * Removes the {@code "X-SPDY-Stream-ID"} header.
      */
-    public static void removeStreamId(HttpMessage message) {
+    public static void removeStreamId(HttpHeader message) {
         message.removeHeader(Names.STREAM_ID);
     }
 
     /**
      * Returns the value of the {@code "X-SPDY-Stream-ID"} header.
      */
-    public static int getStreamId(HttpMessage message) {
+    public static int getStreamId(HttpHeader message) {
         return HttpHeaders.getIntHeader(message, Names.STREAM_ID);
     }
 
     /**
      * Sets the {@code "X-SPDY-Stream-ID"} header.
      */
-    public static void setStreamId(HttpMessage message, int streamId) {
+    public static void setStreamId(HttpHeader message, int streamId) {
         HttpHeaders.setIntHeader(message, Names.STREAM_ID, streamId);
     }
 
     /**
      * Removes the {@code "X-SPDY-Associated-To-Stream-ID"} header.
      */
-    public static void removeAssociatedToStreamId(HttpMessage message) {
+    public static void removeAssociatedToStreamId(HttpHeader message) {
         message.removeHeader(Names.ASSOCIATED_TO_STREAM_ID);
     }
 
@@ -91,21 +91,21 @@ public final class SpdyHttpHeaders {
      * @return the header value or {@code 0} if there is no such header or
      *         if the header value is not a number
      */
-    public static int getAssociatedToStreamId(HttpMessage message) {
+    public static int getAssociatedToStreamId(HttpHeader message) {
         return HttpHeaders.getIntHeader(message, Names.ASSOCIATED_TO_STREAM_ID, 0);
     }
 
     /**
      * Sets the {@code "X-SPDY-Associated-To-Stream-ID"} header.
      */
-    public static void setAssociatedToStreamId(HttpMessage message, int associatedToStreamId) {
+    public static void setAssociatedToStreamId(HttpHeader message, int associatedToStreamId) {
         HttpHeaders.setIntHeader(message, Names.ASSOCIATED_TO_STREAM_ID, associatedToStreamId);
     }
 
     /**
      * Removes the {@code "X-SPDY-Priority"} header.
      */
-    public static void removePriority(HttpMessage message) {
+    public static void removePriority(HttpHeader message) {
         message.removeHeader(Names.PRIORITY);
     }
 
@@ -115,56 +115,56 @@ public final class SpdyHttpHeaders {
      * @return the header value or {@code 0} if there is no such header or
      *         if the header value is not a number
      */
-    public static byte getPriority(HttpMessage message) {
+    public static byte getPriority(HttpHeader message) {
         return (byte) HttpHeaders.getIntHeader(message, Names.PRIORITY, 0);
     }
 
     /**
      * Sets the {@code "X-SPDY-Priority"} header.
      */
-    public static void setPriority(HttpMessage message, byte priority) {
+    public static void setPriority(HttpHeader message, byte priority) {
         HttpHeaders.setIntHeader(message, Names.PRIORITY, priority);
     }
 
     /**
      * Removes the {@code "X-SPDY-URL"} header.
      */
-    public static void removeUrl(HttpMessage message) {
+    public static void removeUrl(HttpHeader message) {
         message.removeHeader(Names.URL);
     }
 
     /**
      * Returns the value of the {@code "X-SPDY-URL"} header.
      */
-    public static String getUrl(HttpMessage message) {
+    public static String getUrl(HttpHeader message) {
         return message.getHeader(Names.URL);
     }
 
     /**
      * Sets the {@code "X-SPDY-URL"} header.
      */
-    public static void setUrl(HttpMessage message, String url) {
+    public static void setUrl(HttpHeader message, String url) {
         message.setHeader(Names.URL, url);
     }
 
     /**
      * Removes the {@code "X-SPDY-Scheme"} header.
      */
-    public static void removeScheme(HttpMessage message) {
+    public static void removeScheme(HttpHeader message) {
         message.removeHeader(Names.SCHEME);
     }
 
     /**
      * Returns the value of the {@code "X-SPDY-Scheme"} header.
      */
-    public static String getScheme(HttpMessage message) {
+    public static String getScheme(HttpHeader message) {
         return message.getHeader(Names.SCHEME);
     }
 
     /**
      * Sets the {@code "X-SPDY-Scheme"} header.
      */
-    public static void setScheme(HttpMessage message, String scheme) {
+    public static void setScheme(HttpHeader message, String scheme) {
         message.setHeader(Names.SCHEME, scheme);
     }
 }

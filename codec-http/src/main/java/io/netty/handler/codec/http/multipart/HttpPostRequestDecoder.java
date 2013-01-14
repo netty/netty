@@ -16,11 +16,12 @@
 package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.http.HttpChunk;
+import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpRequestHeader;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadNoBackArrayException;
 import io.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadOptimize;
 import io.netty.handler.codec.http.multipart.HttpPostBodyUtil.TransferEncodingMechanism;
@@ -49,7 +50,7 @@ public class HttpPostRequestDecoder {
     /**
      * Request to decode
      */
-    private final HttpRequest request;
+    private final HttpRequestHeader request;
 
     /**
      * Default charset to use
@@ -135,7 +136,7 @@ public class HttpPostRequestDecoder {
      *             if the default charset was wrong when decoding or other
      *             errors
      */
-    public HttpPostRequestDecoder(HttpRequest request) throws ErrorDataDecoderException,
+    public HttpPostRequestDecoder(HttpRequestHeader request) throws ErrorDataDecoderException,
             IncompatibleDataDecoderException {
         this(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE), request, HttpConstants.DEFAULT_CHARSET);
     }
@@ -154,7 +155,7 @@ public class HttpPostRequestDecoder {
      *             if the default charset was wrong when decoding or other
      *             errors
      */
-    public HttpPostRequestDecoder(HttpDataFactory factory, HttpRequest request) throws ErrorDataDecoderException,
+    public HttpPostRequestDecoder(HttpDataFactory factory, HttpRequestHeader request) throws ErrorDataDecoderException,
             IncompatibleDataDecoderException {
         this(factory, request, HttpConstants.DEFAULT_CHARSET);
     }
@@ -175,7 +176,7 @@ public class HttpPostRequestDecoder {
      *             if the default charset was wrong when decoding or other
      *             errors
      */
-    public HttpPostRequestDecoder(HttpDataFactory factory, HttpRequest request, Charset charset)
+    public HttpPostRequestDecoder(HttpDataFactory factory, HttpRequestHeader request, Charset charset)
             throws ErrorDataDecoderException, IncompatibleDataDecoderException {
         if (factory == null) {
             throw new NullPointerException("factory");
@@ -202,11 +203,9 @@ public class HttpPostRequestDecoder {
         if (!bodyToDecode) {
             throw new IncompatibleDataDecoderException("No Body to decode");
         }
-        if (!this.request.getTransferEncoding().isMultiple()) {
-            undecodedChunk = this.request.getContent();
-            isLastChunk = true;
-            parseBody();
-        }
+        undecodedChunk = buffer();
+        isLastChunk = true;
+        parseBody();
     }
 
     /**
@@ -335,14 +334,14 @@ public class HttpPostRequestDecoder {
     /**
      * Initialized the internals from a new chunk
      *
-     * @param chunk
+     * @param content
      *            the new received chunk
      * @throws ErrorDataDecoderException
      *             if there is a problem with the charset decoding or other
      *             errors
      */
-    public void offer(HttpChunk chunk) throws ErrorDataDecoderException {
-        ByteBuf chunked = chunk.getContent();
+    public void offer(HttpContent content) throws ErrorDataDecoderException {
+        ByteBuf chunked = content.getContent();
         if (undecodedChunk == null) {
             undecodedChunk = chunked;
         } else {
@@ -351,7 +350,7 @@ public class HttpPostRequestDecoder {
             // less memory usage
             undecodedChunk = wrappedBuffer(undecodedChunk, chunked);
         }
-        if (chunk.isLast()) {
+        if (content instanceof LastHttpContent) {
             isLastChunk = true;
         }
         parseBody();

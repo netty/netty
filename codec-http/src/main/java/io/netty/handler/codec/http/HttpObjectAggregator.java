@@ -30,16 +30,16 @@ import io.netty.util.CharsetUtil;
 import java.util.Map.Entry;
 
 /**
- * A {@link ChannelHandler} that aggregates an {@link HttpMessage}
- * and its following {@link HttpChunk}s into a single {@link HttpMessage} with
- * no following {@link HttpChunk}s.  It is useful when you don't want to take
+ * A {@link ChannelHandler} that aggregates an {@link HttpHeader}
+ * and its following {@link HttpContent}s into a single {@link HttpHeader} with
+ * no following {@link HttpContent}s.  It is useful when you don't want to take
  * care of HTTP messages whose transfer encoding is 'chunked'.  Insert this
- * handler after {@link HttpMessageDecoder} in the {@link ChannelPipeline}:
+ * handler after {@link HttpObjectDecoder} in the {@link ChannelPipeline}:
  * <pre>
  * {@link ChannelPipeline} p = ...;
  * ...
  * p.addLast("decoder", new {@link HttpRequestDecoder}());
- * p.addLast("aggregator", <b>new {@link HttpChunkAggregator}(1048576)</b>);
+ * p.addLast("aggregator", <b>new {@link HttpObjectAggregator}(1048576)</b>);
  * ...
  * p.addLast("encoder", new {@link HttpResponseEncoder}());
  * p.addLast("handler", new HttpRequestHandler());
@@ -47,7 +47,7 @@ import java.util.Map.Entry;
  * @apiviz.landmark
  * @apiviz.has io.netty.handler.codec.http.HttpChunk oneway - - filters out
  */
-public class HttpChunkAggregator extends MessageToMessageDecoder<HttpObject> {
+public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
     public static final int DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS = 1024;
     private static final ByteBuf CONTINUE = Unpooled.copiedBuffer(
             "HTTP/1.1 100 Continue\r\n\r\n", CharsetUtil.US_ASCII);
@@ -66,7 +66,7 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<HttpObject> {
      *        If the length of the aggregated content exceeds this value,
      *        a {@link TooLongFrameException} will be raised.
      */
-    public HttpChunkAggregator(int maxContentLength) {
+    public HttpObjectAggregator(int maxContentLength) {
         super(HttpObject.class);
 
         if (maxContentLength <= 0) {
@@ -113,8 +113,8 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<HttpObject> {
     protected Object decode(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
         HttpMessage currentMessage = this.currentMessage;
 
-        if (msg instanceof HttpMessage) {
-            HttpMessage m = (HttpMessage) msg;
+        if (msg instanceof HttpHeader) {
+            HttpHeader m = (HttpHeader) msg;
 
             // Handle the 'Expect: 100-continue' header if necessary.
             // TODO: Respond with 413 Request Entity Too Large
@@ -126,36 +126,37 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<HttpObject> {
             }
 
             if (!m.getDecoderResult().isSuccess()) {
-                m.setTransferEncoding(HttpTransferEncoding.SINGLE);
+                removeTransferEncodingChunked(m);
                 this.currentMessage = null;
                 return m;
             }
+            if (msg instanceof HttpRequestHeader) {
+                HttpRequestHeader header = (HttpRequestHeader) msg;
+                this.currentMessage = new DefaultHttpRequest(header.getProtocolVersion(),
+                        header.getMethod(), header.getUri());
+            }  else {
+                HttpResponseHeader header = (HttpResponseHeader) msg;
+                this.currentMessage = new DefaultHttpResponse(header.getProtocolVersion(), header.getStatus());
+            }
+            for (String name: m.getHeaderNames()) {
+                this.currentMessage.setHeader(name, m.getHeaders(name));
+            }
+            // A streamed message - initialize the cumulative buffer, and wait for incoming chunks.
+            removeTransferEncodingChunked(m);
+            this.currentMessage.setContent(Unpooled.compositeBuffer(maxCumulationBufferComponents));
+            return null;
 
-            switch (m.getTransferEncoding()) {
-            case SINGLE:
-                this.currentMessage = null;
-                return m;
-            case STREAMED:
-            case CHUNKED:
-                // A streamed message - initialize the cumulative buffer, and wait for incoming chunks.
-                m.setTransferEncoding(HttpTransferEncoding.SINGLE);
-                m.setContent(Unpooled.compositeBuffer(maxCumulationBufferComponents));
-                this.currentMessage = m;
-                return null;
-            default:
-                throw new Error();
-            }
-        } else if (msg instanceof HttpChunk) {
+        } else if (msg instanceof HttpContent) {
             // Sanity check
             if (currentMessage == null) {
                 throw new IllegalStateException(
-                        "received " + HttpChunk.class.getSimpleName() +
-                        " without " + HttpMessage.class.getSimpleName() +
+                        "received " + HttpContent.class.getSimpleName() +
+                        " without " + HttpHeader.class.getSimpleName() +
                         " or last message's transfer encoding was 'SINGLE'");
             }
 
             // Merge the received chunk into the content of the current message.
-            HttpChunk chunk = (HttpChunk) msg;
+            HttpContent chunk = (HttpContent) msg;
             ByteBuf content = currentMessage.getContent();
 
             if (content.readableBytes() > maxContentLength - chunk.getContent().readableBytes()) {
@@ -177,15 +178,15 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<HttpObject> {
                         DecoderResult.partialFailure(chunk.getDecoderResult().cause()));
                 last = true;
             } else {
-                last = chunk.isLast();
+                last = msg instanceof LastHttpContent;
             }
 
             if (last) {
                 this.currentMessage = null;
 
                 // Merge trailing headers into the message.
-                if (chunk instanceof HttpChunkTrailer) {
-                    HttpChunkTrailer trailer = (HttpChunkTrailer) chunk;
+                if (chunk instanceof LastHttpContent) {
+                    LastHttpContent trailer = (LastHttpContent) chunk;
                     for (Entry<String, String> header: trailer.getHeaders()) {
                         currentMessage.setHeader(header.getKey(), header.getValue());
                     }
@@ -203,8 +204,8 @@ public class HttpChunkAggregator extends MessageToMessageDecoder<HttpObject> {
             }
         } else {
             throw new IllegalStateException(
-                    "Only " + HttpMessage.class.getSimpleName() + " and " +
-                    HttpChunk.class.getSimpleName() + " are accepted: " + msg.getClass().getName());
+                    "Only " + HttpHeader.class.getSimpleName() + " and " +
+                    HttpContent.class.getSimpleName() + " are accepted: " + msg.getClass().getName());
         }
     }
 

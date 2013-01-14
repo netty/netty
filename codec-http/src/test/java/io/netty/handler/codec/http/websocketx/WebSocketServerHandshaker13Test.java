@@ -20,12 +20,12 @@ import static io.netty.handler.codec.http.HttpVersion.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.http.DefaultHttpRequest;
-import io.netty.handler.codec.http.HttpChunkAggregator;
+import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestDecoder;
-import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseHeader;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 
@@ -37,7 +37,7 @@ public class WebSocketServerHandshaker13Test {
     @Test
     public void testPerformOpeningHandshake() {
         EmbeddedByteChannel ch = new EmbeddedByteChannel(
-                new HttpChunkAggregator(42), new HttpRequestDecoder(), new HttpResponseEncoder());
+                new HttpObjectAggregator(42), new HttpRequestDecoder(), new HttpResponseEncoder());
 
         HttpRequest req = new DefaultHttpRequest(HTTP_1_1, HttpMethod.GET, "/chat");
         req.setHeader(Names.HOST, "server.example.com");
@@ -55,7 +55,7 @@ public class WebSocketServerHandshaker13Test {
 
         EmbeddedByteChannel ch2 = new EmbeddedByteChannel(new HttpResponseDecoder());
         ch2.writeInbound(resBuf);
-        HttpResponse res = (HttpResponse) ch2.readInbound();
+        HttpResponseHeader res = (HttpResponseHeader) ch2.readInbound();
 
         Assert.assertEquals(
                 "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", res.getHeader(Names.SEC_WEBSOCKET_ACCEPT));

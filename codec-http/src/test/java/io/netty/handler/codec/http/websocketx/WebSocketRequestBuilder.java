@@ -17,9 +17,11 @@ package io.netty.handler.codec.http.websocketx;
 
 import static io.netty.handler.codec.http.HttpHeaders.Values.WEBSOCKET;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpRequestHeader;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 
@@ -117,7 +119,7 @@ public class WebSocketRequestBuilder {
         return req;
     }
     
-    public static HttpRequest sucessful() {
+    public static HttpRequestHeader sucessful() {
         return new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
                 .method(HttpMethod.GET)
                 .uri("/test")

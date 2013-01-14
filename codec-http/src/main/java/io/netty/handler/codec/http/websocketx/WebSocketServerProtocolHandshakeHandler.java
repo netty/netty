@@ -27,7 +27,8 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpRequestHeader;
+import io.netty.handler.codec.http.HttpResponseHeader;
 import io.netty.handler.ssl.SslHandler;
 
 /**
@@ -74,14 +75,14 @@ public class WebSocketServerProtocolHandshakeHandler extends ChannelInboundMessa
         }
     }
 
-    private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
+    private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequestHeader req, HttpResponseHeader res) {
         ChannelFuture f = ctx.channel().write(res);
         if (!isKeepAlive(req) || res.getStatus().getCode() != 200) {
             f.addListener(ChannelFutureListener.CLOSE);
         }
     }
 
-    private static String getWebSocketLocation(ChannelPipeline cp, HttpRequest req, String path) {
+    private static String getWebSocketLocation(ChannelPipeline cp, HttpRequestHeader req, String path) {
         String protocol = "ws";
         if (cp.get(SslHandler.class) != null) {
             // SSL in use so use Secure WebSockets

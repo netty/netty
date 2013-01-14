@@ -21,7 +21,7 @@ import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.util.internal.StringUtil;
 
 /**
- * Compresses an {@link HttpMessage} and an {@link HttpChunk} in {@code gzip} or
+ * Compresses an {@link HttpHeader} and an {@link HttpContent} in {@code gzip} or
  * {@code deflate} encoding while respecting the {@code "Accept-Encoding"} header.
  * If there is no matching encoding, no compression is done.  For more
  * information on how this handler modifies the message, please refer to
@@ -93,8 +93,8 @@ public class HttpContentCompressor extends HttpContentEncoder {
     }
 
     @Override
-    protected Result beginEncode(HttpMessage msg, String acceptEncoding) throws Exception {
-        String contentEncoding = msg.getHeader(HttpHeaders.Names.CONTENT_ENCODING);
+    protected Result beginEncode(HttpHeader header, HttpContent msg, String acceptEncoding) throws Exception {
+        String contentEncoding = header.getHeader(HttpHeaders.Names.CONTENT_ENCODING);
         if (contentEncoding != null &&
             !HttpHeaders.Values.IDENTITY.equalsIgnoreCase(contentEncoding)) {
             return null;

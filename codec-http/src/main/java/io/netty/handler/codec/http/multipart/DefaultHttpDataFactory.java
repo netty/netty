@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpRequestHeader;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -46,8 +46,8 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     /**
      * Keep all HttpDatas until cleanAllHttpDatas() is called.
      */
-    private final ConcurrentHashMap<HttpRequest, List<HttpData>> requestFileDeleteMap =
-        new ConcurrentHashMap<HttpRequest, List<HttpData>>();
+    private final ConcurrentHashMap<HttpRequestHeader, List<HttpData>> requestFileDeleteMap =
+        new ConcurrentHashMap<HttpRequestHeader, List<HttpData>>();
     /**
      * HttpData will be in memory if less than default size (16KB).
      * The type will be Mixed.
@@ -79,7 +79,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     /**
      * @return the associated list of Files for the request
      */
-    private List<HttpData> getList(HttpRequest request) {
+    private List<HttpData> getList(HttpRequestHeader request) {
         List<HttpData> list = requestFileDeleteMap.get(request);
         if (list == null) {
             list = new ArrayList<HttpData>();
@@ -89,7 +89,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     }
 
     @Override
-    public Attribute createAttribute(HttpRequest request, String name) {
+    public Attribute createAttribute(HttpRequestHeader request, String name) {
         if (useDisk) {
             Attribute attribute = new DiskAttribute(name);
             List<HttpData> fileToDelete = getList(request);
@@ -106,7 +106,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     }
 
     @Override
-    public Attribute createAttribute(HttpRequest request, String name, String value) {
+    public Attribute createAttribute(HttpRequestHeader request, String name, String value) {
         if (useDisk) {
             Attribute attribute;
             try {
@@ -133,7 +133,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     }
 
     @Override
-    public FileUpload createFileUpload(HttpRequest request, String name, String filename,
+    public FileUpload createFileUpload(HttpRequestHeader request, String name, String filename,
             String contentType, String contentTransferEncoding, Charset charset,
             long size) {
         if (useDisk) {
@@ -155,7 +155,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     }
 
     @Override
-    public void removeHttpDataFromClean(HttpRequest request, InterfaceHttpData data) {
+    public void removeHttpDataFromClean(HttpRequestHeader request, InterfaceHttpData data) {
         if (data instanceof HttpData) {
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.remove(data);
@@ -163,7 +163,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     }
 
     @Override
-    public void cleanRequestHttpDatas(HttpRequest request) {
+    public void cleanRequestHttpDatas(HttpRequestHeader request) {
         List<HttpData> fileToDelete = requestFileDeleteMap.remove(request);
         if (fileToDelete != null) {
             for (HttpData data: fileToDelete) {
@@ -175,7 +175,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
 
     @Override
     public void cleanAllHttpDatas() {
-        for (HttpRequest request : requestFileDeleteMap.keySet()) {
+        for (HttpRequestHeader request : requestFileDeleteMap.keySet()) {
             List<HttpData> fileToDelete = requestFileDeleteMap.get(request);
             if (fileToDelete != null) {
                 for (HttpData data: fileToDelete) {

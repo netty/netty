@@ -27,19 +27,17 @@ import java.util.Set;
 
 /**
  * An HTTP chunk which is used for HTTP chunked transfer-encoding.
- * {@link HttpMessageDecoder} generates {@link HttpChunk} after
- * {@link HttpMessage} when the content is large or the encoding of the content
- * is 'chunked.  If you prefer not to receive {@link HttpChunk} in your handler,
- * please {@link HttpChunkAggregator} after {@link HttpMessageDecoder} in the
+ * {@link HttpObjectDecoder} generates {@link HttpContent} after
+ * {@link HttpHeader} when the content is large or the encoding of the content
+ * is 'chunked.  If you prefer not to receive {@link HttpContent} in your handler,
+ * please {@link HttpObjectAggregator} after {@link HttpObjectDecoder} in the
  * {@link ChannelPipeline}.
  * @apiviz.landmark
  */
-public interface HttpChunk extends HttpObject {
+public interface HttpContent extends HttpObject {
 
-    /**
-     * The 'end of content' marker in chunked encoding.
-     */
-    HttpChunkTrailer LAST_CHUNK = new HttpChunkTrailer() {
+    HttpContent EMPTY = new HttpContent() {
+
         @Override
         public ByteBuf getContent() {
             return Unpooled.EMPTY_BUFFER;
@@ -51,8 +49,28 @@ public interface HttpChunk extends HttpObject {
         }
 
         @Override
-        public boolean isLast() {
-            return true;
+        public DecoderResult getDecoderResult() {
+            return DecoderResult.SUCCESS;
+        }
+
+        @Override
+        public void setDecoderResult(DecoderResult result) {
+            throw new IllegalStateException("read-only");
+        }
+    };
+
+    /**
+     * The 'end of content' marker in chunked encoding.
+     */
+    LastHttpContent LAST_CONTENT = new LastHttpContent() {
+        @Override
+        public ByteBuf getContent() {
+            return Unpooled.EMPTY_BUFFER;
+        }
+
+        @Override
+        public void setContent(ByteBuf content) {
+            throw new IllegalStateException("read-only");
         }
 
         @Override
@@ -115,12 +133,6 @@ public interface HttpChunk extends HttpObject {
             throw new IllegalStateException("read-only");
         }
     };
-
-    /**
-     * Returns {@code true} if and only if this chunk is the 'end of content'
-     * marker.
-     */
-    boolean isLast();
 
     /**
      * Returns the content of this chunk.  If this is the 'end of content'
