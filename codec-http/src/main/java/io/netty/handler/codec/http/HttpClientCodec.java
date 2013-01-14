@@ -84,17 +84,15 @@ public class HttpClientCodec extends CombinedChannelHandler {
         @Override
         protected void encode(
                 ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
-            if (msg instanceof HttpRequest && !done) {
-                queue.offer(((HttpRequest) msg).getMethod());
+            if (msg instanceof HttpRequestHeader && !done) {
+                queue.offer(((HttpRequestHeader) msg).getMethod());
             }
 
             super.encode(ctx, msg, out);
 
             if (failOnMissingResponse) {
                 // check if the request is chunked if so do not increment
-                if (msg instanceof HttpRequest && ((HttpMessage) msg).getTransferEncoding().isSingle()) {
-                    requestResponseCounter.incrementAndGet();
-                } else if (msg instanceof HttpChunk && ((HttpChunk) msg).isLast()) {
+                if (msg instanceof LastHttpContent) {
                     // increment as its the last chunk
                     requestResponseCounter.incrementAndGet();
                 }
@@ -127,21 +125,20 @@ public class HttpClientCodec extends CombinedChannelHandler {
                 return;
             }
 
-            // check if it's an HttpMessage and its transfer encoding is SINGLE.
-            if (msg instanceof HttpMessage && ((HttpMessage) msg).getTransferEncoding().isSingle()) {
-                requestResponseCounter.decrementAndGet();
-            } else if (msg instanceof HttpChunk && ((HttpChunk) msg).isLast()) {
+            // check if it's an Header and its transfer encoding is not chunked.
+            if (msg instanceof LastHttpContent) {
                 requestResponseCounter.decrementAndGet();
             } else if (msg instanceof Object[]) {
-                // we just decrement it here as we only use this if the end of the chunk is reached
-                // It would be more safe to check all the objects in the array but would also be slower
-                requestResponseCounter.decrementAndGet();
+                Object[] objects = (Object[]) msg;
+                for (Object obj: objects) {
+                    decrement(obj);
+                }
             }
         }
 
         @Override
-        protected boolean isContentAlwaysEmpty(HttpMessage msg) {
-            final int statusCode = ((HttpResponse) msg).getStatus().getCode();
+        protected boolean isContentAlwaysEmpty(HttpHeader msg) {
+            final int statusCode = ((HttpResponseHeader) msg).getStatus().getCode();
             if (statusCode == 100) {
                 // 100-continue response should be excluded from paired comparison.
                 return true;

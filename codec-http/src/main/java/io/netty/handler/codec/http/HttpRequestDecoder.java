@@ -21,7 +21,7 @@ import io.netty.handler.codec.TooLongFrameException;
 
 
 /**
- * Decodes {@link ByteBuf}s into {@link HttpRequest}s and {@link HttpChunk}s.
+ * Decodes {@link ByteBuf}s into {@link HttpRequestHeader}s and {@link HttpContent}s.
  *
  * <h3>Parameters that prevents excessive memory consumption</h3>
  * <table border="1">
@@ -44,15 +44,15 @@ import io.netty.handler.codec.TooLongFrameException;
  * <td>The maximum length of the content or each chunk.  If the content length
  *     exceeds this value, the transfer encoding of the decoded request will be
  *     converted to 'chunked' and the content will be split into multiple
- *     {@link HttpChunk}s.  If the transfer encoding of the HTTP request is
+ *     {@link HttpContent}s.  If the transfer encoding of the HTTP request is
  *     'chunked' already, each chunk will be split into smaller chunks if the
  *     length of the chunk exceeds this value.  If you prefer not to handle
- *     {@link HttpChunk}s in your handler, insert {@link HttpChunkAggregator}
+ *     {@link HttpContent}s in your handler, insert {@link HttpObjectAggregator}
  *     after this decoder in the {@link ChannelPipeline}.</td>
  * </tr>
  * </table>
  */
-public class HttpRequestDecoder extends HttpMessageDecoder {
+public class HttpRequestDecoder extends HttpObjectDecoder {
 
     /**
      * Creates a new instance with the default
@@ -71,14 +71,14 @@ public class HttpRequestDecoder extends HttpMessageDecoder {
     }
 
     @Override
-    protected HttpMessage createMessage(String[] initialLine) throws Exception {
-        return new DefaultHttpRequest(
+    protected HttpHeader createMessage(String[] initialLine) throws Exception {
+        return new DefaultHttpRequestHeader(
                 HttpVersion.valueOf(initialLine[2]), HttpMethod.valueOf(initialLine[0]), initialLine[1]);
     }
 
     @Override
-    protected HttpMessage createInvalidMessage() {
-        return new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, "/bad-request");
+    protected HttpHeader createInvalidMessage() {
+        return new DefaultHttpRequestHeader(HttpVersion.HTTP_1_0, HttpMethod.GET, "/bad-request");
     }
 
     @Override

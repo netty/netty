@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,49 +15,9 @@
  */
 package io.netty.handler.codec.http;
 
-
 /**
- * An HTTP request.
- *
- * <h3>Accessing Query Parameters and Cookie</h3>
- * <p>
- * Unlike the Servlet API, a query string is constructed and decomposed by
- * {@link QueryStringEncoder} and {@link QueryStringDecoder}.  {@link Cookie}
- * support is also provided separately via {@link CookieDecoder}, {@link ClientCookieEncoder},
- * and {@link @ServerCookieEncoder}.
- *
- * @see HttpResponse
- * @see ClientCookieEncoder
- * @see ServerCookieEncoder
- * @see CookieDecoder
+ * Combinate the {@link HttpRequestHeader} and {@link HttpMessage}, so the request is a <i>complete</i> HTTP
+ * request.
  */
-public interface HttpRequest extends HttpMessage {
-
-    /**
-     * Returns the {@link HttpMethod} of this {@link HttpRequest}.
-     *
-     * @return The {@link HttpMethod} of this {@link HttpRequest}
-     */
-    HttpMethod getMethod();
-
-    /**
-     * Sets the {@link HttpMethod} of this {@link HttpRequest}.
-     *
-     * @param method The {@link HttpMethod} to set
-     */
-    void setMethod(HttpMethod method);
-
-    /**
-     * Returns the requested URI (or alternatively, path)
-     *
-     * @return The URI being requested
-     */
-    String getUri();
-
-    /**
-     * Sets the URI (or alternatively, path) being requested.
-     *
-     * @param uri The URI being requested
-     */
-    void setUri(String uri);
+public interface HttpRequest extends HttpRequestHeader, HttpMessage {
 }

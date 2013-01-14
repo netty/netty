@@ -21,8 +21,8 @@ import io.netty.handler.codec.TooLongFrameException;
 
 
 /**
- * Decodes {@link ByteBuf}s into {@link HttpResponse}s and
- * {@link HttpChunk}s.
+ * Decodes {@link ByteBuf}s into {@link HttpResponseHeader}s and
+ * {@link HttpContent}s.
  *
  * <h3>Parameters that prevents excessive memory consumption</h3>
  * <table border="1">
@@ -45,10 +45,10 @@ import io.netty.handler.codec.TooLongFrameException;
  * <td>The maximum length of the content or each chunk.  If the content length
  *     exceeds this value, the transfer encoding of the decoded response will be
  *     converted to 'chunked' and the content will be split into multiple
- *     {@link HttpChunk}s.  If the transfer encoding of the HTTP response is
+ *     {@link HttpContent}s.  If the transfer encoding of the HTTP response is
  *     'chunked' already, each chunk will be split into smaller chunks if the
  *     length of the chunk exceeds this value.  If you prefer not to handle
- *     {@link HttpChunk}s in your handler, insert {@link HttpChunkAggregator}
+ *     {@link HttpContent}s in your handler, insert {@link HttpObjectAggregator}
  *     after this decoder in the {@link ChannelPipeline}.</td>
  * </tr>
  * </table>
@@ -59,7 +59,7 @@ import io.netty.handler.codec.TooLongFrameException;
  * request does not have any content even if there is <tt>Content-Length</tt>
  * header.  Because {@link HttpResponseDecoder} is not able to determine if the
  * response currently being decoded is associated with a <tt>HEAD</tt> request,
- * you must override {@link #isContentAlwaysEmpty(HttpMessage)} to return
+ * you must override {@link #isContentAlwaysEmpty(HttpHeader)} to return
  * <tt>true</tt> for the response of the <tt>HEAD</tt> request.
  * </p><p>
  * If you are writing an HTTP client that issues a <tt>HEAD</tt> request,
@@ -81,7 +81,7 @@ import io.netty.handler.codec.TooLongFrameException;
  * <tt>CONNECT</tt> request.
  * </p>
  */
-public class HttpResponseDecoder extends HttpMessageDecoder {
+public class HttpResponseDecoder extends HttpObjectDecoder {
 
     private static final HttpResponseStatus UNKNOWN_STATUS = new HttpResponseStatus(999, "Unknown");
 
@@ -102,15 +102,15 @@ public class HttpResponseDecoder extends HttpMessageDecoder {
     }
 
     @Override
-    protected HttpMessage createMessage(String[] initialLine) {
-        return new DefaultHttpResponse(
+    protected HttpHeader createMessage(String[] initialLine) {
+        return new DefaultHttpResponseHeader(
                 HttpVersion.valueOf(initialLine[0]),
                 new HttpResponseStatus(Integer.valueOf(initialLine[1]), initialLine[2]));
     }
 
     @Override
-    protected HttpMessage createInvalidMessage() {
-        return new DefaultHttpResponse(HttpVersion.HTTP_1_0, UNKNOWN_STATUS);
+    protected HttpHeader createInvalidMessage() {
+        return new DefaultHttpResponseHeader(HttpVersion.HTTP_1_0, UNKNOWN_STATUS);
     }
 
     @Override

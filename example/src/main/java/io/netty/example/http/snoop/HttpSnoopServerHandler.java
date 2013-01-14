@@ -25,12 +25,14 @@ import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.Cookie;
 import io.netty.handler.codec.http.CookieDecoder;
 import io.netty.handler.codec.http.DefaultHttpResponse;
-import io.netty.handler.codec.http.HttpChunk;
-import io.netty.handler.codec.http.HttpChunkTrailer;
+import io.netty.handler.codec.http.DefaultHttpResponseHeader;
+import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpObject;
-import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpRequestHeader;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseHeader;
+import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.http.ServerCookieEncoder;
 import io.netty.util.CharsetUtil;
@@ -47,15 +49,15 @@ import static io.netty.handler.codec.http.HttpVersion.*;
 
 public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<Object> {
 
-    private HttpRequest request;
+    private HttpRequestHeader request;
     private boolean readingChunks;
     /** Buffer that stores the response content */
     private final StringBuilder buf = new StringBuilder();
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (!readingChunks) {
-            HttpRequest request = this.request = (HttpRequest) msg;
+        if (msg instanceof HttpRequestHeader) {
+            HttpRequestHeader request = this.request = (HttpRequestHeader) msg;
 
             if (is100ContinueExpected(request)) {
                 send100Continue(ctx);
@@ -92,25 +94,36 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
                 buf.append("\r\n");
             }
 
-            if (request.getTransferEncoding().isMultiple()) {
+            if (isTransferEncodingChunked(request)) {
                 readingChunks = true;
             } else {
-                ByteBuf content = request.getContent();
-                if (content.readable()) {
-                    buf.append("CONTENT: ");
-                    buf.append(content.toString(CharsetUtil.UTF_8));
-                    buf.append("\r\n");
-                }
                 appendDecoderResult(buf, request);
-                writeResponse(ctx, request);
             }
-        } else {
-            HttpChunk chunk = (HttpChunk) msg;
-            if (chunk.isLast()) {
+        }
+        if (msg instanceof HttpContent) {
+            HttpContent httpContent = (HttpContent) msg;
+
+            ByteBuf content = httpContent.getContent();
+            if (content.readable()) {
+                buf.append("CONTENT: ");
+                buf.append(content.toString(CharsetUtil.UTF_8));
+                buf.append("\r\n");
+            }
+            appendDecoderResult(buf, request);
+            writeResponse(ctx, request);
+
+            if (msg instanceof LastHttpContent) {
+                if (readingChunks) {
+                    buf.append("CHUNK: ");
+                } else {
+                    buf.append("CONTENT: ");
+                }
+                buf.append(content.toString(CharsetUtil.UTF_8)).append("\r\n");
+
                 readingChunks = false;
                 buf.append("END OF CONTENT\r\n");
 
-                HttpChunkTrailer trailer = (HttpChunkTrailer) chunk;
+                LastHttpContent trailer = (LastHttpContent) msg;
                 if (!trailer.getHeaderNames().isEmpty()) {
                     buf.append("\r\n");
                     for (String name: trailer.getHeaderNames()) {
@@ -122,12 +135,14 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
                     buf.append("\r\n");
                 }
 
-                appendDecoderResult(buf, chunk);
-                writeResponse(ctx, chunk);
+                appendDecoderResult(buf, trailer);
+                writeResponse(ctx, trailer);
             } else {
-                buf.append("CHUNK: ");
-                buf.append(chunk.getContent().toString(CharsetUtil.UTF_8)).append("\r\n");
-                appendDecoderResult(buf, chunk);
+                if (readingChunks) {
+                    buf.append("CHUNK: ");
+                }
+                buf.append(content.toString(CharsetUtil.UTF_8)).append("\r\n");
+                appendDecoderResult(buf, httpContent);
             }
         }
     }
@@ -192,7 +207,7 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
     }
 
     private static void send100Continue(ChannelHandlerContext ctx) {
-        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, CONTINUE);
+        HttpResponseHeader response = new DefaultHttpResponseHeader(HTTP_1_1, CONTINUE);
         ctx.write(response);
     }
 

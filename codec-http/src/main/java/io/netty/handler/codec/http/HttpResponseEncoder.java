@@ -20,14 +20,13 @@ import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
 
 /**
- * Encodes an {@link HttpResponse} or an {@link HttpChunk} into
+ * Encodes an {@link HttpResponseHeader} or an {@link HttpContent} into
  * a {@link ByteBuf}.
  */
-public class HttpResponseEncoder extends HttpMessageEncoder {
+public class HttpResponseEncoder extends HttpObjectEncoder<HttpResponseHeader> {
 
     @Override
-    protected void encodeInitialLine(ByteBuf buf, HttpMessage message) throws Exception {
-        HttpResponse response = (HttpResponse) message;
+    protected void encodeInitialLine(ByteBuf buf, HttpResponseHeader response) throws Exception {
         buf.writeBytes(response.getProtocolVersion().toString().getBytes(CharsetUtil.US_ASCII));
         buf.writeByte(SP);
         buf.writeBytes(String.valueOf(response.getStatus().getCode()).getBytes(CharsetUtil.US_ASCII));

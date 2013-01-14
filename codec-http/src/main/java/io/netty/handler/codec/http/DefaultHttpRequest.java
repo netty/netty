@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,75 +15,34 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.util.internal.StringUtil;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
 /**
- * The default {@link HttpRequest} implementation.
+ * Default implementation of {@link HttpRequest}.
  */
-public class DefaultHttpRequest extends DefaultHttpMessage implements HttpRequest {
+public class DefaultHttpRequest extends DefaultHttpRequestHeader implements HttpRequest {
+    private ByteBuf content = Unpooled.EMPTY_BUFFER;
 
-    private HttpMethod method;
-    private String uri;
-
-    /**
-     * Creates a new instance.
-     *
-     * @param httpVersion the HTTP version of the request
-     * @param method      the HTTP method of the request
-     * @param uri         the URI or path of the request
-     */
     public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri) {
-        super(httpVersion);
-        setMethod(method);
-        setUri(uri);
+        this(httpVersion, method, uri, Unpooled.EMPTY_BUFFER);
+    }
+
+    public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, ByteBuf content) {
+        super(httpVersion, method, uri);
+        setContent(content);
     }
 
     @Override
-    public HttpMethod getMethod() {
-        return method;
+    public ByteBuf getContent() {
+        return content;
     }
 
     @Override
-    public void setMethod(HttpMethod method) {
-        if (method == null) {
-            throw new NullPointerException("method");
+    public void setContent(ByteBuf content) {
+        if (content == null) {
+            throw new NullPointerException("content");
         }
-        this.method = method;
-    }
-
-    @Override
-    public String getUri() {
-        return uri;
-    }
-
-    @Override
-    public void setUri(String uri) {
-        if (uri == null) {
-            throw new NullPointerException("uri");
-        }
-        this.uri = uri;
-    }
-
-    @Override
-    public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append(getClass().getSimpleName());
-        buf.append("(transferEncoding: ");
-        buf.append(getTransferEncoding());
-        buf.append(", decodeResult: ");
-        buf.append(getDecoderResult());
-        buf.append(')');
-        buf.append(StringUtil.NEWLINE);
-        buf.append(getMethod().toString());
-        buf.append(' ');
-        buf.append(getUri());
-        buf.append(' ');
-        buf.append(getProtocolVersion().getText());
-        buf.append(StringUtil.NEWLINE);
-        appendHeaders(buf);
-
-        // Remove the last newline.
-        buf.setLength(buf.length() - StringUtil.NEWLINE.length());
-        return buf.toString();
+        this.content = content;
     }
 }

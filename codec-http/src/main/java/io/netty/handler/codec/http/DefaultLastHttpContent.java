@@ -24,14 +24,14 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * The default {@link HttpChunkTrailer} implementation.
+ * The default {@link LastHttpContent} implementation.
  */
-public class DefaultHttpChunkTrailer extends DefaultHttpObject implements HttpChunkTrailer {
+public class DefaultLastHttpContent extends DefaultHttpContent implements LastHttpContent {
 
     private final HttpHeaders headers = new HttpHeaders() {
         @Override
-        void validateHeaderName(String name) {
-            super.validateHeaderName(name);
+        void validateHeaderName0(String name) {
+            super.validateHeaderName0(name);
             if (name.equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH) ||
                 name.equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING) ||
                 name.equalsIgnoreCase(HttpHeaders.Names.TRAILER)) {
@@ -41,9 +41,12 @@ public class DefaultHttpChunkTrailer extends DefaultHttpObject implements HttpCh
         }
     };
 
-    @Override
-    public boolean isLast() {
-        return true;
+    public DefaultLastHttpContent() {
+        this(Unpooled.EMPTY_BUFFER);
+    }
+
+    public DefaultLastHttpContent(ByteBuf content) {
+        super(content);
     }
 
     @Override
@@ -97,28 +100,11 @@ public class DefaultHttpChunkTrailer extends DefaultHttpObject implements HttpCh
     }
 
     @Override
-    public ByteBuf getContent() {
-        return Unpooled.EMPTY_BUFFER;
-    }
-
-    @Override
-    public void setContent(ByteBuf content) {
-        throw new IllegalStateException("read-only");
-    }
-
-    @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
         buf.append(getClass().getSimpleName());
-
-        final boolean last = isLast();
-        buf.append("(last: ");
-        buf.append(last);
-        if (!last) {
-            buf.append(", size: ");
-            buf.append(getContent().readableBytes());
-        }
-
+        buf.append(", size: ");
+        buf.append(getContent().readableBytes());
         buf.append(", decodeResult: ");
         buf.append(getDecoderResult());
         buf.append(')');

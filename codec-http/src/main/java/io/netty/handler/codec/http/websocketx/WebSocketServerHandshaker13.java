@@ -20,12 +20,12 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.DefaultHttpResponse;
-import io.netty.handler.codec.http.HttpChunkAggregator;
+import io.netty.handler.codec.http.DefaultHttpResponseHeader;
+import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestDecoder;
-import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseHeader;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.logging.InternalLogger;
@@ -115,7 +115,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
             logger.debug(String.format("Channel %s WS Version 13 server handshake", channel.id()));
         }
 
-        HttpResponse res = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
+        HttpResponseHeader res = new DefaultHttpResponseHeader(HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
 
         String key = req.getHeader(Names.SEC_WEBSOCKET_KEY);
         if (key == null) {
@@ -152,8 +152,8 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
             @Override
             public void operationComplete(ChannelFuture future) {
                 ChannelPipeline p = future.channel().pipeline();
-                if (p.get(HttpChunkAggregator.class) != null) {
-                    p.remove(HttpChunkAggregator.class);
+                if (p.get(HttpObjectAggregator.class) != null) {
+                    p.remove(HttpObjectAggregator.class);
                 }
 
                 p.get(HttpRequestDecoder.class).replace("wsdecoder",

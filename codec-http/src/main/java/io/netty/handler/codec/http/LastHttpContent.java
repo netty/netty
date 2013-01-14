@@ -20,15 +20,9 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * The last {@link HttpChunk} which has trailing headers.
+ * The last {@link HttpContent} which has trailing headers.
  */
-public interface HttpChunkTrailer extends HttpChunk {
-
-    /**
-     * Always returns {@code true}.
-     */
-    @Override
-    boolean isLast();
+public interface LastHttpContent extends HttpContent {
 
     /**
      * Returns the trailing header value with the specified header name.

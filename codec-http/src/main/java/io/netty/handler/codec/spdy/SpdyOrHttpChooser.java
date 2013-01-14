@@ -22,8 +22,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.http.HttpChunkAggregator;
-import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.ssl.SslHandler;
@@ -139,19 +138,19 @@ public abstract class SpdyOrHttpChooser extends ChannelHandlerAdapter implements
         ChannelPipeline pipeline = ctx.pipeline();
         pipeline.addLast("httpRquestDecoder", new HttpRequestDecoder());
         pipeline.addLast("httpResponseEncoder", new HttpResponseEncoder());
-        pipeline.addLast("httpChunkAggregator", new HttpChunkAggregator(maxHttpContentLength));
+        pipeline.addLast("httpChunkAggregator", new HttpObjectAggregator(maxHttpContentLength));
         pipeline.addLast("httpRquestHandler", createHttpRequestHandlerForHttp());
     }
 
     /**
-     * Create the {@link ChannelInboundHandler} that is responsible for handling the {@link HttpRequest}'s
+     * Create the {@link ChannelInboundHandler} that is responsible for handling the http requests
      * when the {@link SelectedProtocol} was {@link SelectedProtocol#HttpVersion1_0} or
      * {@link SelectedProtocol#HttpVersion1_1}
      */
     protected abstract ChannelInboundHandler createHttpRequestHandlerForHttp();
 
     /**
-     * Create the {@link ChannelInboundHandler} that is responsible for handling the {@link HttpRequest}'s
+     * Create the {@link ChannelInboundHandler} that is responsible for handling the http responses
      * when the {@link SelectedProtocol} was {@link SelectedProtocol#SpdyVersion2} or
      * {@link SelectedProtocol#SpdyVersion3}.
      *

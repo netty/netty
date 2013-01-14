@@ -22,11 +22,13 @@ import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedMessageChannel;
-import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.DefaultHttpRequestHeader;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpRequestHeader;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseHeader;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import org.junit.Test;
 
@@ -44,7 +46,7 @@ public class WebSocketServerProtocolHandlerTest {
         
         writeUpgradeRequest(ch);
         
-        assertEquals(SWITCHING_PROTOCOLS, ((HttpResponse) ch.outboundMessageBuffer().poll()).getStatus());
+        assertEquals(SWITCHING_PROTOCOLS, ((HttpResponseHeader) ch.outboundMessageBuffer().poll()).getStatus());
         assertNotNull(WebSocketServerProtocolHandler.getHandshaker(handshakerCtx));
     }
     
@@ -53,10 +55,10 @@ public class WebSocketServerProtocolHandlerTest {
         EmbeddedMessageChannel ch = createChannel(new MockOutboundHandler());
         
         writeUpgradeRequest(ch);
-        assertEquals(SWITCHING_PROTOCOLS, ((HttpResponse) ch.outboundMessageBuffer().poll()).getStatus());
+        assertEquals(SWITCHING_PROTOCOLS, ((HttpResponseHeader) ch.outboundMessageBuffer().poll()).getStatus());
         
-        ch.writeInbound(new DefaultHttpRequest(HTTP_1_1, HttpMethod.GET, "/test"));
-        assertEquals(FORBIDDEN, ((HttpResponse) ch.outboundMessageBuffer().poll()).getStatus());
+        ch.writeInbound(new DefaultHttpRequestHeader(HTTP_1_1, HttpMethod.GET, "/test"));
+        assertEquals(FORBIDDEN, ((HttpResponseHeader) ch.outboundMessageBuffer().poll()).getStatus());
     }
     
     @Test
@@ -81,7 +83,7 @@ public class WebSocketServerProtocolHandlerTest {
     @Test
     public void testHttpUpgradeRequestMissingWSKeyHeader() {
         EmbeddedMessageChannel ch = createChannel();
-        HttpRequest httpRequest = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
+        HttpRequestHeader httpRequest = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
                 .method(HttpMethod.GET)
                 .uri("/test")
                 .key(null)
