@@ -23,8 +23,8 @@ import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.example.udt.util.UtilThreadFactory;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.transport.udt.UdtChannel;
-import io.netty.transport.udt.nio.NioUdtProvider;
+import io.netty.channel.udt.UdtChannel;
+import io.netty.channel.udt.nio.NioUdtProvider;
 
 import java.util.concurrent.ThreadFactory;
 

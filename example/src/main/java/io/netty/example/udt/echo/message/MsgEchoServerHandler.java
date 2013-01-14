@@ -19,8 +19,8 @@ import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
-import io.netty.transport.udt.UdtMessage;
-import io.netty.transport.udt.nio.NioUdtProvider;
+import io.netty.channel.udt.UdtMessage;
+import io.netty.channel.udt.nio.NioUdtProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
