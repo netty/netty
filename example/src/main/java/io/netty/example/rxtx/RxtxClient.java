@@ -22,8 +22,8 @@ import io.netty.channel.socket.oio.OioEventLoopGroup;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
-import io.netty.transport.rxtx.RxtxChannel;
-import io.netty.transport.rxtx.RxtxDeviceAddress;
+import io.netty.channel.rxtx.RxtxChannel;
+import io.netty.channel.rxtx.RxtxDeviceAddress;
 
 /**
  * Sends one message to a serial device
