@@ -22,7 +22,7 @@ import static io.netty.handler.codec.http.CookieEncoderUtil.*;
  * the HTTP cookie version 0, 1, and 2.
  * <pre>
  * // Example
- * {@link HttpRequest} req = ...;
+ * {@link HttpRequestHeader} req = ...;
  * res.setHeader("Cookie", {@link ClientCookieEncoder}.encode("JSESSIONID", "1234"));
  * </pre>
  *

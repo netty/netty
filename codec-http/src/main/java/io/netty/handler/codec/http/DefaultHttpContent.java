@@ -18,18 +18,16 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.ByteBuf;
 
 /**
- * The default {@link HttpChunk} implementation.
+ * The default {@link HttpContent} implementation.
  */
-public class DefaultHttpChunk extends DefaultHttpObject implements HttpChunk {
+public class DefaultHttpContent extends DefaultHttpObject implements HttpContent {
 
     private ByteBuf content;
-    private boolean last;
 
     /**
-     * Creates a new instance with the specified chunk content. If an empty
-     * buffer is specified, this chunk becomes the 'end of content' marker.
+     * Creates a new instance with the specified chunk content.
      */
-    public DefaultHttpChunk(ByteBuf content) {
+    public DefaultHttpContent(ByteBuf content) {
         setContent(content);
     }
 
@@ -43,13 +41,7 @@ public class DefaultHttpChunk extends DefaultHttpObject implements HttpChunk {
         if (content == null) {
             throw new NullPointerException("content");
         }
-        last = !content.readable();
         this.content = content;
-    }
-
-    @Override
-    public boolean isLast() {
-        return last;
     }
 
     @Override
@@ -57,13 +49,8 @@ public class DefaultHttpChunk extends DefaultHttpObject implements HttpChunk {
         StringBuilder buf = new StringBuilder();
         buf.append(getClass().getSimpleName());
 
-        final boolean last = isLast();
-        buf.append("(last: ");
-        buf.append(last);
-        if (!last) {
-            buf.append(", size: ");
-            buf.append(getContent().readableBytes());
-        }
+        buf.append(" size: ");
+        buf.append(getContent().readableBytes());
 
         buf.append(", decodeResult: ");
         buf.append(getDecoderResult());

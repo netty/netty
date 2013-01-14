@@ -29,19 +29,19 @@ import java.util.List;
 import org.easymock.EasyMock;
 import org.junit.Test;
 
-public class HttpChunkAggregatorTest {
+public class HttpObjectAggregatorTest {
 
     @Test
     public void testAggregate() {
-        HttpChunkAggregator aggr = new HttpChunkAggregator(1024 * 1024);
+        HttpObjectAggregator aggr = new HttpObjectAggregator(1024 * 1024);
         EmbeddedMessageChannel embedder = new EmbeddedMessageChannel(aggr);
 
-        HttpMessage message = new DefaultHttpMessage(HttpVersion.HTTP_1_1);
+        HttpRequestHeader message = new DefaultHttpRequestHeader(HttpVersion.HTTP_1_1,
+                HttpMethod.GET, "http://localhost");
         HttpHeaders.setHeader(message, "X-Test", true);
-        message.setTransferEncoding(HttpTransferEncoding.STREAMED);
-        HttpChunk chunk1 = new DefaultHttpChunk(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
-        HttpChunk chunk2 = new DefaultHttpChunk(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII));
-        HttpChunk chunk3 = new DefaultHttpChunk(Unpooled.EMPTY_BUFFER);
+        HttpContent chunk1 = new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
+        HttpContent chunk2 = new DefaultHttpContent(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII));
+        HttpContent chunk3 = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER);
         assertFalse(embedder.writeInbound(message));
         assertFalse(embedder.writeInbound(chunk1));
         assertFalse(embedder.writeInbound(chunk2));
@@ -49,7 +49,7 @@ public class HttpChunkAggregatorTest {
         // this should trigger a messageReceived event so return true
         assertTrue(embedder.writeInbound(chunk3));
         assertTrue(embedder.finish());
-        HttpMessage aggratedMessage = (HttpMessage) embedder.readInbound();
+        DefaultHttpRequest aggratedMessage = (DefaultHttpRequest) embedder.readInbound();
         assertNotNull(aggratedMessage);
 
         assertEquals(chunk1.getContent().readableBytes() + chunk2.getContent().readableBytes(), HttpHeaders.getContentLength(aggratedMessage));
@@ -59,7 +59,7 @@ public class HttpChunkAggregatorTest {
 
     }
 
-    private static void checkContentBuffer(HttpMessage aggregatedMessage) {
+    private static void checkContentBuffer(DefaultHttpRequest aggregatedMessage) {
         CompositeByteBuf buffer = (CompositeByteBuf) aggregatedMessage.getContent();
         assertEquals(2, buffer.numComponents());
         List<ByteBuf> buffers = buffer.decompose(0, buffer.capacity());
@@ -72,14 +72,15 @@ public class HttpChunkAggregatorTest {
 
     @Test
     public void testAggregateWithTrailer() {
-        HttpChunkAggregator aggr = new HttpChunkAggregator(1024 * 1024);
+        HttpObjectAggregator aggr = new HttpObjectAggregator(1024 * 1024);
         EmbeddedMessageChannel embedder = new EmbeddedMessageChannel(aggr);
-        HttpMessage message = new DefaultHttpMessage(HttpVersion.HTTP_1_1);
+        HttpRequestHeader message = new DefaultHttpRequestHeader(HttpVersion.HTTP_1_1,
+                HttpMethod.GET, "http://localhost");
         HttpHeaders.setHeader(message, "X-Test", true);
-        message.setTransferEncoding(HttpTransferEncoding.CHUNKED);
-        HttpChunk chunk1 = new DefaultHttpChunk(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
-        HttpChunk chunk2 = new DefaultHttpChunk(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII));
-        HttpChunkTrailer trailer = new DefaultHttpChunkTrailer();
+        HttpHeaders.setTransferEncodingChunked(message);
+        HttpContent chunk1 = new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
+        HttpContent chunk2 = new DefaultHttpContent(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII));
+        LastHttpContent trailer = new DefaultLastHttpContent();
         trailer.setHeader("X-Trailer", true);
 
         assertFalse(embedder.writeInbound(message));
@@ -89,7 +90,7 @@ public class HttpChunkAggregatorTest {
         // this should trigger a messageReceived event so return true
         assertTrue(embedder.writeInbound(trailer));
         assertTrue(embedder.finish());
-        HttpMessage aggratedMessage = (HttpMessage) embedder.readInbound();
+        DefaultHttpRequest aggratedMessage = (DefaultHttpRequest) embedder.readInbound();
         assertNotNull(aggratedMessage);
 
         assertEquals(chunk1.getContent().readableBytes() + chunk2.getContent().readableBytes(), HttpHeaders.getContentLength(aggratedMessage));
@@ -104,12 +105,12 @@ public class HttpChunkAggregatorTest {
 
     @Test(expected = TooLongFrameException.class)
     public void testTooLongFrameException() {
-        HttpChunkAggregator aggr = new HttpChunkAggregator(4);
+        HttpObjectAggregator aggr = new HttpObjectAggregator(4);
         EmbeddedMessageChannel embedder = new EmbeddedMessageChannel(aggr);
-        HttpMessage message = new DefaultHttpMessage(HttpVersion.HTTP_1_1);
-        message.setTransferEncoding(HttpTransferEncoding.STREAMED);
-        HttpChunk chunk1 = new DefaultHttpChunk(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
-        HttpChunk chunk2 = new DefaultHttpChunk(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII));
+        HttpRequestHeader message = new DefaultHttpRequestHeader(HttpVersion.HTTP_1_1,
+                HttpMethod.GET, "http://localhost");
+        HttpContent chunk1 = new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
+        HttpContent chunk2 = new DefaultHttpContent(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII));
         assertFalse(embedder.writeInbound(message));
         assertFalse(embedder.writeInbound(chunk1));
         embedder.writeInbound(chunk2);
@@ -119,18 +120,18 @@ public class HttpChunkAggregatorTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void testInvalidConstructorUsage() {
-        new HttpChunkAggregator(0);
+        new HttpObjectAggregator(0);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testInvalidMaxCumulationBufferComponents() {
-        HttpChunkAggregator aggr= new HttpChunkAggregator(Integer.MAX_VALUE);
+        HttpObjectAggregator aggr= new HttpObjectAggregator(Integer.MAX_VALUE);
         aggr.setMaxCumulationBufferComponents(1);
     }
 
     @Test(expected = IllegalStateException.class)
     public void testSetMaxCumulationBufferComponentsAfterInit() throws Exception {
-        HttpChunkAggregator aggr = new HttpChunkAggregator(Integer.MAX_VALUE);
+        HttpObjectAggregator aggr = new HttpObjectAggregator(Integer.MAX_VALUE);
         ChannelHandlerContext ctx = EasyMock.createMock(ChannelHandlerContext.class);
         EasyMock.replay(ctx);
         aggr.beforeAdd(ctx);

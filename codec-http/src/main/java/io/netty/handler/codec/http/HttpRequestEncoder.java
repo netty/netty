@@ -20,15 +20,14 @@ import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
 
 /**
- * Encodes an {@link HttpRequest} or an {@link HttpChunk} into
+ * Encodes an {@link HttpRequestHeader} or an {@link HttpContent} into
  * a {@link ByteBuf}.
  */
-public class HttpRequestEncoder extends HttpMessageEncoder {
+public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequestHeader> {
     private static final char SLASH = '/';
 
     @Override
-    protected void encodeInitialLine(ByteBuf buf, HttpMessage message) throws Exception {
-        HttpRequest request = (HttpRequest) message;
+    protected void encodeInitialLine(ByteBuf buf, HttpRequestHeader request) throws Exception {
         buf.writeBytes(request.getMethod().toString().getBytes(CharsetUtil.US_ASCII));
         buf.writeByte(SP);
 

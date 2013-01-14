@@ -23,7 +23,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultHttpResponse;
-import io.netty.handler.codec.http.HttpChunkAggregator;
+import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpHeaders.Values;
 import io.netty.handler.codec.http.HttpRequest;
@@ -186,8 +186,8 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
             @Override
             public void operationComplete(ChannelFuture future) {
                 ChannelPipeline p = future.channel().pipeline();
-                if (p.get(HttpChunkAggregator.class) != null) {
-                    p.remove(HttpChunkAggregator.class);
+                if (p.get(HttpObjectAggregator.class) != null) {
+                    p.remove(HttpObjectAggregator.class);
                 }
                 p.get(HttpRequestDecoder.class).replace("wsdecoder",
                         new WebSocket00FrameDecoder(getMaxFramePayloadLength()));
