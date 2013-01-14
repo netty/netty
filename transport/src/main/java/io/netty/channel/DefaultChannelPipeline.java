@@ -611,25 +611,33 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         // Free all buffers before completing removal.
-        ctx.executor().execute(new Runnable() {
-            @Override
-            public void run() {
-                if (handler instanceof ChannelInboundHandler) {
-                    try {
-                        ((ChannelInboundHandler) handler).freeInboundBuffer(ctx);
-                    } catch (Exception e) {
-                        notifyHandlerException(e);
-                    }
+        if (channel.isRegistered()) {
+            ctx.executor().execute(new Runnable() {
+                @Override
+                public void run() {
+                    freeHandlerBuffers(handler, ctx);
                 }
-                if (handler instanceof ChannelOutboundHandler) {
-                    try {
-                        ((ChannelOutboundHandler) handler).freeOutboundBuffer(ctx);
-                    } catch (Exception e) {
-                        notifyHandlerException(e);
-                    }
-                }
+            });
+        } else {
+            freeHandlerBuffers(handler, ctx);
+        }
+    }
+
+    private void freeHandlerBuffers(ChannelHandler handler, ChannelHandlerContext ctx) {
+        if (handler instanceof ChannelInboundHandler) {
+            try {
+                ((ChannelInboundHandler) handler).freeInboundBuffer(ctx);
+            } catch (Exception e) {
+                notifyHandlerException(e);
             }
-        });
+        }
+        if (handler instanceof ChannelOutboundHandler) {
+            try {
+                ((ChannelOutboundHandler) handler).freeOutboundBuffer(ctx);
+            } catch (Exception e) {
+                notifyHandlerException(e);
+            }
+        }
     }
 
     @Override
