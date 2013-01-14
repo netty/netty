@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.ResourceLeak;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -33,10 +34,11 @@ import java.util.Queue;
  * and {@link Unpooled#wrappedBuffer(ByteBuffer)} instead of calling the
  * constructor explicitly.
  */
-@SuppressWarnings("restriction")
 final class UnpooledDirectByteBuf extends AbstractByteBuf {
 
+    private final ResourceLeak leak = leakDetector.open(this);
     private final ByteBufAllocator alloc;
+
     private ByteBuffer buffer;
     private ByteBuffer tmpNioBuf;
     private int capacity;
@@ -67,7 +69,6 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
 
         this.alloc = alloc;
         setByteBuffer(ByteBuffer.allocateDirect(initialCapacity));
-        enableDebugLeak();
     }
 
     /**
@@ -100,7 +101,6 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
         doNotFree = true;
         setByteBuffer(initialBuffer.slice().order(ByteOrder.BIG_ENDIAN));
         writerIndex(initialCapacity);
-        enableDebugLeak();
     }
 
     private void setByteBuffer(ByteBuffer buffer) {
@@ -459,7 +459,7 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    protected void doFree() {
+    public void free() {
         ByteBuffer buffer = this.buffer;
         if (buffer == null) {
             return;
@@ -467,12 +467,11 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
 
         this.buffer = null;
 
-        if (doNotFree) {
-            return;
-        }
-
         resumeIntermediaryDeallocations();
-        PlatformDependent.freeDirectBuffer(buffer);
+        if (!doNotFree) {
+            PlatformDependent.freeDirectBuffer(buffer);
+        }
+        leak.close();
     }
 
     @Override

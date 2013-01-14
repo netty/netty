@@ -357,7 +357,7 @@ final class UnpooledHeapByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    protected void doFree() {
+    public void free() {
         array = null;
     }
 

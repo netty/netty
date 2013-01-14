@@ -238,7 +238,7 @@ public class DuplicatedByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    protected void doFree() {
+    public void free() {
         throw new UnsupportedOperationException("derived");
     }
 

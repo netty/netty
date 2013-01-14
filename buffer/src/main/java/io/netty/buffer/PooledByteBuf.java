@@ -16,12 +16,16 @@
 
 package io.netty.buffer;
 
+import io.netty.util.ResourceLeak;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
 abstract class PooledByteBuf<T> extends AbstractByteBuf {
+
+    private final ResourceLeak leak = leakDetector.open(this);
 
     protected PoolChunk<T> chunk;
     protected long handle;
@@ -35,7 +39,6 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf {
 
     protected PooledByteBuf(int maxCapacity) {
         super(maxCapacity);
-        enableDebugLeak();
     }
 
     void init(PoolChunk<T> chunk, long handle, int offset, int length, int maxLength) {
@@ -174,13 +177,14 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf {
     }
 
     @Override
-    protected void doFree() {
+    public void free() {
         if (handle >= 0) {
             resumeIntermediaryDeallocations();
             final long handle = this.handle;
             this.handle = -1;
             memory = null;
             chunk.arena.free(chunk, handle);
+            leak.close();
         }
     }
 

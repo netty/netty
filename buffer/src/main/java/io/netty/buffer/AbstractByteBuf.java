@@ -15,20 +15,16 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.internal.StringUtil;
+import io.netty.util.ResourceLeakDetector;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.ref.ReferenceQueue;
-import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 
 /**
@@ -36,64 +32,7 @@ import java.util.concurrent.ConcurrentMap;
  */
 public abstract class AbstractByteBuf implements ByteBuf {
 
-    private static final boolean DEBUG_LEAK = true;
-    private static final int DEBUG_LEAK_SAMPLING_INTERVAL = 113;
-
-    private static volatile long leakCheckCnt;
-    private static final ReferenceQueue<AbstractByteBuf> bufRefQueue = new ReferenceQueue<AbstractByteBuf>();
-    private static final ConcurrentMap<WeakBufRef, Boolean> bufRefs = new ConcurrentHashMap<WeakBufRef, Boolean>();
-    private static final ConcurrentMap<String, Boolean> reportedLeaks = new ConcurrentHashMap<String, Boolean>();
-
-    private static final class WeakBufRef extends WeakReference<AbstractByteBuf> {
-        private final Class<?> bufType;
-        private final StackTraceElement[] stackTrace;
-        private volatile boolean freed;
-
-        public WeakBufRef(AbstractByteBuf referent, StackTraceElement[] stackTrace) {
-            super(referent, bufRefQueue);
-            bufType = referent.getClass();
-            this.stackTrace = stackTrace;
-            bufRefs.put(this, Boolean.TRUE);
-        }
-    }
-
-    private static void reportLeak() {
-        // Detect and report previous leaks.
-        WeakBufRef ref = (WeakBufRef) bufRefQueue.poll();
-        if (ref == null) {
-            return;
-        }
-
-        boolean removed = bufRefs.remove(ref);
-        assert removed;
-
-        if (ref.freed) {
-            return;
-        }
-
-        StackTraceElement[] stackTrace = ref.stackTrace;
-        StringBuilder msgBuf = new StringBuilder(4096);
-        msgBuf.append("ByteBuf has been GC'd before being freed: ");
-        msgBuf.append(ref.bufType.getName());
-
-        if (stackTrace == null || stackTrace.length == 0) {
-            msgBuf.append(" (no stack trace available)");
-        } else {
-            for (StackTraceElement e: stackTrace) {
-                if (e == null) {
-                    break;
-                }
-                msgBuf.append(StringUtil.NEWLINE);
-                msgBuf.append("    ");
-                msgBuf.append(e);
-            }
-        }
-
-        String msg = msgBuf.toString();
-        if (reportedLeaks.putIfAbsent(msg, Boolean.TRUE) == null) {
-            System.err.println(msg);
-        }
-    }
+    static final ResourceLeakDetector<ByteBuf> leakDetector = new ResourceLeakDetector<ByteBuf>(ByteBuf.class);
 
     private int readerIndex;
     private int writerIndex;
@@ -103,24 +42,12 @@ public abstract class AbstractByteBuf implements ByteBuf {
     private final int maxCapacity;
 
     private SwappedByteBuf swappedBuf;
-    private WeakBufRef selfRef; // Used only when DEBUG_LEAK is set
 
     protected AbstractByteBuf(int maxCapacity) {
         if (maxCapacity < 0) {
             throw new IllegalArgumentException("maxCapacity: " + maxCapacity + " (expected: >= 0)");
         }
         this.maxCapacity = maxCapacity;
-    }
-
-    protected final void enableDebugLeak() {
-        if (DEBUG_LEAK) {
-            if (++ leakCheckCnt % DEBUG_LEAK_SAMPLING_INTERVAL != 0) {
-                return;
-            }
-
-            selfRef = new WeakBufRef(this, Thread.currentThread().getStackTrace());
-            reportLeak();
-        }
     }
 
     @Override
@@ -1015,22 +942,6 @@ public abstract class AbstractByteBuf implements ByteBuf {
                "cap=" + capacity() +
                ')';
     }
-
-    @Override
-    public final void free() {
-        if (isFreed()) {
-            return;
-        }
-
-        WeakBufRef selfRef = this.selfRef;
-        if (selfRef != null) {
-            selfRef.freed = true;
-        }
-
-        doFree();
-    }
-
-    protected abstract void doFree();
 
     protected final void checkIndex(int index) {
         checkUnfreed();

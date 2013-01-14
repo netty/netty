@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.ResourceLeak;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -43,6 +44,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
     private static final ByteBuffer[] EMPTY_NIOBUFFERS = new ByteBuffer[0];
 
+    private final ResourceLeak leak = leakDetector.open(this);
     private final ByteBufAllocator alloc;
     private final boolean direct;
     private final List<Component> components = new ArrayList<Component>();
@@ -61,7 +63,6 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         this.alloc = alloc;
         this.direct = direct;
         this.maxNumComponents = maxNumComponents;
-        enableDebugLeak();
     }
 
     public DefaultCompositeByteBuf(ByteBufAllocator alloc, boolean direct, int maxNumComponents, ByteBuf... buffers) {
@@ -81,7 +82,6 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         addComponents0(0, buffers);
         consolidateIfNeeded();
         setIndex(0, capacity());
-        enableDebugLeak();
     }
 
     public DefaultCompositeByteBuf(
@@ -101,7 +101,6 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         addComponents0(0, buffers);
         consolidateIfNeeded();
         setIndex(0, capacity());
-        enableDebugLeak();
     }
 
     @Override
@@ -1537,12 +1536,18 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     }
 
     @Override
-    protected void doFree() {
+    public void free() {
+        if (freed) {
+            return;
+        }
+
         freed = true;
         resumeIntermediaryDeallocations();
         for (Component c: components) {
             c.freeIfNecessary();
         }
+
+        leak.close();
     }
 
     @Override
