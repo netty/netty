@@ -177,7 +177,7 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf {
     }
 
     @Override
-    public void free() {
+    public final void free() {
         if (handle >= 0) {
             resumeIntermediaryDeallocations();
             final long handle = this.handle;
