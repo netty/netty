@@ -578,7 +578,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
             }
         }
 
-        while (numHeaders -- > 0) {
+        while (numHeaders > 0) {
             int headerSize = this.headerSize;
             decompressed.markReaderIndex();
 
@@ -638,6 +638,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
                     return;
                 } else {
                     spdyHeaderBlock.addHeader(name, "");
+                    numHeaders --;
                     this.headerSize = headerSize;
                     continue;
                 }
@@ -683,6 +684,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
                 index ++;
                 offset = index;
             }
+            numHeaders --;
             this.headerSize = headerSize;
         }
         decompressed = null;
