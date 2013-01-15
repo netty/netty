@@ -694,7 +694,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public ByteBuf nextInboundByteBuffer() {
         DefaultChannelHandlerContext ctx = next;
-        final Thread currentThread = Thread.currentThread();
         for (;;) {
             if (ctx == null) {
                 if (prev != null) {
@@ -710,7 +709,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 }
             }
             if (ctx.hasInboundByteBuffer()) {
-                if (ctx.executor().inEventLoop(currentThread)) {
+                if (ctx.executor().inEventLoop()) {
                     return ctx.inboundByteBuffer();
                 } else {
                     ByteBridge bridge = ctx.inByteBridge.get();
@@ -730,7 +729,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public MessageBuf<Object> nextInboundMessageBuffer() {
         DefaultChannelHandlerContext ctx = next;
-        final Thread currentThread = Thread.currentThread();
         for (;;) {
             if (ctx == null) {
                 if (prev != null) {
@@ -747,7 +745,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             }
 
             if (ctx.hasInboundMessageBuffer()) {
-                if (ctx.executor().inEventLoop(currentThread)) {
+                if (ctx.executor().inEventLoop()) {
                     return ctx.inboundMessageBuffer();
                 } else {
                     MessageBridge bridge = ctx.inMsgBridge.get();
@@ -768,10 +766,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     public ByteBuf nextOutboundByteBuffer() {
         DefaultChannelHandlerContext ctx = prev;
         final DefaultChannelHandlerContext initialCtx = ctx;
-        final Thread currentThread = Thread.currentThread();
         for (;;) {
             if (ctx.hasOutboundByteBuffer()) {
-                if (ctx.executor().inEventLoop(currentThread)) {
+                if (ctx.executor().inEventLoop()) {
                     return ctx.outboundByteBuffer();
                 } else {
                     ByteBridge bridge = ctx.outByteBridge.get();
@@ -806,10 +803,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     public MessageBuf<Object> nextOutboundMessageBuffer() {
         DefaultChannelHandlerContext ctx = prev;
         final DefaultChannelHandlerContext initialCtx = ctx;
-        final Thread currentThread = Thread.currentThread();
         for (;;) {
             if (ctx.hasOutboundMessageBuffer()) {
-                if (ctx.executor().inEventLoop(currentThread)) {
+                if (ctx.executor().inEventLoop()) {
                     return ctx.outboundMessageBuffer();
                 } else {
                     MessageBridge bridge = ctx.outMsgBridge.get();
@@ -876,7 +872,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         final DefaultChannelHandlerContext next = findContextInbound();
         if (next != null) {
             EventExecutor executor = next.executor();
-            if (executor.inEventLoop() && prev != null) {
+            if (prev != null && executor.inEventLoop()) {
                 next.invokeChannelUnregistered();
             } else {
                 Runnable task = next.invokeChannelUnregisteredTask;
@@ -936,7 +932,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         final DefaultChannelHandlerContext next = findContextInbound();
         if (next != null) {
             EventExecutor executor = next.executor();
-            if (executor.inEventLoop() && prev != null) {
+            if (prev != null && executor.inEventLoop()) {
                 next.invokeChannelInactive();
             } else {
                 Runnable task = next.invokeChannelInactiveTask;
@@ -970,7 +966,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         final DefaultChannelHandlerContext next = this.next;
         if (next != null) {
             EventExecutor executor = next.executor();
-            if (executor.inEventLoop() && prev != null) {
+            if (prev != null && executor.inEventLoop()) {
                 next.invokeExceptionCaught(cause);
             } else {
                 try {
@@ -1101,7 +1097,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         final DefaultChannelHandlerContext next = findContextInbound();
         if (next != null) {
             EventExecutor executor = next.executor();
-            if (executor.inEventLoop() && prev != null) {
+            if (prev != null && executor.inEventLoop()) {
                 next.invokeInboundBufferSuspended();
             } else {
                 Runnable task = next.invokeInboundBufferSuspendedTask;
@@ -1552,7 +1548,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     void invokeFreeInboundBuffer() {
         EventExecutor executor = executor();
-        if (executor.inEventLoop() && prev != null) {
+        if (prev != null && executor.inEventLoop()) {
             invokeFreeInboundBuffer0();
         } else {
             Runnable task = invokeFreeInboundBuffer0Task;
