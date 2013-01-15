@@ -159,9 +159,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 throw new Error();
             }
         } else {
-            inByteBuf = null;
             inByteBridge = null;
-            inMsgBuf = null;
             inMsgBridge = null;
         }
 
@@ -175,11 +173,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             } else {
                 initOutboundBuffer();
             }
-        } else {
-            outByteBuf = null;
-            outByteBridge = null;
-            outMsgBuf = null;
-            outMsgBridge = null;
         }
 
         this.needsLazyBufInit = needsLazyBufInit;
