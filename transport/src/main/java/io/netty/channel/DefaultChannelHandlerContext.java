@@ -48,7 +48,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private final String name;
     private final Set<ChannelHandlerType> type;
     private final ChannelHandler handler;
-    private final boolean needsLazyBufInit;
+    private boolean needsLazyBufInit;
 
     // Will be set to null if no child executor should be used, otherwise it will be set to the
     // child executor.
@@ -165,7 +165,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
         if (handler instanceof ChannelOutboundHandler) {
             if (needsLazyBufInit) {
-                // Special case: if pref == null, it means this context for HeadHandler.
+                // Special case: it means this context is for HeadHandler.
                 // HeadHandler is an outbound handler instantiated by the constructor of DefaultChannelPipeline.
                 // Because Channel is not really fully initialized at this point, we should not call
                 // newOutboundBuffer() yet because it will usually lead to NPE.
@@ -181,6 +181,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private void lazyInitOutboundBuffer() {
         if (needsLazyBufInit) {
             if (outByteBuf == null && outMsgBuf == null) {
+                needsLazyBufInit = false;
                 EventExecutor exec = executor();
                 if (exec.inEventLoop()) {
                     initOutboundBuffer();
