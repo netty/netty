@@ -23,6 +23,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.util.DefaultAttributeMap;
 
 import java.net.SocketAddress;
+import java.nio.channels.ClosedChannelException;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Queue;
@@ -53,7 +54,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private final String name;
     private final Set<ChannelHandlerType> type;
     private final ChannelHandler handler;
-    final int flags;
+    private final int flags;
 
     // Will be set to null if no child executor should be used, otherwise it will be set to the
     // child executor.
@@ -74,163 +75,17 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private final AtomicReference<ByteBridge> inByteBridge;
     AtomicReference<ByteBridge> outByteBridge;
 
-    // Runnables that calls handlers
-    private final Runnable fireChannelRegisteredTask = new Runnable() {
-        @Override
-        public void run() {
-            DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
-            try {
-                ((ChannelStateHandler) ctx.handler).channelRegistered(ctx);
-            } catch (Throwable t) {
-                pipeline.notifyHandlerException(t);
-            }
-        }
-    };
-    private final Runnable fireChannelUnregisteredTask = new Runnable() {
-        @Override
-        public void run() {
-            DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
-            try {
-                ((ChannelStateHandler) ctx.handler).channelUnregistered(ctx);
-            } catch (Throwable t) {
-                pipeline.notifyHandlerException(t);
-            }
-        }
-    };
-    private final Runnable fireChannelActiveTask = new Runnable() {
-        @Override
-        public void run() {
-            DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
-            try {
-                ((ChannelStateHandler) ctx.handler).channelActive(ctx);
-            } catch (Throwable t) {
-                pipeline.notifyHandlerException(t);
-            }
-        }
-    };
-    private final Runnable fireChannelInactiveTask = new Runnable() {
-        @Override
-        public void run() {
-            DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
-            try {
-                ((ChannelStateHandler) ctx.handler).channelInactive(ctx);
-            } catch (Throwable t) {
-                pipeline.notifyHandlerException(t);
-            }
-        }
-    };
-    private final Runnable curCtxFireInboundBufferUpdatedTask = new Runnable() {
-        @Override
-        public void run() {
-            DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
-            ChannelStateHandler handler = (ChannelStateHandler) ctx.handler;
-            flushBridge();
-            try {
-                handler.inboundBufferUpdated(ctx);
-            } catch (Throwable t) {
-                pipeline.notifyHandlerException(t);
-            } finally {
-                if (handler instanceof ChannelInboundByteHandler) {
-                    try {
-                        ((ChannelInboundByteHandler) handler).discardInboundReadBytes(ctx);
-                    } catch (Throwable t) {
-                        pipeline.notifyHandlerException(t);
-                    }
-                }
-            }
-        }
-    };
-    private final Runnable nextCtxFireInboundBufferUpdatedTask = new Runnable() {
-        @Override
-        public void run() {
-            DefaultChannelHandlerContext next = findContextInbound(
-                    DefaultChannelHandlerContext.this.next, FLAG_STATE_HANDLER);
-            if (next != null) {
-                next.fillBridge();
-                EventExecutor executor = next.executor();
-                if (executor.inEventLoop()) {
-                    next.curCtxFireInboundBufferUpdatedTask.run();
-                } else {
-                    executor.execute(next.curCtxFireInboundBufferUpdatedTask);
-                }
-            }
-        }
-    };
-    private final Runnable fireInboundBufferSuspendedTask = new Runnable() {
-        @Override
-        public void run() {
-            DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
-            try {
-                ((ChannelStateHandler) ctx.handler).channelReadSuspended(ctx);
-            } catch (Throwable t) {
-                pipeline.notifyHandlerException(t);
-            }
-        }
-    };
-    private final Runnable freeInboundBufferTask = new Runnable() {
-        @Override
-        public void run() {
-            DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
-            if (ctx.handler instanceof ChannelInboundHandler) {
-                ChannelInboundHandler h = (ChannelInboundHandler) ctx.handler;
-                try {
-                    if (ctx.hasInboundByteBuffer()) {
-                        if (ctx.inByteBuf != null) {
-                            h.freeInboundBuffer(ctx);
-                        }
-                    } else {
-                        if (ctx.inMsgBuf != null) {
-                            h.freeInboundBuffer(ctx);
-                        }
-                    }
-                } catch (Throwable t) {
-                    pipeline.notifyHandlerException(t);
-                }
-            }
-
-            DefaultChannelHandlerContext nextCtx = findContextInbound(ctx.next, FLAG_STATE_HANDLER);
-            if (nextCtx != null) {
-                nextCtx.callFreeInboundBuffer();
-            } else {
-                // Freed all inbound buffers. Free all outbound buffers in a reverse order.
-                pipeline.lastContext(FLAG_OPERATION_HANDLER).callFreeOutboundBuffer();
-            }
-        }
-    };
-    private final Runnable freeOutboundBufferTask = new Runnable() {
-        @Override
-        public void run() {
-            DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
-            if (ctx.handler instanceof ChannelOutboundHandler) {
-                ChannelOutboundHandler h = (ChannelOutboundHandler) ctx.handler;
-                try {
-                    if (ctx.hasOutboundByteBuffer()) {
-                        if (ctx.outByteBuf != null) {
-                            h.freeOutboundBuffer(ctx);
-                        }
-                    } else {
-                        if (ctx.outMsgBuf != null) {
-                            h.freeOutboundBuffer(ctx);
-                        }
-                    }
-                } catch (Throwable t) {
-                    pipeline.notifyHandlerException(t);
-                }
-            }
-
-            DefaultChannelHandlerContext nextCtx = findContextOutbound(ctx.prev, FLAG_OPERATION_HANDLER);
-            if (nextCtx != null) {
-                nextCtx.callFreeOutboundBuffer();
-            }
-        }
-    };
-
-    final Runnable read0Task = new Runnable() {
-        @Override
-        public void run() {
-            pipeline.read0(DefaultChannelHandlerContext.this);
-        }
-    };
+    // Lazily instantiated tasks used to trigger events to a handler with different executor.
+    private Runnable invokeChannelRegisteredTask;
+    private Runnable invokeChannelUnregisteredTask;
+    private Runnable invokeChannelActiveTask;
+    private Runnable invokeChannelInactiveTask;
+    private Runnable invokeInboundBufferUpdatedTask;
+    private Runnable fireInboundBufferUpdated0Task;
+    private Runnable invokeInboundBufferSuspendedTask;
+    private Runnable invokeFreeInboundBuffer0Task;
+    private Runnable invokeFreeOutboundBuffer0Task;
+    private Runnable read0Task;
 
     @SuppressWarnings("unchecked")
     DefaultChannelHandlerContext(
@@ -947,53 +802,125 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public void fireChannelRegistered() {
-        DefaultChannelHandlerContext next = findContextInbound(this.next, FLAG_STATE_HANDLER);
+        final DefaultChannelHandlerContext next = findContextInbound(FLAG_STATE_HANDLER);
         if (next != null) {
             EventExecutor executor = next.executor();
             if (executor.inEventLoop()) {
-                next.fireChannelRegisteredTask.run();
+                next.invokeChannelRegistered();
             } else {
-                executor.execute(next.fireChannelRegisteredTask);
+                Runnable task = next.invokeChannelRegisteredTask;
+                if (task == null) {
+                    next.invokeChannelRegisteredTask = task = new Runnable() {
+                        @Override
+                        public void run() {
+                            next.invokeChannelRegistered();
+                        }
+                    };
+                }
+                executor.execute(task);
             }
+        }
+    }
+
+    private void invokeChannelRegistered() {
+        DefaultChannelHandlerContext ctx = this;
+        try {
+            ((ChannelStateHandler) ctx.handler).channelRegistered(ctx);
+        } catch (Throwable t) {
+            pipeline.notifyHandlerException(t);
         }
     }
 
     @Override
     public void fireChannelUnregistered() {
-        DefaultChannelHandlerContext next = findContextInbound(this.next, FLAG_STATE_HANDLER);
+        final DefaultChannelHandlerContext next = findContextInbound(FLAG_STATE_HANDLER);
         if (next != null) {
             EventExecutor executor = next.executor();
             if (executor.inEventLoop() && prev != null) {
-                next.fireChannelUnregisteredTask.run();
+                next.invokeChannelUnregistered();
             } else {
-                executor.execute(next.fireChannelUnregisteredTask);
+                Runnable task = next.invokeChannelUnregisteredTask;
+                if (task == null) {
+                    next.invokeChannelUnregisteredTask = task = new Runnable() {
+                        @Override
+                        public void run() {
+                            next.invokeChannelUnregistered();
+                        }
+                    };
+                }
+                executor.execute(task);
             }
+        }
+    }
+
+    private void invokeChannelUnregistered() {
+        DefaultChannelHandlerContext ctx = this;
+        try {
+            ((ChannelStateHandler) ctx.handler).channelUnregistered(ctx);
+        } catch (Throwable t) {
+            pipeline.notifyHandlerException(t);
         }
     }
 
     @Override
     public void fireChannelActive() {
-        DefaultChannelHandlerContext next = findContextInbound(this.next, FLAG_STATE_HANDLER);
+        final DefaultChannelHandlerContext next = findContextInbound(FLAG_STATE_HANDLER);
         if (next != null) {
             EventExecutor executor = next.executor();
             if (executor.inEventLoop()) {
-                next.fireChannelActiveTask.run();
+                next.invokeChannelActive();
             } else {
-                executor.execute(next.fireChannelActiveTask);
+                Runnable task = next.invokeChannelActiveTask;
+                if (task == null) {
+                    next.invokeChannelActiveTask = task = new Runnable() {
+                        @Override
+                        public void run() {
+                            next.invokeChannelActive();
+                        }
+                    };
+                }
+                executor.execute(task);
             }
+        }
+    }
+
+    private void invokeChannelActive() {
+        DefaultChannelHandlerContext ctx = this;
+        try {
+            ((ChannelStateHandler) ctx.handler).channelActive(ctx);
+        } catch (Throwable t) {
+            pipeline.notifyHandlerException(t);
         }
     }
 
     @Override
     public void fireChannelInactive() {
-        DefaultChannelHandlerContext next = findContextInbound(this.next, FLAG_STATE_HANDLER);
+        final DefaultChannelHandlerContext next = findContextInbound(FLAG_STATE_HANDLER);
         if (next != null) {
             EventExecutor executor = next.executor();
             if (executor.inEventLoop() && prev != null) {
-                next.fireChannelInactiveTask.run();
+                next.invokeChannelInactive();
             } else {
-                executor.execute(next.fireChannelInactiveTask);
+                Runnable task = next.invokeChannelInactiveTask;
+                if (task == null) {
+                    next.invokeChannelInactiveTask = task = new Runnable() {
+                        @Override
+                        public void run() {
+                            next.invokeChannelInactive();
+                        }
+                    };
+                }
+                executor.execute(task);
             }
+        }
+    }
+
+    private void invokeChannelInactive() {
+        DefaultChannelHandlerContext ctx = this;
+        try {
+            ((ChannelStateHandler) ctx.handler).channelInactive(ctx);
+        } catch (Throwable t) {
+            pipeline.notifyHandlerException(t);
         }
     }
 
@@ -1007,13 +934,13 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (next != null) {
             EventExecutor executor = next.executor();
             if (executor.inEventLoop() && prev != null) {
-                fireExceptionCaught0(next, cause);
+                next.invokeExceptionCaught(cause);
             } else {
                 try {
                     executor.execute(new Runnable() {
                         @Override
                         public void run() {
-                            fireExceptionCaught0(next, cause);
+                            next.invokeExceptionCaught(cause);
                         }
                     });
                 } catch (Throwable t) {
@@ -1031,9 +958,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
     }
 
-    private static void fireExceptionCaught0(DefaultChannelHandlerContext next, Throwable cause) {
+    private void invokeExceptionCaught(Throwable cause) {
         try {
-            next.handler().exceptionCaught(next, cause);
+            handler().exceptionCaught(this, cause);
         } catch (Throwable t) {
             if (logger.isWarnEnabled()) {
                 logger.warn(
@@ -1049,23 +976,27 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             throw new NullPointerException("event");
         }
 
-        DefaultChannelHandlerContext next = this.next;
+        final DefaultChannelHandlerContext next = this.next;
         if (next != null) {
             EventExecutor executor = next.executor();
             if (executor.inEventLoop()) {
-                try {
-                    next.handler().userEventTriggered(next, event);
-                } catch (Throwable t) {
-                    pipeline.notifyHandlerException(t);
-                }
+                next.invokeUserEventTriggered(event);
             } else {
                 executor.execute(new Runnable() {
                     @Override
                     public void run() {
-                        fireUserEventTriggered(event);
+                        next.invokeUserEventTriggered(event);
                     }
                 });
             }
+        }
+    }
+
+    private void invokeUserEventTriggered(Object event) {
+        try {
+            handler.userEventTriggered(next, event);
+        } catch (Throwable t) {
+            pipeline.notifyHandlerException(t);
         }
     }
 
@@ -1073,22 +1004,90 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     public void fireInboundBufferUpdated() {
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            nextCtxFireInboundBufferUpdatedTask.run();
+            fireInboundBufferUpdated0();
         } else {
-            executor.execute(nextCtxFireInboundBufferUpdatedTask);
+            Runnable task = fireInboundBufferUpdated0Task;
+            if (task == null) {
+                fireInboundBufferUpdated0Task = task = new Runnable() {
+                    @Override
+                    public void run() {
+                        fireInboundBufferUpdated0();
+                    }
+                };
+            }
+            executor.execute(task);
+        }
+    }
+
+    private void fireInboundBufferUpdated0() {
+        final DefaultChannelHandlerContext next = findContextInbound(FLAG_STATE_HANDLER);
+        if (next != null) {
+            next.fillBridge();
+            EventExecutor executor = next.executor();
+            if (executor.inEventLoop()) {
+                next.invokeInboundBufferUpdated();
+            } else {
+                Runnable task = next.invokeInboundBufferUpdatedTask;
+                if (task == null) {
+                    next.invokeInboundBufferUpdatedTask = task = new Runnable() {
+                        @Override
+                        public void run() {
+                            next.invokeInboundBufferUpdated();
+                        }
+                    };
+                }
+                executor.execute(task);
+            }
+        }
+    }
+
+    private void invokeInboundBufferUpdated() {
+        DefaultChannelHandlerContext ctx = this;
+        ChannelStateHandler handler = (ChannelStateHandler) ctx.handler;
+        flushBridge();
+        try {
+            handler.inboundBufferUpdated(ctx);
+        } catch (Throwable t) {
+            pipeline.notifyHandlerException(t);
+        } finally {
+            if (handler instanceof ChannelInboundByteHandler) {
+                try {
+                    ((ChannelInboundByteHandler) handler).discardInboundReadBytes(ctx);
+                } catch (Throwable t) {
+                    pipeline.notifyHandlerException(t);
+                }
+            }
         }
     }
 
     @Override
     public void fireInboundBufferSuspended() {
-        DefaultChannelHandlerContext next = findContextInbound(this.next, FLAG_STATE_HANDLER);
+        final DefaultChannelHandlerContext next = findContextInbound(FLAG_STATE_HANDLER);
         if (next != null) {
             EventExecutor executor = next.executor();
             if (executor.inEventLoop() && prev != null) {
-                next.fireInboundBufferSuspendedTask.run();
+                next.invokeInboundBufferSuspended();
             } else {
-                executor.execute(next.fireInboundBufferSuspendedTask);
+                Runnable task = next.invokeInboundBufferSuspendedTask;
+                if (task == null) {
+                    next.invokeInboundBufferSuspendedTask = task = new Runnable() {
+                        @Override
+                        public void run() {
+                            next.invokeInboundBufferSuspended();
+                        }
+                    };
+                }
+                executor.execute(task);
             }
+        }
+    }
+
+    private void invokeInboundBufferSuspended() {
+        DefaultChannelHandlerContext ctx = this;
+        try {
+            ((ChannelStateHandler) ctx.handler).channelReadSuspended(ctx);
+        } catch (Throwable t) {
+            pipeline.notifyHandlerException(t);
         }
     }
 
@@ -1134,7 +1133,35 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-        return pipeline.bind(findContextOutbound(prev, FLAG_OPERATION_HANDLER), localAddress, promise);
+        return findContextOutbound(FLAG_OPERATION_HANDLER).invokeBind(localAddress, promise);
+    }
+
+    private ChannelFuture invokeBind(final SocketAddress localAddress, final ChannelPromise promise) {
+        if (localAddress == null) {
+            throw new NullPointerException("localAddress");
+        }
+        validateFuture(promise);
+
+        EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            invokeBind0(localAddress, promise);
+        } else {
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    invokeBind0(localAddress, promise);
+                }
+            });
+        }
+        return promise;
+    }
+
+    private void invokeBind0(SocketAddress localAddress, ChannelPromise promise) {
+        try {
+            ((ChannelOperationHandler) handler).bind(this, localAddress, promise);
+        } catch (Throwable t) {
+            pipeline.notifyHandlerException(t);
+        }
     }
 
     @Override
@@ -1144,42 +1171,24 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-        return pipeline.connect(
-                findContextOutbound(prev, FLAG_OPERATION_HANDLER), remoteAddress, localAddress, promise);
+        return findContextOutbound(FLAG_OPERATION_HANDLER).invokeConnect(remoteAddress, localAddress, promise);
     }
 
-    @Override
-    public ChannelFuture disconnect(ChannelPromise promise) {
-        return pipeline.disconnect(findContextOutbound(prev, FLAG_OPERATION_HANDLER), promise);
-    }
+    private ChannelFuture invokeConnect(
+            final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
+        if (remoteAddress == null) {
+            throw new NullPointerException("remoteAddress");
+        }
+        validateFuture(promise);
 
-    @Override
-    public ChannelFuture close(ChannelPromise promise) {
-        return pipeline.close(findContextOutbound(prev, FLAG_OPERATION_HANDLER), promise);
-    }
-
-    @Override
-    public ChannelFuture deregister(ChannelPromise promise) {
-        return pipeline.deregister(findContextOutbound(prev, FLAG_OPERATION_HANDLER), promise);
-    }
-
-    @Override
-    public void read() {
-        pipeline.read(findContextOutbound(prev, FLAG_OPERATION_HANDLER));
-    }
-
-    @Override
-    public ChannelFuture flush(final ChannelPromise promise) {
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            DefaultChannelHandlerContext prev = findContextOutbound(this.prev, FLAG_OPERATION_HANDLER);
-            prev.fillBridge();
-            pipeline.flush(prev, promise);
+            invokeConnect0(remoteAddress, localAddress, promise);
         } else {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    flush(promise);
+                    invokeConnect0(remoteAddress, localAddress, promise);
                 }
             });
         }
@@ -1187,27 +1196,410 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         return promise;
     }
 
-    @Override
-    public ChannelFuture write(Object message, ChannelPromise promise) {
-        return pipeline.write(prev, message, promise);
-    }
-
-    void callFreeInboundBuffer() {
-        EventExecutor executor = executor();
-        if (executor.inEventLoop() && prev != null) {
-            freeInboundBufferTask.run();
-        } else {
-            executor.execute(freeInboundBufferTask);
+    private void invokeConnect0(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+        try {
+            ((ChannelOperationHandler) handler).connect(this, remoteAddress, localAddress, promise);
+        } catch (Throwable t) {
+            pipeline.notifyHandlerException(t);
         }
     }
 
-    /** Invocation initiated by {@link #freeInboundBufferTask} after freeing all inbound buffers. */
-    private void callFreeOutboundBuffer() {
+    @Override
+    public ChannelFuture disconnect(ChannelPromise promise) {
+        return findContextOutbound(FLAG_OPERATION_HANDLER).invokeDisconnect(promise);
+    }
+
+    private ChannelFuture invokeDisconnect(final ChannelPromise promise) {
+        // Translate disconnect to close if the channel has no notion of disconnect-reconnect.
+        // So far, UDP/IP is the only transport that has such behavior.
+        if (!channel.metadata().hasDisconnect()) {
+            return invokeClose(promise);
+        }
+
+        validateFuture(promise);
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            freeOutboundBufferTask.run();
+            invokeDisconnect0(promise);
         } else {
-            executor.execute(freeOutboundBufferTask);
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    invokeDisconnect0(promise);
+                }
+            });
+        }
+
+        return promise;
+    }
+
+    private void invokeDisconnect0(ChannelPromise promise) {
+        try {
+            ((ChannelOperationHandler) handler).disconnect(this, promise);
+        } catch (Throwable t) {
+            pipeline.notifyHandlerException(t);
+        }
+    }
+
+    @Override
+    public ChannelFuture close(ChannelPromise promise) {
+        return findContextOutbound(FLAG_OPERATION_HANDLER).invokeClose(promise);
+    }
+
+    private ChannelFuture invokeClose(final ChannelPromise promise) {
+        validateFuture(promise);
+        EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            invokeClose0(promise);
+        } else {
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    invokeClose0(promise);
+                }
+            });
+        }
+
+        return promise;
+    }
+
+    private void invokeClose0(ChannelPromise promise) {
+        try {
+            ((ChannelOperationHandler) handler).close(this, promise);
+        } catch (Throwable t) {
+            pipeline.notifyHandlerException(t);
+        }
+    }
+
+    @Override
+    public ChannelFuture deregister(ChannelPromise promise) {
+        return findContextOutbound(FLAG_OPERATION_HANDLER).invokeDeregister(promise);
+    }
+
+    private ChannelFuture invokeDeregister(final ChannelPromise promise) {
+        validateFuture(promise);
+        EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            invokeDeregister0(promise);
+        } else {
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    invokeDeregister0(promise);
+                }
+            });
+        }
+
+        return promise;
+    }
+
+    private void invokeDeregister0(ChannelPromise promise) {
+        try {
+            ((ChannelOperationHandler) handler).deregister(this, promise);
+        } catch (Throwable t) {
+            pipeline.notifyHandlerException(t);
+        }
+    }
+
+    @Override
+    public void read() {
+        findContextOutbound(FLAG_OPERATION_HANDLER).invokeRead();
+    }
+
+    private void invokeRead() {
+        EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            invokeRead0();
+        } else {
+            Runnable task = read0Task;
+            if (task == null) {
+                read0Task = task = new Runnable() {
+                    @Override
+                    public void run() {
+                        invokeRead0();
+                    }
+                };
+            }
+            executor.execute(task);
+        }
+    }
+
+    private void invokeRead0() {
+        try {
+            ((ChannelOperationHandler) handler).read(this);
+        } catch (Throwable t) {
+            pipeline.notifyHandlerException(t);
+        }
+    }
+
+    @Override
+    public ChannelFuture flush(final ChannelPromise promise) {
+        EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            invokePrevFlush(promise);
+        } else {
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    invokePrevFlush(promise);
+                }
+            });
+        }
+
+        return promise;
+    }
+
+    private void invokePrevFlush(ChannelPromise promise) {
+        DefaultChannelHandlerContext prev = findContextOutbound(FLAG_OPERATION_HANDLER);
+        prev.fillBridge();
+        prev.invokeFlush(promise);
+    }
+
+    private ChannelFuture invokeFlush(final ChannelPromise promise) {
+        validateFuture(promise);
+        EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            invokeFlush0(promise);
+        } else {
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    invokeFlush0(promise);
+                }
+            });
+        }
+
+        return promise;
+    }
+
+    private void invokeFlush0(ChannelPromise promise) {
+        if (!channel.isRegistered() && !channel.isActive()) {
+            promise.setFailure(new ClosedChannelException());
+            return;
+        }
+
+        ChannelOperationHandler handler = (ChannelOperationHandler) this.handler;
+        try {
+            flushBridge();
+            handler.flush(this, promise);
+        } catch (Throwable t) {
+            pipeline.notifyHandlerException(t);
+        } finally {
+            if (handler instanceof ChannelOutboundByteHandler) {
+                try {
+                    ((ChannelOutboundByteHandler) handler).discardOutboundReadBytes(this);
+                } catch (Throwable t) {
+                    pipeline.notifyHandlerException(t);
+                }
+            }
+        }
+    }
+
+    @Override
+    public ChannelFuture sendFile(FileRegion region) {
+        return sendFile(region, newPromise());
+    }
+
+    @Override
+    public ChannelFuture sendFile(FileRegion region, ChannelPromise promise) {
+        return findContextOutbound(FLAG_OPERATION_HANDLER).invokeSendFile(region, promise);
+    }
+
+    private ChannelFuture invokeSendFile(final FileRegion region, final ChannelPromise promise) {
+        if (region == null) {
+            throw new NullPointerException("region");
+        }
+        validateFuture(promise);
+
+        EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            invokeSendFile0(region, promise);
+        } else {
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    invokeSendFile0(region, promise);
+                }
+            });
+        }
+
+        return promise;
+    }
+
+    private void invokeSendFile0(FileRegion region, ChannelPromise promise) {
+        try {
+            flushBridge();
+            ((ChannelOperationHandler) handler).sendFile(this, region, promise);
+        } catch (Throwable t) {
+            pipeline.notifyHandlerException(t);
+        }
+    }
+
+    @Override
+    public ChannelFuture write(final Object message, final ChannelPromise promise) {
+        if (message instanceof FileRegion) {
+            return sendFile((FileRegion) message, promise);
+        }
+
+        if (message == null) {
+            throw new NullPointerException("message");
+        }
+        validateFuture(promise);
+
+        DefaultChannelHandlerContext ctx = prev;
+        final DefaultChannelHandlerContext initialCtx = ctx;
+        EventExecutor executor;
+        boolean msgBuf = false;
+        for (;;) {
+            if (ctx.hasOutboundMessageBuffer()) {
+                msgBuf = true;
+                executor = ctx.executor();
+                break;
+            }
+
+            if (message instanceof ByteBuf && ctx.hasOutboundByteBuffer()) {
+                executor = ctx.executor();
+                break;
+            }
+
+            ctx = ctx.prev;
+
+            if (ctx == null) {
+                if (initialCtx.next != null) {
+                    throw new NoSuchBufferException(String.format(
+                            "the handler '%s' could not find a %s which accepts a %s, and " +
+                                    "the transport does not accept it as-is.",
+                            initialCtx.next.name(),
+                            ChannelOutboundHandler.class.getSimpleName(),
+                            message.getClass().getSimpleName()));
+                } else {
+                    throw new NoSuchBufferException(String.format(
+                            "the pipeline does not contain a %s which accepts a %s, and " +
+                                    "the transport does not accept it as-is.",
+                            ChannelOutboundHandler.class.getSimpleName(),
+                            message.getClass().getSimpleName()));
+                }
+            }
+        }
+
+        if (executor.inEventLoop()) {
+            ctx.write0(message, promise, msgBuf);
+            return promise;
+        }
+
+        final boolean msgBuf0 = msgBuf;
+        final DefaultChannelHandlerContext ctx0 = ctx;
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                ctx0.write0(message, promise, msgBuf0);
+            }
+        });
+
+        return promise;
+    }
+
+    private void write0(Object message, ChannelPromise promise, boolean msgBuf) {
+        if (!channel.isRegistered() && !channel.isActive()) {
+            promise.setFailure(new ClosedChannelException());
+            return;
+        }
+
+        if (msgBuf) {
+            outboundMessageBuffer().add(message);
+        } else {
+            ByteBuf buf = (ByteBuf) message;
+            outboundByteBuffer().writeBytes(buf, buf.readerIndex(), buf.readableBytes());
+        }
+        invokeFlush0(promise);
+    }
+
+    void invokeFreeInboundBuffer() {
+        EventExecutor executor = executor();
+        if (executor.inEventLoop() && prev != null) {
+            invokeFreeInboundBuffer0();
+        } else {
+            Runnable task = invokeFreeInboundBuffer0Task;
+            if (task == null) {
+                invokeFreeInboundBuffer0Task = task = new Runnable() {
+                    @Override
+                    public void run() {
+                        invokeFreeInboundBuffer0();
+                    }
+                };
+            }
+            executor.execute(task);
+        }
+    }
+
+    private void invokeFreeInboundBuffer0() {
+        DefaultChannelHandlerContext ctx = this;
+        if (ctx.handler instanceof ChannelInboundHandler) {
+            ChannelInboundHandler h = (ChannelInboundHandler) ctx.handler;
+            try {
+                if (ctx.hasInboundByteBuffer()) {
+                    if (ctx.inByteBuf != null) {
+                        h.freeInboundBuffer(ctx);
+                    }
+                } else {
+                    if (ctx.inMsgBuf != null) {
+                        h.freeInboundBuffer(ctx);
+                    }
+                }
+            } catch (Throwable t) {
+                pipeline.notifyHandlerException(t);
+            }
+        }
+
+        DefaultChannelHandlerContext nextCtx = ctx.findContextInbound(FLAG_STATE_HANDLER);
+        if (nextCtx != null) {
+            nextCtx.invokeFreeInboundBuffer();
+        } else {
+            // Freed all inbound buffers. Free all outbound buffers in a reverse order.
+            pipeline.tail.findContextOutbound(FLAG_OPERATION_HANDLER).invokeFreeOutboundBuffer();
+        }
+    }
+
+    /** Invocation initiated by {@link #invokeFreeInboundBuffer0()} after freeing all inbound buffers. */
+    private void invokeFreeOutboundBuffer() {
+        EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            invokeFreeOutboundBuffer0();
+        } else {
+            Runnable task = invokeFreeOutboundBuffer0Task;
+            if (task == null) {
+                invokeFreeOutboundBuffer0Task = task = new Runnable() {
+                    @Override
+                    public void run() {
+                        invokeFreeOutboundBuffer0();
+                    }
+                };
+            }
+            executor.execute(task);
+        }
+    }
+
+    private void invokeFreeOutboundBuffer0() {
+        DefaultChannelHandlerContext ctx = this;
+        if (ctx.handler instanceof ChannelOutboundHandler) {
+            ChannelOutboundHandler h = (ChannelOutboundHandler) ctx.handler;
+            try {
+                if (ctx.hasOutboundByteBuffer()) {
+                    if (ctx.outByteBuf != null) {
+                        h.freeOutboundBuffer(ctx);
+                    }
+                } else {
+                    if (ctx.outMsgBuf != null) {
+                        h.freeOutboundBuffer(ctx);
+                    }
+                }
+            } catch (Throwable t) {
+                pipeline.notifyHandlerException(t);
+            }
+        }
+
+        DefaultChannelHandlerContext nextCtx = ctx.findContextOutbound(FLAG_OPERATION_HANDLER);
+        if (nextCtx != null) {
+            nextCtx.invokeFreeOutboundBuffer();
         }
     }
 
@@ -1224,6 +1616,44 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public ChannelFuture newFailedFuture(Throwable cause) {
         return channel.newFailedFuture(cause);
+    }
+
+    private void validateFuture(ChannelFuture future) {
+        if (future == null) {
+            throw new NullPointerException("future");
+        }
+        if (future.channel() != channel) {
+            throw new IllegalArgumentException(String.format(
+                    "future.channel does not match: %s (expected: %s)", future.channel(), channel));
+        }
+        if (future.isDone()) {
+            throw new IllegalArgumentException("future already done");
+        }
+        if (future instanceof ChannelFuture.Unsafe) {
+            throw new IllegalArgumentException("internal use only future not allowed");
+        }
+    }
+
+    private DefaultChannelHandlerContext findContextInbound(int flag) {
+        DefaultChannelHandlerContext realCtx = this;
+        do {
+            realCtx = realCtx.next;
+            if (realCtx == null) {
+                return null;
+            }
+        } while ((realCtx.flags & flag) == 0);
+        return realCtx;
+    }
+
+    private DefaultChannelHandlerContext findContextOutbound(int flag) {
+        DefaultChannelHandlerContext realCtx = this;
+        do {
+            realCtx = realCtx.prev;
+            if (realCtx == null) {
+                return null;
+            }
+        } while ((realCtx.flags & flag) == 0);
+        return realCtx;
     }
 
     static final class MessageBridge {
@@ -1303,15 +1733,5 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 }
             }
         }
-    }
-
-    @Override
-    public ChannelFuture sendFile(FileRegion region) {
-        return pipeline.sendFile(findContextOutbound(prev, FLAG_OPERATION_HANDLER), region, newPromise());
-    }
-
-    @Override
-    public ChannelFuture sendFile(FileRegion region, ChannelPromise promise) {
-        return pipeline.sendFile(findContextOutbound(prev, FLAG_OPERATION_HANDLER), region, promise);
     }
 }
