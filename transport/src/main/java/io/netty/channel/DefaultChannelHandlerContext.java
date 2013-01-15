@@ -82,15 +82,24 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (executor.inEventLoop()) {
             fireChannelRegisteredTask0();
         } else {
+            Runnable task = fireChannelRegisteredTask;
             if (fireChannelRegisteredTask == null) {
-                fireChannelRegisteredTask = new Runnable() {
+                task = new Runnable() {
                     @Override
                     public void run() {
+                        if (fireChannelRegisteredTask == null) {
+                            fireChannelRegisteredTask = new Runnable() {
+                                @Override
+                                public void run() {
+                                    fireChannelRegisteredTask0();
+                                }
+                            };
+                        }
                         fireChannelRegisteredTask0();
                     }
                 };
             }
-            executor.execute(fireChannelRegisteredTask);
+            executor.execute(task);
         }
     }
 
@@ -109,15 +118,23 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (executor.inEventLoop() && caller.prev != null) {
             fireChannelUnregisteredTask0();
         } else {
-            if (fireChannelUnregisteredTask == null) {
-                fireChannelUnregisteredTask = new Runnable() {
+            Runnable task = fireChannelUnregisteredTask;
+            if (task == null) {
+                task = new Runnable() {
                     @Override
                     public void run() {
+                        if (fireChannelUnregisteredTask == null) {
+                            fireChannelUnregisteredTask = new Runnable() {
+                                @Override
+                                public void run() {
+                                    fireChannelUnregisteredTask0();                                }
+                            };
+                        }
                         fireChannelUnregisteredTask0();
                     }
                 };
             }
-            executor.execute(fireChannelUnregisteredTask);
+            executor.execute(task);
         }
     }
     private void fireChannelUnregisteredTask0() {
@@ -135,15 +152,24 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (executor.inEventLoop()) {
             fireChannelActiveTask0();
         } else {
-            if (fireChannelActiveTask == null) {
-                fireChannelActiveTask = new Runnable() {
+            Runnable task = fireChannelActiveTask;
+            if (task == null) {
+                task = new Runnable() {
                     @Override
                     public void run() {
+                        if (fireChannelActiveTask == null) {
+                            fireChannelActiveTask = new Runnable() {
+                                @Override
+                                public void run() {
+                                    fireChannelActiveTask0();
+                                }
+                            };
+                        }
                         fireChannelActiveTask0();
                     }
                 };
             }
-            executor.execute(fireChannelActiveTask);
+            executor.execute(task);
         }
     }
 
@@ -162,15 +188,24 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (executor.inEventLoop() && caller.prev != null) {
             fireChannelInactiveTask0();
         } else {
-            if (fireChannelInactiveTask == null) {
-                fireChannelInactiveTask = new Runnable() {
+            Runnable task = fireChannelInactiveTask;
+            if (task == null) {
+                task = new Runnable() {
                     @Override
                     public void run() {
+                        if (fireChannelInactiveTask == null) {
+                            fireChannelInactiveTask = new Runnable() {
+                                @Override
+                                public void run() {
+                                    fireChannelInactiveTask0();
+                                }
+                            };
+                        }
                         fireChannelInactiveTask0();
                     }
                 };
             }
-            executor.execute(fireChannelInactiveTask);
+            executor.execute(task);
         }
     }
 
@@ -183,20 +218,30 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     private volatile Runnable curCtxFireInboundBufferUpdatedTask;
+
     private void curCtxFireInboundBufferUpdatedTask() {
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
             curCtxFireInboundBufferUpdatedTask0();
         } else {
-            if (curCtxFireInboundBufferUpdatedTask == null) {
-                curCtxFireInboundBufferUpdatedTask = new Runnable() {
+            Runnable task = curCtxFireInboundBufferUpdatedTask;
+            if (task == null) {
+                task = new Runnable() {
                     @Override
                     public void run() {
+                        if (curCtxFireInboundBufferUpdatedTask == null) {
+                            curCtxFireInboundBufferUpdatedTask = new Runnable() {
+                                @Override
+                                public void run() {
+                                    curCtxFireInboundBufferUpdatedTask0();
+                                }
+                            };
+                        }
                         curCtxFireInboundBufferUpdatedTask0();
                     }
                 };
             }
-            executor.execute(curCtxFireInboundBufferUpdatedTask);
+            executor.execute(task);
         }
     }
 
@@ -219,20 +264,30 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     private volatile Runnable nextCtxFireInboundBufferUpdatedTask;
+
     private void nextCtxFireInboundBufferUpdatedTask() {
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
             nextCtxFireInboundBufferUpdatedTask0();
         } else {
-            if (nextCtxFireInboundBufferUpdatedTask == null) {
-                nextCtxFireInboundBufferUpdatedTask = new Runnable() {
+            Runnable task = nextCtxFireInboundBufferUpdatedTask;
+            if (task == null) {
+                task = new Runnable() {
                     @Override
                     public void run() {
+                        if (nextCtxFireInboundBufferUpdatedTask == null) {
+                            nextCtxFireInboundBufferUpdatedTask = new Runnable() {
+                                @Override
+                                public void run() {
+                                    nextCtxFireInboundBufferUpdatedTask0();
+                                }
+                            };
+                        }
                         nextCtxFireInboundBufferUpdatedTask0();
                     }
                 };
             }
-            executor.execute(nextCtxFireInboundBufferUpdatedTask);
+            executor.execute(task);
         }
     }
 
@@ -252,15 +307,24 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (executor.inEventLoop() && caller.prev != null) {
             fireInboundBufferSuspendedTask0();
         } else {
-            if (fireInboundBufferSuspendedTask == null) {
-                fireInboundBufferSuspendedTask = new Runnable() {
+            Runnable task = fireInboundBufferSuspendedTask;
+            if (task == null) {
+                task = new Runnable() {
                     @Override
                     public void run() {
+                        if (fireInboundBufferSuspendedTask == null) {
+                            fireInboundBufferSuspendedTask = new Runnable() {
+                                @Override
+                                public void run() {
+                                    fireInboundBufferSuspendedTask0();
+                                }
+                            };
+                        }
                         fireInboundBufferSuspendedTask0();
                     }
                 };
             }
-            executor.execute(fireInboundBufferSuspendedTask);
+            executor.execute(task);
         }
     }
 
@@ -279,15 +343,24 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (executor.inEventLoop() && prev != null) {
             freeInboundBufferTask0();
         } else {
-            if (freeInboundBufferTask == null) {
-                freeInboundBufferTask = new Runnable() {
+            Runnable task = freeInboundBufferTask;
+            if (task == null) {
+                task = new Runnable() {
                     @Override
                     public void run() {
+                        if (freeInboundBufferTask == null) {
+                            freeInboundBufferTask = new Runnable() {
+                                @Override
+                                public void run() {
+                                    freeInboundBufferTask0();
+                                }
+                            };
+                        }
                         freeInboundBufferTask0();
                     }
                 };
             }
-            executor.execute(freeInboundBufferTask);
+            executor.execute(task);
         }
     }
 
@@ -325,15 +398,24 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (executor.inEventLoop()) {
             freeOutboundBufferTask0();
         } else {
-            if (freeOutboundBufferTask == null) {
-                freeOutboundBufferTask = new Runnable() {
+            Runnable task = freeOutboundBufferTask;
+            if (task == null) {
+                task = new Runnable() {
                     @Override
                     public void run() {
+                        if (freeOutboundBufferTask == null) {
+                            freeOutboundBufferTask = new Runnable() {
+                                @Override
+                                public void run() {
+                                    freeOutboundBufferTask0();
+                                }
+                            };
+                        }
                         freeOutboundBufferTask0();
                     }
                 };
             }
-            executor.execute(freeOutboundBufferTask);
+            executor.execute(task);
         }
     }
 
