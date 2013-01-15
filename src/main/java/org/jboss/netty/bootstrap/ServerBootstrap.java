@@ -20,6 +20,7 @@ import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
@@ -27,6 +28,7 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ChildChannelStateEvent;
+import org.jboss.netty.channel.DefaultChannelFuture;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.ServerChannelFactory;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
@@ -36,9 +38,6 @@ import java.net.SocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 import static org.jboss.netty.channel.Channels.*;
 
@@ -232,6 +231,8 @@ public class ServerBootstrap extends Bootstrap {
      * b.bind(b.getOption("localAddress"));
      * </pre>
      *
+     * This operation will block until the channel is bound.
+     *
      * @return a new bound channel which accepts incoming connections
      *
      * @throws IllegalStateException
@@ -252,7 +253,8 @@ public class ServerBootstrap extends Bootstrap {
     }
 
     /**
-     * Creates a new channel which is bound to the specified local address.
+     * Creates a new channel which is bound to the specified local address. This operation will block until
+     * the channel is bound.
      *
      * @return a new bound channel which accepts incoming connections
      *
@@ -261,14 +263,30 @@ public class ServerBootstrap extends Bootstrap {
      *                      bind it to the local address
      */
     public Channel bind(final SocketAddress localAddress) {
+        ChannelFuture future = bindAsync(localAddress);
+
+        // Wait for the future.
+        future.awaitUninterruptibly();
+        if (!future.isSuccess()) {
+            future.getChannel().close().awaitUninterruptibly();
+            throw new ChannelException("Failed to bind to: " + localAddress, future.getCause());
+        }
+
+        return future.getChannel();
+    }
+
+    /**
+     * Creates a new channel which is bound to the specified local address.
+     *
+     * @return a new {@link ChannelFuture} which will be notified once the Channel is
+     * bound and accepts incoming connections
+     *
+     */
+    public ChannelFuture bindAsync(final SocketAddress localAddress) {
         if (localAddress == null) {
             throw new NullPointerException("localAddress");
         }
-
-        final BlockingQueue<ChannelFuture> futureQueue =
-            new LinkedBlockingQueue<ChannelFuture>();
-
-        ChannelHandler binder = new Binder(localAddress, futureQueue);
+        Binder binder = new Binder(localAddress);
         ChannelHandler parentHandler = getParentHandler();
 
         ChannelPipeline bossPipeline = pipeline();
@@ -278,42 +296,29 @@ public class ServerBootstrap extends Bootstrap {
         }
 
         Channel channel = getFactory().newChannel(bossPipeline);
-
-        // Wait until the future is available.
-        ChannelFuture future = null;
-        boolean interrupted = false;
-        do {
-            try {
-                future = futureQueue.poll(Integer.MAX_VALUE, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                interrupted = true;
+        final ChannelFuture bfuture = new DefaultChannelFuture(channel, false);
+        binder.bindFuture.addListener(new ChannelFutureListener() {
+            public void operationComplete(ChannelFuture future) throws Exception {
+                if (future.isSuccess()) {
+                    bfuture.setSuccess();
+                } else {
+                    // Call close on bind failure
+                    bfuture.getChannel().close();
+                    bfuture.setFailure(future.getCause());
+                }
             }
-        } while (future == null);
-
-        if (interrupted) {
-            Thread.currentThread().interrupt();
-        }
-
-        // Wait for the future.
-        future.awaitUninterruptibly();
-        if (!future.isSuccess()) {
-            future.getChannel().close().awaitUninterruptibly();
-            throw new ChannelException("Failed to bind to: " + localAddress, future.getCause());
-        }
-
-        return channel;
+        });
+        return bfuture;
     }
 
     private final class Binder extends SimpleChannelUpstreamHandler {
 
         private final SocketAddress localAddress;
-        private final BlockingQueue<ChannelFuture> futureQueue;
         private final Map<String, Object> childOptions =
             new HashMap<String, Object>();
-
-        Binder(SocketAddress localAddress, BlockingQueue<ChannelFuture> futureQueue) {
+        private final DefaultChannelFuture bindFuture = new DefaultChannelFuture(null, false);
+        Binder(SocketAddress localAddress) {
             this.localAddress = localAddress;
-            this.futureQueue = futureQueue;
         }
 
         @Override
@@ -343,8 +348,15 @@ public class ServerBootstrap extends Bootstrap {
                 ctx.sendUpstream(evt);
             }
 
-            boolean finished = futureQueue.offer(evt.getChannel().bind(localAddress));
-            assert finished;
+            evt.getChannel().bind(localAddress).addListener(new ChannelFutureListener() {
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    if (future.isSuccess()) {
+                        bindFuture.setSuccess();
+                    } else {
+                        bindFuture.setFailure(future.getCause());
+                    }
+                }
+            });
         }
 
         @Override
@@ -364,8 +376,7 @@ public class ServerBootstrap extends Bootstrap {
         public void exceptionCaught(
                 ChannelHandlerContext ctx, ExceptionEvent e)
                 throws Exception {
-            boolean finished = futureQueue.offer(failedFuture(e.getChannel(), e.getCause()));
-            assert finished;
+            bindFuture.setFailure(e.getCause());
             ctx.sendUpstream(e);
         }
     }
