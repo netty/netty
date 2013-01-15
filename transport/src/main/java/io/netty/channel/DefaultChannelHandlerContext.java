@@ -1056,8 +1056,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         final DefaultChannelHandlerContext next = findContextInbound();
         if (next != null) {
             next.fillBridge();
-            EventExecutor executor = next.executor();
-            if (executor.inEventLoop()) {
+            // This comparison is safe because this method is always executed from the executor.
+            if (next.executor == executor) {
                 next.invokeInboundBufferUpdated();
             } else {
                 Runnable task = next.invokeInboundBufferUpdatedTask;
@@ -1069,7 +1069,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                         }
                     };
                 }
-                executor.execute(task);
+                next.executor().execute(task);
             }
         }
     }
