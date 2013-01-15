@@ -275,7 +275,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             }
         }
 
-        lazyInitOutboundBuffer();
         if (outMsgBridge != null) {
             MessageBridge bridge = outMsgBridge.get();
             if (bridge != null) {
@@ -377,59 +376,53 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public boolean hasOutboundByteBuffer() {
-        lazyInitOutboundBuffer();
         return outByteBuf != null;
     }
 
     @Override
     public boolean hasOutboundMessageBuffer() {
-        lazyInitOutboundBuffer();
         return outMsgBuf != null;
     }
 
     @Override
     public ByteBuf outboundByteBuffer() {
-        if (outMsgBuf == null) {
-            lazyInitOutboundBuffer();
+        ByteBuf outByteBuf = this.outByteBuf;
+        if (outByteBuf != null) {
+            return outByteBuf;
         }
 
-        if (outByteBuf == null) {
-            if (handler instanceof ChannelOutboundHandler) {
-                throw new NoSuchBufferException(String.format(
-                        "the handler '%s' has no outbound byte buffer; it implements %s, but " +
-                        "its newOutboundBuffer() method created a %s.",
-                        name, ChannelOutboundHandler.class.getSimpleName(),
-                        MessageBuf.class.getSimpleName()));
-            } else {
-                throw new NoSuchBufferException(String.format(
-                        "the handler '%s' has no outbound byte buffer; it does not implement %s.",
-                        name, ChannelOutboundHandler.class.getSimpleName()));
-            }
+        if (handler instanceof ChannelOutboundHandler) {
+            throw new NoSuchBufferException(String.format(
+                    "the handler '%s' has no outbound byte buffer; it implements %s, but " +
+                    "its newOutboundBuffer() method created a %s.",
+                    name, ChannelOutboundHandler.class.getSimpleName(),
+                    MessageBuf.class.getSimpleName()));
+        } else {
+            throw new NoSuchBufferException(String.format(
+                    "the handler '%s' has no outbound byte buffer; it does not implement %s.",
+                    name, ChannelOutboundHandler.class.getSimpleName()));
         }
-        return outByteBuf;
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public <T> MessageBuf<T> outboundMessageBuffer() {
-        if (outMsgBuf == null) {
-            initOutboundBuffer();
+        MessageBuf<T> outMsgBuf = (MessageBuf<T>) this.outMsgBuf;
+        if (outMsgBuf != null) {
+            return outMsgBuf;
         }
 
-        if (outMsgBuf == null) {
-            if (handler instanceof ChannelOutboundHandler) {
-                throw new NoSuchBufferException(String.format(
-                        "the handler '%s' has no outbound message buffer; it implements %s, but " +
-                        "its newOutboundBuffer() method created a %s.",
-                        name, ChannelOutboundHandler.class.getSimpleName(),
-                        ByteBuf.class.getSimpleName()));
-            } else {
-                throw new NoSuchBufferException(String.format(
-                        "the handler '%s' has no outbound message buffer; it does not implement %s.",
-                        name, ChannelOutboundHandler.class.getSimpleName()));
-            }
+        if (handler instanceof ChannelOutboundHandler) {
+            throw new NoSuchBufferException(String.format(
+                    "the handler '%s' has no outbound message buffer; it implements %s, but " +
+                    "its newOutboundBuffer() method created a %s.",
+                    name, ChannelOutboundHandler.class.getSimpleName(),
+                    ByteBuf.class.getSimpleName()));
+        } else {
+            throw new NoSuchBufferException(String.format(
+                    "the handler '%s' has no outbound message buffer; it does not implement %s.",
+                    name, ChannelOutboundHandler.class.getSimpleName()));
         }
-        return (MessageBuf<T>) outMsgBuf;
     }
 
     /**
@@ -684,11 +677,10 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 return false;
             }
 
-            ctx.lazyInitOutboundBuffer();
-
-            if (ctx.outByteBridge != null) {
+            if (ctx.hasOutboundByteBuffer()) {
                 return true;
             }
+
             ctx = ctx.prev;
         }
     }
@@ -701,11 +693,10 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 return false;
             }
 
-            ctx.lazyInitOutboundBuffer();
-
-            if (ctx.outMsgBridge != null) {
+            if (ctx.hasOutboundMessageBuffer()) {
                 return true;
             }
+
             ctx = ctx.prev;
         }
     }
@@ -785,16 +776,83 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ByteBuf nextOutboundByteBuffer() {
-        return findOutboundByteBuffer();
+        DefaultChannelHandlerContext ctx = prev;
+        final DefaultChannelHandlerContext initialCtx = ctx;
+        final Thread currentThread = Thread.currentThread();
+        for (;;) {
+            if (ctx.hasOutboundByteBuffer()) {
+                if (ctx.executor().inEventLoop(currentThread)) {
+                    return ctx.outboundByteBuffer();
+                } else {
+                    ByteBridge bridge = ctx.outByteBridge.get();
+                    if (bridge == null) {
+                        bridge = new ByteBridge(ctx);
+                        if (!ctx.outByteBridge.compareAndSet(null, bridge)) {
+                            bridge = ctx.outByteBridge.get();
+                        }
+                    }
+                    return bridge.byteBuf;
+                }
+            }
+            ctx = ctx.prev;
+
+            if (ctx == null) {
+                if (initialCtx != null && initialCtx.next != null) {
+                    throw new NoSuchBufferException(String.format(
+                            "the handler '%s' could not find a %s whose outbound buffer is %s.",
+                            initialCtx.next.name(), ChannelOutboundHandler.class.getSimpleName(),
+                            ByteBuf.class.getSimpleName()));
+                } else {
+                    throw new NoSuchBufferException(String.format(
+                            "the pipeline does not contain a %s whose outbound buffer is %s.",
+                            ChannelOutboundHandler.class.getSimpleName(),
+                            ByteBuf.class.getSimpleName()));
+                }
+            }
+        }
     }
 
     @Override
     public MessageBuf<Object> nextOutboundMessageBuffer() {
-        return findOutboundMessageBuffer();
+        DefaultChannelHandlerContext ctx = prev;
+        final DefaultChannelHandlerContext initialCtx = ctx;
+        final Thread currentThread = Thread.currentThread();
+        for (;;) {
+            if (ctx.hasOutboundMessageBuffer()) {
+                if (ctx.executor().inEventLoop(currentThread)) {
+                    return ctx.outboundMessageBuffer();
+                } else {
+                    MessageBridge bridge = ctx.outMsgBridge.get();
+                    if (bridge == null) {
+                        bridge = new MessageBridge();
+                        if (!ctx.outMsgBridge.compareAndSet(null, bridge)) {
+                            bridge = ctx.outMsgBridge.get();
+                        }
+                    }
+                    return bridge.msgBuf;
+                }
+            }
+            ctx = ctx.prev;
+
+            if (ctx == null) {
+                if (initialCtx.next != null) {
+                    throw new NoSuchBufferException(String.format(
+                            "the handler '%s' could not find a %s whose outbound buffer is %s.",
+                            initialCtx.next.name(), ChannelOutboundHandler.class.getSimpleName(),
+                            MessageBuf.class.getSimpleName()));
+                } else {
+                    throw new NoSuchBufferException(String.format(
+                            "the pipeline does not contain a %s whose outbound buffer is %s.",
+                            ChannelOutboundHandler.class.getSimpleName(),
+                            MessageBuf.class.getSimpleName()));
+                }
+            }
+        }
     }
 
     @Override
     public void fireChannelRegistered() {
+        lazyInitOutboundBuffer();
         final DefaultChannelHandlerContext next = findContextInbound();
         if (next != null) {
             EventExecutor executor = next.executor();
@@ -1641,80 +1699,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             realCtx = realCtx.prev;
         } while (realCtx != null && !(realCtx.handler instanceof ChannelOperationHandler));
         return realCtx;
-    }
-
-    private ByteBuf findOutboundByteBuffer() {
-        DefaultChannelHandlerContext ctx = prev;
-        final DefaultChannelHandlerContext initialCtx = ctx;
-        final Thread currentThread = Thread.currentThread();
-        for (;;) {
-            if (ctx.hasOutboundByteBuffer()) {
-                if (ctx.executor().inEventLoop(currentThread)) {
-                    return ctx.outboundByteBuffer();
-                } else {
-                    ByteBridge bridge = ctx.outByteBridge.get();
-                    if (bridge == null) {
-                        bridge = new ByteBridge(ctx);
-                        if (!ctx.outByteBridge.compareAndSet(null, bridge)) {
-                            bridge = ctx.outByteBridge.get();
-                        }
-                    }
-                    return bridge.byteBuf;
-                }
-            }
-            ctx = ctx.prev;
-
-            if (ctx == null) {
-                if (initialCtx != null && initialCtx.next != null) {
-                    throw new NoSuchBufferException(String.format(
-                            "the handler '%s' could not find a %s whose outbound buffer is %s.",
-                            initialCtx.next.name(), ChannelOutboundHandler.class.getSimpleName(),
-                            ByteBuf.class.getSimpleName()));
-                } else {
-                    throw new NoSuchBufferException(String.format(
-                            "the pipeline does not contain a %s whose outbound buffer is %s.",
-                            ChannelOutboundHandler.class.getSimpleName(),
-                            ByteBuf.class.getSimpleName()));
-                }
-            }
-        }
-    }
-
-    private MessageBuf<Object> findOutboundMessageBuffer() {
-        DefaultChannelHandlerContext ctx = prev;
-        final DefaultChannelHandlerContext initialCtx = ctx;
-        final Thread currentThread = Thread.currentThread();
-        for (;;) {
-            if (ctx.hasOutboundMessageBuffer()) {
-                if (ctx.executor().inEventLoop(currentThread)) {
-                    return ctx.outboundMessageBuffer();
-                } else {
-                    MessageBridge bridge = ctx.outMsgBridge.get();
-                    if (bridge == null) {
-                        bridge = new MessageBridge();
-                        if (!ctx.outMsgBridge.compareAndSet(null, bridge)) {
-                            bridge = ctx.outMsgBridge.get();
-                        }
-                    }
-                    return bridge.msgBuf;
-                }
-            }
-            ctx = ctx.prev;
-
-            if (ctx == null) {
-                if (initialCtx.next != null) {
-                    throw new NoSuchBufferException(String.format(
-                            "the handler '%s' could not find a %s whose outbound buffer is %s.",
-                            initialCtx.next.name(), ChannelOutboundHandler.class.getSimpleName(),
-                            MessageBuf.class.getSimpleName()));
-                } else {
-                    throw new NoSuchBufferException(String.format(
-                            "the pipeline does not contain a %s whose outbound buffer is %s.",
-                            ChannelOutboundHandler.class.getSimpleName(),
-                            MessageBuf.class.getSimpleName()));
-                }
-            }
-        }
     }
 
     static final class MessageBridge {
