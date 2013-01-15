@@ -78,7 +78,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             throw new Error("unknown buffer type: " + channel.metadata().bufferType());
         }
 
-        head = new DefaultChannelHandlerContext(this, null, generateName(headHandler), headHandler);
+        head = new DefaultChannelHandlerContext(this, null, generateName(headHandler), headHandler, true);
 
         head.next = tail;
         tail.prev = head;
@@ -813,84 +813,12 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     @SuppressWarnings("unchecked")
     public <T> MessageBuf<T> outboundMessageBuffer() {
-        return (MessageBuf<T>) findOutboundMessageBuffer(tail.prev);
+        return (MessageBuf<T>) tail.nextOutboundMessageBuffer();
     }
 
     @Override
     public ByteBuf outboundByteBuffer() {
-        return findOutboundByteBuffer(tail.prev);
-    }
-
-    ByteBuf findOutboundByteBuffer(DefaultChannelHandlerContext ctx) {
-        final DefaultChannelHandlerContext initialCtx = ctx;
-        final Thread currentThread = Thread.currentThread();
-        for (;;) {
-            if (ctx == null) {
-                if (initialCtx != null && initialCtx.next != null) {
-                    throw new NoSuchBufferException(String.format(
-                            "the handler '%s' could not find a %s whose outbound buffer is %s.",
-                            initialCtx.next.name(), ChannelOutboundHandler.class.getSimpleName(),
-                            ByteBuf.class.getSimpleName()));
-                } else {
-                    throw new NoSuchBufferException(String.format(
-                            "the pipeline does not contain a %s whose outbound buffer is %s.",
-                            ChannelOutboundHandler.class.getSimpleName(),
-                            ByteBuf.class.getSimpleName()));
-                }
-            }
-
-            if (ctx.hasOutboundByteBuffer()) {
-                if (ctx.executor().inEventLoop(currentThread)) {
-                    return ctx.outboundByteBuffer();
-                } else {
-                    ByteBridge bridge = ctx.outByteBridge.get();
-                    if (bridge == null) {
-                        bridge = new ByteBridge(ctx);
-                        if (!ctx.outByteBridge.compareAndSet(null, bridge)) {
-                            bridge = ctx.outByteBridge.get();
-                        }
-                    }
-                    return bridge.byteBuf;
-                }
-            }
-            ctx = ctx.prev;
-        }
-    }
-
-    MessageBuf<Object> findOutboundMessageBuffer(DefaultChannelHandlerContext ctx) {
-        final DefaultChannelHandlerContext initialCtx = ctx;
-        final Thread currentThread = Thread.currentThread();
-        for (;;) {
-            if (ctx == null) {
-                if (initialCtx.next != null) {
-                    throw new NoSuchBufferException(String.format(
-                            "the handler '%s' could not find a %s whose outbound buffer is %s.",
-                            initialCtx.next.name(), ChannelOutboundHandler.class.getSimpleName(),
-                            MessageBuf.class.getSimpleName()));
-                } else {
-                    throw new NoSuchBufferException(String.format(
-                            "the pipeline does not contain a %s whose outbound buffer is %s.",
-                            ChannelOutboundHandler.class.getSimpleName(),
-                            MessageBuf.class.getSimpleName()));
-                }
-            }
-
-            if (ctx.hasOutboundMessageBuffer()) {
-                if (ctx.executor().inEventLoop(currentThread)) {
-                    return ctx.outboundMessageBuffer();
-                } else {
-                    MessageBridge bridge = ctx.outMsgBridge.get();
-                    if (bridge == null) {
-                        bridge = new MessageBridge();
-                        if (!ctx.outMsgBridge.compareAndSet(null, bridge)) {
-                            bridge = ctx.outMsgBridge.get();
-                        }
-                    }
-                    return bridge.msgBuf;
-                }
-            }
-            ctx = ctx.prev;
-        }
+        return tail.nextOutboundByteBuffer();
     }
 
     @Override
