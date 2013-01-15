@@ -329,7 +329,7 @@
         <configuration>
           <signature>
             <groupId>org.codehaus.mojo.signature</groupId>
-            <artifactId>java15</artifactId>
+            <artifactId>java16</artifactId>
             <version>1.0</version>
           </signature>
           <ignores>
@@ -343,6 +343,7 @@
             <ignore>java.net.StandardProtocolFamily</ignore>
             <!-- Java Object Serialization -->
             <ignore>java.io.ObjectStreamClass</ignore>
+            <ignore>sun.net.util.IPAddressUtil</ignore>
           </ignores>
         </configuration>
         <executions>
