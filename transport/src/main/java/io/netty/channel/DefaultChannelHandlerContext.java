@@ -75,155 +75,373 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     AtomicReference<ByteBridge> outByteBridge;
 
     // Runnables that calls handlers
-    private final Runnable fireChannelRegisteredTask = new Runnable() {
-        @Override
-        public void run() {
-            DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
-            try {
-                ((ChannelStateHandler) ctx.handler).channelRegistered(ctx);
-            } catch (Throwable t) {
-                pipeline.notifyHandlerException(t);
-            }
-        }
-    };
-    private final Runnable fireChannelUnregisteredTask = new Runnable() {
-        @Override
-        public void run() {
-            DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
-            try {
-                ((ChannelStateHandler) ctx.handler).channelUnregistered(ctx);
-            } catch (Throwable t) {
-                pipeline.notifyHandlerException(t);
-            }
-        }
-    };
-    private final Runnable fireChannelActiveTask = new Runnable() {
-        @Override
-        public void run() {
-            DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
-            try {
-                ((ChannelStateHandler) ctx.handler).channelActive(ctx);
-            } catch (Throwable t) {
-                pipeline.notifyHandlerException(t);
-            }
-        }
-    };
-    private final Runnable fireChannelInactiveTask = new Runnable() {
-        @Override
-        public void run() {
-            DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
-            try {
-                ((ChannelStateHandler) ctx.handler).channelInactive(ctx);
-            } catch (Throwable t) {
-                pipeline.notifyHandlerException(t);
-            }
-        }
-    };
-    private final Runnable curCtxFireInboundBufferUpdatedTask = new Runnable() {
-        @Override
-        public void run() {
-            DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
-            ChannelStateHandler handler = (ChannelStateHandler) ctx.handler;
-            flushBridge();
-            try {
-                handler.inboundBufferUpdated(ctx);
-            } catch (Throwable t) {
-                pipeline.notifyHandlerException(t);
-            } finally {
-                if (handler instanceof ChannelInboundByteHandler) {
-                    try {
-                        ((ChannelInboundByteHandler) handler).discardInboundReadBytes(ctx);
-                    } catch (Throwable t) {
-                        pipeline.notifyHandlerException(t);
+    private volatile Runnable fireChannelRegisteredTask;
+
+    private void fireChannelRegisteredTask() {
+        EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            fireChannelRegisteredTask0();
+        } else {
+            Runnable task = fireChannelRegisteredTask;
+            if (fireChannelRegisteredTask == null) {
+                task = new Runnable() {
+                    @Override
+                    public void run() {
+                        if (fireChannelRegisteredTask == null) {
+                            fireChannelRegisteredTask = new Runnable() {
+                                @Override
+                                public void run() {
+                                    fireChannelRegisteredTask0();
+                                }
+                            };
+                        }
+                        fireChannelRegisteredTask0();
                     }
+                };
+            }
+            executor.execute(task);
+        }
+    }
+
+    private void fireChannelRegisteredTask0() {
+        try {
+            ((ChannelStateHandler) handler).channelRegistered(this);
+        } catch (Throwable t) {
+            pipeline.notifyHandlerException(t);
+        }
+    }
+
+    private volatile Runnable fireChannelUnregisteredTask;
+
+    private void fireChannelUnregisteredTask(DefaultChannelHandlerContext caller) {
+        EventExecutor executor = executor();
+        if (executor.inEventLoop() && caller.prev != null) {
+            fireChannelUnregisteredTask0();
+        } else {
+            Runnable task = fireChannelUnregisteredTask;
+            if (task == null) {
+                task = new Runnable() {
+                    @Override
+                    public void run() {
+                        if (fireChannelUnregisteredTask == null) {
+                            fireChannelUnregisteredTask = new Runnable() {
+                                @Override
+                                public void run() {
+                                    fireChannelUnregisteredTask0();                                }
+                            };
+                        }
+                        fireChannelUnregisteredTask0();
+                    }
+                };
+            }
+            executor.execute(task);
+        }
+    }
+    private void fireChannelUnregisteredTask0() {
+        try {
+            ((ChannelStateHandler) handler).channelUnregistered(this);
+        } catch (Throwable t) {
+            pipeline.notifyHandlerException(t);
+        }
+    }
+
+    private volatile Runnable fireChannelActiveTask;
+
+    private void fireChannelActiveTask() {
+        EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            fireChannelActiveTask0();
+        } else {
+            Runnable task = fireChannelActiveTask;
+            if (task == null) {
+                task = new Runnable() {
+                    @Override
+                    public void run() {
+                        if (fireChannelActiveTask == null) {
+                            fireChannelActiveTask = new Runnable() {
+                                @Override
+                                public void run() {
+                                    fireChannelActiveTask0();
+                                }
+                            };
+                        }
+                        fireChannelActiveTask0();
+                    }
+                };
+            }
+            executor.execute(task);
+        }
+    }
+
+    private void fireChannelActiveTask0() {
+        try {
+            ((ChannelStateHandler) handler).channelActive(this);
+        } catch (Throwable t) {
+            pipeline.notifyHandlerException(t);
+        }
+    }
+
+    private volatile Runnable fireChannelInactiveTask;
+
+    private void fireChannelInactiveTask(DefaultChannelHandlerContext caller) {
+        EventExecutor executor = executor();
+        if (executor.inEventLoop() && caller.prev != null) {
+            fireChannelInactiveTask0();
+        } else {
+            Runnable task = fireChannelInactiveTask;
+            if (task == null) {
+                task = new Runnable() {
+                    @Override
+                    public void run() {
+                        if (fireChannelInactiveTask == null) {
+                            fireChannelInactiveTask = new Runnable() {
+                                @Override
+                                public void run() {
+                                    fireChannelInactiveTask0();
+                                }
+                            };
+                        }
+                        fireChannelInactiveTask0();
+                    }
+                };
+            }
+            executor.execute(task);
+        }
+    }
+
+    private void fireChannelInactiveTask0() {
+        try {
+            ((ChannelStateHandler) handler).channelInactive(this);
+        } catch (Throwable t) {
+            pipeline.notifyHandlerException(t);
+        }
+    }
+
+    private volatile Runnable curCtxFireInboundBufferUpdatedTask;
+
+    private void curCtxFireInboundBufferUpdatedTask() {
+        EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            curCtxFireInboundBufferUpdatedTask0();
+        } else {
+            Runnable task = curCtxFireInboundBufferUpdatedTask;
+            if (task == null) {
+                task = new Runnable() {
+                    @Override
+                    public void run() {
+                        if (curCtxFireInboundBufferUpdatedTask == null) {
+                            curCtxFireInboundBufferUpdatedTask = new Runnable() {
+                                @Override
+                                public void run() {
+                                    curCtxFireInboundBufferUpdatedTask0();
+                                }
+                            };
+                        }
+                        curCtxFireInboundBufferUpdatedTask0();
+                    }
+                };
+            }
+            executor.execute(task);
+        }
+    }
+
+    private void curCtxFireInboundBufferUpdatedTask0() {
+        ChannelStateHandler handler = (ChannelStateHandler) this.handler;
+        flushBridge();
+        try {
+            handler.inboundBufferUpdated(this);
+        } catch (Throwable t) {
+            pipeline.notifyHandlerException(t);
+        } finally {
+            if (handler instanceof ChannelInboundByteHandler) {
+                try {
+                    ((ChannelInboundByteHandler) handler).discardInboundReadBytes(this);
+                } catch (Throwable t) {
+                    pipeline.notifyHandlerException(t);
                 }
             }
         }
-    };
-    private final Runnable nextCtxFireInboundBufferUpdatedTask = new Runnable() {
-        @Override
-        public void run() {
-            DefaultChannelHandlerContext next = findContextInbound(
-                    DefaultChannelHandlerContext.this.next, FLAG_STATE_HANDLER);
-            if (next != null) {
-                next.fillBridge();
-                EventExecutor executor = next.executor();
-                if (executor.inEventLoop()) {
-                    next.curCtxFireInboundBufferUpdatedTask.run();
+    }
+
+    private volatile Runnable nextCtxFireInboundBufferUpdatedTask;
+
+    private void nextCtxFireInboundBufferUpdatedTask() {
+        EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            nextCtxFireInboundBufferUpdatedTask0();
+        } else {
+            Runnable task = nextCtxFireInboundBufferUpdatedTask;
+            if (task == null) {
+                task = new Runnable() {
+                    @Override
+                    public void run() {
+                        if (nextCtxFireInboundBufferUpdatedTask == null) {
+                            nextCtxFireInboundBufferUpdatedTask = new Runnable() {
+                                @Override
+                                public void run() {
+                                    nextCtxFireInboundBufferUpdatedTask0();
+                                }
+                            };
+                        }
+                        nextCtxFireInboundBufferUpdatedTask0();
+                    }
+                };
+            }
+            executor.execute(task);
+        }
+    }
+
+    private void nextCtxFireInboundBufferUpdatedTask0() {
+        DefaultChannelHandlerContext next = findContextInbound(
+                this.next, FLAG_STATE_HANDLER);
+        if (next != null) {
+            next.fillBridge();
+            next.curCtxFireInboundBufferUpdatedTask();
+        }
+    }
+
+    private volatile Runnable fireInboundBufferSuspendedTask;
+
+    private void fireInboundBufferSuspendedTask(DefaultChannelHandlerContext caller) {
+        EventExecutor executor = executor();
+        if (executor.inEventLoop() && caller.prev != null) {
+            fireInboundBufferSuspendedTask0();
+        } else {
+            Runnable task = fireInboundBufferSuspendedTask;
+            if (task == null) {
+                task = new Runnable() {
+                    @Override
+                    public void run() {
+                        if (fireInboundBufferSuspendedTask == null) {
+                            fireInboundBufferSuspendedTask = new Runnable() {
+                                @Override
+                                public void run() {
+                                    fireInboundBufferSuspendedTask0();
+                                }
+                            };
+                        }
+                        fireInboundBufferSuspendedTask0();
+                    }
+                };
+            }
+            executor.execute(task);
+        }
+    }
+
+    private void fireInboundBufferSuspendedTask0() {
+        try {
+            ((ChannelStateHandler) handler).channelReadSuspended(this);
+        } catch (Throwable t) {
+            pipeline.notifyHandlerException(t);
+        }
+    }
+
+    private volatile Runnable freeInboundBufferTask;
+
+    void freeInboundBufferTask() {
+        EventExecutor executor = executor();
+        if (executor.inEventLoop() && prev != null) {
+            freeInboundBufferTask0();
+        } else {
+            Runnable task = freeInboundBufferTask;
+            if (task == null) {
+                task = new Runnable() {
+                    @Override
+                    public void run() {
+                        if (freeInboundBufferTask == null) {
+                            freeInboundBufferTask = new Runnable() {
+                                @Override
+                                public void run() {
+                                    freeInboundBufferTask0();
+                                }
+                            };
+                        }
+                        freeInboundBufferTask0();
+                    }
+                };
+            }
+            executor.execute(task);
+        }
+    }
+
+    private void freeInboundBufferTask0() {
+        if (handler instanceof ChannelInboundHandler) {
+            ChannelInboundHandler h = (ChannelInboundHandler) handler;
+            try {
+                if (hasInboundByteBuffer()) {
+                    if (inByteBuf != null) {
+                        h.freeInboundBuffer(this);
+                    }
                 } else {
-                    executor.execute(next.curCtxFireInboundBufferUpdatedTask);
+                    if (inMsgBuf != null) {
+                        h.freeInboundBuffer(this);
+                    }
                 }
-            }
-        }
-    };
-    private final Runnable fireInboundBufferSuspendedTask = new Runnable() {
-        @Override
-        public void run() {
-            DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
-            try {
-                ((ChannelStateHandler) ctx.handler).channelReadSuspended(ctx);
             } catch (Throwable t) {
                 pipeline.notifyHandlerException(t);
             }
         }
-    };
-    private final Runnable freeInboundBufferTask = new Runnable() {
-        @Override
-        public void run() {
-            DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
-            if (ctx.handler instanceof ChannelInboundHandler) {
-                ChannelInboundHandler h = (ChannelInboundHandler) ctx.handler;
-                try {
-                    if (ctx.hasInboundByteBuffer()) {
-                        if (ctx.inByteBuf != null) {
-                            h.freeInboundBuffer(ctx);
-                        }
-                    } else {
-                        if (ctx.inMsgBuf != null) {
-                            h.freeInboundBuffer(ctx);
-                        }
-                    }
-                } catch (Throwable t) {
-                    pipeline.notifyHandlerException(t);
-                }
-            }
+        DefaultChannelHandlerContext nextCtx = findContextInbound(next, FLAG_STATE_HANDLER);
+        if (nextCtx != null) {
+            nextCtx.freeInboundBufferTask();
+        } else {
+            // Freed all inbound buffers. Free all outbound buffers in a reverse order.
+            pipeline.lastContext(FLAG_OPERATION_HANDLER).freeOutboundBufferTask();
+        }
+    }
 
-            DefaultChannelHandlerContext nextCtx = findContextInbound(ctx.next, FLAG_STATE_HANDLER);
-            if (nextCtx != null) {
-                nextCtx.callFreeInboundBuffer();
-            } else {
-                // Freed all inbound buffers. Free all outbound buffers in a reverse order.
-                pipeline.lastContext(FLAG_OPERATION_HANDLER).callFreeOutboundBuffer();
+    private volatile Runnable freeOutboundBufferTask;
+
+    /** Invocation initiated by {@link #freeInboundBufferTask} after freeing all inbound buffers. */
+    private void freeOutboundBufferTask() {
+        EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            freeOutboundBufferTask0();
+        } else {
+            Runnable task = freeOutboundBufferTask;
+            if (task == null) {
+                task = new Runnable() {
+                    @Override
+                    public void run() {
+                        if (freeOutboundBufferTask == null) {
+                            freeOutboundBufferTask = new Runnable() {
+                                @Override
+                                public void run() {
+                                    freeOutboundBufferTask0();
+                                }
+                            };
+                        }
+                        freeOutboundBufferTask0();
+                    }
+                };
+            }
+            executor.execute(task);
+        }
+    }
+
+    private void freeOutboundBufferTask0() {
+        if (handler instanceof ChannelOutboundHandler) {
+            ChannelOutboundHandler h = (ChannelOutboundHandler) handler;
+            try {
+                if (hasOutboundByteBuffer()) {
+                    if (outByteBuf != null) {
+                        h.freeOutboundBuffer(this);
+                    }
+                } else {
+                    if (outMsgBuf != null) {
+                        h.freeOutboundBuffer(this);
+                    }
+                }
+            } catch (Throwable t) {
+                pipeline.notifyHandlerException(t);
             }
         }
-    };
-    private final Runnable freeOutboundBufferTask = new Runnable() {
-        @Override
-        public void run() {
-            DefaultChannelHandlerContext ctx = DefaultChannelHandlerContext.this;
-            if (ctx.handler instanceof ChannelOutboundHandler) {
-                ChannelOutboundHandler h = (ChannelOutboundHandler) ctx.handler;
-                try {
-                    if (ctx.hasOutboundByteBuffer()) {
-                        if (ctx.outByteBuf != null) {
-                            h.freeOutboundBuffer(ctx);
-                        }
-                    } else {
-                        if (ctx.outMsgBuf != null) {
-                            h.freeOutboundBuffer(ctx);
-                        }
-                    }
-                } catch (Throwable t) {
-                    pipeline.notifyHandlerException(t);
-                }
-            }
 
-            DefaultChannelHandlerContext nextCtx = findContextOutbound(ctx.prev, FLAG_OPERATION_HANDLER);
-            if (nextCtx != null) {
-                nextCtx.callFreeOutboundBuffer();
-            }
+        DefaultChannelHandlerContext nextCtx = findContextOutbound(prev, FLAG_OPERATION_HANDLER);
+        if (nextCtx != null) {
+            nextCtx.freeOutboundBufferTask();
         }
-    };
+    }
 
     final Runnable read0Task = new Runnable() {
         @Override
@@ -949,12 +1167,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     public void fireChannelRegistered() {
         DefaultChannelHandlerContext next = findContextInbound(this.next, FLAG_STATE_HANDLER);
         if (next != null) {
-            EventExecutor executor = next.executor();
-            if (executor.inEventLoop()) {
-                next.fireChannelRegisteredTask.run();
-            } else {
-                executor.execute(next.fireChannelRegisteredTask);
-            }
+            next.fireChannelRegisteredTask();
         }
     }
 
@@ -962,12 +1175,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     public void fireChannelUnregistered() {
         DefaultChannelHandlerContext next = findContextInbound(this.next, FLAG_STATE_HANDLER);
         if (next != null) {
-            EventExecutor executor = next.executor();
-            if (executor.inEventLoop() && prev != null) {
-                next.fireChannelUnregisteredTask.run();
-            } else {
-                executor.execute(next.fireChannelUnregisteredTask);
-            }
+            next.fireChannelUnregisteredTask(this);
         }
     }
 
@@ -975,12 +1183,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     public void fireChannelActive() {
         DefaultChannelHandlerContext next = findContextInbound(this.next, FLAG_STATE_HANDLER);
         if (next != null) {
-            EventExecutor executor = next.executor();
-            if (executor.inEventLoop()) {
-                next.fireChannelActiveTask.run();
-            } else {
-                executor.execute(next.fireChannelActiveTask);
-            }
+            next.fireChannelActiveTask();
         }
     }
 
@@ -988,12 +1191,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     public void fireChannelInactive() {
         DefaultChannelHandlerContext next = findContextInbound(this.next, FLAG_STATE_HANDLER);
         if (next != null) {
-            EventExecutor executor = next.executor();
-            if (executor.inEventLoop() && prev != null) {
-                next.fireChannelInactiveTask.run();
-            } else {
-                executor.execute(next.fireChannelInactiveTask);
-            }
+            next.fireChannelInactiveTask(this);
         }
     }
 
@@ -1071,24 +1269,14 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public void fireInboundBufferUpdated() {
-        EventExecutor executor = executor();
-        if (executor.inEventLoop()) {
-            nextCtxFireInboundBufferUpdatedTask.run();
-        } else {
-            executor.execute(nextCtxFireInboundBufferUpdatedTask);
-        }
+        nextCtxFireInboundBufferUpdatedTask();
     }
 
     @Override
     public void fireInboundBufferSuspended() {
         DefaultChannelHandlerContext next = findContextInbound(this.next, FLAG_STATE_HANDLER);
         if (next != null) {
-            EventExecutor executor = next.executor();
-            if (executor.inEventLoop() && prev != null) {
-                next.fireInboundBufferSuspendedTask.run();
-            } else {
-                executor.execute(next.fireInboundBufferSuspendedTask);
-            }
+            next.fireInboundBufferSuspendedTask(this);
         }
     }
 
@@ -1190,25 +1378,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public ChannelFuture write(Object message, ChannelPromise promise) {
         return pipeline.write(prev, message, promise);
-    }
-
-    void callFreeInboundBuffer() {
-        EventExecutor executor = executor();
-        if (executor.inEventLoop() && prev != null) {
-            freeInboundBufferTask.run();
-        } else {
-            executor.execute(freeInboundBufferTask);
-        }
-    }
-
-    /** Invocation initiated by {@link #freeInboundBufferTask} after freeing all inbound buffers. */
-    private void callFreeOutboundBuffer() {
-        EventExecutor executor = executor();
-        if (executor.inEventLoop()) {
-            freeOutboundBufferTask.run();
-        } else {
-            executor.execute(freeOutboundBufferTask);
-        }
     }
 
     @Override

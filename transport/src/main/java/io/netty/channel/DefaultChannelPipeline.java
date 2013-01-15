@@ -905,7 +905,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         // Free all buffers if channel is closed and unregistered.
         if (!channel.isOpen()) {
-            head.callFreeInboundBuffer();
+            head.freeInboundBufferTask();
         }
     }
 
