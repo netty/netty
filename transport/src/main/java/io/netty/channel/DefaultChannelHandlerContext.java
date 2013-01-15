@@ -638,7 +638,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             if (ctx == null) {
                 return false;
             }
-            if (ctx.hasNextInboundByteBuffer()) {
+            if (ctx.hasInboundByteBuffer()) {
                 return true;
             }
             ctx = ctx.next;
