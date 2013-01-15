@@ -982,7 +982,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         return tail.write(message, promise);
     }
 
-    protected void notifyHandlerException(Throwable cause) {
+    void notifyHandlerException(Throwable cause) {
         if (!(cause instanceof ChannelPipelineException)) {
             cause = new ChannelPipelineException(cause);
         }
