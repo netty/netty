@@ -955,48 +955,48 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     public void fireInboundBufferSuspended() {
         head.fireInboundBufferSuspended();
         if (channel.config().isAutoRead()) {
-            channel.read();
+            read();
         }
     }
 
     @Override
     public ChannelFuture bind(SocketAddress localAddress) {
-        return bind(localAddress, channel.newPromise());
+        return tail.bind(localAddress);
     }
 
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress) {
-        return connect(remoteAddress, channel.newPromise());
+        return tail.connect(remoteAddress);
     }
 
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-        return connect(remoteAddress, localAddress, channel.newPromise());
+        return tail.connect(remoteAddress, localAddress);
     }
 
     @Override
     public ChannelFuture disconnect() {
-        return disconnect(channel.newPromise());
+        return tail.disconnect();
     }
 
     @Override
     public ChannelFuture close() {
-        return close(channel.newPromise());
+        return tail.close();
     }
 
     @Override
     public ChannelFuture deregister() {
-        return deregister(channel.newPromise());
+        return tail.deregister();
     }
 
     @Override
     public ChannelFuture flush() {
-        return flush(channel.newPromise());
+        return tail.flush();
     }
 
     @Override
     public ChannelFuture write(Object message) {
-        return write(message, channel.newPromise());
+        return tail.write(message);
     }
 
     @Override
@@ -1006,7 +1006,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
-        return connect(remoteAddress, null, promise);
+        return tail.connect(remoteAddress, promise);
     }
 
     @Override
@@ -1041,7 +1041,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelFuture sendFile(FileRegion region) {
-        return sendFile(region, channel().newPromise());
+        return tail.sendFile(region);
     }
 
     @Override
