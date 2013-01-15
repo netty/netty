@@ -22,7 +22,7 @@ import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.MessageToMessageDecoder;
 
 /**
- * Decodes the content of the received {@link HttpRequest} and {@link HttpChunk}.
+ * Decodes the content of the received {@link HttpRequestHeader} and {@link HttpContent}.
  * The original content is replaced with the new content decoded by the
  * {@link EmbeddedByteChannel}, which is created by {@link #newContentDecoder(String)}.
  * Once decoding is finished, the value of the <tt>'Content-Encoding'</tt>
@@ -36,13 +36,15 @@ import io.netty.handler.codec.MessageToMessageDecoder;
  * and implement {@link #newContentDecoder(String)} properly to make this class
  * functional.  For example, refer to the source code of {@link HttpContentDecompressor}.
  * <p>
- * This handler must be placed after {@link HttpMessageDecoder} in the pipeline
- * so that this handler can intercept HTTP requests after {@link HttpMessageDecoder}
+ * This handler must be placed after {@link HttpObjectDecoder} in the pipeline
+ * so that this handler can intercept HTTP requests after {@link HttpObjectDecoder}
  * converts {@link ByteBuf}s into HTTP requests.
  */
 public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object> {
 
     private EmbeddedByteChannel decoder;
+    private HttpHeader header;
+    private boolean decodeStarted;
 
     /**
      * Creates a new instance.
@@ -53,82 +55,88 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
 
     @Override
     protected Object decode(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().getCode() == 100) {
+        if (msg instanceof HttpResponseHeader && ((HttpResponseHeader) msg).getStatus().getCode() == 100) {
             // 100-continue response must be passed through.
             return msg;
         }
-        if (msg instanceof HttpMessage) {
-            HttpMessage m = (HttpMessage) msg;
+        if (msg instanceof HttpHeader) {
+            assert header == null;
+            header = (HttpHeader) msg;
 
             cleanup();
+        }
 
-            // Determine the content encoding.
-            String contentEncoding = m.getHeader(HttpHeaders.Names.CONTENT_ENCODING);
-            if (contentEncoding != null) {
-                contentEncoding = contentEncoding.trim();
-            } else {
-                contentEncoding = HttpHeaders.Values.IDENTITY;
-            }
+        if (msg instanceof HttpContent) {
+            HttpContent c = (HttpContent) msg;
 
-            boolean hasContent =
-                    m.getTransferEncoding().isMultiple() || m.getContent().readable();
-            if (hasContent && (decoder = newContentDecoder(contentEncoding)) != null) {
-                // Decode the content and remove or replace the existing headers
-                // so that the message looks like a decoded message.
-                String targetContentEncoding = getTargetContentEncoding(contentEncoding);
-                if (HttpHeaders.Values.IDENTITY.equals(targetContentEncoding)) {
-                    // Do NOT set the 'Content-Encoding' header if the target encoding is 'identity'
-                    // as per: http://tools.ietf.org/html/rfc2616#section-14.11
-                    m.removeHeader(HttpHeaders.Names.CONTENT_ENCODING);
+            if (!decodeStarted) {
+                decodeStarted = true;
+                HttpHeader header = this.header;
+                this.header = null;
+
+                // Determine the content encoding.
+                String contentEncoding = header.getHeader(HttpHeaders.Names.CONTENT_ENCODING);
+                if (contentEncoding != null) {
+                    contentEncoding = contentEncoding.trim();
                 } else {
-                    m.setHeader(HttpHeaders.Names.CONTENT_ENCODING, targetContentEncoding);
+                    contentEncoding = HttpHeaders.Values.IDENTITY;
                 }
 
-                if (m.getTransferEncoding().isSingle()) {
-                    ByteBuf content = m.getContent();
-                    // Decode the content
-                    ByteBuf newContent = Unpooled.buffer();
-                    decode(content, newContent);
-                    finishDecode(newContent);
+                if ((decoder = newContentDecoder(contentEncoding)) != null) {
+                    // Decode the content and remove or replace the existing headers
+                    // so that the message looks like a decoded message.
+                    String targetContentEncoding = getTargetContentEncoding(contentEncoding);
+                    if (HttpHeaders.Values.IDENTITY.equals(targetContentEncoding)) {
+                        // Do NOT set the 'Content-Encoding' header if the target encoding is 'identity'
+                        // as per: http://tools.ietf.org/html/rfc2616#section-14.11
+                        header.removeHeader(HttpHeaders.Names.CONTENT_ENCODING);
+                    } else {
+                        header.setHeader(HttpHeaders.Names.CONTENT_ENCODING, targetContentEncoding);
+                    }
+                    Object[] decoded = decodeContent(header, c);
 
                     // Replace the content.
-                    m.setContent(newContent);
-                    if (m.containsHeader(HttpHeaders.Names.CONTENT_LENGTH)) {
-                        m.setHeader(
+                    if (header.containsHeader(HttpHeaders.Names.CONTENT_LENGTH)) {
+                        header.setHeader(
                                 HttpHeaders.Names.CONTENT_LENGTH,
-                                Integer.toString(newContent.readableBytes()));
+                                Integer.toString(((HttpContent) decoded[1]).getContent().readableBytes()));
                     }
+                    return decoded;
                 }
+                return new Object[] { header, c };
             }
-        } else if (msg instanceof HttpChunk) {
-            HttpChunk c = (HttpChunk) msg;
-            ByteBuf content = c.getContent();
-
-            // Decode the chunk if necessary.
-            if (decoder != null) {
-                if (!c.isLast()) {
-                    ByteBuf newContent = Unpooled.buffer();
-                    decode(content, newContent);
-                    if (newContent.readable()) {
-                        c.setContent(newContent);
-                    } else {
-                        return null;
-                    }
-                } else {
-                    ByteBuf lastProduct = Unpooled.buffer();
-                    finishDecode(lastProduct);
-
-                    // Generate an additional chunk if the decoder produced
-                    // the last product on closure,
-                    if (lastProduct.readable()) {
-                        return new Object[] { new DefaultHttpChunk(lastProduct), c };
-                    }
-                }
-            }
+            return decodeContent(null, c);
         }
 
         // Because HttpMessage and HttpChunk is a mutable object, we can simply forward it.
         return msg;
+    }
+
+    private Object[] decodeContent(HttpHeader header, HttpContent c) {
+        ByteBuf newContent = Unpooled.buffer();
+        ByteBuf content = c.getContent();
+        decode(content, newContent);
+
+        if (c instanceof LastHttpContent) {
+            ByteBuf lastProduct = Unpooled.buffer();
+            finishDecode(lastProduct);
+
+            // Generate an additional chunk if the decoder produced
+            // the last product on closure,
+            if (lastProduct.readable()) {
+                if (header == null) {
+                    return new Object[] { new DefaultHttpContent(newContent), new DefaultLastHttpContent(lastProduct)};
+                } else {
+                    return new Object[] { header,  new DefaultHttpContent(newContent),
+                            new DefaultLastHttpContent(lastProduct)};
+                }
+            }
+        }
+        if (header == null) {
+            return new Object[] { new DefaultHttpContent(newContent) };
+        } else {
+            return new Object[] { header, new DefaultHttpContent(newContent) };
+        }
     }
 
     /**

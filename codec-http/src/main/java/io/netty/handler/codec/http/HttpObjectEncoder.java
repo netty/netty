@@ -20,13 +20,12 @@ import static io.netty.handler.codec.http.HttpConstants.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
-import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.util.CharsetUtil;
 
 import java.util.Map;
 
 /**
- * Encodes an {@link HttpMessage} or an {@link HttpChunk} into
+ * Encodes an {@link HttpHeader} or an {@link HttpContent} into
  * a {@link ByteBuf}.
  *
  * <h3>Extensibility</h3>
@@ -39,68 +38,46 @@ import java.util.Map;
  * implement all abstract methods properly.
  * @apiviz.landmark
  */
-public abstract class HttpMessageEncoder extends MessageToByteEncoder<Object> {
+public abstract class HttpObjectEncoder<H extends HttpHeader> extends MessageToByteEncoder<Object> {
 
-    private static final ByteBuf LAST_CHUNK =
-        copiedBuffer("0\r\n\r\n", CharsetUtil.US_ASCII);
-
-    private HttpTransferEncoding lastTE;
+    private boolean chunked;
 
     /**
      * Creates a new instance.
      */
-    protected HttpMessageEncoder() {
+    protected HttpObjectEncoder() {
         super(HttpObject.class);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     protected void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
-        if (msg instanceof HttpMessage) {
-            HttpMessage m = (HttpMessage) msg;
-            HttpTransferEncoding te = m.getTransferEncoding();
-            lastTE = te;
-            // Calling setTransferEncoding() will sanitize the headers and the content.
-            // For example, it will remove the cases such as 'Transfer-Encoding' and 'Content-Length'
-            // coexist.  It also removes the content if the transferEncoding is not SINGLE.
-            m.setTransferEncoding(te);
-
+        if (msg instanceof HttpHeader) {
+            HttpHeader m = (HttpHeader) msg;
+            chunked = HttpHeaders.isTransferEncodingChunked(m);
             // Encode the message.
             out.markWriterIndex();
-            encodeInitialLine(out, m);
+
+            encodeInitialLine(out, (H) m);
             encodeHeaders(out, m);
             out.writeByte(CR);
             out.writeByte(LF);
+        }
 
-            ByteBuf content = m.getContent();
-            out.writeBytes(content, content.readerIndex(), content.readableBytes());
-        } else if (msg instanceof HttpChunk) {
-            HttpChunk chunk = (HttpChunk) msg;
-            HttpTransferEncoding te = lastTE;
-            if (te == null) {
-                throw new IllegalArgumentException("HttpChunk must follow an HttpMessage.");
-            }
+        if (msg instanceof HttpContent) {
+            HttpContent chunk = (HttpContent) msg;
 
-            switch (te) {
-            case SINGLE:
-                throw new IllegalArgumentException(
-                        "The transfer encoding of the last encoded HttpMessage is SINGLE.");
-            case STREAMED: {
+            if (!chunked) {
                 ByteBuf content = chunk.getContent();
                 out.writeBytes(content, content.readerIndex(), content.readableBytes());
-                break;
-            }
-            case CHUNKED:
-                if (chunk.isLast()) {
-                    if (chunk instanceof HttpChunkTrailer) {
-                        out.writeByte((byte) '0');
-                        out.writeByte(CR);
-                        out.writeByte(LF);
-                        encodeTrailingHeaders(out, (HttpChunkTrailer) chunk);
-                        out.writeByte(CR);
-                        out.writeByte(LF);
-                    } else {
-                        out.writeBytes(LAST_CHUNK, LAST_CHUNK.readerIndex(), LAST_CHUNK.readableBytes());
-                    }
+            } else {
+                if (chunk instanceof LastHttpContent) {
+                    out.writeByte((byte) '0');
+                    out.writeByte(CR);
+                    out.writeByte(LF);
+                    encodeTrailingHeaders(out, (LastHttpContent) chunk);
+                    out.writeByte(CR);
+                    out.writeByte(LF);
                 } else {
                     ByteBuf content = chunk.getContent();
                     int contentLength = content.readableBytes();
@@ -112,18 +89,16 @@ public abstract class HttpMessageEncoder extends MessageToByteEncoder<Object> {
                     out.writeByte(LF);
                 }
             }
-        } else {
-            throw new UnsupportedMessageTypeException(msg, HttpMessage.class, HttpChunk.class);
         }
     }
 
-    private static void encodeHeaders(ByteBuf buf, HttpMessage message) {
+    private static void encodeHeaders(ByteBuf buf, HttpHeader message) {
         for (Map.Entry<String, String> h: message.getHeaders()) {
             encodeHeader(buf, h.getKey(), h.getValue());
         }
     }
 
-    private static void encodeTrailingHeaders(ByteBuf buf, HttpChunkTrailer trailer) {
+    private static void encodeTrailingHeaders(ByteBuf buf, LastHttpContent trailer) {
         for (Map.Entry<String, String> h: trailer.getHeaders()) {
             encodeHeader(buf, h.getKey(), h.getValue());
         }
@@ -138,5 +113,5 @@ public abstract class HttpMessageEncoder extends MessageToByteEncoder<Object> {
         buf.writeByte(LF);
     }
 
-    protected abstract void encodeInitialLine(ByteBuf buf, HttpMessage message) throws Exception;
+    protected abstract void encodeInitialLine(ByteBuf buf, H message) throws Exception;
 }

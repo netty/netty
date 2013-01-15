@@ -22,6 +22,7 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpHeader;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpMethod;
@@ -173,7 +174,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
 
             SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
             Integer streamID = Integer.valueOf(spdyHeadersFrame.getStreamId());
-            HttpMessage httpMessage = messageMap.get(streamID);
+            HttpHeader httpMessage = messageMap.get(streamID);
 
             // If message is not in map discard HEADERS frame.
             // SpdySessionHandler should prevent this from happening.

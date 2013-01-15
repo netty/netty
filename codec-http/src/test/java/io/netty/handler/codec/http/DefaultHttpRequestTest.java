@@ -18,11 +18,11 @@ package io.netty.handler.codec.http;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class DefaultHttpMessageTest {
+public class DefaultHttpRequestTest {
 
     @Test
     public void testHeaderRemoval() {
-        HttpMessage m = new DefaultHttpRequest(
+        HttpHeader m = new DefaultHttpRequestHeader(
                 HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
 
         // Insert sample keys.

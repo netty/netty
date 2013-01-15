@@ -19,31 +19,31 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
-import io.netty.handler.codec.http.HttpMessage;
-import io.netty.handler.codec.http.HttpMessageEncoder;
+import io.netty.handler.codec.http.HttpHeader;
+import io.netty.handler.codec.http.HttpObjectEncoder;
 
 /**
- * Encodes an RTSP message represented in {@link HttpMessage} into
+ * Encodes an RTSP message represented in {@link HttpHeader} into
  * a {@link ByteBuf}.
 
  *
  * @apiviz.landmark
  */
 @Sharable
-public abstract class RtspMessageEncoder extends HttpMessageEncoder {
+public abstract class RtspObjectEncoder<H extends HttpHeader> extends HttpObjectEncoder<H> {
 
     /**
      * Creates a new instance.
      */
-    protected RtspMessageEncoder() {
+    protected RtspObjectEncoder() {
     }
 
     @Override
     protected void encode(ChannelHandlerContext ctx, Object msg,
             ByteBuf out) throws Exception {
         // Ignore unrelated message types such as HttpChunk.
-        if (!(msg instanceof HttpMessage)) {
-            throw new UnsupportedMessageTypeException(msg, HttpMessage.class);
+        if (!(msg instanceof HttpHeader)) {
+            throw new UnsupportedMessageTypeException(msg, HttpHeader.class);
         }
 
         super.encode(ctx, msg, out);

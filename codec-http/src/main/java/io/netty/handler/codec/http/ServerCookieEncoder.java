@@ -27,7 +27,7 @@ import java.util.List;
  * the HTTP cookie version 0, 1, and 2.
  * <pre>
  * // Example
- * {@link HttpRequest} req = ...;
+ * {@link HttpRequestHeader} req = ...;
  * res.setHeader("Set-Cookie", {@link ServerCookieEncoder}.encode("JSESSIONID", "1234"));
  * </pre>
  *

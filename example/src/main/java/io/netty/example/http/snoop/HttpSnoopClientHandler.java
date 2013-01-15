@@ -15,21 +15,20 @@
  */
 package io.netty.example.http.snoop;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
-import io.netty.handler.codec.http.HttpChunk;
-import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpResponseHeader;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
 
 public class HttpSnoopClientHandler extends ChannelInboundMessageHandlerAdapter<Object> {
 
-    private boolean readingChunks;
-
     @Override
     public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (!readingChunks) {
-            HttpResponse response = (HttpResponse) msg;
+        if (msg instanceof HttpResponseHeader) {
+            HttpResponseHeader response = (HttpResponseHeader) msg;
 
             System.out.println("STATUS: " + response.getStatus());
             System.out.println("VERSION: " + response.getProtocolVersion());
@@ -44,25 +43,20 @@ public class HttpSnoopClientHandler extends ChannelInboundMessageHandlerAdapter<
                 System.out.println();
             }
 
-            if (response.getTransferEncoding().isMultiple()) {
-                readingChunks = true;
+            if (HttpHeaders.isTransferEncodingChunked(response)) {
                 System.out.println("CHUNKED CONTENT {");
             } else {
-                ByteBuf content = response.getContent();
-                if (content.readable()) {
-                    System.out.println("CONTENT {");
-                    System.out.println(content.toString(CharsetUtil.UTF_8));
-                    System.out.println("} END OF CONTENT");
-                }
+                System.out.println("CONTENT {");
             }
-        } else {
-            HttpChunk chunk = (HttpChunk) msg;
-            if (chunk.isLast()) {
-                readingChunks = false;
-                System.out.println("} END OF CHUNKED CONTENT");
-            } else {
-                System.out.print(chunk.getContent().toString(CharsetUtil.UTF_8));
-                System.out.flush();
+        }
+        if (msg instanceof HttpContent) {
+            HttpContent content = (HttpContent) msg;
+
+            System.out.print(content.getContent().toString(CharsetUtil.UTF_8));
+            System.out.flush();
+
+            if (content instanceof LastHttpContent) {
+                System.out.println("} END OF CONTENT");
             }
         }
     }

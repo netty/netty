@@ -24,9 +24,9 @@ import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.handler.codec.http.Cookie;
 import io.netty.handler.codec.http.CookieDecoder;
 import io.netty.handler.codec.http.DefaultHttpResponse;
-import io.netty.handler.codec.http.HttpChunk;
+import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpRequestHeader;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
@@ -64,7 +64,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(HttpUploadServerHandler.class);
 
-    private HttpRequest request;
+    private HttpRequestHeader request;
 
     private boolean readingChunks;
 
@@ -95,14 +95,14 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (!readingChunks) {
+        if (msg instanceof HttpRequestHeader) {
             // clean previous FileUpload if Any
             if (decoder != null) {
                 decoder.cleanFiles();
                 decoder = null;
             }
 
-            HttpRequest request = this.request = (HttpRequest) msg;
+            HttpRequestHeader request = this.request = (HttpRequestHeader) msg;
             URI uri = new URI(request.getUri());
             if (!uri.getPath().startsWith("/form")) {
                 // Write Menu
@@ -165,9 +165,10 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
                 return;
             }
 
-            responseContent.append("Is Chunked: " + request.getTransferEncoding().isMultiple() + "\r\n");
+            readingChunks = HttpHeaders.isTransferEncodingChunked(request);
+            responseContent.append("Is Chunked: " + readingChunks + "\r\n");
             responseContent.append("IsMultipart: " + decoder.isMultipart() + "\r\n");
-            if (request.getTransferEncoding().isMultiple()) {
+            if (readingChunks) {
                 // Chunk version
                 responseContent.append("Chunks: ");
                 readingChunks = true;
@@ -177,9 +178,10 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
                 responseContent.append("\r\n\r\nEND OF NOT CHUNKED CONTENT\r\n");
                 writeResponse(ctx.channel());
             }
-        } else {
+        }
+        if (msg instanceof HttpContent) {
             // New chunk is received
-            HttpChunk chunk = (HttpChunk) msg;
+            HttpContent chunk = (HttpContent) msg;
             try {
                 decoder.offer(chunk);
             } catch (ErrorDataDecoderException e1) {
@@ -194,7 +196,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
             // Factory)
             readHttpDataChunkByChunk();
             // example of reading only if at the end
-            if (chunk.isLast()) {
+            if (chunk instanceof HttpContent) {
                 readHttpDataAllReceive(ctx.channel());
                 writeResponse(ctx.channel());
                 readingChunks = false;

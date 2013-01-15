@@ -21,7 +21,7 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.http.HttpChunkAggregator;
+import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
@@ -69,7 +69,7 @@ public class WebSocketServer {
                 public void initChannel(final SocketChannel ch) throws Exception {
                     ch.pipeline().addLast(
                         new HttpRequestDecoder(),
-                        new HttpChunkAggregator(65536),
+                        new HttpObjectAggregator(65536),
                         new HttpResponseEncoder(),
                         new WebSocketServerProtocolHandler("/websocket"),
                         new CustomTextFrameHandler());
