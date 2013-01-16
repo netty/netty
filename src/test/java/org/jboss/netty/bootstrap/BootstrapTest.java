@@ -39,7 +39,7 @@ import org.junit.Test;
 public class BootstrapTest {
     @Test(expected = IllegalStateException.class)
     public void shouldNotReturnNullFactory() {
-        new Bootstrap().getFactory();
+        newBootstrap().getFactory();
     }
 
     @Test(expected = IllegalStateException.class)
@@ -49,7 +49,7 @@ public class BootstrapTest {
 
     @Test
     public void shouldNotAllowFactoryToChangeMoreThanOnce() {
-        Bootstrap b = new Bootstrap();
+        Bootstrap b = newBootstrap();
         ChannelFactory f = createMock(ChannelFactory.class);
         b.setFactory(f);
         assertSame(f, b.getFactory());
@@ -65,22 +65,22 @@ public class BootstrapTest {
 
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullFactory() {
-        new Bootstrap().setFactory(null);
+        newBootstrap().setFactory(null);
     }
 
     @Test
     public void shouldHaveNonNullInitialPipeline() {
-        assertNotNull(new Bootstrap().getPipeline());
+        assertNotNull(newBootstrap().getPipeline());
     }
 
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullPipeline() {
-        new Bootstrap().setPipeline(null);
+        newBootstrap().setPipeline(null);
     }
 
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullPipelineMap() {
-        new Bootstrap().setPipelineAsMap(null);
+        newBootstrap().setPipelineAsMap(null);
     }
 
     @Test
@@ -90,7 +90,7 @@ public class BootstrapTest {
 
     @Test
     public void shouldUpdatePipelineFactoryIfPipelineIsSet() {
-        Bootstrap b = new Bootstrap();
+        Bootstrap b = newBootstrap();
         ChannelPipelineFactory oldPipelineFactory = b.getPipelineFactory();
         b.setPipeline(createMock(ChannelPipeline.class));
         assertNotSame(oldPipelineFactory, b.getPipelineFactory());
@@ -99,7 +99,7 @@ public class BootstrapTest {
 
     @Test(expected = IllegalStateException.class)
     public void shouldNotReturnPipelineWhenPipelineFactoryIsSetByUser() {
-        Bootstrap b = new Bootstrap();
+        Bootstrap b = newBootstrap();
         b.setPipelineFactory(createMock(ChannelPipelineFactory.class));
         b.getPipeline();
         b.releaseExternalResources();
@@ -107,7 +107,7 @@ public class BootstrapTest {
 
     @Test(expected = IllegalStateException.class)
     public void shouldNotReturnPipelineMapWhenPipelineFactoryIsSetByUser() {
-        Bootstrap b = new Bootstrap();
+        Bootstrap b = newBootstrap();
         b.setPipelineFactory(createMock(ChannelPipelineFactory.class));
         b.getPipelineAsMap();
         b.releaseExternalResources();
@@ -115,17 +115,17 @@ public class BootstrapTest {
 
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullPipelineFactory() {
-        new Bootstrap().setPipelineFactory(null);
+        newBootstrap().setPipelineFactory(null);
     }
 
     @Test
     public void shouldHaveInitialEmptyPipelineMap() {
-        assertTrue(new Bootstrap().getPipelineAsMap().isEmpty());
+        assertTrue(newBootstrap().getPipelineAsMap().isEmpty());
     }
 
     @Test
     public void shouldReturnOrderedPipelineMap() {
-        Bootstrap b = new Bootstrap();
+        Bootstrap b = newBootstrap();
         ChannelPipeline p = b.getPipeline();
         p.addLast("a", new DummyHandler());
         p.addLast("b", new DummyHandler());
@@ -160,7 +160,7 @@ public class BootstrapTest {
         m.put("c", new DummyHandler());
         m.put("d", new DummyHandler());
 
-        Bootstrap b = new Bootstrap();
+        Bootstrap b = newBootstrap();
         b.setPipelineAsMap(m);
         b.releaseExternalResources();
     }
@@ -173,7 +173,7 @@ public class BootstrapTest {
         m.put("c", new DummyHandler());
         m.put("d", new DummyHandler());
 
-        Bootstrap b = new Bootstrap();
+        Bootstrap b = newBootstrap();
         b.setPipelineAsMap(m);
 
         ChannelPipeline p = b.getPipeline();
@@ -202,12 +202,12 @@ public class BootstrapTest {
 
     @Test
     public void shouldHaveInitialEmptyOptionMap() {
-        assertTrue(new Bootstrap().getOptions().isEmpty());
+        assertTrue(newBootstrap().getOptions().isEmpty());
     }
 
     @Test
     public void shouldUpdateOptionMapAsRequested1() {
-        Bootstrap b = new Bootstrap();
+        Bootstrap b =new Bootstrap();
         b.setOption("s", "x");
         b.setOption("b", true);
         b.setOption("i", 42);
@@ -222,7 +222,7 @@ public class BootstrapTest {
 
     @Test
     public void shouldUpdateOptionMapAsRequested2() {
-        Bootstrap b = new Bootstrap();
+        Bootstrap b = newBootstrap();
         Map<String, Object> o1 = new HashMap<String, Object>();
         o1.put("s", "x");
         o1.put("b", true);
@@ -242,7 +242,7 @@ public class BootstrapTest {
 
     @Test
     public void shouldRemoveOptionIfValueIsNull() {
-        Bootstrap b = new Bootstrap();
+        Bootstrap b = newBootstrap();
 
         b.setOption("s", "x");
         assertEquals("x", b.getOption("s"));
@@ -255,16 +255,20 @@ public class BootstrapTest {
 
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullOptionKeyOnGet() {
-        new Bootstrap().getOption(null);
+        newBootstrap().getOption(null);
     }
 
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullOptionKeyOnSet() {
-        new Bootstrap().setOption(null, "x");
+        newBootstrap().setOption(null, "x");
     }
 
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullOptionMap() {
-        new Bootstrap().setOptions(null);
+        newBootstrap().setOptions(null);
+    }
+
+    protected Bootstrap newBootstrap() {
+        return new Bootstrap();
     }
 }
