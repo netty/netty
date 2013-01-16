@@ -20,14 +20,14 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.DefaultHttpResponseWithContent;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
-import io.netty.handler.codec.http.HttpRequestWithContent;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpResponseWithContent;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.CharsetUtil;
@@ -109,14 +109,14 @@ public class WebSocketServerHandshaker07 extends WebSocketServerHandshaker {
      *            HTTP request
      */
     @Override
-    public ChannelFuture handshake(Channel channel, HttpRequestWithContent req, ChannelPromise promise) {
+    public ChannelFuture handshake(Channel channel, FullHttpRequest req, ChannelPromise promise) {
 
         if (logger.isDebugEnabled()) {
             logger.debug(String.format("Channel %s WS Version 7 server handshake", channel.id()));
         }
 
-        HttpResponseWithContent res =
-                new DefaultHttpResponseWithContent(HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
+        FullHttpResponse res =
+                new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
 
         String key = req.headers().get(Names.SEC_WEBSOCKET_KEY);
         if (key == null) {

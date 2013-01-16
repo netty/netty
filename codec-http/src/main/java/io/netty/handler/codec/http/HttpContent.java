@@ -24,7 +24,7 @@ import io.netty.channel.ChannelPipeline;
  * {@link HttpObjectDecoder} generates {@link HttpContent} after
  * {@link HttpMessage} when the content is large or the encoding of the content
  * is 'chunked.  If you prefer not to receive {@link HttpContent} in your handler,
- * please {@link HttpObjectAggregator} after {@link HttpObjectDecoder} in the
+ * place {@link HttpObjectAggregator} after {@link HttpObjectDecoder} in the
  * {@link ChannelPipeline}.
  * @apiviz.landmark
  */

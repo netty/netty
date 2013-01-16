@@ -48,6 +48,16 @@ public interface LastHttpContent extends HttpContent {
         public void setDecoderResult(DecoderResult result) {
             throw new UnsupportedOperationException("read only");
         }
+
+        @Override
+        public boolean isFreed() {
+            return false;
+        }
+
+        @Override
+        public void free() {
+            // NOOP
+        }
     };
 
     HttpHeaders trailingHeaders();

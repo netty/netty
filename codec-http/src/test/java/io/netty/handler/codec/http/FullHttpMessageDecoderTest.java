@@ -29,7 +29,7 @@ import java.util.List;
 
 import static org.junit.Assert.*;
 
-public class HttpObjectAggregatorTest {
+public class FullHttpMessageDecoderTest {
 
     @Test
     public void testAggregate() {
@@ -49,7 +49,7 @@ public class HttpObjectAggregatorTest {
         // this should trigger a messageReceived event so return true
         assertTrue(embedder.writeInbound(chunk3));
         assertTrue(embedder.finish());
-        DefaultHttpRequestWithContent aggratedMessage = (DefaultHttpRequestWithContent) embedder.readInbound();
+        DefaultFullHttpRequest aggratedMessage = (DefaultFullHttpRequest) embedder.readInbound();
         assertNotNull(aggratedMessage);
 
         assertEquals(chunk1.content().readableBytes() + chunk2.content().readableBytes(), HttpHeaders.getContentLength(aggratedMessage));
@@ -59,7 +59,7 @@ public class HttpObjectAggregatorTest {
 
     }
 
-    private static void checkContentBuffer(DefaultHttpRequestWithContent aggregatedMessage) {
+    private static void checkContentBuffer(DefaultFullHttpRequest aggregatedMessage) {
         CompositeByteBuf buffer = (CompositeByteBuf) aggregatedMessage.content();
         assertEquals(2, buffer.numComponents());
         List<ByteBuf> buffers = buffer.decompose(0, buffer.capacity());
@@ -90,7 +90,7 @@ public class HttpObjectAggregatorTest {
         // this should trigger a messageReceived event so return true
         assertTrue(embedder.writeInbound(trailer));
         assertTrue(embedder.finish());
-        DefaultHttpRequestWithContent aggratedMessage = (DefaultHttpRequestWithContent) embedder.readInbound();
+        DefaultFullHttpRequest aggratedMessage = (DefaultFullHttpRequest) embedder.readInbound();
         assertNotNull(aggratedMessage);
 
         assertEquals(chunk1.content().readableBytes() + chunk2.content().readableBytes(), HttpHeaders.getContentLength(aggratedMessage));

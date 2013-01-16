@@ -20,17 +20,17 @@ import io.netty.buffer.Unpooled;
 
 
 /**
- * Default implementation of a {@link HttpResponseWithContent}.
+ * Default implementation of a {@link FullHttpResponse}.
  */
-public class DefaultHttpResponseWithContent extends DefaultHttpResponse implements HttpResponseWithContent {
+public class DefaultFullHttpResponse extends DefaultHttpResponse implements FullHttpResponse {
     private ByteBuf content;
     private final HttpHeaders trailingHeaders = new DefaultHttpHeaders();
 
-    public DefaultHttpResponseWithContent(HttpVersion version, HttpResponseStatus status) {
+    public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status) {
         this(version, status, Unpooled.buffer(0));
     }
 
-    public DefaultHttpResponseWithContent(HttpVersion version, HttpResponseStatus status, ByteBuf content) {
+    public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status, ByteBuf content) {
         super(version, status);
         if (content == null) {
             throw new NullPointerException("content");

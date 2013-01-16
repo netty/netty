@@ -16,8 +16,8 @@
 package io.netty.handler.codec.http;
 
 /**
- * Combination of a {@link HttpResponse} and {@link HttpMessageWithContent}.
- * So it represent a <i>complete</i> http response.
+ * Combinate the {@link HttpRequest} and {@link FullHttpMessage}, so the request is a <i>complete</i> HTTP
+ * request.
  */
-public interface HttpResponseWithContent extends HttpResponse, HttpMessageWithContent {
+public interface FullHttpRequest extends HttpRequest, FullHttpMessage {
 }

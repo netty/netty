@@ -21,10 +21,10 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
-import io.netty.handler.codec.http.HttpRequestWithContent;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -109,7 +109,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
      *            HTTP request
      */
     @Override
-    public ChannelFuture handshake(Channel channel, HttpRequestWithContent req, ChannelPromise promise) {
+    public ChannelFuture handshake(Channel channel, FullHttpRequest req, ChannelPromise promise) {
 
         if (logger.isDebugEnabled()) {
             logger.debug(String.format("Channel %s WS Version 13 server handshake", channel.id()));

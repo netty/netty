@@ -21,6 +21,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpHeaders.Values;
 import io.netty.handler.codec.http.HttpMethod;
@@ -28,7 +29,6 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpResponseWithContent;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -191,7 +191,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      * @throws WebSocketHandshakeException
      */
     @Override
-    public void finishHandshake(Channel channel, HttpResponseWithContent response) {
+    public void finishHandshake(Channel channel, FullHttpResponse response) {
         final HttpResponseStatus status = HttpResponseStatus.SWITCHING_PROTOCOLS;
 
         if (!response.status().equals(status)) {

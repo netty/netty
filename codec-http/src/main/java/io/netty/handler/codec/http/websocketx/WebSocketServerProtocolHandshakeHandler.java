@@ -20,10 +20,10 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.http.DefaultHttpResponseWithContent;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpRequestWithContent;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.ssl.SslHandler;
 
@@ -36,7 +36,7 @@ import static io.netty.handler.codec.http.HttpVersion.*;
  * Handles the HTTP handshake (the HTTP Upgrade request) for {@link WebSocketServerProtocolHandler}.
  */
 public class WebSocketServerProtocolHandshakeHandler
-        extends ChannelInboundMessageHandlerAdapter<HttpRequestWithContent> {
+        extends ChannelInboundMessageHandlerAdapter<FullHttpRequest> {
 
     private final String websocketPath;
     private final String subprotocols;
@@ -50,9 +50,9 @@ public class WebSocketServerProtocolHandshakeHandler
     }
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx, HttpRequestWithContent req) throws Exception {
+    public void messageReceived(final ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
         if (req.method() != GET) {
-            sendHttpResponse(ctx, req, new DefaultHttpResponseWithContent(HTTP_1_1, FORBIDDEN));
+            sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN));
             return;
         }
 

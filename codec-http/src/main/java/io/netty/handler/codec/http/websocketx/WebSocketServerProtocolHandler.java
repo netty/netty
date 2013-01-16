@@ -21,9 +21,9 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.http.DefaultHttpResponseWithContent;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpResponseWithContent;
 import io.netty.util.AttributeKey;
 
 import static io.netty.handler.codec.http.HttpVersion.*;
@@ -92,7 +92,7 @@ public class WebSocketServerProtocolHandler extends ChannelInboundMessageHandler
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (cause instanceof WebSocketHandshakeException) {
-            HttpResponseWithContent response = new DefaultHttpResponseWithContent(
+            FullHttpResponse response = new DefaultFullHttpResponse(
                     HTTP_1_1, HttpResponseStatus.BAD_REQUEST, Unpooled.wrappedBuffer(cause.getMessage().getBytes()));
             ctx.channel().write(response).addListener(ChannelFutureListener.CLOSE);
         } else {
@@ -113,8 +113,8 @@ public class WebSocketServerProtocolHandler extends ChannelInboundMessageHandler
             @Override
             public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
                 if (!(msg instanceof WebSocketFrame)) {
-                    HttpResponseWithContent response =
-                            new DefaultHttpResponseWithContent(HTTP_1_1, HttpResponseStatus.FORBIDDEN);
+                    FullHttpResponse response =
+                            new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.FORBIDDEN);
                     ctx.channel().write(response);
                 } else {
                     ctx.nextInboundMessageBuffer().add(msg);

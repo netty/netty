@@ -20,15 +20,15 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.DefaultHttpRequestWithContent;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpHeaders.Values;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequestEncoder;
-import io.netty.handler.codec.http.HttpRequestWithContent;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpResponseWithContent;
 import io.netty.handler.codec.http.HttpVersion;
 
 import java.net.URI;
@@ -141,7 +141,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         }
 
         // Format request
-        HttpRequestWithContent request = new DefaultHttpRequestWithContent(HttpVersion.HTTP_1_1, HttpMethod.GET, path);
+        FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, path);
         request.headers().add(Names.UPGRADE, Values.WEBSOCKET);
         request.headers().add(Names.CONNECTION, Values.UPGRADE);
         request.headers().add(Names.HOST, wsURL.getHost());
@@ -216,7 +216,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      * @throws WebSocketHandshakeException
      */
     @Override
-    public void finishHandshake(Channel channel, HttpResponseWithContent response) {
+    public void finishHandshake(Channel channel, FullHttpResponse response) {
         final HttpResponseStatus status = new HttpResponseStatus(101, "WebSocket Protocol Handshake");
 
         if (!response.status().equals(status)) {

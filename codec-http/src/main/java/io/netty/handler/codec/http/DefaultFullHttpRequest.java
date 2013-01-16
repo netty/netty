@@ -19,17 +19,17 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
 /**
- * Default implementation of {@link HttpRequestWithContent}.
+ * Default implementation of {@link FullHttpRequest}.
  */
-public class DefaultHttpRequestWithContent extends DefaultHttpRequest implements HttpRequestWithContent {
+public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHttpRequest {
     private final ByteBuf content;
     private final HttpHeaders trailingHeader = new DefaultHttpHeaders();
 
-    public DefaultHttpRequestWithContent(HttpVersion httpVersion, HttpMethod method, String uri) {
+    public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri) {
         this(httpVersion, method, uri, Unpooled.buffer(0));
     }
 
-    public DefaultHttpRequestWithContent(HttpVersion httpVersion, HttpMethod method, String uri, ByteBuf content) {
+    public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, ByteBuf content) {
         super(httpVersion, method, uri);
         if (content == null) {
             throw new NullPointerException("content");

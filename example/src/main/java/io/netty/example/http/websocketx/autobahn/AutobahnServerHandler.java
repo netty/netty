@@ -20,10 +20,10 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
-import io.netty.handler.codec.http.DefaultHttpResponseWithContent;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpRequestWithContent;
-import io.netty.handler.codec.http.HttpResponseWithContent;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.ContinuationWebSocketFrame;
@@ -52,23 +52,23 @@ public class AutobahnServerHandler extends ChannelInboundMessageHandlerAdapter<O
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof HttpRequestWithContent) {
-            handleHttpRequest(ctx, (HttpRequestWithContent) msg);
+        if (msg instanceof FullHttpRequest) {
+            handleHttpRequest(ctx, (FullHttpRequest) msg);
         } else if (msg instanceof WebSocketFrame) {
             handleWebSocketFrame(ctx, (WebSocketFrame) msg);
         }
     }
 
-    private void handleHttpRequest(ChannelHandlerContext ctx, HttpRequestWithContent req) throws Exception {
+    private void handleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
         // Handle a bad request.
         if (!req.getDecoderResult().isSuccess()) {
-            sendHttpResponse(ctx, req, new DefaultHttpResponseWithContent(HTTP_1_1, BAD_REQUEST));
+            sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST));
             return;
         }
 
         // Allow only GET methods.
         if (req.method() != GET) {
-            sendHttpResponse(ctx, req, new DefaultHttpResponseWithContent(HTTP_1_1, FORBIDDEN));
+            sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN));
             return;
         }
 
@@ -113,7 +113,7 @@ public class AutobahnServerHandler extends ChannelInboundMessageHandlerAdapter<O
     }
 
     private static void sendHttpResponse(
-            ChannelHandlerContext ctx, HttpRequestWithContent req, HttpResponseWithContent res) {
+            ChannelHandlerContext ctx, FullHttpRequest req, FullHttpResponse res) {
         // Generate an error page if response status code is not OK (200).
         if (res.status().code() != 200) {
             res.content().writeBytes(Unpooled.copiedBuffer(res.status().toString(), CharsetUtil.UTF_8));
@@ -133,7 +133,7 @@ public class AutobahnServerHandler extends ChannelInboundMessageHandlerAdapter<O
         ctx.close();
     }
 
-    private static String getWebSocketLocation(HttpRequestWithContent req) {
+    private static String getWebSocketLocation(FullHttpRequest req) {
         return "ws://" + req.headers().get(HttpHeaders.Names.HOST);
     }
 }

@@ -108,7 +108,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
             return decodeContent(null, c);
         }
 
-        // Because HttpMessageWithContent and HttpChunk is a mutable object, we can simply forward it.
+        // Because FullHttpMessage and HttpChunk is a mutable object, we can simply forward it.
         return msg;
     }
 

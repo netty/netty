@@ -22,15 +22,15 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.DefaultHttpResponseWithContent;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpHeaders.Values;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
-import io.netty.handler.codec.http.HttpRequestWithContent;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpResponseWithContent;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
@@ -119,7 +119,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      *            HTTP request
      */
     @Override
-    public ChannelFuture handshake(Channel channel, HttpRequestWithContent req, ChannelPromise promise) {
+    public ChannelFuture handshake(Channel channel, FullHttpRequest req, ChannelPromise promise) {
 
         if (logger.isDebugEnabled()) {
             logger.debug(String.format("Channel %s WS Version 00 server handshake", channel.id()));
@@ -135,7 +135,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
         boolean isHixie76 = req.headers().contains(SEC_WEBSOCKET_KEY1) && req.headers().contains(SEC_WEBSOCKET_KEY2);
 
         // Create the WebSocket handshake response.
-        HttpResponseWithContent res = new DefaultHttpResponseWithContent(HTTP_1_1, new HttpResponseStatus(101,
+        FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, new HttpResponseStatus(101,
                 isHixie76 ? "WebSocket Protocol Handshake" : "Web Socket Protocol Handshake"));
         res.headers().add(Names.UPGRADE, WEBSOCKET);
         res.headers().add(CONNECTION, Values.UPGRADE);

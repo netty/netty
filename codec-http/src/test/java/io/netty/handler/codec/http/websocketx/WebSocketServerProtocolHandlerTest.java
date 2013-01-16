@@ -23,13 +23,13 @@ import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedMessageChannel;
 import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestDecoder;
-import io.netty.handler.codec.http.HttpRequestWithContent;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseEncoder;
-import io.netty.handler.codec.http.HttpResponseWithContent;
 import org.junit.Test;
 
 import static io.netty.handler.codec.http.HttpHeaders.Values.*;
@@ -64,7 +64,7 @@ public class WebSocketServerProtocolHandlerTest {
     @Test
     public void testHttpUpgradeRequestInvalidUpgradeHeader() {
         EmbeddedMessageChannel ch = createChannel();
-        HttpRequestWithContent httpRequestWithEntity = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
+        FullHttpRequest httpRequestWithEntity = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
                 .method(HttpMethod.GET)
                 .uri("/test")
                 .connection("Upgrade")
@@ -74,7 +74,7 @@ public class WebSocketServerProtocolHandlerTest {
         
         ch.writeInbound(httpRequestWithEntity);
         
-        HttpResponseWithContent response = getHttpResponse(ch);
+        FullHttpResponse response = getHttpResponse(ch);
         assertEquals(BAD_REQUEST, response.status());
         assertEquals("not a WebSocket handshake request: missing upgrade", getResponseMessage(response));
         
@@ -94,7 +94,7 @@ public class WebSocketServerProtocolHandlerTest {
         
         ch.writeInbound(httpRequest);
         
-        HttpResponseWithContent response = getHttpResponse(ch);
+        FullHttpResponse response = getHttpResponse(ch);
         assertEquals(BAD_REQUEST, response.status());
         assertEquals("not a WebSocket request: missing key", getResponseMessage(response));
     }
@@ -129,13 +129,13 @@ public class WebSocketServerProtocolHandlerTest {
         ch.writeInbound(WebSocketRequestBuilder.sucessful());
     }
 
-    private static String getResponseMessage(HttpResponseWithContent response) {
+    private static String getResponseMessage(FullHttpResponse response) {
         return new String(response.content().array());
     }
 
-    private static HttpResponseWithContent getHttpResponse(EmbeddedMessageChannel ch) {
+    private static FullHttpResponse getHttpResponse(EmbeddedMessageChannel ch) {
         MessageBuf<Object> outbound = ch.pipeline().context(MockOutboundHandler.class).outboundMessageBuffer();
-        return (HttpResponseWithContent) outbound.poll();
+        return (FullHttpResponse) outbound.poll();
     }
 
     private static class MockOutboundHandler extends ChannelOutboundMessageHandlerAdapter<Object> {

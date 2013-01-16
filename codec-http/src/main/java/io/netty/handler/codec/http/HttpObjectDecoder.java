@@ -195,7 +195,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             State nextState = readHeaders(buffer);
             checkpoint(nextState);
             if (nextState == State.READ_CHUNK_SIZE) {
-                // Chunked encoding - generate HttpMessageWithContent first.  HttpChunks will follow.
+                // Chunked encoding - generate FullHttpMessage first.  HttpChunks will follow.
                 return message;
             }
             if (nextState == State.SKIP_CONTROL_CHARS) {
@@ -211,7 +211,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             switch (nextState) {
             case READ_FIXED_LENGTH_CONTENT:
                 if (contentLength > maxChunkSize || HttpHeaders.is100ContinueExpected(message)) {
-                    // Generate HttpMessageWithContent first.  HttpChunks will follow.
+                    // Generate FullHttpMessage first.  HttpChunks will follow.
                     checkpoint(State.READ_FIXED_LENGTH_CONTENT_AS_CHUNKS);
                     // chunkSize will be decreased as the READ_FIXED_LENGTH_CONTENT_AS_CHUNKS
                     // state reads data chunk by chunk.
@@ -221,7 +221,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                 break;
             case READ_VARIABLE_LENGTH_CONTENT:
                 if (buffer.readableBytes() > maxChunkSize || HttpHeaders.is100ContinueExpected(message)) {
-                    // Generate HttpMessageWithContent first.  HttpChunks will follow.
+                    // Generate FullHttpMessage first.  HttpChunks will follow.
                     checkpoint(State.READ_VARIABLE_LENGTH_CONTENT_AS_CHUNKS);
                     return message;
                 }

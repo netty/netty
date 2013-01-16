@@ -54,7 +54,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             "HTTP/1.1 100 Continue\r\n\r\n", CharsetUtil.US_ASCII);
 
     private final int maxContentLength;
-    private HttpMessageWithContent currentMessage;
+    private FullHttpMessage currentMessage;
 
     private int maxCumulationBufferComponents = DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS;
     private ChannelHandlerContext ctx;
@@ -112,9 +112,11 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
 
     @Override
     protected Object decode(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
-        HttpMessageWithContent currentMessage = this.currentMessage;
+        FullHttpMessage currentMessage = this.currentMessage;
 
         if (msg instanceof HttpMessage) {
+            assert currentMessage == null;
+
             HttpMessage m = (HttpMessage) msg;
 
             // Handle the 'Expect: 100-continue' header if necessary.
@@ -133,36 +135,31 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             }
             if (msg instanceof HttpRequest) {
                 HttpRequest header = (HttpRequest) msg;
-                this.currentMessage = new DefaultHttpRequestWithContent(header.protocolVersion(),
+                this.currentMessage = currentMessage = new DefaultFullHttpRequest(header.protocolVersion(),
                         header.method(), header.uri(), Unpooled.compositeBuffer(maxCumulationBufferComponents));
             } else if (msg instanceof HttpResponse) {
                 HttpResponse header = (HttpResponse) msg;
-                this.currentMessage = new DefaultHttpResponseWithContent(
+                this.currentMessage = currentMessage = new DefaultFullHttpResponse(
                         header.protocolVersion(), header.status(),
                         Unpooled.compositeBuffer(maxCumulationBufferComponents));
             } else {
                 throw new Error();
             }
 
+            HttpHeaders headers = currentMessage.headers();
             for (String name: m.headers().names()) {
-                this.currentMessage.headers().set(name, m.headers().get(name));
+                headers.set(name, m.headers().get(name));
             }
             // A streamed message - initialize the cumulative buffer, and wait for incoming chunks.
-            removeTransferEncodingChunked(m);
+            removeTransferEncodingChunked(currentMessage);
             return null;
 
         } else if (msg instanceof HttpContent) {
-            // Sanity check
-            if (currentMessage == null) {
-                throw new IllegalStateException(
-                        "received " + HttpContent.class.getSimpleName() +
-                        " without " + HttpMessage.class.getSimpleName() +
-                        " or last message's transfer encoding was 'SINGLE'");
-            }
+            assert currentMessage != null;
 
             // Merge the received chunk into the content of the current message.
             HttpContent chunk = (HttpContent) msg;
-            ByteBuf content = currentMessage.content();
+            CompositeByteBuf content = (CompositeByteBuf) currentMessage.content();
 
             if (content.readableBytes() > maxContentLength - chunk.content().readableBytes()) {
                 // TODO: Respond with 413 Request Entity Too Large
@@ -175,7 +172,12 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             }
 
             // Append the content of the chunk
-            appendToCumulation(chunk.content());
+            if (chunk.content().readable()) {
+                content.addComponent(chunk.content());
+                content.writerIndex(content.writerIndex() + chunk.content().readableBytes());
+            } else {
+                chunk.free();
+            }
 
             final boolean last;
             if (!chunk.getDecoderResult().isSuccess()) {
@@ -208,21 +210,12 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
                 return null;
             }
         } else {
-            throw new IllegalStateException(
-                    "Only " + HttpMessage.class.getSimpleName() + " and " +
-                    HttpContent.class.getSimpleName() + " are accepted: " + msg.getClass().getName());
+            throw new Error();
         }
-    }
-
-    private void appendToCumulation(ByteBuf input) {
-        CompositeByteBuf cumulation = (CompositeByteBuf) currentMessage.content();
-        cumulation.addComponent(input);
-        cumulation.writerIndex(cumulation.capacity());
     }
 
     @Override
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
     }
-
 }

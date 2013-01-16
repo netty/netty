@@ -19,15 +19,15 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.handler.codec.http.DefaultHttpRequestWithContent;
-import io.netty.handler.codec.http.DefaultHttpResponseWithContent;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpMessage;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
-import io.netty.handler.codec.http.HttpMessageWithContent;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpRequestWithContent;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpResponseWithContent;
 import io.netty.handler.codec.http.HttpVersion;
 
 import java.util.HashMap;
@@ -35,13 +35,13 @@ import java.util.Map;
 
 /**
  * Decodes {@link SpdySynStreamFrame}s, {@link SpdySynReplyFrame}s,
- * and {@link SpdyDataFrame}s into {@link HttpRequestWithContent}s and {@link HttpResponseWithContent}s.
+ * and {@link SpdyDataFrame}s into {@link FullHttpRequest}s and {@link FullHttpResponse}s.
  */
 public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
 
     private final int spdyVersion;
     private final int maxContentLength;
-    private final Map<Integer, HttpMessageWithContent> messageMap = new HashMap<Integer, HttpMessageWithContent>();
+    private final Map<Integer, FullHttpMessage> messageMap = new HashMap<Integer, FullHttpMessage>();
 
     /**
      * Creates a new instance.
@@ -97,7 +97,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
                 }
 
                 try {
-                    HttpResponseWithContent httpResponseWithEntity =
+                    FullHttpResponse httpResponseWithEntity =
                             createHttpResponse(spdyVersion, spdySynStreamFrame);
 
                     // Set the Stream-ID, Associated-To-Stream-ID, Priority, and URL as headers
@@ -121,7 +121,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
             } else {
                 // SYN_STREAM frames initiated by the client are HTTP requests
                 try {
-                    HttpRequestWithContent httpRequestWithEntity = createHttpRequest(spdyVersion, spdySynStreamFrame);
+                    FullHttpRequest httpRequestWithEntity = createHttpRequest(spdyVersion, spdySynStreamFrame);
 
                     // Set the Stream-ID as a header
                     SpdyHttpHeaders.setStreamId(httpRequestWithEntity, streamID);
@@ -150,7 +150,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
             int streamID = spdySynReplyFrame.getStreamId();
 
             try {
-                HttpResponseWithContent httpResponseWithEntity = createHttpResponse(spdyVersion, spdySynReplyFrame);
+                FullHttpResponse httpResponseWithEntity = createHttpResponse(spdyVersion, spdySynReplyFrame);
 
                 // Set the Stream-ID as a header
                 SpdyHttpHeaders.setStreamId(httpResponseWithEntity, streamID);
@@ -190,15 +190,15 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
             Integer streamID = Integer.valueOf(spdyDataFrame.getStreamId());
-            HttpMessageWithContent httpMessageWithContent = messageMap.get(streamID);
+            FullHttpMessage fullHttpMessage = messageMap.get(streamID);
 
             // If message is not in map discard Data Frame.
             // SpdySessionHandler should prevent this from happening.
-            if (httpMessageWithContent == null) {
+            if (fullHttpMessage == null) {
                 return null;
             }
 
-            ByteBuf content = httpMessageWithContent.content();
+            ByteBuf content = fullHttpMessage.content();
             if (content.readableBytes() > maxContentLength - spdyDataFrame.getData().readableBytes()) {
                 messageMap.remove(streamID);
                 throw new TooLongFrameException(
@@ -210,9 +210,9 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
             content.writeBytes(spdyDataFrameData, spdyDataFrameData.readerIndex(), spdyDataFrameDataLen);
 
             if (spdyDataFrame.isLast()) {
-                HttpHeaders.setContentLength(httpMessageWithContent, content.readableBytes());
+                HttpHeaders.setContentLength(fullHttpMessage, content.readableBytes());
                 messageMap.remove(streamID);
-                return httpMessageWithContent;
+                return fullHttpMessage;
             }
 
         } else if (msg instanceof SpdyRstStreamFrame) {
@@ -225,7 +225,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
         return null;
     }
 
-    private static HttpRequestWithContent createHttpRequest(int spdyVersion, SpdyHeaderBlock requestFrame)
+    private static FullHttpRequest createHttpRequest(int spdyVersion, SpdyHeaderBlock requestFrame)
             throws Exception {
         // Create the first line of the request from the name/value pairs
         HttpMethod  method      = SpdyHeaders.getMethod(spdyVersion, requestFrame);
@@ -235,7 +235,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
         SpdyHeaders.removeUrl(spdyVersion, requestFrame);
         SpdyHeaders.removeVersion(spdyVersion, requestFrame);
 
-        HttpRequestWithContent httpRequestWithEntity = new DefaultHttpRequestWithContent(httpVersion, method, url);
+        FullHttpRequest httpRequestWithEntity = new DefaultFullHttpRequest(httpVersion, method, url);
 
         // Remove the scheme header
         SpdyHeaders.removeScheme(spdyVersion, requestFrame);
@@ -260,7 +260,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
         return httpRequestWithEntity;
     }
 
-    private static HttpResponseWithContent createHttpResponse(int spdyVersion, SpdyHeaderBlock responseFrame)
+    private static FullHttpResponse createHttpResponse(int spdyVersion, SpdyHeaderBlock responseFrame)
             throws Exception {
         // Create the first line of the response from the name/value pairs
         HttpResponseStatus status = SpdyHeaders.getStatus(spdyVersion, responseFrame);
@@ -268,7 +268,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
         SpdyHeaders.removeStatus(spdyVersion, responseFrame);
         SpdyHeaders.removeVersion(spdyVersion, responseFrame);
 
-        HttpResponseWithContent httpResponseWithEntity = new DefaultHttpResponseWithContent(version, status);
+        FullHttpResponse httpResponseWithEntity = new DefaultFullHttpResponse(version, status);
         for (Map.Entry<String, String> e: responseFrame.getHeaders()) {
             httpResponseWithEntity.headers().add(e.getKey(), e.getValue());
         }

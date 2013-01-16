@@ -18,12 +18,12 @@ package io.netty.handler.codec.spdy;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpRequestWithContent;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
 
@@ -219,7 +219,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
                 new DefaultSpdySynStreamFrame(streamID, associatedToStreamId, priority);
 
         // Unfold the first line of the message into name/value pairs
-        if (httpMessage instanceof HttpRequestWithContent) {
+        if (httpMessage instanceof FullHttpRequest) {
             HttpRequest httpRequest = (HttpRequest) httpMessage;
             SpdyHeaders.setMethod(spdyVersion, spdySynStreamFrame, httpRequest.method());
             SpdyHeaders.setUrl(spdyVersion, spdySynStreamFrame, httpRequest.uri());

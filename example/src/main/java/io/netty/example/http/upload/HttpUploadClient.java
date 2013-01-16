@@ -21,10 +21,10 @@ import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.ClientCookieEncoder;
 import io.netty.handler.codec.http.DefaultCookie;
-import io.netty.handler.codec.http.DefaultHttpRequestWithContent;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpRequestWithContent;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.QueryStringEncoder;
 import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
@@ -178,8 +178,8 @@ public class HttpUploadClient {
             return null;
         }
 
-        HttpRequestWithContent request =
-                new DefaultHttpRequestWithContent(HttpVersion.HTTP_1_1, HttpMethod.GET, uriGet.toASCIIString());
+        FullHttpRequest request =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, uriGet.toASCIIString());
         HttpHeaders headers = request.headers();
         headers.set(HttpHeaders.Names.HOST, host);
         headers.set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
@@ -218,8 +218,8 @@ public class HttpUploadClient {
         Channel channel = bootstrap.connect().sync().channel();
 
         // Prepare the HTTP request.
-        HttpRequestWithContent request =
-                new DefaultHttpRequestWithContent(HttpVersion.HTTP_1_1, HttpMethod.POST, uriSimple.toASCIIString());
+        FullHttpRequest request =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uriSimple.toASCIIString());
 
         // Use the PostBody encoder
         HttpPostRequestEncoder bodyRequestEncoder = null;
@@ -303,8 +303,8 @@ public class HttpUploadClient {
         Channel channel = bootstrap.connect().sync().channel();
 
         // Prepare the HTTP request.
-        HttpRequestWithContent request =
-                new DefaultHttpRequestWithContent(HttpVersion.HTTP_1_1, HttpMethod.POST, uriFile.toASCIIString());
+        FullHttpRequest request =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uriFile.toASCIIString());
 
         // Use the PostBody encoder
         HttpPostRequestEncoder bodyRequestEncoder = null;

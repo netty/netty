@@ -54,7 +54,7 @@ import java.util.Map;
  * @see QueryStringEncoder
  *
  * @apiviz.stereotype utility
- * @apiviz.has        io.netty.handler.codec.http.HttpRequestWithContent oneway - - decodes
+ * @apiviz.has        io.netty.handler.codec.http.FullHttpRequest oneway - - decodes
  */
 public class QueryStringDecoder {
 
