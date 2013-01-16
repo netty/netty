@@ -50,7 +50,6 @@ import static io.netty.handler.codec.http.HttpVersion.*;
 public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<Object> {
 
     private HttpRequest request;
-    private boolean readingChunks;
     /** Buffer that stores the response content */
     private final StringBuilder buf = new StringBuilder();
 
@@ -94,12 +93,9 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
                 buf.append("\r\n");
             }
 
-            if (isTransferEncodingChunked(request)) {
-                readingChunks = true;
-            } else {
-                appendDecoderResult(buf, request);
-            }
+            appendDecoderResult(buf, request);
         }
+
         if (msg instanceof HttpContent) {
             HttpContent httpContent = (HttpContent) msg;
 
@@ -108,19 +104,10 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
                 buf.append("CONTENT: ");
                 buf.append(content.toString(CharsetUtil.UTF_8));
                 buf.append("\r\n");
+                appendDecoderResult(buf, request);
             }
-            appendDecoderResult(buf, request);
-            writeResponse(ctx, request);
 
             if (msg instanceof LastHttpContent) {
-                if (readingChunks) {
-                    buf.append("CHUNK: ");
-                } else {
-                    buf.append("CONTENT: ");
-                }
-                buf.append(content.toString(CharsetUtil.UTF_8)).append("\r\n");
-
-                readingChunks = false;
                 buf.append("END OF CONTENT\r\n");
 
                 LastHttpContent trailer = (LastHttpContent) msg;
@@ -135,14 +122,7 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
                     buf.append("\r\n");
                 }
 
-                appendDecoderResult(buf, trailer);
                 writeResponse(ctx, trailer);
-            } else {
-                if (readingChunks) {
-                    buf.append("CHUNK: ");
-                }
-                buf.append(content.toString(CharsetUtil.UTF_8)).append("\r\n");
-                appendDecoderResult(buf, httpContent);
             }
         }
     }

@@ -62,15 +62,16 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             if (state != ST_INIT) {
                 throw new IllegalStateException("unexpected message type: " + msg.getClass().getSimpleName());
             }
-            HttpMessage m = (HttpMessage) msg;
-            state = HttpHeaders.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
-            // Encode the message.
-            out.markWriterIndex();
 
+            HttpMessage m = (HttpMessage) msg;
+
+            // Encode the message.
             encodeInitialLine(out, (H) m);
             encodeHeaders(out, m);
             out.writeByte(CR);
             out.writeByte(LF);
+
+            state = HttpHeaders.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
         }
 
         if (msg instanceof HttpContent) {
