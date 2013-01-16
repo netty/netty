@@ -192,16 +192,12 @@ public class HttpUploadClient {
         headers.set(HttpHeaders.Names.USER_AGENT, "Netty Simple Http Client side");
         headers.set(HttpHeaders.Names.ACCEPT, "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
 
-        // connection will not close but needed
-        // request.setHeader("Connection","keep-alive");
-        // request.setHeader("Keep-Alive","300");
-
-        request.headers().set(HttpHeaders.Names.COOKIE, ClientCookieEncoder.encode(new DefaultCookie("my-cookie", "foo"),
+        headers.set(HttpHeaders.Names.COOKIE, ClientCookieEncoder.encode(new DefaultCookie("my-cookie", "foo"),
                 new DefaultCookie("another-cookie", "bar")));
 
         // send request
         List<Entry<String, String>> entries = headers.entries();
-        channel.write(request);
+        channel.write(request).sync();
 
         // Wait for the server to close the connection.
         channel.closeFuture().sync();
@@ -222,7 +218,8 @@ public class HttpUploadClient {
         Channel channel = bootstrap.connect().sync().channel();
 
         // Prepare the HTTP request.
-        HttpRequestWithContent request = new DefaultHttpRequestWithContent(HttpVersion.HTTP_1_1, HttpMethod.POST, uriSimple.toASCIIString());
+        HttpRequestWithContent request =
+                new DefaultHttpRequestWithContent(HttpVersion.HTTP_1_1, HttpMethod.POST, uriSimple.toASCIIString());
 
         // Use the PostBody encoder
         HttpPostRequestEncoder bodyRequestEncoder = null;
@@ -306,7 +303,8 @@ public class HttpUploadClient {
         Channel channel = bootstrap.connect().sync().channel();
 
         // Prepare the HTTP request.
-        HttpRequestWithContent request = new DefaultHttpRequestWithContent(HttpVersion.HTTP_1_1, HttpMethod.POST, uriFile.toASCIIString());
+        HttpRequestWithContent request =
+                new DefaultHttpRequestWithContent(HttpVersion.HTTP_1_1, HttpMethod.POST, uriFile.toASCIIString());
 
         // Use the PostBody encoder
         HttpPostRequestEncoder bodyRequestEncoder = null;
