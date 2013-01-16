@@ -519,4 +519,15 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             selector.wakeup();
         }
     }
+
+    void selectNow() throws IOException {
+        try {
+            selector.selectNow();
+        } finally {
+            // restore wakup state if needed
+            if (wakenUp.get()) {
+                selector.wakeup();
+            }
+        }
+    }
 }
