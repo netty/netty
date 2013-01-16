@@ -44,7 +44,7 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object> {
 
     private EmbeddedByteChannel decoder;
-    private HttpMessage header;
+    private HttpMessage message;
     private boolean decodeStarted;
 
     /**
@@ -61,8 +61,8 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
             return msg;
         }
         if (msg instanceof HttpMessage) {
-            assert header == null;
-            header = (HttpMessage) msg;
+            assert message == null;
+            message = (HttpMessage) msg;
 
             cleanup();
         }
@@ -72,11 +72,12 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
 
             if (!decodeStarted) {
                 decodeStarted = true;
-                HttpMessage header = this.header;
-                this.header = null;
+                HttpMessage message = this.message;
+                HttpHeaders headers = message.headers();
+                this.message = null;
 
                 // Determine the content encoding.
-                String contentEncoding = header.headers().get(HttpHeaders.Names.CONTENT_ENCODING);
+                String contentEncoding = headers.get(HttpHeaders.Names.CONTENT_ENCODING);
                 if (contentEncoding != null) {
                     contentEncoding = contentEncoding.trim();
                 } else {
@@ -90,21 +91,21 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
                     if (HttpHeaders.Values.IDENTITY.equals(targetContentEncoding)) {
                         // Do NOT set the 'Content-Encoding' header if the target encoding is 'identity'
                         // as per: http://tools.ietf.org/html/rfc2616#section-14.11
-                        header.headers().remove(HttpHeaders.Names.CONTENT_ENCODING);
+                        headers.remove(HttpHeaders.Names.CONTENT_ENCODING);
                     } else {
-                        header.headers().set(HttpHeaders.Names.CONTENT_ENCODING, targetContentEncoding);
+                        headers.set(HttpHeaders.Names.CONTENT_ENCODING, targetContentEncoding);
                     }
-                    Object[] decoded = decodeContent(header, c);
+                    Object[] decoded = decodeContent(message, c);
 
                     // Replace the content.
-                    if (header.headers().contains(HttpHeaders.Names.CONTENT_LENGTH)) {
-                        header.headers().set(
+                    if (headers.contains(HttpHeaders.Names.CONTENT_LENGTH)) {
+                        headers.set(
                                 HttpHeaders.Names.CONTENT_LENGTH,
                                 Integer.toString(((ByteBufHolder) decoded[1]).data().readableBytes()));
                     }
                     return decoded;
                 }
-                return new Object[] { header, c };
+                return new Object[] { message, c };
             }
             return decodeContent(null, c);
         }

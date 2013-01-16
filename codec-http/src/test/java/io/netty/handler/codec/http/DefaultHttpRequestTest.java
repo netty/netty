@@ -15,32 +15,33 @@
  */
 package io.netty.handler.codec.http;
 
-import org.junit.Assert;
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 public class DefaultHttpRequestTest {
 
     @Test
     public void testHeaderRemoval() {
-        HttpMessage m = new DefaultHttpRequest(
-                HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+        HttpMessage m = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+        HttpHeaders h = m.headers();
 
         // Insert sample keys.
         for (int i = 0; i < 1000; i ++) {
-            m.headers().set(String.valueOf(i), "");
+            h.set(String.valueOf(i), "");
         }
 
         // Remove in reversed order.
         for (int i = 999; i >= 0; i --) {
-            m.headers().remove(String.valueOf(i));
+            h.remove(String.valueOf(i));
         }
 
         // Check if random access returns nothing.
         for (int i = 0; i < 1000; i ++) {
-            Assert.assertNull(m.headers().get(String.valueOf(i)));
+            assertNull(h.get(String.valueOf(i)));
         }
 
         // Check if sequential access returns nothing.
-        Assert.assertTrue(m.headers().isEmpty());
+        assertTrue(h.isEmpty());
     }
 }

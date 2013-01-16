@@ -19,9 +19,9 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaders;
 
 import java.net.URI;
-import java.util.Map;
 
 /**
  * Base class for web socket client handshake implementations
@@ -38,7 +38,7 @@ public abstract class WebSocketClientHandshaker {
 
     private String actualSubprotocol;
 
-    protected final Map<String, String> customHeaders;
+    protected final HttpHeaders customHeaders;
 
     private final int maxFramePayloadLength;
 
@@ -58,7 +58,7 @@ public abstract class WebSocketClientHandshaker {
      *            Maximum length of a frame's payload
      */
     protected WebSocketClientHandshaker(URI webSocketUrl, WebSocketVersion version, String subprotocol,
-                                        Map<String, String> customHeaders, int maxFramePayloadLength) {
+                                        HttpHeaders customHeaders, int maxFramePayloadLength) {
         this.webSocketUrl = webSocketUrl;
         this.version = version;
         expectedSubprotocol = subprotocol;

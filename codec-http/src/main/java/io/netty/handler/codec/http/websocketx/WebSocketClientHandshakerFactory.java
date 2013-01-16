@@ -15,8 +15,9 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
+import io.netty.handler.codec.http.HttpHeaders;
+
 import java.net.URI;
-import java.util.Map;
 
 import static io.netty.handler.codec.http.websocketx.WebSocketVersion.*;
 
@@ -48,7 +49,7 @@ public final class WebSocketClientHandshakerFactory {
      */
     public static WebSocketClientHandshaker newHandshaker(
             URI webSocketURL, WebSocketVersion version, String subprotocol,
-            boolean allowExtensions, Map<String, String> customHeaders) {
+            boolean allowExtensions, HttpHeaders customHeaders) {
         return newHandshaker(webSocketURL, version, subprotocol, allowExtensions, customHeaders, 65536);
     }
 
@@ -72,7 +73,7 @@ public final class WebSocketClientHandshakerFactory {
      */
     public static WebSocketClientHandshaker newHandshaker(
             URI webSocketURL, WebSocketVersion version, String subprotocol,
-            boolean allowExtensions, Map<String, String> customHeaders, int maxFramePayloadLength) {
+            boolean allowExtensions, HttpHeaders customHeaders, int maxFramePayloadLength) {
         if (version == V13) {
             return new WebSocketClientHandshaker13(
                     webSocketURL, V13, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength);

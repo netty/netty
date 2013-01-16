@@ -195,8 +195,10 @@ public class HttpPostRequestDecoder {
         this.charset = charset;
         this.factory = factory;
         // Fill default values
-        if (this.request.headers().contains(HttpHeaders.Names.CONTENT_TYPE)) {
-            checkMultipart(this.request.headers().get(HttpHeaders.Names.CONTENT_TYPE));
+
+        String contentType = this.request.headers().get(HttpHeaders.Names.CONTENT_TYPE);
+        if (contentType != null) {
+            checkMultipart(contentType);
         } else {
             isMultipart = false;
         }

@@ -26,8 +26,6 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
 
-import java.util.Map.Entry;
-
 import static io.netty.handler.codec.http.HttpHeaders.*;
 
 /**
@@ -146,10 +144,8 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
                 throw new Error();
             }
 
-            HttpHeaders headers = currentMessage.headers();
-            for (String name: m.headers().names()) {
-                headers.set(name, m.headers().get(name));
-            }
+            currentMessage.headers().set(m.headers());
+
             // A streamed message - initialize the cumulative buffer, and wait for incoming chunks.
             removeTransferEncodingChunked(currentMessage);
             return null;
@@ -194,9 +190,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
                 // Merge trailing headers into the message.
                 if (chunk instanceof LastHttpContent) {
                     LastHttpContent trailer = (LastHttpContent) chunk;
-                    for (Entry<String, String> header: trailer.trailingHeaders()) {
-                        currentMessage.headers().add(header.getKey(), header.getValue());
-                    }
+                    currentMessage.headers().add(trailer.trailingHeaders());
                 }
 
                 // Set the 'Content-Length' header.
