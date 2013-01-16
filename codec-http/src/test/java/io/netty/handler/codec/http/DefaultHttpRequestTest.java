@@ -22,7 +22,7 @@ public class DefaultHttpRequestTest {
 
     @Test
     public void testHeaderRemoval() {
-        HttpHeader m = new DefaultHttpRequestHeader(
+        HttpMessage m = new DefaultHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
 
         // Insert sample keys.

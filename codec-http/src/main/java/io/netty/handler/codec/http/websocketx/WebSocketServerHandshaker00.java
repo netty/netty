@@ -22,15 +22,15 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.DefaultHttpResponse;
-import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.DefaultHttpResponseWithEntityWithEntity;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpHeaders.Values;
-import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
-import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpRequestWithEntityWithEntity;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpResponseWithEntityWithEntity;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
@@ -119,7 +119,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      *            HTTP request
      */
     @Override
-    public ChannelFuture handshake(Channel channel, HttpRequest req, ChannelPromise promise) {
+    public ChannelFuture handshake(Channel channel, HttpRequestWithEntityWithEntity req, ChannelPromise promise) {
 
         if (logger.isDebugEnabled()) {
             logger.debug(String.format("Channel %s WS Version 00 server handshake", channel.id()));
@@ -135,7 +135,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
         boolean isHixie76 = req.containsHeader(SEC_WEBSOCKET_KEY1) && req.containsHeader(SEC_WEBSOCKET_KEY2);
 
         // Create the WebSocket handshake response.
-        HttpResponse res = new DefaultHttpResponse(HTTP_1_1, new HttpResponseStatus(101,
+        HttpResponseWithEntityWithEntity res = new DefaultHttpResponseWithEntityWithEntity(HTTP_1_1, new HttpResponseStatus(101,
                 isHixie76 ? "WebSocket Protocol Handshake" : "Web Socket Protocol Handshake"));
         res.addHeader(Names.UPGRADE, WEBSOCKET);
         res.addHeader(CONNECTION, Values.UPGRADE);

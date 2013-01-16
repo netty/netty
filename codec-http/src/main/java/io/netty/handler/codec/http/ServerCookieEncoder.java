@@ -15,19 +15,19 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.handler.codec.http.CookieEncoderUtil.*;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+
+import static io.netty.handler.codec.http.CookieEncoderUtil.*;
 
 /**
  * Encodes server-side {@link Cookie}s into HTTP header values.  This encoder can encode
  * the HTTP cookie version 0, 1, and 2.
  * <pre>
  * // Example
- * {@link HttpRequestHeader} req = ...;
+ * {@link HttpRequest} req = ...;
  * res.setHeader("Set-Cookie", {@link ServerCookieEncoder}.encode("JSESSIONID", "1234"));
  * </pre>
  *

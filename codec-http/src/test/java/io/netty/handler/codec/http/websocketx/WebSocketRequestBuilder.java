@@ -15,15 +15,15 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import static io.netty.handler.codec.http.HttpHeaders.Values.WEBSOCKET;
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-
-import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.DefaultHttpRequestWithEntityWithEntity;
+import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpRequestHeader;
+import io.netty.handler.codec.http.HttpRequestWithEntityWithEntity;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http.HttpHeaders.Names;
+
+import static io.netty.handler.codec.http.HttpHeaders.Values.*;
+import static io.netty.handler.codec.http.HttpVersion.*;
 
 public class WebSocketRequestBuilder {
     
@@ -96,8 +96,8 @@ public class WebSocketRequestBuilder {
         return this;
     }
     
-    public HttpRequest build() {
-        HttpRequest req = new DefaultHttpRequest(httpVersion, method, uri);
+    public HttpRequestWithEntityWithEntity build() {
+        HttpRequestWithEntityWithEntity req = new DefaultHttpRequestWithEntityWithEntity(httpVersion, method, uri);
         if (host != null) {
             req.setHeader(Names.HOST, host);
         }
@@ -119,7 +119,7 @@ public class WebSocketRequestBuilder {
         return req;
     }
     
-    public static HttpRequestHeader sucessful() {
+    public static HttpRequest sucessful() {
         return new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
                 .method(HttpMethod.GET)
                 .uri("/test")

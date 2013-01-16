@@ -15,8 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.buffer.Unpooled.*;
-import static io.netty.handler.codec.http.HttpConstants.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
@@ -24,8 +22,11 @@ import io.netty.util.CharsetUtil;
 
 import java.util.Map;
 
+import static io.netty.buffer.Unpooled.*;
+import static io.netty.handler.codec.http.HttpConstants.*;
+
 /**
- * Encodes an {@link HttpHeader} or an {@link HttpContent} into
+ * Encodes an {@link HttpMessage} or an {@link HttpContent} into
  * a {@link ByteBuf}.
  *
  * <h3>Extensibility</h3>
@@ -38,7 +39,7 @@ import java.util.Map;
  * implement all abstract methods properly.
  * @apiviz.landmark
  */
-public abstract class HttpObjectEncoder<H extends HttpHeader> extends MessageToByteEncoder<Object> {
+public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageToByteEncoder<Object> {
 
     private boolean chunked;
 
@@ -52,8 +53,8 @@ public abstract class HttpObjectEncoder<H extends HttpHeader> extends MessageToB
     @SuppressWarnings("unchecked")
     @Override
     protected void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
-        if (msg instanceof HttpHeader) {
-            HttpHeader m = (HttpHeader) msg;
+        if (msg instanceof HttpMessage) {
+            HttpMessage m = (HttpMessage) msg;
             chunked = HttpHeaders.isTransferEncodingChunked(m);
             // Encode the message.
             out.markWriterIndex();
@@ -92,7 +93,7 @@ public abstract class HttpObjectEncoder<H extends HttpHeader> extends MessageToB
         }
     }
 
-    private static void encodeHeaders(ByteBuf buf, HttpHeader message) {
+    private static void encodeHeaders(ByteBuf buf, HttpMessage message) {
         for (Map.Entry<String, String> h: message.getHeaders()) {
             encodeHeader(buf, h.getKey(), h.getValue());
         }

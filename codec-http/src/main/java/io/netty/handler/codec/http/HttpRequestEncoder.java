@@ -15,19 +15,20 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.handler.codec.http.HttpConstants.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
 
+import static io.netty.handler.codec.http.HttpConstants.*;
+
 /**
- * Encodes an {@link HttpRequestHeader} or an {@link HttpContent} into
+ * Encodes an {@link HttpRequest} or an {@link HttpContent} into
  * a {@link ByteBuf}.
  */
-public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequestHeader> {
+public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
     private static final char SLASH = '/';
 
     @Override
-    protected void encodeInitialLine(ByteBuf buf, HttpRequestHeader request) throws Exception {
+    protected void encodeInitialLine(ByteBuf buf, HttpRequest request) throws Exception {
         buf.writeBytes(request.getMethod().toString().getBytes(CharsetUtil.US_ASCII));
         buf.writeByte(SP);
 

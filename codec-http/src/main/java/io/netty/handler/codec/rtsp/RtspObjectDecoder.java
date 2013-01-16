@@ -19,13 +19,13 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedMessageChannel;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.handler.codec.http.HttpHeader;
+import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpObjectDecoder;
 
 /**
  * Decodes {@link ByteBuf}s into RTSP messages represented in
- * {@link io.netty.handler.codec.http.HttpHeader}s.
+ * {@link io.netty.handler.codec.http.HttpMessage}s.
  * <p>
  * <h3>Parameters that prevents excessive memory consumption</h3>
  * <table border="1">
@@ -84,7 +84,7 @@ public abstract class RtspObjectDecoder extends HttpObjectDecoder {
     }
 
     @Override
-    protected boolean isContentAlwaysEmpty(HttpHeader msg) {
+    protected boolean isContentAlwaysEmpty(HttpMessage msg) {
         // Unlike HTTP, RTSP always assumes zero-length body if Content-Length
         // header is absent.
         boolean empty = super.isContentAlwaysEmpty(msg);

@@ -19,25 +19,25 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.HttpHeader;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpRequestHeader;
-import io.netty.handler.codec.http.HttpResponseHeader;
-import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpObject;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpRequestWithEntityWithEntity;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.LastHttpContent;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Encodes {@link HttpRequestHeader}s, {@link HttpResponseHeader}s, and {@link HttpContent}s
+ * Encodes {@link io.netty.handler.codec.http.HttpRequest}s, {@link io.netty.handler.codec.http.HttpResponse}s, and {@link HttpContent}s
  * into {@link SpdySynStreamFrame}s and {@link SpdySynReplyFrame}s.
  *
  * <h3>Request Annotations</h3>
  *
- * SPDY specific headers must be added to {@link HttpRequestHeader}s:
+ * SPDY specific headers must be added to {@link io.netty.handler.codec.http.HttpRequest}s:
  * <table border=1>
  * <tr>
  * <th>Header Name</th><th>Header Value</th>
@@ -58,7 +58,7 @@ import java.util.Map;
  *
  * <h3>Response Annotations</h3>
  *
- * SPDY specific headers must be added to {@link HttpResponseHeader}s:
+ * SPDY specific headers must be added to {@link io.netty.handler.codec.http.HttpResponse}s:
  * <table border=1>
  * <tr>
  * <th>Header Name</th><th>Header Value</th>
@@ -71,7 +71,7 @@ import java.util.Map;
  *
  * <h3>Pushed Resource Annotations</h3>
  *
- * SPDY specific headers must be added to pushed {@link HttpResponseHeader}s:
+ * SPDY specific headers must be added to pushed {@link io.netty.handler.codec.http.HttpResponse}s:
  * <table border=1>
  * <tr>
  * <th>Header Name</th><th>Header Value</th>
@@ -112,8 +112,8 @@ import java.util.Map;
  * <h3>Chunked Content</h3>
  *
  * This encoder associates all {@link HttpContent}s that it receives
- * with the most recently received 'chunked' {@link HttpRequestHeader}
- * or {@link HttpResponseHeader}.
+ * with the most recently received 'chunked' {@link io.netty.handler.codec.http.HttpRequest}
+ * or {@link io.netty.handler.codec.http.HttpResponse}.
  *
  * <h3>Pushed Resources</h3>
  *
@@ -144,15 +144,15 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
     public Object encode(ChannelHandlerContext ctx, Object msg) throws Exception {
 
         List<Object> out = new ArrayList<Object>();
-        if (msg instanceof HttpRequestHeader) {
+        if (msg instanceof HttpRequest) {
 
-            HttpRequestHeader httpRequest = (HttpRequestHeader) msg;
+            HttpRequest httpRequest = (HttpRequest) msg;
             SpdySynStreamFrame spdySynStreamFrame = createSynStreamFrame(httpRequest);
             out.add(spdySynStreamFrame);
         }
-        if (msg instanceof HttpResponseHeader) {
+        if (msg instanceof HttpResponse) {
 
-            HttpResponseHeader httpResponse = (HttpResponseHeader) msg;
+            HttpResponse httpResponse = (HttpResponse) msg;
             if (httpResponse.containsHeader(SpdyHttpHeaders.Names.ASSOCIATED_TO_STREAM_ID)) {
                 SpdySynStreamFrame spdySynStreamFrame = createSynStreamFrame(httpResponse);
                 out.add(spdySynStreamFrame);
@@ -194,7 +194,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
         return out.toArray();
     }
 
-    private SpdySynStreamFrame createSynStreamFrame(HttpHeader httpMessage)
+    private SpdySynStreamFrame createSynStreamFrame(HttpMessage httpMessage)
             throws Exception {
         // Get the Stream-ID, Associated-To-Stream-ID, Priority, URL, and scheme from the headers
         int streamID = SpdyHttpHeaders.getStreamId(httpMessage);
@@ -219,14 +219,14 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
                 new DefaultSpdySynStreamFrame(streamID, associatedToStreamId, priority);
 
         // Unfold the first line of the message into name/value pairs
-        if (httpMessage instanceof HttpRequest) {
-            HttpRequestHeader httpRequest = (HttpRequestHeader) httpMessage;
+        if (httpMessage instanceof HttpRequestWithEntityWithEntity) {
+            HttpRequest httpRequest = (HttpRequest) httpMessage;
             SpdyHeaders.setMethod(spdyVersion, spdySynStreamFrame, httpRequest.getMethod());
             SpdyHeaders.setUrl(spdyVersion, spdySynStreamFrame, httpRequest.getUri());
             SpdyHeaders.setVersion(spdyVersion, spdySynStreamFrame, httpMessage.getProtocolVersion());
         }
-        if (httpMessage instanceof HttpResponseHeader) {
-            HttpResponseHeader httpResponse = (HttpResponseHeader) httpMessage;
+        if (httpMessage instanceof HttpResponse) {
+            HttpResponse httpResponse = (HttpResponse) httpMessage;
             SpdyHeaders.setStatus(spdyVersion, spdySynStreamFrame, httpResponse.getStatus());
             SpdyHeaders.setUrl(spdyVersion, spdySynStreamFrame, URL);
             SpdyHeaders.setVersion(spdyVersion, spdySynStreamFrame, httpMessage.getProtocolVersion());
@@ -255,7 +255,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
         return spdySynStreamFrame;
     }
 
-    private SpdySynReplyFrame createSynReplyFrame(HttpResponseHeader httpResponse)
+    private SpdySynReplyFrame createSynReplyFrame(HttpResponse httpResponse)
             throws Exception {
         boolean chunked = HttpHeaders.isTransferEncodingChunked(httpResponse);
 

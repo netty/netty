@@ -22,14 +22,14 @@ import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedMessageChannel;
-import io.netty.handler.codec.http.DefaultHttpRequestHeader;
+import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpRequestHeader;
 import io.netty.handler.codec.http.HttpRequestDecoder;
+import io.netty.handler.codec.http.HttpRequestWithEntityWithEntity;
 import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.HttpResponseHeader;
 import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.handler.codec.http.HttpResponseWithEntityWithEntity;
 import org.junit.Test;
 
 import static io.netty.handler.codec.http.HttpHeaders.Values.*;
@@ -46,7 +46,7 @@ public class WebSocketServerProtocolHandlerTest {
         
         writeUpgradeRequest(ch);
         
-        assertEquals(SWITCHING_PROTOCOLS, ((HttpResponseHeader) ch.outboundMessageBuffer().poll()).getStatus());
+        assertEquals(SWITCHING_PROTOCOLS, ((HttpResponse) ch.outboundMessageBuffer().poll()).getStatus());
         assertNotNull(WebSocketServerProtocolHandler.getHandshaker(handshakerCtx));
     }
     
@@ -55,16 +55,16 @@ public class WebSocketServerProtocolHandlerTest {
         EmbeddedMessageChannel ch = createChannel(new MockOutboundHandler());
         
         writeUpgradeRequest(ch);
-        assertEquals(SWITCHING_PROTOCOLS, ((HttpResponseHeader) ch.outboundMessageBuffer().poll()).getStatus());
+        assertEquals(SWITCHING_PROTOCOLS, ((HttpResponse) ch.outboundMessageBuffer().poll()).getStatus());
         
-        ch.writeInbound(new DefaultHttpRequestHeader(HTTP_1_1, HttpMethod.GET, "/test"));
-        assertEquals(FORBIDDEN, ((HttpResponseHeader) ch.outboundMessageBuffer().poll()).getStatus());
+        ch.writeInbound(new DefaultHttpRequest(HTTP_1_1, HttpMethod.GET, "/test"));
+        assertEquals(FORBIDDEN, ((HttpResponse) ch.outboundMessageBuffer().poll()).getStatus());
     }
     
     @Test
     public void testHttpUpgradeRequestInvalidUpgradeHeader() {
         EmbeddedMessageChannel ch = createChannel();
-        HttpRequest httpRequest = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
+        HttpRequestWithEntityWithEntity httpRequestWithEntity = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
                 .method(HttpMethod.GET)
                 .uri("/test")
                 .connection("Upgrade")
@@ -72,9 +72,9 @@ public class WebSocketServerProtocolHandlerTest {
                 .upgrade("BogusSocket")
                 .build();
         
-        ch.writeInbound(httpRequest);
+        ch.writeInbound(httpRequestWithEntity);
         
-        HttpResponse response = getHttpResponse(ch);
+        HttpResponseWithEntityWithEntity response = getHttpResponse(ch);
         assertEquals(BAD_REQUEST, response.getStatus());
         assertEquals("not a WebSocket handshake request: missing upgrade", getResponseMessage(response));
         
@@ -83,7 +83,7 @@ public class WebSocketServerProtocolHandlerTest {
     @Test
     public void testHttpUpgradeRequestMissingWSKeyHeader() {
         EmbeddedMessageChannel ch = createChannel();
-        HttpRequestHeader httpRequest = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
+        HttpRequest httpRequest = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
                 .method(HttpMethod.GET)
                 .uri("/test")
                 .key(null)
@@ -94,7 +94,7 @@ public class WebSocketServerProtocolHandlerTest {
         
         ch.writeInbound(httpRequest);
         
-        HttpResponse response = getHttpResponse(ch);
+        HttpResponseWithEntityWithEntity response = getHttpResponse(ch);
         assertEquals(BAD_REQUEST, response.getStatus());
         assertEquals("not a WebSocket request: missing key", getResponseMessage(response));
     }
@@ -129,13 +129,13 @@ public class WebSocketServerProtocolHandlerTest {
         ch.writeInbound(WebSocketRequestBuilder.sucessful());
     }
 
-    private static String getResponseMessage(HttpResponse response) {
+    private static String getResponseMessage(HttpResponseWithEntityWithEntity response) {
         return new String(response.getContent().array());
     }
 
-    private static HttpResponse getHttpResponse(EmbeddedMessageChannel ch) {
+    private static HttpResponseWithEntityWithEntity getHttpResponse(EmbeddedMessageChannel ch) {
         MessageBuf<Object> outbound = ch.pipeline().context(MockOutboundHandler.class).outboundMessageBuffer();
-        return (HttpResponse) outbound.poll();
+        return (HttpResponseWithEntityWithEntity) outbound.poll();
     }
 
     private static class MockOutboundHandler extends ChannelOutboundMessageHandlerAdapter<Object> {

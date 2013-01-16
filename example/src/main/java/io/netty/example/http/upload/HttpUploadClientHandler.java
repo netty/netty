@@ -19,7 +19,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpResponseHeader;
+import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -36,8 +36,8 @@ public class HttpUploadClientHandler extends ChannelInboundMessageHandlerAdapter
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof HttpResponseHeader) {
-            HttpResponseHeader response = (HttpResponseHeader) msg;
+        if (msg instanceof HttpResponse) {
+            HttpResponse response = (HttpResponse) msg;
 
             logger.info("STATUS: " + response.getStatus());
             logger.info("VERSION: " + response.getProtocolVersion());

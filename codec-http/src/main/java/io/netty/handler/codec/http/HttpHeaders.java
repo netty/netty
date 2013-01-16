@@ -27,7 +27,7 @@ import java.util.TreeSet;
 
 /**
  * Provides the constants for the standard HTTP header names and values and
- * commonly used utility methods that accesses an {@link HttpHeader}.
+ * commonly used utility methods that accesses an {@link HttpMessage}.
  * @apiviz.landmark
  * @apiviz.stereotype static
  */
@@ -483,7 +483,7 @@ public class HttpHeaders {
      * {@code "Connection"} header first and then the return value of
      * {@link HttpVersion#isKeepAliveDefault()}.
      */
-    public static boolean isKeepAlive(HttpHeader message) {
+    public static boolean isKeepAlive(HttpMessage message) {
         String connection = message.getHeader(Names.CONNECTION);
         if (Values.CLOSE.equalsIgnoreCase(connection)) {
             return false;
@@ -515,7 +515,7 @@ public class HttpHeaders {
      *     </ul></li>
      * </ul>
      */
-    public static void setKeepAlive(HttpHeader message, boolean keepAlive) {
+    public static void setKeepAlive(HttpMessage message, boolean keepAlive) {
         if (message.getProtocolVersion().isKeepAliveDefault()) {
             if (keepAlive) {
                 message.removeHeader(Names.CONNECTION);
@@ -538,7 +538,7 @@ public class HttpHeaders {
      *
      * @return the header value or {@code null} if there is no such header
      */
-    public static String getHeader(HttpHeader message, String name) {
+    public static String getHeader(HttpMessage message, String name) {
         return message.getHeader(name);
     }
 
@@ -550,7 +550,7 @@ public class HttpHeaders {
      * @return the header value or the {@code defaultValue} if there is no such
      *         header
      */
-    public static String getHeader(HttpHeader message, String name, String defaultValue) {
+    public static String getHeader(HttpMessage message, String name, String defaultValue) {
         String value = message.getHeader(name);
         if (value == null) {
             return defaultValue;
@@ -566,7 +566,7 @@ public class HttpHeaders {
      * and {@link Calendar} which are formatted to the date format defined in
      * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>.
      */
-    public static void setHeader(HttpHeader message, String name, Object value) {
+    public static void setHeader(HttpMessage message, String name, Object value) {
         message.setHeader(name, value);
     }
 
@@ -584,7 +584,7 @@ public class HttpHeaders {
      * }
      * </pre>
      */
-    public static void setHeader(HttpHeader message, String name, Iterable<?> values) {
+    public static void setHeader(HttpMessage message, String name, Iterable<?> values) {
         message.setHeader(name, values);
     }
 
@@ -595,21 +595,21 @@ public class HttpHeaders {
      * and {@link Calendar} which are formatted to the date format defined in
      * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>.
      */
-    public static void addHeader(HttpHeader message, String name, Object value) {
+    public static void addHeader(HttpMessage message, String name, Object value) {
         message.addHeader(name, value);
     }
 
     /**
      * Removes the header with the specified name.
      */
-    public static void removeHeader(HttpHeader message, String name) {
+    public static void removeHeader(HttpMessage message, String name) {
         message.removeHeader(name);
     }
 
     /**
      * Removes all headers from the specified message.
      */
-    public static void clearHeaders(HttpHeader message) {
+    public static void clearHeaders(HttpMessage message) {
         message.clearHeaders();
     }
 
@@ -622,7 +622,7 @@ public class HttpHeaders {
      * @throws NumberFormatException
      *         if there is no such header or the header value is not a number
      */
-    public static int getIntHeader(HttpHeader message, String name) {
+    public static int getIntHeader(HttpMessage message, String name) {
         String value = getHeader(message, name);
         if (value == null) {
             throw new NumberFormatException("header not found: " + name);
@@ -638,7 +638,7 @@ public class HttpHeaders {
      * @return the header value or the {@code defaultValue} if there is no such
      *         header or the header value is not a number
      */
-    public static int getIntHeader(HttpHeader message, String name, int defaultValue) {
+    public static int getIntHeader(HttpMessage message, String name, int defaultValue) {
         String value = getHeader(message, name);
         if (value == null) {
             return defaultValue;
@@ -655,7 +655,7 @@ public class HttpHeaders {
      * Sets a new integer header with the specified name and value.  If there
      * is an existing header with the same name, the existing header is removed.
      */
-    public static void setIntHeader(HttpHeader message, String name, int value) {
+    public static void setIntHeader(HttpMessage message, String name, int value) {
         message.setHeader(name, value);
     }
 
@@ -663,14 +663,14 @@ public class HttpHeaders {
      * Sets a new integer header with the specified name and values.  If there
      * is an existing header with the same name, the existing header is removed.
      */
-    public static void setIntHeader(HttpHeader message, String name, Iterable<Integer> values) {
+    public static void setIntHeader(HttpMessage message, String name, Iterable<Integer> values) {
         message.setHeader(name, values);
     }
 
     /**
      * Adds a new integer header with the specified name and value.
      */
-    public static void addIntHeader(HttpHeader message, String name, int value) {
+    public static void addIntHeader(HttpMessage message, String name, int value) {
         message.addHeader(name, value);
     }
 
@@ -683,7 +683,7 @@ public class HttpHeaders {
      * @throws ParseException
      *         if there is no such header or the header value is not a formatted date
      */
-    public static Date getDateHeader(HttpHeader message, String name) throws ParseException {
+    public static Date getDateHeader(HttpMessage message, String name) throws ParseException {
         String value = getHeader(message, name);
         if (value == null) {
             throw new ParseException("header not found: " + name, 0);
@@ -699,7 +699,7 @@ public class HttpHeaders {
      * @return the header value or the {@code defaultValue} if there is no such
      *         header or the header value is not a formatted date
      */
-    public static Date getDateHeader(HttpHeader message, String name, Date defaultValue) {
+    public static Date getDateHeader(HttpMessage message, String name, Date defaultValue) {
         final String value = getHeader(message, name);
         if (value == null) {
             return defaultValue;
@@ -718,7 +718,7 @@ public class HttpHeaders {
      * The specified value is formatted as defined in
      * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>
      */
-    public static void setDateHeader(HttpHeader message, String name, Date value) {
+    public static void setDateHeader(HttpMessage message, String name, Date value) {
         if (value != null) {
             message.setHeader(name, new HttpHeaderDateFormat().format(value));
         } else {
@@ -732,7 +732,7 @@ public class HttpHeaders {
      * The specified values are formatted as defined in
      * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>
      */
-    public static void setDateHeader(HttpHeader message, String name, Iterable<Date> values) {
+    public static void setDateHeader(HttpMessage message, String name, Iterable<Date> values) {
         message.setHeader(name, values);
     }
 
@@ -741,7 +741,7 @@ public class HttpHeaders {
      * value is formatted as defined in
      * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>
      */
-    public static void addDateHeader(HttpHeader message, String name, Date value) {
+    public static void addDateHeader(HttpMessage message, String name, Date value) {
         message.addHeader(name, value);
     }
 
@@ -757,7 +757,7 @@ public class HttpHeaders {
      *         if the message does not have the {@code "Content-Length"} header
      *         or its value is not a number
      */
-    public static long getContentLength(HttpHeader message) {
+    public static long getContentLength(HttpMessage message) {
         String value = getHeader(message, Names.CONTENT_LENGTH);
         if (value != null) {
             return Long.parseLong(value);
@@ -784,7 +784,7 @@ public class HttpHeaders {
      *         not have the {@code "Content-Length"} header or its value is not
      *         a number
      */
-    public static long getContentLength(HttpHeader message, long defaultValue) {
+    public static long getContentLength(HttpMessage message, long defaultValue) {
         String contentLength = message.getHeader(Names.CONTENT_LENGTH);
         if (contentLength != null) {
             try {
@@ -809,17 +809,17 @@ public class HttpHeaders {
      * Returns the content length of the specified web socket message.  If the
      * specified message is not a web socket message, {@code -1} is returned.
      */
-    private static int getWebSocketContentLength(HttpHeader message) {
+    private static int getWebSocketContentLength(HttpMessage message) {
         // WebSockset messages have constant content-lengths.
-        if (message instanceof HttpRequestHeader) {
-            HttpRequestHeader req = (HttpRequestHeader) message;
+        if (message instanceof HttpRequest) {
+            HttpRequest req = (HttpRequest) message;
             if (HttpMethod.GET.equals(req.getMethod()) &&
                 req.containsHeader(Names.SEC_WEBSOCKET_KEY1) &&
                 req.containsHeader(Names.SEC_WEBSOCKET_KEY2)) {
                 return 8;
             }
-        } else if (message instanceof HttpResponseHeader) {
-            HttpResponseHeader res = (HttpResponseHeader) message;
+        } else if (message instanceof HttpResponse) {
+            HttpResponse res = (HttpResponse) message;
             if (res.getStatus().getCode() == 101 &&
                 res.containsHeader(Names.SEC_WEBSOCKET_ORIGIN) &&
                 res.containsHeader(Names.SEC_WEBSOCKET_LOCATION)) {
@@ -834,14 +834,14 @@ public class HttpHeaders {
     /**
      * Sets the {@code "Content-Length"} header.
      */
-    public static void setContentLength(HttpHeader message, long length) {
+    public static void setContentLength(HttpMessage message, long length) {
         message.setHeader(Names.CONTENT_LENGTH, length);
     }
 
     /**
      * Returns the value of the {@code "Host"} header.
      */
-    public static String getHost(HttpHeader message) {
+    public static String getHost(HttpMessage message) {
         return message.getHeader(Names.HOST);
     }
 
@@ -849,14 +849,14 @@ public class HttpHeaders {
      * Returns the value of the {@code "Host"} header.  If there is no such
      * header, the {@code defaultValue} is returned.
      */
-    public static String getHost(HttpHeader message, String defaultValue) {
+    public static String getHost(HttpMessage message, String defaultValue) {
         return getHeader(message, Names.HOST, defaultValue);
     }
 
     /**
      * Sets the {@code "Host"} header.
      */
-    public static void setHost(HttpHeader message, String value) {
+    public static void setHost(HttpMessage message, String value) {
         message.setHeader(Names.HOST, value);
     }
 
@@ -866,7 +866,7 @@ public class HttpHeaders {
      * @throws ParseException
      *         if there is no such header or the header value is not a formatted date
      */
-    public static Date getDate(HttpHeader message) throws ParseException {
+    public static Date getDate(HttpMessage message) throws ParseException {
         return getDateHeader(message, Names.DATE);
     }
 
@@ -875,14 +875,14 @@ public class HttpHeaders {
      * header or the header is not a formatted date, the {@code defaultValue}
      * is returned.
      */
-    public static Date getDate(HttpHeader message, Date defaultValue) {
+    public static Date getDate(HttpMessage message, Date defaultValue) {
         return getDateHeader(message, Names.DATE, defaultValue);
     }
 
     /**
      * Sets the {@code "Date"} header.
      */
-    public static void setDate(HttpHeader message, Date value) {
+    public static void setDate(HttpMessage message, Date value) {
         if (value != null) {
             message.setHeader(Names.DATE, new HttpHeaderDateFormat().format(value));
         } else {
@@ -894,9 +894,9 @@ public class HttpHeaders {
      * Returns {@code true} if and only if the specified message contains the
      * {@code "Expect: 100-continue"} header.
      */
-    public static boolean is100ContinueExpected(HttpHeader message) {
+    public static boolean is100ContinueExpected(HttpMessage message) {
         // Expect: 100-continue is for requests only.
-        if (!(message instanceof HttpRequestHeader)) {
+        if (!(message instanceof HttpRequest)) {
             return false;
         }
 
@@ -928,7 +928,7 @@ public class HttpHeaders {
      * If there is any existing {@code "Expect"} header, they are replaced with
      * the new one.
      */
-    public static void set100ContinueExpected(HttpHeader message) {
+    public static void set100ContinueExpected(HttpMessage message) {
         set100ContinueExpected(message, true);
     }
 
@@ -939,7 +939,7 @@ public class HttpHeaders {
      * {@code "Expect"} headers are removed.  Otherwise, all {@code "Expect"}
      * headers are removed completely.
      */
-    public static void set100ContinueExpected(HttpHeader message, boolean set) {
+    public static void set100ContinueExpected(HttpMessage message, boolean set) {
         if (set) {
             message.setHeader(Names.EXPECT, Values.CONTINUE);
         } else {
@@ -950,7 +950,7 @@ public class HttpHeaders {
     /**
      * Set the headers on the dst like they are set on the src
      */
-    public static void setHeaders(HttpHeader src, HttpHeader dst) {
+    public static void setHeaders(HttpMessage src, HttpMessage dst) {
         for (String name: src.getHeaderNames()) {
             dst.setHeader(name, src.getHeaders(name));
         }
@@ -1065,12 +1065,12 @@ public class HttpHeaders {
     }
 
     /**
-     * Checks to see if the transfer encoding in a specified {@link HttpHeader} is chunked
+     * Checks to see if the transfer encoding in a specified {@link HttpMessage} is chunked
      *
      * @param message The message to check
      * @return True if transfer encoding is chunked, otherwise false
      */
-    public static boolean isTransferEncodingChunked(HttpHeader message) {
+    public static boolean isTransferEncodingChunked(HttpMessage message) {
         List<String> transferEncodingHeaders = message.getHeaders(Names.TRANSFER_ENCODING);
         if (transferEncodingHeaders.isEmpty()) {
             return false;
@@ -1084,7 +1084,7 @@ public class HttpHeaders {
         return false;
     }
 
-    public static void removeTransferEncodingChunked(HttpHeader m) {
+    public static void removeTransferEncodingChunked(HttpMessage m) {
         List<String> values = m.getHeaders(Names.TRANSFER_ENCODING);
         values.remove(Values.CHUNKED);
         if (values.isEmpty()) {
@@ -1094,12 +1094,12 @@ public class HttpHeaders {
         }
     }
 
-    public static void setTransferEncodingChunked(HttpHeader m) {
+    public static void setTransferEncodingChunked(HttpMessage m) {
         addHeader(m, Names.TRANSFER_ENCODING, Values.CHUNKED);
         removeHeader(m, Names.CONTENT_LENGTH);
     }
 
-    public static boolean isContentLengthSet(HttpHeader m) {
+    public static boolean isContentLengthSet(HttpMessage m) {
         List<String> contentLength = m.getHeaders(Names.CONTENT_LENGTH);
         return !contentLength.isEmpty();
     }

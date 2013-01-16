@@ -25,14 +25,14 @@ import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.Cookie;
 import io.netty.handler.codec.http.CookieDecoder;
 import io.netty.handler.codec.http.DefaultHttpResponse;
-import io.netty.handler.codec.http.DefaultHttpResponseHeader;
+import io.netty.handler.codec.http.DefaultHttpResponseWithEntityWithEntity;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpRequestHeader;
-import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.HttpResponseHeader;
-import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.HttpObject;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseWithEntityWithEntity;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.http.ServerCookieEncoder;
 import io.netty.util.CharsetUtil;
@@ -49,15 +49,15 @@ import static io.netty.handler.codec.http.HttpVersion.*;
 
 public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<Object> {
 
-    private HttpRequestHeader request;
+    private HttpRequest request;
     private boolean readingChunks;
     /** Buffer that stores the response content */
     private final StringBuilder buf = new StringBuilder();
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof HttpRequestHeader) {
-            HttpRequestHeader request = this.request = (HttpRequestHeader) msg;
+        if (msg instanceof HttpRequest) {
+            HttpRequest request = this.request = (HttpRequest) msg;
 
             if (is100ContinueExpected(request)) {
                 send100Continue(ctx);
@@ -167,7 +167,7 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
         boolean keepAlive = isKeepAlive(request);
 
         // Build the response object.
-        HttpResponse response = new DefaultHttpResponse(
+        HttpResponseWithEntityWithEntity response = new DefaultHttpResponseWithEntityWithEntity(
                 HTTP_1_1, currentObj.getDecoderResult().isSuccess()? OK : BAD_REQUEST);
 
         response.setContent(Unpooled.copiedBuffer(buf.toString(), CharsetUtil.UTF_8));
@@ -207,7 +207,7 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
     }
 
     private static void send100Continue(ChannelHandlerContext ctx) {
-        HttpResponseHeader response = new DefaultHttpResponseHeader(HTTP_1_1, CONTINUE);
+        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, CONTINUE);
         ctx.write(response);
     }
 

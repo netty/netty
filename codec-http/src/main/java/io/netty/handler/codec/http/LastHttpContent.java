@@ -15,6 +15,11 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.DecoderResult;
+
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -23,6 +28,81 @@ import java.util.Set;
  * The last {@link HttpContent} which has trailing headers.
  */
 public interface LastHttpContent extends HttpContent {
+
+    /**
+     * The 'end of content' marker in chunked encoding.
+     */
+    LastHttpContent EMPTY_LAST_CONTENT = new LastHttpContent() {
+        @Override
+        public ByteBuf getContent() {
+            return Unpooled.EMPTY_BUFFER;
+        }
+
+        @Override
+        public void setContent(ByteBuf content) {
+            throw new IllegalStateException("read-only");
+        }
+
+        @Override
+        public void addHeader(String name, Object value) {
+            throw new IllegalStateException("read-only");
+        }
+
+        @Override
+        public void clearHeaders() {
+            // NOOP
+        }
+
+        @Override
+        public boolean containsHeader(String name) {
+            return false;
+        }
+
+        @Override
+        public String getHeader(String name) {
+            return null;
+        }
+
+        @Override
+        public Set<String> getHeaderNames() {
+            return Collections.emptySet();
+        }
+
+        @Override
+        public List<String> getHeaders(String name) {
+            return Collections.emptyList();
+        }
+
+        @Override
+        public List<Map.Entry<String, String>> getHeaders() {
+            return Collections.emptyList();
+        }
+
+        @Override
+        public void removeHeader(String name) {
+            // NOOP
+        }
+
+        @Override
+        public void setHeader(String name, Object value) {
+            throw new IllegalStateException("read-only");
+        }
+
+        @Override
+        public void setHeader(String name, Iterable<?> values) {
+            throw new IllegalStateException("read-only");
+        }
+
+        @Override
+        public DecoderResult getDecoderResult() {
+            return DecoderResult.SUCCESS;
+        }
+
+        @Override
+        public void setDecoderResult(DecoderResult result) {
+            throw new IllegalStateException("read-only");
+        }
+    };
 
     /**
      * Returns the trailing header value with the specified header name.

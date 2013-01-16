@@ -20,11 +20,11 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
-import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.DefaultHttpResponseWithEntityWithEntity;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpRequestWithEntityWithEntity;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpResponseWithEntityWithEntity;
 import io.netty.handler.stream.ChunkedFile;
 import io.netty.util.CharsetUtil;
 
@@ -94,7 +94,7 @@ import static io.netty.handler.codec.http.HttpVersion.*;
  *
  * </pre>
  */
-public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAdapter<HttpRequest> {
+public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAdapter<HttpRequestWithEntityWithEntity> {
 
     public static final String HTTP_DATE_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz";
     public static final String HTTP_DATE_GMT_TIMEZONE = "GMT";
@@ -102,7 +102,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
 
     @Override
     public void messageReceived(
-            ChannelHandlerContext ctx, HttpRequest request) throws Exception {
+            ChannelHandlerContext ctx, HttpRequestWithEntityWithEntity request) throws Exception {
 
         if (!request.getDecoderResult().isSuccess()) {
             sendError(ctx, BAD_REQUEST);
@@ -166,7 +166,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
         }
         long fileLength = raf.length();
 
-        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
+        HttpResponseWithEntityWithEntity response = new DefaultHttpResponseWithEntityWithEntity(HTTP_1_1, OK);
         setContentLength(response, fileLength);
         setContentTypeHeader(response, file);
         setDateAndCacheHeaders(response, file);
@@ -232,7 +232,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
     private static final Pattern ALLOWED_FILE_NAME = Pattern.compile("[A-Za-z0-9][-_A-Za-z0-9\\.]*");
 
     private static void sendListing(ChannelHandlerContext ctx, File dir) {
-        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
+        HttpResponseWithEntityWithEntity response = new DefaultHttpResponseWithEntityWithEntity(HTTP_1_1, OK);
         response.setHeader(CONTENT_TYPE, "text/html; charset=UTF-8");
 
         StringBuilder buf = new StringBuilder();
@@ -277,7 +277,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
     }
 
     private static void sendRedirect(ChannelHandlerContext ctx, String newUri) {
-        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, FOUND);
+        HttpResponseWithEntityWithEntity response = new DefaultHttpResponseWithEntityWithEntity(HTTP_1_1, FOUND);
         response.setHeader(LOCATION, newUri);
 
         // Close the connection as soon as the error message is sent.
@@ -285,7 +285,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
     }
 
     private static void sendError(ChannelHandlerContext ctx, HttpResponseStatus status) {
-        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, status);
+        HttpResponseWithEntityWithEntity response = new DefaultHttpResponseWithEntityWithEntity(HTTP_1_1, status);
         response.setHeader(CONTENT_TYPE, "text/plain; charset=UTF-8");
         response.setContent(Unpooled.copiedBuffer(
                 "Failure: " + status.toString() + "\r\n",
@@ -302,7 +302,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
      *            Context
      */
     private static void sendNotModified(ChannelHandlerContext ctx) {
-        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, NOT_MODIFIED);
+        HttpResponseWithEntityWithEntity response = new DefaultHttpResponseWithEntityWithEntity(HTTP_1_1, NOT_MODIFIED);
         setDateHeader(response);
 
         // Close the connection as soon as the error message is sent.
@@ -315,7 +315,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
      * @param response
      *            HTTP response
      */
-    private static void setDateHeader(HttpResponse response) {
+    private static void setDateHeader(HttpResponseWithEntityWithEntity response) {
         SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
         dateFormatter.setTimeZone(TimeZone.getTimeZone(HTTP_DATE_GMT_TIMEZONE));
 
@@ -331,7 +331,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
      * @param fileToCache
      *            file to extract content type
      */
-    private static void setDateAndCacheHeaders(HttpResponse response, File fileToCache) {
+    private static void setDateAndCacheHeaders(HttpResponseWithEntityWithEntity response, File fileToCache) {
         SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
         dateFormatter.setTimeZone(TimeZone.getTimeZone(HTTP_DATE_GMT_TIMEZONE));
 
@@ -355,7 +355,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
      * @param file
      *            file to extract content type
      */
-    private static void setContentTypeHeader(HttpResponse response, File file) {
+    private static void setContentTypeHeader(HttpResponseWithEntityWithEntity response, File file) {
         MimetypesFileTypeMap mimeTypesMap = new MimetypesFileTypeMap();
         response.setHeader(CONTENT_TYPE, mimeTypesMap.getContentType(file.getPath()));
     }

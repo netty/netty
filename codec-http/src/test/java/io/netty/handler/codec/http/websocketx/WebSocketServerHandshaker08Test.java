@@ -15,22 +15,22 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import static io.netty.handler.codec.http.HttpHeaders.Values.*;
-import static io.netty.handler.codec.http.HttpVersion.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedByteChannel;
-import io.netty.handler.codec.http.DefaultHttpRequest;
-import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.DefaultHttpRequestWithEntityWithEntity;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
-import io.netty.handler.codec.http.HttpResponseHeader;
+import io.netty.handler.codec.http.HttpRequestWithEntityWithEntity;
+import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
-
 import org.junit.Assert;
 import org.junit.Test;
+
+import static io.netty.handler.codec.http.HttpHeaders.Values.*;
+import static io.netty.handler.codec.http.HttpVersion.*;
 
 public class WebSocketServerHandshaker08Test {
 
@@ -39,7 +39,7 @@ public class WebSocketServerHandshaker08Test {
         EmbeddedByteChannel ch = new EmbeddedByteChannel(
                 new HttpObjectAggregator(42), new HttpRequestDecoder(), new HttpResponseEncoder());
 
-        HttpRequest req = new DefaultHttpRequest(HTTP_1_1, HttpMethod.GET, "/chat");
+        HttpRequestWithEntityWithEntity req = new DefaultHttpRequestWithEntityWithEntity(HTTP_1_1, HttpMethod.GET, "/chat");
         req.setHeader(Names.HOST, "server.example.com");
         req.setHeader(Names.UPGRADE, WEBSOCKET.toLowerCase());
         req.setHeader(Names.CONNECTION, "Upgrade");
@@ -55,7 +55,7 @@ public class WebSocketServerHandshaker08Test {
 
         EmbeddedByteChannel ch2 = new EmbeddedByteChannel(new HttpResponseDecoder());
         ch2.writeInbound(resBuf);
-        HttpResponseHeader res = (HttpResponseHeader) ch2.readInbound();
+        HttpResponse res = (HttpResponse) ch2.readInbound();
 
         Assert.assertEquals(
                 "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", res.getHeader(Names.SEC_WEBSOCKET_ACCEPT));

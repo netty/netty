@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,35 +15,55 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-
+import io.netty.util.internal.StringUtil;
 
 /**
- * Default implementation of a {@link HttpResponse}.
+ * The default {@link HttpResponse} implementation.
  */
-public class DefaultHttpResponse extends DefaultHttpResponseHeader implements HttpResponse {
-    private ByteBuf content = Unpooled.EMPTY_BUFFER;
+public class DefaultHttpResponse extends DefaultHttpMessage implements HttpResponse {
 
+    private HttpResponseStatus status;
+
+    /**
+     * Creates a new instance.
+     *
+     * @param version the HTTP version of this response
+     * @param status  the status of this response
+     */
     public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status) {
-        this(version, status, Unpooled.EMPTY_BUFFER);
-    }
-
-    public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status, ByteBuf content) {
-        super(version, status);
-        setContent(content);
+        super(version);
+        setStatus(status);
     }
 
     @Override
-    public ByteBuf getContent() {
-        return content;
+    public HttpResponseStatus getStatus() {
+        return status;
     }
 
     @Override
-    public void setContent(ByteBuf content) {
-        if (content == null) {
-            throw new NullPointerException("content");
+    public void setStatus(HttpResponseStatus status) {
+        if (status == null) {
+            throw new NullPointerException("status");
         }
-        this.content = content;
+        this.status = status;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder();
+        buf.append(getClass().getSimpleName());
+        buf.append(", decodeResult: ");
+        buf.append(getDecoderResult());
+        buf.append(')');
+        buf.append(StringUtil.NEWLINE);
+        buf.append(getProtocolVersion().getText());
+        buf.append(' ');
+        buf.append(getStatus().toString());
+        buf.append(StringUtil.NEWLINE);
+        appendHeaders(buf);
+
+        // Remove the last newline.
+        buf.setLength(buf.length() - StringUtil.NEWLINE.length());
+        return buf.toString();
     }
 }

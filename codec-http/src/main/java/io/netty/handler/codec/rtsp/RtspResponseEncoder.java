@@ -16,19 +16,18 @@
 package io.netty.handler.codec.rtsp;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.http.HttpHeader;
-import io.netty.handler.codec.http.HttpResponseHeader;
+import io.netty.handler.codec.http.HttpResponse;
 import io.netty.util.CharsetUtil;
 
 /**
- * Encodes an RTSP response represented in {@link HttpResponseHeader} into
+ * Encodes an RTSP response represented in {@link io.netty.handler.codec.http.HttpResponse} into
  * a {@link ByteBuf}.
 
  */
-public class RtspResponseEncoder extends RtspObjectEncoder<HttpResponseHeader> {
+public class RtspResponseEncoder extends RtspObjectEncoder<HttpResponse> {
 
     @Override
-    protected void encodeInitialLine(ByteBuf buf, HttpResponseHeader response)
+    protected void encodeInitialLine(ByteBuf buf, HttpResponse response)
             throws Exception {
         buf.writeBytes(response.getProtocolVersion().toString().getBytes(CharsetUtil.US_ASCII));
         buf.writeByte((byte) ' ');

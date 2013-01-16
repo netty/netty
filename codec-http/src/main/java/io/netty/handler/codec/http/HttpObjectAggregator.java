@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.handler.codec.http.HttpHeaders.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
@@ -29,9 +28,11 @@ import io.netty.util.CharsetUtil;
 
 import java.util.Map.Entry;
 
+import static io.netty.handler.codec.http.HttpHeaders.*;
+
 /**
- * A {@link ChannelHandler} that aggregates an {@link HttpHeader}
- * and its following {@link HttpContent}s into a single {@link HttpHeader} with
+ * A {@link ChannelHandler} that aggregates an {@link HttpMessage}
+ * and its following {@link HttpContent}s into a single {@link HttpMessage} with
  * no following {@link HttpContent}s.  It is useful when you don't want to take
  * care of HTTP messages whose transfer encoding is 'chunked'.  Insert this
  * handler after {@link HttpObjectDecoder} in the {@link ChannelPipeline}:
@@ -53,7 +54,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             "HTTP/1.1 100 Continue\r\n\r\n", CharsetUtil.US_ASCII);
 
     private final int maxContentLength;
-    private HttpMessage currentMessage;
+    private HttpMessageWithEntity currentMessage;
 
     private int maxCumulationBufferComponents = DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS;
     private ChannelHandlerContext ctx;
@@ -111,10 +112,10 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
 
     @Override
     protected Object decode(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
-        HttpMessage currentMessage = this.currentMessage;
+        HttpMessageWithEntity currentMessage = this.currentMessage;
 
-        if (msg instanceof HttpHeader) {
-            HttpHeader m = (HttpHeader) msg;
+        if (msg instanceof HttpMessage) {
+            HttpMessage m = (HttpMessage) msg;
 
             // Handle the 'Expect: 100-continue' header if necessary.
             // TODO: Respond with 413 Request Entity Too Large
@@ -130,13 +131,13 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
                 this.currentMessage = null;
                 return m;
             }
-            if (msg instanceof HttpRequestHeader) {
-                HttpRequestHeader header = (HttpRequestHeader) msg;
-                this.currentMessage = new DefaultHttpRequest(header.getProtocolVersion(),
+            if (msg instanceof HttpRequest) {
+                HttpRequest header = (HttpRequest) msg;
+                this.currentMessage = new DefaultHttpRequestWithEntityWithEntity(header.getProtocolVersion(),
                         header.getMethod(), header.getUri());
             }  else {
-                HttpResponseHeader header = (HttpResponseHeader) msg;
-                this.currentMessage = new DefaultHttpResponse(header.getProtocolVersion(), header.getStatus());
+                HttpResponse header = (HttpResponse) msg;
+                this.currentMessage = new DefaultHttpResponseWithEntityWithEntity(header.getProtocolVersion(), header.getStatus());
             }
             for (String name: m.getHeaderNames()) {
                 this.currentMessage.setHeader(name, m.getHeaders(name));
@@ -151,7 +152,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             if (currentMessage == null) {
                 throw new IllegalStateException(
                         "received " + HttpContent.class.getSimpleName() +
-                        " without " + HttpHeader.class.getSimpleName() +
+                        " without " + HttpMessage.class.getSimpleName() +
                         " or last message's transfer encoding was 'SINGLE'");
             }
 
@@ -204,7 +205,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             }
         } else {
             throw new IllegalStateException(
-                    "Only " + HttpHeader.class.getSimpleName() + " and " +
+                    "Only " + HttpMessage.class.getSimpleName() + " and " +
                     HttpContent.class.getSimpleName() + " are accepted: " + msg.getClass().getName());
         }
     }

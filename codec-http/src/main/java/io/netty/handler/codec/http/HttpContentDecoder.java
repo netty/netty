@@ -22,7 +22,7 @@ import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.MessageToMessageDecoder;
 
 /**
- * Decodes the content of the received {@link HttpRequestHeader} and {@link HttpContent}.
+ * Decodes the content of the received {@link HttpRequest} and {@link HttpContent}.
  * The original content is replaced with the new content decoded by the
  * {@link EmbeddedByteChannel}, which is created by {@link #newContentDecoder(String)}.
  * Once decoding is finished, the value of the <tt>'Content-Encoding'</tt>
@@ -43,7 +43,7 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object> {
 
     private EmbeddedByteChannel decoder;
-    private HttpHeader header;
+    private HttpMessage header;
     private boolean decodeStarted;
 
     /**
@@ -55,13 +55,13 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
 
     @Override
     protected Object decode(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof HttpResponseHeader && ((HttpResponseHeader) msg).getStatus().getCode() == 100) {
+        if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().getCode() == 100) {
             // 100-continue response must be passed through.
             return msg;
         }
-        if (msg instanceof HttpHeader) {
+        if (msg instanceof HttpMessage) {
             assert header == null;
-            header = (HttpHeader) msg;
+            header = (HttpMessage) msg;
 
             cleanup();
         }
@@ -71,7 +71,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
 
             if (!decodeStarted) {
                 decodeStarted = true;
-                HttpHeader header = this.header;
+                HttpMessage header = this.header;
                 this.header = null;
 
                 // Determine the content encoding.
@@ -108,11 +108,11 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
             return decodeContent(null, c);
         }
 
-        // Because HttpMessage and HttpChunk is a mutable object, we can simply forward it.
+        // Because HttpMessageWithEntity and HttpChunk is a mutable object, we can simply forward it.
         return msg;
     }
 
-    private Object[] decodeContent(HttpHeader header, HttpContent c) {
+    private Object[] decodeContent(HttpMessage header, HttpContent c) {
         ByteBuf newContent = Unpooled.buffer();
         ByteBuf content = c.getContent();
         decode(content, newContent);
