@@ -19,7 +19,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpResponseHeader;
+import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -36,21 +36,21 @@ public class HttpUploadClientHandler extends ChannelInboundMessageHandlerAdapter
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof HttpResponseHeader) {
-            HttpResponseHeader response = (HttpResponseHeader) msg;
+        if (msg instanceof HttpResponse) {
+            HttpResponse response = (HttpResponse) msg;
 
-            logger.info("STATUS: " + response.getStatus());
-            logger.info("VERSION: " + response.getProtocolVersion());
+            logger.info("STATUS: " + response.status());
+            logger.info("VERSION: " + response.protocolVersion());
 
-            if (!response.getHeaderNames().isEmpty()) {
-                for (String name : response.getHeaderNames()) {
-                    for (String value : response.getHeaders(name)) {
+            if (!response.headers().isEmpty()) {
+                for (String name : response.headers().names()) {
+                    for (String value : response.headers().getAll(name)) {
                         logger.info("HEADER: " + name + " = " + value);
                     }
                 }
             }
 
-            if (response.getStatus().getCode() == 200 && HttpHeaders.isTransferEncodingChunked(response)) {
+            if (response.status().code() == 200 && HttpHeaders.isTransferEncodingChunked(response)) {
                 readingChunks = true;
                 logger.info("CHUNKED CONTENT {");
             } else {
@@ -59,7 +59,7 @@ public class HttpUploadClientHandler extends ChannelInboundMessageHandlerAdapter
         }
         if (msg instanceof HttpContent) {
             HttpContent chunk = (HttpContent) msg;
-            logger.info(chunk.getContent().toString(CharsetUtil.UTF_8));
+            logger.info(chunk.data().toString(CharsetUtil.UTF_8));
 
             if (chunk instanceof LastHttpContent) {
                 if (readingChunks) {
@@ -69,7 +69,7 @@ public class HttpUploadClientHandler extends ChannelInboundMessageHandlerAdapter
                 }
                 readingChunks = false;
             } else {
-                logger.info(chunk.getContent().toString(CharsetUtil.UTF_8));
+                logger.info(chunk.data().toString(CharsetUtil.UTF_8));
             }
         }
     }

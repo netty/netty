@@ -15,14 +15,14 @@
  */
 package io.netty.handler.codec.http;
 
-import static org.junit.Assert.*;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.util.CharsetUtil;
-
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 public class HttpClientCodecTest {
 
@@ -38,7 +38,7 @@ public class HttpClientCodecTest {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
         EmbeddedByteChannel ch = new EmbeddedByteChannel(codec);
 
-        ch.writeOutbound(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
+        ch.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
         ch.writeInbound(Unpooled.copiedBuffer(RESPONSE, CharsetUtil.ISO_8859_1));
         ch.finish();
     }
@@ -48,7 +48,7 @@ public class HttpClientCodecTest {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
         EmbeddedByteChannel ch = new EmbeddedByteChannel(codec);
 
-        ch.writeOutbound(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
+        ch.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
         ch.writeInbound(Unpooled.copiedBuffer(CHUNKED_RESPONSE, CharsetUtil.ISO_8859_1));
         ch.finish();
     }
@@ -58,7 +58,7 @@ public class HttpClientCodecTest {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
         EmbeddedByteChannel ch = new EmbeddedByteChannel(codec);
 
-        assertTrue(ch.writeOutbound(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/")));
+        assertTrue(ch.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/")));
         assertNotNull(ch.readOutbound());
 
         try {
@@ -75,7 +75,7 @@ public class HttpClientCodecTest {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
         EmbeddedByteChannel ch = new EmbeddedByteChannel(codec);
 
-        ch.writeOutbound(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
+        ch.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
         ch.writeInbound(Unpooled.copiedBuffer(INCOMPLETE_CHUNKED_RESPONSE, CharsetUtil.ISO_8859_1));
 
         try {

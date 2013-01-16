@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedByteChannel;
@@ -25,20 +26,20 @@ import java.util.ArrayDeque;
 import java.util.Queue;
 
 /**
- * Encodes the content of the outbound {@link HttpResponseHeader} and {@link HttpContent}.
+ * Encodes the content of the outbound {@link HttpResponse} and {@link HttpContent}.
  * The original content is replaced with the new content encoded by the
- * {@link EmbeddedByteChannel}, which is created by {@link #beginEncode(HttpHeader, HttpContent, String)}.
+ * {@link EmbeddedByteChannel}, which is created by {@link #beginEncode(HttpMessage, HttpContent, String)}.
  * Once encoding is finished, the value of the <tt>'Content-Encoding'</tt> header
  * is set to the target content encoding, as returned by
- * {@link #beginEncode(HttpHeader, HttpContent, String)}.
+ * {@link #beginEncode(HttpMessage, HttpContent, String)}.
  * Also, the <tt>'Content-Length'</tt> header is updated to the length of the
  * encoded content.  If there is no supported or allowed encoding in the
- * corresponding {@link HttpRequestHeader}'s {@code "Accept-Encoding"} header,
- * {@link #beginEncode(HttpHeader, HttpContent, String)} should return {@code null} so that
+ * corresponding {@link HttpRequest}'s {@code "Accept-Encoding"} header,
+ * {@link #beginEncode(HttpMessage, HttpContent, String)} should return {@code null} so that
  * no encoding occurs (i.e. pass-through).
  * <p>
  * Please note that this is an abstract class.  You have to extend this class
- * and implement {@link #beginEncode(HttpHeader, HttpContent, String)} properly to make
+ * and implement {@link #beginEncode(HttpMessage, HttpContent, String)} properly to make
  * this class functional.  For example, refer to the source code of
  * {@link HttpContentCompressor}.
  * <p>
@@ -46,11 +47,11 @@ import java.util.Queue;
  * so that this handler can intercept HTTP responses before {@link HttpObjectEncoder}
  * converts them into {@link ByteBuf}s.
  */
-public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpHeader, Object> {
+public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessage, Object> {
 
     private final Queue<String> acceptEncodingQueue = new ArrayDeque<String>();
     private EmbeddedByteChannel encoder;
-    private HttpHeader header;
+    private HttpMessage header;
     private boolean encodeStarted;
 
     /**
@@ -58,14 +59,14 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpHeade
      */
     protected HttpContentEncoder() {
         super(
-                new Class<?>[] { HttpHeader.class },
+                new Class<?>[] { HttpMessage.class },
                 new Class<?>[] { HttpObject.class });
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, HttpHeader msg)
+    protected Object decode(ChannelHandlerContext ctx, HttpMessage msg)
             throws Exception {
-        String acceptedEncoding = msg.getHeader(HttpHeaders.Names.ACCEPT_ENCODING);
+        String acceptedEncoding = msg.headers().get(HttpHeaders.Names.ACCEPT_ENCODING);
         if (acceptedEncoding == null) {
             acceptedEncoding = HttpHeaders.Values.IDENTITY;
         }
@@ -78,31 +79,31 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpHeade
     public Object encode(ChannelHandlerContext ctx, Object msg)
             throws Exception {
 
-        if (msg instanceof HttpResponseHeader && ((HttpResponseHeader) msg).getStatus().getCode() == 100) {
+        if (msg instanceof HttpResponse && ((HttpResponse) msg).status().code() == 100) {
             // 100-continue response must be passed through.
             return msg;
         }
-        if (msg instanceof HttpHeader) {
+        if (msg instanceof HttpMessage) {
             assert header == null;
 
             // check if this message is also of type HttpContent is such case just make a safe copy of the headers
             // as the content will get handled later and this simplify the handling
             if (msg instanceof HttpContent) {
-                if (msg instanceof HttpRequestHeader) {
-                    HttpRequestHeader reqHeader = (HttpRequestHeader) msg;
-                    header = new DefaultHttpRequestHeader(reqHeader.getProtocolVersion(), reqHeader.getMethod(),
-                            reqHeader.getUri());
+                if (msg instanceof HttpRequest) {
+                    HttpRequest reqHeader = (HttpRequest) msg;
+                    header = new DefaultHttpRequest(reqHeader.protocolVersion(), reqHeader.method(),
+                            reqHeader.uri());
                     HttpHeaders.setHeaders(reqHeader, header);
-                } else  if (msg instanceof HttpResponseHeader) {
-                    HttpResponseHeader responseHeader = (HttpResponseHeader) msg;
-                    header = new DefaultHttpResponseHeader(responseHeader.getProtocolVersion(),
-                            responseHeader.getStatus());
+                } else  if (msg instanceof HttpResponse) {
+                    HttpResponse responseHeader = (HttpResponse) msg;
+                    header = new DefaultHttpResponse(responseHeader.protocolVersion(),
+                            responseHeader.status());
                     HttpHeaders.setHeaders(responseHeader, header);
                 } else {
                     return msg;
                 }
             } else {
-                header = (HttpHeader) msg;
+                header = (HttpMessage) msg;
             }
 
             cleanup();
@@ -113,7 +114,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpHeade
 
             if (!encodeStarted) {
                 encodeStarted = true;
-                HttpHeader header = this.header;
+                HttpMessage header = this.header;
                 this.header = null;
 
                 // Determine the content encoding.
@@ -124,25 +125,29 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpHeade
                 Result result = beginEncode(header, c, acceptEncoding);
 
                 if (result == null) {
-                    return new Object[] { header, c };
+                    if (c instanceof LastHttpContent) {
+                        return new Object[] { header, new DefaultLastHttpContent(c.data()) };
+                    } else {
+                        return new Object[] { header, new DefaultHttpContent(c.data()) };
+                    }
                 }
 
                 encoder = result.getContentEncoder();
 
                 // Encode the content and remove or replace the existing headers
                 // so that the message looks like a decoded message.
-                header.setHeader(
+                header.headers().set(
                         HttpHeaders.Names.CONTENT_ENCODING,
                         result.getTargetContentEncoding());
 
                 Object[] encoded = encodeContent(header, c);
 
                 if (!HttpHeaders.isTransferEncodingChunked(header) && encoded.length == 3) {
-                    if (header.containsHeader(HttpHeaders.Names.CONTENT_LENGTH)) {
-                        long length = ((HttpContent) encoded[1]).getContent().readableBytes() +
-                                ((HttpContent) encoded[2]).getContent().readableBytes();
+                    if (header.headers().contains(HttpHeaders.Names.CONTENT_LENGTH)) {
+                        long length = ((ByteBufHolder) encoded[1]).data().readableBytes() +
+                                ((ByteBufHolder) encoded[2]).data().readableBytes();
 
-                        header.setHeader(
+                        header.headers().set(
                                 HttpHeaders.Names.CONTENT_LENGTH,
                                 Long.toString(length));
                     }
@@ -157,9 +162,9 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpHeade
         return null;
     }
 
-    private Object[] encodeContent(HttpHeader header, HttpContent c) {
+    private Object[] encodeContent(HttpMessage header, HttpContent c) {
         ByteBuf newContent = Unpooled.buffer();
-        ByteBuf content = c.getContent();
+        ByteBuf content = c.data();
         encode(content, newContent);
 
         if (c instanceof LastHttpContent) {
@@ -200,7 +205,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpHeade
      *         {@code null} if {@code acceptEncoding} is unsupported or rejected
      *         and thus the content should be handled as-is (i.e. no encoding).
      */
-    protected abstract Result beginEncode(HttpHeader header, HttpContent msg, String acceptEncoding) throws Exception;
+    protected abstract Result beginEncode(HttpMessage header, HttpContent msg, String acceptEncoding) throws Exception;
 
     @Override
     public void afterRemove(ChannelHandlerContext ctx) throws Exception {

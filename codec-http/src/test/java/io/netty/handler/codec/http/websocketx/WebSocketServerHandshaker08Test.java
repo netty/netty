@@ -15,22 +15,22 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import static io.netty.handler.codec.http.HttpHeaders.Values.*;
-import static io.netty.handler.codec.http.HttpVersion.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedByteChannel;
-import io.netty.handler.codec.http.DefaultHttpRequest;
-import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
-import io.netty.handler.codec.http.HttpResponseHeader;
+import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
-
 import org.junit.Assert;
 import org.junit.Test;
+
+import static io.netty.handler.codec.http.HttpHeaders.Values.*;
+import static io.netty.handler.codec.http.HttpVersion.*;
 
 public class WebSocketServerHandshaker08Test {
 
@@ -39,14 +39,14 @@ public class WebSocketServerHandshaker08Test {
         EmbeddedByteChannel ch = new EmbeddedByteChannel(
                 new HttpObjectAggregator(42), new HttpRequestDecoder(), new HttpResponseEncoder());
 
-        HttpRequest req = new DefaultHttpRequest(HTTP_1_1, HttpMethod.GET, "/chat");
-        req.setHeader(Names.HOST, "server.example.com");
-        req.setHeader(Names.UPGRADE, WEBSOCKET.toLowerCase());
-        req.setHeader(Names.CONNECTION, "Upgrade");
-        req.setHeader(Names.SEC_WEBSOCKET_KEY, "dGhlIHNhbXBsZSBub25jZQ==");
-        req.setHeader(Names.SEC_WEBSOCKET_ORIGIN, "http://example.com");
-        req.setHeader(Names.SEC_WEBSOCKET_PROTOCOL, "chat, superchat");
-        req.setHeader(Names.SEC_WEBSOCKET_VERSION, "8");
+        FullHttpRequest req = new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, "/chat");
+        req.headers().set(Names.HOST, "server.example.com");
+        req.headers().set(Names.UPGRADE, WEBSOCKET.toLowerCase());
+        req.headers().set(Names.CONNECTION, "Upgrade");
+        req.headers().set(Names.SEC_WEBSOCKET_KEY, "dGhlIHNhbXBsZSBub25jZQ==");
+        req.headers().set(Names.SEC_WEBSOCKET_ORIGIN, "http://example.com");
+        req.headers().set(Names.SEC_WEBSOCKET_PROTOCOL, "chat, superchat");
+        req.headers().set(Names.SEC_WEBSOCKET_VERSION, "8");
 
         new WebSocketServerHandshaker08(
                 "ws://example.com/chat", "chat", false, Integer.MAX_VALUE).handshake(ch, req);
@@ -55,10 +55,10 @@ public class WebSocketServerHandshaker08Test {
 
         EmbeddedByteChannel ch2 = new EmbeddedByteChannel(new HttpResponseDecoder());
         ch2.writeInbound(resBuf);
-        HttpResponseHeader res = (HttpResponseHeader) ch2.readInbound();
+        HttpResponse res = (HttpResponse) ch2.readInbound();
 
         Assert.assertEquals(
-                "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", res.getHeader(Names.SEC_WEBSOCKET_ACCEPT));
-        Assert.assertEquals("chat", res.getHeader(Names.SEC_WEBSOCKET_PROTOCOL));
+                "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", res.headers().get(Names.SEC_WEBSOCKET_ACCEPT));
+        Assert.assertEquals("chat", res.headers().get(Names.SEC_WEBSOCKET_PROTOCOL));
     }
 }

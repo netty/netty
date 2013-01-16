@@ -447,20 +447,20 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     /**
      * Returns the code of this status.
      */
-    public int getCode() {
+    public int code() {
         return code;
     }
 
     /**
      * Returns the reason phrase of this status.
      */
-    public String getReasonPhrase() {
+    public String reasonPhrase() {
         return reasonPhrase;
     }
 
     @Override
     public int hashCode() {
-        return getCode();
+        return code();
     }
 
     @Override
@@ -469,12 +469,12 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
             return false;
         }
 
-        return getCode() == ((HttpResponseStatus) o).getCode();
+        return code() == ((HttpResponseStatus) o).code();
     }
 
     @Override
     public int compareTo(HttpResponseStatus o) {
-        return getCode() - o.getCode();
+        return code() - o.code();
     }
 
     @Override

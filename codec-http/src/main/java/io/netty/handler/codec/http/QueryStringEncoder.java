@@ -36,7 +36,7 @@ import java.util.List;
  * @see QueryStringDecoder
  *
  * @apiviz.stereotype utility
- * @apiviz.has        io.netty.handler.codec.http.HttpRequest oneway - - encodes
+ * @apiviz.has        io.netty.handler.codec.http.FullHttpRequest oneway - - encodes
  */
 public class QueryStringEncoder {
 

@@ -18,7 +18,7 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.util.internal.StringUtil;
 
 import java.util.Collections;
@@ -112,7 +112,7 @@ public abstract class WebSocketServerHandshaker {
      * @param req
      *            HTTP Request
      */
-    public ChannelFuture handshake(Channel channel, HttpRequest req) {
+    public ChannelFuture handshake(Channel channel, FullHttpRequest req) {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
@@ -129,7 +129,7 @@ public abstract class WebSocketServerHandshaker {
      * @param promise
      *            the {@link ChannelPromise} to be notified when the opening handshake is done
      */
-    public abstract ChannelFuture handshake(Channel channel, HttpRequest req, ChannelPromise promise);
+    public abstract ChannelFuture handshake(Channel channel, FullHttpRequest req, ChannelPromise promise);
 
     /**
      * Performs the closing handshake

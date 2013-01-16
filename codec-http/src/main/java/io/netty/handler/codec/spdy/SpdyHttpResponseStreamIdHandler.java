@@ -15,31 +15,31 @@
  */
 package io.netty.handler.codec.spdy;
 
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.MessageToMessageCodec;
+import io.netty.handler.codec.http.HttpMessage;
+
 import java.util.LinkedList;
 import java.util.Queue;
 
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToMessageCodec;
-import io.netty.handler.codec.http.HttpHeader;
-
 /**
  * {@link MessageToMessageCodec} that takes care of adding the right {@link SpdyHttpHeaders.Names#STREAM_ID} to the
- * {@link HttpHeader} if one is not present. This makes it possible to just re-use plan handlers current used
+ * {@link HttpMessage} if one is not present. This makes it possible to just re-use plan handlers current used
  * for HTTP.
  */
 public class SpdyHttpResponseStreamIdHandler extends
-        MessageToMessageCodec<Object, HttpHeader> {
+        MessageToMessageCodec<Object, HttpMessage> {
     private static final Integer NO_ID = -1;
     private final Queue<Integer> ids = new LinkedList<Integer>();
 
     public SpdyHttpResponseStreamIdHandler() {
-        super(new Class<?>[] { HttpHeader.class, SpdyRstStreamFrame.class }, new Class<?>[] { HttpHeader.class });
+        super(new Class<?>[] { HttpMessage.class, SpdyRstStreamFrame.class }, new Class<?>[] { HttpMessage.class });
     }
 
     @Override
-    protected Object encode(ChannelHandlerContext ctx, HttpHeader msg) throws Exception {
+    protected Object encode(ChannelHandlerContext ctx, HttpMessage msg) throws Exception {
         Integer id = ids.poll();
-        if (id != null && id.intValue() != NO_ID && !msg.containsHeader(SpdyHttpHeaders.Names.STREAM_ID)) {
+        if (id != null && id.intValue() != NO_ID && !msg.headers().contains(SpdyHttpHeaders.Names.STREAM_ID)) {
             SpdyHttpHeaders.setStreamId(msg, id);
         }
         return msg;
@@ -47,12 +47,12 @@ public class SpdyHttpResponseStreamIdHandler extends
 
     @Override
     protected Object decode(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof HttpHeader) {
-            boolean contains = ((HttpHeader) msg).containsHeader(SpdyHttpHeaders.Names.STREAM_ID);
+        if (msg instanceof HttpMessage) {
+            boolean contains = ((HttpMessage) msg).headers().contains(SpdyHttpHeaders.Names.STREAM_ID);
             if (!contains) {
                 ids.add(NO_ID);
             } else {
-                ids.add(SpdyHttpHeaders.getStreamId((HttpHeader) msg));
+                ids.add(SpdyHttpHeaders.getStreamId((HttpMessage) msg));
             }
         } else if (msg instanceof SpdyRstStreamFrame) {
             ids.remove(((SpdyRstStreamFrame) msg).getStreamId());
