@@ -66,32 +66,32 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         }
 
         @Override
-        public void add(String name, Object value) {
+        public HttpHeaders add(String name, Object value) {
             throw new UnsupportedOperationException("read only");
         }
 
         @Override
-        public void add(String name, Iterable<?> values) {
+        public HttpHeaders add(String name, Iterable<?> values) {
             throw new UnsupportedOperationException("read only");
         }
 
         @Override
-        public void set(String name, Object value) {
+        public HttpHeaders set(String name, Object value) {
             throw new UnsupportedOperationException("read only");
         }
 
         @Override
-        public void set(String name, Iterable<?> values) {
+        public HttpHeaders set(String name, Iterable<?> values) {
             throw new UnsupportedOperationException("read only");
         }
 
         @Override
-        public void remove(String name) {
+        public HttpHeaders remove(String name) {
             throw new UnsupportedOperationException("read only");
         }
 
         @Override
-        public void clear() {
+        public HttpHeaders clear() {
             throw new UnsupportedOperationException("read only");
         }
 
@@ -1230,8 +1230,10 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      *
      * @param name The name of the header being added
      * @param value The value of the header being added
+     *
+     * @return {@code this}
      */
-    public abstract void add(String name, Object value);
+    public abstract HttpHeaders add(String name, Object value);
 
     /**
      * Adds a new header with the specified name and values.
@@ -1248,16 +1250,23 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      *
      * @param name The name of the headers being set
      * @param values The values of the headers being set
+     * @return {@code this}
      */
-    public abstract void add(String name, Iterable<?> values);
+    public abstract HttpHeaders add(String name, Iterable<?> values);
 
-    public void add(HttpHeaders headers) {
+    /**
+     * Adds all header entries of the specified {@code headers}.
+     *
+     * @return {@code this}
+     */
+    public HttpHeaders add(HttpHeaders headers) {
         if (headers == null) {
             throw new NullPointerException("headers");
         }
         for (Map.Entry<String, String> e: headers) {
             add(e.getKey(), e.getValue());
         }
+        return this;
     }
 
     /**
@@ -1271,8 +1280,9 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      *
      * @param name The name of the header being set
      * @param value The value of the header being set
+     * @return {@code this}
      */
-    public abstract void set(String name, Object value);
+    public abstract HttpHeaders set(String name, Object value);
 
     /**
      * Sets a header with the specified name and values.
@@ -1291,10 +1301,16 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      *
      * @param name The name of the headers being set
      * @param values The values of the headers being set
+     * @return {@code this}
      */
-    public abstract void set(String name, Iterable<?> values);
+    public abstract HttpHeaders set(String name, Iterable<?> values);
 
-    public void set(HttpHeaders headers) {
+    /**
+     * Cleans the current header entries and copies all header entries of the specified {@code headers}.
+     *
+     * @return {@code this}
+     */
+    public HttpHeaders set(HttpHeaders headers) {
         if (headers == null) {
             throw new NullPointerException("headers");
         }
@@ -1302,17 +1318,21 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         for (Map.Entry<String, String> e: headers) {
             add(e.getKey(), e.getValue());
         }
+        return this;
     }
 
     /**
      * Removes the header with the specified name.
      *
      * @param name The name of the header to remove
+     * @return {@code this}
      */
-    public abstract void remove(String name);
+    public abstract HttpHeaders remove(String name);
 
     /**
      * Removes all headers from this {@link HttpMessage}.
+     *
+     * @return {@code this}
      */
-    public abstract void clear();
+    public abstract HttpHeaders clear();
 }
