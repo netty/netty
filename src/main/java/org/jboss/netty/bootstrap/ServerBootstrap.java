@@ -276,7 +276,38 @@ public class ServerBootstrap extends Bootstrap {
     }
 
     /**
-     * Creates a new channel which is bound to the specified local address.
+     * Bind a channel asynchronous to the local address
+     * specified in the current {@code "localAddress"} option.  This method is
+     * similar to the following code:
+     *
+     * <pre>
+     * {@link ServerBootstrap} b = ...;
+     * b.bindAsync(b.getOption("localAddress"));
+     * </pre>
+     *
+     *
+     * @return a new {@link ChannelFuture} which will be notified once the Channel is
+     * bound and accepts incoming connections
+     *
+     * @throws IllegalStateException
+     *         if {@code "localAddress"} option was not set
+     * @throws ClassCastException
+     *         if {@code "localAddress"} option's value is
+     *         neither a {@link SocketAddress} nor {@code null}
+     * @throws ChannelException
+     *         if failed to create a new channel and
+     *                      bind it to the local address
+     */
+    public ChannelFuture bindAsync() {
+        SocketAddress localAddress = (SocketAddress) getOption("localAddress");
+        if (localAddress == null) {
+            throw new IllegalStateException("localAddress option is not set.");
+        }
+        return bindAsync(localAddress);
+    }
+
+    /**
+     * Bind a channel asynchronous to the specified local address.
      *
      * @return a new {@link ChannelFuture} which will be notified once the Channel is
      * bound and accepts incoming connections
