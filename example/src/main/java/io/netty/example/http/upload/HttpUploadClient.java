@@ -178,17 +178,19 @@ public class HttpUploadClient {
             return null;
         }
 
-        HttpRequestWithContent request = new DefaultHttpRequestWithContent(HttpVersion.HTTP_1_1, HttpMethod.GET, uriGet.toASCIIString());
-        request.headers().set(HttpHeaders.Names.HOST, host);
-        request.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
-        request.headers().set(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP + ','
+        HttpRequestWithContent request =
+                new DefaultHttpRequestWithContent(HttpVersion.HTTP_1_1, HttpMethod.GET, uriGet.toASCIIString());
+        HttpHeaders headers = request.headers();
+        headers.set(HttpHeaders.Names.HOST, host);
+        headers.set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
+        headers.set(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP + ','
                 + HttpHeaders.Values.DEFLATE);
 
-        request.headers().set(HttpHeaders.Names.ACCEPT_CHARSET, "ISO-8859-1,utf-8;q=0.7,*;q=0.7");
-        request.headers().set(HttpHeaders.Names.ACCEPT_LANGUAGE, "fr");
-        request.headers().set(HttpHeaders.Names.REFERER, uriSimple.toString());
-        request.headers().set(HttpHeaders.Names.USER_AGENT, "Netty Simple Http Client side");
-        request.headers().set(HttpHeaders.Names.ACCEPT, "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        headers.set(HttpHeaders.Names.ACCEPT_CHARSET, "ISO-8859-1,utf-8;q=0.7,*;q=0.7");
+        headers.set(HttpHeaders.Names.ACCEPT_LANGUAGE, "fr");
+        headers.set(HttpHeaders.Names.REFERER, uriSimple.toString());
+        headers.set(HttpHeaders.Names.USER_AGENT, "Netty Simple Http Client side");
+        headers.set(HttpHeaders.Names.ACCEPT, "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
 
         // connection will not close but needed
         // request.setHeader("Connection","keep-alive");
@@ -198,13 +200,13 @@ public class HttpUploadClient {
                 new DefaultCookie("another-cookie", "bar")));
 
         // send request
-        List<Entry<String, String>> headers = request.headers().entries();
+        List<Entry<String, String>> entries = headers.entries();
         channel.write(request);
 
         // Wait for the server to close the connection.
         channel.closeFuture().sync();
 
-        return headers;
+        return entries;
     }
 
     /**

@@ -125,7 +125,8 @@ public class WebSocketServerHandler extends ChannelInboundMessageHandlerAdapter<
         ctx.channel().write(new TextWebSocketFrame(request.toUpperCase()));
     }
 
-    private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequestWithContent req, HttpResponseWithContent res) {
+    private static void sendHttpResponse(
+            ChannelHandlerContext ctx, HttpRequestWithContent req, HttpResponseWithContent res) {
         // Generate an error page if response status code is not OK (200).
         if (res.status().code() != 200) {
             res.content().writeBytes(Unpooled.copiedBuffer(res.status().toString(), CharsetUtil.UTF_8));
