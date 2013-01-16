@@ -40,6 +40,16 @@ public class DefaultHttpContent extends DefaultHttpObject implements HttpContent
     }
 
     @Override
+    public boolean isFreed() {
+        return content.isFreed();
+    }
+
+    @Override
+    public void free() {
+        content.free();
+    }
+
+    @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
         buf.append(getClass().getSimpleName());

@@ -47,4 +47,14 @@ public class DefaultHttpResponseWithContent extends DefaultHttpResponse implemen
     public ByteBuf content() {
         return content;
     }
+
+    @Override
+    public boolean isFreed() {
+        return content.isFreed();
+    }
+
+    @Override
+    public void free() {
+        content.free();
+    }
 }

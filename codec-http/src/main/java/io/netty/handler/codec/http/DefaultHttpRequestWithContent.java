@@ -26,7 +26,7 @@ public class DefaultHttpRequestWithContent extends DefaultHttpRequest implements
     private final HttpHeaders trailingHeader = new DefaultHttpHeaders();
 
     public DefaultHttpRequestWithContent(HttpVersion httpVersion, HttpMethod method, String uri) {
-        this(httpVersion, method, uri, Unpooled.buffer());
+        this(httpVersion, method, uri, Unpooled.buffer(0));
     }
 
     public DefaultHttpRequestWithContent(HttpVersion httpVersion, HttpMethod method, String uri, ByteBuf content) {
@@ -45,5 +45,15 @@ public class DefaultHttpRequestWithContent extends DefaultHttpRequest implements
     @Override
     public ByteBuf content() {
         return content;
+    }
+
+    @Override
+    public boolean isFreed() {
+        return content.isFreed();
+    }
+
+    @Override
+    public void free() {
+        content.free();
     }
 }

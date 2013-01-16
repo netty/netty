@@ -40,7 +40,7 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
     };
 
     public DefaultLastHttpContent() {
-        this(Unpooled.EMPTY_BUFFER);
+        this(Unpooled.buffer(0));
     }
 
     public DefaultLastHttpContent(ByteBuf content) {
