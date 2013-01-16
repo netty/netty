@@ -51,8 +51,9 @@ class SpdyHeaderBlockZlibCompressor extends SpdyHeaderBlockCompressor {
 
     @Override
     public void encode(ByteBuf compressed) {
-        while (!compressor.needsInput()) {
-            int numBytes = compressor.deflate(out, 0, out.length, Deflater.SYNC_FLUSH);
+        int numBytes = out.length;
+        while (numBytes == out.length) {
+            numBytes = compressor.deflate(out, 0, out.length, Deflater.SYNC_FLUSH);
             compressed.writeBytes(out, 0, numBytes);
         }
     }
