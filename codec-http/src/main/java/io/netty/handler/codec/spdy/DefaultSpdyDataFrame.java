@@ -34,8 +34,7 @@ public class DefaultSpdyDataFrame extends DefaultByteBufHolder implements SpdyDa
      * @param streamId the Stream-ID of this frame
      */
     public DefaultSpdyDataFrame(int streamId) {
-        super(Unpooled.EMPTY_BUFFER);
-        setStreamId(streamId);
+        this(streamId, Unpooled.buffer(0));
     }
 
     /**
@@ -79,11 +78,6 @@ public class DefaultSpdyDataFrame extends DefaultByteBufHolder implements SpdyDa
     @Override
     public void setLast(boolean last) {
         this.last = last;
-    }
-
-    @Override
-    public ByteBuf getData() {
-        return data();
     }
 
     @Override
