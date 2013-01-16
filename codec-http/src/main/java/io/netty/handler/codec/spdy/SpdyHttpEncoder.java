@@ -165,7 +165,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
 
             HttpContent chunk = (HttpContent) msg;
             SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(currentStreamId);
-            spdyDataFrame.setData(chunk.content());
+            spdyDataFrame.setData(chunk.data());
             spdyDataFrame.setLast(chunk instanceof LastHttpContent);
 
             if (chunk instanceof LastHttpContent) {

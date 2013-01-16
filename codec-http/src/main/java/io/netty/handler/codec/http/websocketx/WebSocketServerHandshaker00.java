@@ -163,12 +163,12 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
                            BEGINNING_SPACE.matcher(key1).replaceAll("").length());
             int b = (int) (Long.parseLong(BEGINNING_DIGIT.matcher(key2).replaceAll("")) /
                            BEGINNING_SPACE.matcher(key2).replaceAll("").length());
-            long c = req.content().readLong();
+            long c = req.data().readLong();
             ByteBuf input = Unpooled.buffer(16);
             input.writeInt(a);
             input.writeInt(b);
             input.writeLong(c);
-            res.content().writeBytes(WebSocketUtil.md5(input.array()));
+            res.data().writeBytes(WebSocketUtil.md5(input.array()));
         } else {
             // Old Hixie 75 handshake method with no challenge:
             res.headers().add(WEBSOCKET_ORIGIN, req.headers().get(ORIGIN));

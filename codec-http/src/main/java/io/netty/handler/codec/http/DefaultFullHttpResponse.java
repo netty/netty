@@ -23,7 +23,8 @@ import io.netty.buffer.Unpooled;
  * Default implementation of a {@link FullHttpResponse}.
  */
 public class DefaultFullHttpResponse extends DefaultHttpResponse implements FullHttpResponse {
-    private ByteBuf content;
+
+    private final ByteBuf content;
     private final HttpHeaders trailingHeaders = new DefaultHttpHeaders();
 
     public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status) {
@@ -44,7 +45,7 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
     }
 
     @Override
-    public ByteBuf content() {
+    public ByteBuf data() {
         return content;
     }
 
@@ -56,5 +57,13 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
     @Override
     public void free() {
         content.free();
+    }
+
+    @Override
+    public FullHttpResponse copy() {
+        DefaultFullHttpResponse copy = new DefaultFullHttpResponse(protocolVersion(), status(), data().copy());
+        copy.headers().set(headers());
+        copy.trailingHeaders().set(trailingHeaders());
+        return copy;
     }
 }

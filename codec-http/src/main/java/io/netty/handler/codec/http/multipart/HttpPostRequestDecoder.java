@@ -341,7 +341,7 @@ public class HttpPostRequestDecoder {
      *             errors
      */
     public void offer(HttpContent content) throws ErrorDataDecoderException {
-        ByteBuf chunked = content.content();
+        ByteBuf chunked = content.data();
         if (undecodedChunk == null) {
             undecodedChunk = chunked;
         } else {

@@ -20,4 +20,6 @@ package io.netty.handler.codec.http;
  * request.
  */
 public interface FullHttpRequest extends HttpRequest, FullHttpMessage {
+    @Override
+    FullHttpRequest copy();
 }

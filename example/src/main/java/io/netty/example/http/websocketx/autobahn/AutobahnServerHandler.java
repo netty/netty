@@ -116,8 +116,8 @@ public class AutobahnServerHandler extends ChannelInboundMessageHandlerAdapter<O
             ChannelHandlerContext ctx, FullHttpRequest req, FullHttpResponse res) {
         // Generate an error page if response status code is not OK (200).
         if (res.status().code() != 200) {
-            res.content().writeBytes(Unpooled.copiedBuffer(res.status().toString(), CharsetUtil.UTF_8));
-            setContentLength(res, res.content().readableBytes());
+            res.data().writeBytes(Unpooled.copiedBuffer(res.status().toString(), CharsetUtil.UTF_8));
+            setContentLength(res, res.data().readableBytes());
         }
 
         // Send the response and close the connection if necessary.

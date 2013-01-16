@@ -30,8 +30,13 @@ public interface LastHttpContent extends HttpContent {
     LastHttpContent EMPTY_LAST_CONTENT = new LastHttpContent() {
 
         @Override
-        public ByteBuf content() {
+        public ByteBuf data() {
             return Unpooled.EMPTY_BUFFER;
+        }
+
+        @Override
+        public LastHttpContent copy() {
+            return EMPTY_LAST_CONTENT;
         }
 
         @Override
@@ -61,4 +66,7 @@ public interface LastHttpContent extends HttpContent {
     };
 
     HttpHeaders trailingHeaders();
+
+    @Override
+    LastHttpContent copy();
 }

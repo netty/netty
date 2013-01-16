@@ -198,7 +198,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
                 return null;
             }
 
-            ByteBuf content = fullHttpMessage.content();
+            ByteBuf content = fullHttpMessage.data();
             if (content.readableBytes() > maxContentLength - spdyDataFrame.getData().readableBytes()) {
                 messageMap.remove(streamID);
                 throw new TooLongFrameException(

@@ -35,8 +35,13 @@ public class DefaultHttpContent extends DefaultHttpObject implements HttpContent
     }
 
     @Override
-    public ByteBuf content() {
+    public ByteBuf data() {
         return content;
+    }
+
+    @Override
+    public HttpContent copy() {
+        return new DefaultHttpContent(data().copy());
     }
 
     @Override
@@ -51,16 +56,6 @@ public class DefaultHttpContent extends DefaultHttpObject implements HttpContent
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append(getClass().getSimpleName());
-
-        buf.append(" size: ");
-        buf.append(content().readableBytes());
-
-        buf.append(", decodeResult: ");
-        buf.append(getDecoderResult());
-        buf.append(')');
-
-        return buf.toString();
+        return getClass().getSimpleName() + "(data: " + data() + ", decoderResult: " + getDecoderResult() + ')';
     }
 }

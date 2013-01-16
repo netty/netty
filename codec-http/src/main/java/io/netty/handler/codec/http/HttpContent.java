@@ -15,8 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Freeable;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.ChannelPipeline;
 
 /**
@@ -28,11 +27,7 @@ import io.netty.channel.ChannelPipeline;
  * {@link ChannelPipeline}.
  * @apiviz.landmark
  */
-public interface HttpContent extends HttpObject, Freeable {
-
-    /**
-     * Returns the content of this chunk.  If this is the 'end of content'
-     * marker, a {@link ByteBuf} with no readable bytes will be returned.
-     */
-    ByteBuf content();
+public interface HttpContent extends HttpObject, ByteBufHolder {
+    @Override
+    HttpContent copy();
 }

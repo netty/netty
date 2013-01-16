@@ -20,4 +20,6 @@ package io.netty.handler.codec.http;
  * message. So it represent a <i>complete</i> http message.
  */
 public interface FullHttpMessage extends HttpMessage, LastHttpContent {
+    @Override
+    FullHttpMessage copy();
 }

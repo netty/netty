@@ -270,7 +270,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
 
         buf.append("</ul></body></html>\r\n");
 
-        response.content().writeBytes(Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8));
+        response.data().writeBytes(Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8));
 
         // Close the connection as soon as the error message is sent.
         ctx.write(response).addListener(ChannelFutureListener.CLOSE);

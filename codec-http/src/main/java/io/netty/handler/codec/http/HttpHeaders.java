@@ -815,7 +815,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
 
     /**
      * Returns the length of the content.  Please note that this value is
-     * not retrieved from {@link HttpContent#content()} but from the
+     * not retrieved from {@link HttpContent#data()} but from the
      * {@code "Content-Length"} header, and thus they are independent from each
      * other.
      *
@@ -844,7 +844,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
 
     /**
      * Returns the length of the content.  Please note that this value is
-     * not retrieved from {@link HttpContent#content()} but from the
+     * not retrieved from {@link HttpContent#data()} but from the
      * {@code "Content-Length"} header, and thus they are independent from each
      * other.
      *
@@ -1251,6 +1251,15 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      */
     public abstract void add(String name, Iterable<?> values);
 
+    public void add(HttpHeaders headers) {
+        if (headers == null) {
+            throw new NullPointerException("headers");
+        }
+        for (Map.Entry<String, String> e: headers) {
+            add(e.getKey(), e.getValue());
+        }
+    }
+
     /**
      * Sets a header with the specified name and value.
      *
@@ -1284,6 +1293,16 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * @param values The values of the headers being set
      */
     public abstract void set(String name, Iterable<?> values);
+
+    public void set(HttpHeaders headers) {
+        if (headers == null) {
+            throw new NullPointerException("headers");
+        }
+        clear();
+        for (Map.Entry<String, String> e: headers) {
+            add(e.getKey(), e.getValue());
+        }
+    }
 
     /**
      * Removes the header with the specified name.

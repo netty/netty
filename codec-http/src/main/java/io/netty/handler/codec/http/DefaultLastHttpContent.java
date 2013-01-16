@@ -48,19 +48,20 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
     }
 
     @Override
+    public LastHttpContent copy() {
+        DefaultLastHttpContent copy = new DefaultLastHttpContent(data().copy());
+        copy.trailingHeaders().set(trailingHeaders());
+        return copy;
+    }
+
+    @Override
     public HttpHeaders trailingHeaders() {
         return trailingHeaders;
     }
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append(getClass().getSimpleName());
-        buf.append(", size: ");
-        buf.append(content().readableBytes());
-        buf.append(", decodeResult: ");
-        buf.append(getDecoderResult());
-        buf.append(')');
+        StringBuilder buf = new StringBuilder(super.toString());
         buf.append(StringUtil.NEWLINE);
         appendHeaders(buf);
 

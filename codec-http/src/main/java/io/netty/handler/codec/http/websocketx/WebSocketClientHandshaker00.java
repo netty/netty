@@ -171,7 +171,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         // Set Content-Length to workaround some known defect.
         // See also: http://www.ietf.org/mail-archive/web/hybi/current/msg02149.html
         request.headers().set(Names.CONTENT_LENGTH, key3.length);
-        request.content().writeBytes(key3);
+        request.data().writeBytes(key3);
 
         ChannelFuture future = channel.write(request);
         future.addListener(new ChannelFutureListener() {
@@ -235,7 +235,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
                     + connection);
         }
 
-        byte[] challenge = response.content().array();
+        byte[] challenge = response.data().array();
         if (!Arrays.equals(challenge, expectedChallengeResponseBytes)) {
             throw new WebSocketHandshakeException("Invalid challenge");
         }

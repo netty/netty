@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedByteChannel;
@@ -99,7 +100,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
                     if (header.headers().contains(HttpHeaders.Names.CONTENT_LENGTH)) {
                         header.headers().set(
                                 HttpHeaders.Names.CONTENT_LENGTH,
-                                Integer.toString(((HttpContent) decoded[1]).content().readableBytes()));
+                                Integer.toString(((ByteBufHolder) decoded[1]).data().readableBytes()));
                     }
                     return decoded;
                 }
@@ -114,7 +115,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
 
     private Object[] decodeContent(HttpMessage header, HttpContent c) {
         ByteBuf newContent = Unpooled.buffer();
-        ByteBuf content = c.content();
+        ByteBuf content = c.data();
         decode(content, newContent);
 
         if (c instanceof LastHttpContent) {

@@ -159,9 +159,9 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
 
             // Merge the received chunk into the content of the current message.
             HttpContent chunk = (HttpContent) msg;
-            CompositeByteBuf content = (CompositeByteBuf) currentMessage.content();
+            CompositeByteBuf content = (CompositeByteBuf) currentMessage.data();
 
-            if (content.readableBytes() > maxContentLength - chunk.content().readableBytes()) {
+            if (content.readableBytes() > maxContentLength - chunk.data().readableBytes()) {
                 // TODO: Respond with 413 Request Entity Too Large
                 //   and discard the traffic or close the connection.
                 //       No need to notify the upstream handlers - just log.
@@ -172,9 +172,9 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             }
 
             // Append the content of the chunk
-            if (chunk.content().readable()) {
-                content.addComponent(chunk.content());
-                content.writerIndex(content.writerIndex() + chunk.content().readableBytes());
+            if (chunk.data().readable()) {
+                content.addComponent(chunk.data());
+                content.writerIndex(content.writerIndex() + chunk.data().readableBytes());
             } else {
                 chunk.free();
             }

@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedByteChannel;
@@ -125,9 +126,9 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
 
                 if (result == null) {
                     if (c instanceof LastHttpContent) {
-                        return new Object[] { header, new DefaultLastHttpContent(c.content()) };
+                        return new Object[] { header, new DefaultLastHttpContent(c.data()) };
                     } else {
-                        return new Object[] { header, new DefaultHttpContent(c.content()) };
+                        return new Object[] { header, new DefaultHttpContent(c.data()) };
                     }
                 }
 
@@ -143,8 +144,8 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
 
                 if (!HttpHeaders.isTransferEncodingChunked(header) && encoded.length == 3) {
                     if (header.headers().contains(HttpHeaders.Names.CONTENT_LENGTH)) {
-                        long length = ((HttpContent) encoded[1]).content().readableBytes() +
-                                ((HttpContent) encoded[2]).content().readableBytes();
+                        long length = ((ByteBufHolder) encoded[1]).data().readableBytes() +
+                                ((ByteBufHolder) encoded[2]).data().readableBytes();
 
                         header.headers().set(
                                 HttpHeaders.Names.CONTENT_LENGTH,
@@ -163,7 +164,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
 
     private Object[] encodeContent(HttpMessage header, HttpContent c) {
         ByteBuf newContent = Unpooled.buffer();
-        ByteBuf content = c.content();
+        ByteBuf content = c.data();
         encode(content, newContent);
 
         if (c instanceof LastHttpContent) {

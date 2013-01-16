@@ -43,7 +43,7 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     }
 
     @Override
-    public ByteBuf content() {
+    public ByteBuf data() {
         return content;
     }
 
@@ -55,5 +55,13 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     @Override
     public void free() {
         content.free();
+    }
+
+    @Override
+    public FullHttpRequest copy() {
+        DefaultFullHttpRequest copy = new DefaultFullHttpRequest(protocolVersion(), method(), uri(), data().copy());
+        copy.headers().set(headers());
+        copy.trailingHeaders().set(trailingHeaders());
+        return copy;
     }
 }

@@ -52,7 +52,7 @@ public class FullHttpMessageDecoderTest {
         DefaultFullHttpRequest aggratedMessage = (DefaultFullHttpRequest) embedder.readInbound();
         assertNotNull(aggratedMessage);
 
-        assertEquals(chunk1.content().readableBytes() + chunk2.content().readableBytes(), HttpHeaders.getContentLength(aggratedMessage));
+        assertEquals(chunk1.data().readableBytes() + chunk2.data().readableBytes(), HttpHeaders.getContentLength(aggratedMessage));
         assertEquals(aggratedMessage.headers().get("X-Test"), Boolean.TRUE.toString());
         checkContentBuffer(aggratedMessage);
         assertNull(embedder.readInbound());
@@ -60,7 +60,7 @@ public class FullHttpMessageDecoderTest {
     }
 
     private static void checkContentBuffer(DefaultFullHttpRequest aggregatedMessage) {
-        CompositeByteBuf buffer = (CompositeByteBuf) aggregatedMessage.content();
+        CompositeByteBuf buffer = (CompositeByteBuf) aggregatedMessage.data();
         assertEquals(2, buffer.numComponents());
         List<ByteBuf> buffers = buffer.decompose(0, buffer.capacity());
         assertEquals(2, buffers.size());
@@ -93,7 +93,7 @@ public class FullHttpMessageDecoderTest {
         DefaultFullHttpRequest aggratedMessage = (DefaultFullHttpRequest) embedder.readInbound();
         assertNotNull(aggratedMessage);
 
-        assertEquals(chunk1.content().readableBytes() + chunk2.content().readableBytes(), HttpHeaders.getContentLength(aggratedMessage));
+        assertEquals(chunk1.data().readableBytes() + chunk2.data().readableBytes(), HttpHeaders.getContentLength(aggratedMessage));
         assertEquals(aggratedMessage.headers().get("X-Test"), Boolean.TRUE.toString());
         assertEquals(aggratedMessage.headers().get("X-Trailer"), Boolean.TRUE.toString());
         checkContentBuffer(aggratedMessage);
