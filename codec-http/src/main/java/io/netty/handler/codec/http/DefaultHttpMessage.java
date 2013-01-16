@@ -65,7 +65,7 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
     }
 
     void appendHeaders(StringBuilder buf) {
-        for (Map.Entry<String, String> e: headers().entries()) {
+        for (Map.Entry<String, String> e: headers()) {
             buf.append(e.getKey());
             buf.append(": ");
             buf.append(e.getValue());

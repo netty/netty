@@ -44,6 +44,8 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
@@ -54,7 +56,6 @@ import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 
 import java.net.URI;
-import java.util.HashMap;
 
 public class WebSocketClient {
 
@@ -72,8 +73,8 @@ public class WebSocketClient {
                 throw new IllegalArgumentException("Unsupported protocol: " + protocol);
             }
 
-            HashMap<String, String> customHeaders = new HashMap<String, String>();
-            customHeaders.put("MyHeader", "MyValue");
+            HttpHeaders customHeaders = new DefaultHttpHeaders();
+            customHeaders.add("MyHeader", "MyValue");
 
             // Connect with V13 (RFC 6455 aka HyBi-17). You can change it to V08 or V00.
             // If you change it to V00, ping is not supported and remember to change

@@ -235,7 +235,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
         SpdyHeaders.removeUrl(spdyVersion, requestFrame);
         SpdyHeaders.removeVersion(spdyVersion, requestFrame);
 
-        FullHttpRequest httpRequestWithEntity = new DefaultFullHttpRequest(httpVersion, method, url);
+        FullHttpRequest req = new DefaultFullHttpRequest(httpVersion, method, url);
 
         // Remove the scheme header
         SpdyHeaders.removeScheme(spdyVersion, requestFrame);
@@ -244,20 +244,20 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
             // Replace the SPDY host header with the HTTP host header
             String host = SpdyHeaders.getHost(requestFrame);
             SpdyHeaders.removeHost(requestFrame);
-            HttpHeaders.setHost(httpRequestWithEntity, host);
+            HttpHeaders.setHost(req, host);
         }
 
         for (Map.Entry<String, String> e: requestFrame.getHeaders()) {
-            httpRequestWithEntity.headers().add(e.getKey(), e.getValue());
+            req.headers().add(e.getKey(), e.getValue());
         }
 
         // The Connection and Keep-Alive headers are no longer valid
-        HttpHeaders.setKeepAlive(httpRequestWithEntity, true);
+        HttpHeaders.setKeepAlive(req, true);
 
         // Transfer-Encoding header is not valid
-        httpRequestWithEntity.headers().remove(HttpHeaders.Names.TRANSFER_ENCODING);
+        req.headers().remove(HttpHeaders.Names.TRANSFER_ENCODING);
 
-        return httpRequestWithEntity;
+        return req;
     }
 
     private static FullHttpResponse createHttpResponse(int spdyVersion, SpdyHeaderBlock responseFrame)
@@ -268,18 +268,18 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
         SpdyHeaders.removeStatus(spdyVersion, responseFrame);
         SpdyHeaders.removeVersion(spdyVersion, responseFrame);
 
-        FullHttpResponse httpResponseWithEntity = new DefaultFullHttpResponse(version, status);
+        FullHttpResponse res = new DefaultFullHttpResponse(version, status);
         for (Map.Entry<String, String> e: responseFrame.getHeaders()) {
-            httpResponseWithEntity.headers().add(e.getKey(), e.getValue());
+            res.headers().add(e.getKey(), e.getValue());
         }
 
         // The Connection and Keep-Alive headers are no longer valid
-        HttpHeaders.setKeepAlive(httpResponseWithEntity, true);
+        HttpHeaders.setKeepAlive(res, true);
 
         // Transfer-Encoding header is not valid
-        httpResponseWithEntity.headers().remove(HttpHeaders.Names.TRANSFER_ENCODING);
-        httpResponseWithEntity.headers().remove(HttpHeaders.Names.TRAILER);
+        res.headers().remove(HttpHeaders.Names.TRANSFER_ENCODING);
+        res.headers().remove(HttpHeaders.Names.TRAILER);
 
-        return httpResponseWithEntity;
+        return res;
     }
 }

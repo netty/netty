@@ -493,18 +493,20 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
     private State readHeaders(ByteBuf buffer) {
         headerSize = 0;
         final HttpMessage message = this.message;
+        final HttpHeaders headers = message.headers();
+
         String line = readHeader(buffer);
         String name = null;
         String value = null;
         if (!line.isEmpty()) {
-            message.headers().clear();
+            headers.clear();
             do {
                 char firstChar = line.charAt(0);
                 if (name != null && (firstChar == ' ' || firstChar == '\t')) {
                     value = value + ' ' + line.trim();
                 } else {
                     if (name != null) {
-                        message.headers().add(name, value);
+                        headers.add(name, value);
                     }
                     String[] header = splitHeader(line);
                     name = header[0];
@@ -516,7 +518,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
 
             // Add the last header.
             if (name != null) {
-                message.headers().add(name, value);
+                headers.add(name, value);
             }
         }
 

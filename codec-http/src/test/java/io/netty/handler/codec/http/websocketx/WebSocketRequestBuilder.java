@@ -17,6 +17,7 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
@@ -98,23 +99,25 @@ public class WebSocketRequestBuilder {
     
     public FullHttpRequest build() {
         FullHttpRequest req = new DefaultFullHttpRequest(httpVersion, method, uri);
+        HttpHeaders headers = req.headers();
+
         if (host != null) {
-            req.headers().set(Names.HOST, host);
+            headers.set(Names.HOST, host);
         }
         if (upgrade != null) {
-            req.headers().set(Names.UPGRADE, upgrade);
+            headers.set(Names.UPGRADE, upgrade);
         }
         if (connection != null) {
-            req.headers().set(Names.CONNECTION, connection);
+            headers.set(Names.CONNECTION, connection);
         }
         if (key != null) {
-            req.headers().set(Names.SEC_WEBSOCKET_KEY, key);
+            headers.set(Names.SEC_WEBSOCKET_KEY, key);
         }
         if (origin != null) {
-            req.headers().set(Names.SEC_WEBSOCKET_ORIGIN, origin);
+            headers.set(Names.SEC_WEBSOCKET_ORIGIN, origin);
         }
         if (version != null) {
-            req.headers().set(Names.SEC_WEBSOCKET_VERSION, version.toHttpHeaderValue());
+            headers.set(Names.SEC_WEBSOCKET_VERSION, version.toHttpHeaderValue());
         }
         return req;
     }

@@ -584,17 +584,18 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * </ul>
      */
     public static void setKeepAlive(HttpMessage message, boolean keepAlive) {
+        HttpHeaders h = message.headers();
         if (message.protocolVersion().isKeepAliveDefault()) {
             if (keepAlive) {
-                message.headers().remove(Names.CONNECTION);
+                h.remove(Names.CONNECTION);
             } else {
-                message.headers().set(Names.CONNECTION, Values.CLOSE);
+                h.set(Names.CONNECTION, Values.CLOSE);
             }
         } else {
             if (keepAlive) {
-                message.headers().set(Names.CONNECTION, Values.KEEP_ALIVE);
+                h.set(Names.CONNECTION, Values.KEEP_ALIVE);
             } else {
-                message.headers().remove(Names.CONNECTION);
+                h.remove(Names.CONNECTION);
             }
         }
     }
@@ -879,18 +880,19 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      */
     private static int getWebSocketContentLength(HttpMessage message) {
         // WebSockset messages have constant content-lengths.
+        HttpHeaders h = message.headers();
         if (message instanceof HttpRequest) {
             HttpRequest req = (HttpRequest) message;
             if (HttpMethod.GET.equals(req.method()) &&
-                req.headers().contains(Names.SEC_WEBSOCKET_KEY1) &&
-                req.headers().contains(Names.SEC_WEBSOCKET_KEY2)) {
+                h.contains(Names.SEC_WEBSOCKET_KEY1) &&
+                h.contains(Names.SEC_WEBSOCKET_KEY2)) {
                 return 8;
             }
         } else if (message instanceof HttpResponse) {
             HttpResponse res = (HttpResponse) message;
             if (res.status().code() == 101 &&
-                res.headers().contains(Names.SEC_WEBSOCKET_ORIGIN) &&
-                res.headers().contains(Names.SEC_WEBSOCKET_LOCATION)) {
+                h.contains(Names.SEC_WEBSOCKET_ORIGIN) &&
+                h.contains(Names.SEC_WEBSOCKET_LOCATION)) {
                 return 16;
             }
         }
@@ -1015,14 +1017,6 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         }
     }
 
-    /**
-     * Set the headers on the dst like they are set on the src
-     */
-    public static void setHeaders(HttpMessage src, HttpMessage dst) {
-        for (String name: src.headers().names()) {
-            dst.headers().set(name, src.headers().getAll(name));
-        }
-    }
     /**
      * Validates the name of a header
      *
