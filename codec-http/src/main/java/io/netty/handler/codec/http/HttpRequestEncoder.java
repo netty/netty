@@ -28,6 +28,11 @@ public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
     private static final char SLASH = '/';
 
     @Override
+    public boolean isEncodable(Object msg) throws Exception {
+        return super.isEncodable(msg) && !(msg instanceof HttpResponse);
+    }
+
+    @Override
     protected void encodeInitialLine(ByteBuf buf, HttpRequest request) throws Exception {
         buf.writeBytes(request.method().toString().getBytes(CharsetUtil.US_ASCII));
         buf.writeByte(SP);

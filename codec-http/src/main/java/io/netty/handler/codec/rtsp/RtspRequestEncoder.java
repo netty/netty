@@ -17,14 +17,20 @@ package io.netty.handler.codec.rtsp;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpRequestWithContent;
 import io.netty.util.CharsetUtil;
 
 /**
- * Encodes an RTSP request represented in {@link io.netty.handler.codec.http.HttpRequest} into
+ * Encodes an RTSP request represented in {@link HttpRequestWithContent} into
  * a {@link ByteBuf}.
 
  */
 public class RtspRequestEncoder extends RtspObjectEncoder<HttpRequest> {
+
+    @Override
+    public boolean isEncodable(Object msg) throws Exception {
+        return msg instanceof HttpRequestWithContent;
+    }
 
     @Override
     protected void encodeInitialLine(ByteBuf buf, HttpRequest request)

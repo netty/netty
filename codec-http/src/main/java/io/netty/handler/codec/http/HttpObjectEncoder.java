@@ -41,7 +41,12 @@ import static io.netty.handler.codec.http.HttpConstants.*;
  */
 public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageToByteEncoder<Object> {
 
-    private boolean chunked;
+    private static final int ST_INIT = 0;
+    private static final int ST_CONTENT_NON_CHUNK = 1;
+    private static final int ST_CONTENT_CHUNK = 2;
+
+    @SuppressWarnings("RedundantFieldInitialization")
+    private int state = ST_INIT;
 
     /**
      * Creates a new instance.
@@ -50,12 +55,15 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         super(HttpObject.class);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
+    @SuppressWarnings("unchecked")
     protected void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
         if (msg instanceof HttpMessage) {
+            if (state != ST_INIT) {
+                throw new IllegalStateException("unexpected message type: " + msg.getClass().getSimpleName());
+            }
             HttpMessage m = (HttpMessage) msg;
-            chunked = HttpHeaders.isTransferEncodingChunked(m);
+            state = HttpHeaders.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
             // Encode the message.
             out.markWriterIndex();
 
@@ -66,12 +74,19 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         }
 
         if (msg instanceof HttpContent) {
+            if (state == ST_INIT) {
+                throw new IllegalStateException("unexpected message type: " + msg.getClass().getSimpleName());
+            }
+
             HttpContent chunk = (HttpContent) msg;
 
-            if (!chunked) {
+            if (state == ST_CONTENT_NON_CHUNK) {
                 ByteBuf content = chunk.content();
                 out.writeBytes(content, content.readerIndex(), content.readableBytes());
-            } else {
+                if (chunk instanceof LastHttpContent) {
+                    state = ST_INIT;
+                }
+            } else if (state == ST_CONTENT_CHUNK) {
                 if (chunk instanceof LastHttpContent) {
                     out.writeByte((byte) '0');
                     out.writeByte(CR);
@@ -79,6 +94,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                     encodeTrailingHeaders(out, (LastHttpContent) chunk);
                     out.writeByte(CR);
                     out.writeByte(LF);
+                    state = ST_INIT;
                 } else {
                     ByteBuf content = chunk.content();
                     int contentLength = content.readableBytes();
@@ -89,6 +105,8 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                     out.writeByte(CR);
                     out.writeByte(LF);
                 }
+            } else {
+                throw new Error();
             }
         }
     }

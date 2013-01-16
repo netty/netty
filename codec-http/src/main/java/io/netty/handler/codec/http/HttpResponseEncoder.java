@@ -27,6 +27,11 @@ import static io.netty.handler.codec.http.HttpConstants.*;
 public class HttpResponseEncoder extends HttpObjectEncoder<HttpResponse> {
 
     @Override
+    public boolean isEncodable(Object msg) throws Exception {
+        return super.isEncodable(msg) && !(msg instanceof HttpRequest);
+    }
+
+    @Override
     protected void encodeInitialLine(ByteBuf buf, HttpResponse response) throws Exception {
         buf.writeBytes(response.protocolVersion().toString().getBytes(CharsetUtil.US_ASCII));
         buf.writeByte(SP);

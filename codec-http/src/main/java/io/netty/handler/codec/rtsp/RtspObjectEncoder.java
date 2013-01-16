@@ -17,13 +17,12 @@ package io.netty.handler.codec.rtsp;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.handler.codec.http.HttpMessage;
+import io.netty.handler.codec.http.HttpMessageWithContent;
 import io.netty.handler.codec.http.HttpObjectEncoder;
 
 /**
- * Encodes an RTSP message represented in {@link io.netty.handler.codec.http.HttpMessage} into
+ * Encodes an RTSP message represented in {@link HttpMessageWithContent} into
  * a {@link ByteBuf}.
 
  *
@@ -39,13 +38,7 @@ public abstract class RtspObjectEncoder<H extends HttpMessage> extends HttpObjec
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, Object msg,
-            ByteBuf out) throws Exception {
-        // Ignore unrelated message types such as HttpChunk.
-        if (!(msg instanceof HttpMessage)) {
-            throw new UnsupportedMessageTypeException(msg, HttpMessage.class);
-        }
-
-        super.encode(ctx, msg, out);
+    public boolean isEncodable(Object msg) throws Exception {
+        return msg instanceof HttpMessageWithContent;
     }
 }
