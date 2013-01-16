@@ -138,7 +138,8 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
      * @throws ErrorDataEncoderException
      *             if the request is not a POST
      */
-    public HttpPostRequestEncoder(HttpDataFactory factory, HttpRequestWithContent request, boolean multipart, Charset charset)
+    public HttpPostRequestEncoder(
+            HttpDataFactory factory, HttpRequestWithContent request, boolean multipart, Charset charset)
             throws ErrorDataEncoderException {
         if (factory == null) {
             throw new NullPointerException("factory");

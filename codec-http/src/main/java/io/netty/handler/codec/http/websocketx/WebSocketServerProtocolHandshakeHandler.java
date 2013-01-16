@@ -35,7 +35,8 @@ import static io.netty.handler.codec.http.HttpVersion.*;
 /**
  * Handles the HTTP handshake (the HTTP Upgrade request) for {@link WebSocketServerProtocolHandler}.
  */
-public class WebSocketServerProtocolHandshakeHandler extends ChannelInboundMessageHandlerAdapter<HttpRequestWithContent> {
+public class WebSocketServerProtocolHandshakeHandler
+        extends ChannelInboundMessageHandlerAdapter<HttpRequestWithContent> {
 
     private final String websocketPath;
     private final String subprotocols;

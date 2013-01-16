@@ -115,7 +115,8 @@ public class WebSocketServerHandshaker07 extends WebSocketServerHandshaker {
             logger.debug(String.format("Channel %s WS Version 7 server handshake", channel.id()));
         }
 
-        HttpResponseWithContent res = new DefaultHttpResponseWithContent(HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
+        HttpResponseWithContent res =
+                new DefaultHttpResponseWithContent(HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
 
         String key = req.headers().get(Names.SEC_WEBSOCKET_KEY);
         if (key == null) {

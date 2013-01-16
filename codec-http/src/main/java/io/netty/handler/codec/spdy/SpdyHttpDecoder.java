@@ -97,7 +97,8 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
                 }
 
                 try {
-                    HttpResponseWithContent httpResponseWithEntity = createHttpResponse(spdyVersion, spdySynStreamFrame);
+                    HttpResponseWithContent httpResponseWithEntity =
+                            createHttpResponse(spdyVersion, spdySynStreamFrame);
 
                     // Set the Stream-ID, Associated-To-Stream-ID, Priority, and URL as headers
                     SpdyHttpHeaders.setStreamId(httpResponseWithEntity, streamID);

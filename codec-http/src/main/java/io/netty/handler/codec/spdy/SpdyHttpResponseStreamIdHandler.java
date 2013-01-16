@@ -24,7 +24,7 @@ import java.util.Queue;
 
 /**
  * {@link MessageToMessageCodec} that takes care of adding the right {@link SpdyHttpHeaders.Names#STREAM_ID} to the
- * {@link io.netty.handler.codec.http.HttpMessage} if one is not present. This makes it possible to just re-use plan handlers current used
+ * {@link HttpMessage} if one is not present. This makes it possible to just re-use plan handlers current used
  * for HTTP.
  */
 public class SpdyHttpResponseStreamIdHandler extends

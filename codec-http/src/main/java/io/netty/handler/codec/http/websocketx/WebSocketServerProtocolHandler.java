@@ -113,7 +113,8 @@ public class WebSocketServerProtocolHandler extends ChannelInboundMessageHandler
             @Override
             public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
                 if (!(msg instanceof WebSocketFrame)) {
-                    HttpResponseWithContent response = new DefaultHttpResponseWithContent(HTTP_1_1, HttpResponseStatus.FORBIDDEN);
+                    HttpResponseWithContent response =
+                            new DefaultHttpResponseWithContent(HTTP_1_1, HttpResponseStatus.FORBIDDEN);
                     ctx.channel().write(response);
                 } else {
                     ctx.nextInboundMessageBuffer().add(msg);
