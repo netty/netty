@@ -15,15 +15,15 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import static io.netty.handler.codec.http.HttpHeaders.Values.WEBSOCKET;
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-
-import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpRequestHeader;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http.HttpHeaders.Names;
+
+import static io.netty.handler.codec.http.HttpHeaders.Values.*;
+import static io.netty.handler.codec.http.HttpVersion.*;
 
 public class WebSocketRequestBuilder {
     
@@ -96,30 +96,30 @@ public class WebSocketRequestBuilder {
         return this;
     }
     
-    public HttpRequest build() {
-        HttpRequest req = new DefaultHttpRequest(httpVersion, method, uri);
+    public FullHttpRequest build() {
+        FullHttpRequest req = new DefaultFullHttpRequest(httpVersion, method, uri);
         if (host != null) {
-            req.setHeader(Names.HOST, host);
+            req.headers().set(Names.HOST, host);
         }
         if (upgrade != null) {
-            req.setHeader(Names.UPGRADE, upgrade);
+            req.headers().set(Names.UPGRADE, upgrade);
         }
         if (connection != null) {
-            req.setHeader(Names.CONNECTION, connection);
+            req.headers().set(Names.CONNECTION, connection);
         }
         if (key != null) {
-            req.setHeader(Names.SEC_WEBSOCKET_KEY, key);
+            req.headers().set(Names.SEC_WEBSOCKET_KEY, key);
         }
         if (origin != null) {
-            req.setHeader(Names.SEC_WEBSOCKET_ORIGIN, origin);
+            req.headers().set(Names.SEC_WEBSOCKET_ORIGIN, origin);
         }
         if (version != null) {
-            req.setHeader(Names.SEC_WEBSOCKET_VERSION, version.toHttpHeaderValue());
+            req.headers().set(Names.SEC_WEBSOCKET_VERSION, version.toHttpHeaderValue());
         }
         return req;
     }
     
-    public static HttpRequestHeader sucessful() {
+    public static HttpRequest sucessful() {
         return new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
                 .method(HttpMethod.GET)
                 .uri("/test")

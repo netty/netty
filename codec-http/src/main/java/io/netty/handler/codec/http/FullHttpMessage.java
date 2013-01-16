@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,26 +15,11 @@
  */
 package io.netty.handler.codec.http;
 
-
 /**
- * An HTTP response.
- *
- * <h3>Accessing Cookies</h3>
- * <p>
- * Unlike the Servlet API, {@link Cookie} support is provided separately via {@link CookieDecoder},
- * {@link ClientCookieEncoder}, and {@link ServerCookieEncoder}.
- *
- * @see HttpRequest
- * @see CookieDecoder
- * @see ClientCookieEncoder
- * @see ServerCookieEncoder
+ * Combines {@link FullHttpMessage} and {@link LastHttpContent} into one
+ * message. So it represent a <i>complete</i> http message.
  */
-public interface HttpResponse extends HttpMessage {
-
-    /**
-     * Returns the status of this {@link HttpResponse}.
-     *
-     * @return The {@link HttpResponseStatus} of this {@link HttpResponse}
-     */
-    HttpResponseStatus status();
+public interface FullHttpMessage extends HttpMessage, LastHttpContent {
+    @Override
+    FullHttpMessage copy();
 }

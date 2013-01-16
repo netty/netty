@@ -16,13 +16,14 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.MessageToMessageDecoder;
 
 /**
- * Decodes the content of the received {@link HttpRequestHeader} and {@link HttpContent}.
+ * Decodes the content of the received {@link HttpRequest} and {@link HttpContent}.
  * The original content is replaced with the new content decoded by the
  * {@link EmbeddedByteChannel}, which is created by {@link #newContentDecoder(String)}.
  * Once decoding is finished, the value of the <tt>'Content-Encoding'</tt>
@@ -43,7 +44,7 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object> {
 
     private EmbeddedByteChannel decoder;
-    private HttpHeader header;
+    private HttpMessage header;
     private boolean decodeStarted;
 
     /**
@@ -55,13 +56,13 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
 
     @Override
     protected Object decode(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof HttpResponseHeader && ((HttpResponseHeader) msg).getStatus().getCode() == 100) {
+        if (msg instanceof HttpResponse && ((HttpResponse) msg).status().code() == 100) {
             // 100-continue response must be passed through.
             return msg;
         }
-        if (msg instanceof HttpHeader) {
+        if (msg instanceof HttpMessage) {
             assert header == null;
-            header = (HttpHeader) msg;
+            header = (HttpMessage) msg;
 
             cleanup();
         }
@@ -71,11 +72,11 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
 
             if (!decodeStarted) {
                 decodeStarted = true;
-                HttpHeader header = this.header;
+                HttpMessage header = this.header;
                 this.header = null;
 
                 // Determine the content encoding.
-                String contentEncoding = header.getHeader(HttpHeaders.Names.CONTENT_ENCODING);
+                String contentEncoding = header.headers().get(HttpHeaders.Names.CONTENT_ENCODING);
                 if (contentEncoding != null) {
                     contentEncoding = contentEncoding.trim();
                 } else {
@@ -89,17 +90,17 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
                     if (HttpHeaders.Values.IDENTITY.equals(targetContentEncoding)) {
                         // Do NOT set the 'Content-Encoding' header if the target encoding is 'identity'
                         // as per: http://tools.ietf.org/html/rfc2616#section-14.11
-                        header.removeHeader(HttpHeaders.Names.CONTENT_ENCODING);
+                        header.headers().remove(HttpHeaders.Names.CONTENT_ENCODING);
                     } else {
-                        header.setHeader(HttpHeaders.Names.CONTENT_ENCODING, targetContentEncoding);
+                        header.headers().set(HttpHeaders.Names.CONTENT_ENCODING, targetContentEncoding);
                     }
                     Object[] decoded = decodeContent(header, c);
 
                     // Replace the content.
-                    if (header.containsHeader(HttpHeaders.Names.CONTENT_LENGTH)) {
-                        header.setHeader(
+                    if (header.headers().contains(HttpHeaders.Names.CONTENT_LENGTH)) {
+                        header.headers().set(
                                 HttpHeaders.Names.CONTENT_LENGTH,
-                                Integer.toString(((HttpContent) decoded[1]).getContent().readableBytes()));
+                                Integer.toString(((ByteBufHolder) decoded[1]).data().readableBytes()));
                     }
                     return decoded;
                 }
@@ -108,13 +109,13 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
             return decodeContent(null, c);
         }
 
-        // Because HttpMessage and HttpChunk is a mutable object, we can simply forward it.
+        // Because FullHttpMessage and HttpChunk is a mutable object, we can simply forward it.
         return msg;
     }
 
-    private Object[] decodeContent(HttpHeader header, HttpContent c) {
+    private Object[] decodeContent(HttpMessage header, HttpContent c) {
         ByteBuf newContent = Unpooled.buffer();
-        ByteBuf content = c.getContent();
+        ByteBuf content = c.data();
         decode(content, newContent);
 
         if (c instanceof LastHttpContent) {

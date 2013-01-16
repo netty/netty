@@ -57,9 +57,6 @@ public class DefaultByteBufHolder implements ByteBufHolder {
 
     @Override
     public String toString() {
-        if (isFreed()) {
-            return "Message{data=(FREED)}";
-        }
-        return "Message{data=" + ByteBufUtil.hexDump(data()) + '}';
+        return getClass().getSimpleName() + '(' + data().toString() + ')';
     }
 }

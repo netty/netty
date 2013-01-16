@@ -21,7 +21,7 @@ import io.netty.handler.codec.TooLongFrameException;
 
 
 /**
- * Decodes {@link ByteBuf}s into {@link HttpRequestHeader}s and {@link HttpContent}s.
+ * Decodes {@link ByteBuf}s into {@link HttpRequest}s and {@link HttpContent}s.
  *
  * <h3>Parameters that prevents excessive memory consumption</h3>
  * <table border="1">
@@ -71,14 +71,14 @@ public class HttpRequestDecoder extends HttpObjectDecoder {
     }
 
     @Override
-    protected HttpHeader createMessage(String[] initialLine) throws Exception {
-        return new DefaultHttpRequestHeader(
+    protected HttpMessage createMessage(String[] initialLine) throws Exception {
+        return new DefaultHttpRequest(
                 HttpVersion.valueOf(initialLine[2]), HttpMethod.valueOf(initialLine[0]), initialLine[1]);
     }
 
     @Override
-    protected HttpHeader createInvalidMessage() {
-        return new DefaultHttpRequestHeader(HttpVersion.HTTP_1_0, HttpMethod.GET, "/bad-request");
+    protected HttpMessage createInvalidMessage() {
+        return new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, "/bad-request");
     }
 
     @Override

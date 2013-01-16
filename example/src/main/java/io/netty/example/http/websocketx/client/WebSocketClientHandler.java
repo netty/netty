@@ -42,7 +42,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
@@ -82,16 +82,16 @@ public class WebSocketClientHandler extends ChannelInboundMessageHandlerAdapter<
     public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
         Channel ch = ctx.channel();
         if (!handshaker.isHandshakeComplete()) {
-            handshaker.finishHandshake(ch, (HttpResponse) msg);
+            handshaker.finishHandshake(ch, (FullHttpResponse) msg);
             System.out.println("WebSocket Client connected!");
             handshakeFuture.setSuccess();
             return;
         }
 
-        if (msg instanceof HttpResponse) {
-            HttpResponse response = (HttpResponse) msg;
-            throw new Exception("Unexpected HttpResponse (status=" + response.getStatus() + ", content="
-                    + response.getContent().toString(CharsetUtil.UTF_8) + ')');
+        if (msg instanceof FullHttpResponse) {
+            FullHttpResponse response = (FullHttpResponse) msg;
+            throw new Exception("Unexpected FullHttpResponse (status=" + response.status() + ", content="
+                    + response.data().toString(CharsetUtil.UTF_8) + ')');
         }
 
         WebSocketFrame frame = (WebSocketFrame) msg;

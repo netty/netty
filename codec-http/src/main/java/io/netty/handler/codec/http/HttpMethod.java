@@ -154,13 +154,13 @@ public class HttpMethod implements Comparable<HttpMethod> {
     /**
      * Returns the name of this method.
      */
-    public String getName() {
+    public String name() {
         return name;
     }
 
     @Override
     public int hashCode() {
-        return getName().hashCode();
+        return name().hashCode();
     }
 
     @Override
@@ -170,16 +170,16 @@ public class HttpMethod implements Comparable<HttpMethod> {
         }
 
         HttpMethod that = (HttpMethod) o;
-        return getName().equals(that.getName());
+        return name().equals(that.name());
     }
 
     @Override
     public String toString() {
-        return getName();
+        return name();
     }
 
     @Override
     public int compareTo(HttpMethod o) {
-        return getName().compareTo(o.getName());
+        return name().compareTo(o.name());
     }
 }

@@ -15,25 +15,31 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.handler.codec.http.HttpConstants.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
 
+import static io.netty.handler.codec.http.HttpConstants.*;
+
 /**
- * Encodes an {@link HttpRequestHeader} or an {@link HttpContent} into
+ * Encodes an {@link HttpRequest} or an {@link HttpContent} into
  * a {@link ByteBuf}.
  */
-public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequestHeader> {
+public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
     private static final char SLASH = '/';
 
     @Override
-    protected void encodeInitialLine(ByteBuf buf, HttpRequestHeader request) throws Exception {
-        buf.writeBytes(request.getMethod().toString().getBytes(CharsetUtil.US_ASCII));
+    public boolean isEncodable(Object msg) throws Exception {
+        return super.isEncodable(msg) && !(msg instanceof HttpResponse);
+    }
+
+    @Override
+    protected void encodeInitialLine(ByteBuf buf, HttpRequest request) throws Exception {
+        buf.writeBytes(request.method().toString().getBytes(CharsetUtil.US_ASCII));
         buf.writeByte(SP);
 
         // Add / as absolute path if no is present.
         // See http://tools.ietf.org/html/rfc2616#section-5.1.2
-        String uri = request.getUri();
+        String uri = request.uri();
         int start = uri.indexOf("://");
         if (start != -1) {
             int startIndex = start + 3;
@@ -44,7 +50,7 @@ public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequestHeader> {
         buf.writeBytes(uri.getBytes("UTF-8"));
 
         buf.writeByte(SP);
-        buf.writeBytes(request.getProtocolVersion().toString().getBytes(CharsetUtil.US_ASCII));
+        buf.writeBytes(request.protocolVersion().toString().getBytes(CharsetUtil.US_ASCII));
         buf.writeByte(CR);
         buf.writeByte(LF);
     }

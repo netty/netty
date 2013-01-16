@@ -196,9 +196,9 @@ public class SpdyHeaders {
      */
     public static void setMethod(int spdyVersion, SpdyHeaderBlock block, HttpMethod method) {
         if (spdyVersion < 3) {
-            block.setHeader(Spdy2HttpNames.METHOD, method.getName());
+            block.setHeader(Spdy2HttpNames.METHOD, method.name());
         } else {
-            block.setHeader(HttpNames.METHOD, method.getName());
+            block.setHeader(HttpNames.METHOD, method.name());
         }
     }
 
@@ -264,7 +264,7 @@ public class SpdyHeaders {
                 int code = Integer.parseInt(status.substring(0, space));
                 String reasonPhrase = status.substring(space + 1);
                 HttpResponseStatus responseStatus = HttpResponseStatus.valueOf(code);
-                if (responseStatus.getReasonPhrase().equals(reasonPhrase)) {
+                if (responseStatus.reasonPhrase().equals(reasonPhrase)) {
                     return responseStatus;
                 } else {
                     return new HttpResponseStatus(code, reasonPhrase);

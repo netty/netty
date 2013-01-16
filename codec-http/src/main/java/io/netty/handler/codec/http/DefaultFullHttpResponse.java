@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,18 +16,23 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+
 
 /**
- * The default {@link HttpContent} implementation.
+ * Default implementation of a {@link FullHttpResponse}.
  */
-public class DefaultHttpContent extends DefaultHttpObject implements HttpContent {
+public class DefaultFullHttpResponse extends DefaultHttpResponse implements FullHttpResponse {
 
     private final ByteBuf content;
+    private final HttpHeaders trailingHeaders = new DefaultHttpHeaders();
 
-    /**
-     * Creates a new instance with the specified chunk content.
-     */
-    public DefaultHttpContent(ByteBuf content) {
+    public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status) {
+        this(version, status, Unpooled.buffer(0));
+    }
+
+    public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status, ByteBuf content) {
+        super(version, status);
         if (content == null) {
             throw new NullPointerException("content");
         }
@@ -35,13 +40,13 @@ public class DefaultHttpContent extends DefaultHttpObject implements HttpContent
     }
 
     @Override
-    public ByteBuf data() {
-        return content;
+    public HttpHeaders trailingHeaders() {
+        return trailingHeaders;
     }
 
     @Override
-    public HttpContent copy() {
-        return new DefaultHttpContent(data().copy());
+    public ByteBuf data() {
+        return content;
     }
 
     @Override
@@ -55,7 +60,10 @@ public class DefaultHttpContent extends DefaultHttpObject implements HttpContent
     }
 
     @Override
-    public String toString() {
-        return getClass().getSimpleName() + "(data: " + data() + ", decoderResult: " + decoderResult() + ')';
+    public FullHttpResponse copy() {
+        DefaultFullHttpResponse copy = new DefaultFullHttpResponse(protocolVersion(), status(), data().copy());
+        copy.headers().set(headers());
+        copy.trailingHeaders().set(trailingHeaders());
+        return copy;
     }
 }

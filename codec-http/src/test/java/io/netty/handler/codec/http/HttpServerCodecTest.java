@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.util.CharsetUtil;
-
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -44,8 +43,8 @@ public class HttpServerCodecTest {
         decoderEmbedder.writeInbound(prepareDataChunk(offeredContentLength));
         decoderEmbedder.finish();
 
-        HttpHeader httpMessage = (HttpHeader) decoderEmbedder.readInbound();
-        //Assert.assertSame(HttpTransferEncoding.STREAMED, httpMessage.getTransferEncoding());
+        HttpMessage httpMessage = (HttpMessage) decoderEmbedder.readInbound();
+        Assert.assertNotNull(httpMessage);
 
         boolean empty = true;
         int totalBytesPolled = 0;
@@ -55,7 +54,7 @@ public class HttpServerCodecTest {
                 break;
             }
             empty = false;
-            totalBytesPolled += httpChunk.getContent().readableBytes();
+            totalBytesPolled += httpChunk.data().readableBytes();
             Assert.assertFalse(httpChunk instanceof LastHttpContent);
         }
         Assert.assertFalse(empty);

@@ -17,13 +17,13 @@ package io.netty.handler.codec.rtsp;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.handler.codec.http.DefaultHttpResponseHeader;
-import io.netty.handler.codec.http.HttpHeader;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpResponseStatus;
 
 /**
  * Decodes {@link ByteBuf}s into RTSP responses represented in
- * {@link io.netty.handler.codec.http.HttpResponseHeader}s.
+ * {@link io.netty.handler.codec.http.HttpResponse}s.
  * <p>
  * <h3>Parameters that prevents excessive memory consumption</h3>
  * <table border="1">
@@ -69,15 +69,15 @@ public class RtspResponseDecoder extends RtspObjectDecoder {
     }
 
     @Override
-    protected HttpHeader createMessage(String[] initialLine) throws Exception {
-        return new DefaultHttpResponseHeader(
+    protected HttpMessage createMessage(String[] initialLine) throws Exception {
+        return new DefaultHttpResponse(
                 RtspVersions.valueOf(initialLine[0]),
                 new HttpResponseStatus(Integer.valueOf(initialLine[1]), initialLine[2]));
     }
 
     @Override
-    protected HttpHeader createInvalidMessage() {
-        return new DefaultHttpResponseHeader(RtspVersions.RTSP_1_0, UNKNOWN_STATUS);
+    protected HttpMessage createInvalidMessage() {
+        return new DefaultHttpResponse(RtspVersions.RTSP_1_0, UNKNOWN_STATUS);
     }
 
     @Override
