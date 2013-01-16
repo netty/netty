@@ -22,16 +22,19 @@ import io.netty.buffer.Unpooled;
  * Default implementation of {@link HttpRequestWithContent}.
  */
 public class DefaultHttpRequestWithContent extends DefaultHttpRequest implements HttpRequestWithContent {
-    private ByteBuf content = Unpooled.EMPTY_BUFFER;
+    private final ByteBuf content;
     private final HttpHeaders trailingHeader = new DefaultHttpHeaders();
 
     public DefaultHttpRequestWithContent(HttpVersion httpVersion, HttpMethod method, String uri) {
-        this(httpVersion, method, uri, Unpooled.EMPTY_BUFFER);
+        this(httpVersion, method, uri, Unpooled.buffer());
     }
 
     public DefaultHttpRequestWithContent(HttpVersion httpVersion, HttpMethod method, String uri, ByteBuf content) {
         super(httpVersion, method, uri);
-        setContent(content);
+        if (content == null) {
+            throw new NullPointerException("content");
+        }
+        this.content = content;
     }
 
     @Override
@@ -40,15 +43,7 @@ public class DefaultHttpRequestWithContent extends DefaultHttpRequest implements
     }
 
     @Override
-    public ByteBuf getContent() {
+    public ByteBuf content() {
         return content;
-    }
-
-    @Override
-    public void setContent(ByteBuf content) {
-        if (content == null) {
-            throw new NullPointerException("content");
-        }
-        this.content = content;
     }
 }

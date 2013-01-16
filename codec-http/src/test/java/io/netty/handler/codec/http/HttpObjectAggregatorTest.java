@@ -60,7 +60,7 @@ public class HttpObjectAggregatorTest {
     }
 
     private static void checkContentBuffer(DefaultHttpRequestWithContent aggregatedMessage) {
-        CompositeByteBuf buffer = (CompositeByteBuf) aggregatedMessage.getContent();
+        CompositeByteBuf buffer = (CompositeByteBuf) aggregatedMessage.content();
         assertEquals(2, buffer.numComponents());
         List<ByteBuf> buffers = buffer.decompose(0, buffer.capacity());
         assertEquals(2, buffers.size());
