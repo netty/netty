@@ -48,7 +48,7 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
         StringBuilder buf = new StringBuilder();
         buf.append(getClass().getSimpleName());
         buf.append(", decodeResult: ");
-        buf.append(getDecoderResult());
+        buf.append(decoderResult());
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
         buf.append(protocolVersion().getText());

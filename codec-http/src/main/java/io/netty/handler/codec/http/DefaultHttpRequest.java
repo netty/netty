@@ -59,7 +59,7 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
         StringBuilder buf = new StringBuilder();
         buf.append(getClass().getSimpleName());
         buf.append(", decodeResult: ");
-        buf.append(getDecoderResult());
+        buf.append(decoderResult());
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
         buf.append(method().toString());

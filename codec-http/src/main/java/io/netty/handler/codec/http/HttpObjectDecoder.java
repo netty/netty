@@ -195,7 +195,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             State nextState = readHeaders(buffer);
             checkpoint(nextState);
             if (nextState == State.READ_CHUNK_SIZE) {
-                // Chunked encoding - generate FullHttpMessage first.  HttpChunks will follow.
+                // Chunked encoding - generate HttpMessage first.  HttpChunks will follow.
                 return message;
             }
             if (nextState == State.SKIP_CONTROL_CHARS) {
@@ -444,10 +444,10 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
     private HttpMessage invalidMessage(Exception cause) {
         checkpoint(State.BAD_MESSAGE);
         if (message != null) {
-            message.setDecoderResult(DecoderResult.partialFailure(cause));
+            message.updateDecoderResult(DecoderResult.partialFailure(cause));
         } else {
             message = createInvalidMessage();
-            message.setDecoderResult(DecoderResult.failure(cause));
+            message.updateDecoderResult(DecoderResult.failure(cause));
         }
         return message;
     }
@@ -455,7 +455,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
     private HttpContent invalidChunk(Exception cause) {
         checkpoint(State.BAD_MESSAGE);
         HttpContent chunk = new DefaultHttpContent(Unpooled.EMPTY_BUFFER);
-        chunk.setDecoderResult(DecoderResult.failure(cause));
+        chunk.updateDecoderResult(DecoderResult.failure(cause));
         return chunk;
     }
 

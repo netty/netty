@@ -104,7 +104,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
     public void messageReceived(
             ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
 
-        if (!request.getDecoderResult().isSuccess()) {
+        if (!request.decoderResult().isSuccess()) {
             sendError(ctx, BAD_REQUEST);
             return;
         }

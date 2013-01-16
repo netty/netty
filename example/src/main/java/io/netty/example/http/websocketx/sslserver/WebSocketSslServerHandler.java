@@ -63,7 +63,7 @@ public class WebSocketSslServerHandler extends ChannelInboundMessageHandlerAdapt
 
     private void handleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
         // Handle a bad request.
-        if (!req.getDecoderResult().isSuccess()) {
+        if (!req.decoderResult().isSuccess()) {
             sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST));
             return;
         }

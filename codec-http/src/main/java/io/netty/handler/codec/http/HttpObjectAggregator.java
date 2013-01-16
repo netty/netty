@@ -128,7 +128,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
                 ctx.write(CONTINUE.duplicate());
             }
 
-            if (!m.getDecoderResult().isSuccess()) {
+            if (!m.decoderResult().isSuccess()) {
                 removeTransferEncodingChunked(m);
                 this.currentMessage = null;
                 return m;
@@ -180,9 +180,9 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             }
 
             final boolean last;
-            if (!chunk.getDecoderResult().isSuccess()) {
-                currentMessage.setDecoderResult(
-                        DecoderResult.partialFailure(chunk.getDecoderResult().cause()));
+            if (!chunk.decoderResult().isSuccess()) {
+                currentMessage.updateDecoderResult(
+                        DecoderResult.partialFailure(chunk.decoderResult().cause()));
                 last = true;
             } else {
                 last = msg instanceof LastHttpContent;

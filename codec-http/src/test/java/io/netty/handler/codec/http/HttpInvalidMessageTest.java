@@ -34,7 +34,7 @@ public class HttpInvalidMessageTest {
         EmbeddedByteChannel ch = new EmbeddedByteChannel(new HttpRequestDecoder());
         ch.writeInbound(Unpooled.copiedBuffer("GET / HTTP/1.0 with extra\r\n", CharsetUtil.UTF_8));
         HttpRequest req = (HttpRequest) ch.readInbound();
-        DecoderResult dr = req.getDecoderResult();
+        DecoderResult dr = req.decoderResult();
         Assert.assertFalse(dr.isSuccess());
         Assert.assertFalse(dr.isPartialFailure());
         ensureInboundTrafficDiscarded(ch);
@@ -48,7 +48,7 @@ public class HttpInvalidMessageTest {
         ch.writeInbound(Unpooled.copiedBuffer("Bad=Name: Bad Value\r\n", CharsetUtil.UTF_8));
         ch.writeInbound(Unpooled.copiedBuffer("\r\n", CharsetUtil.UTF_8));
         HttpRequest req = (HttpRequest) ch.readInbound();
-        DecoderResult dr = req.getDecoderResult();
+        DecoderResult dr = req.decoderResult();
         Assert.assertFalse(dr.isSuccess());
         Assert.assertTrue(dr.isPartialFailure());
         Assert.assertEquals("Good Value", req.headers().get("Good_Name"));
@@ -61,7 +61,7 @@ public class HttpInvalidMessageTest {
         EmbeddedByteChannel ch = new EmbeddedByteChannel(new HttpResponseDecoder());
         ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.0 BAD_CODE Bad Server\r\n", CharsetUtil.UTF_8));
         HttpResponse res = (HttpResponse) ch.readInbound();
-        DecoderResult dr = res.getDecoderResult();
+        DecoderResult dr = res.decoderResult();
         Assert.assertFalse(dr.isSuccess());
         Assert.assertFalse(dr.isPartialFailure());
         ensureInboundTrafficDiscarded(ch);
@@ -75,7 +75,7 @@ public class HttpInvalidMessageTest {
         ch.writeInbound(Unpooled.copiedBuffer("Bad=Name: Bad Value\r\n", CharsetUtil.UTF_8));
         ch.writeInbound(Unpooled.copiedBuffer("\r\n", CharsetUtil.UTF_8));
         HttpResponse res = (HttpResponse) ch.readInbound();
-        DecoderResult dr = res.getDecoderResult();
+        DecoderResult dr = res.decoderResult();
         Assert.assertFalse(dr.isSuccess());
         Assert.assertTrue(dr.isPartialFailure());
         Assert.assertEquals("Maybe OK", res.status().reasonPhrase());
@@ -91,10 +91,10 @@ public class HttpInvalidMessageTest {
         ch.writeInbound(Unpooled.copiedBuffer("BAD_LENGTH\r\n", CharsetUtil.UTF_8));
 
         HttpRequest req = (HttpRequest) ch.readInbound();
-        Assert.assertTrue(req.getDecoderResult().isSuccess());
+        Assert.assertTrue(req.decoderResult().isSuccess());
 
         HttpContent chunk = (HttpContent) ch.readInbound();
-        DecoderResult dr = chunk.getDecoderResult();
+        DecoderResult dr = chunk.decoderResult();
         Assert.assertFalse(dr.isSuccess());
         Assert.assertFalse(dr.isPartialFailure());
         ensureInboundTrafficDiscarded(ch);
