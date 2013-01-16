@@ -18,7 +18,7 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.HttpResponseWithEntityWithEntity;
+import io.netty.handler.codec.http.HttpResponseWithContent;
 
 import java.net.URI;
 import java.util.Map;
@@ -148,5 +148,5 @@ public abstract class WebSocketClientHandshaker {
      * @param response
      *            HTTP response containing the closing handshake details
      */
-    public abstract void finishHandshake(Channel channel, HttpResponseWithEntityWithEntity response);
+    public abstract void finishHandshake(Channel channel, HttpResponseWithContent response);
 }

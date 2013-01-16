@@ -26,10 +26,10 @@ import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestDecoder;
-import io.netty.handler.codec.http.HttpRequestWithEntityWithEntity;
+import io.netty.handler.codec.http.HttpRequestWithContent;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseEncoder;
-import io.netty.handler.codec.http.HttpResponseWithEntityWithEntity;
+import io.netty.handler.codec.http.HttpResponseWithContent;
 import org.junit.Test;
 
 import static io.netty.handler.codec.http.HttpHeaders.Values.*;
@@ -64,7 +64,7 @@ public class WebSocketServerProtocolHandlerTest {
     @Test
     public void testHttpUpgradeRequestInvalidUpgradeHeader() {
         EmbeddedMessageChannel ch = createChannel();
-        HttpRequestWithEntityWithEntity httpRequestWithEntity = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
+        HttpRequestWithContent httpRequestWithEntity = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
                 .method(HttpMethod.GET)
                 .uri("/test")
                 .connection("Upgrade")
@@ -74,7 +74,7 @@ public class WebSocketServerProtocolHandlerTest {
         
         ch.writeInbound(httpRequestWithEntity);
         
-        HttpResponseWithEntityWithEntity response = getHttpResponse(ch);
+        HttpResponseWithContent response = getHttpResponse(ch);
         assertEquals(BAD_REQUEST, response.getStatus());
         assertEquals("not a WebSocket handshake request: missing upgrade", getResponseMessage(response));
         
@@ -94,7 +94,7 @@ public class WebSocketServerProtocolHandlerTest {
         
         ch.writeInbound(httpRequest);
         
-        HttpResponseWithEntityWithEntity response = getHttpResponse(ch);
+        HttpResponseWithContent response = getHttpResponse(ch);
         assertEquals(BAD_REQUEST, response.getStatus());
         assertEquals("not a WebSocket request: missing key", getResponseMessage(response));
     }
@@ -129,13 +129,13 @@ public class WebSocketServerProtocolHandlerTest {
         ch.writeInbound(WebSocketRequestBuilder.sucessful());
     }
 
-    private static String getResponseMessage(HttpResponseWithEntityWithEntity response) {
+    private static String getResponseMessage(HttpResponseWithContent response) {
         return new String(response.getContent().array());
     }
 
-    private static HttpResponseWithEntityWithEntity getHttpResponse(EmbeddedMessageChannel ch) {
+    private static HttpResponseWithContent getHttpResponse(EmbeddedMessageChannel ch) {
         MessageBuf<Object> outbound = ch.pipeline().context(MockOutboundHandler.class).outboundMessageBuffer();
-        return (HttpResponseWithEntityWithEntity) outbound.poll();
+        return (HttpResponseWithContent) outbound.poll();
     }
 
     private static class MockOutboundHandler extends ChannelOutboundMessageHandlerAdapter<Object> {

@@ -21,9 +21,9 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
-import io.netty.handler.codec.http.DefaultHttpResponseWithEntityWithEntity;
-import io.netty.handler.codec.http.HttpRequestWithEntityWithEntity;
-import io.netty.handler.codec.http.HttpResponseWithEntityWithEntity;
+import io.netty.handler.codec.http.DefaultHttpResponseWithContent;
+import io.netty.handler.codec.http.HttpRequestWithContent;
+import io.netty.handler.codec.http.HttpResponseWithContent;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
@@ -53,29 +53,29 @@ public class WebSocketServerHandler extends ChannelInboundMessageHandlerAdapter<
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof HttpRequestWithEntityWithEntity) {
-            handleHttpRequest(ctx, (HttpRequestWithEntityWithEntity) msg);
+        if (msg instanceof HttpRequestWithContent) {
+            handleHttpRequest(ctx, (HttpRequestWithContent) msg);
         } else if (msg instanceof WebSocketFrame) {
             handleWebSocketFrame(ctx, (WebSocketFrame) msg);
         }
     }
 
-    private void handleHttpRequest(ChannelHandlerContext ctx, HttpRequestWithEntityWithEntity req) throws Exception {
+    private void handleHttpRequest(ChannelHandlerContext ctx, HttpRequestWithContent req) throws Exception {
         // Handle a bad request.
         if (!req.getDecoderResult().isSuccess()) {
-            sendHttpResponse(ctx, req, new DefaultHttpResponseWithEntityWithEntity(HTTP_1_1, BAD_REQUEST));
+            sendHttpResponse(ctx, req, new DefaultHttpResponseWithContent(HTTP_1_1, BAD_REQUEST));
             return;
         }
 
         // Allow only GET methods.
         if (req.getMethod() != GET) {
-            sendHttpResponse(ctx, req, new DefaultHttpResponseWithEntityWithEntity(HTTP_1_1, FORBIDDEN));
+            sendHttpResponse(ctx, req, new DefaultHttpResponseWithContent(HTTP_1_1, FORBIDDEN));
             return;
         }
 
         // Send the demo page and favicon.ico
         if ("/".equals(req.getUri())) {
-            HttpResponseWithEntityWithEntity res = new DefaultHttpResponseWithEntityWithEntity(HTTP_1_1, OK);
+            HttpResponseWithContent res = new DefaultHttpResponseWithContent(HTTP_1_1, OK);
 
             ByteBuf content = WebSocketServerIndexPage.getContent(getWebSocketLocation(req));
 
@@ -87,7 +87,7 @@ public class WebSocketServerHandler extends ChannelInboundMessageHandlerAdapter<
             return;
         }
         if ("/favicon.ico".equals(req.getUri())) {
-            HttpResponseWithEntityWithEntity res = new DefaultHttpResponseWithEntityWithEntity(HTTP_1_1, NOT_FOUND);
+            HttpResponseWithContent res = new DefaultHttpResponseWithContent(HTTP_1_1, NOT_FOUND);
             sendHttpResponse(ctx, req, res);
             return;
         }
@@ -127,7 +127,7 @@ public class WebSocketServerHandler extends ChannelInboundMessageHandlerAdapter<
         ctx.channel().write(new TextWebSocketFrame(request.toUpperCase()));
     }
 
-    private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequestWithEntityWithEntity req, HttpResponseWithEntityWithEntity res) {
+    private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequestWithContent req, HttpResponseWithContent res) {
         // Generate an error page if response status code is not OK (200).
         if (res.getStatus().getCode() != 200) {
             res.setContent(Unpooled.copiedBuffer(res.getStatus().toString(), CharsetUtil.UTF_8));
@@ -147,7 +147,7 @@ public class WebSocketServerHandler extends ChannelInboundMessageHandlerAdapter<
         ctx.close();
     }
 
-    private static String getWebSocketLocation(HttpRequestWithEntityWithEntity req) {
+    private static String getWebSocketLocation(HttpRequestWithContent req) {
         return "ws://" + req.getHeader(HOST) + WEBSOCKET_PATH;
     }
 }

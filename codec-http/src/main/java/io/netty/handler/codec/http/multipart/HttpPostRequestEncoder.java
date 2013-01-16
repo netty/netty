@@ -22,7 +22,7 @@ import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpRequestWithEntityWithEntity;
+import io.netty.handler.codec.http.HttpRequestWithContent;
 import io.netty.handler.stream.ChunkedMessageInput;
 
 import java.io.File;
@@ -49,7 +49,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
     /**
      * Request to encode
      */
-    private final HttpRequestWithEntityWithEntity request;
+    private final HttpRequestWithContent request;
 
     /**
      * Default charset to use
@@ -100,7 +100,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
      * @throws ErrorDataEncoderException
      *             if the request is not a POST
      */
-    public HttpPostRequestEncoder(HttpRequestWithEntityWithEntity request, boolean multipart) throws ErrorDataEncoderException {
+    public HttpPostRequestEncoder(HttpRequestWithContent request, boolean multipart) throws ErrorDataEncoderException {
         this(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE), request, multipart,
                 HttpConstants.DEFAULT_CHARSET);
     }
@@ -118,7 +118,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
      * @throws ErrorDataEncoderException
      *             if the request is not a POST
      */
-    public HttpPostRequestEncoder(HttpDataFactory factory, HttpRequestWithEntityWithEntity request, boolean multipart)
+    public HttpPostRequestEncoder(HttpDataFactory factory, HttpRequestWithContent request, boolean multipart)
             throws ErrorDataEncoderException {
         this(factory, request, multipart, HttpConstants.DEFAULT_CHARSET);
     }
@@ -138,7 +138,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
      * @throws ErrorDataEncoderException
      *             if the request is not a POST
      */
-    public HttpPostRequestEncoder(HttpDataFactory factory, HttpRequestWithEntityWithEntity request, boolean multipart, Charset charset)
+    public HttpPostRequestEncoder(HttpDataFactory factory, HttpRequestWithContent request, boolean multipart, Charset charset)
             throws ErrorDataEncoderException {
         if (factory == null) {
             throw new NullPointerException("factory");
@@ -598,7 +598,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
      * @throws ErrorDataEncoderException
      *             if the encoding is in error or if the finalize were already done
      */
-    public HttpRequestWithEntityWithEntity finalizeRequest() throws ErrorDataEncoderException {
+    public HttpRequestWithContent finalizeRequest() throws ErrorDataEncoderException {
         // Finalize the multipartHttpDatas
         if (!headerFinalized) {
             if (isMultipart) {

@@ -49,7 +49,7 @@ public class HttpObjectAggregatorTest {
         // this should trigger a messageReceived event so return true
         assertTrue(embedder.writeInbound(chunk3));
         assertTrue(embedder.finish());
-        DefaultHttpRequestWithEntityWithEntity aggratedMessage = (DefaultHttpRequestWithEntityWithEntity) embedder.readInbound();
+        DefaultHttpRequestWithContent aggratedMessage = (DefaultHttpRequestWithContent) embedder.readInbound();
         assertNotNull(aggratedMessage);
 
         assertEquals(chunk1.getContent().readableBytes() + chunk2.getContent().readableBytes(), HttpHeaders.getContentLength(aggratedMessage));
@@ -59,7 +59,7 @@ public class HttpObjectAggregatorTest {
 
     }
 
-    private static void checkContentBuffer(DefaultHttpRequestWithEntityWithEntity aggregatedMessage) {
+    private static void checkContentBuffer(DefaultHttpRequestWithContent aggregatedMessage) {
         CompositeByteBuf buffer = (CompositeByteBuf) aggregatedMessage.getContent();
         assertEquals(2, buffer.numComponents());
         List<ByteBuf> buffers = buffer.decompose(0, buffer.capacity());
@@ -90,7 +90,7 @@ public class HttpObjectAggregatorTest {
         // this should trigger a messageReceived event so return true
         assertTrue(embedder.writeInbound(trailer));
         assertTrue(embedder.finish());
-        DefaultHttpRequestWithEntityWithEntity aggratedMessage = (DefaultHttpRequestWithEntityWithEntity) embedder.readInbound();
+        DefaultHttpRequestWithContent aggratedMessage = (DefaultHttpRequestWithContent) embedder.readInbound();
         assertNotNull(aggratedMessage);
 
         assertEquals(chunk1.getContent().readableBytes() + chunk2.getContent().readableBytes(), HttpHeaders.getContentLength(aggratedMessage));

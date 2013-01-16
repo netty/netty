@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -18,16 +18,20 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
+
 /**
- * Combination of {@link HttpMessage} and {@link LastHttpContent} which can be used to <i>combine</i> the headers and
- * the actual content. {@link HttpObjectAggregator} makes use of this.
- *
+ * Default implementation of a {@link HttpResponseWithContent}.
  */
-public abstract class DefaultHttpMessageWithEntity extends DefaultHttpMessage implements LastHttpContent {
+public class DefaultHttpResponseWithContent extends DefaultHttpResponse implements HttpResponseWithContent {
     private ByteBuf content = Unpooled.EMPTY_BUFFER;
 
-    public DefaultHttpMessageWithEntity(HttpVersion version) {
-        super(version);
+    public DefaultHttpResponseWithContent(HttpVersion version, HttpResponseStatus status) {
+        this(version, status, Unpooled.EMPTY_BUFFER);
+    }
+
+    public DefaultHttpResponseWithContent(HttpVersion version, HttpResponseStatus status, ByteBuf content) {
+        super(version, status);
+        setContent(content);
     }
 
     @Override

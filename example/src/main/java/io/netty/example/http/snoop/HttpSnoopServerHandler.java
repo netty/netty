@@ -25,13 +25,13 @@ import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.Cookie;
 import io.netty.handler.codec.http.CookieDecoder;
 import io.netty.handler.codec.http.DefaultHttpResponse;
-import io.netty.handler.codec.http.DefaultHttpResponseWithEntityWithEntity;
+import io.netty.handler.codec.http.DefaultHttpResponseWithContent;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.HttpResponseWithEntityWithEntity;
+import io.netty.handler.codec.http.HttpResponseWithContent;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.http.ServerCookieEncoder;
@@ -167,7 +167,7 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
         boolean keepAlive = isKeepAlive(request);
 
         // Build the response object.
-        HttpResponseWithEntityWithEntity response = new DefaultHttpResponseWithEntityWithEntity(
+        HttpResponseWithContent response = new DefaultHttpResponseWithContent(
                 HTTP_1_1, currentObj.getDecoderResult().isSuccess()? OK : BAD_REQUEST);
 
         response.setContent(Unpooled.copiedBuffer(buf.toString(), CharsetUtil.UTF_8));

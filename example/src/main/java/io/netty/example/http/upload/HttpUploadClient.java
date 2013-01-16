@@ -21,10 +21,10 @@ import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.ClientCookieEncoder;
 import io.netty.handler.codec.http.DefaultCookie;
-import io.netty.handler.codec.http.DefaultHttpRequestWithEntityWithEntity;
+import io.netty.handler.codec.http.DefaultHttpRequestWithContent;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpRequestWithEntityWithEntity;
+import io.netty.handler.codec.http.HttpRequestWithContent;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.QueryStringEncoder;
 import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
@@ -178,7 +178,7 @@ public class HttpUploadClient {
             return null;
         }
 
-        HttpRequestWithEntityWithEntity request = new DefaultHttpRequestWithEntityWithEntity(HttpVersion.HTTP_1_1, HttpMethod.GET, uriGet.toASCIIString());
+        HttpRequestWithContent request = new DefaultHttpRequestWithContent(HttpVersion.HTTP_1_1, HttpMethod.GET, uriGet.toASCIIString());
         request.setHeader(HttpHeaders.Names.HOST, host);
         request.setHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
         request.setHeader(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP + ','
@@ -220,7 +220,7 @@ public class HttpUploadClient {
         Channel channel = bootstrap.connect().sync().channel();
 
         // Prepare the HTTP request.
-        HttpRequestWithEntityWithEntity request = new DefaultHttpRequestWithEntityWithEntity(HttpVersion.HTTP_1_1, HttpMethod.POST, uriSimple.toASCIIString());
+        HttpRequestWithContent request = new DefaultHttpRequestWithContent(HttpVersion.HTTP_1_1, HttpMethod.POST, uriSimple.toASCIIString());
 
         // Use the PostBody encoder
         HttpPostRequestEncoder bodyRequestEncoder = null;
@@ -304,7 +304,7 @@ public class HttpUploadClient {
         Channel channel = bootstrap.connect().sync().channel();
 
         // Prepare the HTTP request.
-        HttpRequestWithEntityWithEntity request = new DefaultHttpRequestWithEntityWithEntity(HttpVersion.HTTP_1_1, HttpMethod.POST, uriFile.toASCIIString());
+        HttpRequestWithContent request = new DefaultHttpRequestWithContent(HttpVersion.HTTP_1_1, HttpMethod.POST, uriFile.toASCIIString());
 
         // Use the PostBody encoder
         HttpPostRequestEncoder bodyRequestEncoder = null;

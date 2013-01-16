@@ -17,12 +17,12 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedByteChannel;
-import io.netty.handler.codec.http.DefaultHttpRequestWithEntityWithEntity;
+import io.netty.handler.codec.http.DefaultHttpRequestWithContent;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
-import io.netty.handler.codec.http.HttpRequestWithEntityWithEntity;
+import io.netty.handler.codec.http.HttpRequestWithContent;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
@@ -39,7 +39,7 @@ public class WebSocketServerHandshaker08Test {
         EmbeddedByteChannel ch = new EmbeddedByteChannel(
                 new HttpObjectAggregator(42), new HttpRequestDecoder(), new HttpResponseEncoder());
 
-        HttpRequestWithEntityWithEntity req = new DefaultHttpRequestWithEntityWithEntity(HTTP_1_1, HttpMethod.GET, "/chat");
+        HttpRequestWithContent req = new DefaultHttpRequestWithContent(HTTP_1_1, HttpMethod.GET, "/chat");
         req.setHeader(Names.HOST, "server.example.com");
         req.setHeader(Names.UPGRADE, WEBSOCKET.toLowerCase());
         req.setHeader(Names.CONNECTION, "Upgrade");

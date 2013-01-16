@@ -15,11 +15,11 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.handler.codec.http.DefaultHttpRequestWithEntityWithEntity;
+import io.netty.handler.codec.http.DefaultHttpRequestWithContent;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpRequestWithEntityWithEntity;
+import io.netty.handler.codec.http.HttpRequestWithContent;
 import io.netty.handler.codec.http.HttpVersion;
 
 import static io.netty.handler.codec.http.HttpHeaders.Values.*;
@@ -96,8 +96,8 @@ public class WebSocketRequestBuilder {
         return this;
     }
     
-    public HttpRequestWithEntityWithEntity build() {
-        HttpRequestWithEntityWithEntity req = new DefaultHttpRequestWithEntityWithEntity(httpVersion, method, uri);
+    public HttpRequestWithContent build() {
+        HttpRequestWithContent req = new DefaultHttpRequestWithContent(httpVersion, method, uri);
         if (host != null) {
             req.setHeader(Names.HOST, host);
         }

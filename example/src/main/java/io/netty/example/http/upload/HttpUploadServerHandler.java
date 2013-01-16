@@ -23,12 +23,12 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.handler.codec.http.Cookie;
 import io.netty.handler.codec.http.CookieDecoder;
-import io.netty.handler.codec.http.DefaultHttpResponseWithEntityWithEntity;
+import io.netty.handler.codec.http.DefaultHttpResponseWithContent;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpResponseWithEntityWithEntity;
+import io.netty.handler.codec.http.HttpResponseWithContent;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.http.ServerCookieEncoder;
@@ -305,7 +305,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
                 && !HttpHeaders.Values.KEEP_ALIVE.equalsIgnoreCase(request.getHeader(CONNECTION));
 
         // Build the response object.
-        HttpResponseWithEntityWithEntity response = new DefaultHttpResponseWithEntityWithEntity(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        HttpResponseWithContent response = new DefaultHttpResponseWithContent(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         response.setContent(buf);
         response.setHeader(CONTENT_TYPE, "text/plain; charset=UTF-8");
 
@@ -410,7 +410,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
 
         ByteBuf buf = copiedBuffer(responseContent.toString(), CharsetUtil.UTF_8);
         // Build the response object.
-        HttpResponseWithEntityWithEntity response = new DefaultHttpResponseWithEntityWithEntity(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        HttpResponseWithContent response = new DefaultHttpResponseWithContent(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         response.setContent(buf);
         response.setHeader(CONTENT_TYPE, "text/html; charset=UTF-8");
         response.setHeader(CONTENT_LENGTH, String.valueOf(buf.readableBytes()));

@@ -133,11 +133,11 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             }
             if (msg instanceof HttpRequest) {
                 HttpRequest header = (HttpRequest) msg;
-                this.currentMessage = new DefaultHttpRequestWithEntityWithEntity(header.getProtocolVersion(),
+                this.currentMessage = new DefaultHttpRequestWithContent(header.getProtocolVersion(),
                         header.getMethod(), header.getUri());
             }  else {
                 HttpResponse header = (HttpResponse) msg;
-                this.currentMessage = new DefaultHttpResponseWithEntityWithEntity(header.getProtocolVersion(), header.getStatus());
+                this.currentMessage = new DefaultHttpResponseWithContent(header.getProtocolVersion(), header.getStatus());
             }
             for (String name: m.getHeaderNames()) {
                 this.currentMessage.setHeader(name, m.getHeaders(name));

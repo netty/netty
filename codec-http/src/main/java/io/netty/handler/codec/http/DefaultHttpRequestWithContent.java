@@ -18,19 +18,18 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
-
 /**
- * Default implementation of a {@link HttpResponseWithEntityWithEntity}.
+ * Default implementation of {@link HttpRequestWithContent}.
  */
-public class DefaultHttpResponseWithEntityWithEntity extends DefaultHttpResponse implements HttpResponseWithEntityWithEntity {
+public class DefaultHttpRequestWithContent extends DefaultHttpRequest implements HttpRequestWithContent {
     private ByteBuf content = Unpooled.EMPTY_BUFFER;
 
-    public DefaultHttpResponseWithEntityWithEntity(HttpVersion version, HttpResponseStatus status) {
-        this(version, status, Unpooled.EMPTY_BUFFER);
+    public DefaultHttpRequestWithContent(HttpVersion httpVersion, HttpMethod method, String uri) {
+        this(httpVersion, method, uri, Unpooled.EMPTY_BUFFER);
     }
 
-    public DefaultHttpResponseWithEntityWithEntity(HttpVersion version, HttpResponseStatus status, ByteBuf content) {
-        super(version, status);
+    public DefaultHttpRequestWithContent(HttpVersion httpVersion, HttpMethod method, String uri, ByteBuf content) {
+        super(httpVersion, method, uri);
         setContent(content);
     }
 

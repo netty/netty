@@ -23,7 +23,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpRequestWithEntityWithEntity;
+import io.netty.handler.codec.http.HttpRequestWithContent;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
 
@@ -219,7 +219,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
                 new DefaultSpdySynStreamFrame(streamID, associatedToStreamId, priority);
 
         // Unfold the first line of the message into name/value pairs
-        if (httpMessage instanceof HttpRequestWithEntityWithEntity) {
+        if (httpMessage instanceof HttpRequestWithContent) {
             HttpRequest httpRequest = (HttpRequest) httpMessage;
             SpdyHeaders.setMethod(spdyVersion, spdySynStreamFrame, httpRequest.getMethod());
             SpdyHeaders.setUrl(spdyVersion, spdySynStreamFrame, httpRequest.getUri());

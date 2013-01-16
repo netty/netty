@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -19,18 +19,15 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
 /**
- * Default implementation of {@link HttpRequestWithEntityWithEntity}.
+ * Combination of {@link HttpMessage} and {@link LastHttpContent} which can be used to <i>combine</i> the headers and
+ * the actual content. {@link HttpObjectAggregator} makes use of this.
+ *
  */
-public class DefaultHttpRequestWithEntityWithEntity extends DefaultHttpRequest implements HttpRequestWithEntityWithEntity {
+public abstract class DefaultHttpMessageWithContent extends DefaultHttpMessage implements LastHttpContent {
     private ByteBuf content = Unpooled.EMPTY_BUFFER;
 
-    public DefaultHttpRequestWithEntityWithEntity(HttpVersion httpVersion, HttpMethod method, String uri) {
-        this(httpVersion, method, uri, Unpooled.EMPTY_BUFFER);
-    }
-
-    public DefaultHttpRequestWithEntityWithEntity(HttpVersion httpVersion, HttpMethod method, String uri, ByteBuf content) {
-        super(httpVersion, method, uri);
-        setContent(content);
+    public DefaultHttpMessageWithContent(HttpVersion version) {
+        super(version);
     }
 
     @Override
