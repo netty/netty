@@ -80,14 +80,27 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             }
 
             HttpContent chunk = (HttpContent) msg;
+            ByteBuf content = chunk.content();
+            int contentLength = content.readableBytes();
 
             if (state == ST_CONTENT_NON_CHUNK) {
-                ByteBuf content = chunk.content();
-                out.writeBytes(content, content.readerIndex(), content.readableBytes());
+                if (contentLength > 0) {
+                    out.writeBytes(content, content.readerIndex(), content.readableBytes());
+                }
+
                 if (chunk instanceof LastHttpContent) {
                     state = ST_INIT;
                 }
             } else if (state == ST_CONTENT_CHUNK) {
+                if (contentLength > 0) {
+                    out.writeBytes(copiedBuffer(Integer.toHexString(contentLength), CharsetUtil.US_ASCII));
+                    out.writeByte(CR);
+                    out.writeByte(LF);
+                    out.writeBytes(content, content.readerIndex(), contentLength);
+                    out.writeByte(CR);
+                    out.writeByte(LF);
+                }
+
                 if (chunk instanceof LastHttpContent) {
                     out.writeByte((byte) '0');
                     out.writeByte(CR);
@@ -96,15 +109,6 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                     out.writeByte(CR);
                     out.writeByte(LF);
                     state = ST_INIT;
-                } else {
-                    ByteBuf content = chunk.content();
-                    int contentLength = content.readableBytes();
-                    out.writeBytes(copiedBuffer(Integer.toHexString(contentLength), CharsetUtil.US_ASCII));
-                    out.writeByte(CR);
-                    out.writeByte(LF);
-                    out.writeBytes(content, content.readerIndex(), contentLength);
-                    out.writeByte(CR);
-                    out.writeByte(LF);
                 }
             } else {
                 throw new Error();
