@@ -142,7 +142,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
         }
 
         // Cache Validation
-        String ifModifiedSince = request.getHeader(IF_MODIFIED_SINCE);
+        String ifModifiedSince = request.headers().get(IF_MODIFIED_SINCE);
         if (ifModifiedSince != null && !ifModifiedSince.isEmpty()) {
             SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
             Date ifModifiedSinceDate = dateFormatter.parse(ifModifiedSince);
@@ -171,7 +171,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
         setContentTypeHeader(response, file);
         setDateAndCacheHeaders(response, file);
         if (isKeepAlive(request)) {
-            response.setHeader(CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
+            response.headers().set(CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
         }
 
         // Write the initial line and the header.
@@ -233,7 +233,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
 
     private static void sendListing(ChannelHandlerContext ctx, File dir) {
         HttpResponseWithContent response = new DefaultHttpResponseWithContent(HTTP_1_1, OK);
-        response.setHeader(CONTENT_TYPE, "text/html; charset=UTF-8");
+        response.headers().set(CONTENT_TYPE, "text/html; charset=UTF-8");
 
         StringBuilder buf = new StringBuilder();
         String dirPath = dir.getPath();
@@ -278,7 +278,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
 
     private static void sendRedirect(ChannelHandlerContext ctx, String newUri) {
         HttpResponseWithContent response = new DefaultHttpResponseWithContent(HTTP_1_1, FOUND);
-        response.setHeader(LOCATION, newUri);
+        response.headers().set(LOCATION, newUri);
 
         // Close the connection as soon as the error message is sent.
         ctx.write(response).addListener(ChannelFutureListener.CLOSE);
@@ -286,7 +286,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
 
     private static void sendError(ChannelHandlerContext ctx, HttpResponseStatus status) {
         HttpResponseWithContent response = new DefaultHttpResponseWithContent(HTTP_1_1, status);
-        response.setHeader(CONTENT_TYPE, "text/plain; charset=UTF-8");
+        response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
         response.setContent(Unpooled.copiedBuffer(
                 "Failure: " + status.toString() + "\r\n",
                 CharsetUtil.UTF_8));
@@ -320,7 +320,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
         dateFormatter.setTimeZone(TimeZone.getTimeZone(HTTP_DATE_GMT_TIMEZONE));
 
         Calendar time = new GregorianCalendar();
-        response.setHeader(DATE, dateFormatter.format(time.getTime()));
+        response.headers().set(DATE, dateFormatter.format(time.getTime()));
     }
 
     /**
@@ -337,13 +337,13 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
 
         // Date header
         Calendar time = new GregorianCalendar();
-        response.setHeader(DATE, dateFormatter.format(time.getTime()));
+        response.headers().set(DATE, dateFormatter.format(time.getTime()));
 
         // Add cache headers
         time.add(Calendar.SECOND, HTTP_CACHE_SECONDS);
-        response.setHeader(EXPIRES, dateFormatter.format(time.getTime()));
-        response.setHeader(CACHE_CONTROL, "private, max-age=" + HTTP_CACHE_SECONDS);
-        response.setHeader(
+        response.headers().set(EXPIRES, dateFormatter.format(time.getTime()));
+        response.headers().set(CACHE_CONTROL, "private, max-age=" + HTTP_CACHE_SECONDS);
+        response.headers().set(
                 LAST_MODIFIED, dateFormatter.format(new Date(fileToCache.lastModified())));
     }
 
@@ -357,7 +357,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
      */
     private static void setContentTypeHeader(HttpResponseWithContent response, File file) {
         MimetypesFileTypeMap mimeTypesMap = new MimetypesFileTypeMap();
-        response.setHeader(CONTENT_TYPE, mimeTypesMap.getContentType(file.getPath()));
+        response.headers().set(CONTENT_TYPE, mimeTypesMap.getContentType(file.getPath()));
     }
 
 }

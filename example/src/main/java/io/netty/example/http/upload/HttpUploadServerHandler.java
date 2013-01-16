@@ -119,7 +119,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
             responseContent.append("\r\n\r\n");
 
             // new method
-            List<Entry<String, String>> headers = request.getHeaders();
+            List<Entry<String, String>> headers = request.headers().entries();
             for (Entry<String, String> entry : headers) {
                 responseContent.append("HEADER: " + entry.getKey() + '=' + entry.getValue() + "\r\n");
             }
@@ -127,7 +127,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
 
             // new method
             Set<Cookie> cookies;
-            String value = request.getHeader(COOKIE);
+            String value = request.headers().get(COOKIE);
             if (value == null) {
                 cookies = Collections.emptySet();
             } else {
@@ -300,23 +300,23 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
         responseContent.setLength(0);
 
         // Decide whether to close the connection or not.
-        boolean close = HttpHeaders.Values.CLOSE.equalsIgnoreCase(request.getHeader(CONNECTION))
+        boolean close = HttpHeaders.Values.CLOSE.equalsIgnoreCase(request.headers().get(CONNECTION))
                 || request.getProtocolVersion().equals(HttpVersion.HTTP_1_0)
-                && !HttpHeaders.Values.KEEP_ALIVE.equalsIgnoreCase(request.getHeader(CONNECTION));
+                && !HttpHeaders.Values.KEEP_ALIVE.equalsIgnoreCase(request.headers().get(CONNECTION));
 
         // Build the response object.
         HttpResponseWithContent response = new DefaultHttpResponseWithContent(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         response.setContent(buf);
-        response.setHeader(CONTENT_TYPE, "text/plain; charset=UTF-8");
+        response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
 
         if (!close) {
             // There's no need to add 'Content-Length' header
             // if this is the last response.
-            response.setHeader(CONTENT_LENGTH, String.valueOf(buf.readableBytes()));
+            response.headers().set(CONTENT_LENGTH, String.valueOf(buf.readableBytes()));
         }
 
         Set<Cookie> cookies;
-        String value = request.getHeader(COOKIE);
+        String value = request.headers().get(COOKIE);
         if (value == null) {
             cookies = Collections.emptySet();
         } else {
@@ -325,7 +325,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
         if (!cookies.isEmpty()) {
             // Reset the cookies if necessary.
             for (Cookie cookie : cookies) {
-                response.addHeader(SET_COOKIE, ServerCookieEncoder.encode(cookie));
+                response.headers().add(SET_COOKIE, ServerCookieEncoder.encode(cookie));
             }
         }
         // Write the response.
@@ -412,8 +412,8 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
         // Build the response object.
         HttpResponseWithContent response = new DefaultHttpResponseWithContent(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         response.setContent(buf);
-        response.setHeader(CONTENT_TYPE, "text/html; charset=UTF-8");
-        response.setHeader(CONTENT_LENGTH, String.valueOf(buf.readableBytes()));
+        response.headers().set(CONTENT_TYPE, "text/html; charset=UTF-8");
+        response.headers().set(CONTENT_LENGTH, String.valueOf(buf.readableBytes()));
         // Write the response.
         ctx.channel().write(response);
     }

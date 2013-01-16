@@ -39,7 +39,7 @@ public class SpdyHttpResponseStreamIdHandler extends
     @Override
     protected Object encode(ChannelHandlerContext ctx, HttpMessage msg) throws Exception {
         Integer id = ids.poll();
-        if (id != null && id.intValue() != NO_ID && !msg.containsHeader(SpdyHttpHeaders.Names.STREAM_ID)) {
+        if (id != null && id.intValue() != NO_ID && !msg.headers().contains(SpdyHttpHeaders.Names.STREAM_ID)) {
             SpdyHttpHeaders.setStreamId(msg, id);
         }
         return msg;
@@ -48,7 +48,7 @@ public class SpdyHttpResponseStreamIdHandler extends
     @Override
     protected Object decode(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof HttpMessage) {
-            boolean contains = ((HttpMessage) msg).containsHeader(SpdyHttpHeaders.Names.STREAM_ID);
+            boolean contains = ((HttpMessage) msg).headers().contains(SpdyHttpHeaders.Names.STREAM_ID);
             if (!contains) {
                 ids.add(NO_ID);
             } else {

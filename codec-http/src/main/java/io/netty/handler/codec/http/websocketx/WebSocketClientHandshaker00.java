@@ -143,9 +143,9 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
 
         // Format request
         HttpRequestWithContent request = new DefaultHttpRequestWithContent(HttpVersion.HTTP_1_1, HttpMethod.GET, path);
-        request.addHeader(Names.UPGRADE, Values.WEBSOCKET);
-        request.addHeader(Names.CONNECTION, Values.UPGRADE);
-        request.addHeader(Names.HOST, wsURL.getHost());
+        request.headers().add(Names.UPGRADE, Values.WEBSOCKET);
+        request.headers().add(Names.CONNECTION, Values.UPGRADE);
+        request.headers().add(Names.HOST, wsURL.getHost());
 
         int wsPort = wsURL.getPort();
         String originValue = "http://" + wsURL.getHost();
@@ -155,23 +155,23 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
             originValue = originValue + ':' + wsPort;
         }
 
-        request.addHeader(Names.ORIGIN, originValue);
-        request.addHeader(Names.SEC_WEBSOCKET_KEY1, key1);
-        request.addHeader(Names.SEC_WEBSOCKET_KEY2, key2);
+        request.headers().add(Names.ORIGIN, originValue);
+        request.headers().add(Names.SEC_WEBSOCKET_KEY1, key1);
+        request.headers().add(Names.SEC_WEBSOCKET_KEY2, key2);
         String expectedSubprotocol = getExpectedSubprotocol();
         if (expectedSubprotocol != null && !expectedSubprotocol.isEmpty()) {
-            request.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
+            request.headers().add(Names.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
         }
 
         if (customHeaders != null) {
             for (Map.Entry<String, String> e : customHeaders.entrySet()) {
-                request.addHeader(e.getKey(), e.getValue());
+                request.headers().add(e.getKey(), e.getValue());
             }
         }
 
         // Set Content-Length to workaround some known defect.
         // See also: http://www.ietf.org/mail-archive/web/hybi/current/msg02149.html
-        request.setHeader(Names.CONTENT_LENGTH, key3.length);
+        request.headers().set(Names.CONTENT_LENGTH, key3.length);
         request.setContent(Unpooled.copiedBuffer(key3));
 
         ChannelFuture future = channel.write(request);
@@ -224,13 +224,13 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
             throw new WebSocketHandshakeException("Invalid handshake response status: " + response.getStatus());
         }
 
-        String upgrade = response.getHeader(Names.UPGRADE);
+        String upgrade = response.headers().get(Names.UPGRADE);
         if (!Values.WEBSOCKET.equalsIgnoreCase(upgrade)) {
             throw new WebSocketHandshakeException("Invalid handshake response upgrade: "
                     + upgrade);
         }
 
-        String connection = response.getHeader(Names.CONNECTION);
+        String connection = response.headers().get(Names.CONNECTION);
         if (!Values.UPGRADE.equalsIgnoreCase(connection)) {
             throw new WebSocketHandshakeException("Invalid handshake response connection: "
                     + connection);
@@ -241,7 +241,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
             throw new WebSocketHandshakeException("Invalid challenge");
         }
 
-        String subprotocol = response.getHeader(Names.SEC_WEBSOCKET_PROTOCOL);
+        String subprotocol = response.headers().get(Names.SEC_WEBSOCKET_PROTOCOL);
         setActualSubprotocol(subprotocol);
 
         setHandshakeComplete();

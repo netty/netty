@@ -40,13 +40,13 @@ public class WebSocketServerHandshaker08Test {
                 new HttpObjectAggregator(42), new HttpRequestDecoder(), new HttpResponseEncoder());
 
         HttpRequestWithContent req = new DefaultHttpRequestWithContent(HTTP_1_1, HttpMethod.GET, "/chat");
-        req.setHeader(Names.HOST, "server.example.com");
-        req.setHeader(Names.UPGRADE, WEBSOCKET.toLowerCase());
-        req.setHeader(Names.CONNECTION, "Upgrade");
-        req.setHeader(Names.SEC_WEBSOCKET_KEY, "dGhlIHNhbXBsZSBub25jZQ==");
-        req.setHeader(Names.SEC_WEBSOCKET_ORIGIN, "http://example.com");
-        req.setHeader(Names.SEC_WEBSOCKET_PROTOCOL, "chat, superchat");
-        req.setHeader(Names.SEC_WEBSOCKET_VERSION, "8");
+        req.headers().set(Names.HOST, "server.example.com");
+        req.headers().set(Names.UPGRADE, WEBSOCKET.toLowerCase());
+        req.headers().set(Names.CONNECTION, "Upgrade");
+        req.headers().set(Names.SEC_WEBSOCKET_KEY, "dGhlIHNhbXBsZSBub25jZQ==");
+        req.headers().set(Names.SEC_WEBSOCKET_ORIGIN, "http://example.com");
+        req.headers().set(Names.SEC_WEBSOCKET_PROTOCOL, "chat, superchat");
+        req.headers().set(Names.SEC_WEBSOCKET_VERSION, "8");
 
         new WebSocketServerHandshaker08(
                 "ws://example.com/chat", "chat", false, Integer.MAX_VALUE).handshake(ch, req);
@@ -58,7 +58,7 @@ public class WebSocketServerHandshaker08Test {
         HttpResponse res = (HttpResponse) ch2.readInbound();
 
         Assert.assertEquals(
-                "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", res.getHeader(Names.SEC_WEBSOCKET_ACCEPT));
-        Assert.assertEquals("chat", res.getHeader(Names.SEC_WEBSOCKET_PROTOCOL));
+                "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", res.headers().get(Names.SEC_WEBSOCKET_ACCEPT));
+        Assert.assertEquals("chat", res.headers().get(Names.SEC_WEBSOCKET_PROTOCOL));
     }
 }

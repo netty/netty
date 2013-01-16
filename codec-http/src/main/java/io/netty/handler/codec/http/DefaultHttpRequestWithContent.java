@@ -23,6 +23,7 @@ import io.netty.buffer.Unpooled;
  */
 public class DefaultHttpRequestWithContent extends DefaultHttpRequest implements HttpRequestWithContent {
     private ByteBuf content = Unpooled.EMPTY_BUFFER;
+    private final HttpHeaders trailingHeader = new DefaultHttpHeaders();
 
     public DefaultHttpRequestWithContent(HttpVersion httpVersion, HttpMethod method, String uri) {
         this(httpVersion, method, uri, Unpooled.EMPTY_BUFFER);
@@ -31,6 +32,11 @@ public class DefaultHttpRequestWithContent extends DefaultHttpRequest implements
     public DefaultHttpRequestWithContent(HttpVersion httpVersion, HttpMethod method, String uri, ByteBuf content) {
         super(httpVersion, method, uri);
         setContent(content);
+    }
+
+    @Override
+    public HttpHeaders trailingHeaders() {
+        return trailingHeader;
     }
 
     @Override

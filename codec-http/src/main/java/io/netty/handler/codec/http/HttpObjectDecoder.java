@@ -195,7 +195,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             State nextState = readHeaders(buffer);
             checkpoint(nextState);
             if (nextState == State.READ_CHUNK_SIZE) {
-                // Chunked encoding - generate HttpMessageWithEntity first.  HttpChunks will follow.
+                // Chunked encoding - generate HttpMessageWithContent first.  HttpChunks will follow.
                 return message;
             }
             if (nextState == State.SKIP_CONTROL_CHARS) {
@@ -211,7 +211,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             switch (nextState) {
             case READ_FIXED_LENGTH_CONTENT:
                 if (contentLength > maxChunkSize || HttpHeaders.is100ContinueExpected(message)) {
-                    // Generate HttpMessageWithEntity first.  HttpChunks will follow.
+                    // Generate HttpMessageWithContent first.  HttpChunks will follow.
                     checkpoint(State.READ_FIXED_LENGTH_CONTENT_AS_CHUNKS);
                     // chunkSize will be decreased as the READ_FIXED_LENGTH_CONTENT_AS_CHUNKS
                     // state reads data chunk by chunk.
@@ -221,7 +221,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                 break;
             case READ_VARIABLE_LENGTH_CONTENT:
                 if (buffer.readableBytes() > maxChunkSize || HttpHeaders.is100ContinueExpected(message)) {
-                    // Generate HttpMessageWithEntity first.  HttpChunks will follow.
+                    // Generate HttpMessageWithContent first.  HttpChunks will follow.
                     checkpoint(State.READ_VARIABLE_LENGTH_CONTENT_AS_CHUNKS);
                     return message;
                 }
@@ -407,7 +407,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             //     - http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html Section 4.4
             //     - https://github.com/netty/netty/issues/222
             if (code >= 100 && code < 200) {
-                if (code == 101 && !res.containsHeader(HttpHeaders.Names.SEC_WEBSOCKET_ACCEPT)) {
+                if (code == 101 && !res.headers().contains(HttpHeaders.Names.SEC_WEBSOCKET_ACCEPT)) {
                     // It's Hixie 76 websocket handshake response
                     return false;
                 }
@@ -497,14 +497,14 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         String name = null;
         String value = null;
         if (!line.isEmpty()) {
-            message.clearHeaders();
+            message.headers().clear();
             do {
                 char firstChar = line.charAt(0);
                 if (name != null && (firstChar == ' ' || firstChar == '\t')) {
                     value = value + ' ' + line.trim();
                 } else {
                     if (name != null) {
-                        message.addHeader(name, value);
+                        message.headers().add(name, value);
                     }
                     String[] header = splitHeader(line);
                     name = header[0];
@@ -516,7 +516,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
 
             // Add the last header.
             if (name != null) {
-                message.addHeader(name, value);
+                message.headers().add(name, value);
             }
         }
 
@@ -544,7 +544,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             do {
                 char firstChar = line.charAt(0);
                 if (lastHeader != null && (firstChar == ' ' || firstChar == '\t')) {
-                    List<String> current = trailer.getHeaders(lastHeader);
+                    List<String> current = trailer.trailingHeaders().getAll(lastHeader);
                     if (!current.isEmpty()) {
                         int lastPos = current.size() - 1;
                         String newString = current.get(lastPos) + line.trim();
@@ -558,7 +558,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                     if (!name.equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH) &&
                         !name.equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING) &&
                         !name.equalsIgnoreCase(HttpHeaders.Names.TRAILER)) {
-                        trailer.addHeader(name, header[1]);
+                        trailer.trailingHeaders().add(name, header[1]);
                     }
                     lastHeader = name;
                 }

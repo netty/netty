@@ -17,12 +17,13 @@ package io.netty.handler.codec.http;
 
 import java.text.ParseException;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
-import java.util.LinkedList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
-import java.util.TreeSet;
 
 
 /**
@@ -31,7 +32,74 @@ import java.util.TreeSet;
  * @apiviz.landmark
  * @apiviz.stereotype static
  */
-public class HttpHeaders {
+public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>> {
+
+    public static final HttpHeaders EMPTY_HEADERS = new HttpHeaders() {
+        @Override
+        public String get(String name) {
+            return null;
+        }
+
+        @Override
+        public List<String> getAll(String name) {
+            return Collections.emptyList();
+        }
+
+        @Override
+        public List<Entry<String, String>> entries() {
+            return Collections.emptyList();
+        }
+
+        @Override
+        public boolean contains(String name) {
+            return false;
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return true;
+        }
+
+        @Override
+        public Set<String> names() {
+            return Collections.emptySet();
+        }
+
+        @Override
+        public void add(String name, Object value) {
+            throw new UnsupportedOperationException("read only");
+        }
+
+        @Override
+        public void add(String name, Iterable<?> values) {
+            throw new UnsupportedOperationException("read only");
+        }
+
+        @Override
+        public void set(String name, Object value) {
+            throw new UnsupportedOperationException("read only");
+        }
+
+        @Override
+        public void set(String name, Iterable<?> values) {
+            throw new UnsupportedOperationException("read only");
+        }
+
+        @Override
+        public void remove(String name) {
+            throw new UnsupportedOperationException("read only");
+        }
+
+        @Override
+        public void clear() {
+            throw new UnsupportedOperationException("read only");
+        }
+
+        @Override
+        public Iterator<Entry<String, String>> iterator() {
+            return entries().iterator();
+        }
+    };
 
     /**
      * Standard and CORS HTTP header names.
@@ -484,7 +552,7 @@ public class HttpHeaders {
      * {@link HttpVersion#isKeepAliveDefault()}.
      */
     public static boolean isKeepAlive(HttpMessage message) {
-        String connection = message.getHeader(Names.CONNECTION);
+        String connection = message.headers().get(Names.CONNECTION);
         if (Values.CLOSE.equalsIgnoreCase(connection)) {
             return false;
         }
@@ -518,15 +586,15 @@ public class HttpHeaders {
     public static void setKeepAlive(HttpMessage message, boolean keepAlive) {
         if (message.getProtocolVersion().isKeepAliveDefault()) {
             if (keepAlive) {
-                message.removeHeader(Names.CONNECTION);
+                message.headers().remove(Names.CONNECTION);
             } else {
-                message.setHeader(Names.CONNECTION, Values.CLOSE);
+                message.headers().set(Names.CONNECTION, Values.CLOSE);
             }
         } else {
             if (keepAlive) {
-                message.setHeader(Names.CONNECTION, Values.KEEP_ALIVE);
+                message.headers().set(Names.CONNECTION, Values.KEEP_ALIVE);
             } else {
-                message.removeHeader(Names.CONNECTION);
+                message.headers().remove(Names.CONNECTION);
             }
         }
     }
@@ -539,7 +607,7 @@ public class HttpHeaders {
      * @return the header value or {@code null} if there is no such header
      */
     public static String getHeader(HttpMessage message, String name) {
-        return message.getHeader(name);
+        return message.headers().get(name);
     }
 
     /**
@@ -551,7 +619,7 @@ public class HttpHeaders {
      *         header
      */
     public static String getHeader(HttpMessage message, String name, String defaultValue) {
-        String value = message.getHeader(name);
+        String value = message.headers().get(name);
         if (value == null) {
             return defaultValue;
         }
@@ -567,7 +635,7 @@ public class HttpHeaders {
      * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>.
      */
     public static void setHeader(HttpMessage message, String name, Object value) {
-        message.setHeader(name, value);
+        message.headers().set(name, value);
     }
 
     /**
@@ -585,7 +653,7 @@ public class HttpHeaders {
      * </pre>
      */
     public static void setHeader(HttpMessage message, String name, Iterable<?> values) {
-        message.setHeader(name, values);
+        message.headers().set(name, values);
     }
 
     /**
@@ -596,21 +664,21 @@ public class HttpHeaders {
      * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>.
      */
     public static void addHeader(HttpMessage message, String name, Object value) {
-        message.addHeader(name, value);
+        message.headers().add(name, value);
     }
 
     /**
      * Removes the header with the specified name.
      */
     public static void removeHeader(HttpMessage message, String name) {
-        message.removeHeader(name);
+        message.headers().remove(name);
     }
 
     /**
      * Removes all headers from the specified message.
      */
     public static void clearHeaders(HttpMessage message) {
-        message.clearHeaders();
+        message.headers().clear();
     }
 
     /**
@@ -656,7 +724,7 @@ public class HttpHeaders {
      * is an existing header with the same name, the existing header is removed.
      */
     public static void setIntHeader(HttpMessage message, String name, int value) {
-        message.setHeader(name, value);
+        message.headers().set(name, value);
     }
 
     /**
@@ -664,14 +732,14 @@ public class HttpHeaders {
      * is an existing header with the same name, the existing header is removed.
      */
     public static void setIntHeader(HttpMessage message, String name, Iterable<Integer> values) {
-        message.setHeader(name, values);
+        message.headers().set(name, values);
     }
 
     /**
      * Adds a new integer header with the specified name and value.
      */
     public static void addIntHeader(HttpMessage message, String name, int value) {
-        message.addHeader(name, value);
+        message.headers().add(name, value);
     }
 
     /**
@@ -720,9 +788,9 @@ public class HttpHeaders {
      */
     public static void setDateHeader(HttpMessage message, String name, Date value) {
         if (value != null) {
-            message.setHeader(name, new HttpHeaderDateFormat().format(value));
+            message.headers().set(name, new HttpHeaderDateFormat().format(value));
         } else {
-            message.setHeader(name, null);
+            message.headers().set(name, null);
         }
     }
 
@@ -733,7 +801,7 @@ public class HttpHeaders {
      * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>
      */
     public static void setDateHeader(HttpMessage message, String name, Iterable<Date> values) {
-        message.setHeader(name, values);
+        message.headers().set(name, values);
     }
 
     /**
@@ -742,7 +810,7 @@ public class HttpHeaders {
      * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>
      */
     public static void addDateHeader(HttpMessage message, String name, Date value) {
-        message.addHeader(name, value);
+        message.headers().add(name, value);
     }
 
     /**
@@ -785,7 +853,7 @@ public class HttpHeaders {
      *         a number
      */
     public static long getContentLength(HttpMessage message, long defaultValue) {
-        String contentLength = message.getHeader(Names.CONTENT_LENGTH);
+        String contentLength = message.headers().get(Names.CONTENT_LENGTH);
         if (contentLength != null) {
             try {
                 return Long.parseLong(contentLength);
@@ -814,15 +882,15 @@ public class HttpHeaders {
         if (message instanceof HttpRequest) {
             HttpRequest req = (HttpRequest) message;
             if (HttpMethod.GET.equals(req.getMethod()) &&
-                req.containsHeader(Names.SEC_WEBSOCKET_KEY1) &&
-                req.containsHeader(Names.SEC_WEBSOCKET_KEY2)) {
+                req.headers().contains(Names.SEC_WEBSOCKET_KEY1) &&
+                req.headers().contains(Names.SEC_WEBSOCKET_KEY2)) {
                 return 8;
             }
         } else if (message instanceof HttpResponse) {
             HttpResponse res = (HttpResponse) message;
             if (res.getStatus().getCode() == 101 &&
-                res.containsHeader(Names.SEC_WEBSOCKET_ORIGIN) &&
-                res.containsHeader(Names.SEC_WEBSOCKET_LOCATION)) {
+                res.headers().contains(Names.SEC_WEBSOCKET_ORIGIN) &&
+                res.headers().contains(Names.SEC_WEBSOCKET_LOCATION)) {
                 return 16;
             }
         }
@@ -835,14 +903,14 @@ public class HttpHeaders {
      * Sets the {@code "Content-Length"} header.
      */
     public static void setContentLength(HttpMessage message, long length) {
-        message.setHeader(Names.CONTENT_LENGTH, length);
+        message.headers().set(Names.CONTENT_LENGTH, length);
     }
 
     /**
      * Returns the value of the {@code "Host"} header.
      */
     public static String getHost(HttpMessage message) {
-        return message.getHeader(Names.HOST);
+        return message.headers().get(Names.HOST);
     }
 
     /**
@@ -857,7 +925,7 @@ public class HttpHeaders {
      * Sets the {@code "Host"} header.
      */
     public static void setHost(HttpMessage message, String value) {
-        message.setHeader(Names.HOST, value);
+        message.headers().set(Names.HOST, value);
     }
 
     /**
@@ -884,9 +952,9 @@ public class HttpHeaders {
      */
     public static void setDate(HttpMessage message, Date value) {
         if (value != null) {
-            message.setHeader(Names.DATE, new HttpHeaderDateFormat().format(value));
+            message.headers().set(Names.DATE, new HttpHeaderDateFormat().format(value));
         } else {
-            message.setHeader(Names.DATE, null);
+            message.headers().set(Names.DATE, null);
         }
     }
 
@@ -906,7 +974,7 @@ public class HttpHeaders {
         }
 
         // In most cases, there will be one or zero 'Expect' header.
-        String value = message.getHeader(Names.EXPECT);
+        String value = message.headers().get(Names.EXPECT);
         if (value == null) {
             return false;
         }
@@ -915,7 +983,7 @@ public class HttpHeaders {
         }
 
         // Multiple 'Expect' headers.  Search through them.
-        for (String v: message.getHeaders(Names.EXPECT)) {
+        for (String v: message.headers().getAll(Names.EXPECT)) {
             if (Values.CONTINUE.equalsIgnoreCase(v)) {
                 return true;
             }
@@ -941,9 +1009,9 @@ public class HttpHeaders {
      */
     public static void set100ContinueExpected(HttpMessage message, boolean set) {
         if (set) {
-            message.setHeader(Names.EXPECT, Values.CONTINUE);
+            message.headers().set(Names.EXPECT, Values.CONTINUE);
         } else {
-            message.removeHeader(Names.EXPECT);
+            message.headers().remove(Names.EXPECT);
         }
     }
 
@@ -951,8 +1019,8 @@ public class HttpHeaders {
      * Set the headers on the dst like they are set on the src
      */
     public static void setHeaders(HttpMessage src, HttpMessage dst) {
-        for (String name: src.getHeaderNames()) {
-            dst.setHeader(name, src.getHeaders(name));
+        for (String name: src.headers().names()) {
+            dst.headers().set(name, src.headers().getAll(name));
         }
     }
     /**
@@ -1071,7 +1139,7 @@ public class HttpHeaders {
      * @return True if transfer encoding is chunked, otherwise false
      */
     public static boolean isTransferEncodingChunked(HttpMessage message) {
-        List<String> transferEncodingHeaders = message.getHeaders(Names.TRANSFER_ENCODING);
+        List<String> transferEncodingHeaders = message.headers().getAll(Names.TRANSFER_ENCODING);
         if (transferEncodingHeaders.isEmpty()) {
             return false;
         }
@@ -1085,12 +1153,12 @@ public class HttpHeaders {
     }
 
     public static void removeTransferEncodingChunked(HttpMessage m) {
-        List<String> values = m.getHeaders(Names.TRANSFER_ENCODING);
+        List<String> values = m.headers().getAll(Names.TRANSFER_ENCODING);
         values.remove(Values.CHUNKED);
         if (values.isEmpty()) {
-            m.removeHeader(Names.TRANSFER_ENCODING);
+            m.headers().remove(Names.TRANSFER_ENCODING);
         } else {
-            m.setHeader(Names.TRANSFER_ENCODING, values);
+            m.headers().set(Names.TRANSFER_ENCODING, values);
         }
     }
 
@@ -1100,306 +1168,132 @@ public class HttpHeaders {
     }
 
     public static boolean isContentLengthSet(HttpMessage m) {
-        List<String> contentLength = m.getHeaders(Names.CONTENT_LENGTH);
+        List<String> contentLength = m.headers().getAll(Names.CONTENT_LENGTH);
         return !contentLength.isEmpty();
     }
 
-    private static final int BUCKET_SIZE = 17;
+    protected HttpHeaders() { }
 
-    private static int hash(String name) {
-        int h = 0;
-        for (int i = name.length() - 1; i >= 0; i --) {
-            char c = name.charAt(i);
-            if (c >= 'A' && c <= 'Z') {
-                c += 32;
-            }
-            h = 31 * h + c;
-        }
+    /**
+     * Returns the value of a header with the specified name.  If there are
+     * more than one values for the specified name, the first value is returned.
+     *
+     * @param name The name of the header to search
+     * @return The first header value or {@code null} if there is no such header
+     */
+    public abstract String get(String name);
 
-        if (h > 0) {
-            return h;
-        } else if (h == Integer.MIN_VALUE) {
-            return Integer.MAX_VALUE;
-        } else {
-            return -h;
-        }
-    }
+    /**
+     * Returns the values of headers with the specified name
+     *
+     * @param name The name of the headers to search
+     * @return A {@link List} of header values which will be empty if no values
+     *         are found
+     */
+    public abstract List<String> getAll(String name);
 
-    private static boolean eq(String name1, String name2) {
-        int nameLen = name1.length();
-        if (nameLen != name2.length()) {
-            return false;
-        }
+    /**
+     * Returns the all headers that this message contains.
+     *
+     * @return A {@link List} of the header name-value entries, which will be
+     *         empty if no pairs are found
+     */
+    public abstract List<Map.Entry<String, String>> entries();
 
-        for (int i = nameLen - 1; i >= 0; i --) {
-            char c1 = name1.charAt(i);
-            char c2 = name2.charAt(i);
-            if (c1 != c2) {
-                if (c1 >= 'A' && c1 <= 'Z') {
-                    c1 += 32;
-                }
-                if (c2 >= 'A' && c2 <= 'Z') {
-                    c2 += 32;
-                }
-                if (c1 != c2) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
+    /**
+     * Checks to see if there is a header with the specified name
+     *
+     * @param name The name of the header to search for
+     * @return True if at least one header is found
+     */
+    public abstract boolean contains(String name);
 
-    private static int index(int hash) {
-        return hash % BUCKET_SIZE;
-    }
+    /**
+     * Checks if no header exists.
+     */
+    public abstract boolean isEmpty();
 
-    private final HeaderEntry[] entries = new HeaderEntry[BUCKET_SIZE];
-    private final HeaderEntry head = new HeaderEntry(-1, null, null);
+    /**
+     * Gets a {@link Set} of all header names that this message contains
+     *
+     * @return A {@link Set} of all header names
+     */
+    public abstract Set<String> names();
 
-    HttpHeaders() {
-        head.before = head.after = head;
-    }
+    /**
+     * Adds a new header with the specified name and value.
+     *
+     * If the specified value is not a {@link String}, it is converted
+     * into a {@link String} by {@link Object#toString()}, except in the cases
+     * of {@link Date} and {@link Calendar}, which are formatted to the date
+     * format defined in <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>.
+     *
+     * @param name The name of the header being added
+     * @param value The value of the header being added
+     */
+    public abstract void add(String name, Object value);
 
-    void validateHeaderName0(String headerName) {
-        validateHeaderName(headerName);
-    }
+    /**
+     * Adds a new header with the specified name and values.
+     *
+     * This method can be represented approximately as the following code:
+     * <pre>
+     * for (Object v: values) {
+     *     if (v == null) {
+     *         break;
+     *     }
+     *     headers.add(name, v);
+     * }
+     * </pre>
+     *
+     * @param name The name of the headers being set
+     * @param values The values of the headers being set
+     */
+    public abstract void add(String name, Iterable<?> values);
 
-    void addHeader(final String name, final Object value) {
-        validateHeaderName0(name);
-        String strVal = toString(value);
-        validateHeaderValue(strVal);
-        int h = hash(name);
-        int i = index(h);
-        addHeader0(h, i, name, strVal);
-    }
+    /**
+     * Sets a header with the specified name and value.
+     *
+     * If there is an existing header with the same name, it is removed.
+     * If the specified value is not a {@link String}, it is converted into a
+     * {@link String} by {@link Object#toString()}, except for {@link Date}
+     * and {@link Calendar}, which are formatted to the date format defined in
+     * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>.
+     *
+     * @param name The name of the header being set
+     * @param value The value of the header being set
+     */
+    public abstract void set(String name, Object value);
 
-    private void addHeader0(int h, int i, final String name, final String value) {
-        // Update the hash table.
-        HeaderEntry e = entries[i];
-        HeaderEntry newEntry;
-        entries[i] = newEntry = new HeaderEntry(h, name, value);
-        newEntry.next = e;
+    /**
+     * Sets a header with the specified name and values.
+     *
+     * If there is an existing header with the same name, it is removed.
+     * This method can be represented approximately as the following code:
+     * <pre>
+     * headers.remove(name);
+     * for (Object v: values) {
+     *     if (v == null) {
+     *         break;
+     *     }
+     *     headers.add(name, v);
+     * }
+     * </pre>
+     *
+     * @param name The name of the headers being set
+     * @param values The values of the headers being set
+     */
+    public abstract void set(String name, Iterable<?> values);
 
-        // Update the linked list.
-        newEntry.addBefore(head);
-    }
+    /**
+     * Removes the header with the specified name.
+     *
+     * @param name The name of the header to remove
+     */
+    public abstract void remove(String name);
 
-    void removeHeader(final String name) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
-        int h = hash(name);
-        int i = index(h);
-        removeHeader0(h, i, name);
-    }
-
-    private void removeHeader0(int h, int i, String name) {
-        HeaderEntry e = entries[i];
-        if (e == null) {
-            return;
-        }
-
-        for (;;) {
-            if (e.hash == h && eq(name, e.key)) {
-                e.remove();
-                HeaderEntry next = e.next;
-                if (next != null) {
-                    entries[i] = next;
-                    e = next;
-                } else {
-                    entries[i] = null;
-                    return;
-                }
-            } else {
-                break;
-            }
-        }
-
-        for (;;) {
-            HeaderEntry next = e.next;
-            if (next == null) {
-                break;
-            }
-            if (next.hash == h && eq(name, next.key)) {
-                e.next = next.next;
-                next.remove();
-            } else {
-                e = next;
-            }
-        }
-    }
-
-    void setHeader(final String name, final Object value) {
-        validateHeaderName0(name);
-        String strVal = toString(value);
-        validateHeaderValue(strVal);
-        int h = hash(name);
-        int i = index(h);
-        removeHeader0(h, i, name);
-        addHeader0(h, i, name, strVal);
-    }
-
-    void setHeader(final String name, final Iterable<?> values) {
-        if (values == null) {
-            throw new NullPointerException("values");
-        }
-
-        validateHeaderName0(name);
-
-        int h = hash(name);
-        int i = index(h);
-
-        removeHeader0(h, i, name);
-        for (Object v: values) {
-            if (v == null) {
-                break;
-            }
-            String strVal = toString(v);
-            validateHeaderValue(strVal);
-            addHeader0(h, i, name, strVal);
-        }
-    }
-
-    void clearHeaders() {
-        for (int i = 0; i < entries.length; i ++) {
-            entries[i] = null;
-        }
-        head.before = head.after = head;
-    }
-
-    String getHeader(final String name) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
-
-        int h = hash(name);
-        int i = index(h);
-        HeaderEntry e = entries[i];
-        while (e != null) {
-            if (e.hash == h && eq(name, e.key)) {
-                return e.value;
-            }
-
-            e = e.next;
-        }
-        return null;
-    }
-
-    List<String> getHeaders(final String name) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
-
-        LinkedList<String> values = new LinkedList<String>();
-
-        int h = hash(name);
-        int i = index(h);
-        HeaderEntry e = entries[i];
-        while (e != null) {
-            if (e.hash == h && eq(name, e.key)) {
-                values.addFirst(e.value);
-            }
-            e = e.next;
-        }
-        return values;
-    }
-
-    List<Map.Entry<String, String>> getHeaders() {
-        List<Map.Entry<String, String>> all =
-            new LinkedList<Map.Entry<String, String>>();
-
-        HeaderEntry e = head.after;
-        while (e != head) {
-            all.add(e);
-            e = e.after;
-        }
-        return all;
-    }
-
-    boolean containsHeader(String name) {
-        return getHeader(name) != null;
-    }
-
-    Set<String> getHeaderNames() {
-
-        Set<String> names = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
-
-        HeaderEntry e = head.after;
-        while (e != head) {
-            names.add(e.key);
-            e = e.after;
-        }
-        return names;
-    }
-
-    private static String toString(Object value) {
-        if (value == null) {
-            return null;
-        }
-        if (value instanceof String) {
-            return (String) value;
-        }
-        if (value instanceof Number) {
-            return value.toString();
-        }
-        if (value instanceof Date) {
-            return new HttpHeaderDateFormat().format((Date) value);
-        }
-        if (value instanceof Calendar) {
-            return new HttpHeaderDateFormat().format(((Calendar) value).getTime());
-        }
-        return value.toString();
-    }
-
-    private static final class HeaderEntry implements Map.Entry<String, String> {
-        final int hash;
-        final String key;
-        String value;
-        HeaderEntry next;
-        HeaderEntry before, after;
-
-        HeaderEntry(int hash, String key, String value) {
-            this.hash = hash;
-            this.key = key;
-            this.value = value;
-        }
-
-        void remove() {
-            before.after = after;
-            after.before = before;
-        }
-
-        void addBefore(HeaderEntry e) {
-            after  = e;
-            before = e.before;
-            before.after = this;
-            after.before = this;
-        }
-
-        @Override
-        public String getKey() {
-            return key;
-        }
-
-        @Override
-        public String getValue() {
-            return value;
-        }
-
-        @Override
-        public String setValue(String value) {
-            if (value == null) {
-                throw new NullPointerException("value");
-            }
-            validateHeaderValue(value);
-            String oldValue = this.value;
-            this.value = value;
-            return oldValue;
-        }
-
-        @Override
-        public String toString() {
-            return key + '=' + value;
-        }
-    }
+    /**
+     * Removes all headers from this {@link HttpMessage}.
+     */
+    public abstract void clear();
 }

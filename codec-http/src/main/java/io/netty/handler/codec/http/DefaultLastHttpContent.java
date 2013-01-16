@@ -19,16 +19,14 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.internal.StringUtil;
 
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * The default {@link LastHttpContent} implementation.
  */
 public class DefaultLastHttpContent extends DefaultHttpContent implements LastHttpContent {
 
-    private final HttpHeaders headers = new HttpHeaders() {
+    private final HttpHeaders trailingHeaders = new DefaultHttpHeaders() {
         @Override
         void validateHeaderName0(String name) {
             super.validateHeaderName0(name);
@@ -50,53 +48,8 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
     }
 
     @Override
-    public void addHeader(final String name, final Object value) {
-        headers.addHeader(name, value);
-    }
-
-    @Override
-    public void setHeader(final String name, final Object value) {
-        headers.setHeader(name, value);
-    }
-
-    @Override
-    public void setHeader(final String name, final Iterable<?> values) {
-        headers.setHeader(name, values);
-    }
-
-    @Override
-    public void removeHeader(final String name) {
-        headers.removeHeader(name);
-    }
-
-    @Override
-    public void clearHeaders() {
-        headers.clearHeaders();
-    }
-
-    @Override
-    public String getHeader(final String name) {
-        return headers.getHeader(name);
-    }
-
-    @Override
-    public List<String> getHeaders(final String name) {
-        return headers.getHeaders(name);
-    }
-
-    @Override
-    public List<Map.Entry<String, String>> getHeaders() {
-        return headers.getHeaders();
-    }
-
-    @Override
-    public boolean containsHeader(final String name) {
-        return headers.containsHeader(name);
-    }
-
-    @Override
-    public Set<String> getHeaderNames() {
-        return headers.getHeaderNames();
+    public HttpHeaders trailingHeaders() {
+        return trailingHeaders;
     }
 
     @Override
@@ -117,7 +70,7 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
     }
 
     private void appendHeaders(StringBuilder buf) {
-        for (Map.Entry<String, String> e: getHeaders()) {
+        for (Map.Entry<String, String> e: trailingHeaders()) {
             buf.append(e.getKey());
             buf.append(": ");
             buf.append(e.getValue());

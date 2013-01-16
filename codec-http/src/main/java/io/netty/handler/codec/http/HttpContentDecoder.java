@@ -75,7 +75,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
                 this.header = null;
 
                 // Determine the content encoding.
-                String contentEncoding = header.getHeader(HttpHeaders.Names.CONTENT_ENCODING);
+                String contentEncoding = header.headers().get(HttpHeaders.Names.CONTENT_ENCODING);
                 if (contentEncoding != null) {
                     contentEncoding = contentEncoding.trim();
                 } else {
@@ -89,15 +89,15 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
                     if (HttpHeaders.Values.IDENTITY.equals(targetContentEncoding)) {
                         // Do NOT set the 'Content-Encoding' header if the target encoding is 'identity'
                         // as per: http://tools.ietf.org/html/rfc2616#section-14.11
-                        header.removeHeader(HttpHeaders.Names.CONTENT_ENCODING);
+                        header.headers().remove(HttpHeaders.Names.CONTENT_ENCODING);
                     } else {
-                        header.setHeader(HttpHeaders.Names.CONTENT_ENCODING, targetContentEncoding);
+                        header.headers().set(HttpHeaders.Names.CONTENT_ENCODING, targetContentEncoding);
                     }
                     Object[] decoded = decodeContent(header, c);
 
                     // Replace the content.
-                    if (header.containsHeader(HttpHeaders.Names.CONTENT_LENGTH)) {
-                        header.setHeader(
+                    if (header.headers().contains(HttpHeaders.Names.CONTENT_LENGTH)) {
+                        header.headers().set(
                                 HttpHeaders.Names.CONTENT_LENGTH,
                                 Integer.toString(((HttpContent) decoded[1]).getContent().readableBytes()));
                     }
@@ -108,7 +108,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
             return decodeContent(null, c);
         }
 
-        // Because HttpMessageWithEntity and HttpChunk is a mutable object, we can simply forward it.
+        // Because HttpMessageWithContent and HttpChunk is a mutable object, we can simply forward it.
         return msg;
     }
 

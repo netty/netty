@@ -53,7 +53,7 @@ public class HttpObjectAggregatorTest {
         assertNotNull(aggratedMessage);
 
         assertEquals(chunk1.getContent().readableBytes() + chunk2.getContent().readableBytes(), HttpHeaders.getContentLength(aggratedMessage));
-        assertEquals(aggratedMessage.getHeader("X-Test"), Boolean.TRUE.toString());
+        assertEquals(aggratedMessage.headers().get("X-Test"), Boolean.TRUE.toString());
         checkContentBuffer(aggratedMessage);
         assertNull(embedder.readInbound());
 
@@ -81,7 +81,7 @@ public class HttpObjectAggregatorTest {
         HttpContent chunk1 = new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
         HttpContent chunk2 = new DefaultHttpContent(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII));
         LastHttpContent trailer = new DefaultLastHttpContent();
-        trailer.setHeader("X-Trailer", true);
+        trailer.trailingHeaders().set("X-Trailer", true);
 
         assertFalse(embedder.writeInbound(message));
         assertFalse(embedder.writeInbound(chunk1));
@@ -94,8 +94,8 @@ public class HttpObjectAggregatorTest {
         assertNotNull(aggratedMessage);
 
         assertEquals(chunk1.getContent().readableBytes() + chunk2.getContent().readableBytes(), HttpHeaders.getContentLength(aggratedMessage));
-        assertEquals(aggratedMessage.getHeader("X-Test"), Boolean.TRUE.toString());
-        assertEquals(aggratedMessage.getHeader("X-Trailer"), Boolean.TRUE.toString());
+        assertEquals(aggratedMessage.headers().get("X-Test"), Boolean.TRUE.toString());
+        assertEquals(aggratedMessage.headers().get("X-Trailer"), Boolean.TRUE.toString());
         checkContentBuffer(aggratedMessage);
 
         assertNull(embedder.readInbound());

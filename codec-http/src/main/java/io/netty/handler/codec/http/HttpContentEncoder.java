@@ -65,7 +65,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
     @Override
     protected Object decode(ChannelHandlerContext ctx, HttpMessage msg)
             throws Exception {
-        String acceptedEncoding = msg.getHeader(HttpHeaders.Names.ACCEPT_ENCODING);
+        String acceptedEncoding = msg.headers().get(HttpHeaders.Names.ACCEPT_ENCODING);
         if (acceptedEncoding == null) {
             acceptedEncoding = HttpHeaders.Values.IDENTITY;
         }
@@ -135,18 +135,18 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
 
                 // Encode the content and remove or replace the existing headers
                 // so that the message looks like a decoded message.
-                header.setHeader(
+                header.headers().set(
                         HttpHeaders.Names.CONTENT_ENCODING,
                         result.getTargetContentEncoding());
 
                 Object[] encoded = encodeContent(header, c);
 
                 if (!HttpHeaders.isTransferEncodingChunked(header) && encoded.length == 3) {
-                    if (header.containsHeader(HttpHeaders.Names.CONTENT_LENGTH)) {
+                    if (header.headers().contains(HttpHeaders.Names.CONTENT_LENGTH)) {
                         long length = ((HttpContent) encoded[1]).getContent().readableBytes() +
                                 ((HttpContent) encoded[2]).getContent().readableBytes();
 
-                        header.setHeader(
+                        header.headers().set(
                                 HttpHeaders.Names.CONTENT_LENGTH,
                                 Long.toString(length));
                     }

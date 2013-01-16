@@ -43,13 +43,13 @@ public class WebSocketServerHandshaker00Test {
                 new HttpObjectAggregator(42), new HttpRequestDecoder(), new HttpResponseEncoder());
 
         HttpRequestWithContent req = new DefaultHttpRequestWithContent(HTTP_1_1, HttpMethod.GET, "/chat");
-        req.setHeader(Names.HOST, "server.example.com");
-        req.setHeader(Names.UPGRADE, WEBSOCKET.toLowerCase());
-        req.setHeader(Names.CONNECTION, "Upgrade");
-        req.setHeader(Names.ORIGIN, "http://example.com");
-        req.setHeader(Names.SEC_WEBSOCKET_KEY1, "4 @1  46546xW%0l 1 5");
-        req.setHeader(Names.SEC_WEBSOCKET_KEY2, "12998 5 Y3 1  .P00");
-        req.setHeader(Names.SEC_WEBSOCKET_PROTOCOL, "chat, superchat");
+        req.headers().set(Names.HOST, "server.example.com");
+        req.headers().set(Names.UPGRADE, WEBSOCKET.toLowerCase());
+        req.headers().set(Names.CONNECTION, "Upgrade");
+        req.headers().set(Names.ORIGIN, "http://example.com");
+        req.headers().set(Names.SEC_WEBSOCKET_KEY1, "4 @1  46546xW%0l 1 5");
+        req.headers().set(Names.SEC_WEBSOCKET_KEY2, "12998 5 Y3 1  .P00");
+        req.headers().set(Names.SEC_WEBSOCKET_PROTOCOL, "chat, superchat");
 
         ByteBuf buffer = Unpooled.copiedBuffer("^n:ds[4U", CharsetUtil.US_ASCII);
         req.setContent(buffer);
@@ -63,8 +63,8 @@ public class WebSocketServerHandshaker00Test {
         ch2.writeInbound(resBuf);
         HttpResponse res = (HttpResponse) ch2.readInbound();
 
-        Assert.assertEquals("ws://example.com/chat", res.getHeader(Names.SEC_WEBSOCKET_LOCATION));
-        Assert.assertEquals("chat", res.getHeader(Names.SEC_WEBSOCKET_PROTOCOL));
+        Assert.assertEquals("ws://example.com/chat", res.headers().get(Names.SEC_WEBSOCKET_LOCATION));
+        Assert.assertEquals("chat", res.headers().get(Names.SEC_WEBSOCKET_PROTOCOL));
         LastHttpContent content = (LastHttpContent) ch2.readInbound();
 
         Assert.assertEquals("8jKS'y:G*Co,Wxa-", content.getContent().toString(CharsetUtil.US_ASCII));

@@ -24,6 +24,7 @@ import io.netty.buffer.Unpooled;
  */
 public class DefaultHttpResponseWithContent extends DefaultHttpResponse implements HttpResponseWithContent {
     private ByteBuf content = Unpooled.EMPTY_BUFFER;
+    private final HttpHeaders trailingHeaders = new DefaultHttpHeaders();
 
     public DefaultHttpResponseWithContent(HttpVersion version, HttpResponseStatus status) {
         this(version, status, Unpooled.EMPTY_BUFFER);
@@ -32,6 +33,11 @@ public class DefaultHttpResponseWithContent extends DefaultHttpResponse implemen
     public DefaultHttpResponseWithContent(HttpVersion version, HttpResponseStatus status, ByteBuf content) {
         super(version, status);
         setContent(content);
+    }
+
+    @Override
+    public HttpHeaders trailingHeaders() {
+        return trailingHeaders;
     }
 
     @Override

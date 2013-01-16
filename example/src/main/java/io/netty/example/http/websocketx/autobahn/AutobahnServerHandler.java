@@ -133,6 +133,6 @@ public class AutobahnServerHandler extends ChannelInboundMessageHandlerAdapter<O
     }
 
     private static String getWebSocketLocation(HttpRequestWithContent req) {
-        return "ws://" + req.getHeader(HttpHeaders.Names.HOST);
+        return "ws://" + req.headers().get(HttpHeaders.Names.HOST);
     }
 }

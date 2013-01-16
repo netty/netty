@@ -94,13 +94,13 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     }
 
     private static void encodeHeaders(ByteBuf buf, HttpMessage message) {
-        for (Map.Entry<String, String> h: message.getHeaders()) {
+        for (Map.Entry<String, String> h: message.headers()) {
             encodeHeader(buf, h.getKey(), h.getValue());
         }
     }
 
     private static void encodeTrailingHeaders(ByteBuf buf, LastHttpContent trailer) {
-        for (Map.Entry<String, String> h: trailer.getHeaders()) {
+        for (Map.Entry<String, String> h: trailer.trailingHeaders()) {
             encodeHeader(buf, h.getKey(), h.getValue());
         }
     }

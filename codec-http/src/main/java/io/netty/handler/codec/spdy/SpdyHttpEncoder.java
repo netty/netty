@@ -153,7 +153,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
         if (msg instanceof HttpResponse) {
 
             HttpResponse httpResponse = (HttpResponse) msg;
-            if (httpResponse.containsHeader(SpdyHttpHeaders.Names.ASSOCIATED_TO_STREAM_ID)) {
+            if (httpResponse.headers().contains(SpdyHttpHeaders.Names.ASSOCIATED_TO_STREAM_ID)) {
                 SpdySynStreamFrame spdySynStreamFrame = createSynStreamFrame(httpResponse);
                 out.add(spdySynStreamFrame);
             } else {
@@ -170,7 +170,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
 
             if (chunk instanceof LastHttpContent) {
                 LastHttpContent trailer = (LastHttpContent) chunk;
-                List<Map.Entry<String, String>> trailers = trailer.getHeaders();
+                List<Map.Entry<String, String>> trailers = trailer.trailingHeaders().entries();
                 if (trailers.isEmpty()) {
                     out.add(spdyDataFrame);
                 } else {
@@ -210,10 +210,10 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
 
         // The Connection, Keep-Alive, Proxy-Connection, and Transfer-Encoding
         // headers are not valid and MUST not be sent.
-        httpMessage.removeHeader(HttpHeaders.Names.CONNECTION);
-        httpMessage.removeHeader("Keep-Alive");
-        httpMessage.removeHeader("Proxy-Connection");
-        httpMessage.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
+        httpMessage.headers().remove(HttpHeaders.Names.CONNECTION);
+        httpMessage.headers().remove("Keep-Alive");
+        httpMessage.headers().remove("Proxy-Connection");
+        httpMessage.headers().remove(HttpHeaders.Names.TRANSFER_ENCODING);
 
         SpdySynStreamFrame spdySynStreamFrame =
                 new DefaultSpdySynStreamFrame(streamID, associatedToStreamId, priority);
@@ -236,7 +236,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
         // Replace the HTTP host header with the SPDY host header
         if (spdyVersion >= 3) {
             String host = HttpHeaders.getHost(httpMessage);
-            httpMessage.removeHeader(HttpHeaders.Names.HOST);
+            httpMessage.headers().remove(HttpHeaders.Names.HOST);
             SpdyHeaders.setHost(spdySynStreamFrame, host);
         }
 
@@ -247,7 +247,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
         SpdyHeaders.setScheme(spdyVersion, spdySynStreamFrame, scheme);
 
         // Transfer the remaining HTTP headers
-        for (Map.Entry<String, String> entry: httpMessage.getHeaders()) {
+        for (Map.Entry<String, String> entry: httpMessage.headers()) {
             spdySynStreamFrame.addHeader(entry.getKey(), entry.getValue());
         }
         currentStreamId = spdySynStreamFrame.getStreamId();
@@ -265,10 +265,10 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
 
         // The Connection, Keep-Alive, Proxy-Connection, and Transfer-ENcoding
         // headers are not valid and MUST not be sent.
-        httpResponse.removeHeader(HttpHeaders.Names.CONNECTION);
-        httpResponse.removeHeader("Keep-Alive");
-        httpResponse.removeHeader("Proxy-Connection");
-        httpResponse.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
+        httpResponse.headers().remove(HttpHeaders.Names.CONNECTION);
+        httpResponse.headers().remove("Keep-Alive");
+        httpResponse.headers().remove("Proxy-Connection");
+        httpResponse.headers().remove(HttpHeaders.Names.TRANSFER_ENCODING);
 
         SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamID);
 
@@ -277,7 +277,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
         SpdyHeaders.setVersion(spdyVersion, spdySynReplyFrame, httpResponse.getProtocolVersion());
 
         // Transfer the remaining HTTP headers
-        for (Map.Entry<String, String> entry: httpResponse.getHeaders()) {
+        for (Map.Entry<String, String> entry: httpResponse.headers()) {
             spdySynReplyFrame.addHeader(entry.getKey(), entry.getValue());
         }
 

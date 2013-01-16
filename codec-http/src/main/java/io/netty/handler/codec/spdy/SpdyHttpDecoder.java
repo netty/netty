@@ -24,7 +24,7 @@ import io.netty.handler.codec.http.DefaultHttpRequestWithContent;
 import io.netty.handler.codec.http.DefaultHttpResponseWithContent;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
-import io.netty.handler.codec.http.HttpMessageWithEntity;
+import io.netty.handler.codec.http.HttpMessageWithContent;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequestWithContent;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -42,7 +42,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
 
     private final int spdyVersion;
     private final int maxContentLength;
-    private final Map<Integer, HttpMessageWithEntity> messageMap = new HashMap<Integer, HttpMessageWithEntity>();
+    private final Map<Integer, HttpMessageWithContent> messageMap = new HashMap<Integer, HttpMessageWithContent>();
 
     /**
      * Creates a new instance.
@@ -183,22 +183,22 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
             }
 
             for (Map.Entry<String, String> e: spdyHeadersFrame.getHeaders()) {
-                httpMessage.addHeader(e.getKey(), e.getValue());
+                httpMessage.headers().add(e.getKey(), e.getValue());
             }
 
         } else if (msg instanceof SpdyDataFrame) {
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
             Integer streamID = Integer.valueOf(spdyDataFrame.getStreamId());
-            HttpMessageWithEntity httpMessageWithEntity = messageMap.get(streamID);
+            HttpMessageWithContent httpMessageWithContent = messageMap.get(streamID);
 
             // If message is not in map discard Data Frame.
             // SpdySessionHandler should prevent this from happening.
-            if (httpMessageWithEntity == null) {
+            if (httpMessageWithContent == null) {
                 return null;
             }
 
-            ByteBuf content = httpMessageWithEntity.getContent();
+            ByteBuf content = httpMessageWithContent.getContent();
             if (content.readableBytes() > maxContentLength - spdyDataFrame.getData().readableBytes()) {
                 messageMap.remove(streamID);
                 throw new TooLongFrameException(
@@ -210,15 +210,15 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
             if (content == Unpooled.EMPTY_BUFFER) {
                 content = Unpooled.buffer(spdyDataFrameDataLen);
                 content.writeBytes(spdyDataFrameData, spdyDataFrameData.readerIndex(), spdyDataFrameDataLen);
-                httpMessageWithEntity.setContent(content);
+                httpMessageWithContent.setContent(content);
             } else {
                 content.writeBytes(spdyDataFrameData, spdyDataFrameData.readerIndex(), spdyDataFrameDataLen);
             }
 
             if (spdyDataFrame.isLast()) {
-                HttpHeaders.setContentLength(httpMessageWithEntity, content.readableBytes());
+                HttpHeaders.setContentLength(httpMessageWithContent, content.readableBytes());
                 messageMap.remove(streamID);
-                return httpMessageWithEntity;
+                return httpMessageWithContent;
             }
 
         } else if (msg instanceof SpdyRstStreamFrame) {
@@ -254,14 +254,14 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
         }
 
         for (Map.Entry<String, String> e: requestFrame.getHeaders()) {
-            httpRequestWithEntity.addHeader(e.getKey(), e.getValue());
+            httpRequestWithEntity.headers().add(e.getKey(), e.getValue());
         }
 
         // The Connection and Keep-Alive headers are no longer valid
         HttpHeaders.setKeepAlive(httpRequestWithEntity, true);
 
         // Transfer-Encoding header is not valid
-        httpRequestWithEntity.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
+        httpRequestWithEntity.headers().remove(HttpHeaders.Names.TRANSFER_ENCODING);
 
         return httpRequestWithEntity;
     }
@@ -276,15 +276,15 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
 
         HttpResponseWithContent httpResponseWithEntity = new DefaultHttpResponseWithContent(version, status);
         for (Map.Entry<String, String> e: responseFrame.getHeaders()) {
-            httpResponseWithEntity.addHeader(e.getKey(), e.getValue());
+            httpResponseWithEntity.headers().add(e.getKey(), e.getValue());
         }
 
         // The Connection and Keep-Alive headers are no longer valid
         HttpHeaders.setKeepAlive(httpResponseWithEntity, true);
 
         // Transfer-Encoding header is not valid
-        httpResponseWithEntity.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
-        httpResponseWithEntity.removeHeader(HttpHeaders.Names.TRAILER);
+        httpResponseWithEntity.headers().remove(HttpHeaders.Names.TRANSFER_ENCODING);
+        httpResponseWithEntity.headers().remove(HttpHeaders.Names.TRAILER);
 
         return httpResponseWithEntity;
     }

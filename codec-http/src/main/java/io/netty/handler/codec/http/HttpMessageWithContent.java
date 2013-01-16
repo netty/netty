@@ -16,8 +16,8 @@
 package io.netty.handler.codec.http;
 
 /**
- * Combines {@link HttpMessageWithEntity} and {@link LastHttpContent} into one
+ * Combines {@link HttpMessageWithContent} and {@link LastHttpContent} into one
  * message. So it represent a <i>complete</i> http message.
  */
-public interface HttpMessageWithEntity extends HttpMessage, LastHttpContent {
+public interface HttpMessageWithContent extends HttpMessage, LastHttpContent {
 }

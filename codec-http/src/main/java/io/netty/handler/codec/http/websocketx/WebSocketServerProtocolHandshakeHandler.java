@@ -89,7 +89,7 @@ public class WebSocketServerProtocolHandshakeHandler extends ChannelInboundMessa
             // SSL in use so use Secure WebSockets
             protocol = "wss";
         }
-        return protocol + "://" + req.getHeader(HttpHeaders.Names.HOST) + path;
+        return protocol + "://" + req.headers().get(HttpHeaders.Names.HOST) + path;
     }
 
 }

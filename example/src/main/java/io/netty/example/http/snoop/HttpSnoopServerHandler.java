@@ -71,9 +71,9 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
             buf.append("HOSTNAME: ").append(getHost(request, "unknown")).append("\r\n");
             buf.append("REQUEST_URI: ").append(request.getUri()).append("\r\n\r\n");
 
-            List<Map.Entry<String, String>> headers = request.getHeaders();
+            List<Map.Entry<String, String>> headers = request.headers().entries();
             if (!headers.isEmpty()) {
-                for (Map.Entry<String, String> h: request.getHeaders()) {
+                for (Map.Entry<String, String> h: request.headers().entries()) {
                     String key = h.getKey();
                     String value = h.getValue();
                     buf.append("HEADER: ").append(key).append(" = ").append(value).append("\r\n");
@@ -124,10 +124,10 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
                 buf.append("END OF CONTENT\r\n");
 
                 LastHttpContent trailer = (LastHttpContent) msg;
-                if (!trailer.getHeaderNames().isEmpty()) {
+                if (!trailer.trailingHeaders().isEmpty()) {
                     buf.append("\r\n");
-                    for (String name: trailer.getHeaderNames()) {
-                        for (String value: trailer.getHeaders(name)) {
+                    for (String name: trailer.trailingHeaders().names()) {
+                        for (String value: trailer.trailingHeaders().getAll(name)) {
                             buf.append("TRAILING HEADER: ");
                             buf.append(name).append(" = ").append(value).append("\r\n");
                         }
@@ -171,30 +171,30 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
                 HTTP_1_1, currentObj.getDecoderResult().isSuccess()? OK : BAD_REQUEST);
 
         response.setContent(Unpooled.copiedBuffer(buf.toString(), CharsetUtil.UTF_8));
-        response.setHeader(CONTENT_TYPE, "text/plain; charset=UTF-8");
+        response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
 
         if (keepAlive) {
             // Add 'Content-Length' header only for a keep-alive connection.
-            response.setHeader(CONTENT_LENGTH, response.getContent().readableBytes());
+            response.headers().set(CONTENT_LENGTH, response.getContent().readableBytes());
             // Add keep alive header as per:
             // - http://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.html#Connection
-            response.setHeader(CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
+            response.headers().set(CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
         }
 
         // Encode the cookie.
-        String cookieString = request.getHeader(COOKIE);
+        String cookieString = request.headers().get(COOKIE);
         if (cookieString != null) {
             Set<Cookie> cookies = CookieDecoder.decode(cookieString);
             if (!cookies.isEmpty()) {
                 // Reset the cookies if necessary.
                 for (Cookie cookie: cookies) {
-                    response.addHeader(SET_COOKIE, ServerCookieEncoder.encode(cookie));
+                    response.headers().add(SET_COOKIE, ServerCookieEncoder.encode(cookie));
                 }
             }
         } else {
             // Browser sent no cookie.  Add some.
-            response.addHeader(SET_COOKIE, ServerCookieEncoder.encode("key1", "value1"));
-            response.addHeader(SET_COOKIE, ServerCookieEncoder.encode("key2", "value2"));
+            response.headers().add(SET_COOKIE, ServerCookieEncoder.encode("key1", "value1"));
+            response.headers().add(SET_COOKIE, ServerCookieEncoder.encode("key2", "value2"));
         }
 
         // Write the response.

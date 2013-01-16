@@ -54,7 +54,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             "HTTP/1.1 100 Continue\r\n\r\n", CharsetUtil.US_ASCII);
 
     private final int maxContentLength;
-    private HttpMessageWithEntity currentMessage;
+    private HttpMessageWithContent currentMessage;
 
     private int maxCumulationBufferComponents = DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS;
     private ChannelHandlerContext ctx;
@@ -112,7 +112,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
 
     @Override
     protected Object decode(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
-        HttpMessageWithEntity currentMessage = this.currentMessage;
+        HttpMessageWithContent currentMessage = this.currentMessage;
 
         if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;
@@ -139,8 +139,8 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
                 HttpResponse header = (HttpResponse) msg;
                 this.currentMessage = new DefaultHttpResponseWithContent(header.getProtocolVersion(), header.getStatus());
             }
-            for (String name: m.getHeaderNames()) {
-                this.currentMessage.setHeader(name, m.getHeaders(name));
+            for (String name: m.headers().names()) {
+                this.currentMessage.headers().set(name, m.headers().get(name));
             }
             // A streamed message - initialize the cumulative buffer, and wait for incoming chunks.
             removeTransferEncodingChunked(m);
@@ -188,13 +188,13 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
                 // Merge trailing headers into the message.
                 if (chunk instanceof LastHttpContent) {
                     LastHttpContent trailer = (LastHttpContent) chunk;
-                    for (Entry<String, String> header: trailer.getHeaders()) {
-                        currentMessage.setHeader(header.getKey(), header.getValue());
+                    for (Entry<String, String> header: trailer.trailingHeaders()) {
+                        currentMessage.headers().add(header.getKey(), header.getValue());
                     }
                 }
 
                 // Set the 'Content-Length' header.
-                currentMessage.setHeader(
+                currentMessage.headers().set(
                         HttpHeaders.Names.CONTENT_LENGTH,
                         String.valueOf(content.readableBytes()));
 
