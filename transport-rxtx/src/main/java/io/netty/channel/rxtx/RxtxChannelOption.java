@@ -21,9 +21,9 @@ import io.netty.channel.rxtx.RxtxChannelConfig.Paritybit;
 import io.netty.channel.rxtx.RxtxChannelConfig.Stopbits;
 
 /**
- * Options for configuring a serial port connection
+ * Option for configuring a serial port connection
  */
-public final class RxtxChannelOptions {
+public final class RxtxChannelOption<T> extends ChannelOption<T> {
     public static final ChannelOption<Integer> BAUD_RATE =
             new ChannelOption<Integer>("BAUD_RATE");
 
@@ -42,6 +42,7 @@ public final class RxtxChannelOptions {
     public static final ChannelOption<Paritybit> PARITY_BIT =
             new ChannelOption<Paritybit>("PARITY_BIT");
 
-    private RxtxChannelOptions() {
+    public RxtxChannelOption(String name) {
+        super(name);
     }
 }

@@ -53,11 +53,11 @@ import com.barchart.udt.nio.KindUDT;
  * </tr>
  * <tr>
  * <td>{@code "protocolReceiveBuferSize"}</td>
- * <td>{@link #setProtocolBufferSize(int)}</td>
+ * <td>{@link #setProtocolReceiveBufferSize(int)}</td>
  * <tr>
  * <tr>
  * <td>{@code "systemReceiveBufferSize"}</td>
- * <td>{@link #setSystemBufferSize(int)}</td>
+ * <td>{@link #setProtocolReceiveBufferSize(int)}</td>
  * <tr>
  * </table>
  * <p>
@@ -67,30 +67,6 @@ import com.barchart.udt.nio.KindUDT;
  * {@link ChannelException} will be thrown.
  */
 public interface UdtChannelConfig extends ChannelConfig {
-
-    /**
-     * See {@link OptionUDT#Protocol_Receive_Buffer_Size}.
-     */
-    ChannelOption<Integer> PROTOCOL_RECEIVE_BUFFER_SIZE = new ChannelOption<Integer>(
-            "PROTOCOL_RECEIVE_BUFFER_SIZE");
-
-    /**
-     * See {@link OptionUDT#Protocol_Send_Buffer_Size}.
-     */
-    ChannelOption<Integer> PROTOCOL_SEND_BUFFER_SIZE = new ChannelOption<Integer>(
-            "PROTOCOL_SEND_BUFFER_SIZE");
-
-    /**
-     * See {@link OptionUDT#System_Receive_Buffer_Size}.
-     */
-    ChannelOption<Integer> SYSTEM_RECEIVE_BUFFER_SIZE = new ChannelOption<Integer>(
-            "SYSTEM_RECEIVE_BUFFER_SIZE");
-
-    /**
-     * See {@link OptionUDT#System_Send_Buffer_Size}.
-     */
-    ChannelOption<Integer> SYSTEM_SEND_BUFFER_SIZE = new ChannelOption<Integer>(
-            "SYSTEM_SEND_BUFFER_SIZE");
 
     /**
      * Gets {@link KindUDT#ACCEPTOR} channel backlog.

@@ -30,7 +30,7 @@ import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.nio.channels.NotYetConnectedException;
 
-import static io.netty.channel.rxtx.RxtxChannelOptions.*;
+import static io.netty.channel.rxtx.RxtxChannelOption.*;
 
 /**
  * A channel to a serial device using the RXTX library.
