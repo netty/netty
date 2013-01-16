@@ -31,7 +31,7 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
      * Creates a new empty continuation frame.
      */
     public ContinuationWebSocketFrame() {
-        super(Unpooled.EMPTY_BUFFER);
+        super(Unpooled.buffer(0));
     }
 
     /**
@@ -94,8 +94,8 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
     /**
      * Returns the text data in this frame
      */
-    public String getText() {
-        return getBinaryData().toString(CharsetUtil.UTF_8);
+    public String text() {
+        return data().toString(CharsetUtil.UTF_8);
     }
 
     /**
@@ -112,21 +112,16 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
         }
     }
 
-    @Override
-    public String toString() {
-        return getClass().getSimpleName() + "(data: " + getBinaryData() + ')';
-    }
-
     /**
      * Aggregated text returned by decoder on the final continuation frame of a fragmented text message
      */
-    public String getAggregatedText() {
+    public String aggregatedText() {
         return aggregatedText;
     }
 
     @Override
     public ContinuationWebSocketFrame copy() {
-        return new ContinuationWebSocketFrame(isFinalFragment(), getRsv(), data().copy(), getAggregatedText());
+        return new ContinuationWebSocketFrame(isFinalFragment(), rsv(), data().copy(), aggregatedText());
     }
 
 }

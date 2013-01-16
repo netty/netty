@@ -27,7 +27,7 @@ public class PongWebSocketFrame extends WebSocketFrame {
      * Creates a new empty pong frame.
      */
     public PongWebSocketFrame() {
-        super(Unpooled.EMPTY_BUFFER);
+        super(Unpooled.buffer(0));
     }
 
     /**
@@ -56,12 +56,7 @@ public class PongWebSocketFrame extends WebSocketFrame {
 
     @Override
     public PongWebSocketFrame copy() {
-        return new PongWebSocketFrame(isFinalFragment(), getRsv(), data().copy());
-    }
-
-    @Override
-    public String toString() {
-        return getClass().getSimpleName() + "(data: " + getBinaryData() + ')';
+        return new PongWebSocketFrame(isFinalFragment(), rsv(), data().copy());
     }
 
 }

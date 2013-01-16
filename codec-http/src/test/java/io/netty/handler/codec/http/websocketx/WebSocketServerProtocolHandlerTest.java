@@ -150,7 +150,7 @@ public class WebSocketServerProtocolHandlerTest {
 
         @Override
         public void messageReceived(ChannelHandlerContext ctx, TextWebSocketFrame msg) throws Exception {
-            content = "processed: " + msg.getText();
+            content = "processed: " + msg.text();
         }
         
         public String getContent() {

@@ -93,17 +93,17 @@ public class AutobahnServerHandler extends ChannelInboundMessageHandlerAdapter<O
             handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
         } else if (frame instanceof PingWebSocketFrame) {
             ctx.channel().write(
-                    new PongWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));
+                    new PongWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.data()));
         } else if (frame instanceof TextWebSocketFrame) {
             // String text = ((TextWebSocketFrame) frame).getText();
             ctx.channel().write(
-                    new TextWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));
+                    new TextWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.data()));
         } else if (frame instanceof BinaryWebSocketFrame) {
             ctx.channel().write(
-                    new BinaryWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));
+                    new BinaryWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.data()));
         } else if (frame instanceof ContinuationWebSocketFrame) {
             ctx.channel().write(
-                    new ContinuationWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));
+                    new ContinuationWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.data()));
         } else if (frame instanceof PongWebSocketFrame) {
             // Ignore
         } else {

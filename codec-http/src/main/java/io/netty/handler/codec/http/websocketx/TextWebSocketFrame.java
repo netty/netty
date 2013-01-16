@@ -28,7 +28,7 @@ public class TextWebSocketFrame extends WebSocketFrame {
      * Creates a new empty text frame.
      */
     public TextWebSocketFrame() {
-        super(Unpooled.EMPTY_BUFFER);
+        super(Unpooled.buffer(0));
     }
 
     /**
@@ -90,17 +90,12 @@ public class TextWebSocketFrame extends WebSocketFrame {
     /**
      * Returns the text data in this frame
      */
-    public String getText() {
-        return getBinaryData().toString(CharsetUtil.UTF_8);
+    public String text() {
+        return data().toString(CharsetUtil.UTF_8);
     }
 
     @Override
     public TextWebSocketFrame copy() {
-        return new TextWebSocketFrame(isFinalFragment(), getRsv(), data().copy());
-    }
-
-    @Override
-    public String toString() {
-        return getClass().getSimpleName() + "(text: " + getText() + ')';
+        return new TextWebSocketFrame(isFinalFragment(), rsv(), data().copy());
     }
 }

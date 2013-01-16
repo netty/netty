@@ -27,7 +27,7 @@ public class PingWebSocketFrame extends WebSocketFrame {
      * Creates a new empty ping frame.
      */
     public PingWebSocketFrame() {
-        super(true, 0, Unpooled.EMPTY_BUFFER);
+        super(true, 0, Unpooled.buffer(0));
     }
 
     /**
@@ -56,12 +56,6 @@ public class PingWebSocketFrame extends WebSocketFrame {
 
     @Override
     public PingWebSocketFrame copy() {
-        return new PingWebSocketFrame(isFinalFragment(), getRsv(), data().copy());
+        return new PingWebSocketFrame(isFinalFragment(), rsv(), data().copy());
     }
-
-    @Override
-    public String toString() {
-        return getClass().getSimpleName() + "(data: " + getBinaryData() + ')';
-    }
-
 }

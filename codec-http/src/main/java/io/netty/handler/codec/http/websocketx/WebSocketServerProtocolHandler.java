@@ -81,7 +81,7 @@ public class WebSocketServerProtocolHandler extends ChannelInboundMessageHandler
             return;
         }
         if (frame instanceof PingWebSocketFrame) {
-            ctx.channel().write(new PongWebSocketFrame(frame.getBinaryData()));
+            ctx.channel().write(new PongWebSocketFrame(frame.data()));
             return;
         }
 

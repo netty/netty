@@ -45,13 +45,6 @@ public abstract class WebSocketFrame extends DefaultByteBufHolder {
     }
 
     /**
-     * Returns binary data
-     */
-    public ByteBuf getBinaryData() {
-        return data();
-    }
-
-    /**
      * Flag to indicate if this frame is the final fragment in a message. The first fragment (frame) may also be the
      * final fragment.
      */
@@ -62,10 +55,16 @@ public abstract class WebSocketFrame extends DefaultByteBufHolder {
     /**
      * Bits used for extensions to the standard.
      */
-    public int getRsv() {
+    public int rsv() {
         return rsv;
     }
 
     @Override
     public abstract WebSocketFrame copy();
+
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + "(data: " + data().toString() + ')';
+    }
+
 }
