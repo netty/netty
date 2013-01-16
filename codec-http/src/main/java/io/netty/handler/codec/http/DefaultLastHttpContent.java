@@ -57,7 +57,7 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
         StringBuilder buf = new StringBuilder();
         buf.append(getClass().getSimpleName());
         buf.append(", size: ");
-        buf.append(getContent().readableBytes());
+        buf.append(content().readableBytes());
         buf.append(", decodeResult: ");
         buf.append(getDecoderResult());
         buf.append(')');

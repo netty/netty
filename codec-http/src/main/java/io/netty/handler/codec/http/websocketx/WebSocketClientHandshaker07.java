@@ -195,8 +195,8 @@ public class WebSocketClientHandshaker07 extends WebSocketClientHandshaker {
     public void finishHandshake(Channel channel, HttpResponseWithContent response) {
         final HttpResponseStatus status = HttpResponseStatus.SWITCHING_PROTOCOLS;
 
-        if (!response.getStatus().equals(status)) {
-            throw new WebSocketHandshakeException("Invalid handshake response status: " + response.getStatus());
+        if (!response.status().equals(status)) {
+            throw new WebSocketHandshakeException("Invalid handshake response status: " + response.status());
         }
 
         String upgrade = response.headers().get(Names.UPGRADE);

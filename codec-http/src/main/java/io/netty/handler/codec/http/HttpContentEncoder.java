@@ -78,7 +78,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
     public Object encode(ChannelHandlerContext ctx, Object msg)
             throws Exception {
 
-        if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().getCode() == 100) {
+        if (msg instanceof HttpResponse && ((HttpResponse) msg).status().code() == 100) {
             // 100-continue response must be passed through.
             return msg;
         }
@@ -90,13 +90,13 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
             if (msg instanceof HttpContent) {
                 if (msg instanceof HttpRequest) {
                     HttpRequest reqHeader = (HttpRequest) msg;
-                    header = new DefaultHttpRequest(reqHeader.getProtocolVersion(), reqHeader.getMethod(),
-                            reqHeader.getUri());
+                    header = new DefaultHttpRequest(reqHeader.protocolVersion(), reqHeader.method(),
+                            reqHeader.uri());
                     HttpHeaders.setHeaders(reqHeader, header);
                 } else  if (msg instanceof HttpResponse) {
                     HttpResponse responseHeader = (HttpResponse) msg;
-                    header = new DefaultHttpResponse(responseHeader.getProtocolVersion(),
-                            responseHeader.getStatus());
+                    header = new DefaultHttpResponse(responseHeader.protocolVersion(),
+                            responseHeader.status());
                     HttpHeaders.setHeaders(responseHeader, header);
                 } else {
                     return msg;
@@ -125,9 +125,9 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
 
                 if (result == null) {
                     if (c instanceof LastHttpContent) {
-                        return new Object[] { header, new DefaultLastHttpContent(c.getContent()) };
+                        return new Object[] { header, new DefaultLastHttpContent(c.content()) };
                     } else {
-                        return new Object[] { header, new DefaultHttpContent(c.getContent()) };
+                        return new Object[] { header, new DefaultHttpContent(c.content()) };
                     }
                 }
 
@@ -143,8 +143,8 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
 
                 if (!HttpHeaders.isTransferEncodingChunked(header) && encoded.length == 3) {
                     if (header.headers().contains(HttpHeaders.Names.CONTENT_LENGTH)) {
-                        long length = ((HttpContent) encoded[1]).getContent().readableBytes() +
-                                ((HttpContent) encoded[2]).getContent().readableBytes();
+                        long length = ((HttpContent) encoded[1]).content().readableBytes() +
+                                ((HttpContent) encoded[2]).content().readableBytes();
 
                         header.headers().set(
                                 HttpHeaders.Names.CONTENT_LENGTH,
@@ -163,7 +163,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
 
     private Object[] encodeContent(HttpMessage header, HttpContent c) {
         ByteBuf newContent = Unpooled.buffer();
-        ByteBuf content = c.getContent();
+        ByteBuf content = c.content();
         encode(content, newContent);
 
         if (c instanceof LastHttpContent) {

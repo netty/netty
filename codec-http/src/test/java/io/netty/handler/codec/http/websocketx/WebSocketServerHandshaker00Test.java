@@ -42,7 +42,9 @@ public class WebSocketServerHandshaker00Test {
         EmbeddedByteChannel ch = new EmbeddedByteChannel(
                 new HttpObjectAggregator(42), new HttpRequestDecoder(), new HttpResponseEncoder());
 
-        HttpRequestWithContent req = new DefaultHttpRequestWithContent(HTTP_1_1, HttpMethod.GET, "/chat");
+        HttpRequestWithContent req = new DefaultHttpRequestWithContent(
+                HTTP_1_1, HttpMethod.GET, "/chat", Unpooled.copiedBuffer("^n:ds[4U", CharsetUtil.US_ASCII));
+
         req.headers().set(Names.HOST, "server.example.com");
         req.headers().set(Names.UPGRADE, WEBSOCKET.toLowerCase());
         req.headers().set(Names.CONNECTION, "Upgrade");
@@ -50,9 +52,6 @@ public class WebSocketServerHandshaker00Test {
         req.headers().set(Names.SEC_WEBSOCKET_KEY1, "4 @1  46546xW%0l 1 5");
         req.headers().set(Names.SEC_WEBSOCKET_KEY2, "12998 5 Y3 1  .P00");
         req.headers().set(Names.SEC_WEBSOCKET_PROTOCOL, "chat, superchat");
-
-        ByteBuf buffer = Unpooled.copiedBuffer("^n:ds[4U", CharsetUtil.US_ASCII);
-        req.setContent(buffer);
 
         new WebSocketServerHandshaker00(
                 "ws://example.com/chat", "chat", Integer.MAX_VALUE).handshake(ch, req);
@@ -67,6 +66,6 @@ public class WebSocketServerHandshaker00Test {
         Assert.assertEquals("chat", res.headers().get(Names.SEC_WEBSOCKET_PROTOCOL));
         LastHttpContent content = (LastHttpContent) ch2.readInbound();
 
-        Assert.assertEquals("8jKS'y:G*Co,Wxa-", content.getContent().toString(CharsetUtil.US_ASCII));
+        Assert.assertEquals("8jKS'y:G*Co,Wxa-", content.content().toString(CharsetUtil.US_ASCII));
     }
 }

@@ -22,8 +22,8 @@ import io.netty.util.internal.StringUtil;
  */
 public class DefaultHttpRequest extends DefaultHttpMessage implements HttpRequest {
 
-    private HttpMethod method;
-    private String uri;
+    private final HttpMethod method;
+    private final String uri;
 
     /**
      * Creates a new instance.
@@ -34,34 +34,24 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
      */
     public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri) {
         super(httpVersion);
-        setMethod(method);
-        setUri(uri);
+        if (method == null) {
+            throw new NullPointerException("method");
+        }
+        if (uri == null) {
+            throw new NullPointerException("uri");
+        }
+        this.method = method;
+        this.uri = uri;
     }
 
     @Override
-    public HttpMethod getMethod() {
+    public HttpMethod method() {
         return method;
     }
 
     @Override
-    public void setMethod(HttpMethod method) {
-        if (method == null) {
-            throw new NullPointerException("method");
-        }
-        this.method = method;
-    }
-
-    @Override
-    public String getUri() {
+    public String uri() {
         return uri;
-    }
-
-    @Override
-    public void setUri(String uri) {
-        if (uri == null) {
-            throw new NullPointerException("uri");
-        }
-        this.uri = uri;
     }
 
     @Override
@@ -72,11 +62,11 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
         buf.append(getDecoderResult());
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
-        buf.append(getMethod().toString());
+        buf.append(method().toString());
         buf.append(' ');
-        buf.append(getUri());
+        buf.append(uri());
         buf.append(' ');
-        buf.append(getProtocolVersion().getText());
+        buf.append(protocolVersion().getText());
         buf.append(StringUtil.NEWLINE);
         appendHeaders(buf);
 

@@ -67,7 +67,7 @@ public class AutobahnServerHandler extends ChannelInboundMessageHandlerAdapter<O
         }
 
         // Allow only GET methods.
-        if (req.getMethod() != GET) {
+        if (req.method() != GET) {
             sendHttpResponse(ctx, req, new DefaultHttpResponseWithContent(HTTP_1_1, FORBIDDEN));
             return;
         }
@@ -114,14 +114,14 @@ public class AutobahnServerHandler extends ChannelInboundMessageHandlerAdapter<O
 
     private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequestWithContent req, HttpResponseWithContent res) {
         // Generate an error page if response status code is not OK (200).
-        if (res.getStatus().getCode() != 200) {
-            res.setContent(Unpooled.copiedBuffer(res.getStatus().toString(), CharsetUtil.UTF_8));
-            setContentLength(res, res.getContent().readableBytes());
+        if (res.status().code() != 200) {
+            res.content().writeBytes(Unpooled.copiedBuffer(res.status().toString(), CharsetUtil.UTF_8));
+            setContentLength(res, res.content().readableBytes());
         }
 
         // Send the response and close the connection if necessary.
         ChannelFuture f = ctx.channel().write(res);
-        if (!isKeepAlive(req) || res.getStatus().getCode() != 200) {
+        if (!isKeepAlive(req) || res.status().code() != 200) {
             f.addListener(ChannelFutureListener.CLOSE);
         }
     }

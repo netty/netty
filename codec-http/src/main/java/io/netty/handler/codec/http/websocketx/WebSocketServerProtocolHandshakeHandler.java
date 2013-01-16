@@ -50,7 +50,7 @@ public class WebSocketServerProtocolHandshakeHandler extends ChannelInboundMessa
 
     @Override
     public void messageReceived(final ChannelHandlerContext ctx, HttpRequestWithContent req) throws Exception {
-        if (req.getMethod() != GET) {
+        if (req.method() != GET) {
             sendHttpResponse(ctx, req, new DefaultHttpResponseWithContent(HTTP_1_1, FORBIDDEN));
             return;
         }
@@ -78,7 +78,7 @@ public class WebSocketServerProtocolHandshakeHandler extends ChannelInboundMessa
 
     private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
         ChannelFuture f = ctx.channel().write(res);
-        if (!isKeepAlive(req) || res.getStatus().getCode() != 200) {
+        if (!isKeepAlive(req) || res.status().code() != 200) {
             f.addListener(ChannelFutureListener.CLOSE);
         }
     }

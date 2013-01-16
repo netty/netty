@@ -69,7 +69,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             HttpContent chunk = (HttpContent) msg;
 
             if (!chunked) {
-                ByteBuf content = chunk.getContent();
+                ByteBuf content = chunk.content();
                 out.writeBytes(content, content.readerIndex(), content.readableBytes());
             } else {
                 if (chunk instanceof LastHttpContent) {
@@ -80,7 +80,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                     out.writeByte(CR);
                     out.writeByte(LF);
                 } else {
-                    ByteBuf content = chunk.getContent();
+                    ByteBuf content = chunk.content();
                     int contentLength = content.readableBytes();
                     out.writeBytes(copiedBuffer(Integer.toHexString(contentLength), CharsetUtil.US_ASCII));
                     out.writeByte(CR);

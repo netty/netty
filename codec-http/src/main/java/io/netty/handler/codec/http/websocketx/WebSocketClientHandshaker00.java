@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -172,7 +171,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         // Set Content-Length to workaround some known defect.
         // See also: http://www.ietf.org/mail-archive/web/hybi/current/msg02149.html
         request.headers().set(Names.CONTENT_LENGTH, key3.length);
-        request.setContent(Unpooled.copiedBuffer(key3));
+        request.content().writeBytes(key3);
 
         ChannelFuture future = channel.write(request);
         future.addListener(new ChannelFutureListener() {
@@ -220,8 +219,8 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
     public void finishHandshake(Channel channel, HttpResponseWithContent response) {
         final HttpResponseStatus status = new HttpResponseStatus(101, "WebSocket Protocol Handshake");
 
-        if (!response.getStatus().equals(status)) {
-            throw new WebSocketHandshakeException("Invalid handshake response status: " + response.getStatus());
+        if (!response.status().equals(status)) {
+            throw new WebSocketHandshakeException("Invalid handshake response status: " + response.status());
         }
 
         String upgrade = response.headers().get(Names.UPGRADE);
@@ -236,7 +235,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
                     + connection);
         }
 
-        byte[] challenge = response.getContent().array();
+        byte[] challenge = response.content().array();
         if (!Arrays.equals(challenge, expectedChallengeResponseBytes)) {
             throw new WebSocketHandshakeException("Invalid challenge");
         }

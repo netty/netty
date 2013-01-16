@@ -46,7 +46,7 @@ public class WebSocketServerProtocolHandlerTest {
         
         writeUpgradeRequest(ch);
         
-        assertEquals(SWITCHING_PROTOCOLS, ((HttpResponse) ch.outboundMessageBuffer().poll()).getStatus());
+        assertEquals(SWITCHING_PROTOCOLS, ((HttpResponse) ch.outboundMessageBuffer().poll()).status());
         assertNotNull(WebSocketServerProtocolHandler.getHandshaker(handshakerCtx));
     }
     
@@ -55,10 +55,10 @@ public class WebSocketServerProtocolHandlerTest {
         EmbeddedMessageChannel ch = createChannel(new MockOutboundHandler());
         
         writeUpgradeRequest(ch);
-        assertEquals(SWITCHING_PROTOCOLS, ((HttpResponse) ch.outboundMessageBuffer().poll()).getStatus());
+        assertEquals(SWITCHING_PROTOCOLS, ((HttpResponse) ch.outboundMessageBuffer().poll()).status());
         
         ch.writeInbound(new DefaultHttpRequest(HTTP_1_1, HttpMethod.GET, "/test"));
-        assertEquals(FORBIDDEN, ((HttpResponse) ch.outboundMessageBuffer().poll()).getStatus());
+        assertEquals(FORBIDDEN, ((HttpResponse) ch.outboundMessageBuffer().poll()).status());
     }
     
     @Test
@@ -75,7 +75,7 @@ public class WebSocketServerProtocolHandlerTest {
         ch.writeInbound(httpRequestWithEntity);
         
         HttpResponseWithContent response = getHttpResponse(ch);
-        assertEquals(BAD_REQUEST, response.getStatus());
+        assertEquals(BAD_REQUEST, response.status());
         assertEquals("not a WebSocket handshake request: missing upgrade", getResponseMessage(response));
         
     }
@@ -95,7 +95,7 @@ public class WebSocketServerProtocolHandlerTest {
         ch.writeInbound(httpRequest);
         
         HttpResponseWithContent response = getHttpResponse(ch);
-        assertEquals(BAD_REQUEST, response.getStatus());
+        assertEquals(BAD_REQUEST, response.status());
         assertEquals("not a WebSocket request: missing key", getResponseMessage(response));
     }
     
@@ -130,7 +130,7 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     private static String getResponseMessage(HttpResponseWithContent response) {
-        return new String(response.getContent().array());
+        return new String(response.content().array());
     }
 
     private static HttpResponseWithContent getHttpResponse(EmbeddedMessageChannel ch) {

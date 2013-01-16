@@ -90,8 +90,8 @@ public class WebSocketClientHandler extends ChannelInboundMessageHandlerAdapter<
 
         if (msg instanceof HttpResponseWithContent) {
             HttpResponseWithContent response = (HttpResponseWithContent) msg;
-            throw new Exception("Unexpected HttpResponseWithContent (status=" + response.getStatus() + ", content="
-                    + response.getContent().toString(CharsetUtil.UTF_8) + ')');
+            throw new Exception("Unexpected HttpResponseWithContent (status=" + response.status() + ", content="
+                    + response.content().toString(CharsetUtil.UTF_8) + ')');
         }
 
         WebSocketFrame frame = (WebSocketFrame) msg;

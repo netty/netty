@@ -68,25 +68,23 @@ public class WebSocketServerHandler extends ChannelInboundMessageHandlerAdapter<
         }
 
         // Allow only GET methods.
-        if (req.getMethod() != GET) {
+        if (req.method() != GET) {
             sendHttpResponse(ctx, req, new DefaultHttpResponseWithContent(HTTP_1_1, FORBIDDEN));
             return;
         }
 
         // Send the demo page and favicon.ico
-        if ("/".equals(req.getUri())) {
-            HttpResponseWithContent res = new DefaultHttpResponseWithContent(HTTP_1_1, OK);
-
+        if ("/".equals(req.uri())) {
             ByteBuf content = WebSocketServerIndexPage.getContent(getWebSocketLocation(req));
+            HttpResponseWithContent res = new DefaultHttpResponseWithContent(HTTP_1_1, OK, content);
 
             res.headers().set(CONTENT_TYPE, "text/html; charset=UTF-8");
             setContentLength(res, content.readableBytes());
 
-            res.setContent(content);
             sendHttpResponse(ctx, req, res);
             return;
         }
-        if ("/favicon.ico".equals(req.getUri())) {
+        if ("/favicon.ico".equals(req.uri())) {
             HttpResponseWithContent res = new DefaultHttpResponseWithContent(HTTP_1_1, NOT_FOUND);
             sendHttpResponse(ctx, req, res);
             return;
@@ -129,14 +127,14 @@ public class WebSocketServerHandler extends ChannelInboundMessageHandlerAdapter<
 
     private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequestWithContent req, HttpResponseWithContent res) {
         // Generate an error page if response status code is not OK (200).
-        if (res.getStatus().getCode() != 200) {
-            res.setContent(Unpooled.copiedBuffer(res.getStatus().toString(), CharsetUtil.UTF_8));
-            setContentLength(res, res.getContent().readableBytes());
+        if (res.status().code() != 200) {
+            res.content().writeBytes(Unpooled.copiedBuffer(res.status().toString(), CharsetUtil.UTF_8));
+            setContentLength(res, res.content().readableBytes());
         }
 
         // Send the response and close the connection if necessary.
         ChannelFuture f = ctx.channel().write(res);
-        if (!isKeepAlive(req) || res.getStatus().getCode() != 200) {
+        if (!isKeepAlive(req) || res.status().code() != 200) {
             f.addListener(ChannelFutureListener.CLOSE);
         }
     }

@@ -33,14 +33,10 @@ public interface HttpMessage extends HttpObject {
      *
      * @return The protocol version
      */
-    HttpVersion getProtocolVersion();
+    HttpVersion protocolVersion();
 
     /**
-     * Sets the protocol version of this {@link HttpMessage}
-     *
-     * @param version The version to set
+     * Returns the headers of this message.
      */
-    void setProtocolVersion(HttpVersion version);
-
     HttpHeaders headers();
 }

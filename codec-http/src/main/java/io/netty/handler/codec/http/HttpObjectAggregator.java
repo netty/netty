@@ -133,18 +133,17 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             }
             if (msg instanceof HttpRequest) {
                 HttpRequest header = (HttpRequest) msg;
-                this.currentMessage = new DefaultHttpRequestWithContent(header.getProtocolVersion(),
-                        header.getMethod(), header.getUri());
+                this.currentMessage = new DefaultHttpRequestWithContent(header.protocolVersion(),
+                        header.method(), header.uri(), Unpooled.compositeBuffer(maxCumulationBufferComponents));
             }  else {
                 HttpResponse header = (HttpResponse) msg;
-                this.currentMessage = new DefaultHttpResponseWithContent(header.getProtocolVersion(), header.getStatus());
+                this.currentMessage = new DefaultHttpResponseWithContent(header.protocolVersion(), header.status(), Unpooled.compositeBuffer(maxCumulationBufferComponents));
             }
             for (String name: m.headers().names()) {
                 this.currentMessage.headers().set(name, m.headers().get(name));
             }
             // A streamed message - initialize the cumulative buffer, and wait for incoming chunks.
             removeTransferEncodingChunked(m);
-            this.currentMessage.setContent(Unpooled.compositeBuffer(maxCumulationBufferComponents));
             return null;
 
         } else if (msg instanceof HttpContent) {
@@ -158,9 +157,9 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
 
             // Merge the received chunk into the content of the current message.
             HttpContent chunk = (HttpContent) msg;
-            ByteBuf content = currentMessage.getContent();
+            ByteBuf content = currentMessage.content();
 
-            if (content.readableBytes() > maxContentLength - chunk.getContent().readableBytes()) {
+            if (content.readableBytes() > maxContentLength - chunk.content().readableBytes()) {
                 // TODO: Respond with 413 Request Entity Too Large
                 //   and discard the traffic or close the connection.
                 //       No need to notify the upstream handlers - just log.
@@ -171,7 +170,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             }
 
             // Append the content of the chunk
-            appendToCumulation(chunk.getContent());
+            appendToCumulation(chunk.content());
 
             final boolean last;
             if (!chunk.getDecoderResult().isSuccess()) {
@@ -211,7 +210,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
     }
 
     private void appendToCumulation(ByteBuf input) {
-        CompositeByteBuf cumulation = (CompositeByteBuf) currentMessage.getContent();
+        CompositeByteBuf cumulation = (CompositeByteBuf) currentMessage.content();
         cumulation.addComponent(input);
         cumulation.writerIndex(cumulation.capacity());
     }

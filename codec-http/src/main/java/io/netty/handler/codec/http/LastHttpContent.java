@@ -30,13 +30,8 @@ public interface LastHttpContent extends HttpContent {
     LastHttpContent EMPTY_LAST_CONTENT = new LastHttpContent() {
 
         @Override
-        public ByteBuf getContent() {
+        public ByteBuf content() {
             return Unpooled.EMPTY_BUFFER;
-        }
-
-        @Override
-        public void setContent(ByteBuf content) {
-            throw new UnsupportedOperationException("read only");
         }
 
         @Override

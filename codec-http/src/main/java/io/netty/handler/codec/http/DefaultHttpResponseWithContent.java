@@ -23,16 +23,19 @@ import io.netty.buffer.Unpooled;
  * Default implementation of a {@link HttpResponseWithContent}.
  */
 public class DefaultHttpResponseWithContent extends DefaultHttpResponse implements HttpResponseWithContent {
-    private ByteBuf content = Unpooled.EMPTY_BUFFER;
+    private ByteBuf content;
     private final HttpHeaders trailingHeaders = new DefaultHttpHeaders();
 
     public DefaultHttpResponseWithContent(HttpVersion version, HttpResponseStatus status) {
-        this(version, status, Unpooled.EMPTY_BUFFER);
+        this(version, status, Unpooled.buffer(0));
     }
 
     public DefaultHttpResponseWithContent(HttpVersion version, HttpResponseStatus status, ByteBuf content) {
         super(version, status);
-        setContent(content);
+        if (content == null) {
+            throw new NullPointerException("content");
+        }
+        this.content = content;
     }
 
     @Override
@@ -41,15 +44,7 @@ public class DefaultHttpResponseWithContent extends DefaultHttpResponse implemen
     }
 
     @Override
-    public ByteBuf getContent() {
+    public ByteBuf content() {
         return content;
-    }
-
-    @Override
-    public void setContent(ByteBuf content) {
-        if (content == null) {
-            throw new NullPointerException("content");
-        }
-        this.content = content;
     }
 }

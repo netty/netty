@@ -109,12 +109,12 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
             return;
         }
 
-        if (request.getMethod() != GET) {
+        if (request.method() != GET) {
             sendError(ctx, METHOD_NOT_ALLOWED);
             return;
         }
 
-        final String uri = request.getUri();
+        final String uri = request.uri();
         final String path = sanitizeUri(uri);
         if (path == null) {
             sendError(ctx, FORBIDDEN);
@@ -270,7 +270,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
 
         buf.append("</ul></body></html>\r\n");
 
-        response.setContent(Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8));
+        response.content().writeBytes(Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8));
 
         // Close the connection as soon as the error message is sent.
         ctx.write(response).addListener(ChannelFutureListener.CLOSE);
@@ -285,11 +285,9 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
     }
 
     private static void sendError(ChannelHandlerContext ctx, HttpResponseStatus status) {
-        HttpResponseWithContent response = new DefaultHttpResponseWithContent(HTTP_1_1, status);
+        HttpResponseWithContent response = new DefaultHttpResponseWithContent(
+                HTTP_1_1, status, Unpooled.copiedBuffer("Failure: " + status.toString() + "\r\n", CharsetUtil.UTF_8));
         response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
-        response.setContent(Unpooled.copiedBuffer(
-                "Failure: " + status.toString() + "\r\n",
-                CharsetUtil.UTF_8));
 
         // Close the connection as soon as the error message is sent.
         ctx.write(response).addListener(ChannelFutureListener.CLOSE);

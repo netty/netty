@@ -16,7 +16,6 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
@@ -36,7 +35,7 @@ import java.util.Map;
 
 /**
  * Decodes {@link SpdySynStreamFrame}s, {@link SpdySynReplyFrame}s,
- * and {@link SpdyDataFrame}s into {@link io.netty.handler.codec.http.HttpRequestWithContent}s and {@link io.netty.handler.codec.http.HttpResponseWithContent}s.
+ * and {@link SpdyDataFrame}s into {@link HttpRequestWithContent}s and {@link HttpResponseWithContent}s.
  */
 public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
 
@@ -198,7 +197,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
                 return null;
             }
 
-            ByteBuf content = httpMessageWithContent.getContent();
+            ByteBuf content = httpMessageWithContent.content();
             if (content.readableBytes() > maxContentLength - spdyDataFrame.getData().readableBytes()) {
                 messageMap.remove(streamID);
                 throw new TooLongFrameException(
@@ -207,13 +206,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
 
             ByteBuf spdyDataFrameData = spdyDataFrame.getData();
             int spdyDataFrameDataLen = spdyDataFrameData.readableBytes();
-            if (content == Unpooled.EMPTY_BUFFER) {
-                content = Unpooled.buffer(spdyDataFrameDataLen);
-                content.writeBytes(spdyDataFrameData, spdyDataFrameData.readerIndex(), spdyDataFrameDataLen);
-                httpMessageWithContent.setContent(content);
-            } else {
-                content.writeBytes(spdyDataFrameData, spdyDataFrameData.readerIndex(), spdyDataFrameDataLen);
-            }
+            content.writeBytes(spdyDataFrameData, spdyDataFrameData.readerIndex(), spdyDataFrameDataLen);
 
             if (spdyDataFrame.isLast()) {
                 HttpHeaders.setContentLength(httpMessageWithContent, content.readableBytes());

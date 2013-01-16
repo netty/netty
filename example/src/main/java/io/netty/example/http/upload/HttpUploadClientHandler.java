@@ -39,8 +39,8 @@ public class HttpUploadClientHandler extends ChannelInboundMessageHandlerAdapter
         if (msg instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) msg;
 
-            logger.info("STATUS: " + response.getStatus());
-            logger.info("VERSION: " + response.getProtocolVersion());
+            logger.info("STATUS: " + response.status());
+            logger.info("VERSION: " + response.protocolVersion());
 
             if (!response.headers().isEmpty()) {
                 for (String name : response.headers().names()) {
@@ -50,7 +50,7 @@ public class HttpUploadClientHandler extends ChannelInboundMessageHandlerAdapter
                 }
             }
 
-            if (response.getStatus().getCode() == 200 && HttpHeaders.isTransferEncodingChunked(response)) {
+            if (response.status().code() == 200 && HttpHeaders.isTransferEncodingChunked(response)) {
                 readingChunks = true;
                 logger.info("CHUNKED CONTENT {");
             } else {
@@ -59,7 +59,7 @@ public class HttpUploadClientHandler extends ChannelInboundMessageHandlerAdapter
         }
         if (msg instanceof HttpContent) {
             HttpContent chunk = (HttpContent) msg;
-            logger.info(chunk.getContent().toString(CharsetUtil.UTF_8));
+            logger.info(chunk.content().toString(CharsetUtil.UTF_8));
 
             if (chunk instanceof LastHttpContent) {
                 if (readingChunks) {
@@ -69,7 +69,7 @@ public class HttpUploadClientHandler extends ChannelInboundMessageHandlerAdapter
                 }
                 readingChunks = false;
             } else {
-                logger.info(chunk.getContent().toString(CharsetUtil.UTF_8));
+                logger.info(chunk.content().toString(CharsetUtil.UTF_8));
             }
         }
     }

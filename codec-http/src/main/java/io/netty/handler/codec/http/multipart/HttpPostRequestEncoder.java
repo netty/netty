@@ -149,7 +149,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
         if (charset == null) {
             throw new NullPointerException("charset");
         }
-        if (request.getMethod() != HttpMethod.POST) {
+        if (request.method() != HttpMethod.POST) {
             throw new ErrorDataEncoderException("Cannot create a Encoder if not a POST");
         }
         this.request = request;
@@ -662,11 +662,11 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
                 }
             }
             HttpHeaders.setTransferEncodingChunked(request);
-            request.setContent(EMPTY_BUFFER);
+            request.content().clear();
         } else {
             // get the only one body and set it to the request
             HttpContent chunk = nextChunk();
-            request.setContent(chunk.getContent());
+            request.content().clear().writeBytes(chunk.content());
         }
         return request;
     }

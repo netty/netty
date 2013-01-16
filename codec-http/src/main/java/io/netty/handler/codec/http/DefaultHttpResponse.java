@@ -22,7 +22,7 @@ import io.netty.util.internal.StringUtil;
  */
 public class DefaultHttpResponse extends DefaultHttpMessage implements HttpResponse {
 
-    private HttpResponseStatus status;
+    private final HttpResponseStatus status;
 
     /**
      * Creates a new instance.
@@ -32,20 +32,15 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
      */
     public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status) {
         super(version);
-        setStatus(status);
-    }
-
-    @Override
-    public HttpResponseStatus getStatus() {
-        return status;
-    }
-
-    @Override
-    public void setStatus(HttpResponseStatus status) {
         if (status == null) {
             throw new NullPointerException("status");
         }
         this.status = status;
+    }
+
+    @Override
+    public HttpResponseStatus status() {
+        return status;
     }
 
     @Override
@@ -56,9 +51,9 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
         buf.append(getDecoderResult());
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
-        buf.append(getProtocolVersion().getText());
+        buf.append(protocolVersion().getText());
         buf.append(' ');
-        buf.append(getStatus().toString());
+        buf.append(status().toString());
         buf.append(StringUtil.NEWLINE);
         appendHeaders(buf);
 

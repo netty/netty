@@ -67,9 +67,9 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
             buf.append("WELCOME TO THE WILD WILD WEB SERVER\r\n");
             buf.append("===================================\r\n");
 
-            buf.append("VERSION: ").append(request.getProtocolVersion()).append("\r\n");
+            buf.append("VERSION: ").append(request.protocolVersion()).append("\r\n");
             buf.append("HOSTNAME: ").append(getHost(request, "unknown")).append("\r\n");
-            buf.append("REQUEST_URI: ").append(request.getUri()).append("\r\n\r\n");
+            buf.append("REQUEST_URI: ").append(request.uri()).append("\r\n\r\n");
 
             List<Map.Entry<String, String>> headers = request.headers().entries();
             if (!headers.isEmpty()) {
@@ -81,7 +81,7 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
                 buf.append("\r\n");
             }
 
-            QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.getUri());
+            QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.uri());
             Map<String, List<String>> params = queryStringDecoder.getParameters();
             if (!params.isEmpty()) {
                 for (Entry<String, List<String>> p: params.entrySet()) {
@@ -103,7 +103,7 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
         if (msg instanceof HttpContent) {
             HttpContent httpContent = (HttpContent) msg;
 
-            ByteBuf content = httpContent.getContent();
+            ByteBuf content = httpContent.content();
             if (content.readable()) {
                 buf.append("CONTENT: ");
                 buf.append(content.toString(CharsetUtil.UTF_8));
@@ -168,14 +168,14 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
 
         // Build the response object.
         HttpResponseWithContent response = new DefaultHttpResponseWithContent(
-                HTTP_1_1, currentObj.getDecoderResult().isSuccess()? OK : BAD_REQUEST);
+                HTTP_1_1, currentObj.getDecoderResult().isSuccess()? OK : BAD_REQUEST,
+                Unpooled.copiedBuffer(buf.toString(), CharsetUtil.UTF_8));
 
-        response.setContent(Unpooled.copiedBuffer(buf.toString(), CharsetUtil.UTF_8));
         response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
 
         if (keepAlive) {
             // Add 'Content-Length' header only for a keep-alive connection.
-            response.headers().set(CONTENT_LENGTH, response.getContent().readableBytes());
+            response.headers().set(CONTENT_LENGTH, response.content().readableBytes());
             // Add keep alive header as per:
             // - http://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.html#Connection
             response.headers().set(CONNECTION, HttpHeaders.Values.KEEP_ALIVE);

@@ -103,7 +103,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
             }
 
             HttpRequest request = this.request = (HttpRequest) msg;
-            URI uri = new URI(request.getUri());
+            URI uri = new URI(request.uri());
             if (!uri.getPath().startsWith("/form")) {
                 // Write Menu
                 writeMenu(ctx);
@@ -113,9 +113,9 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
             responseContent.append("WELCOME TO THE WILD WILD WEB SERVER\r\n");
             responseContent.append("===================================\r\n");
 
-            responseContent.append("VERSION: " + request.getProtocolVersion().getText() + "\r\n");
+            responseContent.append("VERSION: " + request.protocolVersion().getText() + "\r\n");
 
-            responseContent.append("REQUEST_URI: " + request.getUri() + "\r\n\r\n");
+            responseContent.append("REQUEST_URI: " + request.uri() + "\r\n\r\n");
             responseContent.append("\r\n\r\n");
 
             // new method
@@ -138,7 +138,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
             }
             responseContent.append("\r\n\r\n");
 
-            QueryStringDecoder decoderQuery = new QueryStringDecoder(request.getUri());
+            QueryStringDecoder decoderQuery = new QueryStringDecoder(request.uri());
             Map<String, List<String>> uriAttributes = decoderQuery.getParameters();
             for (Entry<String, List<String>> attr: uriAttributes.entrySet()) {
                 for (String attrVal: attr.getValue()) {
@@ -301,12 +301,12 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
 
         // Decide whether to close the connection or not.
         boolean close = HttpHeaders.Values.CLOSE.equalsIgnoreCase(request.headers().get(CONNECTION))
-                || request.getProtocolVersion().equals(HttpVersion.HTTP_1_0)
+                || request.protocolVersion().equals(HttpVersion.HTTP_1_0)
                 && !HttpHeaders.Values.KEEP_ALIVE.equalsIgnoreCase(request.headers().get(CONNECTION));
 
         // Build the response object.
-        HttpResponseWithContent response = new DefaultHttpResponseWithContent(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        response.setContent(buf);
+        HttpResponseWithContent response = new DefaultHttpResponseWithContent(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.OK, buf);
         response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
 
         if (!close) {
@@ -410,10 +410,12 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
 
         ByteBuf buf = copiedBuffer(responseContent.toString(), CharsetUtil.UTF_8);
         // Build the response object.
-        HttpResponseWithContent response = new DefaultHttpResponseWithContent(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        response.setContent(buf);
+        HttpResponseWithContent response = new DefaultHttpResponseWithContent(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.OK, buf);
+
         response.headers().set(CONTENT_TYPE, "text/html; charset=UTF-8");
         response.headers().set(CONTENT_LENGTH, String.valueOf(buf.readableBytes()));
+
         // Write the response.
         ctx.channel().write(response);
     }

@@ -16,7 +16,6 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelPipeline;
 
 /**
@@ -32,13 +31,7 @@ public interface HttpContent extends HttpObject {
 
     /**
      * Returns the content of this chunk.  If this is the 'end of content'
-     * marker, {@link Unpooled#EMPTY_BUFFER} will be returned.
+     * marker, a {@link ByteBuf} with no readable bytes will be returned.
      */
-    ByteBuf getContent();
-
-    /**
-     * Sets the content of this chunk.  If an empty buffer is specified,
-     * this chunk becomes the 'end of content' marker.
-     */
-    void setContent(ByteBuf content);
+    ByteBuf content();
 }

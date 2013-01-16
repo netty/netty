@@ -130,7 +130,6 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
             logger.debug(String.format("WS Version 8 Server Handshake key: %s. Response: %s.", key, accept));
         }
 
-        res.setStatus(HttpResponseStatus.SWITCHING_PROTOCOLS);
         res.headers().add(Names.UPGRADE, WEBSOCKET.toLowerCase());
         res.headers().add(Names.CONNECTION, Names.UPGRADE);
         res.headers().add(Names.SEC_WEBSOCKET_ACCEPT, accept);

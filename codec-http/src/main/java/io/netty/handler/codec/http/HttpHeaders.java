@@ -557,7 +557,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
             return false;
         }
 
-        if (message.getProtocolVersion().isKeepAliveDefault()) {
+        if (message.protocolVersion().isKeepAliveDefault()) {
             return !Values.CLOSE.equalsIgnoreCase(connection);
         } else {
             return Values.KEEP_ALIVE.equalsIgnoreCase(connection);
@@ -584,7 +584,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * </ul>
      */
     public static void setKeepAlive(HttpMessage message, boolean keepAlive) {
-        if (message.getProtocolVersion().isKeepAliveDefault()) {
+        if (message.protocolVersion().isKeepAliveDefault()) {
             if (keepAlive) {
                 message.headers().remove(Names.CONNECTION);
             } else {
@@ -815,7 +815,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
 
     /**
      * Returns the length of the content.  Please note that this value is
-     * not retrieved from {@link HttpContent#getContent()} but from the
+     * not retrieved from {@link HttpContent#content()} but from the
      * {@code "Content-Length"} header, and thus they are independent from each
      * other.
      *
@@ -844,7 +844,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
 
     /**
      * Returns the length of the content.  Please note that this value is
-     * not retrieved from {@link HttpContent#getContent()} but from the
+     * not retrieved from {@link HttpContent#content()} but from the
      * {@code "Content-Length"} header, and thus they are independent from each
      * other.
      *
@@ -881,14 +881,14 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         // WebSockset messages have constant content-lengths.
         if (message instanceof HttpRequest) {
             HttpRequest req = (HttpRequest) message;
-            if (HttpMethod.GET.equals(req.getMethod()) &&
+            if (HttpMethod.GET.equals(req.method()) &&
                 req.headers().contains(Names.SEC_WEBSOCKET_KEY1) &&
                 req.headers().contains(Names.SEC_WEBSOCKET_KEY2)) {
                 return 8;
             }
         } else if (message instanceof HttpResponse) {
             HttpResponse res = (HttpResponse) message;
-            if (res.getStatus().getCode() == 101 &&
+            if (res.status().code() == 101 &&
                 res.headers().contains(Names.SEC_WEBSOCKET_ORIGIN) &&
                 res.headers().contains(Names.SEC_WEBSOCKET_LOCATION)) {
                 return 16;
@@ -969,7 +969,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         }
 
         // It works only on HTTP/1.1 or later.
-        if (message.getProtocolVersion().compareTo(HttpVersion.HTTP_1_1) < 0) {
+        if (message.protocolVersion().compareTo(HttpVersion.HTTP_1_1) < 0) {
             return false;
         }
 

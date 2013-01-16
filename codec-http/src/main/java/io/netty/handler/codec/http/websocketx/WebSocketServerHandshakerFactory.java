@@ -115,8 +115,7 @@ public class WebSocketServerHandshakerFactory {
     public static void sendUnsupportedWebSocketVersionResponse(Channel channel) {
         HttpResponse res = new DefaultHttpResponse(
                 HttpVersion.HTTP_1_1,
-                HttpResponseStatus.SWITCHING_PROTOCOLS);
-        res.setStatus(HttpResponseStatus.UPGRADE_REQUIRED);
+                HttpResponseStatus.UPGRADE_REQUIRED);
         res.headers().set(Names.SEC_WEBSOCKET_VERSION, WebSocketVersion.V13.toHttpHeaderValue());
         channel.write(res);
     }

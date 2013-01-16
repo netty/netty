@@ -188,7 +188,7 @@ public class HttpPostRequestDecoder {
             throw new NullPointerException("charset");
         }
         this.request = request;
-        HttpMethod method = request.getMethod();
+        HttpMethod method = request.method();
         if (method.equals(HttpMethod.POST) || method.equals(HttpMethod.PUT) || method.equals(HttpMethod.PATCH)) {
             bodyToDecode = true;
         }
@@ -341,7 +341,7 @@ public class HttpPostRequestDecoder {
      *             errors
      */
     public void offer(HttpContent content) throws ErrorDataDecoderException {
-        ByteBuf chunked = content.getContent();
+        ByteBuf chunked = content.content();
         if (undecodedChunk == null) {
             undecodedChunk = chunked;
         } else {

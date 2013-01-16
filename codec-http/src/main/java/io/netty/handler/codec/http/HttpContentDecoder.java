@@ -55,7 +55,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
 
     @Override
     protected Object decode(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().getCode() == 100) {
+        if (msg instanceof HttpResponse && ((HttpResponse) msg).status().code() == 100) {
             // 100-continue response must be passed through.
             return msg;
         }
@@ -99,7 +99,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
                     if (header.headers().contains(HttpHeaders.Names.CONTENT_LENGTH)) {
                         header.headers().set(
                                 HttpHeaders.Names.CONTENT_LENGTH,
-                                Integer.toString(((HttpContent) decoded[1]).getContent().readableBytes()));
+                                Integer.toString(((HttpContent) decoded[1]).content().readableBytes()));
                     }
                     return decoded;
                 }
@@ -114,7 +114,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
 
     private Object[] decodeContent(HttpMessage header, HttpContent c) {
         ByteBuf newContent = Unpooled.buffer();
-        ByteBuf content = c.getContent();
+        ByteBuf content = c.content();
         decode(content, newContent);
 
         if (c instanceof LastHttpContent) {

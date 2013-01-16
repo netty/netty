@@ -44,7 +44,7 @@ public class HttpServerCodecTest {
         decoderEmbedder.finish();
 
         HttpMessage httpMessage = (HttpMessage) decoderEmbedder.readInbound();
-        //Assert.assertSame(HttpTransferEncoding.STREAMED, httpMessage.getTransferEncoding());
+        Assert.assertNotNull(httpMessage);
 
         boolean empty = true;
         int totalBytesPolled = 0;
@@ -54,7 +54,7 @@ public class HttpServerCodecTest {
                 break;
             }
             empty = false;
-            totalBytesPolled += httpChunk.getContent().readableBytes();
+            totalBytesPolled += httpChunk.content().readableBytes();
             Assert.assertFalse(httpChunk instanceof LastHttpContent);
         }
         Assert.assertFalse(empty);

@@ -22,26 +22,21 @@ import io.netty.buffer.ByteBuf;
  */
 public class DefaultHttpContent extends DefaultHttpObject implements HttpContent {
 
-    private ByteBuf content;
+    private final ByteBuf content;
 
     /**
      * Creates a new instance with the specified chunk content.
      */
     public DefaultHttpContent(ByteBuf content) {
-        setContent(content);
-    }
-
-    @Override
-    public ByteBuf getContent() {
-        return content;
-    }
-
-    @Override
-    public void setContent(ByteBuf content) {
         if (content == null) {
             throw new NullPointerException("content");
         }
         this.content = content;
+    }
+
+    @Override
+    public ByteBuf content() {
+        return content;
     }
 
     @Override
@@ -50,7 +45,7 @@ public class DefaultHttpContent extends DefaultHttpObject implements HttpContent
         buf.append(getClass().getSimpleName());
 
         buf.append(" size: ");
-        buf.append(getContent().readableBytes());
+        buf.append(content().readableBytes());
 
         buf.append(", decodeResult: ");
         buf.append(getDecoderResult());

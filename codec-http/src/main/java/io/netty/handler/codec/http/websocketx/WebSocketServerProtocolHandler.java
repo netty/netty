@@ -92,8 +92,8 @@ public class WebSocketServerProtocolHandler extends ChannelInboundMessageHandler
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (cause instanceof WebSocketHandshakeException) {
-            HttpResponseWithContent response = new DefaultHttpResponseWithContent(HTTP_1_1, HttpResponseStatus.BAD_REQUEST);
-            response.setContent(Unpooled.wrappedBuffer(cause.getMessage().getBytes()));
+            HttpResponseWithContent response = new DefaultHttpResponseWithContent(
+                    HTTP_1_1, HttpResponseStatus.BAD_REQUEST, Unpooled.wrappedBuffer(cause.getMessage().getBytes()));
             ctx.channel().write(response).addListener(ChannelFutureListener.CLOSE);
         } else {
             ctx.close();
