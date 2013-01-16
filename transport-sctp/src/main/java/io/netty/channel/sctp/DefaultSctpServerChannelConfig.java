@@ -51,7 +51,7 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
     public Map<ChannelOption<?>, Object> getOptions() {
         return getOptions(
                 super.getOptions(),
-                ChannelOption.SO_RCVBUF, ChannelOption.SO_SNDBUF, ChannelOption.SCTP_INIT_MAXSTREAMS);
+                ChannelOption.SO_RCVBUF, ChannelOption.SO_SNDBUF, SctpChannelOption.SCTP_INIT_MAXSTREAMS);
     }
 
     @SuppressWarnings("unchecked")
@@ -74,7 +74,7 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
             setReceiveBufferSize((Integer) value);
         } else if (option == ChannelOption.SO_SNDBUF) {
             setSendBufferSize((Integer) value);
-        } else if (option == ChannelOption.SCTP_INIT_MAXSTREAMS) {
+        } else if (option == SCTP_INIT_MAXSTREAMS) {
             setInitMaxStreams((InitMaxStreams) value);
         } else {
             return super.setOption(option, value);

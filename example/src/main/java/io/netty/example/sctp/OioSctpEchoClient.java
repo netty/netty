@@ -18,8 +18,8 @@ package io.netty.example.sctp;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
 import io.netty.channel.sctp.SctpChannel;
+import io.netty.channel.sctp.SctpChannelOption;
 import io.netty.channel.socket.oio.OioEventLoopGroup;
 import io.netty.channel.sctp.oio.OioSctpChannel;
 import io.netty.handler.logging.LogLevel;
@@ -53,7 +53,7 @@ public class OioSctpEchoClient {
         try {
             b.group(new OioEventLoopGroup())
              .channel(OioSctpChannel.class)
-             .option(ChannelOption.SCTP_NODELAY, true)
+             .option(SctpChannelOption.SCTP_NODELAY, true)
              .remoteAddress(new InetSocketAddress(host, port))
              .handler(new ChannelInitializer<SctpChannel>() {
                  @Override

@@ -24,7 +24,7 @@ import io.netty.channel.DefaultChannelConfig;
 import java.io.IOException;
 import java.util.Map;
 
-import static io.netty.channel.ChannelOption.*;
+import static io.netty.channel.udt.UdtChannelOption.*;
 
 /**
  * The default {@link UdtChannelConfig} implementation.

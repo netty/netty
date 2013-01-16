@@ -21,7 +21,7 @@ import io.netty.channel.DefaultChannelConfig;
 
 import java.util.Map;
 
-import static io.netty.channel.rxtx.RxtxChannelOptions.*;
+import static io.netty.channel.rxtx.RxtxChannelOption.*;
 
 /**
  * A configuration class for RXTX device connections.

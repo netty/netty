@@ -15,6 +15,7 @@
  */
 package io.netty.channel.sctp;
 
+
 import com.sun.nio.sctp.SctpChannel;
 import com.sun.nio.sctp.SctpStandardSocketOptions;
 import io.netty.buffer.ByteBufAllocator;
@@ -25,7 +26,7 @@ import io.netty.channel.DefaultChannelConfig;
 import java.io.IOException;
 import java.util.Map;
 
-import static io.netty.channel.ChannelOption.*;
+import static io.netty.channel.sctp.SctpChannelOption.*;
 
 /**
  * The default {@link SctpChannelConfig} implementation for SCTP.

@@ -20,8 +20,6 @@ import io.netty.util.UniqueName;
 
 import java.net.InetAddress;
 import java.net.NetworkInterface;
-import java.net.SocketAddress;
-import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -78,35 +76,6 @@ public class ChannelOption<T> extends UniqueName {
 
     public static final ChannelOption<Boolean> TCP_NODELAY =
             new ChannelOption<Boolean>("TCP_NODELAY");
-
-    public static final ChannelOption<Boolean> SCTP_DISABLE_FRAGMENTS =
-            new ChannelOption<Boolean>("SCTP_DISABLE_FRAGMENTS");
-    public static final ChannelOption<Boolean> SCTP_EXPLICIT_COMPLETE =
-            new ChannelOption<Boolean>("SCTP_EXPLICIT_COMPLETE");
-    public static final ChannelOption<Integer> SCTP_FRAGMENT_INTERLEAVE =
-            new ChannelOption<Integer>("SCTP_FRAGMENT_INTERLEAVE");
-    public static final ChannelOption<List<Integer>> SCTP_INIT_MAXSTREAMS =
-            new ChannelOption<List<Integer>>("SCTP_INIT_MAXSTREAMS") {
-        @Override
-        public void validate(List<Integer> value) {
-            super.validate(value);
-            if (value.size() != 2) {
-                throw new IllegalArgumentException("value must be a List of 2 Integers: " + value);
-            }
-            if (value.get(0) == null) {
-                throw new NullPointerException("value[0]");
-            }
-            if (value.get(1) == null) {
-                throw new NullPointerException("value[1]");
-            }
-        }
-    };
-    public static final ChannelOption<Boolean> SCTP_NODELAY =
-            new ChannelOption<Boolean>("SCTP_NODELAY");
-    public static final ChannelOption<SocketAddress> SCTP_PRIMARY_ADDR =
-            new ChannelOption<SocketAddress>("SCTP_PRIMARY_ADDR");
-    public static final ChannelOption<SocketAddress> SCTP_SET_PEER_PRIMARY_ADDR =
-            new ChannelOption<SocketAddress>("SCTP_SET_PEER_PRIMARY_ADDR");
 
     public static final ChannelOption<Long> AIO_READ_TIMEOUT =
             new ChannelOption<Long>("AIO_READ_TIMEOUT");
