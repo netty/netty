@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.util.Queue;
@@ -250,8 +251,24 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     @Override
     protected Runnable doRegister() throws Exception {
-        selectionKey = javaChannel().register(eventLoop().selector, 0, this);
-        return null;
+        boolean selected = false;
+        for (;;) {
+            try {
+                selectionKey = javaChannel().register(eventLoop().selector, 0, this);
+                return null;
+            } catch (CancelledKeyException e) {
+                if (!selected) {
+                    // Force the Selector to select now  as the "canceled" SelectionKey may still be
+                    // cached and not removed because no Select.select(..) operation was called yet.
+                    eventLoop().selectNow();
+                    selected = true;
+                } else {
+                    // We forced a select operation on the selector before but the SelectionKey is still cached
+                    // for whatever reason. JDK bug ?
+                    throw e;
+                }
+            }
+        }
     }
 
     @Override
