@@ -21,10 +21,10 @@ import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.ClientCookieEncoder;
 import io.netty.handler.codec.http.DefaultCookie;
-import io.netty.handler.codec.http.DefaultHttpRequestHeader;
+import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpRequestHeader;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
 
 import java.net.InetSocketAddress;
@@ -73,14 +73,14 @@ public class HttpSnoopClient {
             Channel ch = b.connect().sync().channel();
 
             // Prepare the HTTP request.
-            HttpRequestHeader request = new DefaultHttpRequestHeader(
+            HttpRequest request = new DefaultHttpRequest(
                     HttpVersion.HTTP_1_1, HttpMethod.GET, uri.getRawPath());
-            request.setHeader(HttpHeaders.Names.HOST, host);
-            request.setHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
-            request.setHeader(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);
+            request.headers().set(HttpHeaders.Names.HOST, host);
+            request.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
+            request.headers().set(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);
 
             // Set some example cookies.
-            request.setHeader(
+            request.headers().set(
                     HttpHeaders.Names.COOKIE,
                     ClientCookieEncoder.encode(
                             new DefaultCookie("my-cookie", "foo"),

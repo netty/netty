@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.handler.codec.http.HttpHeaders.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
@@ -29,9 +28,11 @@ import io.netty.util.CharsetUtil;
 
 import java.util.Map.Entry;
 
+import static io.netty.handler.codec.http.HttpHeaders.*;
+
 /**
- * A {@link ChannelHandler} that aggregates an {@link HttpHeader}
- * and its following {@link HttpContent}s into a single {@link HttpHeader} with
+ * A {@link ChannelHandler} that aggregates an {@link HttpMessage}
+ * and its following {@link HttpContent}s into a single {@link HttpMessage} with
  * no following {@link HttpContent}s.  It is useful when you don't want to take
  * care of HTTP messages whose transfer encoding is 'chunked'.  Insert this
  * handler after {@link HttpObjectDecoder} in the {@link ChannelPipeline}:
@@ -53,7 +54,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             "HTTP/1.1 100 Continue\r\n\r\n", CharsetUtil.US_ASCII);
 
     private final int maxContentLength;
-    private HttpMessage currentMessage;
+    private FullHttpMessage currentMessage;
 
     private int maxCumulationBufferComponents = DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS;
     private ChannelHandlerContext ctx;
@@ -111,10 +112,12 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
 
     @Override
     protected Object decode(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
-        HttpMessage currentMessage = this.currentMessage;
+        FullHttpMessage currentMessage = this.currentMessage;
 
-        if (msg instanceof HttpHeader) {
-            HttpHeader m = (HttpHeader) msg;
+        if (msg instanceof HttpMessage) {
+            assert currentMessage == null;
+
+            HttpMessage m = (HttpMessage) msg;
 
             // Handle the 'Expect: 100-continue' header if necessary.
             // TODO: Respond with 413 Request Entity Too Large
@@ -125,41 +128,40 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
                 ctx.write(CONTINUE.duplicate());
             }
 
-            if (!m.getDecoderResult().isSuccess()) {
+            if (!m.decoderResult().isSuccess()) {
                 removeTransferEncodingChunked(m);
                 this.currentMessage = null;
                 return m;
             }
-            if (msg instanceof HttpRequestHeader) {
-                HttpRequestHeader header = (HttpRequestHeader) msg;
-                this.currentMessage = new DefaultHttpRequest(header.getProtocolVersion(),
-                        header.getMethod(), header.getUri());
-            }  else {
-                HttpResponseHeader header = (HttpResponseHeader) msg;
-                this.currentMessage = new DefaultHttpResponse(header.getProtocolVersion(), header.getStatus());
+            if (msg instanceof HttpRequest) {
+                HttpRequest header = (HttpRequest) msg;
+                this.currentMessage = currentMessage = new DefaultFullHttpRequest(header.protocolVersion(),
+                        header.method(), header.uri(), Unpooled.compositeBuffer(maxCumulationBufferComponents));
+            } else if (msg instanceof HttpResponse) {
+                HttpResponse header = (HttpResponse) msg;
+                this.currentMessage = currentMessage = new DefaultFullHttpResponse(
+                        header.protocolVersion(), header.status(),
+                        Unpooled.compositeBuffer(maxCumulationBufferComponents));
+            } else {
+                throw new Error();
             }
-            for (String name: m.getHeaderNames()) {
-                this.currentMessage.setHeader(name, m.getHeaders(name));
+
+            HttpHeaders headers = currentMessage.headers();
+            for (String name: m.headers().names()) {
+                headers.set(name, m.headers().get(name));
             }
             // A streamed message - initialize the cumulative buffer, and wait for incoming chunks.
-            removeTransferEncodingChunked(m);
-            this.currentMessage.setContent(Unpooled.compositeBuffer(maxCumulationBufferComponents));
+            removeTransferEncodingChunked(currentMessage);
             return null;
 
         } else if (msg instanceof HttpContent) {
-            // Sanity check
-            if (currentMessage == null) {
-                throw new IllegalStateException(
-                        "received " + HttpContent.class.getSimpleName() +
-                        " without " + HttpHeader.class.getSimpleName() +
-                        " or last message's transfer encoding was 'SINGLE'");
-            }
+            assert currentMessage != null;
 
             // Merge the received chunk into the content of the current message.
             HttpContent chunk = (HttpContent) msg;
-            ByteBuf content = currentMessage.getContent();
+            CompositeByteBuf content = (CompositeByteBuf) currentMessage.data();
 
-            if (content.readableBytes() > maxContentLength - chunk.getContent().readableBytes()) {
+            if (content.readableBytes() > maxContentLength - chunk.data().readableBytes()) {
                 // TODO: Respond with 413 Request Entity Too Large
                 //   and discard the traffic or close the connection.
                 //       No need to notify the upstream handlers - just log.
@@ -170,12 +172,17 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             }
 
             // Append the content of the chunk
-            appendToCumulation(chunk.getContent());
+            if (chunk.data().readable()) {
+                content.addComponent(chunk.data());
+                content.writerIndex(content.writerIndex() + chunk.data().readableBytes());
+            } else {
+                chunk.free();
+            }
 
             final boolean last;
-            if (!chunk.getDecoderResult().isSuccess()) {
-                currentMessage.setDecoderResult(
-                        DecoderResult.partialFailure(chunk.getDecoderResult().cause()));
+            if (!chunk.decoderResult().isSuccess()) {
+                currentMessage.updateDecoderResult(
+                        DecoderResult.partialFailure(chunk.decoderResult().cause()));
                 last = true;
             } else {
                 last = msg instanceof LastHttpContent;
@@ -187,13 +194,13 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
                 // Merge trailing headers into the message.
                 if (chunk instanceof LastHttpContent) {
                     LastHttpContent trailer = (LastHttpContent) chunk;
-                    for (Entry<String, String> header: trailer.getHeaders()) {
-                        currentMessage.setHeader(header.getKey(), header.getValue());
+                    for (Entry<String, String> header: trailer.trailingHeaders()) {
+                        currentMessage.headers().add(header.getKey(), header.getValue());
                     }
                 }
 
                 // Set the 'Content-Length' header.
-                currentMessage.setHeader(
+                currentMessage.headers().set(
                         HttpHeaders.Names.CONTENT_LENGTH,
                         String.valueOf(content.readableBytes()));
 
@@ -203,21 +210,12 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
                 return null;
             }
         } else {
-            throw new IllegalStateException(
-                    "Only " + HttpHeader.class.getSimpleName() + " and " +
-                    HttpContent.class.getSimpleName() + " are accepted: " + msg.getClass().getName());
+            throw new Error();
         }
-    }
-
-    private void appendToCumulation(ByteBuf input) {
-        CompositeByteBuf cumulation = (CompositeByteBuf) currentMessage.getContent();
-        cumulation.addComponent(input);
-        cumulation.writerIndex(cumulation.capacity());
     }
 
     @Override
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
     }
-
 }

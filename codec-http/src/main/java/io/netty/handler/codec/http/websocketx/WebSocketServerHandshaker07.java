@@ -20,12 +20,12 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.DefaultHttpResponse;
-import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders.Names;
-import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
-import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.logging.InternalLogger;
@@ -109,15 +109,16 @@ public class WebSocketServerHandshaker07 extends WebSocketServerHandshaker {
      *            HTTP request
      */
     @Override
-    public ChannelFuture handshake(Channel channel, HttpRequest req, ChannelPromise promise) {
+    public ChannelFuture handshake(Channel channel, FullHttpRequest req, ChannelPromise promise) {
 
         if (logger.isDebugEnabled()) {
             logger.debug(String.format("Channel %s WS Version 7 server handshake", channel.id()));
         }
 
-        HttpResponse res = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
+        FullHttpResponse res =
+                new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
 
-        String key = req.getHeader(Names.SEC_WEBSOCKET_KEY);
+        String key = req.headers().get(Names.SEC_WEBSOCKET_KEY);
         if (key == null) {
             throw new WebSocketHandshakeException("not a WebSocket request: missing key");
         }
@@ -129,17 +130,16 @@ public class WebSocketServerHandshaker07 extends WebSocketServerHandshaker {
             logger.debug(String.format("WS Version 7 Server Handshake key: %s. Response: %s.", key, accept));
         }
 
-        res.setStatus(HttpResponseStatus.SWITCHING_PROTOCOLS);
-        res.addHeader(Names.UPGRADE, WEBSOCKET.toLowerCase());
-        res.addHeader(Names.CONNECTION, Names.UPGRADE);
-        res.addHeader(Names.SEC_WEBSOCKET_ACCEPT, accept);
-        String subprotocols = req.getHeader(Names.SEC_WEBSOCKET_PROTOCOL);
+        res.headers().add(Names.UPGRADE, WEBSOCKET.toLowerCase());
+        res.headers().add(Names.CONNECTION, Names.UPGRADE);
+        res.headers().add(Names.SEC_WEBSOCKET_ACCEPT, accept);
+        String subprotocols = req.headers().get(Names.SEC_WEBSOCKET_PROTOCOL);
         if (subprotocols != null) {
             String selectedSubprotocol = selectSubprotocol(subprotocols);
             if (selectedSubprotocol == null) {
                 throw new WebSocketHandshakeException("Requested subprotocol(s) not supported: " + subprotocols);
             } else {
-                res.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
+                res.headers().add(Names.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
                 setSelectedSubprotocol(selectedSubprotocol);
             }
         }

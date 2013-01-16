@@ -16,11 +16,11 @@
 package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpConstants;
+import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpRequestHeader;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadNoBackArrayException;
 import io.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadOptimize;
@@ -50,7 +50,7 @@ public class HttpPostRequestDecoder {
     /**
      * Request to decode
      */
-    private final HttpRequestHeader request;
+    private final HttpRequest request;
 
     /**
      * Default charset to use
@@ -136,7 +136,7 @@ public class HttpPostRequestDecoder {
      *             if the default charset was wrong when decoding or other
      *             errors
      */
-    public HttpPostRequestDecoder(HttpRequestHeader request) throws ErrorDataDecoderException,
+    public HttpPostRequestDecoder(HttpRequest request) throws ErrorDataDecoderException,
             IncompatibleDataDecoderException {
         this(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE), request, HttpConstants.DEFAULT_CHARSET);
     }
@@ -155,7 +155,7 @@ public class HttpPostRequestDecoder {
      *             if the default charset was wrong when decoding or other
      *             errors
      */
-    public HttpPostRequestDecoder(HttpDataFactory factory, HttpRequestHeader request) throws ErrorDataDecoderException,
+    public HttpPostRequestDecoder(HttpDataFactory factory, HttpRequest request) throws ErrorDataDecoderException,
             IncompatibleDataDecoderException {
         this(factory, request, HttpConstants.DEFAULT_CHARSET);
     }
@@ -176,7 +176,7 @@ public class HttpPostRequestDecoder {
      *             if the default charset was wrong when decoding or other
      *             errors
      */
-    public HttpPostRequestDecoder(HttpDataFactory factory, HttpRequestHeader request, Charset charset)
+    public HttpPostRequestDecoder(HttpDataFactory factory, HttpRequest request, Charset charset)
             throws ErrorDataDecoderException, IncompatibleDataDecoderException {
         if (factory == null) {
             throw new NullPointerException("factory");
@@ -188,15 +188,15 @@ public class HttpPostRequestDecoder {
             throw new NullPointerException("charset");
         }
         this.request = request;
-        HttpMethod method = request.getMethod();
+        HttpMethod method = request.method();
         if (method.equals(HttpMethod.POST) || method.equals(HttpMethod.PUT) || method.equals(HttpMethod.PATCH)) {
             bodyToDecode = true;
         }
         this.charset = charset;
         this.factory = factory;
         // Fill default values
-        if (this.request.containsHeader(HttpHeaders.Names.CONTENT_TYPE)) {
-            checkMultipart(this.request.getHeader(HttpHeaders.Names.CONTENT_TYPE));
+        if (this.request.headers().contains(HttpHeaders.Names.CONTENT_TYPE)) {
+            checkMultipart(this.request.headers().get(HttpHeaders.Names.CONTENT_TYPE));
         } else {
             isMultipart = false;
         }
@@ -341,7 +341,7 @@ public class HttpPostRequestDecoder {
      *             errors
      */
     public void offer(HttpContent content) throws ErrorDataDecoderException {
-        ByteBuf chunked = content.getContent();
+        ByteBuf chunked = content.data();
         if (undecodedChunk == null) {
             undecodedChunk = chunked;
         } else {

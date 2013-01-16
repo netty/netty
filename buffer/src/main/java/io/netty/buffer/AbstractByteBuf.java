@@ -936,6 +936,10 @@ public abstract class AbstractByteBuf implements ByteBuf {
 
     @Override
     public String toString() {
+        if (isFreed()) {
+            return getClass().getSimpleName() + "(freed)";
+        }
+
         return getClass().getSimpleName() + '(' +
                "ridx=" + readerIndex + ", " +
                "widx=" + writerIndex + ", " +

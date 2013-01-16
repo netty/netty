@@ -21,10 +21,10 @@ import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.ClientCookieEncoder;
 import io.netty.handler.codec.http.DefaultCookie;
-import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.QueryStringEncoder;
 import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
@@ -178,33 +178,31 @@ public class HttpUploadClient {
             return null;
         }
 
-        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, uriGet.toASCIIString());
-        request.setHeader(HttpHeaders.Names.HOST, host);
-        request.setHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
-        request.setHeader(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP + ','
+        FullHttpRequest request =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, uriGet.toASCIIString());
+        HttpHeaders headers = request.headers();
+        headers.set(HttpHeaders.Names.HOST, host);
+        headers.set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
+        headers.set(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP + ','
                 + HttpHeaders.Values.DEFLATE);
 
-        request.setHeader(HttpHeaders.Names.ACCEPT_CHARSET, "ISO-8859-1,utf-8;q=0.7,*;q=0.7");
-        request.setHeader(HttpHeaders.Names.ACCEPT_LANGUAGE, "fr");
-        request.setHeader(HttpHeaders.Names.REFERER, uriSimple.toString());
-        request.setHeader(HttpHeaders.Names.USER_AGENT, "Netty Simple Http Client side");
-        request.setHeader(HttpHeaders.Names.ACCEPT, "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        headers.set(HttpHeaders.Names.ACCEPT_CHARSET, "ISO-8859-1,utf-8;q=0.7,*;q=0.7");
+        headers.set(HttpHeaders.Names.ACCEPT_LANGUAGE, "fr");
+        headers.set(HttpHeaders.Names.REFERER, uriSimple.toString());
+        headers.set(HttpHeaders.Names.USER_AGENT, "Netty Simple Http Client side");
+        headers.set(HttpHeaders.Names.ACCEPT, "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
 
-        // connection will not close but needed
-        // request.setHeader("Connection","keep-alive");
-        // request.setHeader("Keep-Alive","300");
-
-        request.setHeader(HttpHeaders.Names.COOKIE, ClientCookieEncoder.encode(new DefaultCookie("my-cookie", "foo"),
+        headers.set(HttpHeaders.Names.COOKIE, ClientCookieEncoder.encode(new DefaultCookie("my-cookie", "foo"),
                 new DefaultCookie("another-cookie", "bar")));
 
         // send request
-        List<Entry<String, String>> headers = request.getHeaders();
-        channel.write(request);
+        List<Entry<String, String>> entries = headers.entries();
+        channel.write(request).sync();
 
         // Wait for the server to close the connection.
         channel.closeFuture().sync();
 
-        return headers;
+        return entries;
     }
 
     /**
@@ -220,7 +218,8 @@ public class HttpUploadClient {
         Channel channel = bootstrap.connect().sync().channel();
 
         // Prepare the HTTP request.
-        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uriSimple.toASCIIString());
+        FullHttpRequest request =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uriSimple.toASCIIString());
 
         // Use the PostBody encoder
         HttpPostRequestEncoder bodyRequestEncoder = null;
@@ -236,7 +235,7 @@ public class HttpUploadClient {
 
         // it is legal to add directly header or cookie into the request until finalize
         for (Entry<String, String> entry : headers) {
-            request.setHeader(entry.getKey(), entry.getValue());
+            request.headers().set(entry.getKey(), entry.getValue());
         }
 
         // add Form attribute
@@ -304,7 +303,8 @@ public class HttpUploadClient {
         Channel channel = bootstrap.connect().sync().channel();
 
         // Prepare the HTTP request.
-        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uriFile.toASCIIString());
+        FullHttpRequest request =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uriFile.toASCIIString());
 
         // Use the PostBody encoder
         HttpPostRequestEncoder bodyRequestEncoder = null;
@@ -320,7 +320,7 @@ public class HttpUploadClient {
 
         // it is legal to add directly header or cookie into the request until finalize
         for (Entry<String, String> entry : headers) {
-            request.setHeader(entry.getKey(), entry.getValue());
+            request.headers().set(entry.getKey(), entry.getValue());
         }
 
         // add Form attribute from previous request in formpost()

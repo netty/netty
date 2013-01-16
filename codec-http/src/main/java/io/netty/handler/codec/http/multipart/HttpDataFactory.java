@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import io.netty.handler.codec.http.HttpRequestHeader;
+import io.netty.handler.codec.http.HttpRequest;
 
 import java.nio.charset.Charset;
 
@@ -28,20 +28,20 @@ public interface HttpDataFactory {
     * @param request associated request
     * @return a new Attribute with no value
     */
-    Attribute createAttribute(HttpRequestHeader request, String name);
+    Attribute createAttribute(HttpRequest request, String name);
 
     /**
      * @param request associated request
      * @return a new Attribute
      */
-    Attribute createAttribute(HttpRequestHeader request, String name, String value);
+    Attribute createAttribute(HttpRequest request, String name, String value);
 
     /**
      * @param request associated request
      * @param size the size of the Uploaded file
      * @return a new FileUpload
      */
-    FileUpload createFileUpload(HttpRequestHeader request, String name, String filename,
+    FileUpload createFileUpload(HttpRequest request, String name, String filename,
                                 String contentType, String contentTransferEncoding, Charset charset,
                                 long size);
 
@@ -50,14 +50,14 @@ public interface HttpDataFactory {
      * is still a temporary one as setup at construction)
      * @param request associated request
      */
-    void removeHttpDataFromClean(HttpRequestHeader request, InterfaceHttpData data);
+    void removeHttpDataFromClean(HttpRequest request, InterfaceHttpData data);
 
     /**
      * Remove all InterfaceHttpData from virtual File storage from clean list for the request
      *
      * @param request associated request
      */
-    void cleanRequestHttpDatas(HttpRequestHeader request);
+    void cleanRequestHttpDatas(HttpRequest request);
 
     /**
      * Remove all InterfaceHttpData from virtual File storage from clean list for all requests

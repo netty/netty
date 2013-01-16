@@ -15,31 +15,61 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.util.internal.StringUtil;
+
+import java.util.Map;
 
 /**
- * Combination of {@link HttpHeader} and {@link LastHttpContent} which can be used to <i>combine</i> the headers and
- * the actual content. {@link HttpObjectAggregator} makes use of this.
- *
+ * The default {@link HttpMessage} implementation.
  */
-public abstract class DefaultHttpMessage extends DefaultHttpHeader implements LastHttpContent {
-    private ByteBuf content = Unpooled.EMPTY_BUFFER;
+public abstract class DefaultHttpMessage extends DefaultHttpObject implements HttpMessage {
 
-    public DefaultHttpMessage(HttpVersion version) {
-        super(version);
-    }
+    private final HttpVersion version;
+    private final HttpHeaders headers = new DefaultHttpHeaders();
 
-    @Override
-    public ByteBuf getContent() {
-        return content;
-    }
-
-    @Override
-    public void setContent(ByteBuf content) {
-        if (content == null) {
-            throw new NullPointerException("content");
+    /**
+     * Creates a new instance.
+     */
+    protected DefaultHttpMessage(final HttpVersion version) {
+        if (version == null) {
+            throw new NullPointerException("version");
         }
-        this.content = content;
+        this.version = version;
+    }
+
+    @Override
+    public HttpHeaders headers() {
+        return headers;
+    }
+
+    @Override
+    public HttpVersion protocolVersion() {
+        return version;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder();
+        buf.append(getClass().getSimpleName());
+        buf.append("(version: ");
+        buf.append(protocolVersion().getText());
+        buf.append(", keepAlive: ");
+        buf.append(HttpHeaders.isKeepAlive(this));
+        buf.append(')');
+        buf.append(StringUtil.NEWLINE);
+        appendHeaders(buf);
+
+        // Remove the last newline.
+        buf.setLength(buf.length() - StringUtil.NEWLINE.length());
+        return buf.toString();
+    }
+
+    void appendHeaders(StringBuilder buf) {
+        for (Map.Entry<String, String> e: headers().entries()) {
+            buf.append(e.getKey());
+            buf.append(": ");
+            buf.append(e.getValue());
+            buf.append(StringUtil.NEWLINE);
+        }
     }
 }

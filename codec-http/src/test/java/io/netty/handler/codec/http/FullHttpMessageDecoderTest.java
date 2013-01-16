@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import static org.junit.Assert.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
@@ -23,20 +22,21 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedMessageChannel;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
-
-import java.util.List;
-
 import org.easymock.EasyMock;
 import org.junit.Test;
 
-public class HttpObjectAggregatorTest {
+import java.util.List;
+
+import static org.junit.Assert.*;
+
+public class FullHttpMessageDecoderTest {
 
     @Test
     public void testAggregate() {
         HttpObjectAggregator aggr = new HttpObjectAggregator(1024 * 1024);
         EmbeddedMessageChannel embedder = new EmbeddedMessageChannel(aggr);
 
-        HttpRequestHeader message = new DefaultHttpRequestHeader(HttpVersion.HTTP_1_1,
+        HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
                 HttpMethod.GET, "http://localhost");
         HttpHeaders.setHeader(message, "X-Test", true);
         HttpContent chunk1 = new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
@@ -49,18 +49,18 @@ public class HttpObjectAggregatorTest {
         // this should trigger a messageReceived event so return true
         assertTrue(embedder.writeInbound(chunk3));
         assertTrue(embedder.finish());
-        DefaultHttpRequest aggratedMessage = (DefaultHttpRequest) embedder.readInbound();
+        DefaultFullHttpRequest aggratedMessage = (DefaultFullHttpRequest) embedder.readInbound();
         assertNotNull(aggratedMessage);
 
-        assertEquals(chunk1.getContent().readableBytes() + chunk2.getContent().readableBytes(), HttpHeaders.getContentLength(aggratedMessage));
-        assertEquals(aggratedMessage.getHeader("X-Test"), Boolean.TRUE.toString());
+        assertEquals(chunk1.data().readableBytes() + chunk2.data().readableBytes(), HttpHeaders.getContentLength(aggratedMessage));
+        assertEquals(aggratedMessage.headers().get("X-Test"), Boolean.TRUE.toString());
         checkContentBuffer(aggratedMessage);
         assertNull(embedder.readInbound());
 
     }
 
-    private static void checkContentBuffer(DefaultHttpRequest aggregatedMessage) {
-        CompositeByteBuf buffer = (CompositeByteBuf) aggregatedMessage.getContent();
+    private static void checkContentBuffer(DefaultFullHttpRequest aggregatedMessage) {
+        CompositeByteBuf buffer = (CompositeByteBuf) aggregatedMessage.data();
         assertEquals(2, buffer.numComponents());
         List<ByteBuf> buffers = buffer.decompose(0, buffer.capacity());
         assertEquals(2, buffers.size());
@@ -74,14 +74,14 @@ public class HttpObjectAggregatorTest {
     public void testAggregateWithTrailer() {
         HttpObjectAggregator aggr = new HttpObjectAggregator(1024 * 1024);
         EmbeddedMessageChannel embedder = new EmbeddedMessageChannel(aggr);
-        HttpRequestHeader message = new DefaultHttpRequestHeader(HttpVersion.HTTP_1_1,
+        HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
                 HttpMethod.GET, "http://localhost");
         HttpHeaders.setHeader(message, "X-Test", true);
         HttpHeaders.setTransferEncodingChunked(message);
         HttpContent chunk1 = new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
         HttpContent chunk2 = new DefaultHttpContent(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII));
         LastHttpContent trailer = new DefaultLastHttpContent();
-        trailer.setHeader("X-Trailer", true);
+        trailer.trailingHeaders().set("X-Trailer", true);
 
         assertFalse(embedder.writeInbound(message));
         assertFalse(embedder.writeInbound(chunk1));
@@ -90,12 +90,12 @@ public class HttpObjectAggregatorTest {
         // this should trigger a messageReceived event so return true
         assertTrue(embedder.writeInbound(trailer));
         assertTrue(embedder.finish());
-        DefaultHttpRequest aggratedMessage = (DefaultHttpRequest) embedder.readInbound();
+        DefaultFullHttpRequest aggratedMessage = (DefaultFullHttpRequest) embedder.readInbound();
         assertNotNull(aggratedMessage);
 
-        assertEquals(chunk1.getContent().readableBytes() + chunk2.getContent().readableBytes(), HttpHeaders.getContentLength(aggratedMessage));
-        assertEquals(aggratedMessage.getHeader("X-Test"), Boolean.TRUE.toString());
-        assertEquals(aggratedMessage.getHeader("X-Trailer"), Boolean.TRUE.toString());
+        assertEquals(chunk1.data().readableBytes() + chunk2.data().readableBytes(), HttpHeaders.getContentLength(aggratedMessage));
+        assertEquals(aggratedMessage.headers().get("X-Test"), Boolean.TRUE.toString());
+        assertEquals(aggratedMessage.headers().get("X-Trailer"), Boolean.TRUE.toString());
         checkContentBuffer(aggratedMessage);
 
         assertNull(embedder.readInbound());
@@ -107,7 +107,7 @@ public class HttpObjectAggregatorTest {
     public void testTooLongFrameException() {
         HttpObjectAggregator aggr = new HttpObjectAggregator(4);
         EmbeddedMessageChannel embedder = new EmbeddedMessageChannel(aggr);
-        HttpRequestHeader message = new DefaultHttpRequestHeader(HttpVersion.HTTP_1_1,
+        HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
                 HttpMethod.GET, "http://localhost");
         HttpContent chunk1 = new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
         HttpContent chunk2 = new DefaultHttpContent(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII));

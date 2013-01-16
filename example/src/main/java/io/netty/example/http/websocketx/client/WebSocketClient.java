@@ -44,6 +44,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
@@ -91,6 +92,7 @@ public class WebSocketClient {
                      ChannelPipeline pipeline = ch.pipeline();
                      pipeline.addLast("decoder", new HttpResponseDecoder());
                      pipeline.addLast("encoder", new HttpRequestEncoder());
+                     pipeline.addLast("aggregator", new HttpObjectAggregator(8192));
                      pipeline.addLast("ws-handler", handler);
                  }
              });
@@ -101,7 +103,7 @@ public class WebSocketClient {
 
             // Send 10 messages and wait for responses
             System.out.println("WebSocket Client sending message");
-            for (int i = 0; i < 1; i++) {
+            for (int i = 0; i < 10; i++) {
                 ch.write(new TextWebSocketFrame("Message #" + i));
             }
 

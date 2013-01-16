@@ -18,6 +18,14 @@ package io.netty.handler.codec.http;
 import io.netty.handler.codec.DecoderResult;
 
 public interface HttpObject {
-    DecoderResult getDecoderResult();
-    void setDecoderResult(DecoderResult result);
+    /**
+     * Returns the result of decoding this message.
+     */
+    DecoderResult decoderResult();
+
+    /**
+     * Updates the result of decoding this message. This method is supposed to be invoked by {@link HttpObjectDecoder}.
+     * Do not call this method unless you know what you are doing.
+     */
+    void updateDecoderResult(DecoderResult result);
 }

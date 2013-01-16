@@ -84,8 +84,8 @@ public class HttpClientCodec extends CombinedChannelHandler {
         @Override
         protected void encode(
                 ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
-            if (msg instanceof HttpRequestHeader && !done) {
-                queue.offer(((HttpRequestHeader) msg).getMethod());
+            if (msg instanceof HttpRequest && !done) {
+                queue.offer(((HttpRequest) msg).method());
             }
 
             super.encode(ctx, msg, out);
@@ -137,8 +137,8 @@ public class HttpClientCodec extends CombinedChannelHandler {
         }
 
         @Override
-        protected boolean isContentAlwaysEmpty(HttpHeader msg) {
-            final int statusCode = ((HttpResponseHeader) msg).getStatus().getCode();
+        protected boolean isContentAlwaysEmpty(HttpMessage msg) {
+            final int statusCode = ((HttpResponse) msg).status().code();
             if (statusCode == 100) {
                 // 100-continue response should be excluded from paired comparison.
                 return true;
@@ -148,7 +148,7 @@ public class HttpClientCodec extends CombinedChannelHandler {
             // current response.
             HttpMethod method = queue.poll();
 
-            char firstChar = method.getName().charAt(0);
+            char firstChar = method.name().charAt(0);
             switch (firstChar) {
             case 'H':
                 // According to 4.3, RFC2616:

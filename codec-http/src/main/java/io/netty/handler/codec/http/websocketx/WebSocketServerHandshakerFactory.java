@@ -16,10 +16,10 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.channel.Channel;
-import io.netty.handler.codec.http.DefaultHttpResponseHeader;
+import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders.Names;
-import io.netty.handler.codec.http.HttpRequestHeader;
-import io.netty.handler.codec.http.HttpResponseHeader;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 
@@ -81,9 +81,9 @@ public class WebSocketServerHandshakerFactory {
      * @return A new WebSocketServerHandshaker for the requested web socket version. Null if web
      *         socket version is not supported.
      */
-    public WebSocketServerHandshaker newHandshaker(HttpRequestHeader req) {
+    public WebSocketServerHandshaker newHandshaker(HttpRequest req) {
 
-        String version = req.getHeader(Names.SEC_WEBSOCKET_VERSION);
+        String version = req.headers().get(Names.SEC_WEBSOCKET_VERSION);
         if (version != null) {
             if (version.equals(WebSocketVersion.V13.toHttpHeaderValue())) {
                 // Version 13 of the wire protocol - RFC 6455 (version 17 of the draft hybi specification).
@@ -113,11 +113,10 @@ public class WebSocketServerHandshakerFactory {
      *            Channel
      */
     public static void sendUnsupportedWebSocketVersionResponse(Channel channel) {
-        HttpResponseHeader res = new DefaultHttpResponseHeader(
+        HttpResponse res = new DefaultHttpResponse(
                 HttpVersion.HTTP_1_1,
-                HttpResponseStatus.SWITCHING_PROTOCOLS);
-        res.setStatus(HttpResponseStatus.UPGRADE_REQUIRED);
-        res.setHeader(Names.SEC_WEBSOCKET_VERSION, WebSocketVersion.V13.toHttpHeaderValue());
+                HttpResponseStatus.UPGRADE_REQUIRED);
+        res.headers().set(Names.SEC_WEBSOCKET_VERSION, WebSocketVersion.V13.toHttpHeaderValue());
         channel.write(res);
     }
 }

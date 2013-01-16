@@ -20,7 +20,7 @@ import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 
 /**
- * Decompresses an {@link HttpHeader} and an {@link HttpContent} compressed in
+ * Decompresses an {@link HttpMessage} and an {@link HttpContent} compressed in
  * {@code gzip} or {@code deflate} encoding.  For more information on how this
  * handler modifies the message, please refer to {@link HttpContentDecoder}.
  */

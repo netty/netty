@@ -22,9 +22,9 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.example.http.websocketx.server.WebSocketServerIndexPage;
-import io.netty.handler.codec.http.DefaultHttpResponse;
-import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
@@ -54,42 +54,40 @@ public class WebSocketSslServerHandler extends ChannelInboundMessageHandlerAdapt
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof HttpRequest) {
-            handleHttpRequest(ctx, (HttpRequest) msg);
+        if (msg instanceof FullHttpRequest) {
+            handleHttpRequest(ctx, (FullHttpRequest) msg);
         } else if (msg instanceof WebSocketFrame) {
             handleWebSocketFrame(ctx, (WebSocketFrame) msg);
         }
     }
 
-    private void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest req) throws Exception {
+    private void handleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
         // Handle a bad request.
-        if (!req.getDecoderResult().isSuccess()) {
-            sendHttpResponse(ctx, req, new DefaultHttpResponse(HTTP_1_1, BAD_REQUEST));
+        if (!req.decoderResult().isSuccess()) {
+            sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST));
             return;
         }
 
         // Allow only GET methods.
-        if (req.getMethod() != GET) {
-            sendHttpResponse(ctx, req, new DefaultHttpResponse(HTTP_1_1, FORBIDDEN));
+        if (req.method() != GET) {
+            sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN));
             return;
         }
 
         // Send the demo page and favicon.ico
-        if ("/".equals(req.getUri())) {
-            HttpResponse res = new DefaultHttpResponse(HTTP_1_1, OK);
-
+        if ("/".equals(req.uri())) {
             ByteBuf content = WebSocketServerIndexPage.getContent(getWebSocketLocation(req));
+            FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
 
-            res.setHeader(CONTENT_TYPE, "text/html; charset=UTF-8");
+            res.headers().set(CONTENT_TYPE, "text/html; charset=UTF-8");
             setContentLength(res, content.readableBytes());
 
-            res.setContent(content);
             sendHttpResponse(ctx, req, res);
             return;
         }
 
-        if ("/favicon.ico".equals(req.getUri())) {
-            HttpResponse res = new DefaultHttpResponse(HTTP_1_1, NOT_FOUND);
+        if ("/favicon.ico".equals(req.uri())) {
+            FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, NOT_FOUND);
             sendHttpResponse(ctx, req, res);
             return;
         }
@@ -129,16 +127,17 @@ public class WebSocketSslServerHandler extends ChannelInboundMessageHandlerAdapt
         ctx.channel().write(new TextWebSocketFrame(request.toUpperCase()));
     }
 
-    private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
+    private static void sendHttpResponse(
+            ChannelHandlerContext ctx, FullHttpRequest req, FullHttpResponse res) {
         // Generate an error page if response status code is not OK (200).
-        if (res.getStatus().getCode() != 200) {
-            res.setContent(Unpooled.copiedBuffer(res.getStatus().toString(), CharsetUtil.UTF_8));
-            setContentLength(res, res.getContent().readableBytes());
+        if (res.status().code() != 200) {
+            res.data().writeBytes(Unpooled.copiedBuffer(res.status().toString(), CharsetUtil.UTF_8));
+            setContentLength(res, res.data().readableBytes());
         }
 
         // Send the response and close the connection if necessary.
         ChannelFuture f = ctx.channel().write(res);
-        if (!isKeepAlive(req) || res.getStatus().getCode() != 200) {
+        if (!isKeepAlive(req) || res.status().code() != 200) {
             f.addListener(ChannelFutureListener.CLOSE);
         }
     }
@@ -149,7 +148,7 @@ public class WebSocketSslServerHandler extends ChannelInboundMessageHandlerAdapt
         ctx.close();
     }
 
-    private static String getWebSocketLocation(HttpRequest req) {
-        return "wss://" + req.getHeader(HOST) + WEBSOCKET_PATH;
+    private static String getWebSocketLocation(FullHttpRequest req) {
+        return "wss://" + req.headers().get(HOST) + WEBSOCKET_PATH;
     }
 }

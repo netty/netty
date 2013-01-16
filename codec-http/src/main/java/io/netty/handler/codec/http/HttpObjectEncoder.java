@@ -15,8 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.buffer.Unpooled.*;
-import static io.netty.handler.codec.http.HttpConstants.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
@@ -24,8 +22,11 @@ import io.netty.util.CharsetUtil;
 
 import java.util.Map;
 
+import static io.netty.buffer.Unpooled.*;
+import static io.netty.handler.codec.http.HttpConstants.*;
+
 /**
- * Encodes an {@link HttpHeader} or an {@link HttpContent} into
+ * Encodes an {@link HttpMessage} or an {@link HttpContent} into
  * a {@link ByteBuf}.
  *
  * <h3>Extensibility</h3>
@@ -38,9 +39,14 @@ import java.util.Map;
  * implement all abstract methods properly.
  * @apiviz.landmark
  */
-public abstract class HttpObjectEncoder<H extends HttpHeader> extends MessageToByteEncoder<Object> {
+public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageToByteEncoder<Object> {
 
-    private boolean chunked;
+    private static final int ST_INIT = 0;
+    private static final int ST_CONTENT_NON_CHUNK = 1;
+    private static final int ST_CONTENT_CHUNK = 2;
+
+    @SuppressWarnings("RedundantFieldInitialization")
+    private int state = ST_INIT;
 
     /**
      * Creates a new instance.
@@ -49,38 +55,44 @@ public abstract class HttpObjectEncoder<H extends HttpHeader> extends MessageToB
         super(HttpObject.class);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
+    @SuppressWarnings("unchecked")
     protected void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
-        if (msg instanceof HttpHeader) {
-            HttpHeader m = (HttpHeader) msg;
-            chunked = HttpHeaders.isTransferEncodingChunked(m);
-            // Encode the message.
-            out.markWriterIndex();
+        if (msg instanceof HttpMessage) {
+            if (state != ST_INIT) {
+                throw new IllegalStateException("unexpected message type: " + msg.getClass().getSimpleName());
+            }
 
+            HttpMessage m = (HttpMessage) msg;
+
+            // Encode the message.
             encodeInitialLine(out, (H) m);
             encodeHeaders(out, m);
             out.writeByte(CR);
             out.writeByte(LF);
+
+            state = HttpHeaders.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
         }
 
         if (msg instanceof HttpContent) {
-            HttpContent chunk = (HttpContent) msg;
+            if (state == ST_INIT) {
+                throw new IllegalStateException("unexpected message type: " + msg.getClass().getSimpleName());
+            }
 
-            if (!chunked) {
-                ByteBuf content = chunk.getContent();
-                out.writeBytes(content, content.readerIndex(), content.readableBytes());
-            } else {
+            HttpContent chunk = (HttpContent) msg;
+            ByteBuf content = chunk.data();
+            int contentLength = content.readableBytes();
+
+            if (state == ST_CONTENT_NON_CHUNK) {
+                if (contentLength > 0) {
+                    out.writeBytes(content, content.readerIndex(), content.readableBytes());
+                }
+
                 if (chunk instanceof LastHttpContent) {
-                    out.writeByte((byte) '0');
-                    out.writeByte(CR);
-                    out.writeByte(LF);
-                    encodeTrailingHeaders(out, (LastHttpContent) chunk);
-                    out.writeByte(CR);
-                    out.writeByte(LF);
-                } else {
-                    ByteBuf content = chunk.getContent();
-                    int contentLength = content.readableBytes();
+                    state = ST_INIT;
+                }
+            } else if (state == ST_CONTENT_CHUNK) {
+                if (contentLength > 0) {
                     out.writeBytes(copiedBuffer(Integer.toHexString(contentLength), CharsetUtil.US_ASCII));
                     out.writeByte(CR);
                     out.writeByte(LF);
@@ -88,18 +100,30 @@ public abstract class HttpObjectEncoder<H extends HttpHeader> extends MessageToB
                     out.writeByte(CR);
                     out.writeByte(LF);
                 }
+
+                if (chunk instanceof LastHttpContent) {
+                    out.writeByte((byte) '0');
+                    out.writeByte(CR);
+                    out.writeByte(LF);
+                    encodeTrailingHeaders(out, (LastHttpContent) chunk);
+                    out.writeByte(CR);
+                    out.writeByte(LF);
+                    state = ST_INIT;
+                }
+            } else {
+                throw new Error();
             }
         }
     }
 
-    private static void encodeHeaders(ByteBuf buf, HttpHeader message) {
-        for (Map.Entry<String, String> h: message.getHeaders()) {
+    private static void encodeHeaders(ByteBuf buf, HttpMessage message) {
+        for (Map.Entry<String, String> h: message.headers()) {
             encodeHeader(buf, h.getKey(), h.getValue());
         }
     }
 
     private static void encodeTrailingHeaders(ByteBuf buf, LastHttpContent trailer) {
-        for (Map.Entry<String, String> h: trailer.getHeaders()) {
+        for (Map.Entry<String, String> h: trailer.trailingHeaders()) {
             encodeHeader(buf, h.getKey(), h.getValue());
         }
     }

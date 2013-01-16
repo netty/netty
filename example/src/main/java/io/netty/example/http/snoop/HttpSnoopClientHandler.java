@@ -19,7 +19,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpResponseHeader;
+import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
 
@@ -27,16 +27,16 @@ public class HttpSnoopClientHandler extends ChannelInboundMessageHandlerAdapter<
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof HttpResponseHeader) {
-            HttpResponseHeader response = (HttpResponseHeader) msg;
+        if (msg instanceof HttpResponse) {
+            HttpResponse response = (HttpResponse) msg;
 
-            System.out.println("STATUS: " + response.getStatus());
-            System.out.println("VERSION: " + response.getProtocolVersion());
+            System.out.println("STATUS: " + response.status());
+            System.out.println("VERSION: " + response.protocolVersion());
             System.out.println();
 
-            if (!response.getHeaderNames().isEmpty()) {
-                for (String name: response.getHeaderNames()) {
-                    for (String value: response.getHeaders(name)) {
+            if (!response.headers().isEmpty()) {
+                for (String name: response.headers().names()) {
+                    for (String value: response.headers().getAll(name)) {
                         System.out.println("HEADER: " + name + " = " + value);
                     }
                 }
@@ -52,7 +52,7 @@ public class HttpSnoopClientHandler extends ChannelInboundMessageHandlerAdapter<
         if (msg instanceof HttpContent) {
             HttpContent content = (HttpContent) msg;
 
-            System.out.print(content.getContent().toString(CharsetUtil.UTF_8));
+            System.out.print(content.data().toString(CharsetUtil.UTF_8));
             System.out.flush();
 
             if (content instanceof LastHttpContent) {
