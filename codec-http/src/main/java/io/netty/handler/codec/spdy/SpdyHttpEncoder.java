@@ -175,7 +175,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
                     // Create SPDY HEADERS frame out of trailers
                     SpdyHeadersFrame spdyHeadersFrame = new DefaultSpdyHeadersFrame(currentStreamId);
                     for (Map.Entry<String, String> entry: trailers) {
-                        spdyHeadersFrame.addHeader(entry.getKey(), entry.getValue());
+                        spdyHeadersFrame.headers().add(entry.getKey(), entry.getValue());
                     }
 
                     // Write HEADERS frame and append Data Frame
@@ -246,7 +246,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
 
         // Transfer the remaining HTTP headers
         for (Map.Entry<String, String> entry: httpMessage.headers()) {
-            spdySynStreamFrame.addHeader(entry.getKey(), entry.getValue());
+            spdySynStreamFrame.headers().add(entry.getKey(), entry.getValue());
         }
         currentStreamId = spdySynStreamFrame.getStreamId();
 
@@ -276,7 +276,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
 
         // Transfer the remaining HTTP headers
         for (Map.Entry<String, String> entry: httpResponse.headers()) {
-            spdySynReplyFrame.addHeader(entry.getKey(), entry.getValue());
+            spdySynReplyFrame.headers().add(entry.getKey(), entry.getValue());
         }
 
         if (chunked) {

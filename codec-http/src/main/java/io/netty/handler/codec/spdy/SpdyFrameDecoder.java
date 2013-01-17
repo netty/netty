@@ -613,7 +613,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
             String name = new String(nameBytes, "UTF-8");
 
             // Check for identically named headers
-            if (spdyHeaderBlock.containsHeader(name)) {
+            if (spdyHeaderBlock.headers().contains(name)) {
                 spdyHeaderBlock.setInvalid();
                 return;
             }
@@ -638,7 +638,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
                     spdyHeaderBlock.setInvalid();
                     return;
                 } else {
-                    spdyHeaderBlock.addHeader(name, "");
+                    spdyHeaderBlock.headers().add(name, "");
                     numHeaders --;
                     this.headerSize = headerSize;
                     continue;
@@ -676,7 +676,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
                 String value = new String(valueBytes, offset, index - offset, "UTF-8");
 
                 try {
-                    spdyHeaderBlock.addHeader(name, value);
+                    spdyHeaderBlock.headers().add(name, value);
                 } catch (IllegalArgumentException e) {
                     // Name contains NULL or non-ascii characters
                     spdyHeaderBlock.setInvalid();

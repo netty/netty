@@ -18,26 +18,15 @@ package io.netty.handler.codec.spdy;
 /**
  * A SPDY Protocol HEADERS Control Frame
  */
-public interface SpdyHeadersFrame extends SpdyHeaderBlock, SpdyControlFrame {
+public interface SpdyHeadersFrame extends SpdyHeaderBlock, SpdyControlFrame, SpdyStreamFrame {
 
-    /**
-     * Returns the Stream-ID of this frame.
-     */
-    int getStreamId();
+    @Override
+    SpdyHeadersFrame setStreamId(int streamID);
 
-    /**
-     * Sets the Stream-ID of this frame.  The Stream-ID must be positive.
-     */
-    void setStreamId(int streamID);
+    @Override
+    SpdyHeadersFrame setLast(boolean last);
 
-    /**
-     * Returns {@code true} if this frame is the last frame to be transmitted
-     * on the stream.
-     */
-    boolean isLast();
+    @Override
+    SpdyHeadersFrame setInvalid();
 
-    /**
-     * Sets if this frame is the last frame to be transmitted on the stream.
-     */
-    void setLast(boolean last);
 }

@@ -49,12 +49,13 @@ public class DefaultSpdySynStreamFrame extends DefaultSpdyHeaderBlock
     }
 
     @Override
-    public void setStreamId(int streamId) {
+    public SpdySynStreamFrame setStreamId(int streamId) {
         if (streamId <= 0) {
             throw new IllegalArgumentException(
                     "Stream-ID must be positive: " + streamId);
         }
         this.streamId = streamId;
+        return this;
     }
 
     @Override
@@ -63,13 +64,14 @@ public class DefaultSpdySynStreamFrame extends DefaultSpdyHeaderBlock
     }
 
     @Override
-    public void setAssociatedToStreamId(int associatedToStreamId) {
+    public SpdySynStreamFrame setAssociatedToStreamId(int associatedToStreamId) {
         if (associatedToStreamId < 0) {
             throw new IllegalArgumentException(
                     "Associated-To-Stream-ID cannot be negative: " +
                     associatedToStreamId);
         }
         this.associatedToStreamId = associatedToStreamId;
+        return this;
     }
 
     @Override
@@ -78,12 +80,13 @@ public class DefaultSpdySynStreamFrame extends DefaultSpdyHeaderBlock
     }
 
     @Override
-    public void setPriority(byte priority) {
+    public SpdySynStreamFrame setPriority(byte priority) {
         if (priority < 0 || priority > 7) {
             throw new IllegalArgumentException(
                     "Priority must be between 0 and 7 inclusive: " + priority);
         }
         this.priority = priority;
+        return this;
     }
 
     @Override
@@ -92,8 +95,9 @@ public class DefaultSpdySynStreamFrame extends DefaultSpdyHeaderBlock
     }
 
     @Override
-    public void setLast(boolean last) {
+    public SpdySynStreamFrame setLast(boolean last) {
         this.last = last;
+        return this;
     }
 
     @Override
@@ -102,8 +106,15 @@ public class DefaultSpdySynStreamFrame extends DefaultSpdyHeaderBlock
     }
 
     @Override
-    public void setUnidirectional(boolean unidirectional) {
+    public SpdySynStreamFrame setUnidirectional(boolean unidirectional) {
         this.unidirectional = unidirectional;
+        return this;
+    }
+
+    @Override
+    public SpdySynStreamFrame setInvalid() {
+        super.setInvalid();
+        return this;
     }
 
     @Override

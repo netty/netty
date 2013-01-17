@@ -42,12 +42,13 @@ public class DefaultSpdyWindowUpdateFrame implements SpdyWindowUpdateFrame {
     }
 
     @Override
-    public void setStreamId(int streamId) {
+    public SpdyWindowUpdateFrame setStreamId(int streamId) {
         if (streamId <= 0) {
             throw new IllegalArgumentException(
                     "Stream-ID must be positive: " + streamId);
         }
         this.streamId = streamId;
+        return this;
     }
 
     @Override
@@ -56,13 +57,14 @@ public class DefaultSpdyWindowUpdateFrame implements SpdyWindowUpdateFrame {
     }
 
     @Override
-    public void setDeltaWindowSize(int deltaWindowSize) {
+    public SpdyWindowUpdateFrame setDeltaWindowSize(int deltaWindowSize) {
         if (deltaWindowSize <= 0) {
             throw new IllegalArgumentException(
                     "Delta-Window-Size must be positive: " +
                     deltaWindowSize);
         }
         this.deltaWindowSize = deltaWindowSize;
+        return this;
     }
 
     @Override

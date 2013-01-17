@@ -39,8 +39,9 @@ public class DefaultSpdyPingFrame implements SpdyPingFrame {
     }
 
     @Override
-    public void setId(int id) {
+    public SpdyPingFrame setId(int id) {
         this.id = id;
+        return this;
     }
 
     @Override

@@ -182,7 +182,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
                 return null;
             }
 
-            for (Map.Entry<String, String> e: spdyHeadersFrame.getHeaders()) {
+            for (Map.Entry<String, String> e: spdyHeadersFrame.headers().entries()) {
                 httpMessage.headers().add(e.getKey(), e.getValue());
             }
 
@@ -247,7 +247,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
             HttpHeaders.setHost(req, host);
         }
 
-        for (Map.Entry<String, String> e: requestFrame.getHeaders()) {
+        for (Map.Entry<String, String> e: requestFrame.headers().entries()) {
             req.headers().add(e.getKey(), e.getValue());
         }
 
@@ -269,7 +269,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
         SpdyHeaders.removeVersion(spdyVersion, responseFrame);
 
         FullHttpResponse res = new DefaultFullHttpResponse(version, status);
-        for (Map.Entry<String, String> e: responseFrame.getHeaders()) {
+        for (Map.Entry<String, String> e: responseFrame.headers().entries()) {
             res.headers().add(e.getKey(), e.getValue());
         }
 
