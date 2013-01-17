@@ -41,15 +41,15 @@ public class SpdySessionHandlerTest {
     }
 
     private static void assertHeaderBlock(SpdyHeaderBlock received, SpdyHeaderBlock expected) {
-        for (String name: expected.getHeaderNames()) {
-            List<String> expectedValues = expected.getHeaders(name);
-            List<String> receivedValues = received.getHeaders(name);
+        for (String name: expected.headers().names()) {
+            List<String> expectedValues = expected.headers().getAll(name);
+            List<String> receivedValues = received.headers().getAll(name);
             assertTrue(receivedValues.containsAll(expectedValues));
             receivedValues.removeAll(expectedValues);
             assertTrue(receivedValues.isEmpty());
-            received.removeHeader(name);
+            received.headers().remove(name);
         }
-        assertTrue(received.getHeaders().isEmpty());
+        assertTrue(received.headers().entries().isEmpty());
     }
 
     private static void assertDataFrame(Object msg, int streamID, boolean last) {
@@ -139,14 +139,14 @@ public class SpdySessionHandlerTest {
 
         SpdySynStreamFrame spdySynStreamFrame =
                 new DefaultSpdySynStreamFrame(localStreamID, 0, (byte) 0);
-        spdySynStreamFrame.setHeader("Compression", "test");
+        spdySynStreamFrame.headers().set("Compression", "test");
         // Check if frame codec correctly compresses/uncompresses headers
         sessionHandler.writeInbound(spdySynStreamFrame);
         assertSynReply(sessionHandler.readOutbound(), localStreamID, false, spdySynStreamFrame);
         assertNull(sessionHandler.readOutbound());
         SpdyHeadersFrame spdyHeadersFrame = new DefaultSpdyHeadersFrame(localStreamID);
-        spdyHeadersFrame.addHeader("HEADER","test1");
-        spdyHeadersFrame.addHeader("HEADER","test2");
+        spdyHeadersFrame.headers().add("HEADER","test1");
+        spdyHeadersFrame.headers().add("HEADER","test2");
 
         sessionHandler.writeInbound(spdyHeadersFrame);
         assertHeaders(sessionHandler.readOutbound(), localStreamID, spdyHeadersFrame);
@@ -157,7 +157,7 @@ public class SpdySessionHandlerTest {
         // of concurrent streams and that it returns REFUSED_STREAM
         // if it receives a SYN_STREAM frame it does not wish to accept
         spdySynStreamFrame = new DefaultSpdySynStreamFrame(localStreamID, 0, (byte) 0, true, true);
-        spdySynStreamFrame.setHeader("Compression", "test");
+        spdySynStreamFrame.headers().set("Compression", "test");
         sessionHandler.writeInbound(spdySynStreamFrame);
         assertRstStream(sessionHandler.readOutbound(), localStreamID, SpdyStreamStatus.REFUSED_STREAM);
         assertNull(sessionHandler.readOutbound());
@@ -170,12 +170,12 @@ public class SpdySessionHandlerTest {
 
         // Check if session handler honors UNIDIRECTIONAL streams
         spdySynStreamFrame = new DefaultSpdySynStreamFrame(localStreamID, 0, (byte) 0, true, false);
-        spdySynStreamFrame.setHeader("Compression", "test");
+        spdySynStreamFrame.headers().set("Compression", "test");
 
         sessionHandler.writeInbound(spdySynStreamFrame);
         assertNull(sessionHandler.readOutbound());
         spdySynStreamFrame = new DefaultSpdySynStreamFrame(localStreamID, 0, (byte) 0, false, false);
-        spdySynStreamFrame.setHeader("Compression", "test");
+        spdySynStreamFrame.headers().set("Compression", "test");
 
         // Check if session handler returns PROTOCOL_ERROR if it receives
         // multiple SYN_STREAM frames for the same active Stream-ID
@@ -187,14 +187,14 @@ public class SpdySessionHandlerTest {
         // Check if session handler returns PROTOCOL_ERROR if it receives
         // a SYN_STREAM frame with an invalid Stream-ID
         spdySynStreamFrame = new DefaultSpdySynStreamFrame(localStreamID -1, 0, (byte) 0, false, false);
-        spdySynStreamFrame.setHeader("Compression", "test");
+        spdySynStreamFrame.headers().set("Compression", "test");
 
         sessionHandler.writeInbound(spdySynStreamFrame);
         assertRstStream(sessionHandler.readOutbound(), localStreamID - 1, SpdyStreamStatus.PROTOCOL_ERROR);
         assertNull(sessionHandler.readOutbound());
 
         spdySynStreamFrame = new DefaultSpdySynStreamFrame(localStreamID, 0, (byte) 0, false, false);
-        spdySynStreamFrame.setHeader("Compression", "test");
+        spdySynStreamFrame.headers().set("Compression", "test");
 
         // Check if session handler correctly limits the number of
         // concurrent streams in the SETTINGS frame
@@ -221,8 +221,8 @@ public class SpdySessionHandlerTest {
         assertNull(sessionHandler.readOutbound());
 
         spdyHeadersFrame = new DefaultSpdyHeadersFrame(testStreamID);
-        spdyHeadersFrame.addHeader("HEADER","test1");
-        spdyHeadersFrame.addHeader("HEADER","test2");
+        spdyHeadersFrame.headers().set("HEADER","test1");
+        spdyHeadersFrame.headers().set("HEADER","test2");
 
         sessionHandler.writeInbound(spdyHeadersFrame);
         assertRstStream(sessionHandler.readOutbound(), testStreamID, SpdyStreamStatus.INVALID_STREAM);
@@ -232,8 +232,8 @@ public class SpdySessionHandlerTest {
         // an invalid HEADERS frame
 
         spdyHeadersFrame = new DefaultSpdyHeadersFrame(localStreamID);
-        spdyHeadersFrame.addHeader("HEADER","test1");
-        spdyHeadersFrame.addHeader("HEADER","test2");
+        spdyHeadersFrame.headers().set("HEADER","test1");
+        spdyHeadersFrame.headers().set("HEADER","test2");
         spdyHeadersFrame.setInvalid();
         sessionHandler.writeInbound(spdyHeadersFrame);
         assertRstStream(sessionHandler.readOutbound(), localStreamID, SpdyStreamStatus.PROTOCOL_ERROR);
@@ -328,8 +328,8 @@ public class SpdySessionHandlerTest {
                     int streamID = spdySynStreamFrame.streamId();
                     SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamID,
                             spdySynStreamFrame.isLast());
-                    for (Map.Entry<String, String> entry: spdySynStreamFrame.getHeaders()) {
-                        spdySynReplyFrame.addHeader(entry.getKey(), entry.getValue());
+                    for (Map.Entry<String, String> entry: spdySynStreamFrame.headers()) {
+                        spdySynReplyFrame.headers().add(entry.getKey(), entry.getValue());
                     }
 
                     ctx.write(spdySynReplyFrame);

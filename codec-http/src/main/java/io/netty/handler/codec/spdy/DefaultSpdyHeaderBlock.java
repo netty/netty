@@ -17,9 +17,7 @@ package io.netty.handler.codec.spdy;
 
 import io.netty.util.internal.StringUtil;
 
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * The default {@link SpdyHeaderBlock} implementation.
@@ -27,7 +25,7 @@ import java.util.Set;
 public class DefaultSpdyHeaderBlock implements SpdyHeaderBlock {
 
     private boolean invalid;
-    private final SpdyHeaders headers = new SpdyHeaders();
+    private final SpdyHeaders headers = new DefaultSpdyHeaders();
 
     /**
      * Creates a new instance.
@@ -47,62 +45,11 @@ public class DefaultSpdyHeaderBlock implements SpdyHeaderBlock {
     }
 
     @Override
-    public SpdyHeaderBlock addHeader(final String name, final Object value) {
-        headers.addHeader(name, value);
-        return this;
+    public SpdyHeaders headers() {
+        return headers;
     }
-
-    @Override
-    public SpdyHeaderBlock setHeader(final String name, final Object value) {
-        headers.setHeader(name, value);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaderBlock setHeader(final String name, final Iterable<?> values) {
-        headers.setHeader(name, values);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaderBlock removeHeader(final String name) {
-        headers.removeHeader(name);
-        return this;
-    }
-
-    @Override
-    public SpdyHeaderBlock clearHeaders() {
-        headers.clearHeaders();
-        return this;
-    }
-
-    @Override
-    public String getHeader(final String name) {
-        return headers.getHeader(name);
-    }
-
-    @Override
-    public List<String> getHeaders(final String name) {
-        return headers.getHeaders(name);
-    }
-
-    @Override
-    public List<Map.Entry<String, String>> getHeaders() {
-        return headers.getHeaders();
-    }
-
-    @Override
-    public boolean containsHeader(final String name) {
-        return headers.containsHeader(name);
-    }
-
-    @Override
-    public Set<String> getHeaderNames() {
-        return headers.getHeaderNames();
-    }
-
     protected void appendHeaders(StringBuilder buf) {
-        for (Map.Entry<String, String> e: getHeaders()) {
+        for (Map.Entry<String, String> e: headers().entries()) {
             buf.append("    ");
             buf.append(e.getKey());
             buf.append(": ");
