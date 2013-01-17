@@ -42,7 +42,7 @@ public class WebSocket00FrameEncoder extends MessageToByteEncoder<WebSocketFrame
             WebSocketFrame msg, ByteBuf out) throws Exception {
         if (msg instanceof TextWebSocketFrame) {
             // Text frame
-            ByteBuf data = msg.getBinaryData();
+            ByteBuf data = msg.data();
             out.writeByte((byte) 0x00);
             out.writeBytes(data, data.readerIndex(), data.readableBytes());
             out.writeByte((byte) 0xFF);
@@ -52,7 +52,7 @@ public class WebSocket00FrameEncoder extends MessageToByteEncoder<WebSocketFrame
             out.writeByte((byte) 0x00);
         } else {
             // Binary frame
-            ByteBuf data = msg.getBinaryData();
+            ByteBuf data = msg.data();
             int dataLen = data.readableBytes();
             out.ensureWritableBytes(dataLen + 5);
 

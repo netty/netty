@@ -82,7 +82,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
         if (msg instanceof SpdyDataFrame) {
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
-            ByteBuf data = spdyDataFrame.getData();
+            ByteBuf data = spdyDataFrame.data();
             byte flags = spdyDataFrame.isLast() ? SPDY_DATA_FLAG_FIN : 0;
             out.ensureWritableBytes(SPDY_HEADER_SIZE + data.readableBytes());
             out.writeInt(spdyDataFrame.getStreamId() & 0x7FFFFFFF);

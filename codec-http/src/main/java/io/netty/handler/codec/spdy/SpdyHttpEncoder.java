@@ -164,10 +164,8 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
         if (msg instanceof HttpContent) {
 
             HttpContent chunk = (HttpContent) msg;
-            SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(currentStreamId);
-            spdyDataFrame.setData(chunk.data());
+            SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(currentStreamId, chunk.data());
             spdyDataFrame.setLast(chunk instanceof LastHttpContent);
-
             if (chunk instanceof LastHttpContent) {
                 LastHttpContent trailer = (LastHttpContent) chunk;
                 List<Map.Entry<String, String>> trailers = trailer.trailingHeaders().entries();
@@ -287,5 +285,14 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
         }
 
         return spdySynReplyFrame;
+    }
+
+    @Override
+    protected void freeOutboundMessage(Object msg) throws Exception {
+        if (msg instanceof HttpContent) {
+            // Will be freed later as the content of them is just reused here
+            return;
+        }
+        super.freeOutboundMessage(msg);
     }
 }

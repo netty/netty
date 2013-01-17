@@ -15,8 +15,11 @@
  */
 package io.netty.handler.codec.http.multipart;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelException;
 import io.netty.handler.codec.http.HttpHeaders;
 
+import java.io.IOException;
 import java.nio.charset.Charset;
 
 /**
@@ -124,5 +127,21 @@ public class MemoryFileUpload extends AbstractMemoryHttpData implements FileUplo
             HttpHeaders.Names.CONTENT_LENGTH + ": " + length() + "\r\n" +
             "Completed: " + isCompleted() +
             "\r\nIsInMemory: " + isInMemory();
+    }
+
+    @Override
+    public MemoryFileUpload copy() {
+        MemoryFileUpload upload = new MemoryFileUpload(getName(), getFilename(), getContentType(),
+                getContentTransferEncoding(), getCharset(), size);
+        ByteBuf buf = data();
+        if (buf != null) {
+            try {
+                upload.setContent(buf.copy());
+                return upload;
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+        return upload;
     }
 }

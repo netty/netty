@@ -93,17 +93,17 @@ public class AutobahnServerHandler extends ChannelInboundMessageHandlerAdapter<O
             handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
         } else if (frame instanceof PingWebSocketFrame) {
             ctx.channel().write(
-                    new PongWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));
+                    new PongWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.data()));
         } else if (frame instanceof TextWebSocketFrame) {
             // String text = ((TextWebSocketFrame) frame).getText();
             ctx.channel().write(
-                    new TextWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));
+                    new TextWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.data()));
         } else if (frame instanceof BinaryWebSocketFrame) {
             ctx.channel().write(
-                    new BinaryWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));
+                    new BinaryWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.data()));
         } else if (frame instanceof ContinuationWebSocketFrame) {
             ctx.channel().write(
-                    new ContinuationWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));
+                    new ContinuationWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.data()));
         } else if (frame instanceof PongWebSocketFrame) {
             // Ignore
         } else {
@@ -135,5 +135,15 @@ public class AutobahnServerHandler extends ChannelInboundMessageHandlerAdapter<O
 
     private static String getWebSocketLocation(FullHttpRequest req) {
         return "ws://" + req.headers().get(HttpHeaders.Names.HOST);
+    }
+
+    @Override
+    protected void freeInboundMessage(Object msg) throws Exception {
+        if (!(msg instanceof PongWebSocketFrame) && msg instanceof WebSocketFrame) {
+            // will be freed once written by the encoder
+            return;
+        }
+
+        super.freeInboundMessage(msg);
     }
 }

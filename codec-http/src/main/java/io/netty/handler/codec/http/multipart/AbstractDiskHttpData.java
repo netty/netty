@@ -353,4 +353,12 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         return file;
     }
 
+    @Override
+    public boolean isFreed() {
+        if (file == null || !file.exists()) {
+            return true;
+        }
+        return false;
+    }
+
 }

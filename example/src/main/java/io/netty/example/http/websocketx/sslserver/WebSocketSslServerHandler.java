@@ -111,7 +111,7 @@ public class WebSocketSslServerHandler extends ChannelInboundMessageHandlerAdapt
             return;
         }
         if (frame instanceof PingWebSocketFrame) {
-            ctx.channel().write(new PongWebSocketFrame(frame.getBinaryData()));
+            ctx.channel().write(new PongWebSocketFrame(frame.data()));
             return;
         }
         if (!(frame instanceof TextWebSocketFrame)) {
@@ -120,7 +120,7 @@ public class WebSocketSslServerHandler extends ChannelInboundMessageHandlerAdapt
         }
 
         // Send the uppercase string back.
-        String request = ((TextWebSocketFrame) frame).getText();
+        String request = ((TextWebSocketFrame) frame).text();
         if (logger.isDebugEnabled()) {
             logger.debug(String.format("Channel %s received %s", ctx.channel().id(), request));
         }
@@ -150,5 +150,14 @@ public class WebSocketSslServerHandler extends ChannelInboundMessageHandlerAdapt
 
     private static String getWebSocketLocation(FullHttpRequest req) {
         return "wss://" + req.headers().get(HOST) + WEBSOCKET_PATH;
+    }
+
+    @Override
+    protected void freeInboundMessage(Object msg) throws Exception {
+        if (msg instanceof PingWebSocketFrame || msg instanceof CloseWebSocketFrame) {
+            // Will be freed once wrote back
+            return;
+        }
+        super.freeInboundMessage(msg);
     }
 }

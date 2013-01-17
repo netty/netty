@@ -63,14 +63,14 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<Void> {
         byte type = in.readByte();
         if ((type & 0x80) == 0x80) {
             // If the MSB on type is set, decode the frame length
-            return decodeBinaryFrame(type, in);
+            return decodeBinaryFrame(ctx, type, in);
         } else {
             // Decode a 0xff terminated UTF-8 string
-            return decodeTextFrame(in);
+            return decodeTextFrame(ctx, in);
         }
     }
 
-    private WebSocketFrame decodeBinaryFrame(byte type, ByteBuf buffer) {
+    private WebSocketFrame decodeBinaryFrame(ChannelHandlerContext ctx, byte type, ByteBuf buffer) {
         long frameSize = 0;
         int lengthFieldSize = 0;
         byte b;
@@ -92,11 +92,12 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<Void> {
             receivedClosingHandshake = true;
             return new CloseWebSocketFrame();
         }
-
-        return new BinaryWebSocketFrame(buffer.readBytes((int) frameSize));
+        ByteBuf payload = ctx.alloc().buffer((int) frameSize);
+        buffer.readBytes(payload);
+        return new BinaryWebSocketFrame(payload);
     }
 
-    private WebSocketFrame decodeTextFrame(ByteBuf buffer) {
+    private WebSocketFrame decodeTextFrame(ChannelHandlerContext ctx, ByteBuf buffer) {
         int ridx = buffer.readerIndex();
         int rbytes = actualReadableBytes();
         int delimPos = buffer.indexOf(ridx, ridx + rbytes, (byte) 0xFF);
@@ -116,7 +117,8 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<Void> {
             throw new TooLongFrameException();
         }
 
-        ByteBuf binaryData = buffer.readBytes(frameSize);
+        ByteBuf binaryData = ctx.alloc().buffer(frameSize);
+        buffer.readBytes(binaryData);
         buffer.skipBytes(1);
 
         int ffDelimPos = binaryData.indexOf(binaryData.readerIndex(), binaryData.writerIndex(), (byte) 0xFF);
