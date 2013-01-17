@@ -54,7 +54,7 @@ public class SctpChannelOption<T> extends ChannelOption<T> {
     public static final SctpChannelOption<SocketAddress> SCTP_SET_PEER_PRIMARY_ADDR =
             new SctpChannelOption<SocketAddress>("SCTP_SET_PEER_PRIMARY_ADDR");
 
-    private SctpChannelOption(String name) {
+    protected SctpChannelOption(String name) {
         super(name);
     }
 }

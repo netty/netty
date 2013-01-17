@@ -21,7 +21,7 @@ import io.netty.channel.ChannelOption;
 /**
  * Options for the UDT transport
  */
-public class UdtChannelOption<T> extends ChannelOption<T> {
+public final class UdtChannelOption<T> extends ChannelOption<T> {
 
     /**
      * See {@link OptionUDT#Protocol_Receive_Buffer_Size}.
