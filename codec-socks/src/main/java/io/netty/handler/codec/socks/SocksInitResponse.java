@@ -39,13 +39,13 @@ public final class SocksInitResponse extends SocksResponse {
      *
      * @return The {@link AuthScheme} of this {@link SocksInitResponse}
      */
-    public AuthScheme getAuthScheme() {
+    public AuthScheme authScheme() {
         return authScheme;
     }
 
     @Override
     public void encodeAsByteBuf(ByteBuf byteBuf) {
-        byteBuf.writeByte(getProtocolVersion().getByteValue());
+        byteBuf.writeByte(protocolVersion().getByteValue());
         byteBuf.writeByte(authScheme.getByteValue());
     }
 }

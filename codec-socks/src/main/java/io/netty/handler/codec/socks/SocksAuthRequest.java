@@ -59,7 +59,7 @@ public final class SocksAuthRequest extends SocksRequest {
      *
      * @return username that needs to be authenticated
      */
-    public String getUsername() {
+    public String username() {
         return username;
     }
 
@@ -68,7 +68,7 @@ public final class SocksAuthRequest extends SocksRequest {
      *
      * @return password that needs to be validated
      */
-    public String getPassword() {
+    public String password() {
         return password;
     }
 

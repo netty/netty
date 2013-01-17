@@ -263,8 +263,8 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
 
             // compute the number of ms to wait before reopening the channel
             long wait = getTimeToWait(readLimit,
-                                      trafficCounter.getCurrentReadBytes(),
-                                      trafficCounter.getLastTime(), curtime);
+                                      trafficCounter.currentReadBytes(),
+                                      trafficCounter.lastTime(), curtime);
             if (wait >= MINIMAL_WAIT) { // At least 10ms seems a minimal
                 // time in order to
                 // try to limit the traffic
@@ -324,8 +324,8 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
             // compute the number of ms to wait before continue with the
             // channel
             long wait = getTimeToWait(writeLimit,
-                    trafficCounter.getCurrentWrittenBytes(),
-                    trafficCounter.getLastTime(), curtime);
+                    trafficCounter.currentWrittenBytes(),
+                    trafficCounter.lastTime(), curtime);
             if (wait >= MINIMAL_WAIT) {
                 ctx.executor().schedule(new Runnable() {
                     @Override
@@ -344,7 +344,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
      * @return the current TrafficCounter (if
      *         channel is still connected)
      */
-    public TrafficCounter getTrafficCounter() {
+    public TrafficCounter trafficCounter() {
         return trafficCounter;
     }
 

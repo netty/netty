@@ -108,7 +108,7 @@ public interface ChannelGroupFuture extends Iterable<ChannelFuture> {
     /**
      * Returns the {@link ChannelGroup} which is associated with this future.
      */
-    ChannelGroup getGroup();
+    ChannelGroup group();
 
     /**
      * Returns the {@link ChannelFuture} of the individual I/O operation which

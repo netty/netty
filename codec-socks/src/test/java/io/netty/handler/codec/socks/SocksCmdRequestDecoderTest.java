@@ -32,14 +32,14 @@ public class SocksCmdRequestDecoderTest {
         SocksCmdRequestDecoder decoder = new SocksCmdRequestDecoder();
         EmbeddedByteChannel embedder = new EmbeddedByteChannel(decoder);
         SocksCommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
-        if (msg.getAddressType() == SocksMessage.AddressType.UNKNOWN) {
+        if (msg.addressType() == SocksMessage.AddressType.UNKNOWN) {
             assertTrue(embedder.readInbound() instanceof UnknownSocksRequest);
         } else {
             msg = (SocksCmdRequest) embedder.readInbound();
-            assertSame(msg.getCmdType(), cmdType);
-            assertSame(msg.getAddressType(), addressType);
-            assertEquals(msg.getHost(), host);
-            assertEquals(msg.getPort(), port);
+            assertSame(msg.cmdType(), cmdType);
+            assertSame(msg.addressType(), addressType);
+            assertEquals(msg.host(), host);
+            assertEquals(msg.port(), port);
         }
         assertNull(embedder.readInbound());
     }

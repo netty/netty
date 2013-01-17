@@ -77,7 +77,7 @@ public final class SocksCmdRequest extends SocksRequest {
      *
      * @return The {@link CmdType} of this {@link SocksCmdRequest}
      */
-    public CmdType getCmdType() {
+    public CmdType cmdType() {
         return cmdType;
     }
 
@@ -86,7 +86,7 @@ public final class SocksCmdRequest extends SocksRequest {
      *
      * @return The {@link AddressType} of this {@link SocksCmdRequest}
      */
-    public AddressType getAddressType() {
+    public AddressType addressType() {
         return addressType;
     }
 
@@ -95,7 +95,7 @@ public final class SocksCmdRequest extends SocksRequest {
      *
      * @return host that is used as a parameter in {@link CmdType}
      */
-    public String getHost() {
+    public String host() {
         return IDN.toUnicode(host);
     }
 
@@ -104,13 +104,13 @@ public final class SocksCmdRequest extends SocksRequest {
      *
      * @return port that is used as a parameter in {@link CmdType}
      */
-    public int getPort() {
+    public int port() {
         return port;
     }
 
     @Override
     public void encodeAsByteBuf(ByteBuf byteBuf) {
-        byteBuf.writeByte(getProtocolVersion().getByteValue());
+        byteBuf.writeByte(protocolVersion().getByteValue());
         byteBuf.writeByte(cmdType.getByteValue());
         byteBuf.writeByte(0x00);
         byteBuf.writeByte(addressType.getByteValue());

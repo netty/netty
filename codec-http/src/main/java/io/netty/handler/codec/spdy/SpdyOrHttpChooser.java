@@ -96,7 +96,7 @@ public abstract class SpdyOrHttpChooser extends ChannelHandlerAdapter implements
             throw new IllegalStateException("SslHandler is needed for SPDY");
         }
 
-        SelectedProtocol protocol = getProtocol(handler.getEngine());
+        SelectedProtocol protocol = getProtocol(handler.engine());
         switch (protocol) {
         case None:
             // Not done with choosing the protocol, so just return here for now,

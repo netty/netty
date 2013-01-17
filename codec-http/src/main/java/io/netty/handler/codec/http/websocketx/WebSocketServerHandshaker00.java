@@ -144,7 +144,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
         if (isHixie76) {
             // New handshake method with a challenge:
             res.headers().add(SEC_WEBSOCKET_ORIGIN, req.headers().get(ORIGIN));
-            res.headers().add(SEC_WEBSOCKET_LOCATION, getWebSocketUrl());
+            res.headers().add(SEC_WEBSOCKET_LOCATION, uri());
             String subprotocols = req.headers().get(SEC_WEBSOCKET_PROTOCOL);
             if (subprotocols != null) {
                 String selectedSubprotocol = selectSubprotocol(subprotocols);
@@ -172,7 +172,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
         } else {
             // Old Hixie 75 handshake method with no challenge:
             res.headers().add(WEBSOCKET_ORIGIN, req.headers().get(ORIGIN));
-            res.headers().add(WEBSOCKET_LOCATION, getWebSocketUrl());
+            res.headers().add(WEBSOCKET_LOCATION, uri());
             String protocol = req.headers().get(WEBSOCKET_PROTOCOL);
             if (protocol != null) {
                 res.headers().add(WEBSOCKET_PROTOCOL, selectSubprotocol(protocol));
@@ -189,7 +189,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
                     p.remove(HttpObjectAggregator.class);
                 }
                 p.get(HttpRequestDecoder.class).replace("wsdecoder",
-                        new WebSocket00FrameDecoder(getMaxFramePayloadLength()));
+                        new WebSocket00FrameDecoder(maxFramePayloadLength()));
 
                 p.replace(HttpResponseEncoder.class, "wsencoder", new WebSocket00FrameEncoder());
             }

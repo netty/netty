@@ -156,7 +156,7 @@ public class WebSocketServerHandshaker07 extends WebSocketServerHandshaker {
                 }
 
                 p.get(HttpRequestDecoder.class).replace("wsdecoder",
-                        new WebSocket07FrameDecoder(true, allowExtensions, getMaxFramePayloadLength()));
+                        new WebSocket07FrameDecoder(true, allowExtensions, maxFramePayloadLength()));
                 p.replace(HttpResponseEncoder.class, "wsencoder", new WebSocket07FrameEncoder(false));
             }
         });

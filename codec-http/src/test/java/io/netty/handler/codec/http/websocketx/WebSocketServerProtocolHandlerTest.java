@@ -153,10 +153,8 @@ public class WebSocketServerProtocolHandlerTest {
             content = "processed: " + msg.text();
         }
         
-        public String getContent() {
+        String getContent() {
             return content;
         }
-
     }
-    
 }

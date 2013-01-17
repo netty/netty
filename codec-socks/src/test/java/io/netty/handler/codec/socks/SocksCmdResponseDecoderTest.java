@@ -35,7 +35,7 @@ public class SocksCmdResponseDecoderTest {
             assertTrue(embedder.readInbound() instanceof UnknownSocksResponse);
         } else {
             msg = (SocksResponse) embedder.readInbound();
-            assertEquals(((SocksCmdResponse) msg).getCmdStatus(), cmdStatus);
+            assertEquals(((SocksCmdResponse) msg).cmdStatus(), cmdStatus);
         }
         assertNull(embedder.readInbound());
     }

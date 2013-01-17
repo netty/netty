@@ -32,7 +32,7 @@ public class WebSocketSslServerInitializer extends ChannelInitializer<SocketChan
     public void initChannel(SocketChannel ch) throws Exception {
         ChannelPipeline pipeline = ch.pipeline();
 
-        SSLEngine engine = WebSocketSslServerSslContext.getInstance().getServerContext().createSSLEngine();
+        SSLEngine engine = WebSocketSslServerSslContext.getInstance().serverContext().createSSLEngine();
         engine.setUseClientMode(false);
         pipeline.addLast("ssl", new SslHandler(engine));
 

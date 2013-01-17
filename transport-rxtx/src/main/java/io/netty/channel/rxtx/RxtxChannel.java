@@ -103,7 +103,7 @@ public class RxtxChannel extends AbstractOioByteChannel {
     @Override
     protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         RxtxDeviceAddress remote = (RxtxDeviceAddress) remoteAddress;
-        final CommPortIdentifier cpi = CommPortIdentifier.getPortIdentifier(remote.getDeviceAddress());
+        final CommPortIdentifier cpi = CommPortIdentifier.getPortIdentifier(remote.value());
         final CommPort commPort = cpi.open(getClass().getName(), 1000);
 
         deviceAddress = remote;

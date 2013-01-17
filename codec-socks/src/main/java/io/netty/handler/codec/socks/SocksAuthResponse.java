@@ -40,7 +40,7 @@ public final class SocksAuthResponse extends SocksResponse {
      *
      * @return The {@link AuthStatus} of this {@link SocksAuthResponse}
      */
-    public AuthStatus getAuthStatus() {
+    public AuthStatus authStatus() {
         return authStatus;
     }
 
