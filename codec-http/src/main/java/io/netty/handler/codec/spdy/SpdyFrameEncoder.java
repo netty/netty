@@ -289,7 +289,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
 
     private static ByteBuf encodeHeaderBlock(int version, SpdyHeaderBlock headerFrame)
             throws Exception {
-        Set<String> names = headerFrame.getHeaderNames();
+        Set<String> names = headerFrame.headers().names();
         int numHeaders = names.size();
         if (numHeaders == 0) {
             return Unpooled.EMPTY_BUFFER;
@@ -307,7 +307,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
             int savedIndex = headerBlock.writerIndex();
             int valueLength = 0;
             writeLengthField(version, headerBlock, valueLength);
-            for (String value: headerFrame.getHeaders(name)) {
+            for (String value: headerFrame.headers().getAll(name)) {
                 byte[] valueBytes = value.getBytes(CharsetUtil.UTF_8);
                 if (valueBytes.length > 0) {
                     headerBlock.writeBytes(valueBytes);

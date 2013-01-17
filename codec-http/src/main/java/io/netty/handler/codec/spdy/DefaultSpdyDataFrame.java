@@ -62,12 +62,13 @@ public class DefaultSpdyDataFrame extends DefaultByteBufHolder implements SpdyDa
     }
 
     @Override
-    public void setStreamId(int streamId) {
+    public SpdyDataFrame setStreamId(int streamId) {
         if (streamId <= 0) {
             throw new IllegalArgumentException(
                     "Stream-ID must be positive: " + streamId);
         }
         this.streamId = streamId;
+        return this;
     }
 
     @Override
@@ -76,8 +77,9 @@ public class DefaultSpdyDataFrame extends DefaultByteBufHolder implements SpdyDa
     }
 
     @Override
-    public void setLast(boolean last) {
+    public SpdyDataFrame setLast(boolean last) {
         this.last = last;
+        return this;
     }
 
     @Override

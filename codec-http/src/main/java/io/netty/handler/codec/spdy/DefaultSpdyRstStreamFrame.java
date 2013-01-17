@@ -52,12 +52,13 @@ public class DefaultSpdyRstStreamFrame implements SpdyRstStreamFrame {
     }
 
     @Override
-    public void setStreamId(int streamId) {
+    public SpdyRstStreamFrame setStreamId(int streamId) {
         if (streamId <= 0) {
             throw new IllegalArgumentException(
                     "Stream-ID must be positive: " + streamId);
         }
         this.streamId = streamId;
+        return this;
     }
 
     @Override
@@ -66,8 +67,9 @@ public class DefaultSpdyRstStreamFrame implements SpdyRstStreamFrame {
     }
 
     @Override
-    public void setStatus(SpdyStreamStatus status) {
+    public SpdyRstStreamFrame setStatus(SpdyStreamStatus status) {
         this.status = status;
+        return this;
     }
 
     @Override

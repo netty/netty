@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,9 +16,9 @@
 package io.netty.handler.codec.spdy;
 
 /**
- * A SPDY Protocol RST_STREAM Control Frame
+ * A frame which is part of a stream
  */
-public interface SpdyRstStreamFrame extends SpdyControlFrame {
+public interface SpdyStreamFrame {
 
     /**
      * Returns the Stream-ID of this frame.
@@ -28,15 +28,16 @@ public interface SpdyRstStreamFrame extends SpdyControlFrame {
     /**
      * Sets the Stream-ID of this frame.  The Stream-ID must be positive.
      */
-    SpdyControlFrame setStreamId(int streamID);
+    SpdyStreamFrame setStreamId(int streamID);
 
     /**
-     * Returns the getStatus of this frame.
+     * Returns {@code true} if this frame is the last frame to be transmitted
+     * on the stream.
      */
-    SpdyStreamStatus getStatus();
+    boolean isLast();
 
     /**
-     * Sets the getStatus of this frame.
+     * Sets if this frame is the last frame to be transmitted on the stream.
      */
-    SpdyControlFrame setStatus(SpdyStreamStatus status);
+    SpdyStreamFrame setLast(boolean last);
 }

@@ -42,12 +42,13 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyHeaderBlock
     }
 
     @Override
-    public void setStreamId(int streamId) {
+    public SpdyHeadersFrame setStreamId(int streamId) {
         if (streamId <= 0) {
             throw new IllegalArgumentException(
                     "Stream-ID must be positive: " + streamId);
         }
         this.streamId = streamId;
+        return this;
     }
 
     @Override
@@ -56,8 +57,15 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyHeaderBlock
     }
 
     @Override
-    public void setLast(boolean last) {
+    public SpdyHeadersFrame setLast(boolean last) {
         this.last = last;
+        return this;
+    }
+
+    @Override
+    public SpdyHeadersFrame setInvalid() {
+        super.setInvalid();
+        return this;
     }
 
     @Override
