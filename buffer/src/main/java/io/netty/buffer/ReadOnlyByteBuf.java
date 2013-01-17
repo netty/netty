@@ -36,11 +36,11 @@ public class ReadOnlyByteBuf extends AbstractByteBuf {
     public ReadOnlyByteBuf(ByteBuf buffer) {
         super(buffer.maxCapacity());
 
-        if (buffer instanceof ReadOnlyByteBuf) {
-            buffer = ((ReadOnlyByteBuf) buffer).buffer;
+        if (buffer instanceof ReadOnlyByteBuf || buffer instanceof DuplicatedByteBuf) {
+            this.buffer = buffer.unwrap();
+        } else {
+            this.buffer = buffer;
         }
-
-        this.buffer = buffer;
         setIndex(buffer.readerIndex(), buffer.writerIndex());
     }
 
@@ -177,7 +177,7 @@ public class ReadOnlyByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf slice(int index, int length) {
-        return new ReadOnlyByteBuf(buffer.slice(index, length));
+        return Unpooled.unmodifiableBuffer(buffer.slice(index, length));
     }
 
     @Override
