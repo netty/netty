@@ -26,28 +26,28 @@ public class UdtChannelOption<T> extends ChannelOption<T> {
     /**
      * See {@link OptionUDT#Protocol_Receive_Buffer_Size}.
      */
-    public static final ChannelOption<Integer> PROTOCOL_RECEIVE_BUFFER_SIZE = new ChannelOption<Integer>(
+    public static final UdtChannelOption<Integer> PROTOCOL_RECEIVE_BUFFER_SIZE = new UdtChannelOption<Integer>(
             "PROTOCOL_RECEIVE_BUFFER_SIZE");
 
     /**
      * See {@link OptionUDT#Protocol_Send_Buffer_Size}.
      */
-    public static final ChannelOption<Integer> PROTOCOL_SEND_BUFFER_SIZE = new ChannelOption<Integer>(
+    public static final UdtChannelOption<Integer> PROTOCOL_SEND_BUFFER_SIZE = new UdtChannelOption<Integer>(
             "PROTOCOL_SEND_BUFFER_SIZE");
 
     /**
      * See {@link OptionUDT#System_Receive_Buffer_Size}.
      */
-    public static final ChannelOption<Integer> SYSTEM_RECEIVE_BUFFER_SIZE = new ChannelOption<Integer>(
+    public static final UdtChannelOption<Integer> SYSTEM_RECEIVE_BUFFER_SIZE = new UdtChannelOption<Integer>(
             "SYSTEM_RECEIVE_BUFFER_SIZE");
 
     /**
      * See {@link OptionUDT#System_Send_Buffer_Size}.
      */
-    public static final ChannelOption<Integer> SYSTEM_SEND_BUFFER_SIZE = new ChannelOption<Integer>(
+    public static final UdtChannelOption<Integer> SYSTEM_SEND_BUFFER_SIZE = new UdtChannelOption<Integer>(
             "SYSTEM_SEND_BUFFER_SIZE");
 
-    public UdtChannelOption(String name) {
+    private UdtChannelOption(String name) {
         super(name);
     }
 }
