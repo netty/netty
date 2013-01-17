@@ -23,26 +23,26 @@ import io.netty.channel.rxtx.RxtxChannelConfig.Stopbits;
 /**
  * Option for configuring a serial port connection
  */
-public final class RxtxChannelOption<T> extends ChannelOption<T> {
-    public static final ChannelOption<Integer> BAUD_RATE =
-            new ChannelOption<Integer>("BAUD_RATE");
+public class RxtxChannelOption<T> extends ChannelOption<T> {
+    public static final RxtxChannelOption<Integer> BAUD_RATE =
+            new RxtxChannelOption<Integer>("BAUD_RATE");
 
-    public static final ChannelOption<Boolean> DTR =
-            new ChannelOption<Boolean>("DTR");
+    public static final RxtxChannelOption<Boolean> DTR =
+            new RxtxChannelOption<Boolean>("DTR");
 
-    public static final ChannelOption<Boolean> RTS =
-            new ChannelOption<Boolean>("RTS");
+    public static final RxtxChannelOption<Boolean> RTS =
+            new RxtxChannelOption<Boolean>("RTS");
 
-    public static final ChannelOption<Stopbits> STOP_BITS =
-            new ChannelOption<Stopbits>("STOP_BITS");
+    public static final RxtxChannelOption<Stopbits> STOP_BITS =
+            new RxtxChannelOption<Stopbits>("STOP_BITS");
 
-    public static final ChannelOption<Databits> DATA_BITS =
-            new ChannelOption<Databits>("DATA_BITS");
+    public static final RxtxChannelOption<Databits> DATA_BITS =
+            new RxtxChannelOption<Databits>("DATA_BITS");
 
-    public static final ChannelOption<Paritybit> PARITY_BIT =
-            new ChannelOption<Paritybit>("PARITY_BIT");
+    public static final RxtxChannelOption<Paritybit> PARITY_BIT =
+            new RxtxChannelOption<Paritybit>("PARITY_BIT");
 
-    public RxtxChannelOption(String name) {
+    private RxtxChannelOption(String name) {
         super(name);
     }
 }

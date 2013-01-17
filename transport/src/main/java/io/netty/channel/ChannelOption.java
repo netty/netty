@@ -85,16 +85,14 @@ public class ChannelOption<T> extends UniqueName {
     /**
      * Create a new {@link ChannelOption} with the given name. The name needs to be
      * unique.
-     *
      */
-    public ChannelOption(String name) {
+    protected ChannelOption(String name) {
         super(names, name);
     }
 
     /**
      * Validate the value which is set for the {@link ChannelOption}. Sub-classes
      * may override this for special checks.
-     *
      */
     public void validate(T value) {
         if (value == null) {

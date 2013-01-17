@@ -24,14 +24,14 @@ import java.util.List;
  * Option for configuring the SCTP transport
  */
 public class SctpChannelOption<T> extends ChannelOption<T> {
-    public static final ChannelOption<Boolean> SCTP_DISABLE_FRAGMENTS =
-            new ChannelOption<Boolean>("SCTP_DISABLE_FRAGMENTS");
-    public static final ChannelOption<Boolean> SCTP_EXPLICIT_COMPLETE =
-            new ChannelOption<Boolean>("SCTP_EXPLICIT_COMPLETE");
-    public static final ChannelOption<Integer> SCTP_FRAGMENT_INTERLEAVE =
-            new ChannelOption<Integer>("SCTP_FRAGMENT_INTERLEAVE");
-    public static final ChannelOption<List<Integer>> SCTP_INIT_MAXSTREAMS =
-            new ChannelOption<List<Integer>>("SCTP_INIT_MAXSTREAMS") {
+    public static final SctpChannelOption<Boolean> SCTP_DISABLE_FRAGMENTS =
+            new SctpChannelOption<Boolean>("SCTP_DISABLE_FRAGMENTS");
+    public static final SctpChannelOption<Boolean> SCTP_EXPLICIT_COMPLETE =
+            new SctpChannelOption<Boolean>("SCTP_EXPLICIT_COMPLETE");
+    public static final SctpChannelOption<Integer> SCTP_FRAGMENT_INTERLEAVE =
+            new SctpChannelOption<Integer>("SCTP_FRAGMENT_INTERLEAVE");
+    public static final SctpChannelOption<List<Integer>> SCTP_INIT_MAXSTREAMS =
+            new SctpChannelOption<List<Integer>>("SCTP_INIT_MAXSTREAMS") {
                 @Override
                 public void validate(List<Integer> value) {
                     super.validate(value);
@@ -47,14 +47,14 @@ public class SctpChannelOption<T> extends ChannelOption<T> {
                 }
             };
 
-    public static final ChannelOption<Boolean> SCTP_NODELAY =
-            new ChannelOption<Boolean>("SCTP_NODELAY");
-    public static final ChannelOption<SocketAddress> SCTP_PRIMARY_ADDR =
-            new ChannelOption<SocketAddress>("SCTP_PRIMARY_ADDR");
-    public static final ChannelOption<SocketAddress> SCTP_SET_PEER_PRIMARY_ADDR =
-            new ChannelOption<SocketAddress>("SCTP_SET_PEER_PRIMARY_ADDR");
+    public static final SctpChannelOption<Boolean> SCTP_NODELAY =
+            new SctpChannelOption<Boolean>("SCTP_NODELAY");
+    public static final SctpChannelOption<SocketAddress> SCTP_PRIMARY_ADDR =
+            new SctpChannelOption<SocketAddress>("SCTP_PRIMARY_ADDR");
+    public static final SctpChannelOption<SocketAddress> SCTP_SET_PEER_PRIMARY_ADDR =
+            new SctpChannelOption<SocketAddress>("SCTP_SET_PEER_PRIMARY_ADDR");
 
-    public SctpChannelOption(String name) {
+    private SctpChannelOption(String name) {
         super(name);
     }
 }
