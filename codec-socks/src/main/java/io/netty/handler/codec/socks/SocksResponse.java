@@ -25,14 +25,14 @@ package io.netty.handler.codec.socks;
  * @see UnknownSocksResponse
  */
 public abstract class SocksResponse extends SocksMessage {
-    private final SocksResponseType socksResponseType;
+    private final SocksResponseType responseType;
 
-    protected SocksResponse(SocksResponseType socksResponseType) {
+    protected SocksResponse(SocksResponseType responseType) {
         super(MessageType.RESPONSE);
-        if (socksResponseType == null) {
-            throw new NullPointerException("socksResponseType");
+        if (responseType == null) {
+            throw new NullPointerException("responseType");
         }
-        this.socksResponseType = socksResponseType;
+        this.responseType = responseType;
     }
 
     /**
@@ -40,8 +40,8 @@ public abstract class SocksResponse extends SocksMessage {
      *
      * @return socks response type
      */
-    public SocksResponseType getSocksResponseType() {
-        return socksResponseType;
+    public SocksResponseType responseType() {
+        return responseType;
     }
 
     /**

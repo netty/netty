@@ -49,7 +49,7 @@ public final class SocksServerConnectHandler extends ChannelInboundMessageHandle
         CallbackNotifier cb = new CallbackNotifier() {
             @Override
             public void onSuccess(final ChannelHandlerContext outboundCtx) {
-                ctx.channel().write(new SocksCmdResponse(SocksMessage.CmdStatus.SUCCESS, request.getAddressType()))
+                ctx.channel().write(new SocksCmdResponse(SocksMessage.CmdStatus.SUCCESS, request.addressType()))
                              .addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture channelFuture) throws Exception {
@@ -62,7 +62,7 @@ public final class SocksServerConnectHandler extends ChannelInboundMessageHandle
 
             @Override
             public void onFailure(ChannelHandlerContext outboundCtx, Throwable cause) {
-                ctx.channel().write(new SocksCmdResponse(SocksMessage.CmdStatus.FAILURE, request.getAddressType()));
+                ctx.channel().write(new SocksCmdResponse(SocksMessage.CmdStatus.FAILURE, request.addressType()));
                 SocksServerUtils.closeOnFlush(ctx.channel());
             }
         };
@@ -73,7 +73,7 @@ public final class SocksServerConnectHandler extends ChannelInboundMessageHandle
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
                 .option(ChannelOption.SO_KEEPALIVE, true)
                 .handler(new DirectClientInitializer(cb))
-                .remoteAddress(request.getHost(), request.getPort());
+                .remoteAddress(request.host(), request.port());
         b.connect();
     }
 

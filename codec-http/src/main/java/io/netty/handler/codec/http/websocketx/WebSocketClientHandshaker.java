@@ -28,7 +28,7 @@ import java.net.URI;
  */
 public abstract class WebSocketClientHandshaker {
 
-    private final URI webSocketUrl;
+    private final URI uri;
 
     private final WebSocketVersion version;
 
@@ -45,7 +45,7 @@ public abstract class WebSocketClientHandshaker {
     /**
      * Base constructor
      *
-     * @param webSocketUrl
+     * @param uri
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
      * @param version
@@ -57,9 +57,9 @@ public abstract class WebSocketClientHandshaker {
      * @param maxFramePayloadLength
      *            Maximum length of a frame's payload
      */
-    protected WebSocketClientHandshaker(URI webSocketUrl, WebSocketVersion version, String subprotocol,
+    protected WebSocketClientHandshaker(URI uri, WebSocketVersion version, String subprotocol,
                                         HttpHeaders customHeaders, int maxFramePayloadLength) {
-        this.webSocketUrl = webSocketUrl;
+        this.uri = uri;
         this.version = version;
         expectedSubprotocol = subprotocol;
         this.customHeaders = customHeaders;
@@ -69,21 +69,21 @@ public abstract class WebSocketClientHandshaker {
     /**
      * Returns the URI to the web socket. e.g. "ws://myhost.com/path"
      */
-    public URI getWebSocketUrl() {
-        return webSocketUrl;
+    public URI uri() {
+        return uri;
     }
 
     /**
      * Version of the web socket specification that is being used
      */
-    public WebSocketVersion getVersion() {
+    public WebSocketVersion version() {
         return version;
     }
 
     /**
      * Returns the max length for any frame's payload
      */
-    public int getMaxFramePayloadLength() {
+    public int maxFramePayloadLength() {
         return maxFramePayloadLength;
     }
 
@@ -101,7 +101,7 @@ public abstract class WebSocketClientHandshaker {
     /**
      * Returns the CSV of requested subprotocol(s) sent to the server as specified in the constructor
      */
-    public String getExpectedSubprotocol() {
+    public String expectedSubprotocol() {
         return expectedSubprotocol;
     }
 
@@ -109,7 +109,7 @@ public abstract class WebSocketClientHandshaker {
      * Returns the subprotocol response sent by the server. Only available after end of handshake.
      * Null if no subprotocol was requested or confirmed by the server.
      */
-    public String getActualSubprotocol() {
+    public String actualSubprotocol() {
         return actualSubprotocol;
     }
 

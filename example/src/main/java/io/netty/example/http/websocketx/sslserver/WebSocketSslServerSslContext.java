@@ -95,7 +95,7 @@ public final class WebSocketSslServerSslContext {
     /**
      * Returns the server context with server side key store
      */
-    public SSLContext getServerContext() {
+    public SSLContext serverContext() {
         return _serverContext;
     }
 

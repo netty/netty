@@ -25,14 +25,14 @@ package io.netty.handler.codec.socks;
  * @see UnknownSocksRequest
  */
 public abstract class SocksRequest extends SocksMessage {
-    private final SocksRequestType socksRequestType;
+    private final SocksRequestType requestType;
 
-    protected SocksRequest(SocksRequestType socksRequestType) {
+    protected SocksRequest(SocksRequestType requestType) {
         super(MessageType.REQUEST);
-        if (socksRequestType == null) {
-            throw new NullPointerException("socksRequestType");
+        if (requestType == null) {
+            throw new NullPointerException("requestType");
         }
-        this.socksRequestType = socksRequestType;
+        this.requestType = requestType;
     }
 
     /**
@@ -40,8 +40,8 @@ public abstract class SocksRequest extends SocksMessage {
      *
      * @return socks request type
      */
-    public SocksRequestType getSocksRequestType() {
-        return socksRequestType;
+    public SocksRequestType requestType() {
+        return requestType;
     }
 
     /**

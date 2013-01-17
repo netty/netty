@@ -51,7 +51,7 @@ public final class SocksCmdResponse extends SocksResponse {
      *
      * @return The {@link CmdStatus} of this {@link SocksCmdResponse}
      */
-    public CmdStatus getCmdStatus() {
+    public CmdStatus cmdStatus() {
         return cmdStatus;
     }
 
@@ -60,13 +60,13 @@ public final class SocksCmdResponse extends SocksResponse {
      *
      * @return The {@link AddressType} of this {@link SocksCmdResponse}
      */
-    public AddressType getAddressType() {
+    public AddressType addressType() {
         return addressType;
     }
 
     @Override
     public void encodeAsByteBuf(ByteBuf byteBuf) {
-        byteBuf.writeByte(getProtocolVersion().getByteValue());
+        byteBuf.writeByte(protocolVersion().getByteValue());
         byteBuf.writeByte(cmdStatus.getByteValue());
         byteBuf.writeByte(0x00);
         byteBuf.writeByte(addressType.getByteValue());

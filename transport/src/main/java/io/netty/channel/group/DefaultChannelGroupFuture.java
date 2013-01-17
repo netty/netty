@@ -115,7 +115,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
     }
 
     @Override
-    public ChannelGroup getGroup() {
+    public ChannelGroup group() {
         return group;
     }
 

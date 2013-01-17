@@ -282,7 +282,7 @@ public class TrafficCounter {
      * @return the current checkInterval between two computations of traffic counter
      *         in millisecond
      */
-    public long getCheckInterval() {
+    public long checkInterval() {
         return checkInterval.get();
     }
 
@@ -290,7 +290,7 @@ public class TrafficCounter {
      *
      * @return the Read Throughput in bytes/s computes in the last check interval
      */
-    public long getLastReadThroughput() {
+    public long lastReadThroughput() {
         return lastReadThroughput;
     }
 
@@ -298,7 +298,7 @@ public class TrafficCounter {
      *
      * @return the Write Throughput in bytes/s computes in the last check interval
      */
-    public long getLastWriteThroughput() {
+    public long lastWriteThroughput() {
         return lastWriteThroughput;
     }
 
@@ -306,7 +306,7 @@ public class TrafficCounter {
      *
      * @return the number of bytes read during the last check Interval
      */
-    public long getLastReadBytes() {
+    public long lastReadBytes() {
         return lastReadBytes;
     }
 
@@ -314,7 +314,7 @@ public class TrafficCounter {
      *
      * @return the number of bytes written during the last check Interval
      */
-    public long getLastWrittenBytes() {
+    public long lastWrittenBytes() {
         return lastWrittenBytes;
     }
 
@@ -322,7 +322,7 @@ public class TrafficCounter {
     *
     * @return the current number of bytes read since the last checkInterval
     */
-    public long getCurrentReadBytes() {
+    public long currentReadBytes() {
         return currentReadBytes.get();
     }
 
@@ -330,28 +330,28 @@ public class TrafficCounter {
      *
      * @return the current number of bytes written since the last check Interval
      */
-    public long getCurrentWrittenBytes() {
+    public long currentWrittenBytes() {
         return currentWrittenBytes.get();
     }
 
     /**
      * @return the Time in millisecond of the last check as of System.currentTimeMillis()
      */
-    public long getLastTime() {
+    public long lastTime() {
         return lastTime.get();
     }
 
     /**
      * @return the cumulativeWrittenBytes
      */
-    public long getCumulativeWrittenBytes() {
+    public long cumulativeWrittenBytes() {
         return cumulativeWrittenBytes.get();
     }
 
     /**
      * @return the cumulativeReadBytes
      */
-    public long getCumulativeReadBytes() {
+    public long cumulativeReadBytes() {
         return cumulativeReadBytes.get();
     }
 
@@ -359,7 +359,7 @@ public class TrafficCounter {
      * @return the lastCumulativeTime in millisecond as of System.currentTimeMillis()
      * when the cumulative counters were reset to 0.
      */
-    public long getLastCumulativeTime() {
+    public long lastCumulativeTime() {
         return lastCumulativeTime;
     }
 
@@ -375,7 +375,7 @@ public class TrafficCounter {
     /**
      * @return the name
      */
-    public String getName() {
+    public String name() {
         return name;
     }
 

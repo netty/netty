@@ -42,13 +42,13 @@ public final class SocksInitRequest extends SocksRequest {
      *
      * @return The List<{@link AuthScheme}> of this {@link SocksInitRequest}
      */
-    public List<AuthScheme> getAuthSchemes() {
+    public List<AuthScheme> authSchemes() {
         return Collections.unmodifiableList(authSchemes);
     }
 
     @Override
     public void encodeAsByteBuf(ByteBuf byteBuf) {
-        byteBuf.writeByte(getProtocolVersion().getByteValue());
+        byteBuf.writeByte(protocolVersion().getByteValue());
         byteBuf.writeByte(authSchemes.size());
         for (AuthScheme authScheme : authSchemes) {
             byteBuf.writeByte(authScheme.getByteValue());

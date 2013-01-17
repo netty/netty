@@ -268,7 +268,7 @@ public class SslHandler
     /**
      * Returns the {@link SSLEngine} which is used by this handler.
      */
-    public SSLEngine getEngine() {
+    public SSLEngine engine() {
         return engine;
     }
 

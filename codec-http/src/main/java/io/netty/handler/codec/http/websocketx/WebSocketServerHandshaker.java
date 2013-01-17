@@ -32,7 +32,7 @@ public abstract class WebSocketServerHandshaker {
 
     private static final String[] EMPTY_ARRAY = new String[0];
 
-    private final String webSocketUrl;
+    private final String uri;
 
     private final String[] subprotocols;
 
@@ -47,7 +47,7 @@ public abstract class WebSocketServerHandshaker {
      *
      * @param version
      *            the protocol version
-     * @param webSocketUrl
+     * @param uri
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
      * @param subprotocols
@@ -56,10 +56,10 @@ public abstract class WebSocketServerHandshaker {
      *            Maximum length of a frame's payload
      */
     protected WebSocketServerHandshaker(
-            WebSocketVersion version, String webSocketUrl, String subprotocols,
+            WebSocketVersion version, String uri, String subprotocols,
             int maxFramePayloadLength) {
         this.version = version;
-        this.webSocketUrl = webSocketUrl;
+        this.uri = uri;
         if (subprotocols != null) {
             String[] subprotocolArray = StringUtil.split(subprotocols, ',');
             for (int i = 0; i < subprotocolArray.length; i++) {
@@ -75,14 +75,14 @@ public abstract class WebSocketServerHandshaker {
     /**
      * Returns the URL of the web socket
      */
-    public String getWebSocketUrl() {
-        return webSocketUrl;
+    public String uri() {
+        return uri;
     }
 
     /**
      * Returns the CSV of supported sub protocols
      */
-    public Set<String> getSubprotocols() {
+    public Set<String> subprotocols() {
         Set<String> ret = new LinkedHashSet<String>();
         Collections.addAll(ret, subprotocols);
         return ret;
@@ -91,7 +91,7 @@ public abstract class WebSocketServerHandshaker {
     /**
      * Returns the version of the specification being supported
      */
-    public WebSocketVersion getVersion() {
+    public WebSocketVersion version() {
         return version;
     }
 
@@ -100,7 +100,7 @@ public abstract class WebSocketServerHandshaker {
      *
      * @return The maximum length for a frame's payload
      */
-    public int getMaxFramePayloadLength() {
+    public int maxFramePayloadLength() {
         return maxFramePayloadLength;
     }
 
@@ -191,7 +191,7 @@ public abstract class WebSocketServerHandshaker {
      * This is only available AFTER <tt>handshake()</tt> has been called.
      * </p>
      */
-    public String getSelectedSubprotocol() {
+    public String selectedSubprotocol() {
         return selectedSubprotocol;
     }
 

@@ -130,7 +130,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         expectedChallengeResponseBytes = WebSocketUtil.md5(challenge);
 
         // Get path
-        URI wsURL = getWebSocketUrl();
+        URI wsURL = uri();
         String path = wsURL.getPath();
         if (wsURL.getQuery() != null && !wsURL.getQuery().isEmpty()) {
             path = wsURL.getPath() + '?' + wsURL.getQuery();
@@ -159,7 +159,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
                .add(Names.SEC_WEBSOCKET_KEY1, key1)
                .add(Names.SEC_WEBSOCKET_KEY2, key2);
 
-        String expectedSubprotocol = getExpectedSubprotocol();
+        String expectedSubprotocol = expectedSubprotocol();
         if (expectedSubprotocol != null && !expectedSubprotocol.isEmpty()) {
             headers.add(Names.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
         }
@@ -250,7 +250,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         ChannelPipeline p = channel.pipeline();
         p.remove(HttpRequestEncoder.class);
         p.get(HttpResponseDecoder.class).replace(
-                "ws-decoder", new WebSocket00FrameDecoder(getMaxFramePayloadLength()));
+                "ws-decoder", new WebSocket00FrameDecoder(maxFramePayloadLength()));
     }
 
     private static String insertRandomCharacters(String key) {

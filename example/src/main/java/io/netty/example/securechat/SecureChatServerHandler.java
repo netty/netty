@@ -50,7 +50,7 @@ public class SecureChatServerHandler extends ChannelInboundMessageHandlerAdapter
                         " secure chat service!\n");
                 ctx.write(
                         "Your session is protected by " +
-                        ctx.pipeline().get(SslHandler.class).getEngine().getSession().getCipherSuite() +
+                        ctx.pipeline().get(SslHandler.class).engine().getSession().getCipherSuite() +
                         " cipher suite.\n");
 
                 channels.add(ctx.channel());

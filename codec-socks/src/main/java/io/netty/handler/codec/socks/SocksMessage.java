@@ -26,14 +26,14 @@ import io.netty.buffer.ByteBuf;
  */
 
 public abstract class SocksMessage {
-    private final MessageType messageType;
+    private final MessageType type;
     private final ProtocolVersion protocolVersion = ProtocolVersion.SOCKS5;
 
-    protected SocksMessage(MessageType messageType) {
-        if (messageType == null) {
-            throw new NullPointerException("messageType");
+    protected SocksMessage(MessageType type) {
+        if (type == null) {
+            throw new NullPointerException("type");
         }
-        this.messageType = messageType;
+        this.type = type;
     }
 
     /**
@@ -41,8 +41,8 @@ public abstract class SocksMessage {
      *
      * @return The {@link MessageType} of this {@link SocksMessage}
      */
-    public MessageType getMessageType() {
-        return messageType;
+    public MessageType type() {
+        return type;
     }
 
     public enum MessageType {
@@ -239,7 +239,7 @@ public abstract class SocksMessage {
      *
      * @return The {@link ProtocolVersion} of this {@link SocksMessage}
      */
-    public ProtocolVersion getProtocolVersion() {
+    public ProtocolVersion protocolVersion() {
         return protocolVersion;
     }
 

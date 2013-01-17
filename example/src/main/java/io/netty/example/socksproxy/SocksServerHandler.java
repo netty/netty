@@ -18,12 +18,12 @@ package io.netty.example.socksproxy;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.handler.codec.socks.SocksAuthResponse;
+import io.netty.handler.codec.socks.SocksCmdRequest;
 import io.netty.handler.codec.socks.SocksCmdRequestDecoder;
 import io.netty.handler.codec.socks.SocksInitResponse;
 import io.netty.handler.codec.socks.SocksMessage;
 import io.netty.handler.codec.socks.SocksRequest;
-import io.netty.handler.codec.socks.SocksAuthResponse;
-import io.netty.handler.codec.socks.SocksCmdRequest;
 
 
 @ChannelHandler.Sharable
@@ -40,7 +40,7 @@ public final class SocksServerHandler extends ChannelInboundMessageHandlerAdapte
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, SocksRequest socksRequest) throws Exception {
-        switch (socksRequest.getSocksRequestType()) {
+        switch (socksRequest.requestType()) {
             case INIT: {
 //                auth support example
 //                ctx.pipeline().addFirst("socksAuthRequestDecoder",new SocksAuthRequestDecoder());
@@ -55,7 +55,7 @@ public final class SocksServerHandler extends ChannelInboundMessageHandlerAdapte
                 break;
             case CMD:
                 SocksCmdRequest req = (SocksCmdRequest) socksRequest;
-                if (req.getCmdType() == SocksMessage.CmdType.CONNECT) {
+                if (req.cmdType() == SocksMessage.CmdType.CONNECT) {
                     ctx.pipeline().addLast(SocksServerConnectHandler.getName(), new SocksServerConnectHandler());
                     ctx.pipeline().remove(this);
                     ctx.nextInboundMessageBuffer().add(socksRequest);

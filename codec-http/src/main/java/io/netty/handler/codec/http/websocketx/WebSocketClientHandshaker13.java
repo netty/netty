@@ -100,7 +100,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
     @Override
     public ChannelFuture handshake(Channel channel, final ChannelPromise promise) {
         // Get path
-        URI wsURL = getWebSocketUrl();
+        URI wsURL = uri();
         String path = wsURL.getPath();
         if (wsURL.getQuery() != null && !wsURL.getQuery().isEmpty()) {
             path = wsURL.getPath() + '?' + wsURL.getQuery();
@@ -141,7 +141,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         }
         headers.add(Names.SEC_WEBSOCKET_ORIGIN, originValue);
 
-        String expectedSubprotocol = getExpectedSubprotocol();
+        String expectedSubprotocol = expectedSubprotocol();
         if (expectedSubprotocol != null && !expectedSubprotocol.isEmpty()) {
             headers.add(Names.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
         }
@@ -224,6 +224,6 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         p.remove(HttpRequestEncoder.class);
         p.get(HttpResponseDecoder.class).replace(
                 "ws-decoder",
-                new WebSocket13FrameDecoder(false, allowExtensions, getMaxFramePayloadLength()));
+                new WebSocket13FrameDecoder(false, allowExtensions, maxFramePayloadLength()));
     }
 }
