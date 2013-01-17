@@ -65,8 +65,7 @@ class ChannelBufferByteOutput implements ByteOutput {
      * Return the {@link ByteBuf} which contains the written content
      *
      */
-    public ByteBuf getBuffer() {
+    ByteBuf getBuffer() {
         return buffer;
     }
-
 }
