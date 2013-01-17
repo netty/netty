@@ -853,7 +853,12 @@ public final class Unpooled {
      * {@code buffer}.
      */
     public static ByteBuf unmodifiableBuffer(ByteBuf buffer) {
-        return new ReadOnlyByteBuf(buffer);
+        ByteOrder endianness = buffer.order();
+        if (endianness == BIG_ENDIAN) {
+            return new ReadOnlyByteBuf(buffer);
+        }
+
+        return new ReadOnlyByteBuf(buffer.order(BIG_ENDIAN)).order(LITTLE_ENDIAN);
     }
 
     /**

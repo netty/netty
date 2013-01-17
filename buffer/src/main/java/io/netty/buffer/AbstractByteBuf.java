@@ -940,11 +940,22 @@ public abstract class AbstractByteBuf implements ByteBuf {
             return getClass().getSimpleName() + "(freed)";
         }
 
-        return getClass().getSimpleName() + '(' +
-               "ridx=" + readerIndex + ", " +
-               "widx=" + writerIndex + ", " +
-               "cap=" + capacity() +
-               ')';
+        StringBuilder buf = new StringBuilder();
+        buf.append(getClass().getSimpleName());
+        buf.append("(ridx: ");
+        buf.append(readerIndex);
+        buf.append(", widx: ");
+        buf.append(writerIndex);
+        buf.append(", cap: ");
+        buf.append(capacity());
+
+        ByteBuf unwrapped = unwrap();
+        if (unwrapped != null) {
+            buf.append(", unwrapped: ");
+            buf.append(unwrapped);
+        }
+        buf.append(')');
+        return buf.toString();
     }
 
     protected final void checkIndex(int index) {

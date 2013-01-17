@@ -158,7 +158,6 @@ public class SlicedByteBuf extends AbstractByteBuf {
             return Unpooled.EMPTY_BUFFER;
         }
         return buffer.slice(index + adjustment, length);
-        //new SlicedByteBuf(buffer, index + adjustment, length);
     }
 
     @Override
