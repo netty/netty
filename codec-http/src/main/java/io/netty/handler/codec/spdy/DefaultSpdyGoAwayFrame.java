@@ -22,8 +22,8 @@ import io.netty.util.internal.StringUtil;
  */
 public class DefaultSpdyGoAwayFrame implements SpdyGoAwayFrame {
 
-    private int lastGoodStreamId;
-    private SpdySessionStatus status;
+    private final int lastGoodStreamId;
+    private final SpdySessionStatus status;
 
     /**
      * Creates a new instance.
@@ -51,32 +51,22 @@ public class DefaultSpdyGoAwayFrame implements SpdyGoAwayFrame {
      * @param status           the status of this frame
      */
     public DefaultSpdyGoAwayFrame(int lastGoodStreamId, SpdySessionStatus status) {
-        setLastGoodStreamId(lastGoodStreamId);
-        setStatus(status);
-    }
-
-    @Override
-    public int getLastGoodStreamId() {
-        return lastGoodStreamId;
-    }
-
-    @Override
-    public void setLastGoodStreamId(int lastGoodStreamId) {
         if (lastGoodStreamId < 0) {
             throw new IllegalArgumentException("Last-good-stream-ID"
                     + " cannot be negative: " + lastGoodStreamId);
         }
         this.lastGoodStreamId = lastGoodStreamId;
-    }
-
-    @Override
-    public SpdySessionStatus getStatus() {
-        return status;
-    }
-
-    @Override
-    public void setStatus(SpdySessionStatus status) {
         this.status = status;
+    }
+
+    @Override
+    public int lastGoodStreamId() {
+        return lastGoodStreamId;
+    }
+
+    @Override
+    public SpdySessionStatus status() {
+        return status;
     }
 
     @Override

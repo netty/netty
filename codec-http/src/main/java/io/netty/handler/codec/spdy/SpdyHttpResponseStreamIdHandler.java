@@ -55,7 +55,7 @@ public class SpdyHttpResponseStreamIdHandler extends
                 ids.add(SpdyHttpHeaders.getStreamId((HttpMessage) msg));
             }
         } else if (msg instanceof SpdyRstStreamFrame) {
-            ids.remove(((SpdyRstStreamFrame) msg).getStreamId());
+            ids.remove(((SpdyRstStreamFrame) msg).streamId());
         }
 
         return msg;

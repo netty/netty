@@ -22,8 +22,8 @@ import io.netty.util.internal.StringUtil;
  */
 public class DefaultSpdyWindowUpdateFrame implements SpdyWindowUpdateFrame {
 
-    private int streamId;
-    private int deltaWindowSize;
+    private final int streamId;
+    private final int deltaWindowSize;
 
     /**
      * Creates a new instance.
@@ -32,37 +32,27 @@ public class DefaultSpdyWindowUpdateFrame implements SpdyWindowUpdateFrame {
      * @param deltaWindowSize the Delta-Window-Size of this frame
      */
     public DefaultSpdyWindowUpdateFrame(int streamId, int deltaWindowSize) {
-        setStreamId(streamId);
-        setDeltaWindowSize(deltaWindowSize);
-    }
-
-    @Override
-    public int getStreamId() {
-        return streamId;
-    }
-
-    @Override
-    public void setStreamId(int streamId) {
         if (streamId <= 0) {
             throw new IllegalArgumentException(
                     "Stream-ID must be positive: " + streamId);
         }
+        if (deltaWindowSize <= 0) {
+            throw new IllegalArgumentException(
+                    "Delta-Window-Size must be positive: " +
+                            deltaWindowSize);
+        }
+        this.deltaWindowSize = deltaWindowSize;
         this.streamId = streamId;
     }
 
     @Override
-    public int getDeltaWindowSize() {
-        return deltaWindowSize;
+    public int streamId() {
+        return streamId;
     }
 
     @Override
-    public void setDeltaWindowSize(int deltaWindowSize) {
-        if (deltaWindowSize <= 0) {
-            throw new IllegalArgumentException(
-                    "Delta-Window-Size must be positive: " +
-                    deltaWindowSize);
-        }
-        this.deltaWindowSize = deltaWindowSize;
+    public int deltaWindowSize() {
+        return deltaWindowSize;
     }
 
     @Override

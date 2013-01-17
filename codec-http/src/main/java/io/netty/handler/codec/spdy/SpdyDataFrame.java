@@ -22,28 +22,7 @@ import io.netty.buffer.Unpooled;
 /**
  * A SPDY Protocol Data Frame
  */
-public interface SpdyDataFrame extends ByteBufHolder {
-
-    /**
-     * Returns the Stream-ID of this frame.
-     */
-    int getStreamId();
-
-    /**
-     * Sets the Stream-ID of this frame.  The Stream-ID must be positive.
-     */
-    void setStreamId(int streamID);
-
-    /**
-     * Returns {@code true} if this frame is the last frame to be transmitted
-     * on the stream.
-     */
-    boolean isLast();
-
-    /**
-     * Sets if this frame is the last frame to be transmitted on the stream.
-     */
-    void setLast(boolean last);
+public interface SpdyDataFrame extends SpdyStreamFrame, ByteBufHolder {
 
     /**
      * Returns the data payload of this frame.  If there is no data payload

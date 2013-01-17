@@ -41,33 +41,39 @@ public class DefaultSpdyHeaderBlock implements SpdyHeaderBlock {
     }
 
     @Override
-    public void setInvalid() {
+    public SpdyHeaderBlock setInvalid() {
         invalid = true;
+        return this;
     }
 
     @Override
-    public void addHeader(final String name, final Object value) {
+    public SpdyHeaderBlock addHeader(final String name, final Object value) {
         headers.addHeader(name, value);
+        return this;
     }
 
     @Override
-    public void setHeader(final String name, final Object value) {
+    public SpdyHeaderBlock setHeader(final String name, final Object value) {
         headers.setHeader(name, value);
+        return this;
     }
 
     @Override
-    public void setHeader(final String name, final Iterable<?> values) {
+    public SpdyHeaderBlock setHeader(final String name, final Iterable<?> values) {
         headers.setHeader(name, values);
+        return this;
     }
 
     @Override
-    public void removeHeader(final String name) {
+    public SpdyHeaderBlock removeHeader(final String name) {
         headers.removeHeader(name);
+        return this;
     }
 
     @Override
-    public void clearHeaders() {
+    public SpdyHeaderBlock clearHeaders() {
         headers.clearHeaders();
+        return this;
     }
 
     @Override

@@ -22,8 +22,8 @@ import io.netty.util.internal.StringUtil;
  */
 public class DefaultSpdyRstStreamFrame implements SpdyRstStreamFrame {
 
-    private int streamId;
-    private SpdyStreamStatus status;
+    private final int streamId;
+    private final SpdyStreamStatus status;
 
     /**
      * Creates a new instance.
@@ -42,32 +42,22 @@ public class DefaultSpdyRstStreamFrame implements SpdyRstStreamFrame {
      * @param status   the status of this frame
      */
     public DefaultSpdyRstStreamFrame(int streamId, SpdyStreamStatus status) {
-        setStreamId(streamId);
-        setStatus(status);
-    }
-
-    @Override
-    public int getStreamId() {
-        return streamId;
-    }
-
-    @Override
-    public void setStreamId(int streamId) {
         if (streamId <= 0) {
             throw new IllegalArgumentException(
                     "Stream-ID must be positive: " + streamId);
         }
         this.streamId = streamId;
-    }
-
-    @Override
-    public SpdyStreamStatus getStatus() {
-        return status;
-    }
-
-    @Override
-    public void setStatus(SpdyStreamStatus status) {
         this.status = status;
+    }
+
+    @Override
+    public int streamId() {
+        return streamId;
+    }
+
+    @Override
+    public SpdyStreamStatus status() {
+        return status;
     }
 
     @Override

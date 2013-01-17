@@ -23,11 +23,11 @@ import io.netty.util.internal.StringUtil;
 public class DefaultSpdySynStreamFrame extends DefaultSpdyHeaderBlock
         implements SpdySynStreamFrame {
 
-    private int streamId;
-    private int associatedToStreamId;
-    private byte priority;
-    private boolean last;
-    private boolean unidirectional;
+    private final int streamId;
+    private final int associatedToStreamId;
+    private final byte priority;
+    private final boolean last;
+    private final boolean unidirectional;
 
     /**
      * Creates a new instance.
@@ -38,52 +38,54 @@ public class DefaultSpdySynStreamFrame extends DefaultSpdyHeaderBlock
      */
     public DefaultSpdySynStreamFrame(
             int streamId, int associatedToStreamId, byte priority) {
-        setStreamId(streamId);
-        setAssociatedToStreamId(associatedToStreamId);
-        setPriority(priority);
+        this(streamId, associatedToStreamId, priority, false, false);
     }
 
-    @Override
-    public int getStreamId() {
-        return streamId;
-    }
-
-    @Override
-    public void setStreamId(int streamId) {
+    /**
+     * Creates a new instance.
+     *
+     * @param streamId             the Stream-ID of this frame
+     * @param associatedToStreamId the Associated-To-Stream-ID of this frame
+     * @param priority             the priority of the stream
+     * @param unidirectional       if the stream created with this frame is to be
+     *                             considered half-closed to the receiver.
+     * @param last                 if the frame is the last in the stream
+     */
+    public DefaultSpdySynStreamFrame(
+            int streamId, int associatedToStreamId, byte priority, boolean unidirectional, boolean last) {
         if (streamId <= 0) {
             throw new IllegalArgumentException(
                     "Stream-ID must be positive: " + streamId);
         }
-        this.streamId = streamId;
-    }
-
-    @Override
-    public int getAssociatedToStreamId() {
-        return associatedToStreamId;
-    }
-
-    @Override
-    public void setAssociatedToStreamId(int associatedToStreamId) {
         if (associatedToStreamId < 0) {
             throw new IllegalArgumentException(
                     "Associated-To-Stream-ID cannot be negative: " +
-                    associatedToStreamId);
+                            associatedToStreamId);
         }
-        this.associatedToStreamId = associatedToStreamId;
-    }
-
-    @Override
-    public byte getPriority() {
-        return priority;
-    }
-
-    @Override
-    public void setPriority(byte priority) {
         if (priority < 0 || priority > 7) {
             throw new IllegalArgumentException(
                     "Priority must be between 0 and 7 inclusive: " + priority);
         }
         this.priority = priority;
+        this.associatedToStreamId = associatedToStreamId;
+        this.streamId = streamId;
+        this.last = last;
+        this.unidirectional = unidirectional;
+    }
+
+    @Override
+    public int streamId() {
+        return streamId;
+    }
+
+    @Override
+    public int associatedToStreamId() {
+        return associatedToStreamId;
+    }
+
+    @Override
+    public byte priority() {
+        return priority;
     }
 
     @Override
@@ -92,18 +94,8 @@ public class DefaultSpdySynStreamFrame extends DefaultSpdyHeaderBlock
     }
 
     @Override
-    public void setLast(boolean last) {
-        this.last = last;
-    }
-
-    @Override
     public boolean isUnidirectional() {
         return unidirectional;
-    }
-
-    @Override
-    public void setUnidirectional(boolean unidirectional) {
-        this.unidirectional = unidirectional;
     }
 
     @Override

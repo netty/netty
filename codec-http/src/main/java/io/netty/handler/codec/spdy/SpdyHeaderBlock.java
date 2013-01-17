@@ -36,7 +36,7 @@ public interface SpdyHeaderBlock {
     /**
      * Marks this header block as invalid.
      */
-    void setInvalid();
+    SpdyHeaderBlock setInvalid();
 
     /**
      * Returns the header value with the specified header name.  If there is
@@ -77,27 +77,27 @@ public interface SpdyHeaderBlock {
     /**
      * Adds a new header with the specified name and value.
      */
-    void addHeader(String name, Object value);
+    SpdyHeaderBlock addHeader(String name, Object value);
 
     /**
      * Sets a new header with the specified name and value.  If there is an
      * existing header with the same name, the existing header is removed.
      */
-    void setHeader(String name, Object value);
+    SpdyHeaderBlock setHeader(String name, Object value);
 
     /**
      * Sets a new header with the specified name and values.  If there is an
      * existing header with the same name, the existing header is removed.
      */
-    void setHeader(String name, Iterable<?> values);
+    SpdyHeaderBlock setHeader(String name, Iterable<?> values);
 
     /**
      * Removes the header with the specified name.
      */
-    void removeHeader(String name);
+    SpdyHeaderBlock removeHeader(String name);
 
     /**
      * Removes all headers from this block.
      */
-    void clearHeaders();
+    SpdyHeaderBlock clearHeaders();
 }

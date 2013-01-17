@@ -164,8 +164,8 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
         if (msg instanceof HttpContent) {
 
             HttpContent chunk = (HttpContent) msg;
-            SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(currentStreamId, chunk.data());
-            spdyDataFrame.setLast(chunk instanceof LastHttpContent);
+            SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(currentStreamId, chunk instanceof LastHttpContent,
+                    chunk.data());
             if (chunk instanceof LastHttpContent) {
                 LastHttpContent trailer = (LastHttpContent) chunk;
                 List<Map.Entry<String, String>> trailers = trailer.trailingHeaders().entries();
@@ -213,8 +213,16 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
         httpMessage.headers().remove("Proxy-Connection");
         httpMessage.headers().remove(HttpHeaders.Names.TRANSFER_ENCODING);
 
-        SpdySynStreamFrame spdySynStreamFrame =
-                new DefaultSpdySynStreamFrame(streamID, associatedToStreamId, priority);
+        SpdySynStreamFrame spdySynStreamFrame;
+        if (httpMessage instanceof HttpResponse) {
+            spdySynStreamFrame = new DefaultSpdySynStreamFrame(streamID, associatedToStreamId, priority, true, false);
+            HttpResponse httpResponse = (HttpResponse) httpMessage;
+            SpdyHeaders.setStatus(spdyVersion, spdySynStreamFrame, httpResponse.status());
+            SpdyHeaders.setUrl(spdyVersion, spdySynStreamFrame, URL);
+            SpdyHeaders.setVersion(spdyVersion, spdySynStreamFrame, httpMessage.protocolVersion());
+        } else {
+            spdySynStreamFrame = new DefaultSpdySynStreamFrame(streamID, associatedToStreamId, priority);
+        }
 
         // Unfold the first line of the message into name/value pairs
         if (httpMessage instanceof FullHttpRequest) {
@@ -222,13 +230,6 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
             SpdyHeaders.setMethod(spdyVersion, spdySynStreamFrame, httpRequest.method());
             SpdyHeaders.setUrl(spdyVersion, spdySynStreamFrame, httpRequest.uri());
             SpdyHeaders.setVersion(spdyVersion, spdySynStreamFrame, httpMessage.protocolVersion());
-        }
-        if (httpMessage instanceof HttpResponse) {
-            HttpResponse httpResponse = (HttpResponse) httpMessage;
-            SpdyHeaders.setStatus(spdyVersion, spdySynStreamFrame, httpResponse.status());
-            SpdyHeaders.setUrl(spdyVersion, spdySynStreamFrame, URL);
-            SpdyHeaders.setVersion(spdyVersion, spdySynStreamFrame, httpMessage.protocolVersion());
-            spdySynStreamFrame.setUnidirectional(true);
         }
 
         // Replace the HTTP host header with the SPDY host header
@@ -248,7 +249,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
         for (Map.Entry<String, String> entry: httpMessage.headers()) {
             spdySynStreamFrame.addHeader(entry.getKey(), entry.getValue());
         }
-        currentStreamId = spdySynStreamFrame.getStreamId();
+        currentStreamId = spdySynStreamFrame.streamId();
 
         return spdySynStreamFrame;
     }
@@ -268,7 +269,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
         httpResponse.headers().remove("Proxy-Connection");
         httpResponse.headers().remove(HttpHeaders.Names.TRANSFER_ENCODING);
 
-        SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamID);
+        SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamID, !chunked);
 
         // Unfold the first line of the response into name/value pairs
         SpdyHeaders.setStatus(spdyVersion, spdySynReplyFrame, httpResponse.status());
@@ -281,7 +282,6 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
 
         if (chunked) {
             currentStreamId = streamID;
-            spdySynReplyFrame.setLast(false);
         }
 
         return spdySynReplyFrame;

@@ -24,8 +24,8 @@ import io.netty.util.internal.StringUtil;
 public class DefaultSpdyHeadersFrame extends DefaultSpdyHeaderBlock
         implements SpdyHeadersFrame {
 
-    private int streamId;
-    private boolean last;
+    private final int streamId;
+    private final boolean last;
 
     /**
      * Creates a new instance.
@@ -33,31 +33,26 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyHeaderBlock
      * @param streamId the Stream-ID of this frame
      */
     public DefaultSpdyHeadersFrame(int streamId) {
-        setStreamId(streamId);
+        this(streamId, false);
     }
 
-    @Override
-    public int getStreamId() {
-        return streamId;
-    }
-
-    @Override
-    public void setStreamId(int streamId) {
+    public DefaultSpdyHeadersFrame(int streamId, boolean last) {
         if (streamId <= 0) {
             throw new IllegalArgumentException(
                     "Stream-ID must be positive: " + streamId);
         }
         this.streamId = streamId;
+        this.last = last;
+    }
+
+    @Override
+    public int streamId() {
+        return streamId;
     }
 
     @Override
     public boolean isLast() {
         return last;
-    }
-
-    @Override
-    public void setLast(boolean last) {
-        this.last = last;
     }
 
     @Override

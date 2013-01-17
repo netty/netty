@@ -151,20 +151,20 @@ public class SpdyStreamStatus implements Comparable<SpdyStreamStatus> {
     /**
      * Returns the code of this status.
      */
-    public int getCode() {
+    public int code() {
         return code;
     }
 
     /**
      * Returns the status phrase of this status.
      */
-    public String getStatusPhrase() {
+    public String statusPhrase() {
         return statusPhrase;
     }
 
     @Override
     public int hashCode() {
-        return getCode();
+        return code();
     }
 
     @Override
@@ -173,16 +173,16 @@ public class SpdyStreamStatus implements Comparable<SpdyStreamStatus> {
             return false;
         }
 
-        return getCode() == ((SpdyStreamStatus) o).getCode();
+        return code() == ((SpdyStreamStatus) o).code();
     }
 
     @Override
     public String toString() {
-        return getStatusPhrase();
+        return statusPhrase();
     }
 
     @Override
     public int compareTo(SpdyStreamStatus o) {
-        return getCode() - o.getCode();
+        return code() - o.code();
     }
 }

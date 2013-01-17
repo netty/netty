@@ -158,7 +158,7 @@ public class SpdySessionHandler
              */
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
-            int streamID = spdyDataFrame.getStreamId();
+            int streamID = spdyDataFrame.streamId();
 
             // Check if we received a data frame for a Stream-ID which is not open
             if (!spdySession.isActiveStream(streamID)) {
@@ -207,7 +207,7 @@ public class SpdySessionHandler
                 // Send data frames upstream in initialReceiveWindowSize chunks
                 if (newWindowSize < 0) {
                     while (spdyDataFrame.data().readableBytes() > initialReceiveWindowSize) {
-                        SpdyDataFrame partialDataFrame = new DefaultSpdyDataFrame(streamID,
+                        SpdyDataFrame partialDataFrame = new DefaultSpdyDataFrame(streamID, false,
                                 spdyDataFrame.data().readSlice(initialReceiveWindowSize));
                         ctx.nextOutboundMessageBuffer().add(partialDataFrame);
                         ctx.flush();
@@ -246,7 +246,7 @@ public class SpdySessionHandler
              */
 
             SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
-            int streamID = spdySynStreamFrame.getStreamId();
+            int streamID = spdySynStreamFrame.streamId();
 
             // Check if we received a valid SYN_STREAM frame
             if (spdySynStreamFrame.isInvalid() ||
@@ -263,7 +263,7 @@ public class SpdySessionHandler
             }
 
             // Try to accept the stream
-            byte priority = spdySynStreamFrame.getPriority();
+            byte priority = spdySynStreamFrame.priority();
             boolean remoteSideClosed = spdySynStreamFrame.isLast();
             boolean localSideClosed = spdySynStreamFrame.isUnidirectional();
             if (!acceptStream(streamID, priority, remoteSideClosed, localSideClosed)) {
@@ -281,7 +281,7 @@ public class SpdySessionHandler
              */
 
             SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
-            int streamID = spdySynReplyFrame.getStreamId();
+            int streamID = spdySynReplyFrame.streamId();
 
             // Check if we received a valid SYN_REPLY frame
             if (spdySynReplyFrame.isInvalid() ||
@@ -316,7 +316,7 @@ public class SpdySessionHandler
              */
 
             SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
-            removeStream(ctx, spdyRstStreamFrame.getStreamId());
+            removeStream(ctx, spdyRstStreamFrame.streamId());
 
         } else if (msg instanceof SpdySettingsFrame) {
 
@@ -357,7 +357,7 @@ public class SpdySessionHandler
 
             SpdyPingFrame spdyPingFrame = (SpdyPingFrame) msg;
 
-            if (isRemoteInitiatedID(spdyPingFrame.getId())) {
+            if (isRemoteInitiatedID(spdyPingFrame.id())) {
                 ctx.write(spdyPingFrame);
                 return;
             }
@@ -375,7 +375,7 @@ public class SpdySessionHandler
         } else if (msg instanceof SpdyHeadersFrame) {
 
             SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
-            int streamID = spdyHeadersFrame.getStreamId();
+            int streamID = spdyHeadersFrame.streamId();
 
             // Check if we received a valid HEADERS frame
             if (spdyHeadersFrame.isInvalid()) {
@@ -407,8 +407,8 @@ public class SpdySessionHandler
 
             if (flowControl) {
                 SpdyWindowUpdateFrame spdyWindowUpdateFrame = (SpdyWindowUpdateFrame) msg;
-                int streamID = spdyWindowUpdateFrame.getStreamId();
-                int deltaWindowSize = spdyWindowUpdateFrame.getDeltaWindowSize();
+                int streamID = spdyWindowUpdateFrame.streamId();
+                int deltaWindowSize = spdyWindowUpdateFrame.deltaWindowSize();
 
                 // Ignore frames for half-closed streams
                 if (spdySession.isLocalSideClosed(streamID)) {
@@ -473,7 +473,7 @@ public class SpdySessionHandler
         if (msg instanceof SpdyDataFrame) {
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
-            final int streamID = spdyDataFrame.getStreamId();
+            final int streamID = spdyDataFrame.streamId();
 
             // Frames must not be sent on half-closed streams
             if (spdySession.isLocalSideClosed(streamID)) {
@@ -524,7 +524,7 @@ public class SpdySessionHandler
                         spdySession.updateSendWindowSize(streamID, -1 * sendWindowSize);
 
                         // Create a partial data frame whose length is the current window size
-                        SpdyDataFrame partialDataFrame = new DefaultSpdyDataFrame(streamID,
+                        SpdyDataFrame partialDataFrame = new DefaultSpdyDataFrame(streamID, false,
                                 spdyDataFrame.data().readSlice(sendWindowSize));
 
                         // Enqueue the remaining data (will be the first frame queued)
@@ -565,14 +565,14 @@ public class SpdySessionHandler
         } else if (msg instanceof SpdySynStreamFrame) {
 
             SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
-            int streamID = spdySynStreamFrame.getStreamId();
+            int streamID = spdySynStreamFrame.streamId();
 
             if (isRemoteInitiatedID(streamID)) {
                 ctx.fireExceptionCaught(PROTOCOL_EXCEPTION);
                 return;
             }
 
-            byte priority = spdySynStreamFrame.getPriority();
+            byte priority = spdySynStreamFrame.priority();
             boolean remoteSideClosed = spdySynStreamFrame.isUnidirectional();
             boolean localSideClosed = spdySynStreamFrame.isLast();
             if (!acceptStream(streamID, priority, remoteSideClosed, localSideClosed)) {
@@ -583,7 +583,7 @@ public class SpdySessionHandler
         } else if (msg instanceof SpdySynReplyFrame) {
 
             SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
-            int streamID = spdySynReplyFrame.getStreamId();
+            int streamID = spdySynReplyFrame.streamId();
 
             // Frames must not be sent on half-closed streams
             if (!isRemoteInitiatedID(streamID) || spdySession.isLocalSideClosed(streamID)) {
@@ -599,7 +599,7 @@ public class SpdySessionHandler
         } else if (msg instanceof SpdyRstStreamFrame) {
 
             SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
-            removeStream(ctx, spdyRstStreamFrame.getStreamId());
+            removeStream(ctx, spdyRstStreamFrame.streamId());
 
         } else if (msg instanceof SpdySettingsFrame) {
 
@@ -630,9 +630,9 @@ public class SpdySessionHandler
         } else if (msg instanceof SpdyPingFrame) {
 
             SpdyPingFrame spdyPingFrame = (SpdyPingFrame) msg;
-            if (isRemoteInitiatedID(spdyPingFrame.getId())) {
+            if (isRemoteInitiatedID(spdyPingFrame.id())) {
                 ctx.fireExceptionCaught(new IllegalArgumentException(
-                            "invalid PING ID: " + spdyPingFrame.getId()));
+                            "invalid PING ID: " + spdyPingFrame.id()));
                 return;
             }
             pings.getAndIncrement();
@@ -647,7 +647,7 @@ public class SpdySessionHandler
         } else if (msg instanceof SpdyHeadersFrame) {
 
             SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
-            int streamID = spdyHeadersFrame.getStreamId();
+            int streamID = spdyHeadersFrame.streamId();
 
             // Frames must not be sent on half-closed streams
             if (spdySession.isLocalSideClosed(streamID)) {
@@ -848,7 +848,7 @@ public class SpdySessionHandler
                     spdySession.updateSendWindowSize(streamID, -1 * newWindowSize);
 
                     // Create a partial data frame whose length is the current window size
-                    SpdyDataFrame partialDataFrame = new DefaultSpdyDataFrame(streamID,
+                    SpdyDataFrame partialDataFrame = new DefaultSpdyDataFrame(streamID, false,
                             spdyDataFrame.data().readSlice(newWindowSize));
 
                     // The transfer window size is pre-decremented when sending a data frame downstream.

@@ -72,11 +72,11 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
 
             // HTTP requests/responses are mapped one-to-one to SPDY streams.
             SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
-            int streamID = spdySynStreamFrame.getStreamId();
+            int streamID = spdySynStreamFrame.streamId();
 
             if (SpdyCodecUtil.isServerId(streamID)) {
                 // SYN_STREAM frames initiated by the server are pushed resources
-                int associatedToStreamId = spdySynStreamFrame.getAssociatedToStreamId();
+                int associatedToStreamId = spdySynStreamFrame.associatedToStreamId();
 
                 // If a client receives a SYN_STREAM with an Associated-To-Stream-ID of 0
                 // it must reply with a RST_STREAM with error code INVALID_STREAM
@@ -103,7 +103,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
                     // Set the Stream-ID, Associated-To-Stream-ID, Priority, and URL as headers
                     SpdyHttpHeaders.setStreamId(httpResponseWithEntity, streamID);
                     SpdyHttpHeaders.setAssociatedToStreamId(httpResponseWithEntity, associatedToStreamId);
-                    SpdyHttpHeaders.setPriority(httpResponseWithEntity, spdySynStreamFrame.getPriority());
+                    SpdyHttpHeaders.setPriority(httpResponseWithEntity, spdySynStreamFrame.priority());
                     SpdyHttpHeaders.setUrl(httpResponseWithEntity, URL);
 
                     if (spdySynStreamFrame.isLast()) {
@@ -136,8 +136,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
                     // If a client sends a SYN_STREAM without all of the method, url (host and path),
                     // scheme, and version headers the server must reply with a HTTP 400 BAD REQUEST reply.
                     // Also sends HTTP 400 BAD REQUEST reply if header name/value pairs are invalid
-                    SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamID);
-                    spdySynReplyFrame.setLast(true);
+                    SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamID, true);
                     SpdyHeaders.setStatus(spdyVersion, spdySynReplyFrame, HttpResponseStatus.BAD_REQUEST);
                     SpdyHeaders.setVersion(spdyVersion, spdySynReplyFrame, HttpVersion.HTTP_1_0);
                     ctx.write(spdySynReplyFrame);
@@ -147,7 +146,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
         } else if (msg instanceof SpdySynReplyFrame) {
 
             SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
-            int streamID = spdySynReplyFrame.getStreamId();
+            int streamID = spdySynReplyFrame.streamId();
 
             try {
                 FullHttpResponse httpResponseWithEntity = createHttpResponse(spdyVersion, spdySynReplyFrame);
@@ -173,7 +172,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
         } else if (msg instanceof SpdyHeadersFrame) {
 
             SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
-            Integer streamID = Integer.valueOf(spdyHeadersFrame.getStreamId());
+            Integer streamID = Integer.valueOf(spdyHeadersFrame.streamId());
             HttpMessage httpMessage = messageMap.get(streamID);
 
             // If message is not in map discard HEADERS frame.
@@ -189,7 +188,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
         } else if (msg instanceof SpdyDataFrame) {
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
-            Integer streamID = Integer.valueOf(spdyDataFrame.getStreamId());
+            Integer streamID = Integer.valueOf(spdyDataFrame.streamId());
             FullHttpMessage fullHttpMessage = messageMap.get(streamID);
 
             // If message is not in map discard Data Frame.
@@ -218,7 +217,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
         } else if (msg instanceof SpdyRstStreamFrame) {
 
             SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
-            Integer streamID = Integer.valueOf(spdyRstStreamFrame.getStreamId());
+            Integer streamID = Integer.valueOf(spdyRstStreamFrame.streamId());
             messageMap.remove(streamID);
         }
 

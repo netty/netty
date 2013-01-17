@@ -22,7 +22,7 @@ import io.netty.util.internal.StringUtil;
  */
 public class DefaultSpdyPingFrame implements SpdyPingFrame {
 
-    private int id;
+    private final int id;
 
     /**
      * Creates a new instance.
@@ -30,17 +30,12 @@ public class DefaultSpdyPingFrame implements SpdyPingFrame {
      * @param id the unique ID of this frame
      */
     public DefaultSpdyPingFrame(int id) {
-        setId(id);
-    }
-
-    @Override
-    public int getId() {
-        return id;
-    }
-
-    @Override
-    public void setId(int id) {
         this.id = id;
+    }
+
+    @Override
+    public int id() {
+        return id;
     }
 
     @Override

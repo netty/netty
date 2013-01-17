@@ -18,60 +18,23 @@ package io.netty.handler.codec.spdy;
 /**
  * A SPDY Protocol SYN_STREAM Control Frame
  */
-public interface SpdySynStreamFrame extends SpdyHeaderBlock, SpdyControlFrame {
-
-    /**
-     * Returns the Stream-ID of this frame.
-     */
-    int getStreamId();
-
-    /**
-     * Sets the Stream-ID of this frame.  The Stream-ID must be positive.
-     */
-    void setStreamId(int streamId);
+public interface SpdySynStreamFrame extends SpdyHeaderBlock, SpdyControlFrame, SpdyStreamFrame {
 
     /**
      * Returns the Associated-To-Stream-ID of this frame.
-     */
-    int getAssociatedToStreamId();
-
-    /**
-     * Sets the Associated-To-Stream-ID of this frame.
      * The Associated-To-Stream-ID cannot be negative.
      */
-    void setAssociatedToStreamId(int associatedToStreamId);
+    int associatedToStreamId();
 
     /**
      * Returns the priority of the stream.
-     */
-    byte getPriority();
-
-    /**
-     * Sets the priority of the stream.
      * The priority must be between 0 and 7 inclusive.
      */
-    void setPriority(byte priority);
-
-    /**
-     * Returns {@code true} if this frame is the last frame to be transmitted
-     * on the stream.
-     */
-    boolean isLast();
-
-    /**
-     * Sets if this frame is the last frame to be transmitted on the stream.
-     */
-    void setLast(boolean last);
+    byte priority();
 
     /**
      * Returns {@code true} if the stream created with this frame is to be
      * considered half-closed to the receiver.
      */
     boolean isUnidirectional();
-
-    /**
-     * Sets if the stream created with this frame is to be considered
-     * half-closed to the receiver.
-     */
-    void setUnidirectional(boolean unidirectional);
 }

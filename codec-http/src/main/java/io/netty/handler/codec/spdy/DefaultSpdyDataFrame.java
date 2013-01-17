@@ -25,8 +25,8 @@ import io.netty.util.internal.StringUtil;
  */
 public class DefaultSpdyDataFrame extends DefaultByteBufHolder implements SpdyDataFrame {
 
-    private int streamId;
-    private boolean last;
+    private final int streamId;
+    private final boolean last;
 
     /**
      * Creates a new instance.
@@ -34,18 +34,24 @@ public class DefaultSpdyDataFrame extends DefaultByteBufHolder implements SpdyDa
      * @param streamId the Stream-ID of this frame
      */
     public DefaultSpdyDataFrame(int streamId) {
-        this(streamId, Unpooled.buffer(0));
+        this(streamId, false, Unpooled.buffer(0));
     }
 
     /**
      * Creates a new instance.
      *
      * @param streamId  the Stream-ID of this frame
+     * @param last      if this is the last frame in the stream
      * @param data      the payload of the frame. Can not exceed {@link SpdyCodecUtil#SPDY_MAX_LENGTH}
      */
-    public DefaultSpdyDataFrame(int streamId, ByteBuf data) {
+    public DefaultSpdyDataFrame(int streamId, boolean last, ByteBuf data) {
         super(validate(data));
-        setStreamId(streamId);
+        if (streamId <= 0) {
+            throw new IllegalArgumentException(
+                    "Stream-ID must be positive: " + streamId);
+        }
+        this.streamId = streamId;
+        this.last = last;
     }
 
     private static ByteBuf validate(ByteBuf data) {
@@ -57,17 +63,8 @@ public class DefaultSpdyDataFrame extends DefaultByteBufHolder implements SpdyDa
     }
 
     @Override
-    public int getStreamId() {
+    public int streamId() {
         return streamId;
-    }
-
-    @Override
-    public void setStreamId(int streamId) {
-        if (streamId <= 0) {
-            throw new IllegalArgumentException(
-                    "Stream-ID must be positive: " + streamId);
-        }
-        this.streamId = streamId;
     }
 
     @Override
@@ -76,15 +73,8 @@ public class DefaultSpdyDataFrame extends DefaultByteBufHolder implements SpdyDa
     }
 
     @Override
-    public void setLast(boolean last) {
-        this.last = last;
-    }
-
-    @Override
     public DefaultSpdyDataFrame copy() {
-        DefaultSpdyDataFrame frame = new DefaultSpdyDataFrame(getStreamId(), data().copy());
-        frame.setLast(isLast());
-        return frame;
+        return new DefaultSpdyDataFrame(streamId(), isLast(), data().copy());
     }
 
     @Override

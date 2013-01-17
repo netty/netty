@@ -23,10 +23,5 @@ public interface SpdyPingFrame extends SpdyControlFrame {
     /**
      * Returns the ID of this frame.
      */
-    int getId();
-
-    /**
-     * Sets the ID of this frame.
-     */
-    void setId(int id);
+    int id();
 }

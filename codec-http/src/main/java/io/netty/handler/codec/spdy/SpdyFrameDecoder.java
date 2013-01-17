@@ -124,8 +124,8 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
                         return null;
                     }
 
-                    SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(streamID);
-                    spdyDataFrame.setLast((flags & SPDY_DATA_FLAG_FIN) != 0);
+                    SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(streamID,
+                            (flags & SPDY_DATA_FLAG_FIN) != 0, Unpooled.EMPTY_BUFFER);
                     state = State.READ_COMMON_HEADER;
                     return spdyDataFrame;
                 }
@@ -283,13 +283,16 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
 
             ByteBuf data = ctx.alloc().buffer(dataLength);
             data.writeBytes(buffer, dataLength);
-            SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(streamID, data);
-            length -= dataLength;
+            SpdyDataFrame spdyDataFrame;
 
             if (length == 0) {
-                spdyDataFrame.setLast((flags & SPDY_DATA_FLAG_FIN) != 0);
+                spdyDataFrame = new DefaultSpdyDataFrame(streamID, (flags & SPDY_DATA_FLAG_FIN) != 0, data);
                 state = State.READ_COMMON_HEADER;
+            } else {
+                spdyDataFrame = new DefaultSpdyDataFrame(streamID, false, data);
             }
+            length -= dataLength;
+
             return spdyDataFrame;
 
         case DISCARD_FRAME:
@@ -453,11 +456,10 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
                 buffer.skipBytes(2);
                 length = 0;
             }
-
+            boolean last = (flags & SPDY_FLAG_FIN) != 0;
+            boolean unidirectional = (flags & SPDY_FLAG_UNIDIRECTIONAL) != 0;
             SpdySynStreamFrame spdySynStreamFrame =
-                    new DefaultSpdySynStreamFrame(streamID, associatedToStreamId, priority);
-            spdySynStreamFrame.setLast((flags & SPDY_FLAG_FIN) != 0);
-            spdySynStreamFrame.setUnidirectional((flags & SPDY_FLAG_UNIDIRECTIONAL) != 0);
+                    new DefaultSpdySynStreamFrame(streamID, associatedToStreamId, priority, unidirectional, last);
 
             return spdySynStreamFrame;
 
@@ -483,9 +485,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
                 length = 0;
             }
 
-            SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamID);
-            spdySynReplyFrame.setLast((flags & SPDY_FLAG_FIN) != 0);
-
+            SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamID, (flags & SPDY_FLAG_FIN) != 0);
             return spdySynReplyFrame;
 
         case SPDY_HEADERS_FRAME:
@@ -514,9 +514,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
                 length = 0;
             }
 
-            SpdyHeadersFrame spdyHeadersFrame = new DefaultSpdyHeadersFrame(streamID);
-            spdyHeadersFrame.setLast((flags & SPDY_FLAG_FIN) != 0);
-
+            SpdyHeadersFrame spdyHeadersFrame = new DefaultSpdyHeadersFrame(streamID, (flags & SPDY_FLAG_FIN) != 0);
             return spdyHeadersFrame;
 
         default:
