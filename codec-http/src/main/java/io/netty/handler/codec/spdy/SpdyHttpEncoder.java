@@ -164,8 +164,8 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
         if (msg instanceof HttpContent) {
 
             HttpContent chunk = (HttpContent) msg;
-            SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(currentStreamId, chunk instanceof LastHttpContent,
-                    chunk.data());
+            SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(
+                    currentStreamId, chunk instanceof LastHttpContent, chunk.data());
             if (chunk instanceof LastHttpContent) {
                 LastHttpContent trailer = (LastHttpContent) chunk;
                 List<Map.Entry<String, String>> trailers = trailer.trailingHeaders().entries();

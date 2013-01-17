@@ -49,7 +49,7 @@ public class DefaultSpdyHeaderBlock implements SpdyHeaderBlock {
         return headers;
     }
     protected void appendHeaders(StringBuilder buf) {
-        for (Map.Entry<String, String> e: headers().entries()) {
+        for (Map.Entry<String, String> e: headers()) {
             buf.append("    ");
             buf.append(e.getKey());
             buf.append(": ");
