@@ -23,7 +23,7 @@ import io.netty.channel.rxtx.RxtxChannelConfig.Stopbits;
 /**
  * Option for configuring a serial port connection
  */
-public class RxtxChannelOption<T> extends ChannelOption<T> {
+public final class RxtxChannelOption<T> extends ChannelOption<T> {
     public static final RxtxChannelOption<Integer> BAUD_RATE =
             new RxtxChannelOption<Integer>("BAUD_RATE");
 
