@@ -44,6 +44,7 @@ public class WebSocketServerProtocolHandshakeHandler
 
     public WebSocketServerProtocolHandshakeHandler(String websocketPath, String subprotocols,
             boolean allowExtensions) {
+        super(FullHttpRequest.class);
         this.websocketPath = websocketPath;
         this.subprotocols = subprotocols;
         this.allowExtensions = allowExtensions;
