@@ -52,7 +52,7 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
         StringBuilder buf = new StringBuilder();
         buf.append(getClass().getSimpleName());
         buf.append("(version: ");
-        buf.append(protocolVersion().getText());
+        buf.append(protocolVersion().text());
         buf.append(", keepAlive: ");
         buf.append(HttpHeaders.isKeepAlive(this));
         buf.append(')');

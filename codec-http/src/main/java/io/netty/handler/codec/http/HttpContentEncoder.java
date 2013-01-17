@@ -131,13 +131,13 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
                     }
                 }
 
-                encoder = result.getContentEncoder();
+                encoder = result.contentEncoder();
 
                 // Encode the content and remove or replace the existing headers
                 // so that the message looks like a decoded message.
                 headers.set(
                         HttpHeaders.Names.CONTENT_ENCODING,
-                        result.getTargetContentEncoding());
+                        result.targetContentEncoding());
 
                 Object[] encoded = encodeContent(message, c);
 
@@ -264,11 +264,11 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
             this.contentEncoder = contentEncoder;
         }
 
-        public String getTargetContentEncoding() {
+        public String targetContentEncoding() {
             return targetContentEncoding;
         }
 
-        public EmbeddedByteChannel getContentEncoder() {
+        public EmbeddedByteChannel contentEncoder() {
             return contentEncoder;
         }
     }
