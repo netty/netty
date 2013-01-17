@@ -1065,7 +1065,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     next.invokeInboundBufferUpdatedTask = task = new Runnable() {
                         @Override
                         public void run() {
-                            next.invokeInboundBufferUpdated();
+                            if (!next.isInboundBufferFreed()) {
+                                next.invokeInboundBufferUpdated();
+                            }
                         }
                     };
                 }
