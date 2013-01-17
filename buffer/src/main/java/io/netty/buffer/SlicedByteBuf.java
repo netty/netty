@@ -140,7 +140,7 @@ public class SlicedByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf duplicate() {
-        ByteBuf duplicate = new SlicedByteBuf(buffer, adjustment, length);
+        ByteBuf duplicate = buffer.slice(adjustment, length);
         duplicate.setIndex(readerIndex(), writerIndex());
         return duplicate;
     }
@@ -157,7 +157,8 @@ public class SlicedByteBuf extends AbstractByteBuf {
         if (length == 0) {
             return Unpooled.EMPTY_BUFFER;
         }
-        return new SlicedByteBuf(buffer, index + adjustment, length);
+        return buffer.slice(index + adjustment, length);
+        //new SlicedByteBuf(buffer, index + adjustment, length);
     }
 
     @Override
