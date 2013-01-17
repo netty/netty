@@ -1054,7 +1054,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void fireInboundBufferUpdated0() {
         final DefaultChannelHandlerContext next = findContextInbound();
-        if (next != null) {
+        if (next != null && !next.isInboundBufferFreed()) {
             next.fillBridge();
             // This comparison is safe because this method is always executed from the executor.
             if (next.executor == executor) {
@@ -1082,7 +1082,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         } catch (Throwable t) {
             pipeline.notifyHandlerException(t);
         } finally {
-            if (handler instanceof ChannelInboundByteHandler) {
+            if (handler instanceof ChannelInboundByteHandler && !isInboundBufferFreed()) {
                 try {
                     ((ChannelInboundByteHandler) handler).discardInboundReadBytes(this);
                 } catch (Throwable t) {
@@ -1383,6 +1383,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void invokePrevFlush(ChannelPromise promise, Thread currentThread) {
         DefaultChannelHandlerContext prev = findContextOutbound();
+        if (prev.isOutboundBufferFreed()) {
+            promise.setFailure(new ChannelPipelineException(
+                    "Unable to flush as outbound buffer of next handler was freed already"));
+            return;
+        }
         prev.fillBridge();
         prev.invokeFlush(promise, currentThread);
     }
@@ -1537,6 +1542,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             return;
         }
 
+        if (isOutboundBufferFreed()) {
+            promise.setFailure(new ChannelPipelineException(
+                    "Unable to write as outbound buffer of next handler was freed already"));
+            return;
+        }
         if (msgBuf) {
             outboundMessageBuffer().add(message);
         } else {
@@ -1633,6 +1643,26 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public ChannelFuture newFailedFuture(Throwable cause) {
         return channel().newFailedFuture(cause);
+    }
+
+    private boolean isInboundBufferFreed() {
+        if (hasInboundByteBuffer()) {
+            return inboundByteBuffer().isFreed();
+        }
+        if (hasInboundMessageBuffer()) {
+            return inboundMessageBuffer().isFreed();
+        }
+        return false;
+    }
+
+    private boolean isOutboundBufferFreed() {
+        if (hasOutboundByteBuffer()) {
+            return outboundByteBuffer().isFreed();
+        }
+        if (hasOutboundMessageBuffer()) {
+            return outboundMessageBuffer().isFreed();
+        }
+        return false;
     }
 
     private void validateFuture(ChannelFuture future) {
