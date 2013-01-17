@@ -59,7 +59,7 @@ public final class SwappedByteBuf implements ByteBuf {
 
     @Override
     public ByteBuf unwrap() {
-        return buf;
+        return buf.unwrap();
     }
 
     @Override
