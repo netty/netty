@@ -350,9 +350,9 @@ public class SpdyHeaders {
      */
     public static void setVersion(int spdyVersion, SpdyHeaderBlock block, HttpVersion httpVersion) {
         if (spdyVersion < 3) {
-            block.setHeader(Spdy2HttpNames.VERSION, httpVersion.getText());
+            block.setHeader(Spdy2HttpNames.VERSION, httpVersion.text());
         } else {
-            block.setHeader(HttpNames.VERSION, httpVersion.getText());
+            block.setHeader(HttpNames.VERSION, httpVersion.text());
         }
     }
 

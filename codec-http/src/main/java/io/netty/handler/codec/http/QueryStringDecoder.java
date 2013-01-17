@@ -174,7 +174,7 @@ public class QueryStringDecoder {
     /**
      * Returns the decoded path string of the URI.
      */
-    public String getPath() {
+    public String path() {
         if (path == null) {
             if (!hasPath) {
                 return path = "";
@@ -193,10 +193,10 @@ public class QueryStringDecoder {
     /**
      * Returns the decoded key-value parameter pairs of the URI.
      */
-    public Map<String, List<String>> getParameters() {
+    public Map<String, List<String>> parameters() {
         if (params == null) {
             if (hasPath) {
-                int pathLength = getPath().length();
+                int pathLength = path().length();
                 if (uri.length() == pathLength) {
                     return Collections.emptyMap();
                 }

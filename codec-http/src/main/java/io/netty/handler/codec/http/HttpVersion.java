@@ -148,28 +148,28 @@ public class HttpVersion implements Comparable<HttpVersion> {
     /**
      * Returns the name of the protocol such as {@code "HTTP"} in {@code "HTTP/1.0"}.
      */
-    public String getProtocolName() {
+    public String protocolName() {
         return protocolName;
     }
 
     /**
      * Returns the name of the protocol such as {@code 1} in {@code "HTTP/1.0"}.
      */
-    public int getMajorVersion() {
+    public int majorVersion() {
         return majorVersion;
     }
 
     /**
      * Returns the name of the protocol such as {@code 0} in {@code "HTTP/1.0"}.
      */
-    public int getMinorVersion() {
+    public int minorVersion() {
         return minorVersion;
     }
 
     /**
      * Returns the full protocol version text such as {@code "HTTP/1.0"}.
      */
-    public String getText() {
+    public String text() {
         return text;
     }
 
@@ -186,13 +186,13 @@ public class HttpVersion implements Comparable<HttpVersion> {
      */
     @Override
     public String toString() {
-        return getText();
+        return text();
     }
 
     @Override
     public int hashCode() {
-        return (getProtocolName().hashCode() * 31 + getMajorVersion()) * 31 +
-               getMinorVersion();
+        return (protocolName().hashCode() * 31 + majorVersion()) * 31 +
+               minorVersion();
     }
 
     @Override
@@ -202,23 +202,23 @@ public class HttpVersion implements Comparable<HttpVersion> {
         }
 
         HttpVersion that = (HttpVersion) o;
-        return getMinorVersion() == that.getMinorVersion() &&
-               getMajorVersion() == that.getMajorVersion() &&
-               getProtocolName().equals(that.getProtocolName());
+        return minorVersion() == that.minorVersion() &&
+               majorVersion() == that.majorVersion() &&
+               protocolName().equals(that.protocolName());
     }
 
     @Override
     public int compareTo(HttpVersion o) {
-        int v = getProtocolName().compareTo(o.getProtocolName());
+        int v = protocolName().compareTo(o.protocolName());
         if (v != 0) {
             return v;
         }
 
-        v = getMajorVersion() - o.getMajorVersion();
+        v = majorVersion() - o.majorVersion();
         if (v != 0) {
             return v;
         }
 
-        return getMinorVersion() - o.getMinorVersion();
+        return minorVersion() - o.minorVersion();
     }
 }

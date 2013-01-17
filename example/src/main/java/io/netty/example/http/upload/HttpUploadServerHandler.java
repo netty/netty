@@ -113,7 +113,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
             responseContent.append("WELCOME TO THE WILD WILD WEB SERVER\r\n");
             responseContent.append("===================================\r\n");
 
-            responseContent.append("VERSION: " + request.protocolVersion().getText() + "\r\n");
+            responseContent.append("VERSION: " + request.protocolVersion().text() + "\r\n");
 
             responseContent.append("REQUEST_URI: " + request.uri() + "\r\n\r\n");
             responseContent.append("\r\n\r\n");
@@ -139,7 +139,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
             responseContent.append("\r\n\r\n");
 
             QueryStringDecoder decoderQuery = new QueryStringDecoder(request.uri());
-            Map<String, List<String>> uriAttributes = decoderQuery.getParameters();
+            Map<String, List<String>> uriAttributes = decoderQuery.parameters();
             for (Entry<String, List<String>> attr: uriAttributes.entrySet()) {
                 for (String attrVal: attr.getValue()) {
                     responseContent.append("URI: " + attr.getKey() + '=' + attrVal + "\r\n");

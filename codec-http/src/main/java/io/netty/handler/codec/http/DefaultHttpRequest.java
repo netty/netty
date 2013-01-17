@@ -66,7 +66,7 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
         buf.append(' ');
         buf.append(uri());
         buf.append(' ');
-        buf.append(protocolVersion().getText());
+        buf.append(protocolVersion().text());
         buf.append(StringUtil.NEWLINE);
         appendHeaders(buf);
 
