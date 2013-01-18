@@ -39,6 +39,7 @@ public abstract class AbstractChannelBufferTest {
 
     private static final int CAPACITY = 4096; // Must be even
     private static final int BLOCK_SIZE = 128;
+    private static final byte[] EMPTY_ARRAY = new byte[0];
 
     private long seed;
     private Random random;
@@ -60,7 +61,14 @@ public abstract class AbstractChannelBufferTest {
 
     @After
     public void dispose() {
-        buffer = null;
+        if (buffer != null) {
+            try {
+                buffer.free();
+            } catch (Exception e) {
+                // Ignore.
+            }
+            buffer = null;
+        }
     }
 
     @Test
@@ -203,12 +211,12 @@ public abstract class AbstractChannelBufferTest {
 
     @Test(expected = IndexOutOfBoundsException.class)
     public void getByteArrayBoundaryCheck1() {
-        buffer.getBytes(-1, new byte[0]);
+        buffer.getBytes(-1, EMPTY_ARRAY);
     }
 
     @Test(expected = IndexOutOfBoundsException.class)
     public void getByteArrayBoundaryCheck2() {
-        buffer.getBytes(-1, new byte[0], 0, 0);
+        buffer.getBytes(-1, EMPTY_ARRAY, 0, 0);
     }
 
     @Test
@@ -863,6 +871,9 @@ public abstract class AbstractChannelBufferTest {
                 assertEquals(expectedValue.getByte(j), value.getByte(j));
             }
         }
+
+        value.free();
+        expectedValue.free();
     }
 
     @Test
@@ -1037,6 +1048,8 @@ public abstract class AbstractChannelBufferTest {
             assertEquals(0, value.readerIndex());
             assertEquals(0, value.writerIndex());
         }
+
+        value.free();
     }
 
     @Test
@@ -1076,6 +1089,8 @@ public abstract class AbstractChannelBufferTest {
             assertEquals(valueOffset, value.readerIndex());
             assertEquals(valueOffset + BLOCK_SIZE, value.writerIndex());
         }
+
+        value.free();
     }
 
     @Test
@@ -1591,7 +1606,9 @@ public abstract class AbstractChannelBufferTest {
 
         assertEquals(2, set.size());
         assertTrue(set.contains(elemA.copy()));
-        assertTrue(set.contains(elemB.copy()));
+
+        ByteBuf elemBCopy = elemB.copy();
+        assertTrue(set.contains(elemBCopy));
 
         buffer.clear();
         buffer.writeBytes(elemA.duplicate());
@@ -1605,6 +1622,9 @@ public abstract class AbstractChannelBufferTest {
         assertTrue(set.remove(buffer));
         assertFalse(set.contains(elemB));
         assertEquals(0, set.size());
+
+        elemB.free();
+        elemBCopy.free();
     }
 
     // Test case for https://github.com/netty/netty/issues/325

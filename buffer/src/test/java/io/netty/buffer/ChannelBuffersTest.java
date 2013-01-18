@@ -33,6 +33,7 @@ import static org.junit.Assert.*;
 /**
  * Tests channel buffers
  */
+@SuppressWarnings("ZeroLengthArrayAllocation")
 public class ChannelBuffersTest {
 
     @Test
@@ -50,6 +51,8 @@ public class ChannelBuffersTest {
 
         assertEquals(12 + 512, buffer.readableBytes());
         assertEquals(2, buffer.nioBufferCount());
+
+        buffer.free();
     }
 
     @Test
