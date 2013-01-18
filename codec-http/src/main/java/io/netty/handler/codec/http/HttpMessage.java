@@ -24,7 +24,7 @@ package io.netty.handler.codec.http;
  * @see HttpHeaders
  *
  * @apiviz.landmark
- * @apiviz.has io.netty.handler.codec.http.HttpChunk oneway - - is followed by
+ * @apiviz.has io.netty.handler.codec.http.HttpContent oneway - - is followed by
  */
 public interface HttpMessage extends HttpObject {
 
