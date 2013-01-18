@@ -332,12 +332,7 @@ final class UnpooledHeapByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf copy(int index, int length) {
-        checkUnfreed();
-        if (index < 0 || length < 0 || index + length > array.length) {
-            throw new IndexOutOfBoundsException("Too many bytes to copy - Need "
-                    + (index + length) + ", maximum is " + array.length);
-        }
-
+        checkIndex(index, length);
         byte[] copiedArray = new byte[length];
         System.arraycopy(array, index, copiedArray, 0, length);
         return new UnpooledHeapByteBuf(alloc(), copiedArray, maxCapacity());

@@ -68,8 +68,8 @@ public abstract class AbstractByteBuf implements ByteBuf {
     @Override
     public ByteBuf readerIndex(int readerIndex) {
         if (readerIndex < 0 || readerIndex > writerIndex) {
-            throw new IndexOutOfBoundsException("Invalid readerIndex: "
-                    + readerIndex + " - Maximum is " + writerIndex);
+            throw new IndexOutOfBoundsException(String.format(
+                    "readerIndex: %d (expected: 0 <= readerIndex <= writerIndex(%d))", readerIndex, writerIndex));
         }
         this.readerIndex = readerIndex;
         return this;
@@ -83,8 +83,9 @@ public abstract class AbstractByteBuf implements ByteBuf {
     @Override
     public ByteBuf writerIndex(int writerIndex) {
         if (writerIndex < readerIndex || writerIndex > capacity()) {
-            throw new IndexOutOfBoundsException("Invalid writerIndex: "
-                    + writerIndex + " - Maximum is " + readerIndex + " or " + capacity());
+            throw new IndexOutOfBoundsException(String.format(
+                    "writerIndex: %d (expected: readerIndex(%d) <= writerIndex <= capacity(%d))",
+                    writerIndex, readerIndex, capacity()));
         }
         this.writerIndex = writerIndex;
         return this;
@@ -93,9 +94,9 @@ public abstract class AbstractByteBuf implements ByteBuf {
     @Override
     public ByteBuf setIndex(int readerIndex, int writerIndex) {
         if (readerIndex < 0 || readerIndex > writerIndex || writerIndex > capacity()) {
-            throw new IndexOutOfBoundsException("Invalid indexes: readerIndex is "
-                    + readerIndex + ", writerIndex is "
-                    + writerIndex + ", capacity is " + capacity());
+            throw new IndexOutOfBoundsException(String.format(
+                    "readerIndex: %d, writerIndex: %d (expected: 0 <= readerIndex <= writerIndex <= capacity(%d))",
+                    readerIndex, writerIndex, capacity()));
         }
         this.readerIndex = readerIndex;
         this.writerIndex = writerIndex;
@@ -227,8 +228,8 @@ public abstract class AbstractByteBuf implements ByteBuf {
 
         if (minWritableBytes > maxCapacity - writerIndex) {
             throw new IndexOutOfBoundsException(String.format(
-                    "writerIndex(%d) + minWritableBytes(%d) exceeds maxCapacity(%d)",
-                    writerIndex, minWritableBytes, maxCapacity));
+                    "writerIndex(%d) + minWritableBytes(%d) exceeds maxCapacity(%d): %s",
+                    writerIndex, minWritableBytes, maxCapacity, this));
         }
 
         // Normalize the current capacity to the power of 2.
@@ -371,9 +372,14 @@ public abstract class AbstractByteBuf implements ByteBuf {
 
     @Override
     public ByteBuf getBytes(int index, ByteBuf dst, int length) {
+        checkIndex(index,  length);
+        if (dst == null) {
+            throw new NullPointerException("dst");
+        }
+
         if (length > dst.writableBytes()) {
-            throw new IndexOutOfBoundsException("Too many bytes to be read: Need "
-                    + length + ", maximum is " + dst.writableBytes());
+            throw new IndexOutOfBoundsException(String.format(
+                    "length(%d) exceeds dst.writableBytes(%d) where dst is: %s", length, dst.writableBytes(), dst));
         }
         getBytes(index, dst, dst.writerIndex(), length);
         dst.writerIndex(dst.writerIndex() + length);
@@ -418,10 +424,15 @@ public abstract class AbstractByteBuf implements ByteBuf {
 
     @Override
     public ByteBuf setBytes(int index, ByteBuf src, int length) {
-        if (length > src.readableBytes()) {
-            throw new IndexOutOfBoundsException("Too many bytes to write: Need "
-                    + length + ", maximum is " + src.readableBytes());
+        checkIndex(index, length);
+        if (src == null) {
+            throw new NullPointerException("src");
         }
+        if (length > src.readableBytes()) {
+            throw new IndexOutOfBoundsException(String.format(
+                    "length(%d) exceeds src.readableBytes(%d) where src is: %s", length, src.readableBytes(), src));
+        }
+
         setBytes(index, src, src.readerIndex(), length);
         src.readerIndex(src.readerIndex() + length);
         return this;
@@ -432,10 +443,8 @@ public abstract class AbstractByteBuf implements ByteBuf {
         if (length == 0) {
             return this;
         }
-        if (length < 0) {
-            throw new IllegalArgumentException(
-                    "length must be 0 or greater than 0.");
-        }
+
+        checkIndex(index, length);
 
         int nLong = length >>> 3;
         int nBytes = length & 7;
@@ -464,8 +473,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
     @Override
     public byte readByte() {
         if (readerIndex == writerIndex) {
-            throw new IndexOutOfBoundsException("Readable byte limit exceeded: "
-                    + readerIndex);
+            throw new IndexOutOfBoundsException("readerIndex(" + readerIndex + ") == writerIndex(" + writerIndex + ')');
         }
         return getByte(readerIndex ++);
     }
@@ -590,8 +598,8 @@ public abstract class AbstractByteBuf implements ByteBuf {
     @Override
     public ByteBuf readBytes(ByteBuf dst, int length) {
         if (length > dst.writableBytes()) {
-            throw new IndexOutOfBoundsException("Too many bytes to be read: Need "
-                    + length + ", maximum is " + dst.writableBytes());
+            throw new IndexOutOfBoundsException(String.format(
+                    "length(%d) exceeds dst.writableBytes(%d) where dst is: %s", length, dst.writableBytes(), dst));
         }
         readBytes(dst, dst.writerIndex(), length);
         dst.writerIndex(dst.writerIndex() + length);
@@ -636,8 +644,9 @@ public abstract class AbstractByteBuf implements ByteBuf {
     public ByteBuf skipBytes(int length) {
         int newReaderIndex = readerIndex + length;
         if (newReaderIndex > writerIndex) {
-            throw new IndexOutOfBoundsException("Readable bytes exceeded - Need "
-                    + newReaderIndex + ", maximum is " + writerIndex);
+            throw new IndexOutOfBoundsException(String.format(
+                    "length: %d (expected: readerIndex(%d) + length <= writerIndex(%d))",
+                    length, readerIndex, writerIndex));
         }
         readerIndex = newReaderIndex;
         return this;
@@ -729,8 +738,8 @@ public abstract class AbstractByteBuf implements ByteBuf {
     @Override
     public ByteBuf writeBytes(ByteBuf src, int length) {
         if (length > src.readableBytes()) {
-            throw new IndexOutOfBoundsException("Too many bytes to write - Need "
-                    + length + ", maximum is " + src.readableBytes());
+            throw new IndexOutOfBoundsException(String.format(
+                    "length(%d) exceeds src.readableBytes(%d) where src is: %s", length, src.readableBytes(), src));
         }
         writeBytes(src, src.readerIndex(), length);
         src.readerIndex(src.readerIndex() + length);
@@ -781,10 +790,9 @@ public abstract class AbstractByteBuf implements ByteBuf {
         if (length == 0) {
             return this;
         }
-        if (length < 0) {
-            throw new IllegalArgumentException(
-                    "length must be 0 or greater than 0.");
-        }
+
+        checkIndex(writerIndex, length);
+
         int nLong = length >>> 3;
         int nBytes = length & 7;
         for (int i = nLong; i > 0; i --) {
@@ -968,7 +976,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
 
     protected final void checkIndex(int index, int fieldLength) {
         checkUnfreed();
-        if (index < 0 || index > capacity() - fieldLength) {
+        if (index < 0 || index > capacity() - fieldLength || fieldLength < 0) {
             throw new IndexOutOfBoundsException(String.format(
                     "index: %d, length: %d (expected: range(0, %d))", index, fieldLength, capacity()));
         }
@@ -981,9 +989,10 @@ public abstract class AbstractByteBuf implements ByteBuf {
      */
     protected final void checkReadableBytes(int minimumReadableBytes) {
         checkUnfreed();
-        if (readableBytes() < minimumReadableBytes) {
-            throw new IndexOutOfBoundsException("Not enough readable bytes - Need "
-                    + minimumReadableBytes + ", maximum is " + readableBytes());
+        if (readerIndex > writerIndex - minimumReadableBytes) {
+            throw new IndexOutOfBoundsException(String.format(
+                    "readerIndex(%d) + length(%d) exceeds writerIndex(%d): %s",
+                    readerIndex, minimumReadableBytes, writerIndex, this));
         }
     }
 
