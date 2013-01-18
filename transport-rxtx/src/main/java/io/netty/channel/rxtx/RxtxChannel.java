@@ -21,6 +21,7 @@ import gnu.io.SerialPort;
 import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.socket.oio.AbstractOioByteChannel;
 
 import java.io.IOException;
@@ -104,7 +105,12 @@ public class RxtxChannel extends AbstractOioByteChannel {
     protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         RxtxDeviceAddress remote = (RxtxDeviceAddress) remoteAddress;
         final CommPortIdentifier cpi = CommPortIdentifier.getPortIdentifier(remote.value());
-        final CommPort commPort = cpi.open(getClass().getName(), 1000);
+        final CommPort commPort = cpi.open(getClass().getName(), config().getOption(CONNECT_TIMEOUT_MILLIS));
+
+        Integer waitAfterConnect = config().getOption(WAIT_AFTER_CONNECT);
+        if (waitAfterConnect != 0) {
+            Thread.sleep(waitAfterConnect);
+        }
 
         deviceAddress = remote;
 
