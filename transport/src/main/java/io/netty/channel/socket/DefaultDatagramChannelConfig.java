@@ -384,4 +384,9 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
     public DatagramChannelConfig setAutoRead(boolean autoRead) {
         return (DatagramChannelConfig) super.setAutoRead(autoRead);
     }
+
+    @Override
+    public DatagramChannelConfig setMinWritableAmount(int minWritableAmount) {
+        return (DatagramChannelConfig) super.setMinWritableAmount(minWritableAmount);
+    }
 }

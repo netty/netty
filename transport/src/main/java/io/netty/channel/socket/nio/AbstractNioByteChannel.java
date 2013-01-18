@@ -70,6 +70,9 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     return;
                 }
                 loop: for (;;) {
+                    if (!byteBuf.ensureIsWritable(config().minWritableAmount())) {
+                        break;
+                    }
                     int localReadAmount = doReadBytes(byteBuf);
                     if (localReadAmount > 0) {
                         read = true;

@@ -312,7 +312,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 }
 
                 ByteBuf byteBuf = pipeline().inboundByteBuffer();
-                if (expandReadBuffer(byteBuf) == 2) {
+                if (expandReadBuffer(byteBuf) == 2 || !byteBuf.ensureIsWritable(config().minWritableAmount())) {
                     // no room left in the buffer
                     break;
                 }

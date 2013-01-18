@@ -117,7 +117,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
 
     @Override
     protected void doBeginRead() {
-        if (acceptInProgress) {
+        if (acceptInProgress || !pipeline().inboundMessageBuffer().ensureIsWritable(config().minWritableAmount())) {
             return;
         }
 

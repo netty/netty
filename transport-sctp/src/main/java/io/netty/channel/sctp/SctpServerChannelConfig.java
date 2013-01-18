@@ -102,4 +102,7 @@ public interface SctpServerChannelConfig extends ChannelConfig {
 
     @Override
     SctpServerChannelConfig setAutoRead(boolean autoRead);
+
+    @Override
+    SctpServerChannelConfig setMinWritableAmount(int minWritableAmount);
 }

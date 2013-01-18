@@ -15,6 +15,7 @@
  */
 package io.netty.channel.udt;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
@@ -161,4 +162,18 @@ public interface UdtChannelConfig extends ChannelConfig {
      */
     UdtChannelConfig setSystemSendBufferSize(int size);
 
+    @Override
+    UdtChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
+
+    @Override
+    UdtChannelConfig setWriteSpinCount(int writeSpinCount);
+
+    @Override
+    UdtChannelConfig setAllocator(ByteBufAllocator allocator);
+
+    @Override
+    UdtChannelConfig setAutoRead(boolean autoRead);
+
+    @Override
+    UdtChannelConfig setMinWritableAmount(int minWritableAmount);
 }

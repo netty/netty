@@ -179,4 +179,9 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
     public SctpChannelConfig setAutoRead(boolean autoRead) {
         return (SctpChannelConfig) super.setAutoRead(autoRead);
     }
+
+    @Override
+    public SctpChannelConfig setMinWritableAmount(int minWritableAmount) {
+        return (SctpChannelConfig) super.setMinWritableAmount(minWritableAmount);
+    }
 }

@@ -1101,9 +1101,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     private void tryInvokeRead(Buf buf) {
-        // TODO: Replace with some sane number.. Maybe configurable ?
-        //       For message based transports 1 may be a good number but for byte based I don't think so
-        if (prev == pipeline.head && buf.ensureIsWritable(1) && channel().config().isAutoRead()) {
+        if (prev == pipeline.head && buf.ensureIsWritable(channel().config().minWritableAmount())
+                && channel().config().isAutoRead()) {
             // only trigger read if this is the first user handler in the pipeline
             prev.invokeRead();
         }

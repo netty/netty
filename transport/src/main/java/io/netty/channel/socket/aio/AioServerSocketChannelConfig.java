@@ -220,4 +220,9 @@ final class AioServerSocketChannelConfig extends DefaultChannelConfig
     public ServerSocketChannelConfig setAutoRead(boolean autoRead) {
         return (ServerSocketChannelConfig) super.setAutoRead(autoRead);
     }
+
+    @Override
+    public ServerSocketChannelConfig setMinWritableAmount(int minWritableAmount) {
+        return (ServerSocketChannelConfig) super.setMinWritableAmount(minWritableAmount);
+    }
 }

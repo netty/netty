@@ -173,4 +173,9 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
     public SctpServerChannelConfig setAutoRead(boolean autoRead) {
         return (SctpServerChannelConfig) super.setAutoRead(autoRead);
     }
+
+    @Override
+    public SctpServerChannelConfig setMinWritableAmount(int minWritableAmount) {
+        return (SctpServerChannelConfig) super.setMinWritableAmount(minWritableAmount);
+    }
 }

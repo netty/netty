@@ -78,6 +78,9 @@ public interface AioSocketChannelConfig extends SocketChannelConfig {
     @Override
     AioSocketChannelConfig setAutoRead(boolean autoRead);
 
+    @Override
+    AioSocketChannelConfig setMinWritableAmount(int minWritableAmount);
+
     /**
      * Return the read timeout in milliseconds after which a {@link InterruptedByTimeoutException} will get thrown.
      * Once such an exception was detected it will get propagated to the handlers first. After that the channel
