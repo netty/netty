@@ -173,6 +173,8 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         headers.set(Names.CONTENT_LENGTH, key3.length);
         request.data().writeBytes(key3);
 
+        channel.pipeline().get(HttpResponseDecoder.class).setSingleDecode(true);
+
         ChannelFuture future = channel.write(request);
         future.addListener(new ChannelFutureListener() {
             @Override
