@@ -15,17 +15,33 @@
  */
 package io.netty.logging;
 
+import java.io.ObjectStreamException;
+import java.io.Serializable;
+
 /**
  * A skeletal implementation of {@link InternalLogger}.  This class implements
  * all methods that have a {@link InternalLogLevel} parameter by default to call
  * specific logger methods such as {@link #info(String)} or {@link #isInfoEnabled()}.
  */
-public abstract class AbstractInternalLogger implements InternalLogger {
+public abstract class AbstractInternalLogger implements InternalLogger, Serializable {
+
+    private static final long serialVersionUID = -6382972526573193470L;
+
+    private final String name;
 
     /**
      * Creates a new instance.
      */
-    protected AbstractInternalLogger() {
+    protected AbstractInternalLogger(String name) {
+        if (name == null) {
+            throw new NullPointerException("name");
+        }
+        this.name = name;
+    }
+
+    @Override
+    public String name() {
+        return name;
     }
 
     @Override
@@ -90,5 +106,83 @@ public abstract class AbstractInternalLogger implements InternalLogger {
         default:
             throw new Error();
         }
+    }
+
+    @Override
+    public void log(InternalLogLevel level, String format, Object arg) {
+        switch (level) {
+        case TRACE:
+            trace(format, arg);
+            break;
+        case DEBUG:
+            debug(format, arg);
+            break;
+        case INFO:
+            info(format, arg);
+            break;
+        case WARN:
+            warn(format, arg);
+            break;
+        case ERROR:
+            error(format, arg);
+            break;
+        default:
+            throw new Error();
+        }
+    }
+
+    @Override
+    public void log(InternalLogLevel level, String format, Object argA, Object argB) {
+        switch (level) {
+        case TRACE:
+            trace(format, argA, argB);
+            break;
+        case DEBUG:
+            debug(format, argA, argB);
+            break;
+        case INFO:
+            info(format, argA, argB);
+            break;
+        case WARN:
+            warn(format, argA, argB);
+            break;
+        case ERROR:
+            error(format, argA, argB);
+            break;
+        default:
+            throw new Error();
+        }
+    }
+
+    @Override
+    public void log(InternalLogLevel level, String format, Object... arguments) {
+        switch (level) {
+        case TRACE:
+            trace(format, arguments);
+            break;
+        case DEBUG:
+            debug(format, arguments);
+            break;
+        case INFO:
+            info(format, arguments);
+            break;
+        case WARN:
+            warn(format, arguments);
+            break;
+        case ERROR:
+            error(format, arguments);
+            break;
+        default:
+            throw new Error();
+        }
+    }
+
+    protected Object readResolve() throws ObjectStreamException {
+        return InternalLoggerFactory.getInstance(name());
+    }
+
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + '(' + name() + ')';
     }
 }

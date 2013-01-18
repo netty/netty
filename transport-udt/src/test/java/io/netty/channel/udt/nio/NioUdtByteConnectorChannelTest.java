@@ -18,10 +18,14 @@ package io.netty.channel.udt.nio;
 
 import io.netty.buffer.BufType;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.*;
 
-public class NioUdtByteConnectorChannelTest extends TestAny {
+public class NioUdtByteConnectorChannelTest {
+
+    protected static final Logger log = LoggerFactory.getLogger(NioUdtByteAcceptorChannelTest.class);
 
     /**
      * verify channel meta data

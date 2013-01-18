@@ -15,12 +15,12 @@
  */
 package io.netty.logging;
 
-import static org.easymock.EasyMock.*;
-import static org.junit.Assert.*;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.easymock.EasyMock.*;
+import static org.junit.Assert.*;
 
 public class InternalLoggerFactoryTest {
     private static final Exception e = new Exception();
@@ -49,11 +49,6 @@ public class InternalLoggerFactoryTest {
         InternalLoggerFactory.setDefaultFactory(null);
     }
 
-    @Test
-    public void shouldReturnWrappedLogger() {
-        assertNotSame(mock, InternalLoggerFactory.getInstance("mock"));
-    }
-    
     @Test
     public void shouldGetInstance() {
         InternalLoggerFactory.setDefaultFactory(oldLoggerFactory);

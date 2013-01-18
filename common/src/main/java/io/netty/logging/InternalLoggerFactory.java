@@ -32,7 +32,27 @@ package io.netty.logging;
  * @apiviz.has io.netty.logging.InternalLogger oneway - - creates
  */
 public abstract class InternalLoggerFactory {
-    private static volatile InternalLoggerFactory defaultFactory = new JdkLoggerFactory();
+    private static volatile InternalLoggerFactory defaultFactory;
+
+    static {
+        final String name = InternalLoggerFactory.class.getName();
+        InternalLoggerFactory f;
+        try {
+            f = new Slf4JLoggerFactory(true);
+            f.newInstance(name).debug("Using SLF4J as the default logging framework");
+            defaultFactory = f;
+        } catch (Throwable t1) {
+            try {
+                f = new Log4JLoggerFactory();
+                f.newInstance(name).debug("Using Log4J as the default logging framework");
+            } catch (Throwable t2) {
+                f = new JdkLoggerFactory();
+                f.newInstance(name).debug("Using java.util.logging as the default logging framework");
+            }
+        }
+
+        defaultFactory = f;
+    }
 
     /**
      * Returns the default factory.  The initial default factory is
@@ -63,103 +83,11 @@ public abstract class InternalLoggerFactory {
      * Creates a new logger instance with the specified name.
      */
     public static InternalLogger getInstance(String name) {
-        final InternalLogger logger = getDefaultFactory().newInstance(name);
-        return new InternalLogger() {
-
-            @Override
-            public void trace(String msg) {
-                logger.trace(msg);
-            }
-
-            @Override
-            public void trace(String msg, Throwable cause) {
-                logger.trace(msg, cause);
-            }
-
-            @Override
-            public void debug(String msg) {
-                logger.debug(msg);
-            }
-
-            @Override
-            public void debug(String msg, Throwable cause) {
-                logger.debug(msg, cause);
-            }
-
-            @Override
-            public void error(String msg) {
-                logger.error(msg);
-            }
-
-            @Override
-            public void error(String msg, Throwable cause) {
-                logger.error(msg, cause);
-            }
-
-            @Override
-            public void info(String msg) {
-                logger.info(msg);
-            }
-
-            @Override
-            public void info(String msg, Throwable cause) {
-                logger.info(msg, cause);
-            }
-
-            @Override
-            public boolean isTraceEnabled() {
-                return logger.isTraceEnabled();
-            }
-
-            @Override
-            public boolean isDebugEnabled() {
-                return logger.isDebugEnabled();
-            }
-
-            @Override
-            public boolean isErrorEnabled() {
-                return logger.isErrorEnabled();
-            }
-
-            @Override
-            public boolean isInfoEnabled() {
-                return logger.isInfoEnabled();
-            }
-
-            @Override
-            public boolean isWarnEnabled() {
-                return logger.isWarnEnabled();
-            }
-
-            @Override
-            public void warn(String msg) {
-                logger.warn(msg);
-            }
-
-            @Override
-            public void warn(String msg, Throwable cause) {
-                logger.warn(msg, cause);
-            }
-
-            @Override
-            public boolean isEnabled(InternalLogLevel level) {
-                return logger.isEnabled(level);
-            }
-
-            @Override
-            public void log(InternalLogLevel level, String msg) {
-                logger.log(level, msg);
-            }
-
-            @Override
-            public void log(InternalLogLevel level, String msg, Throwable cause) {
-                logger.log(level, msg, cause);
-            }
-        };
+        return getDefaultFactory().newInstance(name);
     }
 
     /**
      * Creates a new logger instance with the specified name.
      */
-    public abstract InternalLogger newInstance(String name);
+    protected abstract InternalLogger newInstance(String name);
 }
