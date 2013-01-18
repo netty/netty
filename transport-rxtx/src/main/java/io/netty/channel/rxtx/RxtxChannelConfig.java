@@ -150,6 +150,7 @@ public class RxtxChannelConfig extends DefaultChannelConfig {
     private volatile Stopbits stopbits = Stopbits.STOPBITS_1;
     private volatile Databits databits = Databits.DATABITS_8;
     private volatile Paritybit paritybit = Paritybit.NONE;
+    private volatile int waitAfterConnect;
 
     public RxtxChannelConfig(RxtxChannel channel) {
         super(channel);
@@ -157,7 +158,8 @@ public class RxtxChannelConfig extends DefaultChannelConfig {
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), BAUD_RATE, DTR, RTS, STOP_BITS, DATA_BITS, PARITY_BIT);
+        return getOptions(super.getOptions(), BAUD_RATE, DTR, RTS, STOP_BITS, DATA_BITS, PARITY_BIT,
+                WAIT_AFTER_CONNECT);
     }
 
     @SuppressWarnings("unchecked")
@@ -181,6 +183,9 @@ public class RxtxChannelConfig extends DefaultChannelConfig {
         if (option == PARITY_BIT) {
             return (T) getParitybit();
         }
+        if (option == WAIT_AFTER_CONNECT) {
+            return (T) Integer.valueOf(waitAfterConnect);
+        }
         return super.getOption(option);
     }
 
@@ -200,6 +205,8 @@ public class RxtxChannelConfig extends DefaultChannelConfig {
             setDatabits((Databits) value);
         } else if (option == PARITY_BIT) {
             setParitybit((Paritybit) value);
+        } else if (option == WAIT_AFTER_CONNECT) {
+            setWaitAfterConnect((Integer) value);
         } else {
             return super.setOption(option, value);
         }
@@ -244,6 +251,16 @@ public class RxtxChannelConfig extends DefaultChannelConfig {
      */
     public void setParitybit(final Paritybit paritybit) {
         this.paritybit = paritybit;
+    }
+
+    /**
+     * Sets the time to wait (in milliseconds) after the serial port has been opened.
+     * This might be needed depending on the kind of serial device you use.
+     *
+     * @param waitAfterConnect how long to wait after the serial port has been opened (in milliseconds)
+     */
+    public void setWaitAfterConnect(int waitAfterConnect) {
+        this.waitAfterConnect = waitAfterConnect;
     }
 
     /**
@@ -307,4 +324,5 @@ public class RxtxChannelConfig extends DefaultChannelConfig {
     public void setRts(final boolean rts) {
         this.rts = rts;
     }
+
 }
