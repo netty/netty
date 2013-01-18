@@ -276,7 +276,6 @@ public final class Unpooled {
         @Override
         public void free() {
             // do nothing
-            // TODO: Maybe throw an UnsupportedOperationException
         }
 
         @Override

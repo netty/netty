@@ -243,29 +243,31 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
-        checkUnfreed();
-        ByteBuffer tmpBuf = internalNioBuffer();
-        try {
-            tmpBuf.clear().position(index).limit(index + length);
-        } catch (IllegalArgumentException e) {
-            throw new IndexOutOfBoundsException("Too many bytes to read - Need " +
-                    (index + length) + ", maximum is " + buffer.limit());
+        checkIndex(index, length);
+        if (dst == null) {
+            throw new NullPointerException("dst");
         }
+        if (dstIndex < 0 || dstIndex > dst.length - length) {
+            throw new IndexOutOfBoundsException(String.format(
+                    "dstIndex: %d, length: %d (expected: range(0, %d))", dstIndex, length, dst.length));
+        }
+
+        ByteBuffer tmpBuf = internalNioBuffer();
+        tmpBuf.clear().position(index).limit(index + length);
         tmpBuf.get(dst, dstIndex, length);
         return this;
     }
 
     @Override
     public ByteBuf getBytes(int index, ByteBuffer dst) {
-        checkUnfreed();
+        checkIndex(index);
+        if (dst == null) {
+            throw new NullPointerException("dst");
+        }
+
         int bytesToCopy = Math.min(capacity() - index, dst.remaining());
         ByteBuffer tmpBuf = internalNioBuffer();
-        try {
-            tmpBuf.clear().position(index).limit(index + bytesToCopy);
-        } catch (IllegalArgumentException e) {
-            throw new IndexOutOfBoundsException("Too many bytes to read - Need " +
-                    (index + bytesToCopy) + ", maximum is " + buffer.limit());
-        }
+        tmpBuf.clear().position(index).limit(index + bytesToCopy);
         dst.put(tmpBuf);
         return this;
     }
