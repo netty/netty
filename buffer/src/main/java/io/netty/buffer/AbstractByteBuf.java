@@ -976,7 +976,10 @@ public abstract class AbstractByteBuf implements ByteBuf {
 
     protected final void checkIndex(int index, int fieldLength) {
         checkUnfreed();
-        if (index < 0 || index > capacity() - fieldLength || fieldLength < 0) {
+        if (fieldLength < 0) {
+            throw new IllegalArgumentException("length: " + fieldLength + " (expected: >= 0)");
+        }
+        if (index < 0 || index > capacity() - fieldLength) {
             throw new IndexOutOfBoundsException(String.format(
                     "index: %d, length: %d (expected: range(0, %d))", index, fieldLength, capacity()));
         }
