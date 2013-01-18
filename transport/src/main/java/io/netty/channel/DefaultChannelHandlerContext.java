@@ -1084,7 +1084,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         } catch (Throwable t) {
             pipeline.notifyHandlerException(t);
         } finally {
-            if (handler instanceof ChannelInboundByteHandler && !isInboundBufferFreed()) {
+            if (handler instanceof ChannelInboundByteHandler && !inboundByteBuffer().isFreed()) {
                 try {
                     ((ChannelInboundByteHandler) handler).discardInboundReadBytes(this);
                 } catch (Throwable t) {
