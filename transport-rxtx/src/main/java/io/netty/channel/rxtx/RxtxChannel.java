@@ -85,7 +85,7 @@ public class RxtxChannel extends AbstractOioByteChannel {
 
     @Override
     protected int doReadBytes(ByteBuf buf) throws Exception {
-        if (in.available() > 0) {
+        if (in != null && in.available() > 0) {
             try {
                 return buf.writeBytes(in, buf.writableBytes());
             } catch (SocketTimeoutException e) {
