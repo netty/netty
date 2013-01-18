@@ -190,14 +190,14 @@ public class DefaultChannelConfig implements ChannelConfig {
     }
 
     @Override
-    public int minWritableAmount() {
+    public int getMinWritableAmount() {
         return minWritableAmount;
     }
 
     @Override
     public ChannelConfig setMinWritableAmount(int minWritableAmount) {
         if (minWritableAmount < 1) {
-            throw new IllegalArgumentException("minWritableAmount must be >=" + 1);
+            throw new IllegalArgumentException("getMinWritableAmount must be >=" + 1);
         }
         this.minWritableAmount = minWritableAmount;
         if (isAutoRead()) {

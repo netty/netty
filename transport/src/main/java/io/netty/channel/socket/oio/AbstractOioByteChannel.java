@@ -59,7 +59,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
         boolean firedInboundBufferSuspeneded = false;
         try {
             for (;;) {
-                if (!byteBuf.ensureIsWritable(config().minWritableAmount())) {
+                if (!byteBuf.ensureIsWritable(config().getMinWritableAmount())) {
                     break;
                 }
                 int localReadAmount = doReadBytes(byteBuf);

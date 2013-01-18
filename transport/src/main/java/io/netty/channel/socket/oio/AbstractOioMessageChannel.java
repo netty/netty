@@ -52,7 +52,7 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
         boolean read = false;
         boolean firedInboundBufferSuspended = false;
         try {
-            if (!msgBuf.ensureIsWritable(config().minWritableAmount())) {
+            if (!msgBuf.ensureIsWritable(config().getMinWritableAmount())) {
                 return;
             }
             int localReadAmount = doReadMessages(msgBuf);

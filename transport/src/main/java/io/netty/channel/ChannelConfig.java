@@ -172,7 +172,7 @@ public interface ChannelConfig {
      * Return the minimum amount which must be writable in the inbound buffer to try to read
      * from the {@link Channel}.
      */
-    int minWritableAmount();
+    int getMinWritableAmount();
 
     /**
      * Set the minimum writable amount that must fit in the inbound buffer before a read operation
