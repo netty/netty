@@ -78,15 +78,8 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                 final int capacity = byteBuf.capacity();
                 final int maxCapacity = byteBuf.maxCapacity();
                 if (capacity == maxCapacity) {
-                    if (read) {
-                        read = false;
-                        pipeline.fireInboundBufferUpdated();
-                        if (!byteBuf.writable()) {
-                            throw new IllegalStateException(
-                                    "an inbound handler whose buffer is full must consume at " +
-                                            "least one byte.");
-                        }
-                    }
+                    // no space left to read data
+                    break;
                 } else {
                     final int writerIndex = byteBuf.writerIndex();
                     if (writerIndex + available > maxCapacity) {

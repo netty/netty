@@ -64,7 +64,11 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             boolean read = false;
             boolean firedInboundBufferSuspended = false;
             try {
-                expandReadBuffer(byteBuf);
+                if (expandReadBuffer(byteBuf) == 2) {
+                    // buffer is full read will be triggered again once there is
+                    // some room for bytes again
+                    return;
+                }
                 loop: for (;;) {
                     int localReadAmount = doReadBytes(byteBuf);
                     if (localReadAmount > 0) {
@@ -82,16 +86,8 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                         // Keep reading until everything is read.
                         break;
                     case 2:
-                        // Let the inbound handler drain the buffer and continue reading.
-                        if (read) {
-                            read = false;
-                            pipeline.fireInboundBufferUpdated();
-                            if (!byteBuf.writable()) {
-                                throw new IllegalStateException(
-                                        "an inbound handler whose buffer is full must consume at " +
-                                        "least one byte.");
-                            }
-                        }
+                        // break the loop as there is no space left in the buffer
+                        break loop;
                     }
                 }
             } catch (Throwable t) {

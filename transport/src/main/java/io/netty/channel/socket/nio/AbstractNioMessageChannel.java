@@ -55,6 +55,9 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             boolean firedInboundBufferSuspended = false;
             try {
                 for (;;) {
+                    if (!msgBuf.ensureIsWritable(1)) {
+                        break;
+                    }
                     int localReadAmount = doReadMessages(msgBuf);
                     if (localReadAmount > 0) {
                         read = true;

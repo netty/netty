@@ -843,9 +843,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         firedChannelActive = true;
         head.fireChannelActive();
 
-        if (channel.config().isAutoRead()) {
-            channel.read();
-        }
+        tryRead();
 
         if (fireInboundBufferUpdatedOnActivation) {
             fireInboundBufferUpdatedOnActivation = false;
@@ -884,8 +882,21 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     public void fireInboundBufferSuspended() {
         head.fireInboundBufferSuspended();
+        tryRead();
+    }
+
+    private void tryRead() {
         if (channel.config().isAutoRead()) {
-            read();
+            // check if we have enough room to trigger a read again
+            DefaultChannelHandlerContext next = head.next;
+
+            // TODO: Replace with some sane number.. Maybe configurable ?
+            //       For message based transports 1 may be a good number but for byte based I don't think so
+            if (next.hasInboundMessageBuffer() && next.inboundMessageBuffer().ensureIsWritable(1)) {
+                read();
+            } else if (next.hasInboundByteBuffer() && next.inboundByteBuffer().ensureIsWritable(1)) {
+                read();
+            }
         }
     }
 

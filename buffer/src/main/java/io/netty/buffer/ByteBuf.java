@@ -249,6 +249,7 @@ public interface ByteBuf extends Buf, Comparable<ByteBuf> {
      * {@link #ensureWritableBytes(int)}, those methods will raise an
      * {@link IllegalArgumentException}.
      */
+    @Override
     int maxCapacity();
 
     /**

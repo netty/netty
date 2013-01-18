@@ -216,6 +216,23 @@ public abstract class AbstractByteBuf implements ByteBuf {
     }
 
     @Override
+    public boolean ensureIsWritable(int minWritableBytes) {
+        if (minWritableBytes < 0) {
+            throw new IllegalArgumentException(String.format(
+                    "minWritableBytes: %d (expected: >= 0)", minWritableBytes));
+        }
+
+        if (minWritableBytes <= writableBytes()) {
+            return true;
+        }
+
+        if (minWritableBytes > maxCapacity - writerIndex) {
+           return false;
+        }
+        return true;
+    }
+
+    @Override
     public ByteBuf ensureWritableBytes(int minWritableBytes) {
         if (minWritableBytes < 0) {
             throw new IllegalArgumentException(String.format(
@@ -226,7 +243,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
             return this;
         }
 
-        if (minWritableBytes > maxCapacity - writerIndex) {
+        if (!ensureIsWritable(minWritableBytes)) {
             throw new IndexOutOfBoundsException(String.format(
                     "writerIndex(%d) + minWritableBytes(%d) exceeds maxCapacity(%d): %s",
                     writerIndex, minWritableBytes, maxCapacity, this));

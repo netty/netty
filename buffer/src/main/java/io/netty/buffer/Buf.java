@@ -23,4 +23,14 @@ public interface Buf extends Freeable {
      * The BufType which will be handled by the Buf implementation
      */
     BufType type();
+
+    /**
+     * Return the maximal number of elements it can hold
+     */
+    int maxCapacity();
+
+    /**
+     * Return {@code true} if there is enough room to add num elements
+     */
+    boolean ensureIsWritable(int num);
 }
