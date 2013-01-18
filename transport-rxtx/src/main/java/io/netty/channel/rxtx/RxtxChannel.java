@@ -77,7 +77,7 @@ public class RxtxChannel extends AbstractOioByteChannel {
     @Override
     protected int available() {
         try {
-            return in.available();
+            return in != null ? in.available() : 0;
         } catch (IOException e) {
             return 0;
         }
