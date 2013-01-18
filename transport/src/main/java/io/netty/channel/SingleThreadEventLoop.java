@@ -15,10 +15,6 @@
  */
 package io.netty.channel;
 
-import io.netty.monitor.CounterMonitor;
-import io.netty.monitor.MonitorName;
-import io.netty.monitor.MonitorRegistries;
-
 import java.util.concurrent.ThreadFactory;
 
 /**
@@ -26,8 +22,6 @@ import java.util.concurrent.ThreadFactory;
  *
  */
 public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor implements EventLoop {
-    protected final CounterMonitor channelCounter = MonitorRegistries.instance()
-            .unique().newCounterMonitor(new MonitorName(getClass(), "total-channels-registered"));
 
     /**
      *
@@ -75,7 +69,6 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
             });
         }
 
-        channelCounter.increment();
         return promise;
     }
 }
