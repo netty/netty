@@ -26,8 +26,6 @@ public class Log4JLoggerFactory extends InternalLoggerFactory {
 
     @Override
     public InternalLogger newInstance(String name) {
-        final Logger logger =
-            Logger.getLogger(name);
-        return new Log4JLogger(logger);
+        return new Log4JLogger(Logger.getLogger(name));
     }
 }

@@ -139,7 +139,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
                 frameOpcode = b & 0x0F;
 
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Decoding WebSocket Frame opCode=" + frameOpcode);
+                    logger.debug("Decoding WebSocket Frame opCode={}", frameOpcode);
                 }
 
                 // MASK, PAYLOAD LEN 1
@@ -229,7 +229,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
                 }
 
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Decoding WebSocket Frame length=" + framePayloadLength);
+                    logger.debug("Decoding WebSocket Frame length={}", framePayloadLength);
                 }
 
                 checkpoint(State.MASKING_KEY);

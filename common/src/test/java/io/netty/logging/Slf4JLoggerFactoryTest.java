@@ -15,9 +15,9 @@
  */
 package io.netty.logging;
 
-import static org.junit.Assert.*;
-
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 public class Slf4JLoggerFactoryTest {
 
@@ -25,6 +25,6 @@ public class Slf4JLoggerFactoryTest {
     public void testCreation() {
         InternalLogger logger = new Slf4JLoggerFactory().newInstance("foo");
         assertTrue(logger instanceof Slf4JLogger);
-        assertEquals("foo", logger.toString());
+        assertEquals("foo", logger.name());
     }
 }

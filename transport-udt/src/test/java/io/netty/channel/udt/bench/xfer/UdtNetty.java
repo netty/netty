@@ -22,8 +22,6 @@ import com.yammer.metrics.core.Meter;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
-import io.netty.logging.InternalLoggerFactory;
-import io.netty.logging.Slf4JLoggerFactory;
 import io.netty.channel.udt.util.BootHelp;
 import io.netty.channel.udt.util.CustomReporter;
 import io.netty.channel.udt.util.EchoMessageHandler;
@@ -45,16 +43,6 @@ public final class UdtNetty {
     }
 
     static final Logger log = LoggerFactory.getLogger(UdtNetty.class);
-
-    /**
-     * use slf4j provider for io.netty.logging.InternalLogger
-     */
-    static {
-        final InternalLoggerFactory defaultFactory = new Slf4JLoggerFactory();
-        InternalLoggerFactory.setDefaultFactory(defaultFactory);
-        log.info("InternalLoggerFactory={}", InternalLoggerFactory
-                .getDefaultFactory().getClass().getName());
-    }
 
     /** benchmark duration */
     static final int time = 10 * 60 * 1000;

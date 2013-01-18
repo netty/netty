@@ -16,13 +16,9 @@
 
 package io.netty.channel.udt.util;
 
-import io.netty.logging.InternalLoggerFactory;
-import io.netty.logging.Slf4JLoggerFactory;
-
+import com.google.caliper.SimpleBenchmark;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.caliper.SimpleBenchmark;
 
 /**
  * Base class for caliper/metrics benchmarks.
@@ -43,14 +39,6 @@ public abstract class CaliperBench extends SimpleBenchmark {
                 }
             }
         });
-    }
-
-    /**
-     * Use slf4j logging.
-     */
-    static {
-        final InternalLoggerFactory defaultFactory = new Slf4JLoggerFactory();
-        InternalLoggerFactory.setDefaultFactory(defaultFactory);
     }
 
     protected final Logger log = LoggerFactory.getLogger(getClass());

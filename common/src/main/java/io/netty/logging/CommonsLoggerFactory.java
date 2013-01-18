@@ -18,12 +18,17 @@ package io.netty.logging;
 
 import org.apache.commons.logging.LogFactory;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Logger factory which creates an
  * <a href="http://commons.apache.org/logging/">Apache Commons Logging</a>
  * logger.
  */
 public class CommonsLoggerFactory extends InternalLoggerFactory {
+
+    Map<String, InternalLogger> loggerMap = new HashMap<String, InternalLogger>();
 
     @Override
     public InternalLogger newInstance(String name) {

@@ -15,9 +15,9 @@
  */
 package io.netty.logging;
 
-import static org.junit.Assert.*;
-
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 public class JdkLoggerFactoryTest {
 
@@ -25,6 +25,6 @@ public class JdkLoggerFactoryTest {
     public void testCreation() {
         InternalLogger logger = new JdkLoggerFactory().newInstance("foo");
         assertTrue(logger instanceof JdkLogger);
-        assertEquals("foo", logger.toString());
+        assertEquals("foo", logger.name());
     }
 }

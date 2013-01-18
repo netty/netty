@@ -15,11 +15,11 @@
  */
 package io.netty.logging;
 
-import static org.easymock.EasyMock.*;
-import static org.junit.Assert.*;
-
 import org.junit.Test;
 import org.slf4j.Logger;
+
+import static org.easymock.EasyMock.*;
+import static org.junit.Assert.*;
 
 public class Slf4JLoggerTest {
     private static final Exception e = new Exception();
@@ -29,6 +29,7 @@ public class Slf4JLoggerTest {
         Logger mock =
             createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         expect(mock.isTraceEnabled()).andReturn(true);
         replay(mock);
 
@@ -42,6 +43,7 @@ public class Slf4JLoggerTest {
         Logger mock =
             createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         expect(mock.isDebugEnabled()).andReturn(true);
         replay(mock);
 
@@ -55,6 +57,7 @@ public class Slf4JLoggerTest {
         Logger mock =
             createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         expect(mock.isInfoEnabled()).andReturn(true);
         replay(mock);
 
@@ -68,6 +71,7 @@ public class Slf4JLoggerTest {
         Logger mock =
             createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         expect(mock.isWarnEnabled()).andReturn(true);
         replay(mock);
 
@@ -81,6 +85,7 @@ public class Slf4JLoggerTest {
         Logger mock =
             createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         expect(mock.isErrorEnabled()).andReturn(true);
         replay(mock);
 
@@ -94,6 +99,7 @@ public class Slf4JLoggerTest {
         Logger mock =
             createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         mock.trace("a");
         replay(mock);
 
@@ -107,6 +113,7 @@ public class Slf4JLoggerTest {
         Logger mock =
             createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         mock.trace("a", e);
         replay(mock);
 
@@ -120,6 +127,7 @@ public class Slf4JLoggerTest {
         Logger mock =
             createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         mock.debug("a");
         replay(mock);
 
@@ -133,6 +141,7 @@ public class Slf4JLoggerTest {
         Logger mock =
             createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         mock.debug("a", e);
         replay(mock);
 
@@ -146,6 +155,7 @@ public class Slf4JLoggerTest {
         Logger mock =
             createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         mock.info("a");
         replay(mock);
 
@@ -159,6 +169,7 @@ public class Slf4JLoggerTest {
         Logger mock =
             createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         mock.info("a", e);
         replay(mock);
 
@@ -172,6 +183,7 @@ public class Slf4JLoggerTest {
         Logger mock =
             createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         mock.warn("a");
         replay(mock);
 
@@ -185,6 +197,7 @@ public class Slf4JLoggerTest {
         Logger mock =
             createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         mock.warn("a", e);
         replay(mock);
 
@@ -198,6 +211,7 @@ public class Slf4JLoggerTest {
         Logger mock =
             createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         mock.error("a");
         replay(mock);
 
@@ -211,6 +225,7 @@ public class Slf4JLoggerTest {
         Logger mock =
             createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         mock.error("a", e);
         replay(mock);
 
