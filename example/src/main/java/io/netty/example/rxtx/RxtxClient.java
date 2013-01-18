@@ -18,6 +18,7 @@ package io.netty.example.rxtx;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.rxtx.RxtxChannelOption;
 import io.netty.channel.socket.oio.OioEventLoopGroup;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.string.StringDecoder;
@@ -35,7 +36,9 @@ public final class RxtxClient {
         try {
             b.group(new OioEventLoopGroup())
              .channel(RxtxChannel.class)
-             .remoteAddress(new RxtxDeviceAddress("/dev/ttyUSB0"))
+             .remoteAddress(new RxtxDeviceAddress("/dev/tty.usbmodem641"))
+             .option(RxtxChannelOption.BAUD_RATE, 57600)
+             .option(RxtxChannelOption.WAIT_AFTER_CONNECT, 1500)
              .handler(new ChannelInitializer<RxtxChannel>() {
                  @Override
                  public void initChannel(RxtxChannel ch) throws Exception {
