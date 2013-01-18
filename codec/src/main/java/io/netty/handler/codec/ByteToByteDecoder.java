@@ -44,6 +44,28 @@ import io.netty.channel.ChannelInboundByteHandlerAdapter;
  */
 public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter {
 
+    private volatile boolean singleDecode;
+
+    /**
+     * If set then only one message is decoded on each {@link #inboundBufferUpdated(ChannelHandlerContext)} call.
+     * This may be useful if you need to do some protocol upgrade and want to make sure nothing is mixed up.
+     *
+     * Default is {@code false} as this has performance impacts.
+     */
+    public void setSingleDecode(boolean singleDecode) {
+        this.singleDecode = singleDecode;
+    }
+
+    /**
+     * If {@code true} then only one message is decoded on each
+     * {@link #inboundBufferUpdated(ChannelHandlerContext)} call.
+     *
+     * Default is {@code false} as this has performance impacts.
+     */
+    public boolean isSingleDecode() {
+        return singleDecode;
+    }
+
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         callDecode(ctx, in, ctx.nextInboundByteBuffer());
@@ -91,7 +113,7 @@ public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter
                     ctx.fireExceptionCaught(new DecoderException(t));
                 }
             }
-            if (oldInSize == in.readableBytes()) {
+            if (oldInSize == in.readableBytes() || isSingleDecode()) {
                 break;
             }
         }

@@ -44,6 +44,28 @@ public abstract class ByteToMessageDecoder
 
     private ChannelHandlerContext ctx;
 
+    private volatile boolean singleDecode;
+
+    /**
+     * If set then only one message is decoded on each {@link #inboundBufferUpdated(ChannelHandlerContext)} call.
+     * This may be useful if you need to do some protocol upgrade and want to make sure nothing is mixed up.
+     *
+     * Default is {@code false} as this has performance impacts.
+     */
+    public void setSingleDecode(boolean singleDecode) {
+        this.singleDecode = singleDecode;
+    }
+
+    /**
+     * If {@code true} then only one message is decoded on each
+     * {@link #inboundBufferUpdated(ChannelHandlerContext)} call.
+     *
+     * Default is {@code false} as this has performance impacts.
+     */
+    public boolean isSingleDecode() {
+        return singleDecode;
+    }
+
     @Override
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
@@ -109,6 +131,9 @@ public abstract class ByteToMessageDecoder
 
                 if (ChannelHandlerUtil.unfoldAndAdd(ctx, o, true)) {
                     decoded = true;
+                    if (isSingleDecode()) {
+                        break;
+                    }
                 } else {
                     break;
                 }
