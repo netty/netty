@@ -1084,7 +1084,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         } catch (Throwable t) {
             pipeline.notifyHandlerException(t);
         } finally {
-            if (handler instanceof ChannelInboundByteHandler && !inboundByteBuffer().isFreed()) {
+            if (handler instanceof ChannelInboundByteHandler && !isInboundBufferFreed()) {
                 try {
                     ((ChannelInboundByteHandler) handler).discardInboundReadBytes(this);
                 } catch (Throwable t) {
@@ -1424,7 +1424,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         } catch (Throwable t) {
             pipeline.notifyHandlerException(t);
         } finally {
-            if (handler instanceof ChannelOutboundByteHandler) {
+            if (handler instanceof ChannelOutboundByteHandler && !isOutboundBufferFreed()) {
                 try {
                     ((ChannelOutboundByteHandler) handler).discardOutboundReadBytes(this);
                 } catch (Throwable t) {
@@ -1559,6 +1559,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     void invokeFreeInboundBuffer() {
+        pipeline.inboundBufferFreed = true;
         EventExecutor executor = executor();
         if (prev != null && executor.inEventLoop()) {
             invokeFreeInboundBuffer0();
@@ -1598,6 +1599,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     /** Invocation initiated by {@link #invokeFreeInboundBuffer0()} after freeing all inbound buffers. */
     private void invokeFreeOutboundBuffer() {
+        pipeline.outboundBufferFreed = true;
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
             invokeFreeOutboundBuffer0();
@@ -1648,23 +1650,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     private boolean isInboundBufferFreed() {
-        if (hasInboundByteBuffer()) {
-            return inboundByteBuffer().isFreed();
-        }
-        if (hasInboundMessageBuffer()) {
-            return inboundMessageBuffer().isFreed();
-        }
-        return false;
+        return pipeline.inboundBufferFreed;
     }
 
     private boolean isOutboundBufferFreed() {
-        if (hasOutboundByteBuffer()) {
-            return outboundByteBuffer().isFreed();
-        }
-        if (hasOutboundMessageBuffer()) {
-            return outboundMessageBuffer().isFreed();
-        }
-        return false;
+        return pipeline.outboundBufferFreed;
     }
 
     private void validateFuture(ChannelFuture future) {

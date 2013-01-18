@@ -57,6 +57,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             new IdentityHashMap<EventExecutorGroup, EventExecutor>();
 
     private static final TailHandler TAIL_HANDLER = new TailHandler();
+    volatile boolean inboundBufferFreed;
+    volatile boolean outboundBufferFreed;
 
     public DefaultChannelPipeline(Channel channel) {
         if (channel == null) {
