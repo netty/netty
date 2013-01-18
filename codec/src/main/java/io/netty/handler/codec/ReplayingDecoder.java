@@ -432,6 +432,9 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                 // A successful decode
                 if (ChannelHandlerUtil.unfoldAndAdd(ctx, result, true)) {
                     decoded = true;
+                    if (isSingleDecode()) {
+                        break;
+                    }
                 }
             } catch (Throwable t) {
                 if (decoded) {
