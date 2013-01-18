@@ -86,37 +86,16 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <scope>compile</scope>
       <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>commons-logging</groupId>
       <artifactId>commons-logging</artifactId>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>org.jboss.logging</groupId>
-      <artifactId>jboss-logging-spi</artifactId>
-      <scope>compile</scope>
       <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>org.osgi</groupId>
-      <artifactId>org.osgi.core</artifactId>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>org.osgi</groupId>
-      <artifactId>org.osgi.compendium</artifactId>
-      <scope>compile</scope>
       <optional>true</optional>
     </dependency>
   </dependencies>
@@ -288,7 +267,6 @@
             -link http://docs.oracle.com/javase/7/docs/api/
             -link http://code.google.com/apis/protocolbuffers/docs/reference/java/
             -link http://docs.oracle.com/javaee/6/api/
-            -link http://www.osgi.org/javadoc/r4v43/core/
             -link http://www.slf4j.org/apidocs/
             -link http://commons.apache.org/logging/commons-logging-1.1.1/apidocs/
             -link http://logging.apache.org/log4j/1.2/apidocs/

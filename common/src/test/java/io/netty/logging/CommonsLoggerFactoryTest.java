@@ -15,9 +15,9 @@
  */
 package io.netty.logging;
 
-import static org.junit.Assert.*;
-
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 public class CommonsLoggerFactoryTest {
 
@@ -25,6 +25,6 @@ public class CommonsLoggerFactoryTest {
     public void testCreation() {
         InternalLogger logger = new CommonsLoggerFactory().newInstance("foo");
         assertTrue(logger instanceof CommonsLogger);
-        assertEquals("foo", logger.toString());
+        assertEquals("foo", logger.name());
     }
 }
