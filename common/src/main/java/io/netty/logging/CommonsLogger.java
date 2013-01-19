@@ -68,8 +68,6 @@ class CommonsLogger extends AbstractInternalLogger {
         return logger.isTraceEnabled();
     }
 
-    //
-
     /**
      * Delegates to the {@link Log#trace(Object)} method of the underlying
      * {@link Log} instance.
@@ -97,7 +95,7 @@ class CommonsLogger extends AbstractInternalLogger {
      */
     @Override
     public void trace(String format, Object arg) {
-        if (logger.isDebugEnabled()) {
+        if (logger.isTraceEnabled()) {
             FormattingTuple ft = MessageFormatter.format(format, arg);
             logger.trace(ft.getMessage(), ft.getThrowable());
         }
@@ -121,7 +119,7 @@ class CommonsLogger extends AbstractInternalLogger {
      */
     @Override
     public void trace(String format, Object argA, Object argB) {
-        if (logger.isDebugEnabled()) {
+        if (logger.isTraceEnabled()) {
             FormattingTuple ft = MessageFormatter.format(format, argA, argB);
             logger.trace(ft.getMessage(), ft.getThrowable());
         }
@@ -141,7 +139,7 @@ class CommonsLogger extends AbstractInternalLogger {
      */
     @Override
     public void trace(String format, Object... arguments) {
-        if (logger.isDebugEnabled()) {
+        if (logger.isTraceEnabled()) {
             FormattingTuple ft = MessageFormatter.arrayFormat(format, arguments);
             logger.trace(ft.getMessage(), ft.getThrowable());
         }
@@ -324,7 +322,6 @@ class CommonsLogger extends AbstractInternalLogger {
     @Override
     public void info(String format, Object argA, Object argB) {
         if (logger.isInfoEnabled()) {
-
             FormattingTuple ft = MessageFormatter.format(format, argA, argB);
             logger.info(ft.getMessage(), ft.getThrowable());
         }
