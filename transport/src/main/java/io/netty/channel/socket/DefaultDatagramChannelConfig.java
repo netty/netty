@@ -126,7 +126,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
         } else if (option == IP_TOS) {
             setTrafficClass((Integer) value);
         } else if (option == UDP_RECEIVE_PACKET_SIZE) {
-          setReceivePacketSize((Integer) value);
+            setReceivePacketSize((Integer) value);
         } else {
             return super.setOption(option, value);
         }
