@@ -125,6 +125,8 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
             setTimeToLive((Integer) value);
         } else if (option == IP_TOS) {
             setTrafficClass((Integer) value);
+        } else if (option == UDP_RECEIVE_PACKET_SIZE) {
+          setReceivePacketSize((Integer) value);
         } else {
             return super.setOption(option, value);
         }
