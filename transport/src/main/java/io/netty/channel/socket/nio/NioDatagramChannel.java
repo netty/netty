@@ -200,7 +200,7 @@ public final class NioDatagramChannel
             if (remoteAddress == null) {
                 return 0;
             }
-            buf.add(new DatagramPacket(buffer.writerIndex(buffer.writerIndex() + data.remaining()), remoteAddress));
+            buf.add(new DatagramPacket(buffer.writerIndex(buffer.writerIndex() + data.position()), remoteAddress));
             free = false;
             return 1;
         } catch (Throwable cause) {
