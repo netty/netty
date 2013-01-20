@@ -98,7 +98,7 @@ public class HttpResponseDecoder extends HttpObjectDecoder {
      */
     public HttpResponseDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
-        super(maxInitialLineLength, maxHeaderSize, maxChunkSize);
+        super(maxInitialLineLength, maxHeaderSize, maxChunkSize, true);
     }
 
     @Override

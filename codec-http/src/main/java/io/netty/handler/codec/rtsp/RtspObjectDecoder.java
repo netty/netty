@@ -16,16 +16,13 @@
 package io.netty.handler.codec.rtsp;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.embedded.EmbeddedMessageChannel;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.http.HttpMessage;
-import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpObjectDecoder;
 
 /**
  * Decodes {@link ByteBuf}s into RTSP messages represented in
- * {@link io.netty.handler.codec.http.HttpMessage}s.
+ * {@link HttpMessage}s.
  * <p>
  * <h3>Parameters that prevents excessive memory consumption</h3>
  * <table border="1">
@@ -54,8 +51,6 @@ import io.netty.handler.codec.http.HttpObjectDecoder;
  */
 public abstract class RtspObjectDecoder extends HttpObjectDecoder {
 
-    private final EmbeddedMessageChannel aggregator;
-
     /**
      * Creates a new instance with the default
      * {@code maxInitialLineLength (4096}}, {@code maxHeaderSize (8192)}, and
@@ -69,18 +64,7 @@ public abstract class RtspObjectDecoder extends HttpObjectDecoder {
      * Creates a new instance with the specified parameters.
      */
     protected RtspObjectDecoder(int maxInitialLineLength, int maxHeaderSize, int maxContentLength) {
-        super(maxInitialLineLength, maxHeaderSize, maxContentLength * 2);
-        aggregator = new EmbeddedMessageChannel(new HttpObjectAggregator(maxContentLength));
-    }
-
-    @Override
-    protected Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
-        Object o = super.decode(ctx, buffer);
-        if (o != null && aggregator.writeInbound(o)) {
-            return aggregator.readInbound();
-        } else {
-            return null;
-        }
+        super(maxInitialLineLength, maxHeaderSize, maxContentLength * 2, false);
     }
 
     @Override
