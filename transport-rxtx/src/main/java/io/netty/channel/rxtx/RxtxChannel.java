@@ -51,7 +51,7 @@ public class RxtxChannel extends AbstractOioByteChannel {
     public RxtxChannel() {
         super(null, null);
 
-        config = new RxtxChannelConfig(this);
+        config = new DefaultRxtxChannelConfig(this);
     }
 
     @Override
