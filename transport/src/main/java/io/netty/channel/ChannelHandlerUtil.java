@@ -43,35 +43,31 @@ public final class ChannelHandlerUtil {
         if (msg == null) {
             return false;
         }
-
-        // Note we only recognize Object[] because Iterable is often implemented by user messages.
-        if (msg instanceof Object[]) {
-            Object[] array = (Object[]) msg;
-            if (array.length == 0) {
-                return false;
-            }
-
+        if (msg instanceof FoldedMessage) {
+            FoldedMessage foldedMsg = (FoldedMessage) msg;
             boolean added = false;
-            for (Object m: array) {
-                if (m == null) {
-                    break;
-                }
-                if (unfoldAndAdd(ctx, m, inbound)) {
+            while (foldedMsg.hasNext()) {
+                if (unfoldAndAdd(ctx, foldedMsg.next(), inbound)) {
                     added = true;
                 }
             }
             return added;
         }
+        return addToBuffer(ctx, msg, inbound);
+    }
 
+    private static boolean addToBuffer(ChannelHandlerContext ctx, Object msg, boolean inbound) {
         if (inbound) {
             if (ctx.hasNextInboundMessageBuffer()) {
-                ctx.nextInboundMessageBuffer().add(msg);
-                return true;
+                return ctx.nextInboundMessageBuffer().offer(msg);
             }
 
             if (msg instanceof ByteBuf && ctx.hasNextInboundByteBuffer()) {
                 ByteBuf altDst = ctx.nextInboundByteBuffer();
                 ByteBuf src = (ByteBuf) msg;
+                if (!altDst.checkWritable(src.readableBytes())) {
+                    return false;
+                }
                 altDst.writeBytes(src, src.readerIndex(), src.readableBytes());
                 return true;
             }
@@ -93,7 +89,7 @@ public final class ChannelHandlerUtil {
                 "the handler '%s' could not find a %s which accepts a %s.",
                 ctx.name(),
                 inbound? ChannelInboundHandler.class.getSimpleName()
-                       : ChannelOutboundHandler.class.getSimpleName(),
+                        : ChannelOutboundHandler.class.getSimpleName(),
                 msg.getClass().getSimpleName()));
     }
 
@@ -156,9 +152,9 @@ public final class ChannelHandlerUtil {
     /**
      * Add the given msg to the next inbound {@link MessageBuf}.
      */
-    public static void addToNextInboundBuffer(ChannelHandlerContext ctx, Object msg) {
+    public static boolean addToNextInboundBuffer(ChannelHandlerContext ctx, Object msg) {
         try {
-            ctx.nextInboundMessageBuffer().add(msg);
+            return ctx.nextInboundMessageBuffer().offer(msg);
         } catch (NoSuchBufferException e) {
             NoSuchBufferException newE =
                     new NoSuchBufferException(e.getMessage() + " (msg: " + msg + ')');
@@ -179,6 +175,13 @@ public final class ChannelHandlerUtil {
                 // TODO: Think about this
             }
         }
+    }
+
+    public static boolean isComplete(Object msg) {
+        if (msg instanceof FoldedMessage) {
+            return !((FoldedMessage) msg).hasNext();
+        }
+        return true;
     }
 
     private ChannelHandlerUtil() {

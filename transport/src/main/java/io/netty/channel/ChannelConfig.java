@@ -167,4 +167,16 @@ public interface ChannelConfig {
      * need to call it at all. The default value is {@code true}.
      */
     ChannelConfig setAutoRead(boolean autoRead);
+
+    /**
+     * Return the minimum amount which must be writable in the inbound buffer to try to read
+     * from the {@link Channel}.
+     */
+    int getMinWritableAmount();
+
+    /**
+     * Set the minimum writable amount that must fit in the inbound buffer before a read operation
+     * is triggered.
+     */
+    ChannelConfig setMinWritableAmount(int minWritableAmount);
 }

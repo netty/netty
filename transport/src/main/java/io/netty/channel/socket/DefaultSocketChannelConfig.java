@@ -286,4 +286,9 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     public SocketChannelConfig setAutoRead(boolean autoRead) {
         return (SocketChannelConfig) super.setAutoRead(autoRead);
     }
+
+    @Override
+    public SocketChannelConfig setMinWritableAmount(int minWritableAmount) {
+        return (SocketChannelConfig) super.setMinWritableAmount(minWritableAmount);
+    }
 }

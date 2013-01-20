@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.FoldedMessage;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
@@ -244,7 +245,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             if (toRead > maxChunkSize) {
                 toRead = maxChunkSize;
             }
-            return new Object[] { message, new DefaultHttpContent(buffer.readBytes(toRead))};
+            return new FoldedMessage(message, new DefaultHttpContent(buffer.readBytes(toRead)));
         }
         case READ_VARIABLE_LENGTH_CONTENT_AS_CHUNKS: {
             // Keep reading data as a chunk until the end of connection is reached.
@@ -438,7 +439,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             httpContent = new DefaultLastHttpContent(content);
         }
 
-        Object[] messages =  { message, httpContent };
+        FoldedMessage  messages =  new FoldedMessage(message, httpContent);
         this.content = null;
         this.message = null;
 
@@ -485,7 +486,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         }
         contentRead += toRead;
         if (length < contentRead) {
-            return new Object[] {message, new DefaultHttpContent(buffer.readBytes(toRead))};
+            return new FoldedMessage(message, new DefaultHttpContent(buffer.readBytes(toRead)));
         }
         if (content == null) {
             content = buffer.readBytes((int) length);

@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.FoldedMessage;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.MessageToMessageCodec;
 
@@ -125,9 +126,9 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
 
                 if (result == null) {
                     if (c instanceof LastHttpContent) {
-                        return new Object[] { message, new DefaultLastHttpContent(c.data()) };
+                        return new FoldedMessage(message, new DefaultLastHttpContent(c.data()));
                     } else {
-                        return new Object[] { message, new DefaultHttpContent(c.data()) };
+                        return new FoldedMessage(message, new DefaultHttpContent(c.data()));
                     }
                 }
 
@@ -139,12 +140,12 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
                         HttpHeaders.Names.CONTENT_ENCODING,
                         result.targetContentEncoding());
 
-                Object[] encoded = encodeContent(message, c);
+                FoldedMessage encoded = encodeContent(message, c);
 
-                if (!HttpHeaders.isTransferEncodingChunked(message) && encoded.length == 3) {
+                if (!HttpHeaders.isTransferEncodingChunked(message) && encoded.elements() == 3) {
                     if (headers.contains(HttpHeaders.Names.CONTENT_LENGTH)) {
-                        long length = ((ByteBufHolder) encoded[1]).data().readableBytes() +
-                                ((ByteBufHolder) encoded[2]).data().readableBytes();
+                        long length = ((ByteBufHolder) encoded.get(1)).data().readableBytes() +
+                                ((ByteBufHolder) encoded.get(2)).data().readableBytes();
 
                         headers.set(
                                 HttpHeaders.Names.CONTENT_LENGTH,
@@ -161,7 +162,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
         return null;
     }
 
-    private Object[] encodeContent(HttpMessage header, HttpContent c) {
+    private FoldedMessage encodeContent(HttpMessage header, HttpContent c) {
         ByteBuf newContent = Unpooled.buffer();
         ByteBuf content = c.data();
         encode(content, newContent);
@@ -174,17 +175,18 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
             // the last product on closure,
             if (lastProduct.readable()) {
                 if (header == null) {
-                    return new Object[] { new DefaultHttpContent(newContent), new DefaultLastHttpContent(lastProduct)};
+                    return new FoldedMessage(new DefaultHttpContent(newContent),
+                            new DefaultLastHttpContent(lastProduct));
                 } else {
-                    return new Object[] { header,  new DefaultHttpContent(newContent),
-                            new DefaultLastHttpContent(lastProduct)};
+                    return new FoldedMessage(header,  new DefaultHttpContent(newContent),
+                            new DefaultLastHttpContent(lastProduct));
                 }
             }
         }
         if (header == null) {
-            return new Object[] { new DefaultHttpContent(newContent) };
+            return new FoldedMessage(new DefaultHttpContent(newContent));
         } else {
-            return new Object[] { header, new DefaultHttpContent(newContent) };
+            return new FoldedMessage(header, new DefaultHttpContent(newContent));
         }
     }
 

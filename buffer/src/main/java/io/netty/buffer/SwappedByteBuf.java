@@ -797,6 +797,11 @@ public final class SwappedByteBuf implements ByteBuf {
     }
 
     @Override
+    public boolean checkWritable(int num) {
+        return buf.checkWritable(num);
+    }
+
+    @Override
     public int hashCode() {
         return buf.hashCode();
     }

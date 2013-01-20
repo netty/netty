@@ -24,6 +24,7 @@ import java.nio.ReadOnlyBufferException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
@@ -285,18 +286,18 @@ public final class Unpooled {
     };
 
     public static <T> MessageBuf<T> messageBuffer() {
-        return new DefaultMessageBuf<T>();
+        return new QueueBackedMessageBuf<T>(new ArrayDeque<T>(), Integer.MAX_VALUE);
     }
 
     public static <T> MessageBuf<T> messageBuffer(int initialCapacity) {
-        return new DefaultMessageBuf<T>(initialCapacity);
+        return new QueueBackedMessageBuf<T>(new ArrayDeque<T>(initialCapacity), Integer.MAX_VALUE);
     }
 
     public static <T> MessageBuf<T> wrappedBuffer(Queue<T> queue) {
         if (queue instanceof MessageBuf) {
             return (MessageBuf<T>) queue;
         }
-        return new QueueBackedMessageBuf<T>(queue);
+        return new QueueBackedMessageBuf<T>(queue, Integer.MAX_VALUE);
     }
 
     /**

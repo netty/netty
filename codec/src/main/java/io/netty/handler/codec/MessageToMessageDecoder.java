@@ -49,6 +49,7 @@ public abstract class MessageToMessageDecoder<I>
         extends ChannelInboundHandlerAdapter implements ChannelInboundMessageHandler<I> {
 
     private final Class<?>[] acceptedMsgTypes;
+    protected Object msg;
 
     /**
      * The types which will be accepted by the decoder. If a received message is an other type it will be just forwarded
@@ -66,19 +67,31 @@ public abstract class MessageToMessageDecoder<I>
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx)
             throws Exception {
-        MessageBuf<I> in = ctx.inboundMessageBuffer();
         boolean notify = false;
+
+        if (!handlePartial(ctx)) {
+            return;
+        }
+
+        MessageBuf<I> in = ctx.inboundMessageBuffer();
         for (;;) {
             try {
-                Object msg = in.poll();
+                Object msg = in.peek();
                 if (msg == null) {
                     break;
                 }
                 if (!isDecodable(msg)) {
-                    ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg);
-                    notify = true;
-                    continue;
+                    if (ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg)) {
+                        in.remove();
+                        notify = true;
+                        continue;
+                    } else {
+                        // no space left in next inbound buffer
+                        break;
+                    }
                 }
+
+                in.remove();
 
                 @SuppressWarnings("unchecked")
                 I imsg = (I) msg;
@@ -93,10 +106,20 @@ public abstract class MessageToMessageDecoder<I>
                     if (omsg == imsg) {
                         free = false;
                     }
+
                     if (ChannelHandlerUtil.unfoldAndAdd(ctx, omsg, true)) {
                         notify = true;
+                        if (!ChannelHandlerUtil.isComplete(omsg)) {
+                            this.msg = omsg;
+                            break;
+                        }
+                    } else {
+                        // no space left in next inbound buffer
+                        this.msg = omsg;
+                        break;
                     }
                 } finally {
+
                     if (free) {
                         freeInboundMessage(imsg);
                     }
@@ -112,6 +135,37 @@ public abstract class MessageToMessageDecoder<I>
         if (notify) {
             ctx.fireInboundBufferUpdated();
         }
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        handlePartial(ctx);
+        msg = null;
+    }
+
+    /**
+     * Handle previous partial messages which may be present because the next inbound buffer had not enough space
+     * left to handle it. Returns {@code true} if there is no partial message left and so it is safe to start
+     * decode new messages.
+     */
+    protected final boolean handlePartial(ChannelHandlerContext ctx) {
+        if (msg != null) {
+            if (ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg)) {
+                if (ChannelHandlerUtil.isComplete(msg)) {
+                    msg = null;
+                }
+                ctx.fireInboundBufferUpdated();
+            }
+            return msg == null;
+        }
+        return true;
+    }
+
+    @Override
+    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
+        super.afterRemove(ctx);
+        handlePartial(ctx);
+        msg = null;
     }
 
     /**

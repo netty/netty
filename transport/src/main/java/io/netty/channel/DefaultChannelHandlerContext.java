@@ -1084,13 +1084,27 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         } catch (Throwable t) {
             pipeline.notifyHandlerException(t);
         } finally {
-            if (handler instanceof ChannelInboundByteHandler && !isInboundBufferFreed()) {
-                try {
-                    ((ChannelInboundByteHandler) handler).discardInboundReadBytes(this);
-                } catch (Throwable t) {
-                    pipeline.notifyHandlerException(t);
+            if (!isInboundBufferFreed()) {
+                if (handler instanceof ChannelInboundByteHandler) {
+                    try {
+                        ChannelInboundByteHandler byteHandler = (ChannelInboundByteHandler) handler;
+                        byteHandler.discardInboundReadBytes(this);
+                        tryInvokeRead(inboundByteBuffer());
+                    } catch (Throwable t) {
+                        pipeline.notifyHandlerException(t);
+                    }
+                } else if (handler instanceof ChannelInboundMessageHandler) {
+                    tryInvokeRead(inboundMessageBuffer());
                 }
             }
+        }
+    }
+
+    private void tryInvokeRead(Buf buf) {
+        if (prev == pipeline.head && buf.checkWritable(channel().config().getMinWritableAmount())
+                && channel().config().isAutoRead()) {
+            // only trigger read if this is the first user handler in the pipeline
+            prev.invokeRead();
         }
     }
 

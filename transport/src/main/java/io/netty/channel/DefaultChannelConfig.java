@@ -39,6 +39,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
     private volatile int writeSpinCount = 16;
     private volatile boolean autoRead = true;
+    private volatile int minWritableAmount = 1;
 
     public DefaultChannelConfig(Channel channel) {
         if (channel == null) {
@@ -183,6 +184,24 @@ public class DefaultChannelConfig implements ChannelConfig {
         boolean oldAutoRead = this.autoRead;
         this.autoRead = autoRead;
         if (autoRead && !oldAutoRead) {
+            channel.read();
+        }
+        return this;
+    }
+
+    @Override
+    public int getMinWritableAmount() {
+        return minWritableAmount;
+    }
+
+    @Override
+    public ChannelConfig setMinWritableAmount(int minWritableAmount) {
+        if (minWritableAmount < 1) {
+            throw new IllegalArgumentException("getMinWritableAmount must be >=" + 1);
+        }
+        int oldValue = this.minWritableAmount;
+        this.minWritableAmount = minWritableAmount;
+        if (oldValue != minWritableAmount && isAutoRead()) {
             channel.read();
         }
         return this;

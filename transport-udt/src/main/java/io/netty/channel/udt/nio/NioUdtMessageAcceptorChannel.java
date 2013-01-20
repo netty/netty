@@ -18,8 +18,6 @@ package io.netty.channel.udt.nio;
 import io.netty.buffer.BufType;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelMetadata;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 
 import com.barchart.udt.TypeUDT;
 import com.barchart.udt.nio.SocketChannelUDT;
@@ -28,9 +26,6 @@ import com.barchart.udt.nio.SocketChannelUDT;
  * Message Channel Acceptor for UDT Datagrams.
  */
 public class NioUdtMessageAcceptorChannel extends NioUdtAcceptorChannel {
-
-    private static final InternalLogger logger = InternalLoggerFactory
-            .getInstance(NioUdtMessageAcceptorChannel.class);
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(
             BufType.MESSAGE, false);

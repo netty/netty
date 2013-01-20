@@ -843,9 +843,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         firedChannelActive = true;
         head.fireChannelActive();
 
-        if (channel.config().isAutoRead()) {
-            channel.read();
-        }
+        tryRead();
 
         if (fireInboundBufferUpdatedOnActivation) {
             fireInboundBufferUpdatedOnActivation = false;
@@ -884,8 +882,21 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     public void fireInboundBufferSuspended() {
         head.fireInboundBufferSuspended();
+        tryRead();
+    }
+
+    private void tryRead() {
         if (channel.config().isAutoRead()) {
-            read();
+            // check if we have enough room to trigger a read again
+            DefaultChannelHandlerContext next = head.next;
+
+            if (next.hasInboundMessageBuffer()
+                    && next.inboundMessageBuffer().checkWritable(channel.config().getMinWritableAmount())) {
+                read();
+            } else if (next.hasInboundByteBuffer()
+                    && next.inboundByteBuffer().checkWritable(channel.config().getMinWritableAmount())) {
+                read();
+            }
         }
     }
 

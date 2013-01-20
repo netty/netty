@@ -158,4 +158,7 @@ public interface SocketChannelConfig extends ChannelConfig {
 
     @Override
     SocketChannelConfig setAutoRead(boolean autoRead);
+
+    @Override
+    SocketChannelConfig setMinWritableAmount(int minWritableAmount);
 }

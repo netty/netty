@@ -20,6 +20,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.FoldedMessage;
 import io.netty.util.internal.Signal;
 
 /**
@@ -250,7 +251,7 @@ import io.netty.util.internal.Signal;
  *
  *         if (buf.readable()) {
  *             // Hand off the remaining data to the second decoder
- *             return new Object[] { firstMessage, buf.readBytes(<b>super.actualReadableBytes()</b>) };
+ *             return new {@link FoldedMessage}(firstMessage, buf.readBytes(<b>super.actualReadableBytes()</b>));
  *         } else {
  *             // Nothing to hand off
  *             return firstMessage;
@@ -361,22 +362,24 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         replayable.terminate();
         ByteBuf in = cumulation;
-        if (in.readable()) {
-            callDecode(ctx);
-        }
-
-        try {
-            if (ChannelHandlerUtil.unfoldAndAdd(ctx, decodeLast(ctx, replayable), true)) {
-                ctx.fireInboundBufferUpdated();
+        if (handlePartial(ctx)) {
+            if (in.readable()) {
+                callDecode(ctx);
             }
-        } catch (Signal replay) {
-            // Ignore
-            replay.expect(REPLAY);
-        } catch (Throwable t) {
-            if (t instanceof CodecException) {
-                ctx.fireExceptionCaught(t);
-            } else {
-                ctx.fireExceptionCaught(new DecoderException(t));
+
+            try {
+                if (ChannelHandlerUtil.unfoldAndAdd(ctx, decodeLast(ctx, replayable), true)) {
+                    ctx.fireInboundBufferUpdated();
+                }
+            } catch (Signal replay) {
+                // Ignore
+                replay.expect(REPLAY);
+            } catch (Throwable t) {
+                if (t instanceof CodecException) {
+                    ctx.fireExceptionCaught(t);
+                } else {
+                    ctx.fireExceptionCaught(new DecoderException(t));
+                }
             }
         }
 
@@ -385,8 +388,9 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
 
     @Override
     protected void callDecode(ChannelHandlerContext ctx) {
-        ByteBuf in = cumulation;
         boolean decoded = false;
+        ByteBuf in = cumulation;
+
         while (in.readable()) {
             try {
                 int oldReaderIndex = checkpoint = in.readerIndex();
@@ -432,9 +436,17 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                 // A successful decode
                 if (ChannelHandlerUtil.unfoldAndAdd(ctx, result, true)) {
                     decoded = true;
+                    if (!ChannelHandlerUtil.isComplete(result)) {
+                        msg = result;
+                        break;
+                    }
                     if (isSingleDecode()) {
                         break;
                     }
+                } else {
+                    // no space left in next inbound buffer
+                    msg = result;
+                    break;
                 }
             } catch (Throwable t) {
                 if (decoded) {

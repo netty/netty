@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.FoldedMessage;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.MessageToMessageDecoder;
 
@@ -95,17 +96,17 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
                     } else {
                         headers.set(HttpHeaders.Names.CONTENT_ENCODING, targetContentEncoding);
                     }
-                    Object[] decoded = decodeContent(message, c);
+                    FoldedMessage decoded = decodeContent(message, c);
 
                     // Replace the content.
                     if (headers.contains(HttpHeaders.Names.CONTENT_LENGTH)) {
                         headers.set(
                                 HttpHeaders.Names.CONTENT_LENGTH,
-                                Integer.toString(((ByteBufHolder) decoded[1]).data().readableBytes()));
+                                Integer.toString(((ByteBufHolder) decoded.get(1)).data().readableBytes()));
                     }
                     return decoded;
                 }
-                return new Object[] { message, c };
+                return new FoldedMessage(message, c);
             }
             return decodeContent(null, c);
         }
@@ -114,7 +115,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
         return msg;
     }
 
-    private Object[] decodeContent(HttpMessage header, HttpContent c) {
+    private FoldedMessage decodeContent(HttpMessage header, HttpContent c) {
         ByteBuf newContent = Unpooled.buffer();
         ByteBuf content = c.data();
         decode(content, newContent);
@@ -127,17 +128,18 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
             // the last product on closure,
             if (lastProduct.readable()) {
                 if (header == null) {
-                    return new Object[] { new DefaultHttpContent(newContent), new DefaultLastHttpContent(lastProduct)};
+                    return new FoldedMessage(new DefaultHttpContent(newContent),
+                            new DefaultLastHttpContent(lastProduct));
                 } else {
-                    return new Object[] { header,  new DefaultHttpContent(newContent),
-                            new DefaultLastHttpContent(lastProduct)};
+                    return new FoldedMessage(header,  new DefaultHttpContent(newContent),
+                            new DefaultLastHttpContent(lastProduct));
                 }
             }
         }
         if (header == null) {
-            return new Object[] { new DefaultHttpContent(newContent) };
+            return new FoldedMessage(new DefaultHttpContent(newContent));
         } else {
-            return new Object[] { header, new DefaultHttpContent(newContent) };
+            return new FoldedMessage(header, new DefaultHttpContent(newContent));
         }
     }
 

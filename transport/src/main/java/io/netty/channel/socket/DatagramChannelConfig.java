@@ -177,4 +177,7 @@ public interface DatagramChannelConfig extends ChannelConfig {
 
     @Override
     DatagramChannelConfig setAutoRead(boolean autoRead);
+
+    @Override
+    DatagramChannelConfig setMinWritableAmount(int minWritableAmount);
 }
