@@ -62,14 +62,6 @@
       <scope>compile</scope>
       <optional>true</optional>
     </dependency>
-    <!-- The only module netty-example does NOT depend on -->
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>netty-metrics-yammer</artifactId>
-      <version>${project.version}</version>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
     <!-- Add optional dependencies explicitly to avoid Javadoc warnings and errors. -->
     <dependency>
       <groupId>com.google.protobuf</groupId>
