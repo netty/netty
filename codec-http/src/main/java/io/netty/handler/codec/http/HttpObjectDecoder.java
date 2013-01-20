@@ -102,6 +102,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
     private final int maxInitialLineLength;
     private final int maxHeaderSize;
     private final int maxChunkSize;
+    private final boolean chunkedSupported;
     private ByteBuf content;
     private HttpMessage message;
     private long chunkSize;
@@ -135,14 +136,14 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
      * {@code maxChunkSize (8192)}.
      */
     protected HttpObjectDecoder() {
-        this(4096, 8192, 8192);
+        this(4096, 8192, 8192, true);
     }
 
     /**
      * Creates a new instance with the specified parameters.
      */
     protected HttpObjectDecoder(
-            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean chunkedSupported) {
 
         super(State.SKIP_CONTROL_CHARS);
 
@@ -164,6 +165,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         this.maxInitialLineLength = maxInitialLineLength;
         this.maxHeaderSize = maxHeaderSize;
         this.maxChunkSize = maxChunkSize;
+        this.chunkedSupported = chunkedSupported;
     }
 
     @Override
@@ -195,6 +197,9 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             State nextState = readHeaders(buffer);
             checkpoint(nextState);
             if (nextState == State.READ_CHUNK_SIZE) {
+                if (!chunkedSupported) {
+                    throw new IllegalArgumentException("Chunked messages not supported");
+                }
                 // Chunked encoding - generate HttpMessage first.  HttpChunks will follow.
                 return message;
             }
