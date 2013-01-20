@@ -17,6 +17,7 @@ package io.netty.channel.rxtx;
 
 import gnu.io.SerialPort;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.DefaultChannelConfig;
 
 import java.util.Map;
@@ -25,6 +26,29 @@ import static io.netty.channel.rxtx.RxtxChannelOption.*;
 
 /**
  * A configuration class for RXTX device connections.
+ *
+ * <h3>Available options</h3>
+ *
+ * In addition to the options provided by {@link ChannelConfig},
+ * {@link RxtxChannelConfig} allows the following options in the option map:
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>Name</th><th>Associated setter method</th>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.rxtx.RxtxChannelOption#BAUD_RATE}</td><td>{@link #setBaudrate(int)}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.rxtx.RxtxChannelOption#DTR}</td><td>{@link #setDtr(boolean)}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.rxtx.RxtxChannelOption#RTS}</td><td>{@link #setRts(boolean)}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.rxtx.RxtxChannelOption#STOP_BITS}</td><td>{@link #setStopbits(Stopbits)}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.rxtx.RxtxChannelOption#DATA_BITS}</td><td>{@link #setDatabits(Databits)}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.rxtx.RxtxChannelOption#PARITY_BIT}</td><td>{@link #setParitybit(Paritybit)}</td>
+ * </tr>
+ * </table>
  */
 public class RxtxChannelConfig extends DefaultChannelConfig {
 

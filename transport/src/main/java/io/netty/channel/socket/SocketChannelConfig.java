@@ -35,19 +35,21 @@ import java.net.StandardSocketOptions;
  * <tr>
  * <th>Name</th><th>Associated setter method</th>
  * </tr><tr>
- * <td>{@code "keepAlive"}</td><td>{@link #setKeepAlive(boolean)}</td>
+ * <td>{@link io.netty.channel.ChannelOption#SO_KEEPALIVE}</td><td>{@link #setKeepAlive(boolean)}</td>
  * </tr><tr>
- * <td>{@code "reuseAddress"}</td><td>{@link #setReuseAddress(boolean)}</td>
+ * <td>{@link io.netty.channel.ChannelOption#SO_REUSEADDR}</td><td>{@link #setReuseAddress(boolean)}</td>
  * </tr><tr>
- * <td>{@code "soLinger"}</td><td>{@link #setSoLinger(int)}</td>
+ * <td>{@link io.netty.channel.ChannelOption#SO_LINGER}</td><td>{@link #setSoLinger(int)}</td>
  * </tr><tr>
- * <td>{@code "tcpNoDelay"}</td><td>{@link #setTcpNoDelay(boolean)}</td>
+ * <td>{@link io.netty.channel.ChannelOption#TCP_NODELAY}</td><td>{@link #setTcpNoDelay(boolean)}</td>
  * </tr><tr>
- * <td>{@code "receiveBufferSize"}</td><td>{@link #setReceiveBufferSize(int)}</td>
+ * <td>{@link io.netty.channel.ChannelOption#SO_RCVBUF}</td><td>{@link #setReceiveBufferSize(int)}</td>
  * </tr><tr>
- * <td>{@code "sendBufferSize"}</td><td>{@link #setSendBufferSize(int)}</td>
+ * <td>{@link io.netty.channel.ChannelOption#SO_SNDBUF}</td><td>{@link #setSendBufferSize(int)}</td>
  * </tr><tr>
- * <td>{@code "trafficClass"}</td><td>{@link #setTrafficClass(int)}</td>
+ * <td>{@link io.netty.channel.ChannelOption#IP_TOS}</td><td>{@link #setTrafficClass(int)}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#ALLOW_HALF_CLOSURE}</td><td>{@link #setAllowHalfClosure(boolean)}</td>
  * </tr>
  * </table>
  */

@@ -24,6 +24,19 @@ import java.nio.channels.InterruptedByTimeoutException;
 /**
  * Special {@link SocketChannelConfig} which is used for the {@link AioSocketChannel} to expose extra configuration
  * possiblilites.
+ *
+ * In addition to the options provided by {@link SocketChannelConfig},
+ * {@link AioSocketChannelConfig} allows the following options in the option map:
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>Name</th><th>Associated setter method</th>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#AIO_READ_TIMEOUT}</td><td>{@link #setReadTimeout(long)}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#AIO_WRITE_TIMEOUT}</td><td>{@link #setWriteTimeout(long)}</td>
+ * </tr>
+ * </table>
  */
 public interface AioSocketChannelConfig extends SocketChannelConfig {
     @Override
