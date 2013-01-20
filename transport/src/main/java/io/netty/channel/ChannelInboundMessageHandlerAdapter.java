@@ -74,16 +74,25 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
         try {
             MessageBuf<I> in = ctx.inboundMessageBuffer();
             for (;;) {
-                Object msg = in.poll();
+                Object msg = in.peek();
                 if (msg == null) {
                     break;
                 }
+
                 try {
                     if (!isSupported(msg)) {
-                        ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg);
-                        unsupportedFound = true;
-                        continue;
+                        if (ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg)) {
+                            unsupportedFound = true;
+                            in.remove();
+                            continue;
+                        } else {
+                            // no space left in next inbound buffer
+                            break;
+                        }
                     }
+
+                    in.remove();
+
                     if (unsupportedFound) {
                         // the last message were unsupported, but now we received one that is supported.
                         // So reset the flag and notify the next context

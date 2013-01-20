@@ -45,6 +45,7 @@ public abstract class ByteToMessageDecoder
     private ChannelHandlerContext ctx;
 
     private volatile boolean singleDecode;
+    protected Object msg;
 
     /**
      * If set then only one message is decoded on each {@link #inboundBufferUpdated(ChannelHandlerContext)} call.
@@ -84,35 +85,36 @@ public abstract class ByteToMessageDecoder
 
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-        callDecode(ctx);
+        if (handlePartial(ctx)) {
+            callDecode(ctx);
+        }
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        ByteBuf in = ctx.inboundByteBuffer();
-        if (in.readable()) {
-            callDecode(ctx);
-        }
+        if (handlePartial(ctx)) {
+            ByteBuf in = ctx.inboundByteBuffer();
 
-        try {
-            if (ChannelHandlerUtil.unfoldAndAdd(ctx, decodeLast(ctx, in), true)) {
-                ctx.fireInboundBufferUpdated();
+            try {
+                if (ChannelHandlerUtil.unfoldAndAdd(ctx, decodeLast(ctx, in), true)) {
+                    ctx.fireInboundBufferUpdated();
+                }
+            } catch (Throwable t) {
+                if (t instanceof CodecException) {
+                    ctx.fireExceptionCaught(t);
+                } else {
+                    ctx.fireExceptionCaught(new DecoderException(t));
+                }
             }
-        } catch (Throwable t) {
-            if (t instanceof CodecException) {
-                ctx.fireExceptionCaught(t);
-            } else {
-                ctx.fireExceptionCaught(new DecoderException(t));
-            }
-        }
 
-        ctx.fireChannelInactive();
+            ctx.fireChannelInactive();
+        }
     }
 
     protected void callDecode(ChannelHandlerContext ctx) {
+        boolean decoded = false;
         ByteBuf in = ctx.inboundByteBuffer();
 
-        boolean decoded = false;
         while (in.readable()) {
             try {
                 int oldInputLength = in.readableBytes();
@@ -128,13 +130,17 @@ public abstract class ByteToMessageDecoder
                     throw new IllegalStateException(
                             "decode() did not read anything but decoded a message.");
                 }
-
                 if (ChannelHandlerUtil.unfoldAndAdd(ctx, o, true)) {
                     decoded = true;
+                    if (!ChannelHandlerUtil.isComplete(o)) {
+                        msg = o;
+                        break;
+                    }
                     if (isSingleDecode()) {
                         break;
                     }
                 } else {
+                    msg = o;
                     break;
                 }
             } catch (Throwable t) {
@@ -157,6 +163,24 @@ public abstract class ByteToMessageDecoder
     }
 
     /**
+     * Handle previous partial messages which may be present because the next inbound buffer had not enough space
+     * left to handle it. Returns {@code true} if there is no partial message left and so it is safe to start
+     * decode new messages.
+     */
+    protected final boolean handlePartial(ChannelHandlerContext ctx) {
+        if (msg != null) {
+            if (ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg)) {
+                if (ChannelHandlerUtil.isComplete(msg)) {
+                    msg = null;
+                }
+                ctx.fireInboundBufferUpdated();
+            }
+            return msg == null;
+        }
+        return true;
+    }
+
+    /**
      * Replace this decoder in the {@link ChannelPipeline} with the given handler.
      * All remaining bytes in the inbound buffer will be forwarded to the new handler's
      * inbound buffer.
@@ -170,6 +194,9 @@ public abstract class ByteToMessageDecoder
         // the new handler.
         ctx.pipeline().addAfter(ctx.name(), newHandlerName, newHandler);
 
+        handlePartial(ctx);
+        msg = null;
+
         ByteBuf in = ctx.inboundByteBuffer();
         try {
             if (in.readable()) {
@@ -179,6 +206,13 @@ public abstract class ByteToMessageDecoder
         } finally {
             ctx.pipeline().remove(this);
         }
+    }
+
+    @Override
+    public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
+        super.beforeRemove(ctx);
+        handlePartial(ctx);
+        msg = null;
     }
 
     /**

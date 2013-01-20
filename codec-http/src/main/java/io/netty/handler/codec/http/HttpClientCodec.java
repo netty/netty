@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.CombinedChannelHandler;
+import io.netty.channel.FoldedMessage;
 import io.netty.handler.codec.PrematureChannelClosureException;
 
 import java.util.ArrayDeque;
@@ -128,10 +129,10 @@ public class HttpClientCodec extends CombinedChannelHandler {
             // check if it's an Header and its transfer encoding is not chunked.
             if (msg instanceof LastHttpContent) {
                 requestResponseCounter.decrementAndGet();
-            } else if (msg instanceof Object[]) {
-                Object[] objects = (Object[]) msg;
-                for (Object obj: objects) {
-                    decrement(obj);
+            } else if (msg instanceof FoldedMessage) {
+                FoldedMessage objects = (FoldedMessage) msg;
+                while (objects.hasNext()) {
+                    decrement(objects.next());
                 }
             }
         }
