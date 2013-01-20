@@ -46,7 +46,13 @@ import java.util.Map;
  * <tr>
  * <th>Name</th><th>Associated setter method</th>
  * </tr><tr>
- * <td>{@code "connectTimeoutMillis"}</td><td>{@link #setConnectTimeoutMillis(int)}</td>
+ * <td>{@link io.netty.channel.ChannelOption#CONNECT_TIMEOUT_MILLIS}</td><td>{@link #setConnectTimeoutMillis(int)}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#WRITE_SPIN_COUNT}</td><td>{@link #setWriteSpinCount(int)}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#ALLOCATOR}</td><td>{@link #setAllocator(ByteBufAllocator)}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#AUTO_READ}</td><td>{@link #setAutoRead(boolean)}</td>
  * </tr>
  * </table>
  * <p>

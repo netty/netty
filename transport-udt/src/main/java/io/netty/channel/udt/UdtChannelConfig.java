@@ -34,31 +34,34 @@ import com.barchart.udt.nio.KindUDT;
  * <tr>
  * <th>Name</th>
  * <th>Associated setter method</th>
- * </tr>
- * <tr>
- * <td>{@code "reuseAddress"}</td>
- * <td>{@link #setReuseAddress(boolean)}</td>
- * </tr>
- * <tr>
- * <td>{@code "soLinger"}</td>
- * <td>{@link #setSoLinger(int)}</td>
- * </tr>
- * <tr>
- * <td>{@code "receiveBufferSize"}</td>
- * <td>{@link #setReceiveBufferSize(int)}</td>
- * </tr>
- * <tr>
- * <td>{@code "sendBufferSize"}</td>
- * <td>{@link #setSendBufferSize(int)}</td>
- * </tr>
- * <tr>
- * <td>{@code "protocolReceiveBuferSize"}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#SO_REUSEADDR}</td><td>{@link #setReuseAddress(boolean)}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#SO_RCVBUF}</td><td>{@link #setReceiveBufferSize(int)}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#SO_SNDBUF}</td><td>{@link #setSendBufferSize(int)}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#SO_REUSEADDR}</td><td>{@link #setReuseAddress(boolean)}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#SO_LINGER}</td><td>{@link #setSoLinger(int)}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#SO_RCVBUF}</td><td>{@link #setReceiveBufferSize(int)}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#SO_SNDBUF}</td><td>{@link #setSendBufferSize(int)}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.udt.UdtChannelOption#PROTOCOL_RECEIVE_BUFFER_SIZE}</td>
  * <td>{@link #setProtocolReceiveBufferSize(int)}</td>
- * <tr>
- * <tr>
- * <td>{@code "systemReceiveBufferSize"}</td>
- * <td>{@link #setProtocolReceiveBufferSize(int)}</td>
- * <tr>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.udt.UdtChannelOption#PROTOCOL_SEND_BUFFER_SIZE}</td>
+ * <td>{@link #setProtocolSendBufferSize(int)}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.udt.UdtChannelOption#SYSTEM_RECEIVE_BUFFER_SIZE}</td>
+ * <td>{@link #setSystemReceiveBufferSize(int)}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.udt.UdtChannelOption#SYSTEM_SEND_BUFFER_SIZE}</td>
+ * <td>{@link #setSystemSendBufferSize(int)}</td>
+
+ * </tr>
  * </table>
  * <p>
  * Note that {@link TypeUDT#DATAGRAM} message oriented channels treat

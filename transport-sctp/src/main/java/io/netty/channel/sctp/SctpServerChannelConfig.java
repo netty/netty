@@ -33,14 +33,13 @@ import static com.sun.nio.sctp.SctpStandardSocketOptions.*;
  * <tr>
  * <th>Name</th><th>Associated setter method</th>
  * </tr><tr>
- * <td>{@code "backlog"}</td><td>{@link #setBacklog(int)}</td>
+ * <td>{@link SctpChannelOption#SO_BACKLOG}</td><td>{@link #setBacklog(int)}</td>
  * </tr><tr>
- * * <td>{@code "receiveBufferSize"}</td><td>{@link #setReceiveBufferSize(int)}</td>
+ * <td>{@link SctpChannelOption#SO_RCVBUF}</td><td>{@link #setReceiveBufferSize(int)}</td>
  * </tr><tr>
- * <td>{@code "sendBufferSize"}</td><td>{@link #setSendBufferSize(int)}</td>
+ * <td>{@link SctpChannelOption#SO_SNDBUF}</td><td>{@link #setSendBufferSize(int)}</td>
  * </tr><tr>
- * <td>{@code "sctpInitMaxStreams"}</td>
- * <td>{@link #setInitMaxStreams(InitMaxStreams)} (int)}}</td>
+ * <td>{@link SctpChannelOption#SCTP_INIT_MAXSTREAMS}</td><td>{@link #setInitMaxStreams(InitMaxStreams)}</td>
  * </tr>
  * </table>
  */
