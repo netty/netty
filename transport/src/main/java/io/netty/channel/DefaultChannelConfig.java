@@ -199,8 +199,9 @@ public class DefaultChannelConfig implements ChannelConfig {
         if (minWritableAmount < 1) {
             throw new IllegalArgumentException("getMinWritableAmount must be >=" + 1);
         }
+        int oldValue = this.minWritableAmount;
         this.minWritableAmount = minWritableAmount;
-        if (isAutoRead()) {
+        if (oldValue != minWritableAmount && isAutoRead()) {
             channel.read();
         }
         return this;
