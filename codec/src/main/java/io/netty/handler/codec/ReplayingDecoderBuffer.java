@@ -876,7 +876,7 @@ final class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
-    public boolean ensureIsWritable(int num) {
+    public boolean checkWritable(int num) {
         throw new UnreplayableOperationException();
     }
 }

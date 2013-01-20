@@ -73,10 +73,17 @@ public final class FoldedMessage implements Iterator<Object> {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * Return the number of elements left. This match the number of times {@link #next()} can be called before it
+     * fails.
+     */
     public int elements() {
         return messages.size() - index;
     }
 
+    /**
+     * Return the Object on the given index.
+     */
     public Object get(int index) {
         return messages.get(index);
     }

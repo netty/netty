@@ -797,8 +797,8 @@ public final class SwappedByteBuf implements ByteBuf {
     }
 
     @Override
-    public boolean ensureIsWritable(int num) {
-        return buf.ensureIsWritable(num);
+    public boolean checkWritable(int num) {
+        return buf.checkWritable(num);
     }
 
     @Override

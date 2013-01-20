@@ -32,5 +32,5 @@ public interface Buf extends Freeable {
     /**
      * Return {@code true} if there is enough room to add num elements
      */
-    boolean ensureIsWritable(int num);
+    boolean checkWritable(int num);
 }

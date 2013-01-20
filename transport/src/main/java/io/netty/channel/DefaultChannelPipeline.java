@@ -891,10 +891,10 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             DefaultChannelHandlerContext next = head.next;
 
             if (next.hasInboundMessageBuffer()
-                    && next.inboundMessageBuffer().ensureIsWritable(channel.config().getMinWritableAmount())) {
+                    && next.inboundMessageBuffer().checkWritable(channel.config().getMinWritableAmount())) {
                 read();
             } else if (next.hasInboundByteBuffer()
-                    && next.inboundByteBuffer().ensureIsWritable(channel.config().getMinWritableAmount())) {
+                    && next.inboundByteBuffer().checkWritable(channel.config().getMinWritableAmount())) {
                 read();
             }
         }

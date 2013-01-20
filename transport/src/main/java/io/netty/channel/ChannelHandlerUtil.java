@@ -65,7 +65,7 @@ public final class ChannelHandlerUtil {
             if (msg instanceof ByteBuf && ctx.hasNextInboundByteBuffer()) {
                 ByteBuf altDst = ctx.nextInboundByteBuffer();
                 ByteBuf src = (ByteBuf) msg;
-                if (!altDst.ensureIsWritable(src.readableBytes())) {
+                if (!altDst.checkWritable(src.readableBytes())) {
                     return false;
                 }
                 altDst.writeBytes(src, src.readerIndex(), src.readableBytes());

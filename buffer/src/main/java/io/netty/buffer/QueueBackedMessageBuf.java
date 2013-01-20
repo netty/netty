@@ -35,7 +35,7 @@ final class QueueBackedMessageBuf<T> implements MessageBuf<T> {
     }
 
     @Override
-    public boolean ensureIsWritable(int num) {
+    public boolean checkWritable(int num) {
         if (elements + num > maxCapacity()) {
             return false;
         }
@@ -55,7 +55,7 @@ final class QueueBackedMessageBuf<T> implements MessageBuf<T> {
     @Override
     public boolean add(T e) {
         ensureValid();
-        if (!ensureIsWritable(1)) {
+        if (!checkWritable(1)) {
             throw new IllegalStateException("maxCapacity of " + maxCapacity() + " reached");
         }
         boolean added = queue.add(e);
@@ -68,7 +68,7 @@ final class QueueBackedMessageBuf<T> implements MessageBuf<T> {
     @Override
     public boolean offer(T e) {
         ensureValid();
-        if (!ensureIsWritable(1)) {
+        if (!checkWritable(1)) {
             return false;
         }
         boolean added =  queue.offer(e);
@@ -165,7 +165,7 @@ final class QueueBackedMessageBuf<T> implements MessageBuf<T> {
     @Override
     public boolean addAll(Collection<? extends T> c) {
         ensureValid();
-        if (!ensureIsWritable(c.size())) {
+        if (!checkWritable(c.size())) {
             return false;
         }
         int size = size();

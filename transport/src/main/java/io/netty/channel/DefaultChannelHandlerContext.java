@@ -1101,7 +1101,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     private void tryInvokeRead(Buf buf) {
-        if (prev == pipeline.head && buf.ensureIsWritable(channel().config().getMinWritableAmount())
+        if (prev == pipeline.head && buf.checkWritable(channel().config().getMinWritableAmount())
                 && channel().config().isAutoRead()) {
             // only trigger read if this is the first user handler in the pipeline
             prev.invokeRead();
