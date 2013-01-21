@@ -35,7 +35,7 @@ import java.net.SocketTimeoutException;
 /**
  * A {@link SocketChannel} which is using Old-Blocking-IO
  */
-public class OioSocketChannel extends StreamOioByteChannel
+public class OioSocketChannel extends OioByteStreamChannel
                               implements SocketChannel {
 
     private static final InternalLogger logger =

@@ -18,7 +18,7 @@ package io.netty.channel.rxtx;
 import gnu.io.CommPort;
 import gnu.io.CommPortIdentifier;
 import gnu.io.SerialPort;
-import io.netty.channel.socket.oio.StreamOioByteChannel;
+import io.netty.channel.socket.oio.OioByteStreamChannel;
 
 import java.net.SocketAddress;
 
@@ -27,7 +27,7 @@ import static io.netty.channel.rxtx.RxtxChannelOption.*;
 /**
  * A channel to a serial device using the RXTX library.
  */
-public class RxtxChannel extends StreamOioByteChannel {
+public class RxtxChannel extends OioByteStreamChannel {
 
     private static final RxtxDeviceAddress LOCAL_ADDRESS = new RxtxDeviceAddress("localhost");
 
