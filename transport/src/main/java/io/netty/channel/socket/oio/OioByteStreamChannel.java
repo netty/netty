@@ -30,7 +30,7 @@ import java.nio.channels.WritableByteChannel;
 /**
  * Abstract base class for OIO Channels that are based on streams.
  */
-public abstract class StreamOioByteChannel extends AbstractOioByteChannel {
+public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
 
     private InputStream is;
     private OutputStream os;
@@ -43,7 +43,7 @@ public abstract class StreamOioByteChannel extends AbstractOioByteChannel {
      *                  {@link} has no parent as it was created by your self.
      * @param id        the id which should be used for this instance or {@code null} if a new one should be generated
      */
-    protected StreamOioByteChannel(Channel parent, Integer id) {
+    protected OioByteStreamChannel(Channel parent, Integer id) {
         super(parent, id);
     }
 
