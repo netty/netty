@@ -34,7 +34,7 @@ import static org.junit.Assert.*;
  * Tests channel buffers
  */
 @SuppressWarnings("ZeroLengthArrayAllocation")
-public class ChannelBuffersTest {
+public class UnpooledTest {
 
     @Test
     public void testCompositeWrappedBuffer() {

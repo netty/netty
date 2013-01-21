@@ -17,33 +17,25 @@ package io.netty.buffer;
 
 import static org.junit.Assert.*;
 
-import java.util.Random;
-
-import org.junit.Test;
+import java.nio.ByteOrder;
 
 /**
- * Tests sliced channel buffers
+ * Tests little-endian direct channel buffers
  */
-public class SlicedChannelBufferTest extends AbstractChannelBufferTest {
+public class LittleEndianDirectByteBufTest extends AbstractByteBufTest {
 
-    private final Random random = new Random();
     private ByteBuf buffer;
 
     @Override
     protected ByteBuf newBuffer(int length) {
-        buffer = Unpooled.wrappedBuffer(
-                new byte[length * 2], random.nextInt(length - 1) + 1, length);
-        assertEquals(length, buffer.writerIndex());
+        buffer = Unpooled.directBuffer(length).order(ByteOrder.LITTLE_ENDIAN);
+        assertSame(ByteOrder.LITTLE_ENDIAN, buffer.order());
+        assertEquals(0, buffer.writerIndex());
         return buffer;
     }
 
     @Override
     protected ByteBuf[] components() {
         return new ByteBuf[] { buffer };
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void shouldNotAllowNullInConstructor() {
-        new SlicedByteBuf(null, 0, 0);
     }
 }

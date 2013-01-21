@@ -26,7 +26,7 @@ import org.junit.Test;
 /**
  * Tests channel buffer streams
  */
-public class ChannelBufferStreamTest {
+public class ByteBufStreamTest {
 
     @Test
     public void testAll() throws Exception {

@@ -35,7 +35,7 @@ import static org.junit.Assert.*;
 /**
  * An abstract test class for channel buffers
  */
-public abstract class AbstractChannelBufferTest {
+public abstract class AbstractByteBufTest {
 
     private static final int CAPACITY = 4096; // Must be even
     private static final int BLOCK_SIZE = 128;

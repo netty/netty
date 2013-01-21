@@ -28,12 +28,12 @@ import static org.junit.Assert.*;
 /**
  * An abstract test class for composite channel buffers
  */
-public abstract class AbstractCompositeChannelBufferTest extends
-        AbstractChannelBufferTest {
+public abstract class AbstractCompositeByteBufTest extends
+        AbstractByteBufTest {
 
     private final ByteOrder order;
 
-    protected AbstractCompositeChannelBufferTest(ByteOrder order) {
+    protected AbstractCompositeByteBufTest(ByteOrder order) {
         if (order == null) {
             throw new NullPointerException("order");
         }

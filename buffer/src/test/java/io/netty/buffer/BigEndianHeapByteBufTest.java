@@ -15,21 +15,20 @@
  */
 package io.netty.buffer;
 
+import org.junit.Test;
+
 import static org.junit.Assert.*;
 
-import java.nio.ByteOrder;
-
 /**
- * Tests big-endian direct channel buffers
+ * Tests big-endian heap channel buffers
  */
-public class BigEndianDirectChannelBufferTest extends AbstractChannelBufferTest {
+public class BigEndianHeapByteBufTest extends AbstractByteBufTest {
 
     private ByteBuf buffer;
 
     @Override
     protected ByteBuf newBuffer(int length) {
-        buffer = Unpooled.directBuffer(length);
-        assertSame(ByteOrder.BIG_ENDIAN, buffer.order());
+        buffer = Unpooled.buffer(length);
         assertEquals(0, buffer.writerIndex());
         return buffer;
     }
@@ -37,5 +36,15 @@ public class BigEndianDirectChannelBufferTest extends AbstractChannelBufferTest 
     @Override
     protected ByteBuf[] components() {
         return new ByteBuf[] { buffer };
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void shouldNotAllowNullInConstructor1() {
+        new UnpooledHeapByteBuf(null, new byte[1], 0);
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void shouldNotAllowNullInConstructor2() {
+        new UnpooledHeapByteBuf(UnpooledByteBufAllocator.HEAP_BY_DEFAULT, null, 0);
     }
 }
