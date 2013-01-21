@@ -15,15 +15,12 @@
  */
 package io.netty.channel.socket.oio;
 
-import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
-import io.netty.channel.FileRegion;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
@@ -32,32 +29,22 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
-import java.nio.channels.Channels;
-import java.nio.channels.NotYetConnectedException;
-import java.nio.channels.WritableByteChannel;
 
 /**
  * A {@link SocketChannel} which is using Old-Blocking-IO
  */
-public class OioSocketChannel extends AbstractOioByteChannel
+public class OioSocketChannel extends StreamOioByteChannel
                               implements SocketChannel {
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(OioSocketChannel.class);
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.BYTE, false);
-
     private final Socket socket;
     private final SocketChannelConfig config;
-    private InputStream is;
-    private OutputStream os;
-    private WritableByteChannel outChannel;
 
     /**
      * Create a new instance with an new {@link Socket}
@@ -91,8 +78,7 @@ public class OioSocketChannel extends AbstractOioByteChannel
         boolean success = false;
         try {
             if (socket.isConnected()) {
-                is = socket.getInputStream();
-                os = socket.getOutputStream();
+                activate(socket.getInputStream(), socket.getOutputStream());
             }
             socket.setSoTimeout(SO_TIMEOUT);
             success = true;
@@ -112,11 +98,6 @@ public class OioSocketChannel extends AbstractOioByteChannel
     @Override
     public ServerSocketChannel parent() {
         return (ServerSocketChannel) super.parent();
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
     }
 
     @Override
@@ -147,6 +128,18 @@ public class OioSocketChannel extends AbstractOioByteChannel
     @Override
     public ChannelFuture shutdownOutput() {
         return shutdownOutput(newPromise());
+    }
+
+    @Override
+    protected int doReadBytes(ByteBuf buf) throws Exception {
+        if (socket.isClosed()) {
+            return -1;
+        }
+        try {
+            return super.doReadBytes(buf);
+        } catch (SocketTimeoutException e) {
+            return 0;
+        }
     }
 
     @Override
@@ -205,8 +198,7 @@ public class OioSocketChannel extends AbstractOioByteChannel
         boolean success = false;
         try {
             socket.connect(remoteAddress, config().getConnectTimeoutMillis());
-            is = socket.getInputStream();
-            os = socket.getOutputStream();
+            activate(socket.getInputStream(), socket.getOutputStream());
             success = true;
         } finally {
             if (!success) {
@@ -223,63 +215,5 @@ public class OioSocketChannel extends AbstractOioByteChannel
     @Override
     protected void doClose() throws Exception {
         socket.close();
-    }
-
-    @Override
-    protected int available() {
-        try {
-            return is.available();
-        } catch (IOException e) {
-            return 0;
-        }
-    }
-
-    @Override
-    protected int doReadBytes(ByteBuf buf) throws Exception {
-        if (socket.isClosed()) {
-            return -1;
-        }
-
-        try {
-            return buf.writeBytes(is, buf.writableBytes());
-        } catch (SocketTimeoutException e) {
-            return 0;
-        }
-    }
-
-    @Override
-    protected void doWriteBytes(ByteBuf buf) throws Exception {
-        OutputStream os = this.os;
-        if (os == null) {
-            throw new NotYetConnectedException();
-        }
-        buf.readBytes(os, buf.readableBytes());
-    }
-
-    @Override
-    protected void doFlushFileRegion(FileRegion region, ChannelPromise promise) throws Exception {
-        OutputStream os = this.os;
-        if (os == null) {
-            throw new NotYetConnectedException();
-        }
-        if (outChannel == null) {
-            outChannel = Channels.newChannel(os);
-        }
-        long written = 0;
-
-        for (;;) {
-            long localWritten = region.transferTo(outChannel, written);
-            if (localWritten == -1) {
-                checkEOF(region, written);
-                region.close();
-                promise.setSuccess();
-                return;
-            }
-            written += localWritten;
-            if (written >= region.count()) {
-                promise.setSuccess();
-                return;
-            }
-        }
     }
 }
