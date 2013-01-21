@@ -49,14 +49,25 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
         return METADATA;
     }
 
-    @Override
-    protected void doRead() {
+    /**
+     * Check if the input was shutdown and if so return {@code true}. The default implementation sleeps also for
+     * {@link #SO_TIMEOUT} milliseconds to simulate some blocking.
+     */
+    protected boolean checkInputShutdown() {
         if (inputShutdown) {
             try {
                 Thread.sleep(SO_TIMEOUT);
             } catch (InterruptedException e) {
                 // ignore
             }
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    protected void doRead() {
+        if (checkInputShutdown()) {
             return;
         }
 
