@@ -6,7 +6,7 @@ Please visit the Netty web site for more information:
 
   * http://netty.io/
 
-Copyright 2011 The Netty Project
+Copyright 2013 The Netty Project
 
 The Netty Project licenses this file to you under the Apache License,
 version 2.0 (the "License"); you may not use this file except in compliance
