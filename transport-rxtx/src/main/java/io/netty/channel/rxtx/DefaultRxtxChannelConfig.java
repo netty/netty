@@ -34,6 +34,7 @@ final class DefaultRxtxChannelConfig extends DefaultChannelConfig implements Rxt
     private volatile Stopbits stopbits = Stopbits.STOPBITS_1;
     private volatile Databits databits = Databits.DATABITS_8;
     private volatile Paritybit paritybit = Paritybit.NONE;
+    private volatile int waitTime;
 
     public DefaultRxtxChannelConfig(RxtxChannel channel) {
         super(channel);
@@ -41,7 +42,7 @@ final class DefaultRxtxChannelConfig extends DefaultChannelConfig implements Rxt
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), BAUD_RATE, DTR, RTS, STOP_BITS, DATA_BITS, PARITY_BIT);
+        return getOptions(super.getOptions(), BAUD_RATE, DTR, RTS, STOP_BITS, DATA_BITS, PARITY_BIT, WAIT_TIME);
     }
 
     @SuppressWarnings("unchecked")
@@ -65,6 +66,9 @@ final class DefaultRxtxChannelConfig extends DefaultChannelConfig implements Rxt
         if (option == PARITY_BIT) {
             return (T) getParitybit();
         }
+        if (option == WAIT_TIME) {
+            return (T) Integer.valueOf(getWaitTimeMillis());
+        }
         return super.getOption(option);
     }
 
@@ -84,6 +88,8 @@ final class DefaultRxtxChannelConfig extends DefaultChannelConfig implements Rxt
             setDatabits((Databits) value);
         } else if (option == PARITY_BIT) {
             setParitybit((Paritybit) value);
+        } else if (option == WAIT_TIME) {
+            setWaitTimeMillis((Integer) value);
         } else {
             return super.setOption(option, value);
         }
@@ -153,6 +159,20 @@ final class DefaultRxtxChannelConfig extends DefaultChannelConfig implements Rxt
     @Override
     public RxtxChannelConfig setRts(final boolean rts) {
         this.rts = rts;
+        return this;
+    }
+
+    @Override
+    public int getWaitTimeMillis() {
+        return waitTime;
+    }
+
+    @Override
+    public RxtxChannelConfig setWaitTimeMillis(final int waitTimeMillis) {
+        if (waitTimeMillis < 0) {
+            throw new IllegalArgumentException("Wait time must be >= 0");
+        }
+        waitTime = waitTimeMillis;
         return this;
     }
 
