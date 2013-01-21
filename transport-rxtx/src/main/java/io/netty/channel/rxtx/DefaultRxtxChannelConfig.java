@@ -169,7 +169,10 @@ final class DefaultRxtxChannelConfig extends DefaultChannelConfig implements Rxt
     
     @Override
     public RxtxChannelConfig setWaitTimeMillis(final int waitTimeMillis) {
-        this.waitTime = waitTime;
+        if (waitTimeMillis < 0) {
+            throw new IllegalArgumentException("Wait time must be >= 0");
+        }
+        this.waitTime = waitTimeMillis;
         return this;
     }
 

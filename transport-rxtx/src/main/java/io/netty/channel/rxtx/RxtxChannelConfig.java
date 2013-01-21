@@ -42,6 +42,8 @@ import io.netty.channel.ChannelConfig;
  * <td>{@link io.netty.channel.rxtx.RxtxChannelOption#DATA_BITS}</td><td>{@link #setDatabits(Databits)}</td>
  * </tr><tr>
  * <td>{@link io.netty.channel.rxtx.RxtxChannelOption#PARITY_BIT}</td><td>{@link #setParitybit(Paritybit)}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.rxtx.RxtxChannelOption#WAIT_TIME}</td><td>{@link #setWaitTime(int)}</td>
  * </tr>
  * </table>
  */
@@ -247,11 +249,12 @@ public interface RxtxChannelConfig extends ChannelConfig {
     
     /**
      * Sets the time to wait after opening the serial port and before sending it any
-     * configuration information or data. Values less than or equal to 0 indicate that no
-     * waiting should occur.
+     * configuration information or data. A value of 0 indicates that no waiting should
+     * occur.
      * 
      * @param waitTimeMillis The number of milliseconds to wait, defaulting to 0 (no
      *     wait) if unset
+     * @throws IllegalArgumentException if the supplied value is < 0
      */
     RxtxChannelConfig setWaitTimeMillis(int waitTimeMillis);
 
