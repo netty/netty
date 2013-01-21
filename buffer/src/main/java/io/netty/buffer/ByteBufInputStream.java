@@ -188,6 +188,9 @@ public class ByteBufInputStream extends InputStream implements DataInput {
         lineBuf.setLength(0);
         for (;;) {
             int b = read();
+            if (b == -1 && lineBuf.length() == 0) {
+                return null;
+            }
             if (b < 0 || b == '\n') {
                 break;
             }
