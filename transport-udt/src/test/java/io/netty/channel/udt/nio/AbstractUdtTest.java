@@ -26,7 +26,7 @@ import com.barchart.udt.SocketUDT;
 /**
  * Base for UDT tests.
  */
-public abstract class AnyTest {
+public abstract class AbstractUdtTest {
 
     /**
      * UDT test assumptions.

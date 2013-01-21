@@ -33,7 +33,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
-public class NioUdtByteRendezvousChannelTest extends AnyTest {
+public class NioUdtByteRendezvousChannelTest extends AbstractUdtTest {
 
     protected static final Logger log = LoggerFactory.getLogger(NioUdtByteAcceptorChannelTest.class);
 
