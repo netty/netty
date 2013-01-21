@@ -42,6 +42,9 @@ public final class RxtxChannelOption<T> extends ChannelOption<T> {
     public static final RxtxChannelOption<Paritybit> PARITY_BIT =
             new RxtxChannelOption<Paritybit>("PARITY_BIT");
 
+    public static final RxtxChannelOption<Integer> WAIT_TIME =
+            new RxtxChannelOption<Integer>("WAIT_TIME");
+
     private RxtxChannelOption(String name) {
         super(name);
     }

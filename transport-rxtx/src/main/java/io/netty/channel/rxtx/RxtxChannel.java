@@ -15,14 +15,17 @@
  */
 package io.netty.channel.rxtx;
 
-import gnu.io.CommPort;
-import gnu.io.CommPortIdentifier;
-import gnu.io.SerialPort;
+import static io.netty.channel.rxtx.RxtxChannelOption.*;
+
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.oio.OioByteStreamChannel;
 
 import java.net.SocketAddress;
+import java.util.concurrent.TimeUnit;
 
-import static io.netty.channel.rxtx.RxtxChannelOption.*;
+import gnu.io.CommPort;
+import gnu.io.CommPortIdentifier;
+import gnu.io.SerialPort;
 
 /**
  * A channel to a serial device using the RXTX library.
@@ -54,6 +57,11 @@ public class RxtxChannel extends OioByteStreamChannel {
     }
 
     @Override
+    protected AbstractUnsafe newUnsafe() {
+        return new RxtxUnsafe();
+    }
+
+    @Override
     protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         RxtxDeviceAddress remote = (RxtxDeviceAddress) remoteAddress;
         final CommPortIdentifier cpi = CommPortIdentifier.getPortIdentifier(remote.value());
@@ -62,11 +70,14 @@ public class RxtxChannel extends OioByteStreamChannel {
         deviceAddress = remote;
 
         serialPort = (SerialPort) commPort;
+    }
+
+    protected void doInit() throws Exception {
         serialPort.setSerialPortParams(
-                config().getOption(BAUD_RATE),
-                config().getOption(DATA_BITS).value(),
-                config().getOption(STOP_BITS).value(),
-                config().getOption(PARITY_BIT).value()
+            config().getOption(BAUD_RATE),
+            config().getOption(DATA_BITS).value(),
+            config().getOption(STOP_BITS).value(),
+            config().getOption(PARITY_BIT).value()
         );
         serialPort.setDTR(config().getOption(DTR));
         serialPort.setRTS(config().getOption(RTS));
@@ -114,6 +125,59 @@ public class RxtxChannel extends OioByteStreamChannel {
                 serialPort.removeEventListener();
                 serialPort.close();
                 serialPort = null;
+            }
+        }
+    }
+
+    private final class RxtxUnsafe extends AbstractUnsafe {
+        @Override
+        public void connect(
+                final SocketAddress remoteAddress,
+                final SocketAddress localAddress, final ChannelPromise promise) {
+            if (eventLoop().inEventLoop()) {
+                if (!ensureOpen(promise)) {
+                    return;
+                }
+
+                try {
+                    final boolean wasActive = isActive();
+                    doConnect(remoteAddress, localAddress);
+
+                    int waitTime = config().getOption(WAIT_TIME);
+                    if (waitTime > 0) {
+                        eventLoop().schedule(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    doInit();
+                                    promise.setSuccess();
+                                    if (!wasActive && isActive()) {
+                                        pipeline().fireChannelActive();
+                                    }
+                                } catch (Throwable t) {
+                                    promise.setFailure(t);
+                                    closeIfClosed();
+                                }
+                            }
+                       }, waitTime, TimeUnit.MILLISECONDS);
+                    } else {
+                        doInit();
+                        promise.setSuccess();
+                        if (!wasActive && isActive()) {
+                            pipeline().fireChannelActive();
+                        }
+                    }
+                } catch (Throwable t) {
+                    promise.setFailure(t);
+                    closeIfClosed();
+                }
+            } else {
+                eventLoop().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        connect(remoteAddress, localAddress, promise);
+                    }
+                });
             }
         }
     }
