@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,25 +16,24 @@
 
 package io.netty.channel.udt.nio;
 
-import io.netty.buffer.BufType;
-import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static org.junit.Assume.*;
+import io.netty.channel.udt.util.UnitHelp;
 
-import static org.junit.Assert.*;
+import org.junit.BeforeClass;
 
-public class NioUdtByteAcceptorChannelTest extends AbstractUdtTest {
+import com.barchart.udt.SocketUDT;
 
-    protected static final Logger log = LoggerFactory.getLogger(NioUdtByteAcceptorChannelTest.class);
+/**
+ * Base for UDT tests.
+ */
+public abstract class AbstractUdtTest {
 
     /**
-     * verify channel meta data
+     * UDT test assumptions.
      */
-    @Test
-    public void metadata() throws Exception {
-
-        assertEquals(BufType.BYTE, new NioUdtByteAcceptorChannel().metadata()
-                .bufferType());
-
+    @BeforeClass
+    public static void assumeConditions(){
+        assumeTrue(UnitHelp.canLoadAndInitClass("com.barchart.udt.SocketUDT"));
     }
+
 }
