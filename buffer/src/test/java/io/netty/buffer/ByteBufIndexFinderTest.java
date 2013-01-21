@@ -24,7 +24,7 @@ import org.junit.Test;
 /**
  * Tests the index-finding capabilities of channel buffers
  */
-public class ChannelBufferIndexFinderTest {
+public class ByteBufIndexFinderTest {
 
     @Test
     public void testForward() {

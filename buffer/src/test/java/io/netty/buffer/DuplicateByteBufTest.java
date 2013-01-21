@@ -15,20 +15,20 @@
  */
 package io.netty.buffer;
 
+import org.junit.Test;
+
 import static org.junit.Assert.*;
 
-import java.nio.ByteOrder;
-
 /**
- * Tests little-endian heap channel buffers
+ * Tests duplicated channel buffers
  */
-public class LittleEndianHeapChannelBufferTest extends AbstractChannelBufferTest {
+public class DuplicateByteBufTest extends AbstractByteBufTest {
 
     private ByteBuf buffer;
 
     @Override
     protected ByteBuf newBuffer(int length) {
-        buffer = Unpooled.buffer(length).order(ByteOrder.LITTLE_ENDIAN);
+        buffer = new DuplicatedByteBuf(Unpooled.buffer(length));
         assertEquals(0, buffer.writerIndex());
         return buffer;
     }
@@ -36,5 +36,10 @@ public class LittleEndianHeapChannelBufferTest extends AbstractChannelBufferTest
     @Override
     protected ByteBuf[] components() {
         return new ByteBuf[] { buffer };
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void shouldNotAllowNullInConstructor() {
+        new DuplicatedByteBuf(null);
     }
 }

@@ -17,10 +17,10 @@ package io.netty.buffer;
 
 
 /**
- * Tests big-endian composite channel buffers
+ * Tests little-endian composite channel buffers
  */
-public class BigEndianCompositeChannelBufferTest extends AbstractCompositeChannelBufferTest {
-    public BigEndianCompositeChannelBufferTest() {
-        super(Unpooled.BIG_ENDIAN);
+public class LittleEndianCompositeByteBufTest extends AbstractCompositeByteBufTest {
+    public LittleEndianCompositeByteBufTest() {
+        super(Unpooled.LITTLE_ENDIAN);
     }
 }

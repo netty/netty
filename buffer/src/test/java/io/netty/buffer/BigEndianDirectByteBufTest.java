@@ -15,20 +15,21 @@
  */
 package io.netty.buffer;
 
-import org.junit.Test;
-
 import static org.junit.Assert.*;
 
+import java.nio.ByteOrder;
+
 /**
- * Tests duplicated channel buffers
+ * Tests big-endian direct channel buffers
  */
-public class DuplicateChannelBufferTest extends AbstractChannelBufferTest {
+public class BigEndianDirectByteBufTest extends AbstractByteBufTest {
 
     private ByteBuf buffer;
 
     @Override
     protected ByteBuf newBuffer(int length) {
-        buffer = new DuplicatedByteBuf(Unpooled.buffer(length));
+        buffer = Unpooled.directBuffer(length);
+        assertSame(ByteOrder.BIG_ENDIAN, buffer.order());
         assertEquals(0, buffer.writerIndex());
         return buffer;
     }
@@ -36,10 +37,5 @@ public class DuplicateChannelBufferTest extends AbstractChannelBufferTest {
     @Override
     protected ByteBuf[] components() {
         return new ByteBuf[] { buffer };
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void shouldNotAllowNullInConstructor() {
-        new DuplicatedByteBuf(null);
     }
 }

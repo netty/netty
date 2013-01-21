@@ -31,7 +31,7 @@ import static org.junit.Assert.*;
 /**
  * Tests read-only channel buffers
  */
-public class ReadOnlyChannelBufferTest {
+public class ReadOnlyByteBufTest {
 
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullInConstructor() {
