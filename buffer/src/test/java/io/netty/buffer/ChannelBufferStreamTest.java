@@ -18,6 +18,7 @@ package io.netty.buffer;
 import static org.junit.Assert.*;
 
 import java.io.EOFException;
+import java.nio.charset.Charset;
 
 import org.junit.Test;
 
@@ -170,13 +171,34 @@ public class ChannelBufferStreamTest {
     }
 
     @Test
-    public void testEmptyReadLine() throws Exception {
-        ByteBuf buf = Unpooled.buffer(0);
+    public void testReadLine() throws Exception {
+        Charset utf8=Charset.forName("UTF-8");
+        ByteBuf buf = Unpooled.buffer();
         ByteBufInputStream in = new ByteBufInputStream(buf);
 
         String s = in.readLine();
-        assertEquals(0, s.length());
+        assertNull(s);
 
+        int charCount=5;//total chars in the string below without new line characters
+        byte[] abc = "a\nb\r\nc\nd\ne".getBytes(utf8);
+        buf.writeBytes(abc);
+        in.mark(charCount);
+        assertEquals("a",in.readLine());
+        assertEquals("b",in.readLine());
+        assertEquals("c",in.readLine());
+        assertEquals("d",in.readLine());
+        assertEquals("e",in.readLine());
+        assertNull(in.readLine());
+
+        in.reset();
+        int count=0;
+        while(in.readLine() != null){
+            ++count;
+            if(count > charCount){
+                fail("readLine() should have returned null");
+            }
+        }
+        assertEquals(charCount,count);
         in.close();
     }
 }
