@@ -77,7 +77,7 @@ public class RxtxChannel extends AbstractOioByteChannel {
     @Override
     protected int available() {
         try {
-            return in.available();
+            return in != null ? in.available() : 0;
         } catch (IOException e) {
             return 0;
         }
@@ -85,9 +85,13 @@ public class RxtxChannel extends AbstractOioByteChannel {
 
     @Override
     protected int doReadBytes(ByteBuf buf) throws Exception {
-        try {
-            return buf.writeBytes(in, buf.writableBytes());
-        } catch (SocketTimeoutException e) {
+        if (in != null && in.available() > 0) {
+            try {
+                return buf.writeBytes(in, buf.writableBytes());
+            } catch (SocketTimeoutException e) {
+                return 0;
+            }
+        } else {
             return 0;
         }
     }
