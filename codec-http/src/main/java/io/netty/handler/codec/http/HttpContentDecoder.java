@@ -114,6 +114,15 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
         return msg;
     }
 
+    @Override
+    protected void freeInboundMessage(Object msg) throws Exception {
+        if (decoder == null) {
+            // if the decoder was null we returned the original message so we are not allowed to free it
+            return;
+        }
+        super.freeInboundMessage(msg);
+    }
+
     private Object[] decodeContent(HttpMessage header, HttpContent c) {
         ByteBuf newContent = Unpooled.buffer();
         ByteBuf content = c.data();
