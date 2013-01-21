@@ -238,6 +238,22 @@ public interface RxtxChannelConfig extends ChannelConfig {
      * @param rts true if RTS is supported, false otherwise
      */
     RxtxChannelConfig setRts(boolean rts);
+    
+    /**
+     * @return The number of milliseconds to wait between opening the serial port and
+     *     initialising.
+     */
+    int getWaitTimeMillis();
+    
+    /**
+     * Sets the time to wait after opening the serial port and before sending it any
+     * configuration information or data. Values less than or equal to 0 indicate that no
+     * waiting should occur.
+     * 
+     * @param waitTimeMillis The number of milliseconds to wait, defaulting to 0 (no
+     *     wait) if unset
+     */
+    RxtxChannelConfig setWaitTimeMillis(int waitTimeMillis);
 
     @Override
     RxtxChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
