@@ -41,6 +41,20 @@ public final class UnitHelp {
     private static final Pattern SPACES = Pattern.compile("\\s+");
 
     /**
+     * Verify class loading with class initialization.
+     */
+    public static boolean canLoadAndInitClass(String name) {
+        try{
+            Class.forName(name, true, UnitHelp.class.getClassLoader());
+            log.info("Class load and init success.");
+            return true;
+        } catch(Throwable e){
+            log.warn("Class load or init failure.", e);
+            return false;
+        }
+    }
+    
+    /**
      * Zero out buffer.
      */
     public static void clear(final IntBuffer buffer) {
