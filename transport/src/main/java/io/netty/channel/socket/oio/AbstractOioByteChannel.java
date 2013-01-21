@@ -15,8 +15,10 @@
  */
 package io.netty.channel.socket.oio;
 
+import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
@@ -29,6 +31,7 @@ import java.io.IOException;
 public abstract class AbstractOioByteChannel extends AbstractOioChannel {
 
     private volatile boolean inputShutdown;
+    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.BYTE, false);
 
     /**
      * @see AbstractOioByteChannel#AbstractOioByteChannel(Channel, Integer)
@@ -39,6 +42,11 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
 
     boolean isInputShutdown() {
         return inputShutdown;
+    }
+
+    @Override
+    public ChannelMetadata metadata() {
+        return METADATA;
     }
 
     @Override

@@ -18,35 +18,24 @@ package io.netty.channel.rxtx;
 import gnu.io.CommPort;
 import gnu.io.CommPortIdentifier;
 import gnu.io.SerialPort;
-import io.netty.buffer.BufType;
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelMetadata;
-import io.netty.channel.socket.oio.AbstractOioByteChannel;
+import io.netty.channel.socket.oio.StreamOioByteChannel;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.SocketAddress;
-import java.net.SocketTimeoutException;
-import java.nio.channels.NotYetConnectedException;
 
 import static io.netty.channel.rxtx.RxtxChannelOption.*;
 
 /**
  * A channel to a serial device using the RXTX library.
  */
-public class RxtxChannel extends AbstractOioByteChannel {
+public class RxtxChannel extends StreamOioByteChannel {
 
     private static final RxtxDeviceAddress LOCAL_ADDRESS = new RxtxDeviceAddress("localhost");
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.BYTE, true);
 
     private final RxtxChannelConfig config;
 
     private boolean open = true;
     private RxtxDeviceAddress deviceAddress;
     private SerialPort serialPort;
-    private InputStream in;
-    private OutputStream out;
 
     public RxtxChannel() {
         super(null, null);
@@ -60,44 +49,8 @@ public class RxtxChannel extends AbstractOioByteChannel {
     }
 
     @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
-    }
-
-    @Override
     public boolean isOpen() {
         return open;
-    }
-
-    @Override
-    public boolean isActive() {
-        return in != null && out != null;
-    }
-
-    @Override
-    protected int available() {
-        try {
-            return in.available();
-        } catch (IOException e) {
-            return 0;
-        }
-    }
-
-    @Override
-    protected int doReadBytes(ByteBuf buf) throws Exception {
-        try {
-            return buf.writeBytes(in, buf.writableBytes());
-        } catch (SocketTimeoutException e) {
-            return 0;
-        }
-    }
-
-    @Override
-    protected void doWriteBytes(ByteBuf buf) throws Exception {
-        if (out == null) {
-            throw new NotYetConnectedException();
-        }
-        buf.readBytes(out, buf.readableBytes());
     }
 
     @Override
@@ -118,8 +71,7 @@ public class RxtxChannel extends AbstractOioByteChannel {
         serialPort.setDTR(config().getOption(DTR));
         serialPort.setRTS(config().getOption(RTS));
 
-        out = serialPort.getOutputStream();
-        in = serialPort.getInputStream();
+        activate(serialPort.getInputStream(), serialPort.getOutputStream());
     }
 
     @Override
@@ -155,36 +107,14 @@ public class RxtxChannel extends AbstractOioByteChannel {
     @Override
     protected void doClose() throws Exception {
         open = false;
-
-        IOException ex = null;
-
         try {
-            if (in != null) {
-                in.close();
+           super.doClose();
+        } finally {
+            if (serialPort != null) {
+                serialPort.removeEventListener();
+                serialPort.close();
+                serialPort = null;
             }
-        } catch (IOException e) {
-            ex = e;
-        }
-
-        try {
-            if (out != null) {
-                out.close();
-            }
-        } catch (IOException e) {
-            ex = e;
-        }
-
-        if (serialPort != null) {
-            serialPort.removeEventListener();
-            serialPort.close();
-        }
-
-        in = null;
-        out = null;
-        serialPort = null;
-
-        if (ex != null) {
-            throw ex;
         }
     }
 }
