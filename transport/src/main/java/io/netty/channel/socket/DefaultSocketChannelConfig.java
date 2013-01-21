@@ -32,7 +32,7 @@ import static io.netty.channel.ChannelOption.*;
 public class DefaultSocketChannelConfig extends DefaultChannelConfig
                                         implements SocketChannelConfig {
 
-    private final Socket javaSocket;
+    protected final Socket javaSocket;
     private volatile boolean allowHalfClosure;
 
     /**

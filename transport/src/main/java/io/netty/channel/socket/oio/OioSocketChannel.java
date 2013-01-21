@@ -21,10 +21,8 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
-import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
@@ -44,7 +42,7 @@ public class OioSocketChannel extends StreamOioByteChannel
             InternalLoggerFactory.getInstance(OioSocketChannel.class);
 
     private final Socket socket;
-    private final SocketChannelConfig config;
+    private final OioSocketChannelConfig config;
 
     /**
      * Create a new instance with an new {@link Socket}
@@ -73,7 +71,7 @@ public class OioSocketChannel extends StreamOioByteChannel
     public OioSocketChannel(Channel parent, Integer id, Socket socket) {
         super(parent, id);
         this.socket = socket;
-        config = new DefaultSocketChannelConfig(this, socket);
+        config = new DefaultOioSocketChannelConfig(this, socket);
 
         boolean success = false;
         try {
@@ -101,7 +99,7 @@ public class OioSocketChannel extends StreamOioByteChannel
     }
 
     @Override
-    public SocketChannelConfig config() {
+    public OioSocketChannelConfig config() {
         return config;
     }
 
@@ -215,5 +213,18 @@ public class OioSocketChannel extends StreamOioByteChannel
     @Override
     protected void doClose() throws Exception {
         socket.close();
+    }
+
+    @Override
+    protected boolean checkInputShutdown() {
+        if (isInputShutdown()) {
+            try {
+                Thread.sleep(config().getSoTimeout());
+            } catch (Throwable e) {
+                // ignore
+            }
+            return true;
+        }
+        return false;
     }
 }

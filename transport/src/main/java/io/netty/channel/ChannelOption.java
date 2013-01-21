@@ -59,6 +59,8 @@ public class ChannelOption<T> extends UniqueName {
             new ChannelOption<Integer>("SO_LINGER");
     public static final ChannelOption<Integer> SO_BACKLOG =
             new ChannelOption<Integer>("SO_BACKLOG");
+    public static final ChannelOption<Integer> SO_TIMEOUT =
+            new ChannelOption<Integer>("SO_TIMEOUT");
 
     public static final ChannelOption<Integer> IP_TOS =
             new ChannelOption<Integer>("IP_TOS");
