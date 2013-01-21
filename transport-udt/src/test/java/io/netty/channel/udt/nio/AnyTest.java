@@ -16,26 +16,24 @@
 
 package io.netty.channel.udt.nio;
 
-import io.netty.buffer.BufType;
-import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static org.junit.Assume.*;
+import io.netty.channel.udt.util.UnitHelp;
 
-import static org.junit.Assert.*;
+import org.junit.BeforeClass;
 
-public class NioUdtMessageConnectorChannelTest extends AnyTest {
+import com.barchart.udt.SocketUDT;
 
-    protected static final Logger log = LoggerFactory.getLogger(NioUdtByteAcceptorChannelTest.class);
+/**
+ * Base for UDT tests.
+ */
+public abstract class AnyTest {
 
     /**
-     * verify channel meta data
+     * UDT test assumptions.
      */
-    @Test
-    public void metadata() throws Exception {
-
-        assertEquals(BufType.MESSAGE, new NioUdtMessageConnectorChannel()
-                .metadata().bufferType());
-
+    @BeforeClass
+    public static void assumeConditions(){
+        assumeTrue(UnitHelp.canLoadAndInitClass("com.barchart.udt.SocketUDT"));
     }
 
 }

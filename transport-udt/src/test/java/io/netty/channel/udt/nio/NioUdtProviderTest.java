@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.*;
 
-public class NioUdtProviderTest {
+public class NioUdtProviderTest extends AnyTest {
 
     protected static final Logger log = LoggerFactory.getLogger(NioUdtProviderTest.class);
 

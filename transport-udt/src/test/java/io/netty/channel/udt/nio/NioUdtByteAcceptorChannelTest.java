@@ -23,7 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.*;
 
-public class NioUdtByteAcceptorChannelTest {
+public class NioUdtByteAcceptorChannelTest extends AnyTest {
 
     protected static final Logger log = LoggerFactory.getLogger(NioUdtByteAcceptorChannelTest.class);
 
