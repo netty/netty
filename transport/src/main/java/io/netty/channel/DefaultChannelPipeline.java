@@ -626,7 +626,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     private void freeHandlerBuffers(ChannelHandler handler, ChannelHandlerContext ctx) {
         if (handler instanceof ChannelInboundHandler) {
-            inboundBufferFreed = true;
             try {
                 ((ChannelInboundHandler) handler).freeInboundBuffer(ctx);
             } catch (Exception e) {
@@ -634,7 +633,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             }
         }
         if (handler instanceof ChannelOutboundHandler) {
-            outboundBufferFreed = true;
             try {
                 ((ChannelOutboundHandler) handler).freeOutboundBuffer(ctx);
             } catch (Exception e) {
