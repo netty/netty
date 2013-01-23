@@ -80,6 +80,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private Runnable invokeFreeInboundBuffer0Task;
     private Runnable invokeFreeOutboundBuffer0Task;
     private Runnable invokeRead0Task;
+    boolean removed;
 
     DefaultChannelHandlerContext(
             DefaultChannelPipeline pipeline, EventExecutorGroup group,
@@ -1084,7 +1085,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         } catch (Throwable t) {
             pipeline.notifyHandlerException(t);
         } finally {
-            if (handler instanceof ChannelInboundByteHandler && !isInboundBufferFreed()) {
+            if (!removed && handler instanceof ChannelInboundByteHandler && !isInboundBufferFreed()) {
                 try {
                     ((ChannelInboundByteHandler) handler).discardInboundReadBytes(this);
                 } catch (Throwable t) {
@@ -1424,7 +1425,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         } catch (Throwable t) {
             pipeline.notifyHandlerException(t);
         } finally {
-            if (handler instanceof ChannelOutboundByteHandler && !isOutboundBufferFreed()) {
+            if (!removed && handler instanceof ChannelOutboundByteHandler && !isOutboundBufferFreed()) {
                 try {
                     ((ChannelOutboundByteHandler) handler).discardOutboundReadBytes(this);
                 } catch (Throwable t) {

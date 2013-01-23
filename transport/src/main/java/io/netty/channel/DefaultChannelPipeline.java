@@ -599,7 +599,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private void callAfterRemove(final ChannelHandlerContext ctx) {
+    private void callAfterRemove(final DefaultChannelHandlerContext ctx) {
         final ChannelHandler handler = ctx.handler();
 
         // Notify the complete removal.
@@ -622,6 +622,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             freeHandlerBuffers(handler, ctx);
         }
+        ctx.removed = true;
     }
 
     private void freeHandlerBuffers(ChannelHandler handler, ChannelHandlerContext ctx) {
