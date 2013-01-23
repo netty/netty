@@ -24,58 +24,32 @@ import io.netty.channel.Channel;
  * @apiviz.has io.netty.handler.timeout.IdleState oneway - -
  */
 public final class IdleStateEvent {
+    public static final IdleStateEvent FIRST_READER_IDLE_STATE_EVENT = new IdleStateEvent(IdleState.READER_IDLE, true);
+    public static final IdleStateEvent READER_IDLE_STATE_EVENT = new IdleStateEvent(IdleState.READER_IDLE, false);
+    public static final IdleStateEvent FIRST_WRITER_IDLE_STATE_EVENT = new IdleStateEvent(IdleState.WRITER_IDLE, true);
+    public static final IdleStateEvent WRITER_IDLE_STATE_EVENT = new IdleStateEvent(IdleState.WRITER_IDLE, false);
+    public static final IdleStateEvent FIRST_ALL_IDLE_STATE_EVENT = new IdleStateEvent(IdleState.ALL_IDLE, true);
+    public static final IdleStateEvent ALL_IDLE_STATE_EVENT = new IdleStateEvent(IdleState.ALL_IDLE, false);
 
     private final IdleState state;
-    private final int count;
-    private final long durationMillis;
+    private final boolean first;
 
-    /**
-     * Create a new instance
-     *
-     * @param state             the detailed idle state.
-     * @param count             the count how often this kind of {@link IdleStateEvent} was fired before
-     * @param durationMillis    the duration which caused the {@link IdleStateEvent} to get fired in milliseconds
-     */
-    public IdleStateEvent(IdleState state, int count, long durationMillis) {
-        if (state == null) {
-            throw new NullPointerException("state");
-        }
-        if (count < 0) {
-            throw new IllegalStateException(String.format("count: %d (expected: >= 0)", count));
-        }
-        if (durationMillis < 0) {
-            throw new IllegalStateException(String.format(
-                    "durationMillis: %d (expected: >= 0)", durationMillis));
-        }
-
+    private IdleStateEvent(IdleState state, boolean first) {
         this.state = state;
-        this.count = count;
-        this.durationMillis = durationMillis;
+        this.first = first;
     }
 
     /**
-     * Returns the detailed idle state.
+     * Returns the idle state.
      */
     public IdleState state() {
         return state;
     }
 
     /**
-     * Return the count how often this kind of {@link IdleStateEvent} was fired before.
+     * Returns {@code true} if this was the first event for the {@link IdleState}
      */
-    public int count() {
-        return count;
-    }
-
-    /**
-     * Return the duration which caused the {@link IdleStateEvent} to get fired in milliseconds.
-     */
-    public long durationMillis() {
-        return durationMillis;
-    }
-
-    @Override
-    public String toString() {
-        return state + "(" + count + ", " + durationMillis + "ms)";
+    public boolean isFirst() {
+        return first;
     }
 }
