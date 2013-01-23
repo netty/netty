@@ -45,6 +45,7 @@ import io.netty.channel.ChannelPromise;
 public abstract class MessageToByteEncoder<I> extends ChannelOutboundMessageHandlerAdapter<I> {
 
     private final Class<?>[] acceptedMsgTypes;
+    private boolean removed;
 
     /**
      * The types which will be accepted by the encoder. If a received message is an other type it will be just forwared
@@ -59,7 +60,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundMessageHand
         MessageBuf<I> in = ctx.outboundMessageBuffer();
         ByteBuf out = ctx.nextOutboundByteBuffer();
 
-        for (;;) {
+        while (!removed) {
             Object msg = in.poll();
             if (msg == null) {
                 break;
@@ -105,4 +106,10 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundMessageHand
      * @throws Exception    is thrown if an error accour
      */
     protected abstract void encode(ChannelHandlerContext ctx, I msg, ByteBuf out) throws Exception;
+
+    @Override
+    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
+        super.afterRemove(ctx);
+        removed = true;
+    }
 }

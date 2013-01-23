@@ -49,6 +49,7 @@ public abstract class MessageToMessageDecoder<I>
         extends ChannelInboundHandlerAdapter implements ChannelInboundMessageHandler<I> {
 
     private final Class<?>[] acceptedMsgTypes;
+    private boolean removed;
 
     /**
      * The types which will be accepted by the decoder. If a received message is an other type it will be just forwarded
@@ -68,7 +69,7 @@ public abstract class MessageToMessageDecoder<I>
             throws Exception {
         MessageBuf<I> in = ctx.inboundMessageBuffer();
         boolean notify = false;
-        for (;;) {
+        while (!removed) {
             try {
                 Object msg = in.poll();
                 if (msg == null) {
@@ -140,5 +141,11 @@ public abstract class MessageToMessageDecoder<I>
      */
     protected void freeInboundMessage(I msg) throws Exception {
         ChannelHandlerUtil.freeMessage(msg);
+    }
+
+    @Override
+    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
+        super.afterRemove(ctx);
+        removed = true;
     }
 }
