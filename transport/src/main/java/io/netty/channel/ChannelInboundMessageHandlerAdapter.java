@@ -44,6 +44,7 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
         extends ChannelInboundHandlerAdapter implements ChannelInboundMessageHandler<I> {
 
     private final Class<?>[] acceptedMsgTypes;
+    private boolean removed;
 
     /**
      * The types which will be accepted by the message handler. If a received message is an other type it will be just
@@ -73,7 +74,7 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
 
         try {
             MessageBuf<I> in = ctx.inboundMessageBuffer();
-            for (;;) {
+            while (!removed) {
                 Object msg = in.poll();
                 if (msg == null) {
                     break;
@@ -163,5 +164,11 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
      */
     protected void freeInboundMessage(I msg) throws Exception {
         ChannelHandlerUtil.freeMessage(msg);
+    }
+
+    @Override
+    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
+        super.afterRemove(ctx);
+        removed = true;
     }
 }
