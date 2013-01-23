@@ -110,19 +110,19 @@ public class IdleStateHandler extends ChannelStateHandlerAdapter implements Chan
 
     volatile ScheduledFuture<?> readerIdleTimeout;
     volatile long lastReadTime;
-    int readerIdleCount;
+    private boolean firstReaderIdleEvent = true;
 
     volatile ScheduledFuture<?> writerIdleTimeout;
     volatile long lastWriteTime;
-    int writerIdleCount;
+    private boolean firstWriterIdleEvent = true;
 
     volatile ScheduledFuture<?> allIdleTimeout;
-    int allIdleCount;
+    private boolean firstAllIdleEvent = true;
 
     private volatile int state; // 0 - none, 1 - initialized, 2 - destroyed
 
     /**
-     * Creates a new instance.
+     * Creates a new instance firing {@link IdleStateEvent}s.
      *
      * @param readerIdleTimeSeconds
      *        an {@link IdleStateEvent} whose state is {@link IdleState#READER_IDLE}
@@ -147,7 +147,7 @@ public class IdleStateHandler extends ChannelStateHandlerAdapter implements Chan
     }
 
     /**
-     * Creates a new instance.
+     * Creates a new instance firing {@link IdleStateEvent}s.
      *
      * @param readerIdleTime
      *        an {@link IdleStateEvent} whose state is {@link IdleState#READER_IDLE}
@@ -168,7 +168,6 @@ public class IdleStateHandler extends ChannelStateHandlerAdapter implements Chan
     public IdleStateHandler(
             long readerIdleTime, long writerIdleTime, long allIdleTime,
             TimeUnit unit) {
-
         if (unit == null) {
             throw new NullPointerException("unit");
         }
@@ -258,7 +257,7 @@ public class IdleStateHandler extends ChannelStateHandlerAdapter implements Chan
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
         lastReadTime = System.currentTimeMillis();
-        readerIdleCount = allIdleCount = 0;
+        firstReaderIdleEvent = firstAllIdleEvent = true;
         ctx.fireInboundBufferUpdated();
     }
 
@@ -274,7 +273,7 @@ public class IdleStateHandler extends ChannelStateHandlerAdapter implements Chan
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 lastWriteTime = System.currentTimeMillis();
-                writerIdleCount = allIdleCount = 0;
+                firstWriterIdleEvent = firstAllIdleEvent = true;
             }
         });
 
@@ -313,7 +312,7 @@ public class IdleStateHandler extends ChannelStateHandlerAdapter implements Chan
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 lastWriteTime = System.currentTimeMillis();
-                writerIdleCount = allIdleCount = 0;
+                firstWriterIdleEvent = firstAllIdleEvent = true;
             }
         });
         ctx.sendFile(region, promise);
@@ -393,8 +392,14 @@ public class IdleStateHandler extends ChannelStateHandlerAdapter implements Chan
                 readerIdleTimeout =
                     ctx.executor().schedule(this, readerIdleTimeMillis, TimeUnit.MILLISECONDS);
                 try {
-                    channelIdle(ctx, new IdleStateEvent(
-                            IdleState.READER_IDLE, readerIdleCount ++, currentTime - lastReadTime));
+                    IdleStateEvent event;
+                    if (firstReaderIdleEvent) {
+                        firstReaderIdleEvent = false;
+                        event = IdleStateEvent.FIRST_READER_IDLE_STATE_EVENT;
+                    } else {
+                        event = IdleStateEvent.READER_IDLE_STATE_EVENT;
+                    }
+                    channelIdle(ctx, event);
                 } catch (Throwable t) {
                     ctx.fireExceptionCaught(t);
                 }
@@ -427,8 +432,14 @@ public class IdleStateHandler extends ChannelStateHandlerAdapter implements Chan
                 writerIdleTimeout = ctx.executor().schedule(
                         this, writerIdleTimeMillis, TimeUnit.MILLISECONDS);
                 try {
-                    channelIdle(ctx, new IdleStateEvent(
-                            IdleState.WRITER_IDLE, writerIdleCount ++, currentTime - lastWriteTime));
+                    IdleStateEvent event;
+                    if (firstWriterIdleEvent) {
+                        firstWriterIdleEvent = false;
+                        event = IdleStateEvent.FIRST_WRITER_IDLE_STATE_EVENT;
+                    } else {
+                        event = IdleStateEvent.WRITER_IDLE_STATE_EVENT;
+                    }
+                    channelIdle(ctx, event);
                 } catch (Throwable t) {
                     ctx.fireExceptionCaught(t);
                 }
@@ -462,8 +473,14 @@ public class IdleStateHandler extends ChannelStateHandlerAdapter implements Chan
                 allIdleTimeout = ctx.executor().schedule(
                         this, allIdleTimeMillis, TimeUnit.MILLISECONDS);
                 try {
-                    channelIdle(ctx, new IdleStateEvent(
-                            IdleState.ALL_IDLE, allIdleCount ++, currentTime - lastIoTime));
+                    IdleStateEvent event;
+                    if (firstAllIdleEvent) {
+                        firstAllIdleEvent = false;
+                        event = IdleStateEvent.FIRST_ALL_IDLE_STATE_EVENT;
+                    } else {
+                        event = IdleStateEvent.ALL_IDLE_STATE_EVENT;
+                    }
+                    channelIdle(ctx, event);
                 } catch (Throwable t) {
                     ctx.fireExceptionCaught(t);
                 }
