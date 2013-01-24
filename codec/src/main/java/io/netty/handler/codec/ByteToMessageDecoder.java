@@ -45,7 +45,6 @@ public abstract class ByteToMessageDecoder
     private ChannelHandlerContext ctx;
 
     private volatile boolean singleDecode;
-    private boolean removed;
 
     /**
      * If set then only one message is decoded on each {@link #inboundBufferUpdated(ChannelHandlerContext)} call.
@@ -114,7 +113,7 @@ public abstract class ByteToMessageDecoder
         ByteBuf in = ctx.inboundByteBuffer();
 
         boolean decoded = false;
-        while (!removed && in.readable()) {
+        while (in.readable()) {
             try {
                 int oldInputLength = in.readableBytes();
                 Object o = decode(ctx, in);
@@ -204,11 +203,5 @@ public abstract class ByteToMessageDecoder
      */
     protected Object decodeLast(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         return decode(ctx, in);
-    }
-
-    @Override
-    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
-        super.afterRemove(ctx);
-        removed = true;
     }
 }
