@@ -73,13 +73,8 @@ public class PortUnificationServerHandler extends ChannelInboundByteHandlerAdapt
                 // Unknown protocol; discard everything and close the connection.
                 in.clear();
                 ctx.close();
-                return;
             }
         }
-
-        // Forward the current read buffer as is to the new handlers.
-        ctx.nextInboundByteBuffer().writeBytes(in);
-        ctx.fireInboundBufferUpdated();
     }
 
     private boolean isSsl(ByteBuf buf) {
@@ -122,7 +117,7 @@ public class PortUnificationServerHandler extends ChannelInboundByteHandlerAdapt
 
         p.addLast("ssl", new SslHandler(engine));
         p.addLast("unificationA", new PortUnificationServerHandler(false, detectGzip));
-        p.remove(this);
+        p.removeAndForward(this);
     }
 
     private void enableGzip(ChannelHandlerContext ctx) {
@@ -130,7 +125,7 @@ public class PortUnificationServerHandler extends ChannelInboundByteHandlerAdapt
         p.addLast("gzipdeflater", ZlibCodecFactory.newZlibEncoder(ZlibWrapper.GZIP));
         p.addLast("gzipinflater", ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP));
         p.addLast("unificationB", new PortUnificationServerHandler(detectSsl, false));
-        p.remove(this);
+        p.removeAndForward(this);
     }
 
     private void switchToHttp(ChannelHandlerContext ctx) {
@@ -139,7 +134,7 @@ public class PortUnificationServerHandler extends ChannelInboundByteHandlerAdapt
         p.addLast("encoder", new HttpResponseEncoder());
         p.addLast("deflater", new HttpContentCompressor());
         p.addLast("handler", new HttpSnoopServerHandler());
-        p.remove(this);
+        p.removeAndForward(this);
     }
 
     private void switchToFactorial(ChannelHandlerContext ctx) {
@@ -147,6 +142,6 @@ public class PortUnificationServerHandler extends ChannelInboundByteHandlerAdapt
         p.addLast("decoder", new BigIntegerDecoder());
         p.addLast("encoder", new NumberEncoder());
         p.addLast("handler", new FactorialServerHandler());
-        p.remove(this);
+        p.removeAndForward(this);
     }
 }
