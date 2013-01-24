@@ -55,7 +55,7 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
     }
 
     @Override
-    public void uri(String uri) {
+    public void updateUri(String uri) {
         this.uri = uri;
     }
 
