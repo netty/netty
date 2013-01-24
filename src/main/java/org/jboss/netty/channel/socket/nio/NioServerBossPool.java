@@ -35,8 +35,9 @@ public class NioServerBossPool extends AbstractNioBossPool<NioServerBoss> {
      *                      if you not want to set one explicit.
      */
     public NioServerBossPool(Executor bossExecutor, int bossCount, ThreadNameDeterminer determiner) {
-        super(bossExecutor, bossCount);
+        super(bossExecutor, bossCount, false);
         this.determiner = determiner;
+        init();
     }
 
     /**
