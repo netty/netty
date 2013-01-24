@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.Buf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Freeable;
 import io.netty.buffer.MessageBuf;
@@ -24,6 +25,7 @@ import io.netty.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
@@ -360,24 +362,53 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         return buf.toString();
     }
 
+    private static void checkBuf(ChannelHandlerContext ctx, Buf buf) {
+        if (buf == null) {
+            return;
+        }
+        if (ctx.hasInboundMessageBuffer() || ctx.hasOutboundMessageBuffer()) {
+            if (!(buf instanceof MessageBuf)) {
+                throw new IllegalArgumentException("buf must be of type " + MessageBuf.class.getSimpleName()
+                        + " for handler " + ctx.handler());
+            }
+        }
+    }
+
     @Override
     public ChannelPipeline remove(ChannelHandler handler) {
-        remove(getContextOrDie(handler));
+        remove(getContextOrDie(handler), null);
+        return this;
+    }
+
+    @Override
+    public ChannelPipeline remove(ChannelHandler handler, Buf buf) {
+        if (buf == null) {
+            throw new NullPointerException("buf");
+        }
+        remove(getContextOrDie(handler), buf);
         return this;
     }
 
     @Override
     public ChannelHandler remove(String name) {
-        return remove(getContextOrDie(name)).handler();
+        return remove(getContextOrDie(name), null).handler();
+    }
+
+    @Override
+    public ChannelHandler remove(String name, Buf buf) {
+        if (buf == null) {
+            throw new NullPointerException("buf");
+        }
+        return remove(getContextOrDie(name), buf).handler();
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public <T extends ChannelHandler> T remove(Class<T> handlerType) {
-        return (T) remove(getContextOrDie(handlerType)).handler();
+        return (T) remove(getContextOrDie(handlerType), null).handler();
     }
 
-    private DefaultChannelHandlerContext remove(final DefaultChannelHandlerContext ctx) {
+    private DefaultChannelHandlerContext remove(final DefaultChannelHandlerContext ctx, final Buf buf) {
         assert ctx != head && ctx != tail;
 
         DefaultChannelHandlerContext context;
@@ -385,14 +416,14 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         synchronized (this) {
             if (!ctx.channel().isRegistered() || ctx.executor().inEventLoop()) {
-                remove0(ctx);
+                remove0(ctx, buf);
                 return ctx;
             } else {
                future = ctx.executor().submit(new Runnable() {
                    @Override
                    public void run() {
                        synchronized (DefaultChannelPipeline.this) {
-                           remove0(ctx);
+                           remove0(ctx, buf);
                        }
                    }
                });
@@ -408,8 +439,16 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         return context;
     }
 
-    private void remove0(DefaultChannelHandlerContext ctx) {
-        callBeforeRemove(ctx);
+    @Override
+    public <T extends ChannelHandler> T remove(Class<T> handlerType, Buf buf) {
+        if (buf == null) {
+            throw new NullPointerException("buf");
+        }
+        return null;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    private void remove0(DefaultChannelHandlerContext ctx, Buf buf) {
+        callBeforeRemove(ctx, buf);
 
         DefaultChannelHandlerContext prev = ctx.prev;
         DefaultChannelHandlerContext next = ctx.next;
@@ -417,7 +456,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         next.prev = prev;
         name2ctx.remove(ctx.name());
 
-        callAfterRemove(ctx);
+        callAfterRemove(ctx, buf);
     }
 
     @Override
@@ -425,7 +464,18 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         if (head.next == tail) {
             throw new NoSuchElementException();
         }
-        return remove(head.next).handler();
+        return remove(head.next, null).handler();
+    }
+
+    @Override
+    public ChannelHandler removeFirst(Buf buf) {
+        if (buf == null) {
+            throw new NullPointerException("buf");
+        }
+        if (head.next == tail) {
+            throw new NoSuchElementException();
+        }
+        return remove(head.next, buf).handler();
     }
 
     @Override
@@ -433,29 +483,57 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         if (head.next == tail) {
             throw new NoSuchElementException();
         }
-        return remove(tail.prev).handler();
+        return remove(tail.prev, null).handler();
+    }
+
+    @Override
+    public ChannelHandler removeLast(Buf buf) {
+        if (buf == null) {
+            throw new NullPointerException("buf");
+        }
+        if (head.next == tail) {
+            throw new NoSuchElementException();
+        }
+        return remove(tail.prev, buf).handler();
     }
 
     @Override
     public ChannelPipeline replace(ChannelHandler oldHandler, String newName, ChannelHandler newHandler) {
-        replace(getContextOrDie(oldHandler), newName, newHandler);
+        replace(getContextOrDie(oldHandler), newName, newHandler, null);
+        return this;
+    }
+
+    @Override
+    public ChannelPipeline replace(ChannelHandler oldHandler, String newName, ChannelHandler newHandler, Buf buf) {
+        if (buf == null) {
+            throw new NullPointerException("buf");
+        }
+        replace(getContextOrDie(oldHandler), newName, newHandler, buf);
         return this;
     }
 
     @Override
     public ChannelHandler replace(String oldName, String newName, ChannelHandler newHandler) {
-        return replace(getContextOrDie(oldName), newName, newHandler);
+        return replace(getContextOrDie(oldName), newName, newHandler, null);
+    }
+
+    @Override
+    public ChannelHandler replace(String oldName, String newName, ChannelHandler newHandler, Buf buf) {
+        if (buf == null) {
+            throw new NullPointerException("buf");
+        }
+        return replace(getContextOrDie(oldName), newName, newHandler, buf);
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public <T extends ChannelHandler> T replace(
             Class<T> oldHandlerType, String newName, ChannelHandler newHandler) {
-        return (T) replace(getContextOrDie(oldHandlerType), newName, newHandler);
+        return (T) replace(getContextOrDie(oldHandlerType), newName, newHandler, null);
     }
 
     private ChannelHandler replace(
-            final DefaultChannelHandlerContext ctx, final String newName, ChannelHandler newHandler) {
+            final DefaultChannelHandlerContext ctx, final String newName, ChannelHandler newHandler, final Buf buf) {
 
         assert ctx != head && ctx != tail;
 
@@ -470,14 +548,14 @@ final class DefaultChannelPipeline implements ChannelPipeline {
                     new DefaultChannelHandlerContext(this, ctx.executor, newName, newHandler);
 
             if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
-                replace0(ctx, newName, newCtx);
+                replace0(ctx, newName, newCtx, buf);
                 return ctx.handler();
             } else {
                 future = newCtx.executor().submit(new Runnable() {
                     @Override
                     public void run() {
                         synchronized (DefaultChannelPipeline.this) {
-                            replace0(ctx, newName, newCtx);
+                            replace0(ctx, newName, newCtx, buf);
                         }
                     }
                 });
@@ -492,7 +570,17 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         return ctx.handler();
     }
 
-    private void replace0(DefaultChannelHandlerContext ctx, String newName, DefaultChannelHandlerContext newCtx) {
+    @Override
+    public <T extends ChannelHandler> T replace(
+            Class<T> oldHandlerType, String newName, ChannelHandler newHandler, Buf buf) {
+        if (buf == null) {
+            throw new NullPointerException("buf");
+        }
+        return null;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    private void replace0(DefaultChannelHandlerContext ctx, String newName,
+                          DefaultChannelHandlerContext newCtx, Buf buf) {
         boolean sameName = ctx.name().equals(newName);
 
         DefaultChannelHandlerContext prev = ctx.prev;
@@ -500,7 +588,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         newCtx.prev = prev;
         newCtx.next = next;
 
-        callBeforeRemove(ctx);
+        callBeforeRemove(ctx, buf);
         callBeforeAdd(newCtx);
 
         prev.next = newCtx;
@@ -515,7 +603,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         ChannelPipelineException addException = null;
         boolean removed = false;
         try {
-            callAfterRemove(ctx);
+            callAfterRemove(ctx, buf);
             removed = true;
         } catch (ChannelPipelineException e) {
             removeException = e;
@@ -569,7 +657,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         } catch (Throwable t) {
             boolean removed = false;
             try {
-                remove((DefaultChannelHandlerContext) ctx);
+                remove((DefaultChannelHandlerContext) ctx, null);
                 removed = true;
             } catch (Throwable t2) {
                 if (logger.isWarnEnabled()) {
@@ -589,7 +677,9 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private static void callBeforeRemove(ChannelHandlerContext ctx) {
+    private static void callBeforeRemove(ChannelHandlerContext ctx, Buf buf) {
+        checkBuf(ctx, buf);
+
         try {
             ctx.handler().beforeRemove(ctx);
         } catch (Throwable t) {
@@ -599,7 +689,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private void callAfterRemove(final DefaultChannelHandlerContext ctx) {
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private void callAfterRemove(final DefaultChannelHandlerContext ctx, Buf buf) {
         final ChannelHandler handler = ctx.handler();
 
         // Notify the complete removal.
@@ -609,6 +700,48 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             throw new ChannelPipelineException(
                     ctx.handler().getClass().getName() +
                     ".afterRemove() has thrown an exception.", t);
+        }
+
+        // transfer the content of the buf or clear it
+        if (ctx.hasOutboundByteBuffer()) {
+            ByteBuf byteBuf = ctx.outboundByteBuffer();
+            if (buf == null) {
+                byteBuf.clear();
+            } else {
+                if (buf instanceof MessageBuf) {
+                    ((MessageBuf) buf).add(byteBuf.readBytes(byteBuf.readableBytes()));
+                } else if (buf instanceof ByteBuf) {
+                    ((ByteBuf) buf).writeBytes(byteBuf);
+                }
+            }
+        }
+        if (ctx.hasOutboundMessageBuffer()) {
+            MessageBuf out = ctx.outboundMessageBuffer();
+            if (buf == null) {
+                out.clear();
+            } else {
+                out.drainTo((Collection) buf);
+            }
+        }
+        if (ctx.hasInboundByteBuffer()) {
+            ByteBuf byteBuf = ctx.inboundByteBuffer();
+            if (buf == null) {
+                byteBuf.clear();
+            } else {
+                if (buf instanceof MessageBuf) {
+                    ((MessageBuf) buf).add(byteBuf.readBytes(byteBuf.readableBytes()));
+                } else if (buf instanceof ByteBuf) {
+                    ((ByteBuf) buf).writeBytes(byteBuf);
+                }
+            }
+        }
+        if (ctx.hasInboundMessageBuffer()) {
+            MessageBuf in = ctx.inboundMessageBuffer();
+            if (buf == null) {
+                in.clear();
+            } else {
+                in.drainTo((Collection) buf);
+            }
         }
 
         // Free all buffers before completing removal.
