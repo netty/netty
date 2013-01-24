@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
 /**
  * The default {@link HttpContent} implementation.
@@ -23,6 +24,13 @@ import io.netty.buffer.ByteBuf;
 public class DefaultHttpContent extends DefaultHttpObject implements HttpContent {
 
     private final ByteBuf content;
+
+     /**
+     * Creates a new instance with no content.
+     */
+    public DefaultHttpContent() {
+        this.content = Unpooled.buffer(0);
+    }
 
     /**
      * Creates a new instance with the specified chunk content.

@@ -952,7 +952,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
             // NextChunk as last non empty from buffer
             buffer = currentBuffer;
             currentBuffer = null;
-            return new DefaultHttpContent(buffer);
+            return buffer == null ? new DefaultHttpContent() : new DefaultHttpContent(buffer);
         }
         while (size > 0 && iterator.hasNext()) {
             currentData = iterator.next();
