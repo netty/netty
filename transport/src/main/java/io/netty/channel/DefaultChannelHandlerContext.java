@@ -181,8 +181,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
     void forwardBufferContent() {
-        // transfer the content of the buf or clear it
-
         if (hasOutboundByteBuffer() && outboundByteBuffer().readable()) {
             nextOutboundByteBuffer().writeBytes(outboundByteBuffer());
             flush();
@@ -200,6 +198,21 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             if (inboundMessageBuffer().drainTo(nextInboundMessageBuffer()) > 0) {
                 fireInboundBufferUpdated();
             }
+        }
+    }
+
+    void clearBuffer() {
+        if (hasOutboundByteBuffer()) {
+            outboundByteBuffer().clear();
+        }
+        if (hasOutboundMessageBuffer()) {
+            outboundMessageBuffer().clear();
+        }
+        if (hasInboundByteBuffer()) {
+            inboundByteBuffer().clear();
+        }
+        if (hasInboundMessageBuffer()) {
+            inboundMessageBuffer().clear();
         }
     }
 

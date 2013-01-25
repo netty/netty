@@ -651,6 +651,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         if (forward) {
             ctx.forwardBufferContent();
+        } else {
+            ctx.clearBuffer();
         }
 
         ctx.removed = true;
