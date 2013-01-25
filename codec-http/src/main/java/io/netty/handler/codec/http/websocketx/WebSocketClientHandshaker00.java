@@ -251,8 +251,8 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
 
         ChannelPipeline p = channel.pipeline();
         p.remove(HttpRequestEncoder.class);
-        p.replace(HttpResponseDecoder.class,
-                "ws-decoder", new WebSocket00FrameDecoder(maxFramePayloadLength()), true);
+        p.replaceAndForward(HttpResponseDecoder.class,
+                "ws-decoder", new WebSocket00FrameDecoder(maxFramePayloadLength()));
     }
 
     private static String insertRandomCharacters(String key) {

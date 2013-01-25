@@ -224,8 +224,8 @@ public class WebSocketClientHandshaker07 extends WebSocketClientHandshaker {
         setHandshakeComplete();
 
         ChannelPipeline p = channel.pipeline();
-        p.replace(HttpResponseDecoder.class,
+        p.replaceAndForward(HttpResponseDecoder.class,
                 "ws-decoder",
-                new WebSocket07FrameDecoder(false, allowExtensions, maxFramePayloadLength()), true);
+                new WebSocket07FrameDecoder(false, allowExtensions, maxFramePayloadLength()));
     }
 }

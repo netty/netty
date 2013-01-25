@@ -362,21 +362,17 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
 
     /**
      * Removes the specified {@link ChannelHandler} from this pipeline
-     * and transfer the content of its {@link Buf} to the given {@link Buf}.
+     * and transfer the content of its {@link Buf} to the next
+     * {@link ChannelHandler} in the {@link ChannelPipeline}.
      *
      * @param  handler          the {@link ChannelHandler} to remove
-     * @param  transferToBuf    the {@link Buf} into which the remaining content should be
-     *                          transfered on removal
      *
      * @throws NoSuchElementException
      *         if there's no such handler in this pipeline
      * @throws NullPointerException
      *         if the specified handler is {@code null}
-     * @throws IllegalArgumentException
-     *         if the given {@link Buf} is not be able to hold the type of data
-     *         which should be transfered.
      */
-    ChannelPipeline remove(ChannelHandler handler, Buf transferToBuf);
+    ChannelPipeline removeAndForward(ChannelHandler handler);
 
     /**
      * Removes the {@link ChannelHandler} with the specified name from this
@@ -396,23 +392,19 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
 
     /**
      * Removes the {@link ChannelHandler} with the specified name from this
-     * pipeline and transfer the content of its {@link Buf} to the given {@link Buf}.
+     * pipeline and transfer the content of its {@link Buf} to the next
+     * {@link ChannelHandler} in the {@link ChannelPipeline}.
      *
      * @param  name             the name under which the {@link ChannelHandler} was stored.
-     * @param  transferToBuf    the {@link Buf} into which the remaining content should be
-     *                          transfered on removal
      *
      * @return the removed handler
      *
      * @throws NoSuchElementException
      *         if there's no such handler with the specified name in this pipeline
      * @throws NullPointerException
-     *         if the specified name or transferToBuf is {@code null}
-     * @throws IllegalArgumentException
-     *         if the given {@link Buf} is not be able to hold the type of data
-     *         which should be transfered.
+     *         if the specified name is {@code null}
      */
-    ChannelHandler remove(String name, Buf transferToBuf);
+    ChannelHandler removeAndForward(String name);
 
     /**
      * Removes the {@link ChannelHandler} of the specified type from this
@@ -434,24 +426,20 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
 
     /**
      * Removes the {@link ChannelHandler} of the specified type from this
-     * pipeline and transfer the content of its {@link Buf} to the given {@link Buf}.
+     * pipeline and transfer the content of its {@link Buf} to the next
+     * {@link ChannelHandler} in the {@link ChannelPipeline}.
      *
      * @param <T>           the type of the handler
      * @param handlerType   the type of the handler
-     * @param transferToBuf the {@link Buf} into which the remaining content should be
-     *                      transfered on removal
      *
      * @return the removed handler
      *
      * @throws NoSuchElementException
      *         if there's no such handler of the specified type in this pipeline
      * @throws NullPointerException
-     *         if the specified handler type or transferToBuf is {@code null}
-     * @throws IllegalArgumentException
-     *         if the given {@link Buf} is not be able to hold the type of data
-     *         which should be transfered.
+     *         if the specified handler type is {@code null}
      */
-    <T extends ChannelHandler> T remove(Class<T> handlerType, Buf transferToBuf);
+    <T extends ChannelHandler> T removeAndForward(Class<T> handlerType);
 
     /**
      * Removes the first {@link ChannelHandler} in this pipeline.
@@ -467,25 +455,6 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
     ChannelHandler removeFirst();
 
     /**
-     * Removes the first {@link ChannelHandler} in this pipeline and transfer the
-     * content of its {@link Buf} to the given {@link Buf}.
-     *
-     * @param transferToBuf the {@link Buf} into which the remaining content should be
-     *                      transfered on removal
-     *
-     * @return the removed handler
-     *
-     * @throws NoSuchElementException
-     *         if this pipeline is empty
-     * @throws IllegalArgumentException
-     *         if the given {@link Buf} is not be able to hold the type of data
-     *         which should be transfered.
-     * @throws NullPointerException
-     *         if the transferToBuf is {@code null}
-     */
-    ChannelHandler removeFirst(Buf transferToBuf);
-
-    /**
      * Removes the last {@link ChannelHandler} in this pipeline.
      *
      * All the remaining content in the {@link Buf) (if any) of the {@link ChannelHandler}
@@ -497,25 +466,6 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
      *         if this pipeline is empty
      */
     ChannelHandler removeLast();
-
-    /**
-     * Removes the last {@link ChannelHandler} in this pipeline and transfer the
-     * content of its {@link Buf} to the given {@link Buf}.
-     *
-     * @param transferToBuf the {@link Buf} into which the remaining content should be
-     *                      transfered on removal
-     *
-     * @return the removed handler
-     *
-     * @throws NoSuchElementException
-     *         if this pipeline is empty
-     * @throws IllegalArgumentException
-     *         if the given {@link Buf} is not be able to hold the type of data
-     *         which should be transfered.
-     * @throws NullPointerException
-     *         if the transferToBuf is {@code null}
-     */
-    ChannelHandler removeLast(Buf transferToBuf);
 
     /**
      * Replaces the specified {@link ChannelHandler} with a new handler in
@@ -543,55 +493,25 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
 
     /**
      * Replaces the specified {@link ChannelHandler} with a new handler in
-     * this pipeline and transfer the content of its {@link Buf} to the given
-     * {@link Buf}.
+     * this pipeline and transfer the content of its {@link Buf} to the next
+     * {@link ChannelHandler} in the {@link ChannelPipeline}.
      *
      * @param  oldHandler    the {@link ChannelHandler} to be replaced
      * @param  newName       the name under which the replacement should be added
      * @param  newHandler    the {@link ChannelHandler} which is used as replacement
-     * @param  transferToBuf the {@link Buf} into which the remaining content should be
-     *                       transfered on removal
-     * @return itself
-
-     * @throws NoSuchElementException
-     *         if the specified old handler does not exist in this pipeline
-     * @throws IllegalArgumentException
-     *         if a handler with the specified new name already exists in this
-     *         pipeline, except for the handler to be replaced or
-     *         if the given {@link Buf} is not be able to hold the type of data
-     *         which should be transfered.
-     * @throws NullPointerException
-     *         if the specified old handler, new name, new handler or transferToBuf is
-     *         {@code null}
-     */
-    ChannelPipeline replace(ChannelHandler oldHandler, String newName, ChannelHandler newHandler, Buf transferToBuf);
-
-    /**
-     * Replaces the specified {@link ChannelHandler} with a new handler in
-     * this pipeline and and transfer the content of it to the replacement
-     * if transferToReplacement is {@code true}
      *
-     * @param  oldHandler               the {@link ChannelHandler} to be replaced
-     * @param  newName                  the name under which the replacement should be added
-     * @param  newHandler               the {@link ChannelHandler} which is used as replacement
-     * @param  transferToReplacement    if {@code true} is used the content of the replaced {@link ChannelHandler}
-     *                                  will be forwarded to the replacement. Be aware that it will not call
-     *                                  {@link #fireInboundBufferUpdated()} even if something was transfered.
      * @return itself
 
      * @throws NoSuchElementException
      *         if the specified old handler does not exist in this pipeline
      * @throws IllegalArgumentException
      *         if a handler with the specified new name already exists in this
-     *         pipeline, except for the handler to be replaced or
-     *         if the given {@link Buf} is not be able to hold the type of data
-     *         which should be transfered.
+     *         pipeline, except for the handler to be replaced
      * @throws NullPointerException
-     *         if the specified old handler, new name, new handler or transferToBuf is
+     *         if the specified old handler, new name, or new handler is
      *         {@code null}
      */
-    ChannelPipeline replace(ChannelHandler oldHandler, String newName, ChannelHandler newHandler,
-                            boolean transferToReplacement);
+    ChannelPipeline replaceAndForward(ChannelHandler oldHandler, String newName, ChannelHandler newHandler);
 
     /**
      * Replaces the {@link ChannelHandler} of the specified name with a new
@@ -619,40 +539,12 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
 
     /**
      * Replaces the {@link ChannelHandler} of the specified name with a new
-     * handler in this pipeline and transfer the content of its {@link Buf} to the given
-     * {@link Buf}.
+     * handler in this pipeline and transfer the content of its {@link Buf} to the next
+     * {@link ChannelHandler} in the {@link ChannelPipeline}.
      *
      * @param  oldName       the name of the {@link ChannelHandler} to be replaced
      * @param  newName       the name under which the replacement should be added
      * @param  newHandler    the {@link ChannelHandler} which is used as replacement
-     * @param  transferToBuf the {@link Buf} into which the remaining content should be
-     *                       transfered on removal
-     * @return the removed handler
-     *
-     * @throws NoSuchElementException
-     *         if the handler with the specified old name does not exist in this pipeline
-     * @throws IllegalArgumentException
-     *         if a handler with the specified new name already exists in this
-     *         pipeline, except for the handler to be replaced or
-     *         if the given {@link Buf} is not be able to hold the type of data
-     *         which should be transfer
-     * @throws NullPointerException
-     *         if the specified old handler, new name, new handler or transferToBuf is
-     *         {@code null}
-     */
-    ChannelHandler replace(String oldName, String newName, ChannelHandler newHandler, Buf transferToBuf);
-
-    /**
-     * Replaces the {@link ChannelHandler} of the specified name with a new
-     * handler in this pipeline and and transfer the content of it to the replacement
-     * if transferToReplacement is {@code true}.
-     *
-     * @param  oldName                  the name of the {@link ChannelHandler} to be replaced
-     * @param  newName                  the name under which the replacement should be added
-     * @param  newHandler               the {@link ChannelHandler} which is used as replacement
-     * @param  transferToReplacement    if {@code true} is used the content of the replaced {@link ChannelHandler}
-     *                                  will be forwarded to the replacement. Be aware that it will not call
-     *                                  {@link #fireInboundBufferUpdated()} even if something was transfered.
      *
      * @return the removed handler
      *
@@ -660,14 +552,12 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
      *         if the handler with the specified old name does not exist in this pipeline
      * @throws IllegalArgumentException
      *         if a handler with the specified new name already exists in this
-     *         pipeline, except for the handler to be replaced or
-     *         if the given {@link Buf} is not be able to hold the type of data
-     *         which should be transfer
+     *         pipeline, except for the handler to be replaced
      * @throws NullPointerException
-     *         if the specified old handler, new name, new handler or transferToBuf is
+     *         if the specified old handler, new name, or new handler is
      *         {@code null}
      */
-    ChannelHandler replace(String oldName, String newName, ChannelHandler newHandler, boolean transferToReplacement);
+    ChannelHandler replaceAndForward(String oldName, String newName, ChannelHandler newHandler);
 
     /**
      * Replaces the {@link ChannelHandler} of the specified type with a new
@@ -696,14 +586,12 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
 
     /**
      * Replaces the {@link ChannelHandler} of the specified type with a new
-     * handler in this pipeline and transfer the content of its {@link Buf} to the given
-     * {@link Buf}.
+     * handler in this pipeline and transfer the content of its {@link Buf} to the next
+     * {@link ChannelHandler} in the {@link ChannelPipeline}.
      *
      * @param  oldHandlerType   the type of the handler to be removed
      * @param  newName          the name under which the replacement should be added
      * @param  newHandler       the {@link ChannelHandler} which is used as replacement
-     * @param  transferToBuf    the {@link Buf} into which the remaining content should be
-     *                          transfered on removal
      *
      * @return the removed handler
      *
@@ -712,44 +600,14 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
      *         in this pipeline
      * @throws IllegalArgumentException
      *         if a handler with the specified new name already exists in this
-     *         pipeline, except for the handler to be replaced or
-     *         if the given {@link Buf} is not be able to hold the type of data
-     *         which should be transfer
+     *         pipeline, except for the handler to be replaced
      * @throws NullPointerException
-     *         if the specified old handler, new name, new handler or transferToBuf is
+     *         if the specified old handler, new name, or new handler is
      *         {@code null}
      */
-    <T extends ChannelHandler> T replace(Class<T> oldHandlerType, String newName,
-                                         ChannelHandler newHandler, Buf transferToBuf);
+    <T extends ChannelHandler> T replaceAndForward(Class<T> oldHandlerType, String newName,
+                                         ChannelHandler newHandler);
 
-    /**
-     * Replaces the {@link ChannelHandler} of the specified type with a new
-     * handler in this pipeline and transfer the content of it to the replacement
-     * if transferToReplacement is {@code true}
-     *
-     * @param  oldHandlerType           the type of the handler to be removed
-     * @param  newName                  the name under which the replacement should be added
-     * @param  newHandler               the {@link ChannelHandler} which is used as replacement
-     * @param  transferToReplacement    if {@code true} is used the content of the replaced {@link ChannelHandler}
-     *                                  will be forwarded to the replacement. Be aware that it will not call
-     *                                  {@link #fireInboundBufferUpdated()} even if something was transfered.
-     *
-     * @return the removed handler
-     *
-     * @throws NoSuchElementException
-     *         if the handler of the specified old handler type does not exist
-     *         in this pipeline
-     * @throws IllegalArgumentException
-     *         if a handler with the specified new name already exists in this
-     *         pipeline, except for the handler to be replaced or
-     *         if the given {@link Buf} is not be able to hold the type of data
-     *         which should be transfer
-     * @throws NullPointerException
-     *         if the specified old handler, new name, new handler or transferToBuf is
-     *         {@code null}
-     */
-    <T extends ChannelHandler> T replace(Class<T> oldHandlerType, String newName,
-                                         ChannelHandler newHandler, boolean transferToReplacement);
     /**
      * Returns the first {@link ChannelHandler} in this pipeline.
      *
