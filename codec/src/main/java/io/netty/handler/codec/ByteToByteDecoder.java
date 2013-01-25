@@ -45,7 +45,6 @@ import io.netty.channel.ChannelInboundByteHandlerAdapter;
 public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter {
 
     private volatile boolean singleDecode;
-    private boolean removed;
 
     /**
      * If set then only one message is decoded on each {@link #inboundBufferUpdated(ChannelHandlerContext)} call.
@@ -103,7 +102,7 @@ public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter
      */
     private void callDecode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) {
         int oldOutSize = out.readableBytes();
-        while (!removed && in.readable()) {
+        while (in.readable()) {
             int oldInSize = in.readableBytes();
             try {
                 decode(ctx, in, out);
@@ -144,11 +143,5 @@ public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter
      */
     protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
         decode(ctx, in, out);
-    }
-
-    @Override
-    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
-        super.afterRemove(ctx);
-        removed = true;
     }
 }

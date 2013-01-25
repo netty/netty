@@ -20,7 +20,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelPipeline;
 
 /**
  * {@link ChannelInboundByteHandler} which decodes bytes in a stream-like fashion from one {@link ByteBuf} to an other
@@ -42,8 +41,6 @@ import io.netty.channel.ChannelPipeline;
 public abstract class ByteToMessageDecoder
     extends ChannelInboundHandlerAdapter implements ChannelInboundByteHandler {
 
-    private ChannelHandlerContext ctx;
-
     private volatile boolean singleDecode;
 
     /**
@@ -64,12 +61,6 @@ public abstract class ByteToMessageDecoder
      */
     public boolean isSingleDecode() {
         return singleDecode;
-    }
-
-    @Override
-    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
-        this.ctx = ctx;
-        super.beforeAdd(ctx);
     }
 
     @Override
@@ -153,31 +144,6 @@ public abstract class ByteToMessageDecoder
 
         if (decoded) {
             ctx.fireInboundBufferUpdated();
-        }
-    }
-
-    /**
-     * Replace this decoder in the {@link ChannelPipeline} with the given handler.
-     * All remaining bytes in the inbound buffer will be forwarded to the new handler's
-     * inbound buffer.
-     */
-    public void replace(String newHandlerName, ChannelInboundByteHandler newHandler) {
-        if (!ctx.executor().inEventLoop()) {
-            throw new IllegalStateException("not in event loop");
-        }
-
-        // We do not use ChannelPipeline.replace() here so that the current context points
-        // the new handler.
-        ctx.pipeline().addAfter(ctx.name(), newHandlerName, newHandler);
-
-        ByteBuf in = ctx.inboundByteBuffer();
-        try {
-            if (in.readable()) {
-                ctx.nextInboundByteBuffer().writeBytes(in);
-                ctx.fireInboundBufferUpdated();
-            }
-        } finally {
-            ctx.pipeline().remove(this);
         }
     }
 

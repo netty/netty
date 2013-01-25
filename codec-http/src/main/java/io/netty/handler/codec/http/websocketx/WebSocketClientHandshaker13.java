@@ -224,8 +224,8 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
 
         ChannelPipeline p = channel.pipeline();
         p.remove(HttpRequestEncoder.class);
-        p.get(HttpResponseDecoder.class).replace(
+        p.replace(HttpResponseDecoder.class,
                 "ws-decoder",
-                new WebSocket13FrameDecoder(false, allowExtensions, maxFramePayloadLength()));
+                new WebSocket13FrameDecoder(false, allowExtensions, maxFramePayloadLength()), true);
     }
 }
