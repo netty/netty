@@ -80,7 +80,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private Runnable invokeFreeInboundBuffer0Task;
     private Runnable invokeFreeOutboundBuffer0Task;
     private Runnable invokeRead0Task;
-    boolean removed;
+    volatile boolean removed;
 
     DefaultChannelHandlerContext(
             DefaultChannelPipeline pipeline, EventExecutorGroup group,
@@ -283,6 +283,27 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
     }
 
+    void freeHandlerBuffersAfterRemoval() {
+        if (!removed) {
+            return;
+        }
+        final ChannelHandler handler = handler();
+
+        if (handler instanceof ChannelInboundHandler) {
+            try {
+                ((ChannelInboundHandler) handler).freeInboundBuffer(this);
+            } catch (Exception e) {
+                pipeline.notifyHandlerException(e);
+            }
+        }
+        if (handler instanceof ChannelOutboundHandler) {
+            try {
+                ((ChannelOutboundHandler) handler).freeOutboundBuffer(this);
+            } catch (Exception e) {
+                pipeline.notifyHandlerException(e);
+            }
+        }
+    }
     @Override
     public Channel channel() {
         return channel;
@@ -865,6 +886,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             ((ChannelStateHandler) handler()).channelRegistered(this);
         } catch (Throwable t) {
             pipeline.notifyHandlerException(t);
+        } finally {
+            freeHandlerBuffersAfterRemoval();
         }
     }
 
@@ -925,6 +948,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             ((ChannelStateHandler) handler()).channelActive(this);
         } catch (Throwable t) {
             pipeline.notifyHandlerException(t);
+        } finally {
+            freeHandlerBuffersAfterRemoval();
         }
     }
 
@@ -955,6 +980,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             ((ChannelStateHandler) handler()).channelInactive(this);
         } catch (Throwable t) {
             pipeline.notifyHandlerException(t);
+        } finally {
+            freeHandlerBuffersAfterRemoval();
         }
     }
 
@@ -1001,6 +1028,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                         "An exception was thrown by a user handler's " +
                         "exceptionCaught() method while handling the following exception:", cause);
             }
+        } finally {
+            freeHandlerBuffersAfterRemoval();
         }
     }
 
@@ -1031,6 +1060,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             handler().userEventTriggered(next, event);
         } catch (Throwable t) {
             pipeline.notifyHandlerException(t);
+        } finally {
+            freeHandlerBuffersAfterRemoval();
         }
     }
 
@@ -1085,13 +1116,14 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         } catch (Throwable t) {
             pipeline.notifyHandlerException(t);
         } finally {
-            if (!removed && handler instanceof ChannelInboundByteHandler && !isInboundBufferFreed()) {
+            if (handler instanceof ChannelInboundByteHandler && !isInboundBufferFreed()) {
                 try {
                     ((ChannelInboundByteHandler) handler).discardInboundReadBytes(this);
                 } catch (Throwable t) {
                     pipeline.notifyHandlerException(t);
                 }
             }
+            freeHandlerBuffersAfterRemoval();
         }
     }
 
@@ -1122,6 +1154,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             ((ChannelStateHandler) handler()).channelReadSuspended(this);
         } catch (Throwable t) {
             pipeline.notifyHandlerException(t);
+        } finally {
+            freeHandlerBuffersAfterRemoval();
         }
     }
 
@@ -1194,6 +1228,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             ((ChannelOperationHandler) handler()).bind(this, localAddress, promise);
         } catch (Throwable t) {
             pipeline.notifyHandlerException(t);
+        } finally {
+            freeHandlerBuffersAfterRemoval();
         }
     }
 
@@ -1233,6 +1269,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             ((ChannelOperationHandler) handler()).connect(this, remoteAddress, localAddress, promise);
         } catch (Throwable t) {
             pipeline.notifyHandlerException(t);
+        } finally {
+            freeHandlerBuffersAfterRemoval();
         }
     }
 
@@ -1270,6 +1308,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             ((ChannelOperationHandler) handler()).disconnect(this, promise);
         } catch (Throwable t) {
             pipeline.notifyHandlerException(t);
+        } finally {
+            freeHandlerBuffersAfterRemoval();
         }
     }
 
@@ -1300,6 +1340,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             ((ChannelOperationHandler) handler()).close(this, promise);
         } catch (Throwable t) {
             pipeline.notifyHandlerException(t);
+        } finally {
+            freeHandlerBuffersAfterRemoval();
         }
     }
 
@@ -1330,6 +1372,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             ((ChannelOperationHandler) handler()).deregister(this, promise);
         } catch (Throwable t) {
             pipeline.notifyHandlerException(t);
+        } finally {
+            freeHandlerBuffersAfterRemoval();
         }
     }
 
@@ -1361,6 +1405,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             ((ChannelOperationHandler) handler()).read(this);
         } catch (Throwable t) {
             pipeline.notifyHandlerException(t);
+        } finally {
+            freeHandlerBuffersAfterRemoval();
         }
     }
 
@@ -1425,13 +1471,14 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         } catch (Throwable t) {
             pipeline.notifyHandlerException(t);
         } finally {
-            if (!removed && handler instanceof ChannelOutboundByteHandler && !isOutboundBufferFreed()) {
+            if (handler instanceof ChannelOutboundByteHandler && !isOutboundBufferFreed()) {
                 try {
                     ((ChannelOutboundByteHandler) handler).discardOutboundReadBytes(this);
                 } catch (Throwable t) {
                     pipeline.notifyHandlerException(t);
                 }
             }
+            freeHandlerBuffersAfterRemoval();
         }
     }
 
@@ -1471,6 +1518,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             ((ChannelOperationHandler) handler()).sendFile(this, region, promise);
         } catch (Throwable t) {
             pipeline.notifyHandlerException(t);
+        } finally {
+            freeHandlerBuffersAfterRemoval();
         }
     }
 
