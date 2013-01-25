@@ -513,6 +513,13 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
+    public ChannelPipeline replace(ChannelHandler oldHandler, String newName, ChannelHandler newHandler,
+                                   boolean transferToReplacement) {
+        replace(getContextOrDie(oldHandler), newName, newHandler, transferToReplacement);
+        return this;
+    }
+
+    @Override
     public ChannelHandler replace(String oldName, String newName, ChannelHandler newHandler) {
         return replace(getContextOrDie(oldName), newName, newHandler, null);
     }
@@ -526,10 +533,80 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
+    public ChannelHandler replace(String oldName, String newName, ChannelHandler newHandler,
+                                  boolean transferToReplacement) {
+        return replace(getContextOrDie(oldName), newName, newHandler, transferToReplacement);
+    }
+
+    @Override
     @SuppressWarnings("unchecked")
     public <T extends ChannelHandler> T replace(
             Class<T> oldHandlerType, String newName, ChannelHandler newHandler) {
         return (T) replace(getContextOrDie(oldHandlerType), newName, newHandler, null);
+    }
+
+    private ChannelHandler replace(
+            final DefaultChannelHandlerContext ctx, final String newName,
+            ChannelHandler newHandler, final boolean transfer) {
+
+        assert ctx != head && ctx != tail;
+
+        Future<?> future;
+        synchronized (this) {
+            boolean sameName = ctx.name().equals(newName);
+            if (!sameName) {
+                checkDuplicateName(newName);
+            }
+
+            final DefaultChannelHandlerContext newCtx =
+                    new DefaultChannelHandlerContext(this, ctx.executor, newName, newHandler);
+            final Buf buf;
+            if (transfer) {
+                if (ctx.handler() instanceof ChannelInboundHandler) {
+                    if (newCtx.hasInboundByteBuffer()) {
+                        buf = newCtx.inboundByteBuffer();
+                    } else if (newCtx.hasInboundMessageBuffer()) {
+                        buf = newCtx.inboundMessageBuffer();
+                    } else {
+                        buf = null;
+                    }
+                } else if (ctx.handler() instanceof ChannelOutboundHandler) {
+                    if (newCtx.hasOutboundByteBuffer()) {
+                        buf = newCtx.outboundByteBuffer();
+                    } else if (newCtx.hasOutboundMessageBuffer()) {
+                        buf = newCtx.outboundMessageBuffer();
+                    } else {
+                        buf = null;
+                    }
+                } else {
+                    buf = null;
+                }
+            } else {
+                buf = null;
+            }
+
+            if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
+                replace0(ctx, newName, newCtx, buf);
+
+                return ctx.handler();
+            } else {
+                future = newCtx.executor().submit(new Runnable() {
+                    @Override
+                    public void run() {
+                        synchronized (DefaultChannelPipeline.this) {
+                            replace0(ctx, newName, newCtx, buf);
+                        }
+                    }
+                });
+            }
+        }
+
+        // Run the following 'waiting' code outside of the above synchronized block
+        // in order to avoid deadlock
+
+        waitForFuture(future);
+
+        return ctx.handler();
     }
 
     private ChannelHandler replace(
@@ -570,13 +647,21 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         return ctx.handler();
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public <T extends ChannelHandler> T replace(
             Class<T> oldHandlerType, String newName, ChannelHandler newHandler, Buf buf) {
         if (buf == null) {
             throw new NullPointerException("buf");
         }
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+        return (T) replace(getContextOrDie(oldHandlerType), newName, newHandler, buf);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public <T extends ChannelHandler> T replace(Class<T> oldHandlerType, String newName, ChannelHandler newHandler,
+                                                boolean transferToReplacement) {
+        return (T) replace(getContextOrDie(oldHandlerType), newName, newHandler, transferToReplacement);
     }
 
     private void replace0(DefaultChannelHandlerContext ctx, String newName,
@@ -689,7 +774,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     private void callAfterRemove(final DefaultChannelHandlerContext ctx, Buf buf) {
         final ChannelHandler handler = ctx.handler();
 
@@ -702,6 +786,18 @@ final class DefaultChannelPipeline implements ChannelPipeline {
                     ".afterRemove() has thrown an exception.", t);
         }
 
+        transferBufferContent(ctx, buf);
+
+        ctx.removed = true;
+
+        // Free all buffers before completing removal.
+        if (!channel.isRegistered()) {
+            ctx.freeHandlerBuffersAfterRemoval();
+        }
+    }
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private static void transferBufferContent(ChannelHandlerContext ctx, Buf buf) {
         // transfer the content of the buf or clear it
         if (ctx.hasOutboundByteBuffer()) {
             ByteBuf byteBuf = ctx.outboundByteBuffer();
@@ -742,12 +838,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             } else {
                 in.drainTo((Collection) buf);
             }
-        }
-        ctx.removed = true;
-
-        // Free all buffers before completing removal.
-        if (!channel.isRegistered()) {
-            ctx.freeHandlerBuffersAfterRemoval();
         }
     }
 
