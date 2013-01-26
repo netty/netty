@@ -1028,7 +1028,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void invokeUserEventTriggered(Object event) {
         try {
-            handler().userEventTriggered(next, event);
+            handler().userEventTriggered(this, event);
         } catch (Throwable t) {
             pipeline.notifyHandlerException(t);
         }
