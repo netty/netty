@@ -179,7 +179,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         this.needsLazyBufInit = needsLazyBufInit;
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     void forwardBufferContent() {
         if (hasOutboundByteBuffer() && outboundByteBuffer().readable()) {
             nextOutboundByteBuffer().writeBytes(outboundByteBuffer());
