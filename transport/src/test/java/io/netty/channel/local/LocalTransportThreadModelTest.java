@@ -35,6 +35,7 @@ import io.netty.channel.EventLoopGroup;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.HashSet;
@@ -79,6 +80,7 @@ public class LocalTransportThreadModelTest {
     }
 
     @Test(timeout = 30000)
+    @Ignore
     public void testStagedExecutionMultiple() throws Throwable {
         for (int i = 0; i < 10; i ++) {
             testStagedExecution();
@@ -86,6 +88,7 @@ public class LocalTransportThreadModelTest {
     }
 
     @Test(timeout = 5000)
+    @Ignore
     public void testStagedExecution() throws Throwable {
         EventLoopGroup l = new LocalEventLoopGroup(4, new PrefixThreadFactory("l"));
         EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e1"));
@@ -203,6 +206,7 @@ public class LocalTransportThreadModelTest {
     }
 
     @Test(timeout = 30000)
+    @Ignore
     public void testConcurrentMessageBufferAccess() throws Throwable {
         EventLoopGroup l = new LocalEventLoopGroup(4, new PrefixThreadFactory("l"));
         EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e1"));
