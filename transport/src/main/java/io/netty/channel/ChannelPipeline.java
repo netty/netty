@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.Buf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
 
@@ -349,6 +350,8 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
 
     /**
      * Removes the specified {@link ChannelHandler} from this pipeline.
+     * All the remaining content in the {@link Buf) (if any) of the
+     * {@link ChannelHandler} will be discarded.
      *
      * @throws NoSuchElementException
      *         if there's no such handler in this pipeline
@@ -358,8 +361,25 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
     ChannelPipeline remove(ChannelHandler handler);
 
     /**
+     * Removes the specified {@link ChannelHandler} from this pipeline
+     * and transfer the content of its {@link Buf} to the next
+     * {@link ChannelHandler} in the {@link ChannelPipeline}.
+     *
+     * @param  handler          the {@link ChannelHandler} to remove
+     *
+     * @throws NoSuchElementException
+     *         if there's no such handler in this pipeline
+     * @throws NullPointerException
+     *         if the specified handler is {@code null}
+     */
+    ChannelPipeline removeAndForward(ChannelHandler handler);
+
+    /**
      * Removes the {@link ChannelHandler} with the specified name from this
-     * pipeline.
+     * pipeline.  All the remaining content in the {@link Buf) (if any) of the
+     * {@link ChannelHandler} will be discarded.
+     *
+     * @param  name the name under which the {@link ChannelHandler} was stored.
      *
      * @return the removed handler
      *
@@ -371,8 +391,26 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
     ChannelHandler remove(String name);
 
     /**
+     * Removes the {@link ChannelHandler} with the specified name from this
+     * pipeline and transfer the content of its {@link Buf} to the next
+     * {@link ChannelHandler} in the {@link ChannelPipeline}.
+     *
+     * @param  name             the name under which the {@link ChannelHandler} was stored.
+     *
+     * @return the removed handler
+     *
+     * @throws NoSuchElementException
+     *         if there's no such handler with the specified name in this pipeline
+     * @throws NullPointerException
+     *         if the specified name is {@code null}
+     */
+    ChannelHandler removeAndForward(String name);
+
+    /**
      * Removes the {@link ChannelHandler} of the specified type from this
-     * pipeline
+     * pipeline. All the remaining content in the {@link Buf) (if any) of the {@link ChannelHandler}
+     * will be discarded.
+     *
      *
      * @param <T>          the type of the handler
      * @param handlerType  the type of the handler
@@ -387,7 +425,27 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
     <T extends ChannelHandler> T remove(Class<T> handlerType);
 
     /**
+     * Removes the {@link ChannelHandler} of the specified type from this
+     * pipeline and transfer the content of its {@link Buf} to the next
+     * {@link ChannelHandler} in the {@link ChannelPipeline}.
+     *
+     * @param <T>           the type of the handler
+     * @param handlerType   the type of the handler
+     *
+     * @return the removed handler
+     *
+     * @throws NoSuchElementException
+     *         if there's no such handler of the specified type in this pipeline
+     * @throws NullPointerException
+     *         if the specified handler type is {@code null}
+     */
+    <T extends ChannelHandler> T removeAndForward(Class<T> handlerType);
+
+    /**
      * Removes the first {@link ChannelHandler} in this pipeline.
+     *
+     * All the remaining content in the {@link Buf) (if any) of the {@link ChannelHandler}
+     * will be discarded.
      *
      * @return the removed handler
      *
@@ -399,6 +457,9 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
     /**
      * Removes the last {@link ChannelHandler} in this pipeline.
      *
+     * All the remaining content in the {@link Buf) (if any) of the {@link ChannelHandler}
+     * will be discarded.
+     *
      * @return the removed handler
      *
      * @throws NoSuchElementException
@@ -409,6 +470,15 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
     /**
      * Replaces the specified {@link ChannelHandler} with a new handler in
      * this pipeline.
+     *
+     * All the remaining content in the {@link Buf) (if any) of the {@link ChannelHandler}
+     * will be discarded.
+     *
+     * @param  oldHandler   the {@link ChannelHandler} to be replaced
+     * @param  newName      the name under which the replacement should be added
+     * @param  newHandler   the {@link ChannelHandler} which is used as replacement
+     *
+     * @return itself
      *
      * @throws NoSuchElementException
      *         if the specified old handler does not exist in this pipeline
@@ -422,8 +492,37 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
     ChannelPipeline replace(ChannelHandler oldHandler, String newName, ChannelHandler newHandler);
 
     /**
+     * Replaces the specified {@link ChannelHandler} with a new handler in
+     * this pipeline and transfer the content of its {@link Buf} to the next
+     * {@link ChannelHandler} in the {@link ChannelPipeline}.
+     *
+     * @param  oldHandler    the {@link ChannelHandler} to be replaced
+     * @param  newName       the name under which the replacement should be added
+     * @param  newHandler    the {@link ChannelHandler} which is used as replacement
+     *
+     * @return itself
+
+     * @throws NoSuchElementException
+     *         if the specified old handler does not exist in this pipeline
+     * @throws IllegalArgumentException
+     *         if a handler with the specified new name already exists in this
+     *         pipeline, except for the handler to be replaced
+     * @throws NullPointerException
+     *         if the specified old handler, new name, or new handler is
+     *         {@code null}
+     */
+    ChannelPipeline replaceAndForward(ChannelHandler oldHandler, String newName, ChannelHandler newHandler);
+
+    /**
      * Replaces the {@link ChannelHandler} of the specified name with a new
      * handler in this pipeline.
+     *
+     * All the remaining content of the {@link Buf) (if any) of the to be replaced
+     * {@link ChannelHandler} will be discarded.
+     *
+     * @param  oldHandler    the {@link ChannelHandler} to be replaced
+     * @param  newName       the name under which the replacement should be added
+     * @param  newHandler    the {@link ChannelHandler} which is used as replacement
      *
      * @return the removed handler
      *
@@ -439,8 +538,37 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
     ChannelHandler replace(String oldName, String newName, ChannelHandler newHandler);
 
     /**
+     * Replaces the {@link ChannelHandler} of the specified name with a new
+     * handler in this pipeline and transfer the content of its {@link Buf} to the next
+     * {@link ChannelHandler} in the {@link ChannelPipeline}.
+     *
+     * @param  oldName       the name of the {@link ChannelHandler} to be replaced
+     * @param  newName       the name under which the replacement should be added
+     * @param  newHandler    the {@link ChannelHandler} which is used as replacement
+     *
+     * @return the removed handler
+     *
+     * @throws NoSuchElementException
+     *         if the handler with the specified old name does not exist in this pipeline
+     * @throws IllegalArgumentException
+     *         if a handler with the specified new name already exists in this
+     *         pipeline, except for the handler to be replaced
+     * @throws NullPointerException
+     *         if the specified old handler, new name, or new handler is
+     *         {@code null}
+     */
+    ChannelHandler replaceAndForward(String oldName, String newName, ChannelHandler newHandler);
+
+    /**
      * Replaces the {@link ChannelHandler} of the specified type with a new
      * handler in this pipeline.
+     *
+     * All the remaining content of the {@link Buf) (if any) of the to be replaced
+     * {@link ChannelHandler} will be discarded.
+     *
+     * @param  oldHandlerType   the type of the handler to be removed
+     * @param  newName          the name under which the replacement should be added
+     * @param  newHandler       the {@link ChannelHandler} which is used as replacement
      *
      * @return the removed handler
      *
@@ -455,6 +583,30 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
      *         {@code null}
      */
     <T extends ChannelHandler> T replace(Class<T> oldHandlerType, String newName, ChannelHandler newHandler);
+
+    /**
+     * Replaces the {@link ChannelHandler} of the specified type with a new
+     * handler in this pipeline and transfer the content of its {@link Buf} to the next
+     * {@link ChannelHandler} in the {@link ChannelPipeline}.
+     *
+     * @param  oldHandlerType   the type of the handler to be removed
+     * @param  newName          the name under which the replacement should be added
+     * @param  newHandler       the {@link ChannelHandler} which is used as replacement
+     *
+     * @return the removed handler
+     *
+     * @throws NoSuchElementException
+     *         if the handler of the specified old handler type does not exist
+     *         in this pipeline
+     * @throws IllegalArgumentException
+     *         if a handler with the specified new name already exists in this
+     *         pipeline, except for the handler to be replaced
+     * @throws NullPointerException
+     *         if the specified old handler, new name, or new handler is
+     *         {@code null}
+     */
+    <T extends ChannelHandler> T replaceAndForward(Class<T> oldHandlerType, String newName,
+                                         ChannelHandler newHandler);
 
     /**
      * Returns the first {@link ChannelHandler} in this pipeline.

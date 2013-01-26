@@ -20,7 +20,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelPipeline;
 
 /**
  * {@link ChannelInboundByteHandler} which decodes bytes in a stream-like fashion from one {@link ByteBuf} to an other
@@ -42,10 +41,7 @@ import io.netty.channel.ChannelPipeline;
 public abstract class ByteToMessageDecoder
     extends ChannelInboundHandlerAdapter implements ChannelInboundByteHandler {
 
-    private ChannelHandlerContext ctx;
-
     private volatile boolean singleDecode;
-    private boolean removed;
 
     /**
      * If set then only one message is decoded on each {@link #inboundBufferUpdated(ChannelHandlerContext)} call.
@@ -65,12 +61,6 @@ public abstract class ByteToMessageDecoder
      */
     public boolean isSingleDecode() {
         return singleDecode;
-    }
-
-    @Override
-    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
-        this.ctx = ctx;
-        super.beforeAdd(ctx);
     }
 
     @Override
@@ -114,7 +104,7 @@ public abstract class ByteToMessageDecoder
         ByteBuf in = ctx.inboundByteBuffer();
 
         boolean decoded = false;
-        while (!removed && in.readable()) {
+        while (in.readable()) {
             try {
                 int oldInputLength = in.readableBytes();
                 Object o = decode(ctx, in);
@@ -158,31 +148,6 @@ public abstract class ByteToMessageDecoder
     }
 
     /**
-     * Replace this decoder in the {@link ChannelPipeline} with the given handler.
-     * All remaining bytes in the inbound buffer will be forwarded to the new handler's
-     * inbound buffer.
-     */
-    public void replace(String newHandlerName, ChannelInboundByteHandler newHandler) {
-        if (!ctx.executor().inEventLoop()) {
-            throw new IllegalStateException("not in event loop");
-        }
-
-        // We do not use ChannelPipeline.replace() here so that the current context points
-        // the new handler.
-        ctx.pipeline().addAfter(ctx.name(), newHandlerName, newHandler);
-
-        ByteBuf in = ctx.inboundByteBuffer();
-        try {
-            if (in.readable()) {
-                ctx.nextInboundByteBuffer().writeBytes(in);
-                ctx.fireInboundBufferUpdated();
-            }
-        } finally {
-            ctx.pipeline().remove(this);
-        }
-    }
-
-    /**
      * Decode the from one {@link ByteBuf} to an other. This method will be called till either the input
      * {@link ByteBuf} has nothing to read anymore, till nothing was read from the input {@link ByteBuf} or till
      * this method returns {@code null}.
@@ -204,11 +169,5 @@ public abstract class ByteToMessageDecoder
      */
     protected Object decodeLast(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         return decode(ctx, in);
-    }
-
-    @Override
-    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
-        super.afterRemove(ctx);
-        removed = true;
     }
 }

@@ -48,7 +48,6 @@ import io.netty.channel.PartialFlushException;
 public abstract class MessageToMessageEncoder<I> extends ChannelOutboundMessageHandlerAdapter<I> {
 
     private final Class<?>[] acceptedMsgTypes;
-    private boolean removed;
 
     /**
      * The types which will be accepted by the decoder. If a received message is an other type it will be just forwared
@@ -63,7 +62,7 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundMessageH
         MessageBuf<I> in = ctx.outboundMessageBuffer();
         boolean encoded = false;
 
-        while (!removed) {
+        for (;;) {
             try {
                 Object msg = in.poll();
                 if (msg == null) {
@@ -140,11 +139,5 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundMessageH
      */
     protected void freeOutboundMessage(I msg) throws Exception {
         ChannelHandlerUtil.freeMessage(msg);
-    }
-
-    @Override
-    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
-        super.afterRemove(ctx);
-        removed = true;
     }
 }

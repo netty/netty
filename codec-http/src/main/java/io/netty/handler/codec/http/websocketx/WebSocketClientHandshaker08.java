@@ -225,7 +225,7 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
 
         ChannelPipeline p = channel.pipeline();
         p.remove(HttpRequestEncoder.class);
-        p.get(HttpResponseDecoder.class).replace(
+        p.replaceAndForward(HttpResponseDecoder.class,
                 "ws-decoder",
                 new WebSocket08FrameDecoder(false, allowExtensions, maxFramePayloadLength()));
     }
