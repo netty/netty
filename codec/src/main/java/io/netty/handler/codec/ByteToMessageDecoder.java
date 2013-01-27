@@ -16,6 +16,7 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundByteHandler;
@@ -42,6 +43,7 @@ public abstract class ByteToMessageDecoder
     extends ChannelInboundHandlerAdapter implements ChannelInboundByteHandler {
 
     private volatile boolean singleDecode;
+    private boolean decodeWasNull;
 
     /**
      * If set then only one message is decoded on each {@link #inboundBufferUpdated(ChannelHandlerContext)} call.
@@ -62,7 +64,6 @@ public abstract class ByteToMessageDecoder
     public boolean isSingleDecode() {
         return singleDecode;
     }
-
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return ctx.alloc().buffer();
@@ -76,6 +77,17 @@ public abstract class ByteToMessageDecoder
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
         callDecode(ctx);
+    }
+
+    @Override
+    public void channelReadSuspended(ChannelHandlerContext ctx) throws Exception {
+        if (decodeWasNull) {
+            decodeWasNull = false;
+            if (!ctx.channel().config().isAutoRead()) {
+                ctx.read();
+            }
+        }
+        super.channelReadSuspended(ctx);
     }
 
     @Override
@@ -101,6 +113,8 @@ public abstract class ByteToMessageDecoder
     }
 
     protected void callDecode(ChannelHandlerContext ctx) {
+        boolean wasNull = false;
+
         ByteBuf in = ctx.inboundByteBuffer();
 
         boolean decoded = false;
@@ -109,12 +123,14 @@ public abstract class ByteToMessageDecoder
                 int oldInputLength = in.readableBytes();
                 Object o = decode(ctx, in);
                 if (o == null) {
+                    wasNull = true;
                     if (oldInputLength == in.readableBytes()) {
                         break;
                     } else {
                         continue;
                     }
                 }
+                wasNull = false;
                 if (oldInputLength == in.readableBytes()) {
                     throw new IllegalStateException(
                             "decode() did not read anything but decoded a message.");
@@ -143,7 +159,12 @@ public abstract class ByteToMessageDecoder
         }
 
         if (decoded) {
+            decodeWasNull = false;
             ctx.fireInboundBufferUpdated();
+        } else {
+            if (wasNull) {
+                decodeWasNull = true;
+            }
         }
     }
 
