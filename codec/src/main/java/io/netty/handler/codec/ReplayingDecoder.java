@@ -272,6 +272,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
     private ReplayingDecoderBuffer replayable;
     private S state;
     private int checkpoint = -1;
+    private boolean decodeWasNull;
 
     /**
      * Creates a new instance with no initial state (i.e: {@code null}).
@@ -385,6 +386,8 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
 
     @Override
     protected void callDecode(ChannelHandlerContext ctx) {
+        boolean wasNull = false;
+
         ByteBuf in = cumulation;
         boolean decoded = false;
         while (in.readable()) {
@@ -417,10 +420,13 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                 }
 
                 if (result == null) {
+                    wasNull = true;
+
                     // Seems like more data is required.
                     // Let us wait for the next notification.
                     break;
                 }
+                wasNull = false;
 
                 if (oldReaderIndex == in.readerIndex() && oldState == state) {
                     throw new IllegalStateException(
@@ -451,7 +457,25 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
         }
 
         if (decoded) {
+            decodeWasNull = false;
             ctx.fireInboundBufferUpdated();
+        } else {
+            if (wasNull) {
+                decodeWasNull = true;
+            }
         }
     }
+
+    @Override
+    public void channelReadSuspended(ChannelHandlerContext ctx) throws Exception {
+        if (decodeWasNull) {
+            decodeWasNull = false;
+            if (!ctx.channel().config().isAutoRead()) {
+                ctx.read();
+            }
+        }
+
+        super.channelReadSuspended(ctx);
+    }
+
 }
