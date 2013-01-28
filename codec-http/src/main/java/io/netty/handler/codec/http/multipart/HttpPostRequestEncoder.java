@@ -45,7 +45,7 @@ import static io.netty.buffer.Unpooled.wrappedBuffer;
  * This encoder will help to encode Request for a FORM as POST.
  */
 public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> {
-    protected static final Map<Pattern, String> percentEncodings = new HashMap<Pattern, String>();
+    private static final Map<Pattern, String> percentEncodings = new HashMap<Pattern, String>();
     static {
         percentEncodings.put(Pattern.compile("\\*"), "%2A");
         percentEncodings.put(Pattern.compile("\\+"), "%20");
@@ -703,9 +703,9 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
         }
         try {
             String encoded = URLEncoder.encode(s, charset.name());
-            for (Pattern pattern : percentEncodings.keySet()) {
-                String replacement = percentEncodings.get(pattern);
-                encoded = pattern.matcher(encoded).replaceAll(replacement);
+            for (Map.Entry<Pattern,String> entry : percentEncodings.entrySet()) {
+                String replacement = entry.getValue();
+                encoded = entry.getKey().matcher(encoded).replaceAll(replacement);
             }
             return encoded;
         } catch (UnsupportedEncodingException e) {
