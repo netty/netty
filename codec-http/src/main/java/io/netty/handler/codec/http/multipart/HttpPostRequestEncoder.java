@@ -697,7 +697,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
      * @throws ErrorDataEncoderException
      *             if the encoding is in error
      */
-    protected static String encodeAttribute(String s, Charset charset) throws ErrorDataEncoderException {
+    protected String encodeAttribute(String s, Charset charset) throws ErrorDataEncoderException {
         if (s == null) {
             return "";
         }
