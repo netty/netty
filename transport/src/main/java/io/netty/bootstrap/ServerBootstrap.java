@@ -134,7 +134,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
     }
 
     /**
-     * Set the {@link ChannelHandler} which is used to server the request for the {@link Channel}'s.
+     * Set the {@link ChannelHandler} which is used to serve the request for the {@link Channel}'s.
      */
     public ServerBootstrap childHandler(ChannelHandler childHandler) {
         if (childHandler == null) {
