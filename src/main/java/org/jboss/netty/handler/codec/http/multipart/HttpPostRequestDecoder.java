@@ -1187,7 +1187,7 @@ public class HttpPostRequestDecoder {
 
     /**
      * Clean all HttpDatas (on Disk) for the current request.
- */
+     */
     public void cleanFiles() {
         factory.cleanRequestHttpDatas(request);
     }
@@ -1219,18 +1219,19 @@ public class HttpPostRequestDecoder {
     private String readLineStandard() throws NotEnoughDataDecoderException {
         int readerIndex = undecodedChunk.readerIndex();
         try {
-            StringBuilder sb = new StringBuilder(64);
+            ChannelBuffer line = ChannelBuffers.dynamicBuffer();
+
             while (undecodedChunk.readable()) {
                 byte nextByte = undecodedChunk.readByte();
                 if (nextByte == HttpConstants.CR) {
                     nextByte = undecodedChunk.readByte();
                     if (nextByte == HttpConstants.LF) {
-                        return sb.toString();
+                        return line.toString(this.charset);
                     }
                 } else if (nextByte == HttpConstants.LF) {
-                    return sb.toString();
+                    return line.toString(this.charset);
                 } else {
-                    sb.append((char) nextByte);
+                    line.writeByte(nextByte);
                 }
             }
         } catch (IndexOutOfBoundsException e) {
@@ -1255,7 +1256,7 @@ public class HttpPostRequestDecoder {
         }
         int readerIndex = undecodedChunk.readerIndex();
         try {
-            StringBuilder sb = new StringBuilder(64);
+            ChannelBuffer line = ChannelBuffers.dynamicBuffer();
             while (sao.pos < sao.limit) {
                 byte nextByte = sao.bytes[sao.pos ++];
                 if (nextByte == HttpConstants.CR) {
@@ -1263,16 +1264,16 @@ public class HttpPostRequestDecoder {
                         nextByte = sao.bytes[sao.pos ++];
                         if (nextByte == HttpConstants.LF) {
                             sao.setReadPosition(0);
-                            return sb.toString();
+                            return line.toString(this.charset);
                         }
                     } else {
-                        sb.append((char) nextByte);
+                        line.writeByte(nextByte);
                     }
                 } else if (nextByte == HttpConstants.LF) {
                     sao.setReadPosition(0);
-                    return sb.toString();
+                    return line.toString(this.charset);
                 } else {
-                    sb.append((char) nextByte);
+                    line.writeByte(nextByte);
                 }
             }
         } catch (IndexOutOfBoundsException e) {
