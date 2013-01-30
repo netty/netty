@@ -34,10 +34,18 @@ import java.util.Map.Entry;
  * for clients.
  *
  */
-public class Bootstrap extends AbstractBootstrap<Bootstrap> {
+public final class Bootstrap extends AbstractBootstrap<Bootstrap> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Bootstrap.class);
+
     private SocketAddress remoteAddress;
+
+    public Bootstrap() { }
+
+    public Bootstrap(Bootstrap bootstrap) {
+        super(bootstrap);
+        remoteAddress = bootstrap.remoteAddress;
+    }
 
     /**
      * The {@link SocketAddress} to connect to once the {@link #connect()} method
@@ -66,7 +74,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap> {
 
     @Override
     ChannelFuture doBind(SocketAddress localAddress) {
-        Channel channel = factory().newChannel();
+        Channel channel = channelFactory().newChannel();
         try {
             init(channel);
         } catch (Throwable t) {
@@ -131,7 +139,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap> {
      * @see {@link #connect()}
      */
     private ChannelFuture doConnect(SocketAddress remoteAddress, SocketAddress localAddress) {
-        final Channel channel = factory().newChannel();
+        final Channel channel = channelFactory().newChannel();
 
         try {
             init(channel);
@@ -180,20 +188,10 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap> {
         }
     }
 
-    /**
-     * Create a new {@link Bootstrap} which has the identical configuration with this {@link Bootstrap}.
-     * This method is useful when you make multiple connections with similar settings.
-     *
-     * Be aware that if you call {@link #shutdown()} on one of them it will shutdown shared resources.
-     */
-    public Bootstrap duplicate() {
-        validate();
-        Bootstrap b = new Bootstrap()
-                .group(group()).channelFactory(factory()).handler(handler())
-                .localAddress(localAddress()).remoteAddress(remoteAddress);
-        b.options().putAll(options());
-        b.attrs().putAll(attrs());
-        return b;
+    @Override
+    @SuppressWarnings("CloneDoesntCallSuperClone")
+    public Bootstrap clone() {
+        return new Bootstrap(this);
     }
 
     @Override

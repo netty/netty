@@ -35,14 +35,27 @@ import java.util.concurrent.ConcurrentHashMap;
  * method-chaining to provide an easy way to configure the {@link AbstractBootstrap}.
  *
  */
-public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
+public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> implements Cloneable {
 
     private EventLoopGroup group;
-    private ChannelFactory factory;
+    private ChannelFactory channelFactory;
     private SocketAddress localAddress;
     private final Map<ChannelOption<?>, Object> options = new ConcurrentHashMap<ChannelOption<?>, Object>();
     private final Map<AttributeKey<?>, Object> attrs = new ConcurrentHashMap<AttributeKey<?>, Object>();
     private ChannelHandler handler;
+
+    AbstractBootstrap() {
+        // Disallow extending from a different package.
+    }
+
+    AbstractBootstrap(AbstractBootstrap<B> bootstrap) {
+        group = bootstrap.group;
+        channelFactory = bootstrap.channelFactory;
+        handler = bootstrap.handler;
+        localAddress = bootstrap.localAddress;
+        options.putAll(bootstrap.options);
+        attrs.putAll(bootstrap.attrs);
+    }
 
     /**
      * The {@link EventLoopGroup} which is used to handle all the events for the to-be-creates
@@ -80,15 +93,15 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
      * simplify your code.
      */
     @SuppressWarnings("unchecked")
-    public B channelFactory(ChannelFactory factory) {
-        if (factory == null) {
-            throw new NullPointerException("factory");
+    public B channelFactory(ChannelFactory channelFactory) {
+        if (channelFactory == null) {
+            throw new NullPointerException("channelFactory");
         }
-        if (this.factory != null) {
-            throw new IllegalStateException("factory set already");
+        if (this.channelFactory != null) {
+            throw new IllegalStateException("channelFactory set already");
         }
 
-        this.factory = factory;
+        this.channelFactory = channelFactory;
         return (B) this;
     }
 
@@ -178,10 +191,19 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
         if (group == null) {
             throw new IllegalStateException("group not set");
         }
-        if (factory == null) {
+        if (channelFactory == null) {
             throw new IllegalStateException("factory not set");
         }
     }
+
+    /**
+     * Returns a deep clone of this bootstrap which has the identical configuration.  This method is useful when making
+     * multiple {@link Channel}s with similar settings.  Please note that this method does not clone the
+     * {@link EventLoopGroup} deeply but shallowly, making the group a shared resource.
+     */
+    @Override
+    @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")
+    public abstract B clone();
 
     /**
      * Create a new {@link Channel} and bind it.
@@ -245,8 +267,8 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
         return localAddress;
     }
 
-    final ChannelFactory factory() {
-        return factory;
+    final ChannelFactory channelFactory() {
+        return channelFactory;
     }
 
     final ChannelHandler handler() {
@@ -275,9 +297,9 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
             buf.append(group.getClass().getSimpleName());
             buf.append(", ");
         }
-        if (factory != null) {
-            buf.append("factory: ");
-            buf.append(factory);
+        if (channelFactory != null) {
+            buf.append("channelFactory: ");
+            buf.append(channelFactory);
             buf.append(", ");
         }
         if (localAddress != null) {
