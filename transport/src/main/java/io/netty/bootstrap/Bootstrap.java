@@ -51,16 +51,16 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap> {
     /**
      * @see {@link #remoteAddress(SocketAddress)}
      */
-    public Bootstrap remoteAddress(String host, int port) {
-        remoteAddress = new InetSocketAddress(host, port);
+    public Bootstrap remoteAddress(String inetHost, int inetPort) {
+        remoteAddress = new InetSocketAddress(inetHost, inetPort);
         return this;
     }
 
     /**
      * @see {@link #remoteAddress(SocketAddress)}
      */
-    public Bootstrap remoteAddress(InetAddress host, int port) {
-        remoteAddress = new InetSocketAddress(host, port);
+    public Bootstrap remoteAddress(InetAddress inetHost, int inetPort) {
+        remoteAddress = new InetSocketAddress(inetHost, inetPort);
         return this;
     }
 
