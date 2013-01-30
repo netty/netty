@@ -31,12 +31,12 @@ public interface SpdyRstStreamFrame extends SpdyControlFrame {
     void setStreamId(int streamID);
 
     /**
-     * Returns the status of this frame.
+     * Returns the getStatus of this frame.
      */
     SpdyStreamStatus getStatus();
 
     /**
-     * Sets the status of this frame.
+     * Sets the getStatus of this frame.
      */
     void setStatus(SpdyStreamStatus status);
 }

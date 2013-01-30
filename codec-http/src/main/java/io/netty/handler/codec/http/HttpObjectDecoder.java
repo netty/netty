@@ -404,7 +404,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
     protected boolean isContentAlwaysEmpty(HttpMessage msg) {
         if (msg instanceof HttpResponse) {
             HttpResponse res = (HttpResponse) msg;
-            int code = res.status().code();
+            int code = res.getStatus().code();
 
             // Correctly handle return codes of 1xx.
             //
@@ -449,10 +449,10 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
     private HttpMessage invalidMessage(Exception cause) {
         checkpoint(State.BAD_MESSAGE);
         if (message != null) {
-            message.updateDecoderResult(DecoderResult.partialFailure(cause));
+            message.setDecoderResult(DecoderResult.partialFailure(cause));
         } else {
             message = createInvalidMessage();
-            message.updateDecoderResult(DecoderResult.failure(cause));
+            message.setDecoderResult(DecoderResult.failure(cause));
         }
         return message;
     }
@@ -460,7 +460,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
     private HttpContent invalidChunk(Exception cause) {
         checkpoint(State.BAD_MESSAGE);
         HttpContent chunk = new DefaultHttpContent(Unpooled.EMPTY_BUFFER);
-        chunk.updateDecoderResult(DecoderResult.failure(cause));
+        chunk.setDecoderResult(DecoderResult.failure(cause));
         return chunk;
     }
 

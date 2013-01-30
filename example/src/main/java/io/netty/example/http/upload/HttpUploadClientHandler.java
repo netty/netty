@@ -39,8 +39,8 @@ public class HttpUploadClientHandler extends ChannelInboundMessageHandlerAdapter
         if (msg instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) msg;
 
-            logger.info("STATUS: " + response.status());
-            logger.info("VERSION: " + response.protocolVersion());
+            logger.info("STATUS: " + response.getStatus());
+            logger.info("VERSION: " + response.getProtocolVersion());
 
             if (!response.headers().isEmpty()) {
                 for (String name : response.headers().names()) {
@@ -50,7 +50,7 @@ public class HttpUploadClientHandler extends ChannelInboundMessageHandlerAdapter
                 }
             }
 
-            if (response.status().code() == 200 && HttpHeaders.isTransferEncodingChunked(response)) {
+            if (response.getStatus().code() == 200 && HttpHeaders.isTransferEncodingChunked(response)) {
                 readingChunks = true;
                 logger.info("CHUNKED CONTENT {");
             } else {

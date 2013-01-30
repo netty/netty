@@ -56,7 +56,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
 
     @Override
     protected Object decode(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof HttpResponse && ((HttpResponse) msg).status().code() == 100) {
+        if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().code() == 100) {
             // 100-continue response must be passed through.
             return msg;
         }
@@ -163,7 +163,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
 
     /**
      * Returns the expected content encoding of the decoded content.
-     * This method returns {@code "identity"} by default, which is the case for
+     * This getMethod returns {@code "identity"} by default, which is the case for
      * most decoders.
      *
      * @param contentEncoding the value of the {@code "Content-Encoding"} header

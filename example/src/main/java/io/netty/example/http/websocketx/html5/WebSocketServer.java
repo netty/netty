@@ -45,7 +45,7 @@ import java.net.InetSocketAddress;
  * </pre>
  *
  * The html page is very simple were you simply enter some text and the server
- * will echo the same text back, but in uppercase. You, also see status messages
+ * will echo the same text back, but in uppercase. You, also see getStatus messages
  * in the "Response From Server" area when client has connected, disconnected
  * etc.
  *

@@ -133,7 +133,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
                         messageMap.put(Integer.valueOf(streamID), httpRequestWithEntity);
                     }
                 } catch (Exception e) {
-                    // If a client sends a SYN_STREAM without all of the method, url (host and path),
+                    // If a client sends a SYN_STREAM without all of the getMethod, url (host and path),
                     // scheme, and version headers the server must reply with a HTTP 400 BAD REQUEST reply.
                     // Also sends HTTP 400 BAD REQUEST reply if header name/value pairs are invalid
                     SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamID);
@@ -163,7 +163,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
                     messageMap.put(Integer.valueOf(streamID), httpResponseWithEntity);
                 }
             } catch (Exception e) {
-                // If a client receives a SYN_REPLY without valid status and version headers
+                // If a client receives a SYN_REPLY without valid getStatus and version headers
                 // the client must reply with a RST_STREAM frame indicating a PROTOCOL_ERROR
                 SpdyRstStreamFrame spdyRstStreamFrame =
                     new DefaultSpdyRstStreamFrame(streamID, SpdyStreamStatus.PROTOCOL_ERROR);

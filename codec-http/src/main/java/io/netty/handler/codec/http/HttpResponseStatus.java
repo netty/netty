@@ -283,7 +283,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
 
     /**
      * Returns the {@link HttpResponseStatus} represented by the specified code.
-     * If the specified code is a standard HTTP status code, a cached instance
+     * If the specified code is a standard HTTP getStatus code, a cached instance
      * will be returned.  Otherwise, a new instance will be returned.
      */
     public static HttpResponseStatus valueOf(int code) {
@@ -445,14 +445,14 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     }
 
     /**
-     * Returns the code of this status.
+     * Returns the code of this getStatus.
      */
     public int code() {
         return code;
     }
 
     /**
-     * Returns the reason phrase of this status.
+     * Returns the reason phrase of this getStatus.
      */
     public String reasonPhrase() {
         return reasonPhrase;

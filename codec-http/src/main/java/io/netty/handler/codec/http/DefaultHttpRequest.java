@@ -22,36 +22,54 @@ import io.netty.util.internal.StringUtil;
  */
 public class DefaultHttpRequest extends DefaultHttpMessage implements HttpRequest {
 
-    private final HttpMethod method;
-    private final String uri;
+    private HttpMethod method;
+    private String uri;
 
     /**
      * Creates a new instance.
      *
      * @param httpVersion the HTTP version of the request
-     * @param method      the HTTP method of the request
+     * @param method      the HTTP getMethod of the request
      * @param uri         the URI or path of the request
      */
     public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri) {
         super(httpVersion);
         if (method == null) {
-            throw new NullPointerException("method");
+            throw new NullPointerException("getMethod");
         }
         if (uri == null) {
-            throw new NullPointerException("uri");
+            throw new NullPointerException("getUri");
         }
         this.method = method;
         this.uri = uri;
     }
 
     @Override
-    public HttpMethod method() {
+    public HttpMethod getMethod() {
         return method;
     }
 
     @Override
-    public String uri() {
+    public String getUri() {
         return uri;
+    }
+
+    @Override
+    public HttpRequest setMethod(HttpMethod method) {
+        this.method = method;
+        return this;
+    }
+
+    @Override
+    public HttpRequest setUri(String uri) {
+        this.uri = uri;
+        return this;
+    }
+
+    @Override
+    public HttpRequest setProtocolVersion(HttpVersion version) {
+        super.setProtocolVersion(version);
+        return this;
     }
 
     @Override
@@ -59,14 +77,14 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
         StringBuilder buf = new StringBuilder();
         buf.append(getClass().getSimpleName());
         buf.append(", decodeResult: ");
-        buf.append(decoderResult());
+        buf.append(getDecoderResult());
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
-        buf.append(method().toString());
+        buf.append(getMethod().toString());
         buf.append(' ');
-        buf.append(uri());
+        buf.append(getUri());
         buf.append(' ');
-        buf.append(protocolVersion().text());
+        buf.append(getProtocolVersion().text());
         buf.append(StringUtil.NEWLINE);
         appendHeaders(buf);
 

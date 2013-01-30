@@ -16,7 +16,7 @@
 package io.netty.handler.codec.spdy;
 
 /**
- * The SPDY session status code and its description.
+ * The SPDY session getStatus code and its description.
  * @apiviz.exclude
  */
 public class SpdySessionStatus implements Comparable<SpdySessionStatus> {
@@ -41,7 +41,7 @@ public class SpdySessionStatus implements Comparable<SpdySessionStatus> {
 
     /**
      * Returns the {@link SpdySessionStatus} represented by the specified code.
-     * If the specified code is a defined SPDY status code, a cached instance
+     * If the specified code is a defined SPDY getStatus code, a cached instance
      * will be returned.  Otherwise, a new instance will be returned.
      */
     public static SpdySessionStatus valueOf(int code) {
@@ -75,14 +75,14 @@ public class SpdySessionStatus implements Comparable<SpdySessionStatus> {
     }
 
     /**
-     * Returns the code of this status.
+     * Returns the code of this getStatus.
      */
     public int getCode() {
         return code;
     }
 
     /**
-     * Returns the status phrase of this status.
+     * Returns the getStatus phrase of this getStatus.
      */
     public String getStatusPhrase() {
         return statusPhrase;

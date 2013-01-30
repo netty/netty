@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Keep reconnecting to the server while printing out the current uptime and
- * connection attempt status.
+ * connection attempt getStatus.
  */
 @Sharable
 public class UptimeClientHandler extends ChannelInboundByteHandlerAdapter {

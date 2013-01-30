@@ -22,4 +22,10 @@ package io.netty.handler.codec.http;
 public interface FullHttpResponse extends HttpResponse, FullHttpMessage {
     @Override
     FullHttpResponse copy();
+
+    @Override
+    FullHttpResponse setProtocolVersion(HttpVersion version);
+
+    @Override
+    FullHttpResponse setStatus(HttpResponseStatus status);
 }

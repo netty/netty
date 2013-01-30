@@ -32,12 +32,12 @@ public interface SpdyGoAwayFrame extends SpdyControlFrame {
     void setLastGoodStreamId(int lastGoodStreamId);
 
     /**
-     * Returns the status of this frame.
+     * Returns the getStatus of this frame.
      */
     SpdySessionStatus getStatus();
 
     /**
-     * Sets the status of this frame.
+     * Sets the getStatus of this frame.
      */
     void setStatus(SpdySessionStatus status);
 }

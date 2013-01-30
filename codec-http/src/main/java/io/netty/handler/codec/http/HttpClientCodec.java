@@ -85,7 +85,7 @@ public class HttpClientCodec extends CombinedChannelHandler {
         protected void encode(
                 ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
             if (msg instanceof HttpRequest && !done) {
-                queue.offer(((HttpRequest) msg).method());
+                queue.offer(((HttpRequest) msg).getMethod());
             }
 
             super.encode(ctx, msg, out);
@@ -138,13 +138,13 @@ public class HttpClientCodec extends CombinedChannelHandler {
 
         @Override
         protected boolean isContentAlwaysEmpty(HttpMessage msg) {
-            final int statusCode = ((HttpResponse) msg).status().code();
+            final int statusCode = ((HttpResponse) msg).getStatus().code();
             if (statusCode == 100) {
                 // 100-continue response should be excluded from paired comparison.
                 return true;
             }
 
-            // Get the method of the HTTP request that corresponds to the
+            // Get the getMethod of the HTTP request that corresponds to the
             // current response.
             HttpMethod method = queue.poll();
 
@@ -152,7 +152,7 @@ public class HttpClientCodec extends CombinedChannelHandler {
             switch (firstChar) {
             case 'H':
                 // According to 4.3, RFC2616:
-                // All responses to the HEAD request method MUST NOT include a
+                // All responses to the HEAD request getMethod MUST NOT include a
                 // message-body, even though the presence of entity-header fields
                 // might lead one to believe they do.
                 if (HttpMethod.HEAD.equals(method)) {

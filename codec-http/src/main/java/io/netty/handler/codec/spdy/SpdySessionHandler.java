@@ -143,7 +143,7 @@ public class SpdySessionHandler
              *
              * If an endpoint which created the stream receives a data frame before receiving
              * a SYN_REPLY on that stream, it is a protocol error, and the recipient must
-             * issue a stream error with the status code PROTOCOL_ERROR for the Stream-ID.
+             * issue a stream error with the getStatus code PROTOCOL_ERROR for the Stream-ID.
              *
              * If an endpoint receives multiple data frames for invalid Stream-IDs,
              * it may close the session.
@@ -151,10 +151,10 @@ public class SpdySessionHandler
              * If an endpoint refuses a stream it must ignore any data frames for that stream.
              *
              * If an endpoint receives a data frame after the stream is half-closed from the
-             * sender, it must send a RST_STREAM frame with the status STREAM_ALREADY_CLOSED.
+             * sender, it must send a RST_STREAM frame with the getStatus STREAM_ALREADY_CLOSED.
              *
              * If an endpoint receives a data frame after the stream is closed, it must send
-             * a RST_STREAM frame with the status PROTOCOL_ERROR.
+             * a RST_STREAM frame with the getStatus PROTOCOL_ERROR.
              */
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
@@ -236,13 +236,13 @@ public class SpdySessionHandler
              *
              * If an endpoint receives a SYN_STREAM with a Stream-ID that is less than
              * any previously received SYN_STREAM, it must issue a session error with
-             * the status PROTOCOL_ERROR.
+             * the getStatus PROTOCOL_ERROR.
              *
              * If an endpoint receives multiple SYN_STREAM frames with the same active
-             * Stream-ID, it must issue a stream error with the status code PROTOCOL_ERROR.
+             * Stream-ID, it must issue a stream error with the getStatus code PROTOCOL_ERROR.
              *
              * The recipient can reject a stream by sending a stream error with the
-             * status code REFUSED_STREAM.
+             * getStatus code REFUSED_STREAM.
              */
 
             SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
@@ -277,7 +277,7 @@ public class SpdySessionHandler
              * SPDY SYN_REPLY frame processing requirements:
              *
              * If an endpoint receives multiple SYN_REPLY frames for the same active Stream-ID
-             * it must issue a stream error with the status code STREAM_IN_USE.
+             * it must issue a stream error with the getStatus code STREAM_IN_USE.
              */
 
             SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
@@ -399,7 +399,7 @@ public class SpdySessionHandler
              * SPDY WINDOW_UPDATE frame processing requirements:
              *
              * Receivers of a WINDOW_UPDATE that cause the window size to exceed 2^31
-             * must send a RST_STREAM with the status code FLOW_CONTROL_ERROR.
+             * must send a RST_STREAM with the getStatus code FLOW_CONTROL_ERROR.
              *
              * Sender should ignore all WINDOW_UPDATE frames associated with a stream
              * after sending the last frame for the stream.
@@ -689,7 +689,7 @@ public class SpdySessionHandler
      * SPDY Stream Error Handling:
      *
      * Upon a stream error, the endpoint must send a RST_STREAM frame which contains
-     * the Stream-ID for the stream where the error occurred and the error status which
+     * the Stream-ID for the stream where the error occurred and the error getStatus which
      * caused the error.
      *
      * After sending the RST_STREAM, the stream is closed to the sending endpoint.

@@ -45,12 +45,12 @@ public interface LastHttpContent extends HttpContent {
         }
 
         @Override
-        public DecoderResult decoderResult() {
+        public DecoderResult getDecoderResult() {
             return DecoderResult.SUCCESS;
         }
 
         @Override
-        public void updateDecoderResult(DecoderResult result) {
+        public void setDecoderResult(DecoderResult result) {
             throw new UnsupportedOperationException("read only");
         }
 

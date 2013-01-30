@@ -58,8 +58,27 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     }
 
     @Override
+    public FullHttpRequest setProtocolVersion(HttpVersion version) {
+        super.setProtocolVersion(version);
+        return this;
+    }
+
+    @Override
+    public FullHttpRequest setMethod(HttpMethod method) {
+        super.setMethod(method);
+        return this;
+    }
+
+    @Override
+    public FullHttpRequest setUri(String uri) {
+        super.setUri(uri);
+        return this;
+    }
+
+    @Override
     public FullHttpRequest copy() {
-        DefaultFullHttpRequest copy = new DefaultFullHttpRequest(protocolVersion(), method(), uri(), data().copy());
+        DefaultFullHttpRequest copy = new DefaultFullHttpRequest(
+                getProtocolVersion(), getMethod(), getUri(), data().copy());
         copy.headers().set(headers());
         copy.trailingHeaders().set(trailingHeaders());
         return copy;

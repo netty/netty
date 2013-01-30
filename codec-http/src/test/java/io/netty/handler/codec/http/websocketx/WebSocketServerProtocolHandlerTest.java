@@ -46,7 +46,7 @@ public class WebSocketServerProtocolHandlerTest {
         
         writeUpgradeRequest(ch);
         
-        assertEquals(SWITCHING_PROTOCOLS, ((HttpResponse) ch.outboundMessageBuffer().poll()).status());
+        assertEquals(SWITCHING_PROTOCOLS, ((HttpResponse) ch.outboundMessageBuffer().poll()).getStatus());
         assertNotNull(WebSocketServerProtocolHandler.getHandshaker(handshakerCtx));
     }
     
@@ -55,10 +55,10 @@ public class WebSocketServerProtocolHandlerTest {
         EmbeddedMessageChannel ch = createChannel(new MockOutboundHandler());
         
         writeUpgradeRequest(ch);
-        assertEquals(SWITCHING_PROTOCOLS, ((HttpResponse) ch.outboundMessageBuffer().poll()).status());
+        assertEquals(SWITCHING_PROTOCOLS, ((HttpResponse) ch.outboundMessageBuffer().poll()).getStatus());
         
         ch.writeInbound(new DefaultHttpRequest(HTTP_1_1, HttpMethod.GET, "/test"));
-        assertEquals(FORBIDDEN, ((HttpResponse) ch.outboundMessageBuffer().poll()).status());
+        assertEquals(FORBIDDEN, ((HttpResponse) ch.outboundMessageBuffer().poll()).getStatus());
     }
     
     @Test
@@ -75,7 +75,7 @@ public class WebSocketServerProtocolHandlerTest {
         ch.writeInbound(httpRequestWithEntity);
         
         FullHttpResponse response = getHttpResponse(ch);
-        assertEquals(BAD_REQUEST, response.status());
+        assertEquals(BAD_REQUEST, response.getStatus());
         assertEquals("not a WebSocket handshake request: missing upgrade", getResponseMessage(response));
         
     }
@@ -95,7 +95,7 @@ public class WebSocketServerProtocolHandlerTest {
         ch.writeInbound(httpRequest);
         
         FullHttpResponse response = getHttpResponse(ch);
-        assertEquals(BAD_REQUEST, response.status());
+        assertEquals(BAD_REQUEST, response.getStatus());
         assertEquals("not a WebSocket request: missing key", getResponseMessage(response));
     }
     

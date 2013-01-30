@@ -39,7 +39,7 @@ public class DefaultSpdyRstStreamFrame implements SpdyRstStreamFrame {
      * Creates a new instance.
      *
      * @param streamId the Stream-ID of this frame
-     * @param status   the status of this frame
+     * @param status   the getStatus of this frame
      */
     public DefaultSpdyRstStreamFrame(int streamId, SpdyStreamStatus status) {
         setStreamId(streamId);

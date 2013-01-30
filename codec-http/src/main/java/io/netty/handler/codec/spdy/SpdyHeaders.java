@@ -42,9 +42,9 @@ public class SpdyHeaders {
          */
         public static final String HOST = ":host";
         /**
-         * {@code ":method"}
+         * {@code ":getMethod"}
          */
-        public static final String METHOD = ":method";
+        public static final String METHOD = ":getMethod";
         /**
          * {@code ":path"}
          */
@@ -54,9 +54,9 @@ public class SpdyHeaders {
          */
         public static final String SCHEME = ":scheme";
         /**
-         * {@code ":status"}
+         * {@code ":getStatus"}
          */
-        public static final String STATUS = ":status";
+        public static final String STATUS = ":getStatus";
         /**
          * {@code ":version"}
          */
@@ -71,17 +71,17 @@ public class SpdyHeaders {
      */
     public static final class Spdy2HttpNames {
         /**
-         * {@code "method"}
+         * {@code "getMethod"}
          */
-        public static final String METHOD = "method";
+        public static final String METHOD = "getMethod";
         /**
          * {@code "scheme"}
          */
         public static final String SCHEME = "scheme";
         /**
-         * {@code "status"}
+         * {@code "getStatus"}
          */
-        public static final String STATUS = "status";
+        public static final String STATUS = "getStatus";
         /**
          * {@code "url"}
          */
@@ -166,7 +166,7 @@ public class SpdyHeaders {
     }
 
     /**
-     * Removes the HTTP method header.
+     * Removes the HTTP getMethod header.
      */
     public static void removeMethod(int spdyVersion, SpdyHeaderBlock block) {
         if (spdyVersion < 3) {
@@ -177,7 +177,7 @@ public class SpdyHeaders {
     }
 
     /**
-     * Returns the {@link HttpMethod} represented by the HTTP method header.
+     * Returns the {@link HttpMethod} represented by the HTTP getMethod header.
      */
     public static HttpMethod getMethod(int spdyVersion, SpdyHeaderBlock block) {
         try {
@@ -192,7 +192,7 @@ public class SpdyHeaders {
     }
 
     /**
-     * Sets the HTTP method header.
+     * Sets the HTTP getMethod header.
      */
     public static void setMethod(int spdyVersion, SpdyHeaderBlock block, HttpMethod method) {
         if (spdyVersion < 3) {
@@ -236,7 +236,7 @@ public class SpdyHeaders {
     }
 
     /**
-     * Removes the HTTP response status header.
+     * Removes the HTTP response getStatus header.
      */
     public static void removeStatus(int spdyVersion, SpdyHeaderBlock block) {
         if (spdyVersion < 3) {
@@ -247,7 +247,7 @@ public class SpdyHeaders {
     }
 
     /**
-     * Returns the {@link HttpResponseStatus} represented by the HTTP response status header.
+     * Returns the {@link HttpResponseStatus} represented by the HTTP response getStatus header.
      */
     public static HttpResponseStatus getStatus(int spdyVersion, SpdyHeaderBlock block) {
         try {
@@ -276,7 +276,7 @@ public class SpdyHeaders {
     }
 
     /**
-     * Sets the HTTP response status header.
+     * Sets the HTTP response getStatus header.
      */
     public static void setStatus(int spdyVersion, SpdyHeaderBlock block, HttpResponseStatus status) {
         if (spdyVersion < 3) {

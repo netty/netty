@@ -21,11 +21,11 @@ public interface HttpObject {
     /**
      * Returns the result of decoding this message.
      */
-    DecoderResult decoderResult();
+    DecoderResult getDecoderResult();
 
     /**
      * Updates the result of decoding this message. This method is supposed to be invoked by {@link HttpObjectDecoder}.
      * Do not call this method unless you know what you are doing.
      */
-    void updateDecoderResult(DecoderResult result);
+    void setDecoderResult(DecoderResult result);
 }

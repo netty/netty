@@ -178,7 +178,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 
                     // close frame : if there is a body, the first two bytes of the
                     // body MUST be a 2-byte unsigned integer (in network byte
-                    // order) representing a status code
+                    // order) representing a getStatus code
                     if (frameOpcode == 8 && framePayloadLen1 == 1) {
                         protocolViolation(ctx, "received close control frame with payload len 1");
                         return null;
@@ -417,7 +417,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
         int statusCode = buffer.readShort();
         if (statusCode >= 0 && statusCode <= 999 || statusCode >= 1004 && statusCode <= 1006
                 || statusCode >= 1012 && statusCode <= 2999) {
-            protocolViolation(ctx, "Invalid close frame status code: " + statusCode);
+            protocolViolation(ctx, "Invalid close frame getStatus code: " + statusCode);
         }
 
         // May have UTF-8 message

@@ -106,7 +106,7 @@ public class QueryStringDecoder {
      */
     public QueryStringDecoder(String uri, Charset charset, boolean hasPath, int maxParams) {
         if (uri == null) {
-            throw new NullPointerException("uri");
+            throw new NullPointerException("getUri");
         }
         if (charset == null) {
             throw new NullPointerException("charset");
@@ -145,7 +145,7 @@ public class QueryStringDecoder {
      */
     public QueryStringDecoder(URI uri, Charset charset, int maxParams) {
         if (uri == null) {
-            throw new NullPointerException("uri");
+            throw new NullPointerException("getUri");
         }
         if (charset == null) {
             throw new NullPointerException("charset");

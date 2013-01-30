@@ -90,7 +90,7 @@ public class WebSocketClientHandler extends ChannelInboundMessageHandlerAdapter<
 
         if (msg instanceof FullHttpResponse) {
             FullHttpResponse response = (FullHttpResponse) msg;
-            throw new Exception("Unexpected FullHttpResponse (status=" + response.status() + ", content="
+            throw new Exception("Unexpected FullHttpResponse (getStatus=" + response.getStatus() + ", content="
                     + response.data().toString(CharsetUtil.UTF_8) + ')');
         }
 

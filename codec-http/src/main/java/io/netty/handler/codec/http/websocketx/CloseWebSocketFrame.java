@@ -34,7 +34,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
     }
 
     /**
-     * Creates a new empty close frame with closing status code and reason text
+     * Creates a new empty close frame with closing getStatus code and reason text
      *
      * @param statusCode
      *            Integer status code as per <a href="http://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
@@ -47,7 +47,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
     }
 
     /**
-     * Creates a new close frame with no losing status code and no reason text
+     * Creates a new close frame with no losing getStatus code and no reason text
      *
      * @param finalFragment
      *            flag indicating if this frame is the final fragment
@@ -107,7 +107,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
 
     /**
      * Returns the closing status code as per <a href="http://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. If
-     * a status code is set, -1 is returned.
+     * a getStatus code is set, -1 is returned.
      */
     public int statusCode() {
         ByteBuf binaryData = data();

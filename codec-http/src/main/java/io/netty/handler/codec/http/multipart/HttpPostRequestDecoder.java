@@ -105,7 +105,7 @@ public class HttpPostRequestDecoder {
     private String multipartMixedBoundary;
 
     /**
-     * Current status
+     * Current getStatus
      */
     private MultiPartStatus currentStatus = MultiPartStatus.NOTSTARTED;
 
@@ -188,7 +188,7 @@ public class HttpPostRequestDecoder {
             throw new NullPointerException("charset");
         }
         this.request = request;
-        HttpMethod method = request.method();
+        HttpMethod method = request.getMethod();
         if (method.equals(HttpMethod.POST) || method.equals(HttpMethod.PUT) || method.equals(HttpMethod.PATCH)) {
             bodyToDecode = true;
         }
@@ -216,7 +216,7 @@ public class HttpPostRequestDecoder {
      * MIXEDDISPOSITION MIXEDFILEUPLOAD)+ MIXEDCLOSEDELIMITER)* CLOSEDELIMITER)+
      * EPILOGUE
      *
-     * First status is: NOSTARTED
+     * First getStatus is: NOSTARTED
      *
      * Content-type: multipart/form-data, boundary=AaB03x => PREAMBLE in Header
      *
@@ -238,7 +238,7 @@ public class HttpPostRequestDecoder {
      * ...contents of file2.gif... => MIXEDFILEUPLOAD --BbC04y-- =>
      * MIXEDCLOSEDELIMITER --AaB03x-- => CLOSEDELIMITER
      *
-     * Once CLOSEDELIMITER is found, last status is EPILOGUE
+     * Once CLOSEDELIMITER is found, last getStatus is EPILOGUE
      */
     private enum MultiPartStatus {
         NOTSTARTED, PREAMBLE, HEADERDELIMITER, DISPOSITION, FIELD, FILEUPLOAD, MIXEDPREAMBLE, MIXEDDELIMITER,
@@ -276,12 +276,12 @@ public class HttpPostRequestDecoder {
     }
 
     /**
-     * This method returns a List of all HttpDatas from body.<br>
+     * This getMethod returns a List of all HttpDatas from body.<br>
      *
-     * If chunked, all chunks must have been offered using offer() method. If
+     * If chunked, all chunks must have been offered using offer() getMethod. If
      * not, NotEnoughDataDecoderException will be raised.
      *
-     * @return the list of HttpDatas from Body part for POST method
+     * @return the list of HttpDatas from Body part for POST getMethod
      * @throws NotEnoughDataDecoderException
      *             Need more chunks
      */
@@ -293,10 +293,10 @@ public class HttpPostRequestDecoder {
     }
 
     /**
-     * This method returns a List of all HttpDatas with the given name from
+     * This getMethod returns a List of all HttpDatas with the given name from
      * body.<br>
      *
-     * If chunked, all chunks must have been offered using offer() method. If
+     * If chunked, all chunks must have been offered using offer() getMethod. If
      * not, NotEnoughDataDecoderException will be raised.
      *
      * @return All Body HttpDatas with the given name (ignore case)
@@ -311,10 +311,10 @@ public class HttpPostRequestDecoder {
     }
 
     /**
-     * This method returns the first InterfaceHttpData with the given name from
+     * This getMethod returns the first InterfaceHttpData with the given name from
      * body.<br>
      *
-     * If chunked, all chunks must have been offered using offer() method. If
+     * If chunked, all chunks must have been offered using offer() getMethod. If
      * not, NotEnoughDataDecoderException will be raised.
      *
      * @return The first Body InterfaceHttpData with the given name (ignore
@@ -359,12 +359,12 @@ public class HttpPostRequestDecoder {
     }
 
     /**
-     * True if at current status, there is an available decoded
+     * True if at current getStatus, there is an available decoded
      * InterfaceHttpData from the Body.
      *
-     * This method works for chunked and not chunked request.
+     * This getMethod works for chunked and not chunked request.
      *
-     * @return True if at current status, there is a decoded InterfaceHttpData
+     * @return True if at current getStatus, there is a decoded InterfaceHttpData
      * @throws EndOfDataDecoderException
      *             No more data will be available
      */
@@ -395,7 +395,7 @@ public class HttpPostRequestDecoder {
     }
 
     /**
-     * This method will parse as much as possible data and fill the list and map
+     * This getMethod will parse as much as possible data and fill the list and map
      *
      * @throws ErrorDataDecoderException
      *             if there is a problem with the charset decoding or other
@@ -432,7 +432,7 @@ public class HttpPostRequestDecoder {
     }
 
     /**
-     * This method fill the map and list with as much Attribute as possible from
+     * This getMethod fill the map and list with as much Attribute as possible from
      * Body in not Multipart mode.
      *
      * @throws ErrorDataDecoderException
@@ -524,7 +524,7 @@ public class HttpPostRequestDecoder {
                 return;
             }
             if (contRead && currentAttribute != null) {
-                // reset index except if to continue in case of FIELD status
+                // reset index except if to continue in case of FIELD getStatus
                 if (currentStatus == MultiPartStatus.FIELD) {
                     currentAttribute.addContent(undecodedChunk.slice(firstpos, currentpos - firstpos), false);
                     firstpos = currentpos;
@@ -545,7 +545,7 @@ public class HttpPostRequestDecoder {
     }
 
     /**
-     * This method fill the map and list with as much Attribute as possible from
+     * This getMethod fill the map and list with as much Attribute as possible from
      * Body in not Multipart mode.
      *
      * @throws ErrorDataDecoderException
@@ -653,7 +653,7 @@ public class HttpPostRequestDecoder {
                 return;
             }
             if (contRead && currentAttribute != null) {
-                // reset index except if to continue in case of FIELD status
+                // reset index except if to continue in case of FIELD getStatus
                 if (currentStatus == MultiPartStatus.FIELD) {
                     currentAttribute.addContent(undecodedChunk.slice(firstpos, currentpos - firstpos), false);
                     firstpos = currentpos;
@@ -740,10 +740,10 @@ public class HttpPostRequestDecoder {
     private InterfaceHttpData decodeMultipart(MultiPartStatus state) throws ErrorDataDecoderException {
         switch (state) {
         case NOTSTARTED:
-            throw new ErrorDataDecoderException("Should not be called with the current status");
+            throw new ErrorDataDecoderException("Should not be called with the current getStatus");
         case PREAMBLE:
             // Content-type: multipart/form-data, boundary=AaB03x
-            throw new ErrorDataDecoderException("Should not be called with the current status");
+            throw new ErrorDataDecoderException("Should not be called with the current getStatus");
         case HEADERDELIMITER: {
             // --AaB03x or --AaB03x--
             return findMultipartDelimiter(multipartDataBoundary, MultiPartStatus.DISPOSITION,
@@ -870,9 +870,9 @@ public class HttpPostRequestDecoder {
      * @param delimiter
      *            delimiter to find
      * @param dispositionStatus
-     *            the next status if the delimiter is a start
+     *            the next getStatus if the delimiter is a start
      * @param closeDelimiterStatus
-     *            the next status if the delimiter is a close delimiter
+     *            the next getStatus if the delimiter is a close delimiter
      * @return the next InterfaceHttpData if any
      * @throws ErrorDataDecoderException
      */
@@ -2045,7 +2045,7 @@ public class HttpPostRequestDecoder {
     }
 
     /**
-     * Exception when an unappropriated method was called on a request
+     * Exception when an unappropriated getMethod was called on a request
      */
     public static class IncompatibleDataDecoderException extends Exception {
         private static final long serialVersionUID = -953268047926250267L;

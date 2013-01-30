@@ -79,7 +79,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
     public Object encode(ChannelHandlerContext ctx, Object msg)
             throws Exception {
 
-        if (msg instanceof HttpResponse && ((HttpResponse) msg).status().code() == 100) {
+        if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().code() == 100) {
             // 100-continue response must be passed through.
             return msg;
         }
@@ -91,11 +91,11 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
             if (msg instanceof HttpContent) {
                 if (msg instanceof HttpRequest) {
                     HttpRequest req = (HttpRequest) msg;
-                    message = new DefaultHttpRequest(req.protocolVersion(), req.method(), req.uri());
+                    message = new DefaultHttpRequest(req.getProtocolVersion(), req.getMethod(), req.getUri());
                     message.headers().set(req.headers());
                 } else  if (msg instanceof HttpResponse) {
                     HttpResponse res = (HttpResponse) msg;
-                    message = new DefaultHttpResponse(res.protocolVersion(), res.status());
+                    message = new DefaultHttpResponse(res.getProtocolVersion(), res.getStatus());
                     message.headers().set(res.headers());
                 } else {
                     return msg;

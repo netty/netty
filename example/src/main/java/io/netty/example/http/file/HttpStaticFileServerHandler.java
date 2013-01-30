@@ -104,17 +104,17 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
     public void messageReceived(
             ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
 
-        if (!request.decoderResult().isSuccess()) {
+        if (!request.getDecoderResult().isSuccess()) {
             sendError(ctx, BAD_REQUEST);
             return;
         }
 
-        if (request.method() != GET) {
+        if (request.getMethod() != GET) {
             sendError(ctx, METHOD_NOT_ALLOWED);
             return;
         }
 
-        final String uri = request.uri();
+        final String uri = request.getUri();
         final String path = sanitizeUri(uri);
         if (path == null) {
             sendError(ctx, FORBIDDEN);

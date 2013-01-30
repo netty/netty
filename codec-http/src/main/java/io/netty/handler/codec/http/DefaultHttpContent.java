@@ -56,6 +56,6 @@ public class DefaultHttpContent extends DefaultHttpObject implements HttpContent
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "(data: " + data() + ", decoderResult: " + decoderResult() + ')';
+        return getClass().getSimpleName() + "(data: " + data() + ", getDecoderResult: " + getDecoderResult() + ')';
     }
 }

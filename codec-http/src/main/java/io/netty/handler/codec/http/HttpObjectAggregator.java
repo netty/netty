@@ -126,19 +126,19 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
                 ctx.write(CONTINUE.duplicate());
             }
 
-            if (!m.decoderResult().isSuccess()) {
+            if (!m.getDecoderResult().isSuccess()) {
                 removeTransferEncodingChunked(m);
                 this.currentMessage = null;
                 return m;
             }
             if (msg instanceof HttpRequest) {
                 HttpRequest header = (HttpRequest) msg;
-                this.currentMessage = currentMessage = new DefaultFullHttpRequest(header.protocolVersion(),
-                        header.method(), header.uri(), Unpooled.compositeBuffer(maxCumulationBufferComponents));
+                this.currentMessage = currentMessage = new DefaultFullHttpRequest(header.getProtocolVersion(),
+                        header.getMethod(), header.getUri(), Unpooled.compositeBuffer(maxCumulationBufferComponents));
             } else if (msg instanceof HttpResponse) {
                 HttpResponse header = (HttpResponse) msg;
                 this.currentMessage = currentMessage = new DefaultFullHttpResponse(
-                        header.protocolVersion(), header.status(),
+                        header.getProtocolVersion(), header.getStatus(),
                         Unpooled.compositeBuffer(maxCumulationBufferComponents));
             } else {
                 throw new Error();
@@ -177,9 +177,9 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             }
 
             final boolean last;
-            if (!chunk.decoderResult().isSuccess()) {
-                currentMessage.updateDecoderResult(
-                        DecoderResult.partialFailure(chunk.decoderResult().cause()));
+            if (!chunk.getDecoderResult().isSuccess()) {
+                currentMessage.setDecoderResult(
+                        DecoderResult.partialFailure(chunk.getDecoderResult().cause()));
                 last = true;
             } else {
                 last = msg instanceof LastHttpContent;

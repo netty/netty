@@ -26,12 +26,12 @@ public class DefaultHttpObject implements HttpObject {
     }
 
     @Override
-    public DecoderResult decoderResult() {
+    public DecoderResult getDecoderResult() {
         return decoderResult;
     }
 
     @Override
-    public void updateDecoderResult(DecoderResult decoderResult) {
+    public void setDecoderResult(DecoderResult decoderResult) {
         if (decoderResult == null) {
             throw new NullPointerException("decoderResult");
         }
