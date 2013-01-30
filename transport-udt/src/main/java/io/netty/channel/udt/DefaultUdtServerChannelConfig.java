@@ -22,13 +22,13 @@ import io.netty.channel.ChannelOption;
 import java.io.IOException;
 import java.util.Map;
 
-import static io.netty.channel.udt.UdtChannelOption.*;
+import static io.netty.channel.ChannelOption.*;
 
 /**
  * The default {@link UdtServerChannelConfig} implementation.
  */
-public class DefaultUdtServerChannelConfig extends DefaultUdtChannelConfig implements
-        UdtServerChannelConfig {
+public class DefaultUdtServerChannelConfig extends DefaultUdtChannelConfig
+        implements UdtServerChannelConfig {
 
     private volatile int backlog = 64;
 
@@ -80,6 +80,58 @@ public class DefaultUdtServerChannelConfig extends DefaultUdtChannelConfig imple
             return super.setOption(option, value);
         }
         return true;
+    }
+
+    @Override
+    public UdtServerChannelConfig setProtocolReceiveBufferSize(
+            final int protocolReceiveBuferSize) {
+        super.setProtocolReceiveBufferSize(protocolReceiveBuferSize);
+        return this;
+    }
+
+    @Override
+    public UdtServerChannelConfig setProtocolSendBufferSize(
+            final int protocolSendBuferSize) {
+        super.setProtocolSendBufferSize(protocolSendBuferSize);
+        return this;
+    }
+
+    @Override
+    public UdtServerChannelConfig setReceiveBufferSize(
+            final int receiveBufferSize) {
+        super.setReceiveBufferSize(receiveBufferSize);
+        return this;
+    }
+
+    @Override
+    public UdtServerChannelConfig setReuseAddress(final boolean reuseAddress) {
+        super.setReuseAddress(reuseAddress);
+        return this;
+    }
+
+    @Override
+    public UdtServerChannelConfig setSendBufferSize(final int sendBufferSize) {
+        super.setSendBufferSize(sendBufferSize);
+        return this;
+    }
+
+    @Override
+    public UdtServerChannelConfig setSoLinger(final int soLinger) {
+        super.setSoLinger(soLinger);
+        return this;
+    }
+
+    @Override
+    public UdtServerChannelConfig setSystemReceiveBufferSize(
+            final int systemSendBuferSize) {
+        super.setSystemReceiveBufferSize(systemSendBuferSize);
+        return this;
+    }
+
+    @Override
+    public UdtServerChannelConfig setSystemSendBufferSize(
+            final int systemReceiveBufferSize) {
+        return this;
     }
 
 }

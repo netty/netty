@@ -43,4 +43,44 @@ public interface UdtServerChannelConfig extends UdtChannelConfig {
      */
     UdtServerChannelConfig setBacklog(int backlog);
 
+    /**
+     * Sets {@link OptionUDT#Protocol_Receive_Buffer_Size}
+     */
+    UdtServerChannelConfig setProtocolReceiveBufferSize(int size);
+
+    /**
+     * Sets {@link OptionUDT#Protocol_Send_Buffer_Size}
+     */
+    UdtServerChannelConfig setProtocolSendBufferSize(int size);
+
+    /**
+     * Sets the {@link ChannelOption#SO_RCVBUF} option.
+     */
+    UdtServerChannelConfig setReceiveBufferSize(int receiveBufferSize);
+
+    /**
+     * Sets the {@link ChannelOption#SO_REUSEADDR} option.
+     */
+    UdtServerChannelConfig setReuseAddress(boolean reuseAddress);
+
+    /**
+     * Sets the {@link ChannelOption#SO_SNDBUF} option.
+     */
+    UdtServerChannelConfig setSendBufferSize(int sendBufferSize);
+
+    /**
+     * Sets the {@link ChannelOption#SO_LINGER} option.
+     */
+    UdtServerChannelConfig setSoLinger(int soLinger);
+
+    /**
+     * Sets {@link OptionUDT#System_Receive_Buffer_Size}
+     */
+    UdtServerChannelConfig setSystemReceiveBufferSize(int size);
+
+    /**
+     * Sets {@link OptionUDT#System_Send_Buffer_Size}
+     */
+    UdtServerChannelConfig setSystemSendBufferSize(int size);
+
 }
