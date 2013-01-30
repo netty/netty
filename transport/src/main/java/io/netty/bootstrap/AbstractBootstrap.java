@@ -105,22 +105,22 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
     /**
      * @see {@link #localAddress(SocketAddress)}
      */
-    public B localAddress(int port) {
-        return localAddress(new InetSocketAddress(port));
+    public B localAddress(int inetPort) {
+        return localAddress(new InetSocketAddress(inetPort));
     }
 
     /**
      * @see {@link #localAddress(SocketAddress)}
      */
-    public B localAddress(String host, int port) {
-        return localAddress(new InetSocketAddress(host, port));
+    public B localAddress(String inetHost, int inetPort) {
+        return localAddress(new InetSocketAddress(inetHost, inetPort));
     }
 
     /**
      * @see {@link #localAddress(SocketAddress)}
      */
-    public B localAddress(InetAddress host, int port) {
-        return localAddress(new InetSocketAddress(host, port));
+    public B localAddress(InetAddress inetHost, int inetPort) {
+        return localAddress(new InetSocketAddress(inetHost, inetPort));
     }
 
     /**
