@@ -34,7 +34,7 @@ import java.util.Map.Entry;
  * for clients.
  *
  */
-public final class Bootstrap extends AbstractBootstrap<Bootstrap> {
+public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Bootstrap.class);
 

@@ -35,10 +35,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * method-chaining to provide an easy way to configure the {@link AbstractBootstrap}.
  *
  */
-public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> implements Cloneable {
+abstract class AbstractBootstrap<B extends AbstractBootstrap<?, C>, C extends Channel> implements Cloneable {
 
     private EventLoopGroup group;
-    private ChannelFactory channelFactory;
+    private ChannelFactory<? extends C> channelFactory;
     private SocketAddress localAddress;
     private final Map<ChannelOption<?>, Object> options = new ConcurrentHashMap<ChannelOption<?>, Object>();
     private final Map<AttributeKey<?>, Object> attrs = new ConcurrentHashMap<AttributeKey<?>, Object>();
@@ -48,7 +48,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> implemen
         // Disallow extending from a different package.
     }
 
-    AbstractBootstrap(AbstractBootstrap<B> bootstrap) {
+    AbstractBootstrap(AbstractBootstrap<B, C> bootstrap) {
         group = bootstrap.group;
         channelFactory = bootstrap.channelFactory;
         handler = bootstrap.handler;
@@ -78,11 +78,11 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> implemen
      * You either use this or {@link #channelFactory(ChannelFactory)} if your
      * {@link Channel} implementation has no no-args constructor.
      */
-    public B channel(Class<? extends Channel> channelClass) {
+    public B channel(Class<? extends C> channelClass) {
         if (channelClass == null) {
             throw new NullPointerException("channelClass");
         }
-        return channelFactory(new BootstrapChannelFactory(channelClass));
+        return channelFactory(new BootstrapChannelFactory<C>(channelClass));
     }
 
     /**
@@ -93,7 +93,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> implemen
      * simplify your code.
      */
     @SuppressWarnings("unchecked")
-    public B channelFactory(ChannelFactory channelFactory) {
+    public B channelFactory(ChannelFactory<? extends C> channelFactory) {
         if (channelFactory == null) {
             throw new NullPointerException("channelFactory");
         }
@@ -267,7 +267,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> implemen
         return localAddress;
     }
 
-    final ChannelFactory channelFactory() {
+    final ChannelFactory<? extends C> channelFactory() {
         return channelFactory;
     }
 
@@ -331,15 +331,15 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> implemen
         return buf.toString();
     }
 
-    private static final class BootstrapChannelFactory implements ChannelFactory {
-        private final Class<? extends Channel> clazz;
+    private static final class BootstrapChannelFactory<T extends Channel> implements ChannelFactory<T> {
+        private final Class<? extends T> clazz;
 
-        BootstrapChannelFactory(Class<? extends Channel> clazz) {
+        BootstrapChannelFactory(Class<? extends T> clazz) {
             this.clazz = clazz;
         }
 
         @Override
-        public Channel newChannel() {
+        public T newChannel() {
             try {
                 return clazz.newInstance();
             } catch (Throwable t) {
@@ -351,17 +351,5 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> implemen
         public String toString() {
             return clazz.getSimpleName() + ".class";
         }
-    }
-
-    /**
-     * Factory that is responsible to create new {@link Channel}'s on {@link AbstractBootstrap#bind()}
-     * requests.
-     *
-     */
-    public interface ChannelFactory {
-        /**
-         * {@link Channel} to use in the {@link AbstractBootstrap}
-         */
-        Channel newChannel();
     }
 }
