@@ -83,6 +83,19 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
             // 100-continue response must be passed through.
             return msg;
         }
+
+        // handle the case of single complete message without content
+        if (msg instanceof FullHttpMessage && !((FullHttpMessage) msg).data().readable()) {
+
+            // Remove content encoding
+            String acceptEncoding = acceptEncodingQueue.poll();
+            if (acceptEncoding == null) {
+                throw new IllegalStateException("cannot send more responses than requests");
+            }
+
+            return msg;
+        }
+
         if (msg instanceof HttpMessage) {
             assert message == null;
 
@@ -121,6 +134,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
                 if (acceptEncoding == null) {
                     throw new IllegalStateException("cannot send more responses than requests");
                 }
+
                 Result result = beginEncode(message, c, acceptEncoding);
 
                 if (result == null) {
