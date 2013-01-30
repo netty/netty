@@ -15,7 +15,7 @@
  */
 package io.netty.testsuite.transport.socket;
 
-import io.netty.bootstrap.AbstractBootstrap;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -35,7 +35,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
         run();
     }
 
-    public void testSimpleSend(AbstractBootstrap<?> sb, AbstractBootstrap<?> cb) throws Throwable {
+    public void testSimpleSend(Bootstrap sb, Bootstrap cb) throws Throwable {
         final CountDownLatch latch = new CountDownLatch(1);
 
         sb.handler(new ChannelInboundMessageHandlerAdapter<DatagramPacket>() {

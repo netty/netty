@@ -15,16 +15,6 @@
  */
 package io.netty.channel.udt.nio;
 
-import io.netty.bootstrap.AbstractBootstrap.ChannelFactory;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelException;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
-import io.netty.channel.udt.UdtChannel;
-
-import java.io.IOException;
-import java.nio.channels.spi.SelectorProvider;
-
 import com.barchart.udt.SocketUDT;
 import com.barchart.udt.TypeUDT;
 import com.barchart.udt.nio.ChannelUDT;
@@ -33,6 +23,15 @@ import com.barchart.udt.nio.RendezvousChannelUDT;
 import com.barchart.udt.nio.SelectorProviderUDT;
 import com.barchart.udt.nio.ServerSocketChannelUDT;
 import com.barchart.udt.nio.SocketChannelUDT;
+import io.netty.bootstrap.ChannelFactory;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelException;
+import io.netty.channel.udt.UdtChannel;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
+
+import java.io.IOException;
+import java.nio.channels.spi.SelectorProvider;
 
 /**
  * UDT NIO components provider:

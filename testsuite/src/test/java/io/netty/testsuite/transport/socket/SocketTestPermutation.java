@@ -15,8 +15,8 @@
  */
 package io.netty.testsuite.transport.socket;
 
-import io.netty.bootstrap.AbstractBootstrap.ChannelFactory;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ChannelFactory;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.socket.InternetProtocolFamily;

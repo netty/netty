@@ -15,7 +15,7 @@
  */
 package io.netty.testsuite.transport.socket;
 
-import io.netty.bootstrap.AbstractBootstrap;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -42,7 +42,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         run();
     }
 
-    public void testMulticast(AbstractBootstrap<?> sb, AbstractBootstrap<?> cb) throws Throwable {
+    public void testMulticast(Bootstrap sb, Bootstrap cb) throws Throwable {
         MulticastTestHandler mhandler = new MulticastTestHandler();
 
         sb.handler(new ChannelInboundMessageHandlerAdapter<DatagramPacket>() {

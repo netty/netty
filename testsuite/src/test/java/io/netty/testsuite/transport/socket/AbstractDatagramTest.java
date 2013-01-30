@@ -15,14 +15,12 @@
  */
 package io.netty.testsuite.transport.socket;
 
-import io.netty.bootstrap.AbstractBootstrap;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.testsuite.transport.socket.SocketTestPermutation.Factory;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.NetUtil;
-
 import org.junit.Rule;
 import org.junit.rules.TestName;
 
@@ -60,7 +58,7 @@ public abstract class AbstractDatagramTest {
                     "Running: %s %d of %d (%s + %s)", testName.getMethodName(), ++ i, COMBO.size(), sb, cb));
             try {
                 Method m = getClass().getDeclaredMethod(
-                        testName.getMethodName(), AbstractBootstrap.class, AbstractBootstrap.class);
+                        testName.getMethodName(), Bootstrap.class, Bootstrap.class);
                 m.invoke(this, sb, cb);
             } catch (InvocationTargetException ex) {
                 throw ex.getCause();
