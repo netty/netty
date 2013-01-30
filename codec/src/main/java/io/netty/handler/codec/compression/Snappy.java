@@ -96,7 +96,7 @@ public class Snappy {
                     in.readerIndex(in.readerIndex() + matched);
                     insertTail = inIndex - 1;
                     nextEmit = inIndex;
-                    if (inIndex >= maxIndex) {
+                    if (inIndex >= maxIndex - 4) {
                         break outer;
                     }
 
