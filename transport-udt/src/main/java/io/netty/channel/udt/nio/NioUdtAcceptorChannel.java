@@ -21,9 +21,10 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.socket.nio.AbstractNioMessageChannel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
-import io.netty.channel.udt.DefaultUdtChannelConfig;
-import io.netty.channel.udt.UdtChannel;
+import io.netty.channel.udt.DefaultUdtServerChannelConfig;
+import io.netty.channel.udt.UdtServerChannel;
 import io.netty.channel.udt.UdtChannelConfig;
+import io.netty.channel.udt.UdtServerChannelConfig;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -35,18 +36,18 @@ import com.barchart.udt.nio.ServerSocketChannelUDT;
  * Common base for Netty Byte/Message UDT Stream/Datagram acceptors.
  */
 public abstract class NioUdtAcceptorChannel extends AbstractNioMessageChannel
-        implements UdtChannel {
+        implements UdtServerChannel {
 
     protected static final InternalLogger logger = InternalLoggerFactory
             .getInstance(NioUdtAcceptorChannel.class);
 
-    private final UdtChannelConfig config;
+    private final UdtServerChannelConfig config;
 
     protected NioUdtAcceptorChannel(final ServerSocketChannelUDT channelUDT) {
         super(null, channelUDT.socketUDT().id(), channelUDT, OP_ACCEPT);
         try {
             channelUDT.configureBlocking(false);
-            config = new DefaultUdtChannelConfig(this, channelUDT, true);
+            config = new DefaultUdtServerChannelConfig(this, channelUDT, true);
         } catch (final Exception e) {
             try {
                 channelUDT.close();
@@ -55,7 +56,7 @@ public abstract class NioUdtAcceptorChannel extends AbstractNioMessageChannel
                     logger.warn("Failed to close channel.", e2);
                 }
             }
-            throw new ChannelException("Failed configure channel.", e);
+            throw new ChannelException("Failed to configure channel.", e);
         }
     }
 
@@ -64,7 +65,7 @@ public abstract class NioUdtAcceptorChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    public UdtChannelConfig config() {
+    public UdtServerChannelConfig config() {
         return config;
     }
 

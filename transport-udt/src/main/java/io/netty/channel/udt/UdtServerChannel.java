@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,17 +13,18 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.udt.nio;
+package io.netty.channel.udt;
 
-import com.barchart.udt.TypeUDT;
+import io.netty.channel.ServerChannel;
+import io.netty.channel.udt.nio.NioUdtProvider;
+
+import java.net.InetSocketAddress;
 
 /**
- * Byte Channel Rendezvous for UDT Streams.
+ * UDT {@link ServerChannel}.
+ * <p>
+ * Supported UDT {@link UdtServerChannel} are available via {@link NioUdtProvider}.
  */
-public class NioUdtByteRendezvousChannel extends NioUdtByteConnectorChannel {
-
-    public NioUdtByteRendezvousChannel() {
-        super(NioUdtProvider.newRendezvousChannelUDT(TypeUDT.STREAM));
-    }
+public interface UdtServerChannel extends ServerChannel, UdtChannel {
 
 }

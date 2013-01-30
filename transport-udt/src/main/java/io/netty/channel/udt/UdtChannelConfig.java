@@ -72,11 +72,6 @@ import com.barchart.udt.nio.KindUDT;
 public interface UdtChannelConfig extends ChannelConfig {
 
     /**
-     * Gets {@link KindUDT#ACCEPTOR} channel backlog.
-     */
-    int getBacklog();
-
-    /**
      * Gets {@link OptionUDT#Protocol_Receive_Buffer_Size}
      */
     int getProtocolReceiveBufferSize();
@@ -115,11 +110,6 @@ public interface UdtChannelConfig extends ChannelConfig {
      * Gets the {@link ChannelOption#SO_REUSEADDR} option.
      */
     boolean isReuseAddress();
-
-    /**
-     * Sets {@link KindUDT#ACCEPTOR} channel backlog.
-     */
-    UdtChannelConfig setBacklog(int backlog);
 
     /**
      * Sets {@link OptionUDT#Protocol_Receive_Buffer_Size}

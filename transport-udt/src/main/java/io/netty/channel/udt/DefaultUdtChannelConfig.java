@@ -44,7 +44,6 @@ public class DefaultUdtChannelConfig extends DefaultChannelConfig implements
     private volatile int allocatorReceiveBufferSize = 128 * K;
     private volatile int allocatorSendBufferSize = 128 * K;
 
-    private volatile int backlog = 64;
     private volatile int soLinger;
 
     private volatile boolean reuseAddress = true;
@@ -82,11 +81,6 @@ public class DefaultUdtChannelConfig extends DefaultChannelConfig implements
         return protocolReceiveBuferSize;
     }
 
-    @Override
-    public int getBacklog() {
-        return backlog;
-    }
-
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getOption(final ChannelOption<T> option) {
@@ -114,9 +108,6 @@ public class DefaultUdtChannelConfig extends DefaultChannelConfig implements
         if (option == SO_LINGER) {
             return (T) Integer.valueOf(getSoLinger());
         }
-        if (option == SO_BACKLOG) {
-            return (T) Integer.valueOf(getBacklog());
-        }
         return super.getOption(option);
     }
 
@@ -125,7 +116,7 @@ public class DefaultUdtChannelConfig extends DefaultChannelConfig implements
         return getOptions(super.getOptions(), PROTOCOL_RECEIVE_BUFFER_SIZE,
                 PROTOCOL_SEND_BUFFER_SIZE, SYSTEM_RECEIVE_BUFFER_SIZE,
                 SYSTEM_SEND_BUFFER_SIZE, SO_RCVBUF, SO_SNDBUF, SO_REUSEADDR,
-                SO_LINGER, SO_BACKLOG);
+                SO_LINGER);
     }
 
     @Override
@@ -155,12 +146,6 @@ public class DefaultUdtChannelConfig extends DefaultChannelConfig implements
     }
 
     @Override
-    public UdtChannelConfig setBacklog(final int backlog) {
-        this.backlog = backlog;
-        return this;
-    }
-
-    @Override
     public <T> boolean setOption(final ChannelOption<T> option, final T value) {
         validate(option, value);
         if (option == PROTOCOL_RECEIVE_BUFFER_SIZE) {
@@ -179,8 +164,6 @@ public class DefaultUdtChannelConfig extends DefaultChannelConfig implements
             setReuseAddress((Boolean) value);
         } else if (option == SO_LINGER) {
             setSoLinger((Integer) value);
-        } else if (option == SO_BACKLOG) {
-            setBacklog((Integer) value);
         } else {
             return super.setOption(option, value);
         }
