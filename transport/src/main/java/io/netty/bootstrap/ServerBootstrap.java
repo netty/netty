@@ -43,7 +43,7 @@ import java.util.Map.Entry;
  * {@link Bootstrap} sub-class which allows easy bootstrap of {@link ServerChannel}
  *
  */
-public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
+public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerChannel> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ServerBootstrap.class);
 
@@ -92,21 +92,6 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
         }
         this.childGroup = childGroup;
         return this;
-    }
-
-    /**
-     * The {@link Class} which is used to create the {@link ServerChannel} from (for the acceptor).
-     */
-    @Override
-    public ServerBootstrap channel(Class<? extends Channel> channelClass) {
-        if (channelClass == null) {
-            throw new NullPointerException("channelClass");
-        }
-        if (!ServerChannel.class.isAssignableFrom(channelClass)) {
-            throw new IllegalArgumentException(
-                    "channelClass must be subtype of " + ServerChannel.class.getSimpleName() + '.');
-        }
-        return super.channel(channelClass);
     }
 
     /**
