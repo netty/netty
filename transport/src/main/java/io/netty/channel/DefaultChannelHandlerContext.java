@@ -32,7 +32,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import static io.netty.channel.DefaultChannelPipeline.*;
 
@@ -64,10 +64,28 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     // To avoid such situation, we lazily creates an additional thread-safe buffer called
     // 'bridge' so that the two handlers access each other's buffer only via the bridges.
     // The content written into a bridge is flushed into the actual buffer by flushBridge().
-    private final AtomicReference<MessageBridge> inMsgBridge;
-    private AtomicReference<MessageBridge> outMsgBridge;
-    private final AtomicReference<ByteBridge> inByteBridge;
-    private AtomicReference<ByteBridge> outByteBridge;
+    //
+    // Note we use an AtomicReferenceFieldUpdater for atomic operations on these to safe memory. This will safe us
+    // 64 bytes per Bridge.
+    private volatile MessageBridge inMsgBridge;
+    private volatile MessageBridge outMsgBridge;
+    private volatile ByteBridge inByteBridge;
+    private volatile ByteBridge outByteBridge;
+
+    private static final AtomicReferenceFieldUpdater<DefaultChannelHandlerContext, MessageBridge> IN_MSG_BRIDGE_UPDATER
+            = AtomicReferenceFieldUpdater.newUpdater(DefaultChannelHandlerContext.class,
+                MessageBridge.class, "inMsgBridge");
+
+    private static final AtomicReferenceFieldUpdater<DefaultChannelHandlerContext, MessageBridge> OUT_MSG_BRIDGE_UPDATER
+            = AtomicReferenceFieldUpdater.newUpdater(DefaultChannelHandlerContext.class,
+                MessageBridge.class, "outMsgBridge");
+
+    private static final AtomicReferenceFieldUpdater<DefaultChannelHandlerContext, ByteBridge> IN_BYTE_BRIDGE_UPDATER
+            =  AtomicReferenceFieldUpdater.newUpdater(DefaultChannelHandlerContext.class,
+                ByteBridge.class, "inByteBridge");
+    private static final AtomicReferenceFieldUpdater<DefaultChannelHandlerContext, ByteBridge> OUT_BYTE_BRIDGE_UPDATER
+            = AtomicReferenceFieldUpdater.newUpdater(DefaultChannelHandlerContext.class,
+                ByteBridge.class, "outByteBridge");
 
     // Lazily instantiated tasks used to trigger events to a handler with different executor.
     private Runnable invokeChannelRegisteredTask;
@@ -148,14 +166,14 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
             if (buf instanceof ByteBuf) {
                 inByteBuf = (ByteBuf) buf;
-                inByteBridge = new AtomicReference<ByteBridge>();
+                inByteBridge = null;
                 inMsgBuf = null;
                 inMsgBridge = null;
             } else if (buf instanceof MessageBuf) {
                 inByteBuf = null;
                 inByteBridge = null;
                 inMsgBuf = (MessageBuf<Object>) buf;
-                inMsgBridge = new AtomicReference<MessageBridge>();
+                inMsgBridge = null;
             } else {
                 throw new Error();
             }
@@ -252,7 +270,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
         if (buf instanceof ByteBuf) {
             outByteBuf = (ByteBuf) buf;
-            outByteBridge = new AtomicReference<ByteBridge>();
+            outByteBridge = null;
             outMsgBuf = null;
             outMsgBridge = null;
         } else if (buf instanceof MessageBuf) {
@@ -261,7 +279,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             @SuppressWarnings("unchecked")
             MessageBuf<Object> msgBuf = (MessageBuf<Object>) buf;
             outMsgBuf = msgBuf;
-            outMsgBridge = new AtomicReference<MessageBridge>();
+            outMsgBridge = null;
         } else {
             throw new Error();
         }
@@ -269,24 +287,24 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void fillBridge() {
         if (inMsgBridge != null) {
-            MessageBridge bridge = inMsgBridge.get();
+            MessageBridge bridge = inMsgBridge;
             if (bridge != null) {
                 bridge.fill();
             }
         } else if (inByteBridge != null) {
-            ByteBridge bridge = inByteBridge.get();
+            ByteBridge bridge = inByteBridge;
             if (bridge != null) {
                 bridge.fill();
             }
         }
 
         if (outMsgBridge != null) {
-            MessageBridge bridge = outMsgBridge.get();
+            MessageBridge bridge = outMsgBridge;
             if (bridge != null) {
                 bridge.fill();
             }
         } else if (outByteBridge != null) {
-            ByteBridge bridge = outByteBridge.get();
+            ByteBridge bridge = outByteBridge;
             if (bridge != null) {
                 bridge.fill();
             }
@@ -295,24 +313,24 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void flushBridge() {
         if (inMsgBridge != null) {
-            MessageBridge bridge = inMsgBridge.get();
+            MessageBridge bridge = inMsgBridge;
             if (bridge != null) {
                 bridge.flush(inMsgBuf);
             }
         } else if (inByteBridge != null) {
-            ByteBridge bridge = inByteBridge.get();
+            ByteBridge bridge = inByteBridge;
             if (bridge != null) {
                 bridge.flush(inByteBuf);
             }
         }
 
         if (outMsgBridge != null) {
-            MessageBridge bridge = outMsgBridge.get();
+            MessageBridge bridge = outMsgBridge;
             if (bridge != null) {
                 bridge.flush(outMsgBuf);
             }
         } else if (outByteBridge != null) {
-            ByteBridge bridge = outByteBridge.get();
+            ByteBridge bridge = outByteBridge;
             if (bridge != null) {
                 bridge.flush(outByteBuf);
             }
@@ -771,11 +789,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 if (ctx.executor().inEventLoop()) {
                     return ctx.inboundByteBuffer();
                 } else {
-                    ByteBridge bridge = ctx.inByteBridge.get();
+                    ByteBridge bridge = ctx.inByteBridge;
                     if (bridge == null) {
                         bridge = new ByteBridge(ctx);
-                        if (!ctx.inByteBridge.compareAndSet(null, bridge)) {
-                            bridge = ctx.inByteBridge.get();
+                        if (!IN_BYTE_BRIDGE_UPDATER.compareAndSet(ctx, null, bridge)) {
+                            bridge = ctx.inByteBridge;
                         }
                     }
                     return bridge.byteBuf;
@@ -807,11 +825,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 if (ctx.executor().inEventLoop()) {
                     return ctx.inboundMessageBuffer();
                 } else {
-                    MessageBridge bridge = ctx.inMsgBridge.get();
+                    MessageBridge bridge = ctx.inMsgBridge;
                     if (bridge == null) {
                         bridge = new MessageBridge();
-                        if (!ctx.inMsgBridge.compareAndSet(null, bridge)) {
-                            bridge = ctx.inMsgBridge.get();
+                        if (!IN_MSG_BRIDGE_UPDATER.compareAndSet(ctx, null, bridge)) {
+                            bridge = ctx.inMsgBridge;
                         }
                     }
                     return bridge.msgBuf;
@@ -830,11 +848,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 if (ctx.executor().inEventLoop()) {
                     return ctx.outboundByteBuffer();
                 } else {
-                    ByteBridge bridge = ctx.outByteBridge.get();
+                    ByteBridge bridge = ctx.outByteBridge;
                     if (bridge == null) {
                         bridge = new ByteBridge(ctx);
-                        if (!ctx.outByteBridge.compareAndSet(null, bridge)) {
-                            bridge = ctx.outByteBridge.get();
+                        if (!OUT_BYTE_BRIDGE_UPDATER.compareAndSet(ctx, null, bridge)) {
+                            bridge = ctx.outByteBridge;
                         }
                     }
                     return bridge.byteBuf;
@@ -867,11 +885,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 if (ctx.executor().inEventLoop()) {
                     return ctx.outboundMessageBuffer();
                 } else {
-                    MessageBridge bridge = ctx.outMsgBridge.get();
+                    MessageBridge bridge = ctx.outMsgBridge;
                     if (bridge == null) {
                         bridge = new MessageBridge();
-                        if (!ctx.outMsgBridge.compareAndSet(null, bridge)) {
-                            bridge = ctx.outMsgBridge.get();
+                        if (!OUT_MSG_BRIDGE_UPDATER.compareAndSet(ctx, null, bridge)) {
+                            bridge = ctx.outMsgBridge;
                         }
                     }
                     return bridge.msgBuf;
