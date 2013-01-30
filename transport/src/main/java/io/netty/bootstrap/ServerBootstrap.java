@@ -61,7 +61,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
 
     public ServerBootstrap() { }
 
-    public ServerBootstrap(ServerBootstrap bootstrap) {
+    private ServerBootstrap(ServerBootstrap bootstrap) {
         super(bootstrap);
         childGroup = bootstrap.childGroup;
         childHandler = bootstrap.childHandler;
