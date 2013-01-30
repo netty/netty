@@ -33,9 +33,8 @@ public final class SocksServer {
         try {
             b.group(new NioEventLoopGroup(), new NioEventLoopGroup())
                     .channel(NioServerSocketChannel.class)
-                    .localAddress(localPort)
                     .childHandler(new SocksServerInitializer());
-            b.bind().sync().channel().closeFuture().sync();
+            b.bind(localPort).sync().channel().closeFuture().sync();
         } finally {
             b.shutdown();
         }

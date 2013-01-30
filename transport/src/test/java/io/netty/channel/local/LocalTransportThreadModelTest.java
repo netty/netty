@@ -58,7 +58,6 @@ public class LocalTransportThreadModelTest {
         sb = new ServerBootstrap();
         sb.group(new LocalEventLoopGroup())
           .channel(LocalServerChannel.class)
-          .localAddress(LocalAddress.ANY)
           .childHandler(new ChannelInitializer<LocalChannel>() {
               @Override
               public void initChannel(LocalChannel ch) throws Exception {
@@ -71,7 +70,7 @@ public class LocalTransportThreadModelTest {
               }
           });
 
-        localAddr = (LocalAddress) sb.bind().syncUninterruptibly().channel().localAddress();
+        localAddr = (LocalAddress) sb.bind(LocalAddress.ANY).syncUninterruptibly().channel().localAddress();
     }
 
     @AfterClass

@@ -42,11 +42,10 @@ public class TelnetClient {
         try {
             b.group(new NioEventLoopGroup())
              .channel(NioSocketChannel.class)
-             .remoteAddress(host, port)
              .handler(new TelnetClientInitializer());
 
             // Start the connection attempt.
-            Channel ch = b.connect().sync().channel();
+            Channel ch = b.connect(host, port).sync().channel();
 
             // Read commands from the stdin.
             ChannelFuture lastWriteFuture = null;

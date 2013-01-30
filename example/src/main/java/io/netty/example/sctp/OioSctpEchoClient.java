@@ -20,12 +20,10 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.sctp.SctpChannel;
 import io.netty.channel.sctp.SctpChannelOption;
-import io.netty.channel.socket.oio.OioEventLoopGroup;
 import io.netty.channel.sctp.oio.OioSctpChannel;
+import io.netty.channel.socket.oio.OioEventLoopGroup;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-
-import java.net.InetSocketAddress;
 
 /**
  * Sends one message when a connection is open and echoes back any received
@@ -54,7 +52,6 @@ public class OioSctpEchoClient {
             b.group(new OioEventLoopGroup())
              .channel(OioSctpChannel.class)
              .option(SctpChannelOption.SCTP_NODELAY, true)
-             .remoteAddress(new InetSocketAddress(host, port))
              .handler(new ChannelInitializer<SctpChannel>() {
                  @Override
                  public void initChannel(SctpChannel ch) throws Exception {
@@ -65,7 +62,7 @@ public class OioSctpEchoClient {
              });
 
             // Start the client.
-            ChannelFuture f = b.connect().sync();
+            ChannelFuture f = b.connect(host, port).sync();
 
             // Wait until the connection is closed.
             f.channel().closeFuture().sync();

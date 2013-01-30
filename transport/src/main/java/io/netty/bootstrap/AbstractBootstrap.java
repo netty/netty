@@ -21,7 +21,6 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.AttributeKey;
 
@@ -37,6 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  */
 public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
+
     private EventLoopGroup group;
     private ChannelFactory factory;
     private SocketAddress localAddress;
@@ -174,7 +174,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
      * Validate all the parameters. Sub-classes may override this, but should
      * call the super method in that case.
      */
-    protected void validate() {
+    public void validate() {
         if (group == null) {
             throw new IllegalStateException("group not set");
         }
@@ -183,21 +183,51 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
         }
     }
 
-    protected final void validate(ChannelFuture future) {
-        if (future == null) {
-            throw new NullPointerException("future");
-        }
-        validate();
-    }
-
     /**
      * Create a new {@link Channel} and bind it.
      */
     public ChannelFuture bind() {
         validate();
-        Channel channel = factory().newChannel();
-        return bind(channel.newPromise());
+        SocketAddress localAddress = this.localAddress;
+        if (localAddress == null) {
+            throw new IllegalStateException("localAddress not set");
+        }
+        return doBind(localAddress);
     }
+
+    /**
+     * Create a new {@link Channel} and bind it.
+     */
+    public ChannelFuture bind(int inetPort) {
+        return bind(new InetSocketAddress(inetPort));
+    }
+
+    /**
+     * Create a new {@link Channel} and bind it.
+     */
+    public ChannelFuture bind(String inetHost, int inetPort) {
+        return bind(new InetSocketAddress(inetHost, inetPort));
+    }
+
+    /**
+     * Create a new {@link Channel} and bind it.
+     */
+    public ChannelFuture bind(InetAddress inetHost, int inetPort) {
+        return bind(new InetSocketAddress(inetHost, inetPort));
+    }
+
+    /**
+     * Create a new {@link Channel} and bind it.
+     */
+    public ChannelFuture bind(SocketAddress localAddress) {
+        validate();
+        if (localAddress == null) {
+            throw new NullPointerException("localAddress");
+        }
+        return doBind(localAddress);
+    }
+
+    abstract ChannelFuture doBind(SocketAddress localAddress);
 
     /**
      * the {@link ChannelHandler} to use for serving the requests.
@@ -211,42 +241,27 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
         return (B) this;
     }
 
-    protected static boolean ensureOpen(ChannelPromise future) {
-        if (!future.channel().isOpen()) {
-            // Registration was successful but the channel was closed due to some failure in
-            // handler.
-            future.setFailure(new ChannelException("initialization failure"));
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * Bind the {@link Channel} of the given {@link ChannelFactory}.
-     */
-    public abstract ChannelFuture bind(ChannelPromise future);
-
-    protected final SocketAddress localAddress() {
+    final SocketAddress localAddress() {
         return localAddress;
     }
 
-    protected final ChannelFactory factory() {
+    final ChannelFactory factory() {
         return factory;
     }
 
-    protected final ChannelHandler handler() {
+    final ChannelHandler handler() {
         return handler;
     }
 
-    protected final EventLoopGroup group() {
+    final EventLoopGroup group() {
         return group;
     }
 
-    protected final Map<ChannelOption<?>, Object> options() {
+    final Map<ChannelOption<?>, Object> options() {
         return options;
     }
 
-    protected final Map<AttributeKey<?>, Object> attrs() {
+    final Map<AttributeKey<?>, Object> attrs() {
         return attrs;
     }
 

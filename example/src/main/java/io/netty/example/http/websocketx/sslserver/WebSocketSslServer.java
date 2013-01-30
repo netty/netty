@@ -51,10 +51,9 @@ public class WebSocketSslServer {
         try {
             b.group(new NioEventLoopGroup(), new NioEventLoopGroup())
              .channel(NioServerSocketChannel.class)
-             .localAddress(port)
              .childHandler(new WebSocketSslServerInitializer());
 
-            Channel ch = b.bind().sync().channel();
+            Channel ch = b.bind(port).sync().channel();
             System.out.println("Web socket server started at port " + port + '.');
             System.out.println("Open your browser and navigate to https://localhost:" + port + '/');
             ch.closeFuture().sync();

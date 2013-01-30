@@ -27,7 +27,6 @@ import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.SocketChannel;
@@ -35,7 +34,7 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.AttributeKey;
 
-import java.nio.channels.ClosedChannelException;
+import java.net.SocketAddress;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -145,27 +144,14 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
     }
 
     @Override
-    public ChannelFuture bind(ChannelPromise future) {
-        validate(future);
-        Channel channel = future.channel();
-        if (channel.isActive()) {
-            future.setFailure(new IllegalStateException("channel already bound: " + channel));
-            return future;
-        }
-        if (channel.isRegistered()) {
-            future.setFailure(new IllegalStateException("channel already registered: " + channel));
-            return future;
-        }
-        if (!channel.isOpen()) {
-            future.setFailure(new ClosedChannelException());
-            return future;
-        }
+    ChannelFuture doBind(SocketAddress localAddress) {
+        Channel channel = factory().newChannel();
 
         try {
             channel.config().setOptions(options());
         } catch (Exception e) {
-            future.setFailure(e);
-            return future;
+            channel.close();
+            return channel.newFailedFuture(e);
         }
 
         for (Entry<AttributeKey<?>, Object> e: attrs().entrySet()) {
@@ -174,7 +160,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
             channel.attr(key).set(e.getValue());
         }
 
-        ChannelPipeline p = future.channel().pipeline();
+        ChannelPipeline p = channel.pipeline();
         if (handler() != null) {
             p.addLast(handler());
         }
@@ -182,17 +168,10 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
 
         ChannelFuture f = group().register(channel).awaitUninterruptibly();
         if (!f.isSuccess()) {
-            future.setFailure(f.cause());
-            return future;
+            return f;
         }
 
-        if (!ensureOpen(future)) {
-            return future;
-        }
-
-        channel.bind(localAddress(), future).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
-
-        return future;
+        return channel.bind(localAddress).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
     }
 
     @Override
@@ -204,13 +183,10 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
     }
 
     @Override
-    protected void validate() {
+    public void validate() {
         super.validate();
         if (childHandler == null) {
             throw new IllegalStateException("childHandler not set");
-        }
-        if (localAddress() == null) {
-            throw new IllegalStateException("localAddress not set");
         }
         if (childGroup == null) {
             logger.warn("childGroup is not set. Using parentGroup instead.");

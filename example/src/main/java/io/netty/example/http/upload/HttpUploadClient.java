@@ -40,7 +40,6 @@ import io.netty.logging.InternalLoggerFactory;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
-import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
@@ -156,8 +155,7 @@ public class HttpUploadClient {
             URI uriSimple) throws Exception {
         // Start the connection attempt.
         // No use of HttpPostRequestEncoder since not a POST
-        bootstrap.remoteAddress(new InetSocketAddress(host, port));
-        Channel channel = bootstrap.connect().sync().channel();
+        Channel channel = bootstrap.connect(host, port).sync().channel();
 
         // Prepare the HTTP request.
         QueryStringEncoder encoder = new QueryStringEncoder(get);
@@ -214,8 +212,7 @@ public class HttpUploadClient {
             File file, HttpDataFactory factory, List<Entry<String, String>> headers) throws Exception {
 
         // Start the connection attempt
-        bootstrap.remoteAddress(new InetSocketAddress(host, port));
-        Channel channel = bootstrap.connect().sync().channel();
+        Channel channel = bootstrap.connect(host, port).sync().channel();
 
         // Prepare the HTTP request.
         FullHttpRequest request =
@@ -299,8 +296,7 @@ public class HttpUploadClient {
             throws Exception {
 
         // Start the connection attempt
-        bootstrap.remoteAddress(new InetSocketAddress(host, port));
-        Channel channel = bootstrap.connect().sync().channel();
+        Channel channel = bootstrap.connect(host, port).sync().channel();
 
         // Prepare the HTTP request.
         FullHttpRequest request =

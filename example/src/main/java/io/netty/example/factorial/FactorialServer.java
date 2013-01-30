@@ -36,10 +36,9 @@ public class FactorialServer {
         try {
             b.group(new NioEventLoopGroup(), new NioEventLoopGroup())
              .channel(NioServerSocketChannel.class)
-             .localAddress(port)
              .childHandler(new FactorialServerInitializer());
 
-            b.bind().sync().channel().closeFuture().sync();
+            b.bind(port).sync().channel().closeFuture().sync();
         } finally {
             b.shutdown();
         }

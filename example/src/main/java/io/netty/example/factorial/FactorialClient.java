@@ -41,11 +41,10 @@ public class FactorialClient {
         try {
             b.group(new NioEventLoopGroup())
              .channel(NioSocketChannel.class)
-             .remoteAddress(host, port)
              .handler(new FactorialClientInitializer(count));
 
             // Make a new connection.
-            ChannelFuture f = b.connect().sync();
+            ChannelFuture f = b.connect(host, port).sync();
 
             // Get the handler instance to retrieve the answer.
             FactorialClientHandler handler =

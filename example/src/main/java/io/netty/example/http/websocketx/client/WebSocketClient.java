@@ -86,7 +86,6 @@ public class WebSocketClient {
 
             b.group(new NioEventLoopGroup())
              .channel(NioSocketChannel.class)
-             .remoteAddress(uri.getHost(), uri.getPort())
              .handler(new ChannelInitializer<SocketChannel>() {
                  @Override
                  public void initChannel(SocketChannel ch) throws Exception {
@@ -99,7 +98,7 @@ public class WebSocketClient {
              });
 
             System.out.println("WebSocket Client connecting");
-            Channel ch = b.connect().sync().channel();
+            Channel ch = b.connect(uri.getHost(), uri.getPort()).sync().channel();
             handler.handshakeFuture().sync();
 
             // Send 10 messages and wait for responses

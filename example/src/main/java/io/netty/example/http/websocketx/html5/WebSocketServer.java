@@ -26,8 +26,6 @@ import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 
-import java.net.InetSocketAddress;
-
 /**
  * A WebSocket Server that respondes to requests at:
  *
@@ -63,7 +61,6 @@ public class WebSocketServer {
         try {
             sb.group(new NioEventLoopGroup(), new NioEventLoopGroup())
              .channel(NioServerSocketChannel.class)
-             .localAddress(new InetSocketAddress(port))
              .childHandler(new ChannelInitializer<SocketChannel>() {
                 @Override
                 public void initChannel(final SocketChannel ch) throws Exception {
@@ -76,7 +73,7 @@ public class WebSocketServer {
                 }
             });
 
-            final Channel ch = sb.bind().sync().channel();
+            final Channel ch = sb.bind(port).sync().channel();
             System.out.println("Web socket server started at port " + port);
 
             ch.closeFuture().sync();

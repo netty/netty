@@ -60,7 +60,6 @@ public abstract class MsgEchoPeerBase {
         try {
             boot.group(connectGroup)
                     .channelFactory(NioUdtProvider.MESSAGE_RENDEZVOUS)
-                    .localAddress(self).remoteAddress(peer)
                     .handler(new ChannelInitializer<UdtChannel>() {
                         @Override
                         public void initChannel(final UdtChannel ch)
@@ -71,7 +70,7 @@ public abstract class MsgEchoPeerBase {
                         }
                     });
             // Start the peer.
-            final ChannelFuture f = boot.connect().sync();
+            final ChannelFuture f = boot.connect(peer, self).sync();
             // Wait until the connection is closed.
             f.channel().closeFuture().sync();
         } finally {

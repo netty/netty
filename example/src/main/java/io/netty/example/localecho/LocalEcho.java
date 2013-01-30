@@ -51,7 +51,6 @@ public class LocalEcho {
             // to reduce the communication latency between socket channels and local channels.
             sb.group(new LocalEventLoopGroup())
               .channel(LocalServerChannel.class)
-              .localAddress(addr)
               .handler(new ChannelInitializer<LocalServerChannel>() {
                   @Override
                   public void initChannel(LocalServerChannel ch) throws Exception {
@@ -69,7 +68,6 @@ public class LocalEcho {
 
             cb.group(new NioEventLoopGroup()) // NIO event loops are also OK
               .channel(LocalChannel.class)
-              .remoteAddress(addr)
               .handler(new ChannelInitializer<LocalChannel>() {
                   @Override
                   public void initChannel(LocalChannel ch) throws Exception {
@@ -80,10 +78,10 @@ public class LocalEcho {
               });
 
             // Start the server.
-            sb.bind().sync();
+            sb.bind(addr).sync();
 
             // Start the client.
-            Channel ch = cb.connect().sync().channel();
+            Channel ch = cb.connect(addr).sync().channel();
 
             // Read commands from the stdin.
             System.out.println("Enter text (quit to end)");

@@ -44,12 +44,10 @@ public class LocalChannelRegistryTest {
 
             cb.group(new LocalEventLoopGroup())
               .channel(LocalChannel.class)
-              .remoteAddress(addr)
               .handler(new TestHandler());
 
             sb.group(new LocalEventLoopGroup())
               .channel(LocalServerChannel.class)
-              .localAddress(addr)
               .childHandler(new ChannelInitializer<LocalChannel>() {
                   @Override
                   public void initChannel(LocalChannel ch) throws Exception {
@@ -59,10 +57,10 @@ public class LocalChannelRegistryTest {
 
 
             // Start server
-            Channel sc = sb.bind().sync().channel();
+            Channel sc = sb.bind(addr).sync().channel();
 
             // Connect to the server
-            Channel cc = cb.connect().sync().channel();
+            Channel cc = cb.connect(addr).sync().channel();
 
             // Send a message event up the pipeline.
             cc.pipeline().inboundMessageBuffer().add("Hello, World");

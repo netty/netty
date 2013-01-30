@@ -36,9 +36,9 @@ public class HttpUploadServer {
         ServerBootstrap b = new ServerBootstrap();
         try {
             b.group(new NioEventLoopGroup(), new NioEventLoopGroup()).channel(NioServerSocketChannel.class)
-                    .localAddress(port).childHandler(new HttpUploadServerInitializer());
+                    .childHandler(new HttpUploadServerInitializer());
 
-            Channel ch = b.bind().sync().channel();
+            Channel ch = b.bind(port).sync().channel();
             System.out.println("HTTP Upload Server at port " + port + '.');
             System.out.println("Open your browser and navigate to http://localhost:" + port + '/');
 
