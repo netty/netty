@@ -43,7 +43,7 @@ import java.util.Map.Entry;
  * {@link Bootstrap} sub-class which allows easy bootstrap of {@link ServerChannel}
  *
  */
-public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerChannel> {
+public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Channel> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ServerBootstrap.class);
 
