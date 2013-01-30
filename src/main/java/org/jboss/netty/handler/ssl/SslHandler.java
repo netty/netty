@@ -1085,20 +1085,24 @@ public class SslHandler extends FrameDecoder
     }
 
     private void flushPendingEncryptedWrites(ChannelHandlerContext ctx) {
-        // Avoid possible dead lock and data integrity issue
-        // which is caused by cross communication between more than one channel
-        // in the same VM.
-        if (!pendingEncryptedWritesLock.tryLock()) {
-            return;
-        }
-
-        try {
-            MessageEvent e;
-            while ((e = pendingEncryptedWrites.poll()) != null) {
-                ctx.sendDownstream(e);
+        while (!pendingEncryptedWrites.isEmpty()) {
+            // Avoid possible dead lock and data integrity issue
+            // which is caused by cross communication between more than one channel
+            // in the same VM.
+            if (!pendingEncryptedWritesLock.tryLock()) {
+                return;
             }
-        } finally {
-            pendingEncryptedWritesLock.unlock();
+
+            try {
+                MessageEvent e;
+                while ((e = pendingEncryptedWrites.poll()) != null) {
+                    ctx.sendDownstream(e);
+                }
+            } finally {
+                pendingEncryptedWritesLock.unlock();
+            }
+
+            // Other thread might have added more elements at this point, so we loop again if the queue got unempty.
         }
     }
 
