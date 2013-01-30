@@ -31,16 +31,26 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
 import java.util.Random;
+import java.util.regex.Pattern;
 
-import static io.netty.buffer.Unpooled.*;
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.buffer.Unpooled.wrappedBuffer;
 
 /**
  * This encoder will help to encode Request for a FORM as POST.
  */
 public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> {
+    private static final Map<Pattern, String> percentEncodings = new HashMap<Pattern, String>();
+    static {
+        percentEncodings.put(Pattern.compile("\\*"), "%2A");
+        percentEncodings.put(Pattern.compile("\\+"), "%20");
+        percentEncodings.put(Pattern.compile("%7E"), "~");
+    }
     /**
      * Factory used to create InterfaceHttpData
      */
@@ -680,7 +690,6 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
     public boolean isChunked() {
         return isChunked;
     }
-
     /**
      * Encode one attribute
      *
@@ -688,12 +697,17 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
      * @throws ErrorDataEncoderException
      *             if the encoding is in error
      */
-    private static String encodeAttribute(String s, Charset charset) throws ErrorDataEncoderException {
+    protected String encodeAttribute(String s, Charset charset) throws ErrorDataEncoderException {
         if (s == null) {
             return "";
         }
         try {
-            return URLEncoder.encode(s, charset.name());
+            String encoded = URLEncoder.encode(s, charset.name());
+            for (Map.Entry<Pattern,String> entry : percentEncodings.entrySet()) {
+                String replacement = entry.getValue();
+                encoded = entry.getKey().matcher(encoded).replaceAll(replacement);
+            }
+            return encoded;
         } catch (UnsupportedEncodingException e) {
             throw new ErrorDataEncoderException(charset.name(), e);
         }
@@ -952,7 +966,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
             // NextChunk as last non empty from buffer
             buffer = currentBuffer;
             currentBuffer = null;
-            return new DefaultHttpContent(buffer);
+            return buffer == null ? new DefaultHttpContent() : new DefaultHttpContent(buffer);
         }
         while (size > 0 && iterator.hasNext()) {
             currentData = iterator.next();

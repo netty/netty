@@ -46,4 +46,10 @@ public interface HttpRequest extends HttpMessage {
      * @return The URI being requested
      */
     String uri();
+
+    /**
+     * Sets the requested URI (or alternatively, path)
+     *@param path the URI to set
+     */
+    void updateUri(String path);
 }

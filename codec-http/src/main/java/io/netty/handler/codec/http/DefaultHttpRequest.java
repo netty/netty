@@ -23,7 +23,7 @@ import io.netty.util.internal.StringUtil;
 public class DefaultHttpRequest extends DefaultHttpMessage implements HttpRequest {
 
     private final HttpMethod method;
-    private final String uri;
+    private String uri;
 
     /**
      * Creates a new instance.
@@ -52,6 +52,11 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
     @Override
     public String uri() {
         return uri;
+    }
+
+    @Override
+    public void updateUri(String uri) {
+        this.uri = uri;
     }
 
     @Override
