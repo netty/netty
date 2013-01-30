@@ -229,7 +229,7 @@ public class HttpUploadClient {
             // should not be since args are not null
             e.printStackTrace();
         } catch (ErrorDataEncoderException e) {
-            // test if method is a POST method
+            // test if getMethod is a POST getMethod
             e.printStackTrace();
         }
 
@@ -314,7 +314,7 @@ public class HttpUploadClient {
             // should not be since no null args
             e.printStackTrace();
         } catch (ErrorDataEncoderException e) {
-            // test if method is a POST method
+            // test if getMethod is a POST getMethod
             e.printStackTrace();
         }
 

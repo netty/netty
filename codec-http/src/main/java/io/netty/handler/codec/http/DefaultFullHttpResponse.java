@@ -60,8 +60,20 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
     }
 
     @Override
+    public FullHttpResponse setProtocolVersion(HttpVersion version) {
+        super.setProtocolVersion(version);
+        return this;
+    }
+
+    @Override
+    public FullHttpResponse setStatus(HttpResponseStatus status) {
+        super.setStatus(status);
+        return this;
+    }
+
+    @Override
     public FullHttpResponse copy() {
-        DefaultFullHttpResponse copy = new DefaultFullHttpResponse(protocolVersion(), status(), data().copy());
+        DefaultFullHttpResponse copy = new DefaultFullHttpResponse(getProtocolVersion(), getStatus(), data().copy());
         copy.headers().set(headers());
         copy.trailingHeaders().set(trailingHeaders());
         return copy;

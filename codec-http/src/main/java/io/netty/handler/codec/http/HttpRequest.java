@@ -38,12 +38,25 @@ public interface HttpRequest extends HttpMessage {
      *
      * @return The {@link HttpMethod} of this {@link HttpRequest}
      */
-    HttpMethod method();
+    HttpMethod getMethod();
+
+    /**
+     * Set the {@link HttpMethod} of this {@link HttpRequest}.
+     */
+    HttpRequest setMethod(HttpMethod method);
 
     /**
      * Returns the requested URI (or alternatively, path)
      *
      * @return The URI being requested
      */
-    String uri();
+    String getUri();
+
+    /**
+     *  Set the requested URI (or alternatively, path)
+     */
+    HttpRequest setUri(String uri);
+
+    @Override
+    HttpRequest setProtocolVersion(HttpVersion version);
 }

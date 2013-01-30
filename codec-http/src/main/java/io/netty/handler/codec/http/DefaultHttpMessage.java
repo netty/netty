@@ -24,7 +24,7 @@ import java.util.Map;
  */
 public abstract class DefaultHttpMessage extends DefaultHttpObject implements HttpMessage {
 
-    private final HttpVersion version;
+    private HttpVersion version;
     private final HttpHeaders headers = new DefaultHttpHeaders();
 
     /**
@@ -43,7 +43,7 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
     }
 
     @Override
-    public HttpVersion protocolVersion() {
+    public HttpVersion getProtocolVersion() {
         return version;
     }
 
@@ -52,7 +52,7 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
         StringBuilder buf = new StringBuilder();
         buf.append(getClass().getSimpleName());
         buf.append("(version: ");
-        buf.append(protocolVersion().text());
+        buf.append(getProtocolVersion().text());
         buf.append(", keepAlive: ");
         buf.append(HttpHeaders.isKeepAlive(this));
         buf.append(')');
@@ -62,6 +62,12 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
         // Remove the last newline.
         buf.setLength(buf.length() - StringUtil.NEWLINE.length());
         return buf.toString();
+    }
+
+    @Override
+    public HttpMessage setProtocolVersion(HttpVersion version) {
+        this.version = version;
+        return this;
     }
 
     void appendHeaders(StringBuilder buf) {

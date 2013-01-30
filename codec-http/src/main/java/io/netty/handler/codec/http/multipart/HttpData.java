@@ -149,8 +149,8 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
     Charset getCharset();
 
     /**
-     * A convenience method to write an uploaded item to disk. If a previous one
-     * exists, it will be deleted. Once this method is called, if successful,
+     * A convenience getMethod to write an uploaded item to disk. If a previous one
+     * exists, it will be deleted. Once this getMethod is called, if successful,
      * the new file will be out of the cleaner of the factory that creates the
      * original InterfaceHttpData object.
      *

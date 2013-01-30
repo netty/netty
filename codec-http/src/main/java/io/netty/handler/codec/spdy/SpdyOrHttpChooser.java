@@ -154,7 +154,7 @@ public abstract class SpdyOrHttpChooser extends ChannelHandlerAdapter implements
      * when the {@link SelectedProtocol} was {@link SelectedProtocol#SpdyVersion2} or
      * {@link SelectedProtocol#SpdyVersion3}.
      *
-     * Bye default this method will just delecate to {@link #createHttpRequestHandlerForHttp()}, but
+     * Bye default this getMethod will just delecate to {@link #createHttpRequestHandlerForHttp()}, but
      * sub-classes may override this to change the behaviour.
      */
     protected ChannelInboundHandler createHttpRequestHandlerForSpdy() {

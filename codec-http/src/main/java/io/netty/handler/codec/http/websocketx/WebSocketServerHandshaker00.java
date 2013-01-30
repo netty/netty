@@ -140,9 +140,9 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
         res.headers().add(Names.UPGRADE, WEBSOCKET);
         res.headers().add(CONNECTION, Values.UPGRADE);
 
-        // Fill in the headers and contents depending on handshake method.
+        // Fill in the headers and contents depending on handshake getMethod.
         if (isHixie76) {
-            // New handshake method with a challenge:
+            // New handshake getMethod with a challenge:
             res.headers().add(SEC_WEBSOCKET_ORIGIN, req.headers().get(ORIGIN));
             res.headers().add(SEC_WEBSOCKET_LOCATION, uri());
             String subprotocols = req.headers().get(SEC_WEBSOCKET_PROTOCOL);
@@ -170,7 +170,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
             input.writeLong(c);
             res.data().writeBytes(WebSocketUtil.md5(input.array()));
         } else {
-            // Old Hixie 75 handshake method with no challenge:
+            // Old Hixie 75 handshake getMethod with no challenge:
             res.headers().add(WEBSOCKET_ORIGIN, req.headers().get(ORIGIN));
             res.headers().add(WEBSOCKET_LOCATION, uri());
             String protocol = req.headers().get(WEBSOCKET_PROTOCOL);

@@ -103,7 +103,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
             }
 
             HttpRequest request = this.request = (HttpRequest) msg;
-            URI uri = new URI(request.uri());
+            URI uri = new URI(request.getUri());
             if (!uri.getPath().startsWith("/form")) {
                 // Write Menu
                 writeMenu(ctx);
@@ -113,19 +113,19 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
             responseContent.append("WELCOME TO THE WILD WILD WEB SERVER\r\n");
             responseContent.append("===================================\r\n");
 
-            responseContent.append("VERSION: " + request.protocolVersion().text() + "\r\n");
+            responseContent.append("VERSION: " + request.getProtocolVersion().text() + "\r\n");
 
-            responseContent.append("REQUEST_URI: " + request.uri() + "\r\n\r\n");
+            responseContent.append("REQUEST_URI: " + request.getUri() + "\r\n\r\n");
             responseContent.append("\r\n\r\n");
 
-            // new method
+            // new getMethod
             List<Entry<String, String>> headers = request.headers().entries();
             for (Entry<String, String> entry : headers) {
                 responseContent.append("HEADER: " + entry.getKey() + '=' + entry.getValue() + "\r\n");
             }
             responseContent.append("\r\n\r\n");
 
-            // new method
+            // new getMethod
             Set<Cookie> cookies;
             String value = request.headers().get(COOKIE);
             if (value == null) {
@@ -138,7 +138,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
             }
             responseContent.append("\r\n\r\n");
 
-            QueryStringDecoder decoderQuery = new QueryStringDecoder(request.uri());
+            QueryStringDecoder decoderQuery = new QueryStringDecoder(request.getUri());
             Map<String, List<String>> uriAttributes = decoderQuery.parameters();
             for (Entry<String, List<String>> attr: uriAttributes.entrySet()) {
                 for (String attrVal: attr.getValue()) {
@@ -301,7 +301,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
 
         // Decide whether to close the connection or not.
         boolean close = HttpHeaders.Values.CLOSE.equalsIgnoreCase(request.headers().get(CONNECTION))
-                || request.protocolVersion().equals(HttpVersion.HTTP_1_0)
+                || request.getProtocolVersion().equals(HttpVersion.HTTP_1_0)
                 && !HttpHeaders.Values.KEEP_ALIVE.equalsIgnoreCase(request.headers().get(CONNECTION));
 
         // Build the response object.

@@ -150,7 +150,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
         if (charset == null) {
             throw new NullPointerException("charset");
         }
-        if (request.method() != HttpMethod.POST) {
+        if (request.getMethod() != HttpMethod.POST) {
             throw new ErrorDataEncoderException("Cannot create a Encoder if not a POST");
         }
         this.request = request;
@@ -231,7 +231,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
     }
 
     /**
-     * This method returns a List of all InterfaceHttpData from body part.<br>
+     * This getMethod returns a List of all InterfaceHttpData from body part.<br>
 
      * @return the list of InterfaceHttpData from Body part
      */
@@ -890,7 +890,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
 
     /**
      * Returns the next available HttpChunk. The caller is responsible to test if this chunk is the last one (isLast()),
-     * in order to stop calling this method.
+     * in order to stop calling this getMethod.
      *
      * @return the next available HttpChunk
      * @throws ErrorDataEncoderException
@@ -908,7 +908,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
 
     /**
      * Returns the next available HttpChunk. The caller is responsible to test if this chunk is the last one (isLast()),
-     * in order to stop calling this method.
+     * in order to stop calling this getMethod.
      *
      * @return the next available HttpChunk
      * @throws ErrorDataEncoderException

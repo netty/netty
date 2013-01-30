@@ -58,7 +58,7 @@ public class QueryStringEncoder {
      */
     public QueryStringEncoder(String uri, Charset charset) {
         if (uri == null) {
-            throw new NullPointerException("uri");
+            throw new NullPointerException("getUri");
         }
         if (charset == null) {
             throw new NullPointerException("charset");
@@ -84,7 +84,7 @@ public class QueryStringEncoder {
     /**
      * Returns the URL-encoded URI object which was created from the path string
      * specified in the constructor and the parameters added by
-     * {@link #addParam(String, String)} method.
+     * {@link #addParam(String, String)} getMethod.
      */
     public URI toUri() throws URISyntaxException {
         return new URI(toString());
@@ -93,7 +93,7 @@ public class QueryStringEncoder {
     /**
      * Returns the URL-encoded URI which was created from the path string
      * specified in the constructor and the parameters added by
-     * {@link #addParam(String, String)} method.
+     * {@link #addParam(String, String)} getMethod.
      */
     @Override
     public String toString() {

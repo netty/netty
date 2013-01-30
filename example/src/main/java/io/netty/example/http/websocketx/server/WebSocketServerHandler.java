@@ -62,19 +62,19 @@ public class WebSocketServerHandler extends ChannelInboundMessageHandlerAdapter<
 
     private void handleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
         // Handle a bad request.
-        if (!req.decoderResult().isSuccess()) {
+        if (!req.getDecoderResult().isSuccess()) {
             sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST));
             return;
         }
 
         // Allow only GET methods.
-        if (req.method() != GET) {
+        if (req.getMethod() != GET) {
             sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN));
             return;
         }
 
         // Send the demo page and favicon.ico
-        if ("/".equals(req.uri())) {
+        if ("/".equals(req.getUri())) {
             ByteBuf content = WebSocketServerIndexPage.getContent(getWebSocketLocation(req));
             FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
 
@@ -84,7 +84,7 @@ public class WebSocketServerHandler extends ChannelInboundMessageHandlerAdapter<
             sendHttpResponse(ctx, req, res);
             return;
         }
-        if ("/favicon.ico".equals(req.uri())) {
+        if ("/favicon.ico".equals(req.getUri())) {
             FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, NOT_FOUND);
             sendHttpResponse(ctx, req, res);
             return;
@@ -127,15 +127,15 @@ public class WebSocketServerHandler extends ChannelInboundMessageHandlerAdapter<
 
     private static void sendHttpResponse(
             ChannelHandlerContext ctx, FullHttpRequest req, FullHttpResponse res) {
-        // Generate an error page if response status code is not OK (200).
-        if (res.status().code() != 200) {
-            res.data().writeBytes(Unpooled.copiedBuffer(res.status().toString(), CharsetUtil.UTF_8));
+        // Generate an error page if response getStatus code is not OK (200).
+        if (res.getStatus().code() != 200) {
+            res.data().writeBytes(Unpooled.copiedBuffer(res.getStatus().toString(), CharsetUtil.UTF_8));
             setContentLength(res, res.data().readableBytes());
         }
 
         // Send the response and close the connection if necessary.
         ChannelFuture f = ctx.channel().write(res);
-        if (!isKeepAlive(req) || res.status().code() != 200) {
+        if (!isKeepAlive(req) || res.getStatus().code() != 200) {
             f.addListener(ChannelFutureListener.CLOSE);
         }
     }

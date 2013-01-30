@@ -22,13 +22,13 @@ import io.netty.util.internal.StringUtil;
  */
 public class DefaultHttpResponse extends DefaultHttpMessage implements HttpResponse {
 
-    private final HttpResponseStatus status;
+    private HttpResponseStatus status;
 
     /**
      * Creates a new instance.
      *
      * @param version the HTTP version of this response
-     * @param status  the status of this response
+     * @param status  the getStatus of this response
      */
     public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status) {
         super(version);
@@ -39,8 +39,20 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
     }
 
     @Override
-    public HttpResponseStatus status() {
+    public HttpResponseStatus getStatus() {
         return status;
+    }
+
+    @Override
+    public HttpResponse setStatus(HttpResponseStatus status) {
+        this.status = status;
+        return this;
+    }
+
+    @Override
+    public HttpResponse setProtocolVersion(HttpVersion version) {
+        super.setProtocolVersion(version);
+        return this;
     }
 
     @Override
@@ -48,12 +60,12 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
         StringBuilder buf = new StringBuilder();
         buf.append(getClass().getSimpleName());
         buf.append(", decodeResult: ");
-        buf.append(decoderResult());
+        buf.append(getDecoderResult());
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
-        buf.append(protocolVersion().text());
+        buf.append(getProtocolVersion().text());
         buf.append(' ');
-        buf.append(status().toString());
+        buf.append(getStatus().toString());
         buf.append(StringUtil.NEWLINE);
         appendHeaders(buf);
 

@@ -30,8 +30,8 @@ public class HttpSnoopClientHandler extends ChannelInboundMessageHandlerAdapter<
         if (msg instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) msg;
 
-            System.out.println("STATUS: " + response.status());
-            System.out.println("VERSION: " + response.protocolVersion());
+            System.out.println("STATUS: " + response.getStatus());
+            System.out.println("VERSION: " + response.getProtocolVersion());
             System.out.println();
 
             if (!response.headers().isEmpty()) {

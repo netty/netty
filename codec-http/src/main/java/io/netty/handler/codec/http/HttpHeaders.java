@@ -557,7 +557,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
             return false;
         }
 
-        if (message.protocolVersion().isKeepAliveDefault()) {
+        if (message.getProtocolVersion().isKeepAliveDefault()) {
             return !Values.CLOSE.equalsIgnoreCase(connection);
         } else {
             return Values.KEEP_ALIVE.equalsIgnoreCase(connection);
@@ -566,7 +566,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
 
     /**
      * Sets the value of the {@code "Connection"} header depending on the
-     * protocol version of the specified message.  This method sets or removes
+     * protocol version of the specified message.  This getMethod sets or removes
      * the {@code "Connection"} header depending on what the default keep alive
      * mode of the message's protocol version is, as specified by
      * {@link HttpVersion#isKeepAliveDefault()}.
@@ -585,7 +585,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      */
     public static void setKeepAlive(HttpMessage message, boolean keepAlive) {
         HttpHeaders h = message.headers();
-        if (message.protocolVersion().isKeepAliveDefault()) {
+        if (message.getProtocolVersion().isKeepAliveDefault()) {
             if (keepAlive) {
                 h.remove(Names.CONNECTION);
             } else {
@@ -642,7 +642,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     /**
      * Sets a new header with the specified name and values.  If there is an
      * existing header with the same name, the existing header is removed.
-     * This method can be represented approximately as the following code:
+     * This getMethod can be represented approximately as the following code:
      * <pre>
      * removeHeader(message, name);
      * for (Object v: values) {
@@ -883,14 +883,14 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         HttpHeaders h = message.headers();
         if (message instanceof HttpRequest) {
             HttpRequest req = (HttpRequest) message;
-            if (HttpMethod.GET.equals(req.method()) &&
+            if (HttpMethod.GET.equals(req.getMethod()) &&
                 h.contains(Names.SEC_WEBSOCKET_KEY1) &&
                 h.contains(Names.SEC_WEBSOCKET_KEY2)) {
                 return 8;
             }
         } else if (message instanceof HttpResponse) {
             HttpResponse res = (HttpResponse) message;
-            if (res.status().code() == 101 &&
+            if (res.getStatus().code() == 101 &&
                 h.contains(Names.SEC_WEBSOCKET_ORIGIN) &&
                 h.contains(Names.SEC_WEBSOCKET_LOCATION)) {
                 return 16;
@@ -971,7 +971,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         }
 
         // It works only on HTTP/1.1 or later.
-        if (message.protocolVersion().compareTo(HttpVersion.HTTP_1_1) < 0) {
+        if (message.getProtocolVersion().compareTo(HttpVersion.HTTP_1_1) < 0) {
             return false;
         }
 
@@ -1232,7 +1232,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     /**
      * Adds a new header with the specified name and values.
      *
-     * This method can be represented approximately as the following code:
+     * This getMethod can be represented approximately as the following code:
      * <pre>
      * for (Object v: values) {
      *     if (v == null) {
@@ -1282,7 +1282,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * Sets a header with the specified name and values.
      *
      * If there is an existing header with the same name, it is removed.
-     * This method can be represented approximately as the following code:
+     * This getMethod can be represented approximately as the following code:
      * <pre>
      * headers.remove(name);
      * for (Object v: values) {

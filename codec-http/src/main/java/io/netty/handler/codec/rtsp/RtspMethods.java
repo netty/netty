@@ -21,14 +21,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * The request method of RTSP.
+ * The request getMethod of RTSP.
  * @apiviz.exclude
  */
 public final class RtspMethods {
 
     /**
-     * The OPTIONS method represents a request for information about the communication options
-     * available on the request/response chain identified by the Request-URI. This method allows
+     * The OPTIONS getMethod represents a request for information about the communication options
+     * available on the request/response chain identified by the Request-URI. This getMethod allows
      * the client to determine the options and/or requirements associated with a resource, or the
      * capabilities of a server, without implying a resource action or initiating a resource
      * retrieval.
@@ -36,7 +36,7 @@ public final class RtspMethods {
     public static final HttpMethod OPTIONS = HttpMethod.OPTIONS;
 
     /**
-     * The DESCRIBE method retrieves the description of a presentation or
+     * The DESCRIBE getMethod retrieves the description of a presentation or
      * media object identified by the request URL from a server.
      */
     public static final HttpMethod DESCRIBE = new HttpMethod("DESCRIBE");
@@ -55,7 +55,7 @@ public final class RtspMethods {
     public static final HttpMethod SETUP = new HttpMethod("SETUP");
 
     /**
-     * The PLAY method tells the server to start sending data via the
+     * The PLAY getMethod tells the server to start sending data via the
      * mechanism specified in SETUP.
      */
     public static final HttpMethod PLAY = new HttpMethod("PLAY");
@@ -91,7 +91,7 @@ public final class RtspMethods {
     public static final HttpMethod REDIRECT = new HttpMethod("REDIRECT");
 
     /**
-     * The RECORD method initiates recording a range of media data according to
+     * The RECORD getMethod initiates recording a range of media data according to
      * the presentation description.
      */
     public static final HttpMethod RECORD = new HttpMethod("RECORD");
@@ -114,7 +114,7 @@ public final class RtspMethods {
 
     /**
      * Returns the {@link HttpMethod} represented by the specified name.
-     * If the specified name is a standard RTSP method name, a cached instance
+     * If the specified name is a standard RTSP getMethod name, a cached instance
      * will be returned.  Otherwise, a new instance will be returned.
      */
     public static HttpMethod valueOf(String name) {

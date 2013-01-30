@@ -18,7 +18,7 @@ package io.netty.handler.codec.rtsp;
 import io.netty.handler.codec.http.HttpResponseStatus;
 
 /**
- * The status code and its description of a RTSP response.
+ * The getStatus code and its description of a RTSP response.
  * @apiviz.exclude
  */
 public final class RtspResponseStatuses {
@@ -262,7 +262,7 @@ public final class RtspResponseStatuses {
 
     /**
      * Returns the {@link HttpResponseStatus} represented by the specified code.
-     * If the specified code is a standard RTSP status code, a cached instance
+     * If the specified code is a standard RTSP getStatus code, a cached instance
      * will be returned.  Otherwise, a new instance will be returned.
      */
     public static HttpResponseStatus valueOf(int code) {
