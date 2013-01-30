@@ -59,6 +59,16 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
     private EventLoopGroup childGroup;
     private ChannelHandler childHandler;
 
+    public ServerBootstrap() { }
+
+    public ServerBootstrap(ServerBootstrap bootstrap) {
+        super(bootstrap);
+        childGroup = bootstrap.childGroup;
+        childHandler = bootstrap.childHandler;
+        childOptions.putAll(bootstrap.childOptions);
+        childAttrs.putAll(bootstrap.childAttrs);
+    }
+
     /**
      * Specify the {@link EventLoopGroup} which is used for the parent (acceptor) and the child (client).
      */
@@ -145,7 +155,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
 
     @Override
     ChannelFuture doBind(SocketAddress localAddress) {
-        Channel channel = factory().newChannel();
+        Channel channel = channelFactory().newChannel();
 
         try {
             channel.config().setOptions(options());
@@ -239,6 +249,12 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
     }
 
     @Override
+    @SuppressWarnings("CloneDoesntCallSuperClone")
+    public ServerBootstrap clone() {
+        return new ServerBootstrap(this);
+    }
+
+    @Override
     public String toString() {
         StringBuilder buf = new StringBuilder(super.toString());
         buf.setLength(buf.length() - 1);
@@ -273,4 +289,3 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
         return buf.toString();
     }
 }
-

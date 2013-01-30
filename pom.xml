@@ -341,7 +341,7 @@
           <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>netty-build</artifactId>
-            <version>13</version>
+            <version>14</version>
           </dependency>
         </dependencies>
       </plugin>
