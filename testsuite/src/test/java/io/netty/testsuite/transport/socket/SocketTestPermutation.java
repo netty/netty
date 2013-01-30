@@ -88,7 +88,7 @@ final class SocketTestPermutation {
         bfs.add(new Factory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
-                return new Bootstrap().group(new NioEventLoopGroup()).channelFactory(new ChannelFactory() {
+                return new Bootstrap().group(new NioEventLoopGroup()).channelFactory(new ChannelFactory<Channel>() {
                     @Override
                     public Channel newChannel() {
                        return new NioDatagramChannel(InternetProtocolFamily.IPv4);

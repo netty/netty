@@ -27,8 +27,6 @@ import io.netty.bootstrap.ChannelFactory;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.udt.UdtChannel;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.nio.channels.spi.SelectorProvider;
@@ -40,23 +38,20 @@ import java.nio.channels.spi.SelectorProvider;
  * <p>
  * Provides {@link SelectorProvider} for UDT channels.
  */
-public final class NioUdtProvider implements ChannelFactory {
-
-    private static final InternalLogger logger = InternalLoggerFactory
-            .getInstance(NioUdtProvider.class);
+public final class NioUdtProvider implements ChannelFactory<UdtChannel> {
 
     /**
      * {@link ChannelFactory} for UDT Byte Acceptor. See {@link TypeUDT#STREAM}
      * and {@link KindUDT#ACCEPTOR}.
      */
-    public static final ChannelFactory BYTE_ACCEPTOR = new NioUdtProvider(
+    public static final ChannelFactory<UdtChannel> BYTE_ACCEPTOR = new NioUdtProvider(
             TypeUDT.STREAM, KindUDT.ACCEPTOR);
 
     /**
      * {@link ChannelFactory} for UDT Byte Connector. See {@link TypeUDT#STREAM}
      * and {@link KindUDT#CONNECTOR}.
      */
-    public static final ChannelFactory BYTE_CONNECTOR = new NioUdtProvider(
+    public static final ChannelFactory<UdtChannel> BYTE_CONNECTOR = new NioUdtProvider(
             TypeUDT.STREAM, KindUDT.CONNECTOR);
 
     /**
@@ -69,21 +64,21 @@ public final class NioUdtProvider implements ChannelFactory {
      * {@link ChannelFactory} for UDT Byte Rendezvous. See
      * {@link TypeUDT#STREAM} and {@link KindUDT#RENDEZVOUS}.
      */
-    public static final ChannelFactory BYTE_RENDEZVOUS = new NioUdtProvider(
+    public static final ChannelFactory<UdtChannel> BYTE_RENDEZVOUS = new NioUdtProvider(
             TypeUDT.STREAM, KindUDT.RENDEZVOUS);
 
     /**
      * {@link ChannelFactory} for UDT Message Acceptor. See
      * {@link TypeUDT#DATAGRAM} and {@link KindUDT#ACCEPTOR}.
      */
-    public static final ChannelFactory MESSAGE_ACCEPTOR = new NioUdtProvider(
+    public static final ChannelFactory<UdtChannel> MESSAGE_ACCEPTOR = new NioUdtProvider(
             TypeUDT.DATAGRAM, KindUDT.ACCEPTOR);
 
     /**
      * {@link ChannelFactory} for UDT Message Connector. See
      * {@link TypeUDT#DATAGRAM} and {@link KindUDT#CONNECTOR}.
      */
-    public static final ChannelFactory MESSAGE_CONNECTOR = new NioUdtProvider(
+    public static final ChannelFactory<UdtChannel> MESSAGE_CONNECTOR = new NioUdtProvider(
             TypeUDT.DATAGRAM, KindUDT.CONNECTOR);
 
     /**
@@ -96,7 +91,7 @@ public final class NioUdtProvider implements ChannelFactory {
      * {@link ChannelFactory} for UDT Message Rendezvous. See
      * {@link TypeUDT#DATAGRAM} and {@link KindUDT#RENDEZVOUS}.
      */
-    public static final ChannelFactory MESSAGE_RENDEZVOUS = new NioUdtProvider(
+    public static final ChannelFactory<UdtChannel> MESSAGE_RENDEZVOUS = new NioUdtProvider(
             TypeUDT.DATAGRAM, KindUDT.RENDEZVOUS);
 
     /**
