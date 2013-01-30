@@ -42,7 +42,7 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
 
     public Bootstrap() { }
 
-    public Bootstrap(Bootstrap bootstrap) {
+    private Bootstrap(Bootstrap bootstrap) {
         super(bootstrap);
         remoteAddress = bootstrap.remoteAddress;
     }
