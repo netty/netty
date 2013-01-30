@@ -21,9 +21,11 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.stream.ChunkedFile;
 import io.netty.util.CharsetUtil;
@@ -166,7 +168,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
         }
         long fileLength = raf.length();
 
-        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK);
+        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
         setContentLength(response, fileLength);
         setContentTypeHeader(response, file);
         setDateAndCacheHeaders(response, file);
@@ -329,7 +331,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
      * @param fileToCache
      *            file to extract content type
      */
-    private static void setDateAndCacheHeaders(FullHttpResponse response, File fileToCache) {
+    private static void setDateAndCacheHeaders(HttpResponse response, File fileToCache) {
         SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
         dateFormatter.setTimeZone(TimeZone.getTimeZone(HTTP_DATE_GMT_TIMEZONE));
 
@@ -353,7 +355,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundMessageHandlerAda
      * @param file
      *            file to extract content type
      */
-    private static void setContentTypeHeader(FullHttpResponse response, File file) {
+    private static void setContentTypeHeader(HttpResponse response, File file) {
         MimetypesFileTypeMap mimeTypesMap = new MimetypesFileTypeMap();
         response.headers().set(CONTENT_TYPE, mimeTypesMap.getContentType(file.getPath()));
     }
