@@ -52,10 +52,9 @@ public class WebSocketServer {
         try {
             b.group(new NioEventLoopGroup(), new NioEventLoopGroup())
              .channel(NioServerSocketChannel.class)
-             .localAddress(port)
              .childHandler(new WebSocketServerInitializer());
 
-            Channel ch = b.bind().sync().channel();
+            Channel ch = b.bind(port).sync().channel();
             System.out.println("Web socket server started at port " + port + '.');
             System.out.println("Open your browser and navigate to http://localhost:" + port + '/');
 

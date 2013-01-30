@@ -20,8 +20,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioEventLoopGroup;
 
-import java.net.InetSocketAddress;
-
 /**
  * A UDP server that responds to the QOTM (quote of the moment) request to a
  * {@link QuoteOfTheMomentClient}.
@@ -41,11 +39,10 @@ public class QuoteOfTheMomentServer {
         try {
             b.group(new NioEventLoopGroup())
              .channel(NioDatagramChannel.class)
-             .localAddress(new InetSocketAddress(port))
              .option(ChannelOption.SO_BROADCAST, true)
              .handler(new QuoteOfTheMomentServerHandler());
 
-            b.bind().sync().channel().closeFuture().await();
+            b.bind(port).sync().channel().closeFuture().await();
         } finally {
             b.shutdown();
         }

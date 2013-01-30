@@ -25,8 +25,6 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 
-import java.net.InetSocketAddress;
-
 /**
  * Sends one message when a connection is open and echoes back any received
  * data to the server.  Simply put, the echo client initiates the ping-pong
@@ -52,7 +50,6 @@ public class EchoClient {
             b.group(new NioEventLoopGroup())
              .channel(NioSocketChannel.class)
              .option(ChannelOption.TCP_NODELAY, true)
-             .remoteAddress(new InetSocketAddress(host, port))
              .handler(new ChannelInitializer<SocketChannel>() {
                  @Override
                  public void initChannel(SocketChannel ch) throws Exception {
@@ -63,7 +60,7 @@ public class EchoClient {
              });
 
             // Start the client.
-            ChannelFuture f = b.connect().sync();
+            ChannelFuture f = b.connect(host, port).sync();
 
             // Wait until the connection is closed.
             f.channel().closeFuture().sync();

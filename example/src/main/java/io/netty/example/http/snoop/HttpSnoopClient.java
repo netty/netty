@@ -27,7 +27,6 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
 
-import java.net.InetSocketAddress;
 import java.net.URI;
 
 /**
@@ -66,11 +65,10 @@ public class HttpSnoopClient {
         try {
             b.group(new NioEventLoopGroup())
              .channel(NioSocketChannel.class)
-             .handler(new HttpSnoopClientInitializer(ssl))
-             .remoteAddress(new InetSocketAddress(host, port));
+             .handler(new HttpSnoopClientInitializer(ssl));
 
             // Make the connection attempt.
-            Channel ch = b.connect().sync().channel();
+            Channel ch = b.connect(host, port).sync().channel();
 
             // Prepare the HTTP request.
             HttpRequest request = new DefaultHttpRequest(

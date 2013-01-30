@@ -38,7 +38,6 @@ public class DiscardServer {
         try {
             b.group(new NioEventLoopGroup(), new NioEventLoopGroup())
              .channel(NioServerSocketChannel.class)
-             .localAddress(port)
              .childHandler(new ChannelInitializer<SocketChannel>() {
                 @Override
                 public void initChannel(SocketChannel ch) throws Exception {
@@ -47,7 +46,7 @@ public class DiscardServer {
              });
 
             // Bind and start to accept incoming connections.
-            ChannelFuture f = b.bind().sync();
+            ChannelFuture f = b.bind(port).sync();
 
             // Wait until the server socket is closed.
             // In this example, this does not happen, but you can do that to gracefully

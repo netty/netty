@@ -34,7 +34,6 @@ import io.netty.util.CharsetUtil;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.net.InetSocketAddress;
 
 /**
  * Server that accept the path of a file an echo back its content.
@@ -54,7 +53,6 @@ public class FileServer {
             b.group(new NioEventLoopGroup(), new NioEventLoopGroup())
              .channel(NioServerSocketChannel.class)
              .option(ChannelOption.SO_BACKLOG, 100)
-             .localAddress(new InetSocketAddress(port))
              .childOption(ChannelOption.TCP_NODELAY, true)
              .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new ChannelInitializer<SocketChannel>() {
@@ -69,7 +67,7 @@ public class FileServer {
              });
 
             // Start the server.
-            ChannelFuture f = b.bind().sync();
+            ChannelFuture f = b.bind(port).sync();
 
             // Wait until the server socket is closed.
             f.channel().closeFuture().sync();

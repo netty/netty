@@ -19,19 +19,17 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.nio.NioEventLoopGroup;
+import io.netty.channel.udt.UdtChannel;
+import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.example.udt.util.UtilConsoleReporter;
 import io.netty.example.udt.util.UtilThreadFactory;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.channel.udt.UdtChannel;
-import io.netty.channel.udt.nio.NioUdtProvider;
-
-import java.net.InetSocketAddress;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 
 /**
  * UDT Message Flow client
@@ -66,8 +64,6 @@ public class MsgEchoClient {
         try {
             boot.group(connectGroup)
                     .channelFactory(NioUdtProvider.MESSAGE_CONNECTOR)
-                    .localAddress("localhost", 0)
-                    .remoteAddress(new InetSocketAddress(host, port))
                     .handler(new ChannelInitializer<UdtChannel>() {
                         @Override
                         public void initChannel(final UdtChannel ch)
@@ -78,7 +74,7 @@ public class MsgEchoClient {
                         }
                     });
             // Start the client.
-            final ChannelFuture f = boot.connect().sync();
+            final ChannelFuture f = boot.connect(host, port).sync();
             // Wait until the connection is closed.
             f.channel().closeFuture().sync();
         } finally {

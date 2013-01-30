@@ -43,7 +43,6 @@ public class LocalTransportThreadModelTest2 {
         serverBootstrap
                 .group(new LocalEventLoopGroup(), new LocalEventLoopGroup())
                 .channel(LocalServerChannel.class)
-                .localAddress(new LocalAddress(LOCAL_CHANNEL))
                 .childHandler(serverHandler);
 
         Bootstrap clientBootstrap = new Bootstrap();
@@ -53,7 +52,7 @@ public class LocalTransportThreadModelTest2 {
                 .channel(LocalChannel.class)
                 .remoteAddress(new LocalAddress(LOCAL_CHANNEL)).handler(clientHandler);
 
-        serverBootstrap.bind().sync();
+        serverBootstrap.bind(new LocalAddress(LOCAL_CHANNEL)).sync();
 
         int count = 100;
         for (int i = 1; i < count + 1; i ++) {

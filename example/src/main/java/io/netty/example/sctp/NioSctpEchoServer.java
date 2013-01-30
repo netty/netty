@@ -21,12 +21,10 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.sctp.SctpChannel;
 import io.netty.channel.sctp.SctpChannelOption;
-import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.sctp.nio.NioSctpServerChannel;
+import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-
-import java.net.InetSocketAddress;
 
 /**
  * Echoes back any received data from a SCTP client.
@@ -46,7 +44,6 @@ public class NioSctpEchoServer {
             b.group(new NioEventLoopGroup(), new NioEventLoopGroup())
              .channel(NioSctpServerChannel.class)
              .option(ChannelOption.SO_BACKLOG, 100)
-             .localAddress(new InetSocketAddress(port))
              .childOption(SctpChannelOption.SCTP_NODELAY, true)
              .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new ChannelInitializer<SctpChannel>() {
@@ -59,7 +56,7 @@ public class NioSctpEchoServer {
              });
 
             // Start the server.
-            ChannelFuture f = b.bind().sync();
+            ChannelFuture f = b.bind(port).sync();
 
             // Wait until the server socket is closed.
             f.channel().closeFuture().sync();

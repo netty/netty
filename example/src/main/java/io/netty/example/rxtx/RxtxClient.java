@@ -18,12 +18,12 @@ package io.netty.example.rxtx;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.rxtx.RxtxChannel;
+import io.netty.channel.rxtx.RxtxDeviceAddress;
 import io.netty.channel.socket.oio.OioEventLoopGroup;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
-import io.netty.channel.rxtx.RxtxChannel;
-import io.netty.channel.rxtx.RxtxDeviceAddress;
 
 /**
  * Sends one message to a serial device
@@ -35,7 +35,6 @@ public final class RxtxClient {
         try {
             b.group(new OioEventLoopGroup())
              .channel(RxtxChannel.class)
-             .remoteAddress(new RxtxDeviceAddress("/dev/ttyUSB0"))
              .handler(new ChannelInitializer<RxtxChannel>() {
                  @Override
                  public void initChannel(RxtxChannel ch) throws Exception {
@@ -48,7 +47,7 @@ public final class RxtxClient {
                  }
              });
 
-            ChannelFuture f = b.connect().sync();
+            ChannelFuture f = b.connect(new RxtxDeviceAddress("/dev/ttyUSB0")).sync();
 
             f.channel().closeFuture().sync();
         } finally {

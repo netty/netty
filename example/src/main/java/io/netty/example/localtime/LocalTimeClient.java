@@ -48,11 +48,10 @@ public class LocalTimeClient {
         try {
             b.group(new NioEventLoopGroup())
              .channel(NioSocketChannel.class)
-             .remoteAddress(host, port)
              .handler(new LocalTimeClientInitializer());
 
             // Make a new connection.
-            Channel ch = b.connect().sync().channel();
+            Channel ch = b.connect(host, port).sync().channel();
 
             // Get the handler instance to initiate the request.
             LocalTimeClientHandler handler =

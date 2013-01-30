@@ -36,10 +36,9 @@ public class SecureChatServer {
         try {
             b.group(new NioEventLoopGroup(), new NioEventLoopGroup())
              .channel(NioServerSocketChannel.class)
-             .localAddress(port)
              .childHandler(new SecureChatServerInitializer());
 
-            b.bind().sync().channel().closeFuture().sync();
+            b.bind(port).sync().channel().closeFuture().sync();
         } finally {
             b.shutdown();
         }

@@ -41,7 +41,6 @@ public class PortUnificationServer {
         try {
             b.group(new NioEventLoopGroup(), new NioEventLoopGroup())
              .channel(NioServerSocketChannel.class)
-             .localAddress(port)
              .childHandler(new ChannelInitializer<SocketChannel>() {
                 @Override
                 public void initChannel(SocketChannel ch) throws Exception {
@@ -50,7 +49,7 @@ public class PortUnificationServer {
             });
 
             // Bind and start to accept incoming connections.
-            b.bind().sync().channel().closeFuture().sync();
+            b.bind(port).sync().channel().closeFuture().sync();
         } finally {
             b.shutdown();
         }

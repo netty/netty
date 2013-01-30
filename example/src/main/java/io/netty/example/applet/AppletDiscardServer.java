@@ -42,13 +42,13 @@ public class AppletDiscardServer extends JApplet {
         try {
             bootstrap = new ServerBootstrap();
             bootstrap.group(new NioEventLoopGroup(), new NioEventLoopGroup()).channel(NioServerSocketChannel.class)
-                    .localAddress(9999).childHandler(new ChannelInitializer<SocketChannel>() {
+                    .childHandler(new ChannelInitializer<SocketChannel>() {
                 @Override
                 public void initChannel(SocketChannel ch) throws Exception {
                     ch.pipeline().addLast(new DiscardServerHandler());
                 }
             });
-            ChannelFuture f = bootstrap.bind().sync();
+            ChannelFuture f = bootstrap.bind(9999).sync();
             f.channel().closeFuture().sync();
         } catch (Exception ex) {
             ex.printStackTrace();

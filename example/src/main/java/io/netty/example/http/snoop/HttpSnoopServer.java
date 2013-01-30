@@ -20,8 +20,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
-import java.net.InetSocketAddress;
-
 /**
  * An HTTP server that sends back the content of the received HTTP request
  * in a pretty plaintext form.
@@ -41,10 +39,9 @@ public class HttpSnoopServer {
         try {
             b.group(new NioEventLoopGroup(), new NioEventLoopGroup())
              .channel(NioServerSocketChannel.class)
-             .childHandler(new HttpSnoopServerInitializer())
-             .localAddress(new InetSocketAddress(port));
+             .childHandler(new HttpSnoopServerInitializer());
 
-            Channel ch = b.bind().sync().channel();
+            Channel ch = b.bind(port).sync().channel();
             ch.closeFuture().sync();
         } finally {
             b.shutdown();

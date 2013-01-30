@@ -40,11 +40,10 @@ public class DiscardClient {
         try {
             b.group(new NioEventLoopGroup())
              .channel(NioSocketChannel.class)
-             .remoteAddress(host, port)
              .handler(new DiscardClientHandler(firstMessageSize));
 
             // Make the connection attempt.
-            ChannelFuture f = b.connect().sync();
+            ChannelFuture f = b.connect(host, port).sync();
 
             // Wait until the connection is closed.
             f.channel().closeFuture().sync();

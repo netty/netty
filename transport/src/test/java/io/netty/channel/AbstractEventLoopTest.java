@@ -20,8 +20,6 @@ import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import org.junit.Test;
 
-import java.net.InetSocketAddress;
-
 import static org.junit.Assert.*;
 
 public abstract class AbstractEventLoopTest {
@@ -37,7 +35,7 @@ public abstract class AbstractEventLoopTest {
 
         ServerBootstrap bootstrap = new ServerBootstrap();
         ChannelFuture future = bootstrap.channel(newChannel()).group(group)
-                .localAddress(new InetSocketAddress(0)).childHandler(new ChannelInitializer<SocketChannel>() {
+                .childHandler(new ChannelInitializer<SocketChannel>() {
 
                     @Override
                     public void initChannel(SocketChannel ch) throws Exception {
@@ -50,7 +48,7 @@ public abstract class AbstractEventLoopTest {
 
                     }
                 })
-                .bind().awaitUninterruptibly();
+                .bind(0).awaitUninterruptibly();
 
         EventExecutor executor = future.channel().pipeline().context(TestChannelHandler2.class).executor();
         EventExecutor executor1 = future.channel().pipeline().context(TestChannelHandler.class).executor();

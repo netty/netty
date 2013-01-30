@@ -20,7 +20,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.AttributeKey;
@@ -28,7 +27,6 @@ import io.netty.util.AttributeKey;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.channels.ClosedChannelException;
 import java.util.Map.Entry;
 
 /**
@@ -67,24 +65,16 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap> {
     }
 
     @Override
-    public ChannelFuture bind(ChannelPromise future) {
-        validate(future);
-        if (localAddress() == null) {
-            throw new IllegalStateException("localAddress not set");
-        }
-
+    ChannelFuture doBind(SocketAddress localAddress) {
+        Channel channel = factory().newChannel();
         try {
-            init(future.channel());
+            init(channel);
         } catch (Throwable t) {
-            future.setFailure(t);
-            return future;
+            channel.close();
+            return channel.newFailedFuture(t);
         }
 
-        if (!ensureOpen(future)) {
-            return future;
-        }
-
-        return future.channel().bind(localAddress(), future).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+        return channel.bind(localAddress).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
     }
 
     /**
@@ -92,50 +82,76 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap> {
      */
     public ChannelFuture connect() {
         validate();
-        Channel channel = factory().newChannel();
-        return connect(channel.newPromise());
+        SocketAddress remoteAddress = this.remoteAddress;
+        if (remoteAddress == null) {
+            throw new IllegalStateException("remoteAddress not set");
+        }
+
+        return doConnect(remoteAddress, localAddress());
+    }
+
+    /**
+     * Connect a {@link Channel} to the remote peer.
+     */
+    public ChannelFuture connect(String inetHost, int inetPort) {
+        return connect(new InetSocketAddress(inetHost, inetPort));
+    }
+
+    /**
+     * Connect a {@link Channel} to the remote peer.
+     */
+    public ChannelFuture connect(InetAddress inetHost, int inetPort) {
+        return connect(new InetSocketAddress(inetHost, inetPort));
+    }
+
+    /**
+     * Connect a {@link Channel} to the remote peer.
+     */
+    public ChannelFuture connect(SocketAddress remoteAddress) {
+        if (remoteAddress == null) {
+            throw new NullPointerException("remoteAddress");
+        }
+
+        validate();
+        return doConnect(remoteAddress, localAddress());
+    }
+
+    /**
+     * Connect a {@link Channel} to the remote peer.
+     */
+    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
+        if (remoteAddress == null) {
+            throw new NullPointerException("remoteAddress");
+        }
+        validate();
+        return doConnect(remoteAddress, localAddress);
     }
 
     /**
      * @see {@link #connect()}
      */
-    public ChannelFuture connect(ChannelPromise future) {
-        validate(future);
-        if (remoteAddress == null) {
-            throw new IllegalStateException("remoteAddress not set");
-        }
+    private ChannelFuture doConnect(SocketAddress remoteAddress, SocketAddress localAddress) {
+        final Channel channel = factory().newChannel();
 
         try {
-            init(future.channel());
+            init(channel);
         } catch (Throwable t) {
-            future.setFailure(t);
-            return future;
+            channel.close();
+            return channel.newFailedFuture(t);
         }
 
-        if (!ensureOpen(future)) {
-            return future;
-        }
-
-        if (localAddress() == null) {
-            future.channel().connect(remoteAddress, future);
+        final ChannelFuture future;
+        if (localAddress == null) {
+            future = channel.connect(remoteAddress);
         } else {
-            future.channel().connect(remoteAddress, localAddress(), future);
+            future = channel.connect(remoteAddress, localAddress);
         }
+
         return future.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
     }
 
     @SuppressWarnings("unchecked")
     private void init(Channel channel) throws Exception {
-        if (channel.isActive()) {
-            throw new IllegalStateException("channel already active:: " + channel);
-        }
-        if (channel.isRegistered()) {
-            throw new IllegalStateException("channel already registered: " + channel);
-        }
-        if (!channel.isOpen()) {
-            throw new ClosedChannelException();
-        }
-
         ChannelPipeline p = channel.pipeline();
         p.addLast(handler());
 
@@ -157,7 +173,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap> {
     }
 
     @Override
-    protected void validate() {
+    public void validate() {
         super.validate();
         if (handler() == null) {
             throw new IllegalStateException("handler not set");

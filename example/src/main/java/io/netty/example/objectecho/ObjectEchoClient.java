@@ -45,7 +45,6 @@ public class ObjectEchoClient {
         try {
             b.group(new NioEventLoopGroup())
              .channel(NioSocketChannel.class)
-             .remoteAddress(host, port)
              .handler(new ChannelInitializer<SocketChannel>() {
                 @Override
                 public void initChannel(SocketChannel ch) throws Exception {
@@ -57,7 +56,7 @@ public class ObjectEchoClient {
              });
 
             // Start the connection attempt.
-            b.connect().sync().channel().closeFuture().sync();
+            b.connect(host, port).sync().channel().closeFuture().sync();
         } finally {
             b.shutdown();
         }

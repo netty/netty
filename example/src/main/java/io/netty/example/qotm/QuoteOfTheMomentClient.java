@@ -45,11 +45,10 @@ public class QuoteOfTheMomentClient {
         try {
             b.group(new NioEventLoopGroup())
              .channel(NioDatagramChannel.class)
-             .localAddress(new InetSocketAddress(0))
              .option(ChannelOption.SO_BROADCAST, true)
              .handler(new QuoteOfTheMomentClientHandler());
 
-            Channel ch = b.bind().sync().channel();
+            Channel ch = b.bind(0).sync().channel();
 
             // Broadcast the QOTM request to port 8080.
             ch.write(new DatagramPacket(

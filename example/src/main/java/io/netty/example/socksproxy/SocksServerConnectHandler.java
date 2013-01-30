@@ -72,9 +72,9 @@ public final class SocksServerConnectHandler extends ChannelInboundMessageHandle
                 .channel(NioSocketChannel.class)
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
                 .option(ChannelOption.SO_KEEPALIVE, true)
-                .handler(new DirectClientInitializer(cb))
-                .remoteAddress(request.host(), request.port());
-        b.connect();
+                .handler(new DirectClientInitializer(cb));
+
+        b.connect(request.host(), request.port());
     }
 
     @Override

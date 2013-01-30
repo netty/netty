@@ -41,10 +41,9 @@ public class HexDumpProxy {
         try {
             b.group(new NioEventLoopGroup(), new NioEventLoopGroup())
              .channel(NioServerSocketChannel.class)
-             .localAddress(localPort)
              .childHandler(new HexDumpProxyInitializer(remoteHost, remotePort));
 
-            b.bind().sync().channel().closeFuture().sync();
+            b.bind(localPort).sync().channel().closeFuture().sync();
         } finally {
             b.shutdown();
         }
