@@ -19,7 +19,6 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 
-import com.barchart.udt.OptionUDT;
 import com.barchart.udt.TypeUDT;
 import com.barchart.udt.nio.KindUDT;
 
@@ -34,53 +33,39 @@ import com.barchart.udt.nio.KindUDT;
 public interface UdtServerChannelConfig extends UdtChannelConfig {
 
     /**
-     * Gets {@link KindUDT#ACCEPTOR} channel backlog via {@link ChannelOption#SO_BACKLOG}.
+     * Gets {@link KindUDT#ACCEPTOR} channel backlog via
+     * {@link ChannelOption#SO_BACKLOG}.
      */
     int getBacklog();
 
     /**
-     * Sets {@link KindUDT#ACCEPTOR} channel backlog via {@link ChannelOption#SO_BACKLOG}.
+     * Sets {@link KindUDT#ACCEPTOR} channel backlog via
+     * {@link ChannelOption#SO_BACKLOG}.
      */
     UdtServerChannelConfig setBacklog(int backlog);
 
-    /**
-     * Sets {@link OptionUDT#Protocol_Receive_Buffer_Size}
-     */
+    @Override
     UdtServerChannelConfig setProtocolReceiveBufferSize(int size);
 
-    /**
-     * Sets {@link OptionUDT#Protocol_Send_Buffer_Size}
-     */
+    @Override
     UdtServerChannelConfig setProtocolSendBufferSize(int size);
 
-    /**
-     * Sets the {@link ChannelOption#SO_RCVBUF} option.
-     */
+    @Override
     UdtServerChannelConfig setReceiveBufferSize(int receiveBufferSize);
 
-    /**
-     * Sets the {@link ChannelOption#SO_REUSEADDR} option.
-     */
+    @Override
     UdtServerChannelConfig setReuseAddress(boolean reuseAddress);
 
-    /**
-     * Sets the {@link ChannelOption#SO_SNDBUF} option.
-     */
+    @Override
     UdtServerChannelConfig setSendBufferSize(int sendBufferSize);
 
-    /**
-     * Sets the {@link ChannelOption#SO_LINGER} option.
-     */
+    @Override
     UdtServerChannelConfig setSoLinger(int soLinger);
 
-    /**
-     * Sets {@link OptionUDT#System_Receive_Buffer_Size}
-     */
+    @Override
     UdtServerChannelConfig setSystemReceiveBufferSize(int size);
 
-    /**
-     * Sets {@link OptionUDT#System_Send_Buffer_Size}
-     */
+    @Override
     UdtServerChannelConfig setSystemSendBufferSize(int size);
 
 }
