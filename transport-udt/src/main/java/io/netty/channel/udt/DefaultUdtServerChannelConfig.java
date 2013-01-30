@@ -15,14 +15,14 @@
  */
 package io.netty.channel.udt;
 
-import com.barchart.udt.SocketUDT;
-import com.barchart.udt.nio.ChannelUDT;
+import static io.netty.channel.ChannelOption.*;
 import io.netty.channel.ChannelOption;
 
 import java.io.IOException;
 import java.util.Map;
 
-import static io.netty.channel.ChannelOption.*;
+import com.barchart.udt.SocketUDT;
+import com.barchart.udt.nio.ChannelUDT;
 
 /**
  * The default {@link UdtServerChannelConfig} implementation.
@@ -41,6 +41,7 @@ public class DefaultUdtServerChannelConfig extends DefaultUdtChannelConfig
         }
     }
 
+    @Override
     protected void apply(final ChannelUDT channelUDT) throws IOException {
         final SocketUDT socketUDT = channelUDT.socketUDT();
         // nothing to apply for now.
@@ -131,6 +132,7 @@ public class DefaultUdtServerChannelConfig extends DefaultUdtChannelConfig
     @Override
     public UdtServerChannelConfig setSystemSendBufferSize(
             final int systemReceiveBufferSize) {
+        super.setSystemSendBufferSize(systemReceiveBufferSize);
         return this;
     }
 
