@@ -25,11 +25,12 @@ import io.netty.example.udt.util.UtilConsoleReporter;
 import io.netty.example.udt.util.UtilThreadFactory;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * UDT Message Flow client
@@ -62,7 +63,7 @@ public class MsgEchoClient {
         final NioEventLoopGroup connectGroup = new NioEventLoopGroup(1,
                 connectFactory, NioUdtProvider.MESSAGE_PROVIDER);
         try {
-            boot.group(connectGroup)
+            boot.group(connectGroup).localAddress(0)
                     .channelFactory(NioUdtProvider.MESSAGE_CONNECTOR)
                     .handler(new ChannelInitializer<UdtChannel>() {
                         @Override

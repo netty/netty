@@ -16,6 +16,8 @@
 
 package io.netty.channel.udt.nio;
 
+import io.netty.channel.udt.UdtServerChannel;
+
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +43,10 @@ public class NioUdtProviderTest extends AbstractUdtTest {
         assertNotNull(NioUdtProvider.MESSAGE_ACCEPTOR.newChannel());
         assertNotNull(NioUdtProvider.MESSAGE_CONNECTOR.newChannel());
         assertNotNull(NioUdtProvider.MESSAGE_RENDEZVOUS.newChannel());
+        
+        // acceptor types
+        assertTrue(NioUdtProvider.BYTE_ACCEPTOR.newChannel() instanceof UdtServerChannel);
+        assertTrue(NioUdtProvider.MESSAGE_ACCEPTOR.newChannel() instanceof UdtServerChannel);
 
     }
 
