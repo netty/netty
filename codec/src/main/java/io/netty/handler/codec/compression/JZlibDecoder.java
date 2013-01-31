@@ -85,7 +85,7 @@ public class JZlibDecoder extends ZlibDecoder {
             ChannelHandlerContext ctx,
             ByteBuf in, ByteBuf out) throws Exception {
 
-        if (!in.readable()) {
+        if (!in.isReadable()) {
             return;
         }
 
@@ -116,7 +116,7 @@ public class JZlibDecoder extends ZlibDecoder {
                 loop: for (;;) {
                     z.avail_out = maxOutputLength;
                     if (outHasArray) {
-                        out.ensureWritableBytes(maxOutputLength);
+                        out.ensureWritable(maxOutputLength);
                         z.next_out = out.array();
                         z.next_out_index = out.arrayOffset() + out.writerIndex();
                     } else {

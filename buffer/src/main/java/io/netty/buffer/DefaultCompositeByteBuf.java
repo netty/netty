@@ -197,7 +197,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             if (b == null) {
                 break;
             }
-            if (b.readable()) {
+            if (b.isReadable()) {
                 cIndex = addComponent0(cIndex, b, false) + 1;
                 int size = components.size();
                 if (cIndex > size) {
@@ -1341,8 +1341,8 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     }
 
     @Override
-    public CompositeByteBuf ensureWritableBytes(int minWritableBytes) {
-        return (CompositeByteBuf) super.ensureWritableBytes(minWritableBytes);
+    public CompositeByteBuf ensureWritable(int minWritableBytes) {
+        return (CompositeByteBuf) super.ensureWritable(minWritableBytes);
     }
 
     @Override

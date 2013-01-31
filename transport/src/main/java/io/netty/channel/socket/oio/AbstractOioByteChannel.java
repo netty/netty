@@ -90,7 +90,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                     break;
                 }
 
-                if (byteBuf.writable()) {
+                if (byteBuf.isWritable()) {
                     continue;
                 }
 
@@ -100,7 +100,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                     if (read) {
                         read = false;
                         pipeline.fireInboundBufferUpdated();
-                        if (!byteBuf.writable()) {
+                        if (!byteBuf.isWritable()) {
                             throw new IllegalStateException(
                                     "an inbound handler whose buffer is full must consume at " +
                                             "least one byte.");
@@ -111,7 +111,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                     if (writerIndex + available > maxCapacity) {
                         byteBuf.capacity(maxCapacity);
                     } else {
-                        byteBuf.ensureWritableBytes(available);
+                        byteBuf.ensureWritable(available);
                     }
                 }
             }
@@ -151,7 +151,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
 
     @Override
     protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
-        while (buf.readable()) {
+        while (buf.isReadable()) {
             doWriteBytes(buf);
         }
         buf.clear();

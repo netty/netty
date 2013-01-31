@@ -294,7 +294,7 @@ public class JZlibEncoder extends ZlibEncoder {
                 boolean outHasArray = out.hasArray();
                 z.avail_out = maxOutputLength;
                 if (outHasArray) {
-                    out.ensureWritableBytes(maxOutputLength);
+                    out.ensureWritable(maxOutputLength);
                     z.next_out = out.array();
                     z.next_out_index = out.arrayOffset() + out.writerIndex();
                 } else {
