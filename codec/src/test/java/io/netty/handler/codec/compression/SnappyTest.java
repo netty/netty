@@ -49,14 +49,14 @@ public class SnappyTest {
     @Test
     public void testDecodeCopyWith1ByteOffset() throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
-            0x01, // preamble length
+            0x0a, // preamble length
             0x04 << 2, // literal tag + length
             0x6e, 0x65, 0x74, 0x74, 0x79, // "netty"
-            0x05 << 2 | 0x01, // copy with 1-byte offset + length
+            0x01 << 2 | 0x01, // copy with 1-byte offset + length
             0x05 // offset
         });
         ByteBuf out = Unpooled.buffer(10);
-        snappy.decode(in, out, 9);
+        snappy.decode(in, out, 10);
 
         // "nettynetty" - we saved a whole byte :)
         byte[] expected = {
@@ -68,7 +68,7 @@ public class SnappyTest {
     @Test(expected = CompressionException.class)
     public void testDecodeCopyWithTinyOffset() throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
-            0x01, // preamble length
+            0x0a, // preamble length
             0x04 << 2, // literal tag + length
             0x6e, 0x65, 0x74, 0x74, 0x79, // "netty"
             0x05 << 2 | 0x01, // copy with 1-byte offset + length
@@ -81,7 +81,7 @@ public class SnappyTest {
     @Test(expected = CompressionException.class)
     public void testDecodeCopyWithOffsetBeforeChunk() throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
-            0x01, // preamble length
+            0x0a, // preamble length
             0x04 << 2, // literal tag + length
             0x6e, 0x65, 0x74, 0x74, 0x79, // "netty"
             0x05 << 2 | 0x01, // copy with 1-byte offset + length
