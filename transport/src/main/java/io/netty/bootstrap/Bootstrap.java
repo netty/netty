@@ -27,6 +27,7 @@ import io.netty.util.AttributeKey;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Map;
 import java.util.Map.Entry;
 
 /**
@@ -38,7 +39,7 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Bootstrap.class);
 
-    private SocketAddress remoteAddress;
+    private volatile SocketAddress remoteAddress;
 
     public Bootstrap() { }
 
@@ -163,18 +164,24 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
         ChannelPipeline p = channel.pipeline();
         p.addLast(handler());
 
-        for (Entry<ChannelOption<?>, Object> e: options().entrySet()) {
-            try {
-                if (!channel.config().setOption((ChannelOption<Object>) e.getKey(), e.getValue())) {
-                    logger.warn("Unknown channel option: " + e);
+        final Map<ChannelOption<?>, Object> options = options();
+        synchronized (options) {
+            for (Entry<ChannelOption<?>, Object> e: options.entrySet()) {
+                try {
+                    if (!channel.config().setOption((ChannelOption<Object>) e.getKey(), e.getValue())) {
+                        logger.warn("Unknown channel option: " + e);
+                    }
+                } catch (Throwable t) {
+                    logger.warn("Failed to set a channel option: " + channel, t);
                 }
-            } catch (Throwable t) {
-                logger.warn("Failed to set a channel option: " + channel, t);
             }
         }
 
-        for (Entry<AttributeKey<?>, Object> e: attrs().entrySet()) {
-            channel.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
+        final Map<AttributeKey<?>, Object> attrs = attrs();
+        synchronized (attrs) {
+            for (Entry<AttributeKey<?>, Object> e: attrs.entrySet()) {
+                channel.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
+            }
         }
 
         group().register(channel).syncUninterruptibly();
