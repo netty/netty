@@ -13,21 +13,21 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.localtime;
+package io.netty.example.worldclock;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 /**
- * Receives a list of continent/city pairs from a {@link LocalTimeClient} to
+ * Receives a list of continent/city pairs from a {@link WorldClockClient} to
  * get the local times of the specified cities.
  */
-public class LocalTimeServer {
+public class WorldClockServer {
 
     private final int port;
 
-    public LocalTimeServer(int port) {
+    public WorldClockServer(int port) {
         this.port = port;
     }
 
@@ -36,7 +36,7 @@ public class LocalTimeServer {
         try {
             b.group(new NioEventLoopGroup(), new NioEventLoopGroup())
              .channel(NioServerSocketChannel.class)
-             .childHandler(new LocalTimeServerInitializer());
+             .childHandler(new WorldClockServerInitializer());
 
             b.bind(port).sync().channel().closeFuture().sync();
         } finally {
@@ -51,6 +51,6 @@ public class LocalTimeServer {
         } else {
             port = 8080;
         }
-        new LocalTimeServer(port).run();
+        new WorldClockServer(port).run();
     }
 }

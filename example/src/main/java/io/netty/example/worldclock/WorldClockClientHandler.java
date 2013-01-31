@@ -13,16 +13,16 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.localtime;
+package io.netty.example.worldclock;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
-import io.netty.example.localtime.LocalTimeProtocol.Continent;
-import io.netty.example.localtime.LocalTimeProtocol.LocalTime;
-import io.netty.example.localtime.LocalTimeProtocol.LocalTimes;
-import io.netty.example.localtime.LocalTimeProtocol.Location;
-import io.netty.example.localtime.LocalTimeProtocol.Locations;
+import io.netty.example.worldclock.WorldClockProtocol.Continent;
+import io.netty.example.worldclock.WorldClockProtocol.LocalTime;
+import io.netty.example.worldclock.WorldClockProtocol.LocalTimes;
+import io.netty.example.worldclock.WorldClockProtocol.Location;
+import io.netty.example.worldclock.WorldClockProtocol.Locations;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -34,10 +34,10 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
-public class LocalTimeClientHandler extends ChannelInboundMessageHandlerAdapter<LocalTimes> {
+public class WorldClockClientHandler extends ChannelInboundMessageHandlerAdapter<LocalTimes> {
 
     private static final Logger logger = Logger.getLogger(
-            LocalTimeClientHandler.class.getName());
+            WorldClockClientHandler.class.getName());
 
     private static final Pattern DELIM = Pattern.compile("/");
 
