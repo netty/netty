@@ -103,7 +103,7 @@ public class ByteBufInputStream extends InputStream implements DataInput {
 
     @Override
     public int read() throws IOException {
-        if (!buffer.readable()) {
+        if (!buffer.isReadable()) {
             return -1;
         }
         return buffer.readByte() & 0xff;
@@ -143,7 +143,7 @@ public class ByteBufInputStream extends InputStream implements DataInput {
 
     @Override
     public byte readByte() throws IOException {
-        if (!buffer.readable()) {
+        if (!buffer.isReadable()) {
             throw new EOFException();
         }
         return buffer.readByte();

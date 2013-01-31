@@ -292,6 +292,10 @@ public final class Unpooled {
         return new DefaultMessageBuf<T>(initialCapacity);
     }
 
+    public static <T> MessageBuf<T> messageBuffer(int initialCapacity, int maxCapacity) {
+        return new DefaultMessageBuf<T>(initialCapacity, maxCapacity);
+    }
+
     public static <T> MessageBuf<T> wrappedBuffer(Queue<T> queue) {
         if (queue instanceof MessageBuf) {
             return (MessageBuf<T>) queue;
@@ -405,7 +409,7 @@ public final class Unpooled {
      * returned buffer.
      */
     public static ByteBuf wrappedBuffer(ByteBuf buffer) {
-        if (buffer.readable()) {
+        if (buffer.isReadable()) {
             return buffer.slice();
         } else {
             return EMPTY_BUFFER;
@@ -483,13 +487,13 @@ public final class Unpooled {
         case 0:
             break;
         case 1:
-            if (buffers[0].readable()) {
+            if (buffers[0].isReadable()) {
                 return wrappedBuffer(buffers[0].order(BIG_ENDIAN));
             }
             break;
         default:
             for (ByteBuf b: buffers) {
-                if (b.readable()) {
+                if (b.isReadable()) {
                     return new DefaultCompositeByteBuf(ALLOC, false, maxNumComponents, buffers);
                 }
             }
@@ -600,7 +604,7 @@ public final class Unpooled {
      * respectively.
      */
     public static ByteBuf copiedBuffer(ByteBuf buffer) {
-        if (buffer.readable()) {
+        if (buffer.isReadable()) {
             return buffer.copy();
         } else {
             return EMPTY_BUFFER;

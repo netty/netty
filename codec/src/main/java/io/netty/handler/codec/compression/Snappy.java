@@ -268,9 +268,9 @@ public class Snappy {
             return;
         }
 
-        out.ensureWritableBytes(inputLength);
+        out.ensureWritable(inputLength);
 
-        while (in.readable() && in.readerIndex() - inIndex < maxLength) {
+        while (in.isReadable() && in.readerIndex() - inIndex < maxLength) {
             byte tag = in.readByte();
             switch (tag & 0x03) {
             case LITERAL:

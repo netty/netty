@@ -189,7 +189,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
         uncompressed.readBytes(inAry);
 
         int sizeEstimate = (int) Math.ceil(inAry.length * 1.001) + 12;
-        out.ensureWritableBytes(sizeEstimate);
+        out.ensureWritable(sizeEstimate);
 
         synchronized (deflater) {
             if (gzip) {

@@ -361,7 +361,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             byteBuf.capacity(maxCapacity);
         } else {
             // Expand by the increment.
-            byteBuf.ensureWritableBytes(increment);
+            byteBuf.ensureWritable(increment);
         }
 
         return 1;

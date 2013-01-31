@@ -450,7 +450,7 @@ public class SslHandler
                 if (result.getStatus() == Status.CLOSED) {
                     // SSLEngine has been closed already.
                     // Any further write attempts should be denied.
-                    if (in.readable()) {
+                    if (in.isReadable()) {
                         in.clear();
                         SSLException e = new SSLException("SSLEngine already closed");
                         promise.setFailure(e);
@@ -465,7 +465,7 @@ public class SslHandler
                         ctx.flush();
                         continue;
                     case NEED_UNWRAP:
-                        if (ctx.inboundByteBuffer().readable()) {
+                        if (ctx.inboundByteBuffer().isReadable()) {
                             unwrapLater = true;
                         }
                         break;
@@ -556,7 +556,7 @@ public class SslHandler
             in.skipBytes(result.bytesConsumed());
             out.writerIndex(out.writerIndex() + result.bytesProduced());
             if (result.getStatus() == Status.BUFFER_OVERFLOW) {
-                out.ensureWritableBytes(engine.getSession().getPacketBufferSize());
+                out.ensureWritable(engine.getSession().getPacketBufferSize());
             } else {
                 return result;
             }
@@ -862,7 +862,7 @@ public class SslHandler
             out.writerIndex(out.writerIndex() + result.bytesProduced());
             switch (result.getStatus()) {
             case BUFFER_OVERFLOW:
-                out.ensureWritableBytes(engine.getSession().getApplicationBufferSize());
+                out.ensureWritable(engine.getSession().getApplicationBufferSize());
                 break;
             default:
                 return result;

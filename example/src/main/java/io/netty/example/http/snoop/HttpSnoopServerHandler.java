@@ -100,7 +100,7 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
             HttpContent httpContent = (HttpContent) msg;
 
             ByteBuf content = httpContent.data();
-            if (content.readable()) {
+            if (content.isReadable()) {
                 buf.append("CONTENT: ");
                 buf.append(content.toString(CharsetUtil.UTF_8));
                 buf.append("\r\n");
