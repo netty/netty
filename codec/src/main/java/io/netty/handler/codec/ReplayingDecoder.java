@@ -248,7 +248,7 @@ import io.netty.util.internal.Signal;
  *         // Remove the first decoder (me)
  *         ctx.pipeline().remove(this);
  *
- *         if (buf.readable()) {
+ *         if (buf.isReadable()) {
  *             // Hand off the remaining data to the second decoder
  *             return new Object[] { firstMessage, buf.readBytes(<b>super.actualReadableBytes()</b>) };
  *         } else {
@@ -362,7 +362,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         replayable.terminate();
         ByteBuf in = cumulation;
-        if (in.readable()) {
+        if (in.isReadable()) {
             callDecode(ctx, in);
         }
 
@@ -390,7 +390,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
 
         ByteBuf in = cumulation;
         boolean decoded = false;
-        while (in.readable()) {
+        while (in.isReadable()) {
             try {
                 int oldReaderIndex = checkpoint = in.readerIndex();
                 Object result = null;

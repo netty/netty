@@ -28,6 +28,7 @@ import static org.junit.Assert.*;
 /**
  * An abstract test class for composite channel buffers
  */
+@SuppressWarnings("ZeroLengthArrayAllocation")
 public abstract class AbstractCompositeByteBufTest extends
         AbstractByteBufTest {
 
@@ -76,7 +77,7 @@ public abstract class AbstractCompositeByteBufTest extends
 
         assertEquals(length, buffer.capacity());
         assertEquals(length, buffer.readableBytes());
-        assertFalse(buffer.writable());
+        assertFalse(buffer.isWritable());
         buffer.writerIndex(0);
         return buffer;
     }

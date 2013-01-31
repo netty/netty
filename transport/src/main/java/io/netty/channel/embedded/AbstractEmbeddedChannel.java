@@ -135,7 +135,7 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
      * Return received data from this {@link Channel}
      */
     public Object readInbound() {
-        if (lastInboundByteBuffer.readable()) {
+        if (lastInboundByteBuffer.isReadable()) {
             try {
                 return lastInboundByteBuffer.readBytes(lastInboundByteBuffer.readableBytes());
             } finally {
@@ -275,7 +275,7 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
         close();
         runPendingTasks();
         checkException();
-        return lastInboundByteBuffer().readable() || !lastInboundMessageBuffer().isEmpty() ||
+        return lastInboundByteBuffer().isReadable() || !lastInboundMessageBuffer().isEmpty() ||
                 hasReadableOutboundBuffer();
     }
 
@@ -291,7 +291,7 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
         pipeline().fireInboundBufferUpdated();
         runPendingTasks();
         checkException();
-        return lastInboundByteBuffer().readable() || !lastInboundMessageBuffer().isEmpty();
+        return lastInboundByteBuffer().isReadable() || !lastInboundMessageBuffer().isEmpty();
     }
 
     /**

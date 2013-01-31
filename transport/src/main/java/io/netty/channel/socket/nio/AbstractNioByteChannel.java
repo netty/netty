@@ -86,7 +86,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                         if (read) {
                             read = false;
                             pipeline.fireInboundBufferUpdated();
-                            if (!byteBuf.writable()) {
+                            if (!byteBuf.isWritable()) {
                                 throw new IllegalStateException(
                                         "an inbound handler whose buffer is full must consume at " +
                                         "least one byte.");
@@ -130,7 +130,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
     @Override
     protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
-        if (!buf.readable()) {
+        if (!buf.isReadable()) {
             // Reset reader/writerIndex to 0 if the buffer is empty.
             buf.clear();
             return;
@@ -141,7 +141,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             if (localFlushedAmount > 0) {
                 break;
             }
-            if (!buf.readable()) {
+            if (!buf.isReadable()) {
                 // Reset reader/writerIndex to 0 if the buffer is empty.
                 buf.clear();
                 break;
