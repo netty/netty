@@ -42,6 +42,8 @@ public final class PlatformDependent {
 
     private static final int JAVA_VERSION = javaVersion0();
 
+    private static final boolean CAN_ENABLE_TCP_NODELAY_BY_DEFAULT = !isAndroid();
+
     private static final boolean HAS_UNSAFE = hasUnsafe0();
     private static final boolean CAN_FREE_DIRECT_BUFFER = canFreeDirectBuffer0();
     private static final boolean IS_UNALIGNED = isUnaligned0();
@@ -73,6 +75,13 @@ public final class PlatformDependent {
      */
     public static int javaVersion() {
         return JAVA_VERSION;
+    }
+
+    /**
+     * Returns {@code true} if and only if it is fine to enable TCP_NODELAY socket option by default.
+     */
+    public static boolean canEnableTcpNoDelayByDefault() {
+        return CAN_ENABLE_TCP_NODELAY_BY_DEFAULT;
     }
 
     /**

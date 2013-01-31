@@ -22,6 +22,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
 import java.util.Map;
@@ -41,6 +42,15 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
             throw new NullPointerException("javaChannel");
         }
         this.javaChannel = javaChannel;
+
+        // Enable TCP_NODELAY by default if possible.
+        if (PlatformDependent.canEnableTcpNoDelayByDefault()) {
+            try {
+                setSctpNoDelay(true);
+            } catch (Exception e) {
+                // Ignore.
+            }
+        }
     }
 
     @Override
