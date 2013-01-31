@@ -273,6 +273,10 @@
           <optimize>true</optimize>
           <showDeprecation>true</showDeprecation>
           <showWarnings>true</showWarnings>
+          <compilerArguments>
+            <Xlint:unchecked/>
+            <Xlint:deprecation/>
+          </compilerArguments>
         </configuration>
       </plugin>
       <plugin>
