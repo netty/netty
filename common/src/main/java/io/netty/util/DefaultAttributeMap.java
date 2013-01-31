@@ -51,11 +51,13 @@ public class DefaultAttributeMap implements AttributeMap {
 
         @Override
         public T setIfAbsent(T value) {
-            if (compareAndSet(null, value)) {
-                return null;
-            } else {
-                return get();
+            while (!compareAndSet(null, value)) {
+                T old = get();
+                if (old != null) {
+                    return old;
+                }
             }
+            return null;
         }
 
         @Override
