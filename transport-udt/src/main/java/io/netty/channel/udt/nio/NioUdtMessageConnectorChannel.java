@@ -15,7 +15,8 @@
  */
 package io.netty.channel.udt.nio;
 
-import static java.nio.channels.SelectionKey.*;
+import com.barchart.udt.TypeUDT;
+import com.barchart.udt.nio.SocketChannelUDT;
 import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
@@ -23,18 +24,18 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.socket.nio.AbstractNioMessageChannel;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 import io.netty.channel.udt.DefaultUdtChannelConfig;
 import io.netty.channel.udt.UdtChannel;
 import io.netty.channel.udt.UdtChannelConfig;
 import io.netty.channel.udt.UdtMessage;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 
-import com.barchart.udt.TypeUDT;
-import com.barchart.udt.nio.SocketChannelUDT;
+import static java.nio.channels.SelectionKey.*;
 
 /**
  * Message Connector for UDT Datagrams.
@@ -108,7 +109,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel
     @Override
     protected boolean doConnect(final SocketAddress remoteAddress,
             final SocketAddress localAddress) throws Exception {
-        doBind(localAddress);
+        doBind(localAddress != null? localAddress : new InetSocketAddress(0));
         boolean success = false;
         try {
             final boolean connected = javaChannel().connect(remoteAddress);
