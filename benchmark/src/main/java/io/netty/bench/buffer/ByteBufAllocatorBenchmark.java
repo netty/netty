@@ -14,24 +14,27 @@
  * under the License.
  */
 
-package io.netty.microbench.buffer;
+package io.netty.bench.buffer;
 
-import com.google.caliper.Param;
+import io.netty.bench.util.CaliperBenchmark;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
-import io.netty.microbench.util.DefaultBenchmark;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-public class ByteBufAllocatorBenchmark extends DefaultBenchmark {
+import com.google.caliper.Param;
+
+public class ByteBufAllocatorBenchmark extends CaliperBenchmark {
 
     private static final ByteBufAllocator POOLED_ALLOCATOR_HEAP = PooledByteBufAllocator.DEFAULT;
-    private static final ByteBufAllocator POOLED_ALLOCATOR_DIRECT = new PooledByteBufAllocator(true);
+    private static final ByteBufAllocator POOLED_ALLOCATOR_DIRECT = new PooledByteBufAllocator(
+            true);
 
-    @Param({"0", "256", "1024", "4096", "16384", "65536"})
+    @Param({ "0", "128", "256", "512", "1024", "2048", "4096", "8192", "16384",
+            "32768", "65536" })
     private int size;
 
     @Param
@@ -43,25 +46,25 @@ public class ByteBufAllocatorBenchmark extends DefaultBenchmark {
     @Override
     protected void setUp() throws Exception {
         alloc = allocator.alloc();
-        for (int i = 0; i < 2560; i ++) {
+        for (int i = 0; i < 256 * 10; i++) {
             queue.add(alloc.buffer(size));
         }
     }
 
     @Override
     protected void tearDown() throws Exception {
-        for (ByteBuf b: queue) {
+        for (final ByteBuf b : queue) {
             b.free();
         }
         queue.clear();
     }
 
-    public void timeAllocAndFree(int reps) {
+    public void timeAllocAndFree(final int reps) {
         final ByteBufAllocator alloc = this.alloc;
         final Deque<ByteBuf> queue = this.queue;
         final int size = this.size;
 
-        for (int i = 0; i < reps; i ++) {
+        for (int i = 0; i < reps; i++) {
             queue.add(alloc.buffer(size));
             queue.removeFirst().free();
         }
@@ -95,4 +98,9 @@ public class ByteBufAllocatorBenchmark extends DefaultBenchmark {
 
         abstract ByteBufAllocator alloc();
     }
+
+    public static void main(final String... args) throws Exception {
+        new ByteBufAllocatorBenchmark().execute();
+    }
+
 }
