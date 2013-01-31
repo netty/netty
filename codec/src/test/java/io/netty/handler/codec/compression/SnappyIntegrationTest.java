@@ -17,14 +17,15 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.util.CharsetUtil;
 
 import org.junit.Assert;
 import org.junit.Test;
 
 public class SnappyIntegrationTest {
-    private final SnappyFramedEncoder encoder = new SnappyFramedEncoder();
-    private final SnappyFramedDecoder decoder = new SnappyFramedDecoder();
+    private final EmbeddedByteChannel channel = new EmbeddedByteChannel(new SnappyFramedEncoder(),
+                                                                        new SnappyFramedDecoder());
     
     @Test
     public void testEncoderDecoderIdentity() throws Exception {
@@ -34,13 +35,10 @@ public class SnappyIntegrationTest {
             "such as FTP, SMTP, HTTP, and various binary and " +
             "text-based legacy protocols", CharsetUtil.US_ASCII
         );
-        ByteBuf encoded = Unpooled.buffer();
-        encoder.encode(null, in, encoded);
+        channel.writeOutbound(in);
         
-        ByteBuf decoded = Unpooled.buffer(183);
-        decoder.decode(null, encoded, decoded);
-
-        decoded.readerIndex(183);
-        Assert.assertEquals(in, decoded);
+        channel.writeInbound(channel.readOutbound());
+        
+        Assert.assertEquals(in, channel.readInbound());
     }
 }

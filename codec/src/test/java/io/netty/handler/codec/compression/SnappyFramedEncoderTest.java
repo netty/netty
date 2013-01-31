@@ -21,8 +21,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 
-import java.util.Arrays;
-
 import org.junit.Before;
 import org.junit.Test;
 
