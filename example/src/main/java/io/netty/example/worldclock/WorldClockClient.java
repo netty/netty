@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.localtime;
+package io.netty.example.worldclock;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -27,16 +27,16 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * Sends a list of continent/city pairs to a {@link LocalTimeServer} to
+ * Sends a list of continent/city pairs to a {@link WorldClockServer} to
  * get the local times of the specified cities.
  */
-public class LocalTimeClient {
+public class WorldClockClient {
 
     private final String host;
     private final int port;
     private final Collection<String> cities;
 
-    public LocalTimeClient(String host, int port, Collection<String> cities) {
+    public WorldClockClient(String host, int port, Collection<String> cities) {
         this.host = host;
         this.port = port;
         this.cities = new ArrayList<String>();
@@ -48,14 +48,14 @@ public class LocalTimeClient {
         try {
             b.group(new NioEventLoopGroup())
              .channel(NioSocketChannel.class)
-             .handler(new LocalTimeClientInitializer());
+             .handler(new WorldClockClientInitializer());
 
             // Make a new connection.
             Channel ch = b.connect(host, port).sync().channel();
 
             // Get the handler instance to initiate the request.
-            LocalTimeClientHandler handler =
-                ch.pipeline().get(LocalTimeClientHandler.class);
+            WorldClockClientHandler handler =
+                ch.pipeline().get(WorldClockClientHandler.class);
 
             // Request and get the response.
             List<String> response = handler.getLocalTimes(cities);
@@ -89,15 +89,15 @@ public class LocalTimeClient {
             return;
         }
 
-        new LocalTimeClient(host, port, cities).run();
+        new WorldClockClient(host, port, cities).run();
     }
 
     private static void printUsage() {
         System.err.println(
-                "Usage: " + LocalTimeClient.class.getSimpleName() +
+                "Usage: " + WorldClockClient.class.getSimpleName() +
                 " <host> <port> <continent/city_name> ...");
         System.err.println(
-                "Example: " + LocalTimeClient.class.getSimpleName() +
+                "Example: " + WorldClockClient.class.getSimpleName() +
                 " localhost 8080 America/New_York Asia/Seoul");
     }
 

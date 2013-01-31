@@ -13,27 +13,28 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.localtime;
+package io.netty.example.worldclock;
 
-import static java.util.Calendar.*;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
-import io.netty.example.localtime.LocalTimeProtocol.Continent;
-import io.netty.example.localtime.LocalTimeProtocol.DayOfWeek;
-import io.netty.example.localtime.LocalTimeProtocol.LocalTime;
-import io.netty.example.localtime.LocalTimeProtocol.LocalTimes;
-import io.netty.example.localtime.LocalTimeProtocol.Location;
-import io.netty.example.localtime.LocalTimeProtocol.Locations;
+import io.netty.example.worldclock.WorldClockProtocol.Continent;
+import io.netty.example.worldclock.WorldClockProtocol.DayOfWeek;
+import io.netty.example.worldclock.WorldClockProtocol.LocalTime;
+import io.netty.example.worldclock.WorldClockProtocol.LocalTimes;
+import io.netty.example.worldclock.WorldClockProtocol.Location;
+import io.netty.example.worldclock.WorldClockProtocol.Locations;
 
 import java.util.Calendar;
 import java.util.TimeZone;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class LocalTimeServerHandler extends ChannelInboundMessageHandlerAdapter<Locations> {
+import static java.util.Calendar.*;
+
+public class WorldClockServerHandler extends ChannelInboundMessageHandlerAdapter<Locations> {
 
     private static final Logger logger = Logger.getLogger(
-            LocalTimeServerHandler.class.getName());
+            WorldClockServerHandler.class.getName());
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, Locations locations) throws Exception {

@@ -13,11 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.localtime;
+package io.netty.example.worldclock;
 
 // How to generate
 // ===============
-// $ protoc src/main/java/io/netty/example/localtime/LocalTimeProtocol.proto \
+// $ cd example
+// $ protoc src/main/java/io/netty/example/worldclock/WorldClockProtocol.proto \
 //          --java_out=src/main/java
 //
 // Add @SuppressWarnings("all") to the generated code not to pollute IDE task list.
