@@ -15,7 +15,6 @@
  */
 package io.netty.handler.stream;
 
-import static org.junit.Assert.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
@@ -24,6 +23,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.channel.embedded.EmbeddedMessageChannel;
 import io.netty.util.CharsetUtil;
+import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -32,7 +32,7 @@ import java.io.IOException;
 import java.nio.channels.Channels;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 public class ChunkedWriteHandlerTest {
     private static final byte[] BYTES = new byte[1024 * 64];
@@ -203,7 +203,7 @@ public class ChunkedWriteHandlerTest {
             if (buffer == null) {
                 break;
             }
-            while (buffer.readable()) {
+            while (buffer.isReadable()) {
                 assertEquals(BYTES[i++], buffer.readByte());
                 read++;
                 if (i == BYTES.length) {

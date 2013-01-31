@@ -15,17 +15,18 @@
  */
 package io.netty.buffer;
 
-import static org.junit.Assert.*;
+import org.junit.Test;
 
 import java.io.EOFException;
 import java.nio.charset.Charset;
 
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 
 /**
  * Tests channel buffer streams
  */
+@SuppressWarnings("ZeroLengthArrayAllocation")
 public class ByteBufStreamTest {
 
     @Test
@@ -93,7 +94,7 @@ public class ByteBufStreamTest {
         in.mark(Integer.MAX_VALUE);
 
         assertEquals(buf.writerIndex(), in.skip(Long.MAX_VALUE));
-        assertFalse(buf.readable());
+        assertFalse(buf.isReadable());
 
         in.reset();
         assertEquals(0, buf.readerIndex());

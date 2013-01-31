@@ -169,7 +169,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             }
 
             // Append the content of the chunk
-            if (chunk.data().readable()) {
+            if (chunk.data().isReadable()) {
                 content.addComponent(chunk.data());
                 content.writerIndex(content.writerIndex() + chunk.data().readableBytes());
             } else {

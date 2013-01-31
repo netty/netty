@@ -326,7 +326,7 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder {
         if (delimiter == null) {
             throw new NullPointerException("delimiter");
         }
-        if (!delimiter.readable()) {
+        if (!delimiter.isReadable()) {
             throw new IllegalArgumentException("empty delimiter");
         }
     }

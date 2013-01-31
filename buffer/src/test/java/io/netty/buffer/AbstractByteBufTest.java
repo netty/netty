@@ -473,7 +473,7 @@ public abstract class AbstractByteBufTest {
     @Test
     public void testSetZero() {
         buffer.clear();
-        while (buffer.writable()) {
+        while (buffer.isWritable()) {
             buffer.writeByte((byte) 0xFF);
         }
 
@@ -494,26 +494,26 @@ public abstract class AbstractByteBufTest {
         for (int i = 0; i < buffer.capacity(); i ++) {
             byte value = (byte) random.nextInt();
             assertEquals(i, buffer.writerIndex());
-            assertTrue(buffer.writable());
+            assertTrue(buffer.isWritable());
             buffer.writeByte(value);
         }
 
         assertEquals(0, buffer.readerIndex());
         assertEquals(buffer.capacity(), buffer.writerIndex());
-        assertFalse(buffer.writable());
+        assertFalse(buffer.isWritable());
 
         random.setSeed(seed);
         for (int i = 0; i < buffer.capacity(); i ++) {
             byte value = (byte) random.nextInt();
             assertEquals(i, buffer.readerIndex());
-            assertTrue(buffer.readable());
+            assertTrue(buffer.isReadable());
             assertEquals(value, buffer.readByte());
         }
 
         assertEquals(buffer.capacity(), buffer.readerIndex());
         assertEquals(buffer.capacity(), buffer.writerIndex());
-        assertFalse(buffer.readable());
-        assertFalse(buffer.writable());
+        assertFalse(buffer.isReadable());
+        assertFalse(buffer.isWritable());
     }
 
     @Test
@@ -522,26 +522,26 @@ public abstract class AbstractByteBufTest {
         for (int i = 0; i < buffer.capacity(); i ++) {
             byte value = (byte) random.nextInt();
             assertEquals(i, buffer.writerIndex());
-            assertTrue(buffer.writable());
+            assertTrue(buffer.isWritable());
             buffer.writeByte(value);
         }
 
         assertEquals(0, buffer.readerIndex());
         assertEquals(buffer.capacity(), buffer.writerIndex());
-        assertFalse(buffer.writable());
+        assertFalse(buffer.isWritable());
 
         random.setSeed(seed);
         for (int i = 0; i < buffer.capacity(); i ++) {
             int value = random.nextInt() & 0xFF;
             assertEquals(i, buffer.readerIndex());
-            assertTrue(buffer.readable());
+            assertTrue(buffer.isReadable());
             assertEquals(value, buffer.readUnsignedByte());
         }
 
         assertEquals(buffer.capacity(), buffer.readerIndex());
         assertEquals(buffer.capacity(), buffer.writerIndex());
-        assertFalse(buffer.readable());
-        assertFalse(buffer.writable());
+        assertFalse(buffer.isReadable());
+        assertFalse(buffer.isWritable());
     }
 
     @Test
@@ -550,26 +550,26 @@ public abstract class AbstractByteBufTest {
         for (int i = 0; i < buffer.capacity(); i += 2) {
             short value = (short) random.nextInt();
             assertEquals(i, buffer.writerIndex());
-            assertTrue(buffer.writable());
+            assertTrue(buffer.isWritable());
             buffer.writeShort(value);
         }
 
         assertEquals(0, buffer.readerIndex());
         assertEquals(buffer.capacity(), buffer.writerIndex());
-        assertFalse(buffer.writable());
+        assertFalse(buffer.isWritable());
 
         random.setSeed(seed);
         for (int i = 0; i < buffer.capacity(); i += 2) {
             short value = (short) random.nextInt();
             assertEquals(i, buffer.readerIndex());
-            assertTrue(buffer.readable());
+            assertTrue(buffer.isReadable());
             assertEquals(value, buffer.readShort());
         }
 
         assertEquals(buffer.capacity(), buffer.readerIndex());
         assertEquals(buffer.capacity(), buffer.writerIndex());
-        assertFalse(buffer.readable());
-        assertFalse(buffer.writable());
+        assertFalse(buffer.isReadable());
+        assertFalse(buffer.isWritable());
     }
 
     @Test
@@ -578,26 +578,26 @@ public abstract class AbstractByteBufTest {
         for (int i = 0; i < buffer.capacity(); i += 2) {
             short value = (short) random.nextInt();
             assertEquals(i, buffer.writerIndex());
-            assertTrue(buffer.writable());
+            assertTrue(buffer.isWritable());
             buffer.writeShort(value);
         }
 
         assertEquals(0, buffer.readerIndex());
         assertEquals(buffer.capacity(), buffer.writerIndex());
-        assertFalse(buffer.writable());
+        assertFalse(buffer.isWritable());
 
         random.setSeed(seed);
         for (int i = 0; i < buffer.capacity(); i += 2) {
             int value = random.nextInt() & 0xFFFF;
             assertEquals(i, buffer.readerIndex());
-            assertTrue(buffer.readable());
+            assertTrue(buffer.isReadable());
             assertEquals(value, buffer.readUnsignedShort());
         }
 
         assertEquals(buffer.capacity(), buffer.readerIndex());
         assertEquals(buffer.capacity(), buffer.writerIndex());
-        assertFalse(buffer.readable());
-        assertFalse(buffer.writable());
+        assertFalse(buffer.isReadable());
+        assertFalse(buffer.isWritable());
     }
 
     @Test
@@ -606,7 +606,7 @@ public abstract class AbstractByteBufTest {
         for (int i = 0; i < buffer.capacity() / 3 * 3; i += 3) {
             int value = random.nextInt();
             assertEquals(i, buffer.writerIndex());
-            assertTrue(buffer.writable());
+            assertTrue(buffer.isWritable());
             buffer.writeMedium(value);
         }
 
@@ -618,7 +618,7 @@ public abstract class AbstractByteBufTest {
         for (int i = 0; i < buffer.capacity() / 3 * 3; i += 3) {
             int value = random.nextInt() << 8 >> 8;
             assertEquals(i, buffer.readerIndex());
-            assertTrue(buffer.readable());
+            assertTrue(buffer.isReadable());
             assertEquals(value, buffer.readMedium());
         }
 
@@ -634,7 +634,7 @@ public abstract class AbstractByteBufTest {
         for (int i = 0; i < buffer.capacity() / 3 * 3; i += 3) {
             int value = random.nextInt() & 0x00FFFFFF;
             assertEquals(i, buffer.writerIndex());
-            assertTrue(buffer.writable());
+            assertTrue(buffer.isWritable());
             buffer.writeMedium(value);
         }
 
@@ -646,7 +646,7 @@ public abstract class AbstractByteBufTest {
         for (int i = 0; i < buffer.capacity() / 3 * 3; i += 3) {
             int value = random.nextInt() & 0x00FFFFFF;
             assertEquals(i, buffer.readerIndex());
-            assertTrue(buffer.readable());
+            assertTrue(buffer.isReadable());
             assertEquals(value, buffer.readUnsignedMedium());
         }
 
@@ -662,26 +662,26 @@ public abstract class AbstractByteBufTest {
         for (int i = 0; i < buffer.capacity(); i += 4) {
             int value = random.nextInt();
             assertEquals(i, buffer.writerIndex());
-            assertTrue(buffer.writable());
+            assertTrue(buffer.isWritable());
             buffer.writeInt(value);
         }
 
         assertEquals(0, buffer.readerIndex());
         assertEquals(buffer.capacity(), buffer.writerIndex());
-        assertFalse(buffer.writable());
+        assertFalse(buffer.isWritable());
 
         random.setSeed(seed);
         for (int i = 0; i < buffer.capacity(); i += 4) {
             int value = random.nextInt();
             assertEquals(i, buffer.readerIndex());
-            assertTrue(buffer.readable());
+            assertTrue(buffer.isReadable());
             assertEquals(value, buffer.readInt());
         }
 
         assertEquals(buffer.capacity(), buffer.readerIndex());
         assertEquals(buffer.capacity(), buffer.writerIndex());
-        assertFalse(buffer.readable());
-        assertFalse(buffer.writable());
+        assertFalse(buffer.isReadable());
+        assertFalse(buffer.isWritable());
     }
 
     @Test
@@ -690,26 +690,26 @@ public abstract class AbstractByteBufTest {
         for (int i = 0; i < buffer.capacity(); i += 4) {
             int value = random.nextInt();
             assertEquals(i, buffer.writerIndex());
-            assertTrue(buffer.writable());
+            assertTrue(buffer.isWritable());
             buffer.writeInt(value);
         }
 
         assertEquals(0, buffer.readerIndex());
         assertEquals(buffer.capacity(), buffer.writerIndex());
-        assertFalse(buffer.writable());
+        assertFalse(buffer.isWritable());
 
         random.setSeed(seed);
         for (int i = 0; i < buffer.capacity(); i += 4) {
             long value = random.nextInt() & 0xFFFFFFFFL;
             assertEquals(i, buffer.readerIndex());
-            assertTrue(buffer.readable());
+            assertTrue(buffer.isReadable());
             assertEquals(value, buffer.readUnsignedInt());
         }
 
         assertEquals(buffer.capacity(), buffer.readerIndex());
         assertEquals(buffer.capacity(), buffer.writerIndex());
-        assertFalse(buffer.readable());
-        assertFalse(buffer.writable());
+        assertFalse(buffer.isReadable());
+        assertFalse(buffer.isWritable());
     }
 
     @Test
@@ -718,26 +718,26 @@ public abstract class AbstractByteBufTest {
         for (int i = 0; i < buffer.capacity(); i += 8) {
             long value = random.nextLong();
             assertEquals(i, buffer.writerIndex());
-            assertTrue(buffer.writable());
+            assertTrue(buffer.isWritable());
             buffer.writeLong(value);
         }
 
         assertEquals(0, buffer.readerIndex());
         assertEquals(buffer.capacity(), buffer.writerIndex());
-        assertFalse(buffer.writable());
+        assertFalse(buffer.isWritable());
 
         random.setSeed(seed);
         for (int i = 0; i < buffer.capacity(); i += 8) {
             long value = random.nextLong();
             assertEquals(i, buffer.readerIndex());
-            assertTrue(buffer.readable());
+            assertTrue(buffer.isReadable());
             assertEquals(value, buffer.readLong());
         }
 
         assertEquals(buffer.capacity(), buffer.readerIndex());
         assertEquals(buffer.capacity(), buffer.writerIndex());
-        assertFalse(buffer.readable());
-        assertFalse(buffer.writable());
+        assertFalse(buffer.isReadable());
+        assertFalse(buffer.isWritable());
     }
 
     @Test
@@ -1254,7 +1254,7 @@ public abstract class AbstractByteBufTest {
         }
 
         buffer.clear();
-        while (buffer.writable()) {
+        while (buffer.isWritable()) {
             buffer.writeByte((byte) 0xFF);
         }
 

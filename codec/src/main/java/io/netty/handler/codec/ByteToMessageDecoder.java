@@ -83,7 +83,7 @@ public abstract class ByteToMessageDecoder
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         ByteBuf in = ctx.inboundByteBuffer();
-        if (in.readable()) {
+        if (in.isReadable()) {
             callDecode(ctx, in);
         }
 
@@ -106,7 +106,7 @@ public abstract class ByteToMessageDecoder
         boolean wasNull = false;
 
         boolean decoded = false;
-        while (in.readable()) {
+        while (in.isReadable()) {
             try {
                 int oldInputLength = in.readableBytes();
                 Object o = decode(ctx, in);

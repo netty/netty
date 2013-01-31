@@ -409,7 +409,7 @@ public class UnpooledTest {
         ByteBuf buffer = copyInt(42);
         assertEquals(4, buffer.capacity());
         assertEquals(42, buffer.readInt());
-        assertFalse(buffer.readable());
+        assertFalse(buffer.isReadable());
     }
 
     @Test
@@ -418,7 +418,7 @@ public class UnpooledTest {
         assertEquals(8, buffer.capacity());
         assertEquals(1, buffer.readInt());
         assertEquals(4, buffer.readInt());
-        assertFalse(buffer.readable());
+        assertFalse(buffer.isReadable());
 
         assertEquals(0, Unpooled.copyInt(null).capacity());
         assertEquals(0, Unpooled.copyInt(new int[0]).capacity());
@@ -429,7 +429,7 @@ public class UnpooledTest {
         ByteBuf buffer = copyShort(42);
         assertEquals(2, buffer.capacity());
         assertEquals(42, buffer.readShort());
-        assertFalse(buffer.readable());
+        assertFalse(buffer.isReadable());
     }
 
     @Test
@@ -438,7 +438,7 @@ public class UnpooledTest {
         assertEquals(4, buffer.capacity());
         assertEquals(1, buffer.readShort());
         assertEquals(4, buffer.readShort());
-        assertFalse(buffer.readable());
+        assertFalse(buffer.isReadable());
 
         assertEquals(0, Unpooled.copyShort((short[]) null).capacity());
         assertEquals(0, Unpooled.copyShort(new short[0]).capacity());
@@ -450,7 +450,7 @@ public class UnpooledTest {
         assertEquals(4, buffer.capacity());
         assertEquals(1, buffer.readShort());
         assertEquals(4, buffer.readShort());
-        assertFalse(buffer.readable());
+        assertFalse(buffer.isReadable());
 
         assertEquals(0, Unpooled.copyShort((int[]) null).capacity());
         assertEquals(0, Unpooled.copyShort(new int[0]).capacity());
@@ -461,7 +461,7 @@ public class UnpooledTest {
         ByteBuf buffer = copyMedium(42);
         assertEquals(3, buffer.capacity());
         assertEquals(42, buffer.readMedium());
-        assertFalse(buffer.readable());
+        assertFalse(buffer.isReadable());
     }
 
     @Test
@@ -470,7 +470,7 @@ public class UnpooledTest {
         assertEquals(6, buffer.capacity());
         assertEquals(1, buffer.readMedium());
         assertEquals(4, buffer.readMedium());
-        assertFalse(buffer.readable());
+        assertFalse(buffer.isReadable());
 
         assertEquals(0, Unpooled.copyMedium(null).capacity());
         assertEquals(0, Unpooled.copyMedium(new int[0]).capacity());
@@ -481,7 +481,7 @@ public class UnpooledTest {
         ByteBuf buffer = copyLong(42);
         assertEquals(8, buffer.capacity());
         assertEquals(42, buffer.readLong());
-        assertFalse(buffer.readable());
+        assertFalse(buffer.isReadable());
     }
 
     @Test
@@ -490,7 +490,7 @@ public class UnpooledTest {
         assertEquals(16, buffer.capacity());
         assertEquals(1, buffer.readLong());
         assertEquals(4, buffer.readLong());
-        assertFalse(buffer.readable());
+        assertFalse(buffer.isReadable());
 
         assertEquals(0, Unpooled.copyLong(null).capacity());
         assertEquals(0, Unpooled.copyLong(new long[0]).capacity());
@@ -501,7 +501,7 @@ public class UnpooledTest {
         ByteBuf buffer = copyFloat(42);
         assertEquals(4, buffer.capacity());
         assertEquals(42, buffer.readFloat(), 0.01);
-        assertFalse(buffer.readable());
+        assertFalse(buffer.isReadable());
     }
 
     @Test
@@ -510,7 +510,7 @@ public class UnpooledTest {
         assertEquals(8, buffer.capacity());
         assertEquals(1, buffer.readFloat(), 0.01);
         assertEquals(4, buffer.readFloat(), 0.01);
-        assertFalse(buffer.readable());
+        assertFalse(buffer.isReadable());
 
         assertEquals(0, Unpooled.copyFloat(null).capacity());
         assertEquals(0, Unpooled.copyFloat(new float[0]).capacity());
@@ -521,7 +521,7 @@ public class UnpooledTest {
         ByteBuf buffer = copyDouble(42);
         assertEquals(8, buffer.capacity());
         assertEquals(42, buffer.readDouble(), 0.01);
-        assertFalse(buffer.readable());
+        assertFalse(buffer.isReadable());
     }
 
     @Test
@@ -530,7 +530,7 @@ public class UnpooledTest {
         assertEquals(16, buffer.capacity());
         assertEquals(1, buffer.readDouble(), 0.01);
         assertEquals(4, buffer.readDouble(), 0.01);
-        assertFalse(buffer.readable());
+        assertFalse(buffer.isReadable());
 
         assertEquals(0, Unpooled.copyDouble(null).capacity());
         assertEquals(0, Unpooled.copyDouble(new double[0]).capacity());
@@ -542,7 +542,7 @@ public class UnpooledTest {
         assertEquals(2, buffer.capacity());
         assertTrue(buffer.readBoolean());
         assertFalse(buffer.readBoolean());
-        assertFalse(buffer.readable());
+        assertFalse(buffer.isReadable());
 
         assertEquals(0, Unpooled.copyBoolean(null).capacity());
         assertEquals(0, Unpooled.copyBoolean(new boolean[0]).capacity());

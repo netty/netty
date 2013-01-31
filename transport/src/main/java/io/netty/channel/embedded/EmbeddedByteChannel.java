@@ -55,7 +55,7 @@ public class EmbeddedByteChannel extends AbstractEmbeddedChannel<ByteBuf> {
 
     @Override
     public ByteBuf readOutbound() {
-        if (!lastOutboundBuffer().readable()) {
+        if (!lastOutboundBuffer().isReadable()) {
             return null;
         }
         try {
@@ -72,7 +72,7 @@ public class EmbeddedByteChannel extends AbstractEmbeddedChannel<ByteBuf> {
 
     @Override
     protected boolean hasReadableOutboundBuffer() {
-        return lastOutboundBuffer().readable();
+        return lastOutboundBuffer().isReadable();
     }
 
     @Override

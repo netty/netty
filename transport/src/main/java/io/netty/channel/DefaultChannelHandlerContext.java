@@ -198,7 +198,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     void forwardBufferContent() {
-        if (hasOutboundByteBuffer() && outboundByteBuffer().readable()) {
+        if (hasOutboundByteBuffer() && outboundByteBuffer().isReadable()) {
             nextOutboundByteBuffer().writeBytes(outboundByteBuffer());
             flush();
         }
@@ -207,7 +207,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 flush();
             }
         }
-        if (hasInboundByteBuffer() && inboundByteBuffer().readable()) {
+        if (hasInboundByteBuffer() && inboundByteBuffer().isReadable()) {
             nextInboundByteBuffer().writeBytes(inboundByteBuffer());
             fireInboundBufferUpdated();
         }
@@ -1833,7 +1833,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
 
         private void fill() {
-            if (!byteBuf.readable()) {
+            if (!byteBuf.isReadable()) {
                 return;
             }
 
@@ -1851,7 +1851,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
 
         private void flush(ByteBuf out) {
-            while (out.writable()) {
+            while (out.isWritable()) {
                 ByteBuf data = exchangeBuf.peek();
                 if (data == null) {
                     break;

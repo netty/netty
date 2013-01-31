@@ -85,7 +85,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
         }
 
         // handle the case of single complete message without content
-        if (msg instanceof FullHttpMessage && !((FullHttpMessage) msg).data().readable()) {
+        if (msg instanceof FullHttpMessage && !((FullHttpMessage) msg).data().isReadable()) {
 
             // Remove content encoding
             String acceptEncoding = acceptEncodingQueue.poll();
@@ -200,7 +200,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
 
             // Generate an additional chunk if the decoder produced
             // the last product on closure,
-            if (lastProduct.readable()) {
+            if (lastProduct.isReadable()) {
                 if (header == null) {
                     return new Object[] { new DefaultHttpContent(newContent), new DefaultLastHttpContent(lastProduct)};
                 } else {

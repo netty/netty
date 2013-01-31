@@ -66,13 +66,13 @@ public class SctpMessageCompletionHandler extends ChannelInboundMessageHandlerAd
             frag = Unpooled.EMPTY_BUFFER;
         }
 
-        if (isComplete && !frag.readable()) {
+        if (isComplete && !frag.isReadable()) {
             //data chunk is not fragmented
             handleAssembledMessage(ctx, msg);
-        } else if (!isComplete && frag.readable()) {
+        } else if (!isComplete && frag.isReadable()) {
             //more message to complete
             fragments.put(streamIdentifier, Unpooled.wrappedBuffer(frag, byteBuf));
-        } else if (isComplete && frag.readable()) {
+        } else if (isComplete && frag.isReadable()) {
             //last message to complete
             fragments.remove(streamIdentifier);
             SctpMessage assembledMsg = new SctpMessage(

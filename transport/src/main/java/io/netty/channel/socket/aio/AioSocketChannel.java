@@ -239,7 +239,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         inDoFlushByteBuffer = true;
 
         try {
-            if (buf.readable()) {
+            if (buf.isReadable()) {
                 for (;;) {
                     if (buf.isFreed()) {
                         break;
@@ -273,7 +273,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
                     // JDK performed the write operation immediately and notified the handler.
                     // We know this because we set asyncWriteInProgress to false in the handler.
-                    if (!buf.readable()) {
+                    if (!buf.isReadable()) {
                         // There's nothing left in the buffer. No need to retry writing.
                         break;
                     }
@@ -386,7 +386,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 return;
             }
 
-            if (buf.readable()) {
+            if (buf.isReadable()) {
                 channel.unsafe().flushNow();
             }
         }
