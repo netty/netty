@@ -143,6 +143,7 @@ final class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
+    @Deprecated
     public ByteBuf ensureWritableBytes(int writableBytes) {
         throw new UnreplayableOperationException();
     }
@@ -395,6 +396,7 @@ final class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
+    @Deprecated
     public boolean readable() {
         return isReadable();
     }
@@ -739,6 +741,7 @@ final class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
+    @Deprecated
     public boolean writable() {
         return false;
     }

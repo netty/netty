@@ -16,10 +16,9 @@
 package io.netty.handler.codec.marshalling;
 
 import io.netty.buffer.ByteBuf;
+import org.jboss.marshalling.ByteInput;
 
 import java.io.IOException;
-
-import org.jboss.marshalling.ByteInput;
 
 /**
  * {@link ByteInput} implementation which reads its data from a {@link ByteBuf}
@@ -44,7 +43,7 @@ class ChannelBufferByteInput implements ByteInput {
 
     @Override
     public int read() throws IOException {
-        if (buffer.readable()) {
+        if (buffer.isReadable()) {
             return buffer.readByte() & 0xff;
         }
         return -1;

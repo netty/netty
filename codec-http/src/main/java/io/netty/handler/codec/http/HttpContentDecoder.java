@@ -134,7 +134,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
 
             // Generate an additional chunk if the decoder produced
             // the last product on closure,
-            if (lastProduct.readable()) {
+            if (lastProduct.isReadable()) {
                 if (header == null) {
                     return new Object[] { new DefaultHttpContent(newContent), new DefaultLastHttpContent(lastProduct)};
                 } else {

@@ -449,7 +449,7 @@ public class HttpPostRequestDecoder {
         }
         boolean contRead = true;
         try {
-            while (undecodedChunk.readable() && contRead) {
+            while (undecodedChunk.isReadable() && contRead) {
                 char read = (char) undecodedChunk.readUnsignedByte();
                 currentpos++;
                 switch (currentStatus) {
@@ -482,7 +482,7 @@ public class HttpPostRequestDecoder {
                         firstpos = currentpos;
                         contRead = true;
                     } else if (read == HttpConstants.CR) {
-                        if (undecodedChunk.readable()) {
+                        if (undecodedChunk.isReadable()) {
                             read = (char) undecodedChunk.readUnsignedByte();
                             currentpos++;
                             if (read == HttpConstants.LF) {
@@ -1188,7 +1188,7 @@ public class HttpPostRequestDecoder {
         try {
             ByteBuf line = buffer(64);
 
-            while (undecodedChunk.readable()) {
+            while (undecodedChunk.isReadable()) {
                 byte nextByte = undecodedChunk.readByte();
                 if (nextByte == HttpConstants.CR) {
                     nextByte = undecodedChunk.readByte();
@@ -1276,7 +1276,7 @@ public class HttpPostRequestDecoder {
             StringBuilder sb = new StringBuilder(64);
             int delimiterPos = 0;
             int len = delimiter.length();
-            while (undecodedChunk.readable() && delimiterPos < len) {
+            while (undecodedChunk.isReadable() && delimiterPos < len) {
                 byte nextByte = undecodedChunk.readByte();
                 if (nextByte == delimiter.charAt(delimiterPos)) {
                     delimiterPos++;
@@ -1288,7 +1288,7 @@ public class HttpPostRequestDecoder {
                 }
             }
             // Now check if either opening delimiter or closing delimiter
-            if (undecodedChunk.readable()) {
+            if (undecodedChunk.isReadable()) {
                 byte nextByte = undecodedChunk.readByte();
                 // first check for opening delimiter
                 if (nextByte == HttpConstants.CR) {
@@ -1310,7 +1310,7 @@ public class HttpPostRequestDecoder {
                     if (nextByte == '-') {
                         sb.append('-');
                         // now try to find if CRLF or LF there
-                        if (undecodedChunk.readable()) {
+                        if (undecodedChunk.isReadable()) {
                             nextByte = undecodedChunk.readByte();
                             if (nextByte == HttpConstants.CR) {
                                 nextByte = undecodedChunk.readByte();
@@ -1484,7 +1484,7 @@ public class HttpPostRequestDecoder {
         int index = 0;
         int lastPosition = undecodedChunk.readerIndex();
         boolean found = false;
-        while (undecodedChunk.readable()) {
+        while (undecodedChunk.isReadable()) {
             byte nextByte = undecodedChunk.readByte();
             if (newLine) {
                 // Check the delimiter
@@ -1500,7 +1500,7 @@ public class HttpPostRequestDecoder {
                     index = 0;
                     // continue until end of line
                     if (nextByte == HttpConstants.CR) {
-                        if (undecodedChunk.readable()) {
+                        if (undecodedChunk.isReadable()) {
                             nextByte = undecodedChunk.readByte();
                             if (nextByte == HttpConstants.LF) {
                                 newLine = true;
@@ -1520,7 +1520,7 @@ public class HttpPostRequestDecoder {
             } else {
                 // continue until end of line
                 if (nextByte == HttpConstants.CR) {
-                    if (undecodedChunk.readable()) {
+                    if (undecodedChunk.isReadable()) {
                         nextByte = undecodedChunk.readByte();
                         if (nextByte == HttpConstants.LF) {
                             newLine = true;
@@ -1684,7 +1684,7 @@ public class HttpPostRequestDecoder {
             int index = 0;
             int lastPosition = undecodedChunk.readerIndex();
             boolean found = false;
-            while (undecodedChunk.readable()) {
+            while (undecodedChunk.isReadable()) {
                 byte nextByte = undecodedChunk.readByte();
                 if (newLine) {
                     // Check the delimiter
@@ -1700,7 +1700,7 @@ public class HttpPostRequestDecoder {
                         index = 0;
                         // continue until end of line
                         if (nextByte == HttpConstants.CR) {
-                            if (undecodedChunk.readable()) {
+                            if (undecodedChunk.isReadable()) {
                                 nextByte = undecodedChunk.readByte();
                                 if (nextByte == HttpConstants.LF) {
                                     newLine = true;
@@ -1719,7 +1719,7 @@ public class HttpPostRequestDecoder {
                 } else {
                     // continue until end of line
                     if (nextByte == HttpConstants.CR) {
-                        if (undecodedChunk.readable()) {
+                        if (undecodedChunk.isReadable()) {
                             nextByte = undecodedChunk.readByte();
                             if (nextByte == HttpConstants.LF) {
                                 newLine = true;
@@ -1899,12 +1899,12 @@ public class HttpPostRequestDecoder {
      * @return True if one empty line was skipped
      */
     private boolean skipOneLine() {
-        if (!undecodedChunk.readable()) {
+        if (!undecodedChunk.isReadable()) {
             return false;
         }
         byte nextByte = undecodedChunk.readByte();
         if (nextByte == HttpConstants.CR) {
-            if (!undecodedChunk.readable()) {
+            if (!undecodedChunk.isReadable()) {
                 undecodedChunk.readerIndex(undecodedChunk.readerIndex() - 1);
                 return false;
             }

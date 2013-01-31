@@ -253,7 +253,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                 toRead = maxChunkSize;
             }
             ByteBuf content = buffer.readBytes(toRead);
-            if (!buffer.readable()) {
+            if (!buffer.isReadable()) {
                 reset();
                 return new DefaultLastHttpContent(content);
             }
@@ -432,7 +432,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         ByteBuf content = this.content;
         LastHttpContent httpContent;
 
-        if (content == null || !content.readable()) {
+        if (content == null || !content.isReadable()) {
             httpContent = LastHttpContent.EMPTY_LAST_CONTENT;
         } else {
             httpContent = new DefaultLastHttpContent(content);

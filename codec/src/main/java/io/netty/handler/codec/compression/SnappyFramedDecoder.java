@@ -70,11 +70,11 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
-        if (!in.readable()) {
+        if (!in.isReadable()) {
             return;
         }
 
-        while (in.readable()) {
+        while (in.isReadable()) {
             if (chunkLength == 0) {
                 if (in.readableBytes() < 3) {
                     // We need to be at least able to read the chunk type identifier (one byte),

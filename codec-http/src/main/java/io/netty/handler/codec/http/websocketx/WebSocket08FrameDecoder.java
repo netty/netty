@@ -421,7 +421,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
         }
 
         // May have UTF-8 message
-        if (buffer.readable()) {
+        if (buffer.isReadable()) {
 
             try {
                 new UTF8Output(buffer);
