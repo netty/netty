@@ -20,7 +20,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandler;
-import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
@@ -143,21 +143,21 @@ public abstract class SpdyOrHttpChooser extends ChannelHandlerAdapter implements
     }
 
     /**
-     * Create the {@link ChannelInboundHandler} that is responsible for handling the http requests
+     * Create the {@link ChannelInboundMessageHandler} that is responsible for handling the http requests
      * when the {@link SelectedProtocol} was {@link SelectedProtocol#HttpVersion1_0} or
      * {@link SelectedProtocol#HttpVersion1_1}
      */
-    protected abstract ChannelInboundHandler createHttpRequestHandlerForHttp();
+    protected abstract ChannelInboundMessageHandler<?> createHttpRequestHandlerForHttp();
 
     /**
-     * Create the {@link ChannelInboundHandler} that is responsible for handling the http responses
+     * Create the {@link ChannelInboundMessageHandler} that is responsible for handling the http responses
      * when the {@link SelectedProtocol} was {@link SelectedProtocol#SpdyVersion2} or
      * {@link SelectedProtocol#SpdyVersion3}.
      *
      * Bye default this getMethod will just delecate to {@link #createHttpRequestHandlerForHttp()}, but
      * sub-classes may override this to change the behaviour.
      */
-    protected ChannelInboundHandler createHttpRequestHandlerForSpdy() {
+    protected ChannelInboundMessageHandler<?> createHttpRequestHandlerForSpdy() {
         return createHttpRequestHandlerForHttp();
     }
 }

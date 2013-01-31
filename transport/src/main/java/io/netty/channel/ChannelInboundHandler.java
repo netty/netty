@@ -20,7 +20,7 @@ import io.netty.buffer.Buf;
 /**
  * {@link ChannelStateHandler} which handles inbound data.
  */
-public interface ChannelInboundHandler extends ChannelStateHandler {
+interface ChannelInboundHandler extends ChannelStateHandler {
     /**
      * Return the {@link Buf} which will be used for inbound data for the given {@link ChannelHandlerContext}.
      */

@@ -22,11 +22,11 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelStateHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.SocketChannel;
@@ -225,7 +225,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
     }
 
     private static class ServerBootstrapAcceptor
-            extends ChannelInboundHandlerAdapter implements ChannelInboundMessageHandler<Channel> {
+            extends ChannelStateHandlerAdapter implements ChannelInboundMessageHandler<Channel> {
 
         private final EventLoopGroup childGroup;
         private final ChannelHandler childHandler;
@@ -280,6 +280,11 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
                     logger.warn("Failed to register an accepted channel: " + child, t);
                 }
             }
+        }
+
+        @Override
+        public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            ctx.inboundMessageBuffer().free();
         }
     }
 

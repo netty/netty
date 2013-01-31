@@ -16,11 +16,10 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundByteHandler;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundByteHandlerAdapter;
 
 /**
  * {@link ChannelInboundByteHandler} which decodes bytes in a stream-like fashion from one {@link ByteBuf} to an other
@@ -40,7 +39,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
  * </pre>
  */
 public abstract class ByteToMessageDecoder
-    extends ChannelInboundHandlerAdapter implements ChannelInboundByteHandler {
+    extends ChannelInboundByteHandlerAdapter {
 
     private volatile boolean singleDecode;
     private boolean decodeWasNull;
@@ -64,19 +63,10 @@ public abstract class ByteToMessageDecoder
     public boolean isSingleDecode() {
         return singleDecode;
     }
-    @Override
-    public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ctx.alloc().buffer();
-    }
 
     @Override
-    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-        ctx.inboundByteBuffer().discardSomeReadBytes();
-    }
-
-    @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-        callDecode(ctx);
+    public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        callDecode(ctx, in);
     }
 
     @Override
@@ -94,7 +84,7 @@ public abstract class ByteToMessageDecoder
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         ByteBuf in = ctx.inboundByteBuffer();
         if (in.readable()) {
-            callDecode(ctx);
+            callDecode(ctx, in);
         }
 
         try {
@@ -112,10 +102,8 @@ public abstract class ByteToMessageDecoder
         ctx.fireChannelInactive();
     }
 
-    protected void callDecode(ChannelHandlerContext ctx) {
+    protected void callDecode(ChannelHandlerContext ctx, ByteBuf in) {
         boolean wasNull = false;
-
-        ByteBuf in = ctx.inboundByteBuffer();
 
         boolean decoded = false;
         while (in.readable()) {

@@ -19,9 +19,9 @@ import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandlerUtil;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelStateHandlerAdapter;
 
 /**
  * {@link ChannelInboundMessageHandler} which decodes from one message to an other message
@@ -46,7 +46,7 @@ import io.netty.channel.ChannelPipeline;
  *
  */
 public abstract class MessageToMessageDecoder<I>
-        extends ChannelInboundHandlerAdapter implements ChannelInboundMessageHandler<I> {
+        extends ChannelStateHandlerAdapter implements ChannelInboundMessageHandler<I> {
 
     private final Class<?>[] acceptedMsgTypes;
 
@@ -140,5 +140,10 @@ public abstract class MessageToMessageDecoder<I>
      */
     protected void freeInboundMessage(I msg) throws Exception {
         ChannelHandlerUtil.freeMessage(msg);
+    }
+
+    @Override
+    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        ctx.inboundMessageBuffer().free();
     }
 }
