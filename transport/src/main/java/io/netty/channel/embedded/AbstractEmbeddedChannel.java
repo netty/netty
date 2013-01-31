@@ -25,11 +25,11 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelOutboundHandler;
+import io.netty.channel.ChannelInboundByteHandler;
+import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelStateHandlerAdapter;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.logging.InternalLogger;
@@ -80,8 +80,10 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
                 break;
             }
             nHandlers ++;
-            p.addLast(h);
-            if (h instanceof ChannelInboundHandler || h instanceof ChannelOutboundHandler) {
+            ChannelHandlerContext ctx = p.addLast(h).context(h);
+
+            if (ctx.hasInboundByteBuffer() || ctx.hasOutboundByteBuffer()
+                    || ctx.hasInboundMessageBuffer() || ctx.hasOutboundMessageBuffer()) {
                 hasBuffer = true;
             }
         }
@@ -324,9 +326,10 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
         }
     }
 
-    private final class LastInboundMessageHandler extends ChannelInboundHandlerAdapter {
+    private final class LastInboundMessageHandler extends ChannelStateHandlerAdapter
+            implements ChannelInboundMessageHandler<Object> {
         @Override
-        public Buf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return lastInboundMessageBuffer;
         }
 
@@ -347,10 +350,16 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
         }
     }
 
-    private final class LastInboundByteHandler extends ChannelInboundHandlerAdapter {
+    private final class LastInboundByteHandler extends ChannelStateHandlerAdapter
+            implements ChannelInboundByteHandler {
         @Override
-        public Buf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return lastInboundByteBuffer;
+        }
+
+        @Override
+        public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+            // nothing
         }
 
         @Override

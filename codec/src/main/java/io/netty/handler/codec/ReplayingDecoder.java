@@ -363,7 +363,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
         replayable.terminate();
         ByteBuf in = cumulation;
         if (in.readable()) {
-            callDecode(ctx);
+            callDecode(ctx, in);
         }
 
         try {
@@ -385,7 +385,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
     }
 
     @Override
-    protected void callDecode(ChannelHandlerContext ctx) {
+    protected void callDecode(ChannelHandlerContext ctx, ByteBuf buf) {
         boolean wasNull = false;
 
         ByteBuf in = cumulation;

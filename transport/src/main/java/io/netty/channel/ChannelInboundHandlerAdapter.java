@@ -21,10 +21,10 @@ import io.netty.buffer.Buf;
 /**
  * Abstract base class for a {@link ChannelHandler} that handles inbound data.
  *
- * Most of the times you either want to extend {@link ChannelInboundByteHandlerAdapter} or
+ * Please either extend {@link ChannelInboundByteHandlerAdapter} or
  * {@link ChannelInboundMessageHandlerAdapter}.
  */
-public abstract class ChannelInboundHandlerAdapter
+abstract class ChannelInboundHandlerAdapter
         extends ChannelStateHandlerAdapter implements ChannelInboundHandler {
 
     /**
