@@ -142,18 +142,18 @@ public class WebSocket08FrameEncoder extends MessageToByteEncoder<WebSocketFrame
 
         int maskLength = maskPayload ? 4 : 0;
         if (length <= 125) {
-            out.ensureWritableBytes(2 + maskLength + length);
+            out.ensureWritable(2 + maskLength + length);
             out.writeByte(b0);
             byte b = (byte) (maskPayload ? 0x80 | (byte) length : (byte) length);
             out.writeByte(b);
         } else if (length <= 0xFFFF) {
-            out.ensureWritableBytes(4 + maskLength + length);
+            out.ensureWritable(4 + maskLength + length);
             out.writeByte(b0);
             out.writeByte(maskPayload ? 0xFE : 126);
             out.writeByte(length >>> 8 & 0xFF);
             out.writeByte(length & 0xFF);
         } else {
-            out.ensureWritableBytes(10 + maskLength + length);
+            out.ensureWritable(10 + maskLength + length);
             out.writeByte(b0);
             out.writeByte(maskPayload ? 0xFF : 127);
             out.writeLong(length);

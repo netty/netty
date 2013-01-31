@@ -16,7 +16,6 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundByteHandler;
@@ -93,7 +92,7 @@ public abstract class ByteToMessageDecoder
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         ByteBuf in = ctx.inboundByteBuffer();
-        if (in.readable()) {
+        if (in.isReadable()) {
             callDecode(ctx);
         }
 
@@ -118,7 +117,7 @@ public abstract class ByteToMessageDecoder
         ByteBuf in = ctx.inboundByteBuffer();
 
         boolean decoded = false;
-        while (in.readable()) {
+        while (in.isReadable()) {
             try {
                 int oldInputLength = in.readableBytes();
                 Object o = decode(ctx, in);

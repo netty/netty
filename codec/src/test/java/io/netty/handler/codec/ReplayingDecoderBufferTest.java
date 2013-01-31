@@ -15,14 +15,13 @@
  */
 package io.netty.handler.codec;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.Signal;
-
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 public class ReplayingDecoderBufferTest {
     
@@ -76,7 +75,7 @@ public class ReplayingDecoderBufferTest {
     @Test
     public void testGetBoolean() {
         ByteBuf buf = Unpooled.buffer(10);
-        while(buf.writable()) {
+        while(buf.isWritable()) {
             buf.writeBoolean(true);
         }
         ReplayingDecoderBuffer buffer = new ReplayingDecoderBuffer(buf);

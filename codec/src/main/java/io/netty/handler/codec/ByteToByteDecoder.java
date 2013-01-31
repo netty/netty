@@ -75,7 +75,7 @@ public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         ByteBuf in = ctx.inboundByteBuffer();
         ByteBuf out = ctx.nextInboundByteBuffer();
-        if (!in.readable()) {
+        if (!in.isReadable()) {
             callDecode(ctx, in, out);
         }
 
@@ -102,7 +102,7 @@ public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter
      */
     private void callDecode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) {
         int oldOutSize = out.readableBytes();
-        while (in.readable()) {
+        while (in.isReadable()) {
             int oldInSize = in.readableBytes();
             try {
                 decode(ctx, in, out);

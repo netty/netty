@@ -13,179 +13,308 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+/*
+ * Written by Josh Bloch of Google Inc. and released to the public domain,
+ * as explained at http://creativecommons.org/publicdomain/zero/1.0/.
+ */
 package io.netty.buffer;
 
-import java.util.ArrayDeque;
-import java.util.Collection;
+import java.lang.reflect.Array;
+import java.util.ConcurrentModificationException;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 /**
  * Default {@link MessageBuf} implementation
  *
  */
-final class DefaultMessageBuf<T> extends ArrayDeque<T> implements MessageBuf<T> {
+final class DefaultMessageBuf<T> extends AbstractMessageBuf<T> {
 
-    private static final long serialVersionUID = 1229808623624907552L;
+    private static final int MIN_INITIAL_CAPACITY = 8;
 
-    private boolean freed;
+    private T[] elements;
+    private int head;
+    private int tail;
 
-    DefaultMessageBuf() { }
+    DefaultMessageBuf() {
+        this(MIN_INITIAL_CAPACITY << 1);
+    }
 
     DefaultMessageBuf(int initialCapacity) {
-        super(initialCapacity);
+        this(initialCapacity, Integer.MAX_VALUE);
+    }
+
+    DefaultMessageBuf(int initialCapacity, int maxCapacity) {
+        super(maxCapacity);
+
+        if (initialCapacity < 0) {
+            throw new IllegalArgumentException("initialCapacity: " + initialCapacity + " (expected: >= 0)");
+        }
+        if (maxCapacity < initialCapacity) {
+            throw new IllegalArgumentException(
+                    "maxCapacity: " + maxCapacity + " (expected: >= initialCapacity(" + initialCapacity + ')');
+        }
+
+        // Find the best power of two to hold elements.
+        // Tests "<=" because arrays aren't kept full.
+        if (initialCapacity >= MIN_INITIAL_CAPACITY) {
+            initialCapacity |= initialCapacity >>>  1;
+            initialCapacity |= initialCapacity >>>  2;
+            initialCapacity |= initialCapacity >>>  4;
+            initialCapacity |= initialCapacity >>>  8;
+            initialCapacity |= initialCapacity >>> 16;
+            initialCapacity ++;
+
+            if (initialCapacity < 0) {  // Too many elements, must back off
+                initialCapacity >>>= 1; // Good luck allocating 2 ^ 30 elements
+            }
+        } else {
+            initialCapacity = MIN_INITIAL_CAPACITY;
+        }
+
+        elements = cast(new Object[initialCapacity]);
     }
 
     @Override
-    public BufType type() {
-        return BufType.MESSAGE;
+    protected void doFree() {
+        elements = null;
+        head = 0;
+        tail = 0;
     }
 
     @Override
-    public void addFirst(T t) {
-        ensureValid();
-        super.addFirst(t);
+    public boolean offer(T e) {
+        if (e == null) {
+            throw new NullPointerException();
+        }
+        if (!isWritable()) {
+            return false;
+        }
+
+        elements[tail] = e;
+        if ((tail = tail + 1 & elements.length - 1) == head) {
+            doubleCapacity();
+        }
+
+        return true;
+    }
+
+    private void doubleCapacity() {
+        assert head == tail;
+
+        int p = head;
+        int n = elements.length;
+        int r = n - p; // number of elements to the right of p
+        int newCapacity = n << 1;
+        if (newCapacity < 0) {
+            throw new IllegalStateException("Sorry, deque too big");
+        }
+        Object[] a = new Object[newCapacity];
+        System.arraycopy(elements, p, a, 0, r);
+        System.arraycopy(elements, 0, a, r, p);
+        elements = cast(a);
+        head = 0;
+        tail = n;
     }
 
     @Override
-    public void addLast(T t) {
-        ensureValid();
-        super.addLast(t);
+    public T poll() {
+        int h = head;
+        T result = elements[h]; // Element is null if deque empty
+        if (result == null) {
+            return null;
+        }
+        elements[h] = null;     // Must null out slot
+        head = h + 1 & elements.length - 1;
+        return result;
     }
 
     @Override
-    public T pollFirst() {
-        ensureValid();
-        return super.pollFirst();
+    public T peek() {
+        return elements[head]; // elements[head] is null if deque empty
     }
 
     @Override
-    public T pollLast() {
-        ensureValid();
-        return super.pollLast();
+    public boolean remove(Object o) {
+        if (o == null) {
+            return false;
+        }
+        int mask = elements.length - 1;
+        int i = head;
+        T x;
+        while ((x = elements[i]) != null) {
+            if (o.equals(x)) {
+                delete(i);
+                return true;
+            }
+            i = i + 1 & mask;
+        }
+        return false;
+    }
+
+    private boolean delete(int i) {
+        assert elements[tail] == null;
+        assert head == tail ? elements[head] == null
+                            : elements[head] != null && elements[tail - 1 & elements.length - 1] != null;
+        assert elements[head - 1 & elements.length - 1] == null;
+
+        final T[] elements = this.elements;
+        final int mask = elements.length - 1;
+        final int h = head;
+        final int t = tail;
+        final int front = i - h & mask;
+        final int back  = t - i & mask;
+
+        // Invariant: head <= i < tail mod circularity
+        if (front >= (t - h & mask)) {
+            throw new ConcurrentModificationException();
+        }
+
+        // Optimize for least element motion
+        if (front < back) {
+            if (h <= i) {
+                System.arraycopy(elements, h, elements, h + 1, front);
+            } else { // Wrap around
+                System.arraycopy(elements, 0, elements, 1, i);
+                elements[0] = elements[mask];
+                System.arraycopy(elements, h, elements, h + 1, mask - h);
+            }
+            elements[h] = null;
+            head = h + 1 & mask;
+            return false;
+        } else {
+            if (i < t) { // Copy the null tail as well
+                System.arraycopy(elements, i + 1, elements, i, back);
+                tail = t - 1;
+            } else { // Wrap around
+                System.arraycopy(elements, i + 1, elements, i, mask - i);
+                elements[mask] = elements[0];
+                System.arraycopy(elements, 1, elements, 0, t);
+                tail = t - 1 & mask;
+            }
+            return true;
+        }
     }
 
     @Override
-    public T getFirst() {
-        ensureValid();
-        return super.getFirst();
+    public int size() {
+        return tail - head & elements.length - 1;
     }
 
     @Override
-    public T getLast() {
-        ensureValid();
-        return super.getLast();
-    }
-
-    @Override
-    public T peekFirst() {
-        ensureValid();
-        return super.peekFirst();
-    }
-
-    @Override
-    public T peekLast() {
-        ensureValid();
-        return super.peekLast();
-    }
-
-    @Override
-    public boolean removeFirstOccurrence(Object o) {
-        ensureValid();
-        return super.removeFirstOccurrence(o);
-    }
-
-    @Override
-    public boolean removeLastOccurrence(Object o) {
-        ensureValid();
-        return super.removeLastOccurrence(o);
+    public boolean isEmpty() {
+        return head == tail;
     }
 
     @Override
     public Iterator<T> iterator() {
-        ensureValid();
-        return super.iterator();
-    }
-
-    @Override
-    public Iterator<T> descendingIterator() {
-        ensureValid();
-        return super.descendingIterator();
+        return new Itr();
     }
 
     @Override
     public boolean contains(Object o) {
-        ensureValid();
-        return super.contains(o);
+        if (o == null) {
+            return false;
+        }
+
+        final int mask = elements.length - 1;
+        int i = head;
+        Object e;
+        while ((e = elements[i]) != null) {
+            if (o.equals(e)) {
+                return true;
+            }
+            i = i + 1 & mask;
+        }
+
+        return false;
     }
 
     @Override
     public void clear() {
-        ensureValid();
-        super.clear();
+        int head = this.head;
+        int tail = this.tail;
+        if (head != tail) {
+            this.head = this.tail = 0;
+            final int mask = elements.length - 1;
+            int i = head;
+            do {
+                elements[i] = null;
+                i = i + 1 & mask;
+            } while (i != tail);
+        }
     }
 
     @Override
     public Object[] toArray() {
-        ensureValid();
-        return super.toArray();
+        return copyElements(new Object[size()]);
     }
 
     @Override
-    public <T1> T1[] toArray(T1[] a) {
-        ensureValid();
-        return super.toArray(a);
-    }
-
-    @Override
-    public ArrayDeque<T> clone() {
-        ensureValid();
-        return super.clone();
-    }
-
-    @Override
-    public int drainTo(Collection<? super T> c) {
-        ensureValid();
-        int cnt = 0;
-        for (;;) {
-            T o = poll();
-            if (o == null) {
-                break;
-            }
-            c.add(o);
-            cnt ++;
+    public <T> T[] toArray(T[] a) {
+        int size = size();
+        if (a.length < size) {
+            a = cast(Array.newInstance(a.getClass().getComponentType(), size));
         }
-        return cnt;
-    }
-
-    @Override
-    public int drainTo(Collection<? super T> c, int maxElements) {
-        ensureValid();
-        int cnt = 0;
-        while (cnt < maxElements) {
-            T o = poll();
-            if (o == null) {
-                break;
-            }
-            c.add(o);
-            cnt ++;
+        copyElements(a);
+        if (a.length > size) {
+            a[size] = null;
         }
-        return cnt;
+        return a;
     }
 
-    @Override
-    public boolean isFreed() {
-        return freed;
+    private <U> U[] copyElements(U[] a) {
+        if (head < tail) {
+            System.arraycopy(elements, head, cast(a), 0, size());
+        } else if (head > tail) {
+            int headPortionLen = elements.length - head;
+            System.arraycopy(elements, head, cast(a), 0, headPortionLen);
+            System.arraycopy(elements, 0, cast(a), headPortionLen, tail);
+        }
+        return a;
     }
 
-    @Override
-    public void free() {
-        freed = true;
-        super.clear();
+    @SuppressWarnings({ "unchecked", "SuspiciousArrayCast" })
+    private static <T> T[] cast(Object a) {
+        return (T[]) a;
     }
 
-    private void ensureValid() {
-        if (freed) {
-            throw new IllegalBufferAccessException();
+    private class Itr implements Iterator<T> {
+        private int cursor = head;
+        private int fence = tail;
+        private int lastRet = -1;
+
+        @Override
+        public boolean hasNext() {
+            return cursor != fence;
+        }
+
+        @Override
+        public T next() {
+            if (cursor == fence) {
+                throw new NoSuchElementException();
+            }
+            T result = elements[cursor];
+            // This check doesn't catch all possible comodifications,
+            // but does catch the ones that corrupt traversal
+            if (tail != fence || result == null) {
+                throw new ConcurrentModificationException();
+            }
+            lastRet = cursor;
+            cursor = cursor + 1 & elements.length - 1;
+            return result;
+        }
+
+        @Override
+        public void remove() {
+            if (lastRet < 0) {
+                throw new IllegalStateException();
+            }
+            if (delete(lastRet)) { // if left-shifted, undo increment in next()
+                cursor = cursor - 1 & elements.length - 1;
+                fence = tail;
+            }
+            lastRet = -1;
         }
     }
 }

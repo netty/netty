@@ -246,9 +246,10 @@ public interface ByteBuf extends Buf, Comparable<ByteBuf> {
     /**
      * Returns the maximum allowed capacity of this buffer.  If a user attempts to increase the
      * capacity of this buffer beyond the maximum capacity using {@link #capacity(int)} or
-     * {@link #ensureWritableBytes(int)}, those methods will raise an
+     * {@link #ensureWritable(int)}, those methods will raise an
      * {@link IllegalArgumentException}.
      */
+    @Override
     int maxCapacity();
 
     /**
@@ -391,6 +392,13 @@ public interface ByteBuf extends Buf, Comparable<ByteBuf> {
      * if and only if {@code (this.writerIndex - this.readerIndex)} is greater
      * than {@code 0}.
      */
+    @Override
+    boolean isReadable();
+
+    /**
+     * @deprecated Use {@link #isReadable()} or {@link #isReadable(int)} instead.
+     */
+    @Deprecated
     boolean readable();
 
     /**
@@ -398,6 +406,13 @@ public interface ByteBuf extends Buf, Comparable<ByteBuf> {
      * if and only if {@code (this.capacity - this.writerIndex)} is greater
      * than {@code 0}.
      */
+    @Override
+    boolean isWritable();
+
+    /**
+     * @deprecated Use {@link #isWritable()} or {@link #isWritable(int)} instead.
+     */
+    @Deprecated
     boolean writable();
 
     /**
@@ -476,11 +491,17 @@ public interface ByteBuf extends Buf, Comparable<ByteBuf> {
      * @throws IndexOutOfBoundsException
      *         if {@link #writerIndex()} + {@code minWritableBytes} > {@link #maxCapacity()}
      */
+    ByteBuf ensureWritable(int minWritableBytes);
+
+    /**
+     * @deprecated Use {@link #ensureWritable(int)} instead.
+     */
+    @Deprecated
     ByteBuf ensureWritableBytes(int minWritableBytes);
 
     /**
      * Tries to make sure the number of {@linkplain #writableBytes() the writable bytes}
-     * is equal to or greater than the specified value.  Unlike {@link #ensureWritableBytes(int)},
+     * is equal to or greater than the specified value.  Unlike {@link #ensureWritable(int)},
      * this method does not raise an exception but returns a code.
      *
      * @param minWritableBytes
@@ -497,7 +518,7 @@ public interface ByteBuf extends Buf, Comparable<ByteBuf> {
      *         {@code 3} if the buffer does not have enough bytes, but its capacity has been
      *                   increased to its maximum.
      */
-    int ensureWritableBytes(int minWritableBytes, boolean force);
+    int ensureWritable(int minWritableBytes, boolean force);
 
     /**
      * Gets a boolean at the specified absolute (@code index) in this buffer.

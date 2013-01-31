@@ -52,7 +52,7 @@ public abstract class ByteToByteEncoder extends ChannelOutboundByteHandlerAdapte
         ByteBuf out = ctx.nextOutboundByteBuffer();
         boolean encoded = false;
 
-        while (in.readable()) {
+        while (in.isReadable()) {
             int oldInSize = in.readableBytes();
             try {
                 encode(ctx, in, out);
