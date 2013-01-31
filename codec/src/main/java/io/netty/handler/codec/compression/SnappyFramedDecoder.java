@@ -84,8 +84,7 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
 
                 byte type = in.readByte();
                 chunkType = mapChunkType(type);
-                chunkLength = (in.readByte() & 0x0ff)
-                        + ((in.readByte() & 0x0ff) << 8);
+                chunkLength = in.readUnsignedByte() | in.readUnsignedByte() << 8;
 
                 // The spec mandates that reserved unskippable chunks must immediately
                 // return an error, as we must assume that we cannot decode the stream
@@ -130,10 +129,10 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
                 if (!started) {
                     throw new CompressionException("Received UNCOMPRESSED_DATA tag before STREAM_IDENTIFIER");
                 }
-                checksum = in.readByte() & 0x0ff
-                        + (in.readByte() << 8 & 0x0ff)
-                        + (in.readByte() << 16 & 0x0ff)
-                        + (in.readByte() << 24 & 0x0ff);
+                checksum = in.readUnsignedByte()
+                        | (in.readUnsignedByte() << 8)
+                        | (in.readUnsignedByte() << 16)
+                        | (in.readUnsignedByte() << 24);
                 if (validateChecksums) {
                     ByteBuf data = in.readBytes(chunkLength);
                     validateChecksum(data, checksum);
@@ -146,10 +145,10 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
                 if (!started) {
                     throw new CompressionException("Received COMPRESSED_DATA tag before STREAM_IDENTIFIER");
                 }
-                checksum = in.readByte() & 0x0ff
-                        + (in.readByte() << 8 & 0x0ff)
-                        + (in.readByte() << 16 & 0x0ff)
-                        + (in.readByte() << 24 & 0x0ff);
+                checksum = in.readUnsignedByte()
+                        | (in.readUnsignedByte() << 8)
+                        | (in.readUnsignedByte() << 16)
+                        | (in.readUnsignedByte() << 24);
                 if (validateChecksums) {
                     ByteBuf uncompressed = ctx.alloc().buffer();
                     snappy.decode(in, uncompressed, chunkLength);

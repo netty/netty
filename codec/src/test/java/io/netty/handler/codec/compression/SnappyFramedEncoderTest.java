@@ -17,12 +17,19 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.embedded.EmbeddedByteChannel;
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 
 public class SnappyFramedEncoderTest {
-    private final SnappyFramedEncoder encoder = new SnappyFramedEncoder();
+    private EmbeddedByteChannel channel;
+    
+    @Before
+    public void setUp() {
+        channel = new EmbeddedByteChannel(new SnappyFramedEncoder());
+    }
 
     @Test
     public void testSmallAmountOfDataIsUncompressed() throws Exception {
@@ -30,15 +37,14 @@ public class SnappyFramedEncoderTest {
             'n', 'e', 't', 't', 'y'
         });
 
-        ByteBuf out = Unpooled.buffer(21);
+        channel.writeOutbound(in);
+        assertTrue(channel.finish());
 
-        encoder.encode(null, in, out);
-
-        byte[] expected = {
+        ByteBuf expected = Unpooled.wrappedBuffer(new byte[] {
             -0x80, 0x06, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
              0x01, 0x05, 0x00, 0x2d, -0x5a, -0x7e, -0x5e, 'n', 'e', 't', 't', 'y'
-        };
-        assertArrayEquals(expected, out.array());
+        });
+        assertEquals(expected, channel.readOutbound());
     }
 
     @Test
@@ -48,18 +54,17 @@ public class SnappyFramedEncoderTest {
             'n', 'e', 't', 't', 'y', 'n', 'e', 't', 't', 'y'
         });
 
-        ByteBuf out = Unpooled.buffer(26);
+        channel.writeOutbound(in);
+        assertTrue(channel.finish());
 
-        encoder.encode(null, in, out);
-
-        byte[] expected = {
+        ByteBuf expected = Unpooled.wrappedBuffer(new byte[] {
             -0x80, 0x06, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
              0x00, 0x14, 0x00, 0x7b, 0x1f, 0x65, 0x64,
                    0x14, 0x10,
                    'n', 'e', 't', 't', 'y',
                    0x3a, 0x05, 0x00
-        };
-        assertArrayEquals(expected, out.array());
+        });
+        assertEquals(expected, channel.readOutbound());
     }
 
     @Test
@@ -68,18 +73,17 @@ public class SnappyFramedEncoderTest {
             'n', 'e', 't', 't', 'y'
         });
 
-        ByteBuf out = Unpooled.buffer(33);
-
-        encoder.encode(null, in, out);
+        channel.writeOutbound(in);
         in.readerIndex(0); // rewind the buffer to write the same data
-        encoder.encode(null, in, out);
+        channel.writeOutbound(in);
+        assertTrue(channel.finish());
 
-        byte[] expected = {
+        ByteBuf expected = Unpooled.wrappedBuffer(new byte[] {
             -0x80, 0x06, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
              0x01, 0x05, 0x00, 0x2d, -0x5a, -0x7e, -0x5e, 'n', 'e', 't', 't', 'y',
              0x01, 0x05, 0x00, 0x2d, -0x5a, -0x7e, -0x5e, 'n', 'e', 't', 't', 'y',
-        };
-        assertArrayEquals(expected, out.array());
+        });
+        assertEquals(expected, channel.readOutbound());
     }
     
     /**
@@ -123,9 +127,8 @@ public class SnappyFramedEncoderTest {
              -1,   -1,   -1, // copy
              -1,   1 // remainder
         });
-
-        ByteBuf out = Unpooled.buffer(274);
         
-        encoder.encode(null, in, out);
+        channel.writeOutbound(in);
+        assertTrue(channel.finish());
     }
 }

@@ -18,8 +18,9 @@ package io.netty.handler.codec.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 public class SnappyTest {
     private final Snappy snappy = new Snappy();
@@ -40,35 +41,35 @@ public class SnappyTest {
         snappy.decode(in, out, 7);
 
         // "netty"
-        byte[] expected = {
+        ByteBuf expected = Unpooled.wrappedBuffer(new byte[] {
             0x6e, 0x65, 0x74, 0x74, 0x79
-        };
-        Assert.assertArrayEquals("Literal was not decoded correctly", expected, out.array());
+        });
+        assertEquals("Literal was not decoded correctly", expected, out);
     }
 
     @Test
     public void testDecodeCopyWith1ByteOffset() throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
-            0x01, // preamble length
+            0x0a, // preamble length
             0x04 << 2, // literal tag + length
             0x6e, 0x65, 0x74, 0x74, 0x79, // "netty"
-            0x05 << 2 | 0x01, // copy with 1-byte offset + length
+            0x01 << 2 | 0x01, // copy with 1-byte offset + length
             0x05 // offset
         });
         ByteBuf out = Unpooled.buffer(10);
-        snappy.decode(in, out, 9);
+        snappy.decode(in, out, 10);
 
         // "nettynetty" - we saved a whole byte :)
-        byte[] expected = {
+        ByteBuf expected = Unpooled.wrappedBuffer(new byte[] {
             0x6e, 0x65, 0x74, 0x74, 0x79, 0x6e, 0x65, 0x74, 0x74, 0x79
-        };
-        Assert.assertArrayEquals("Copy was not decoded correctly", expected, out.array());
+        });
+        assertEquals("Copy was not decoded correctly", expected, out);
     }
 
     @Test(expected = CompressionException.class)
     public void testDecodeCopyWithTinyOffset() throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
-            0x01, // preamble length
+            0x0a, // preamble length
             0x04 << 2, // literal tag + length
             0x6e, 0x65, 0x74, 0x74, 0x79, // "netty"
             0x05 << 2 | 0x01, // copy with 1-byte offset + length
@@ -81,7 +82,7 @@ public class SnappyTest {
     @Test(expected = CompressionException.class)
     public void testDecodeCopyWithOffsetBeforeChunk() throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
-            0x01, // preamble length
+            0x0a, // preamble length
             0x04 << 2, // literal tag + length
             0x6e, 0x65, 0x74, 0x74, 0x79, // "netty"
             0x05 << 2 | 0x01, // copy with 1-byte offset + length
@@ -110,12 +111,12 @@ public class SnappyTest {
         ByteBuf out = Unpooled.buffer(7);
         snappy.encode(in, out, 5);
 
-        byte[] expected = {
+        ByteBuf expected = Unpooled.wrappedBuffer(new byte[] {
             0x05, // preamble length
             0x04 << 2, // literal tag + length
             0x6e, 0x65, 0x74, 0x74, 0x79 // "netty"
-        };
-        Assert.assertArrayEquals("Encoded literal was invalid", expected, out.array());
+        });
+        assertEquals("Encoded literal was invalid", expected, out);
     }
 
     @Test
@@ -132,7 +133,7 @@ public class SnappyTest {
         // The only compressibility in the above are the words "the ",
         // and "protocols", so this is a literal, followed by a copy
         // followed by another literal, followed by another copy
-        byte[] expected = {
+        ByteBuf expected = Unpooled.wrappedBuffer(new byte[] {
             -0x49, 0x01, // preamble length
             -0x10, 0x42, // literal tag + length
 
@@ -163,8 +164,8 @@ public class SnappyTest {
 
             // Second copy (protocols)
             0x15, 0x4c
-        };
+        });
 
-        Assert.assertArrayEquals("Encoded result was incorrect", expected, out.array());
+        assertEquals("Encoded result was incorrect", expected, out);
     }
 }
