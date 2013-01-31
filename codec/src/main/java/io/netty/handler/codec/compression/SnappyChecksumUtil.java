@@ -44,15 +44,11 @@ public final class SnappyChecksumUtil {
     public static int calculateChecksum(ByteBuf slice) {
         CRC32 crc32 = new CRC32();
         try {
-            if (slice.hasArray()) {
-                crc32.update(slice.array());
-            } else {
-                byte[] array = new byte[slice.readableBytes()];
-                slice.markReaderIndex();
-                slice.readBytes(array);
-                slice.resetReaderIndex();
-                crc32.update(array);
-            }
+            byte[] array = new byte[slice.readableBytes()];
+            slice.markReaderIndex();
+            slice.readBytes(array);
+            slice.resetReaderIndex();
+            crc32.update(array);
 
             return maskChecksum((int) crc32.getValue());
         } finally {

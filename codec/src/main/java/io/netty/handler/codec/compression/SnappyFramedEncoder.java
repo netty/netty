@@ -15,11 +15,11 @@
  */
 package io.netty.handler.codec.compression;
 
+import static io.netty.handler.codec.compression.SnappyChecksumUtil.calculateChecksum;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToByteEncoder;
-
-import static io.netty.handler.codec.compression.SnappyChecksumUtil.*;
 
 /**
  * Compresses a {@link ByteBuf} using the Snappy framing format.
@@ -64,20 +64,19 @@ public class SnappyFramedEncoder extends ByteToByteEncoder {
                 int subChunkLength = Math.min(Short.MAX_VALUE, chunkLength);
                 out.writeByte(0);
                 writeChunkLength(out, subChunkLength);
-                ByteBuf slice = in.slice();
+                ByteBuf slice = in.slice(in.readerIndex(), subChunkLength);
                 calculateAndWriteChecksum(slice, out);
 
                 snappy.encode(slice, out, subChunkLength);
+
+                in.readerIndex(slice.readerIndex());
             }
         } else {
             out.writeByte(1);
             writeChunkLength(out, chunkLength);
-            ByteBuf slice = in.slice();
-            calculateAndWriteChecksum(slice, out);
-            out.writeBytes(slice);
+            calculateAndWriteChecksum(in, out);
+            out.writeBytes(in, chunkLength);
         }
-
-        in.readerIndex(in.readerIndex() + chunkLength);
     }
 
     /**

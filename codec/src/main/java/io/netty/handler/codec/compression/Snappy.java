@@ -263,7 +263,7 @@ public class Snappy {
             inputLength = readPreamble(in);
         }
 
-        if (inputLength == 0  || in.readerIndex() - inIndex + in.readableBytes() < maxLength) {
+        if (inputLength == 0  || in.readerIndex() - inIndex + in.readableBytes() < maxLength - 5) {
             // Wait until we've got the entire chunk before continuing
             return;
         }
@@ -330,22 +330,22 @@ public class Snappy {
         int length;
         switch(tag >> 2 & 0x3F) {
         case 60:
-            length = in.readByte() & 0x0ff;
+            length = in.readUnsignedByte();
             break;
         case 61:
-            length = (in.readByte() & 0x0ff)
-                   + ((in.readByte() & 0x0ff) << 8);
+            length = in.readUnsignedByte()
+                   | (in.readUnsignedByte() << 8);
             break;
         case 62:
-            length = (in.readByte() & 0x0ff)
-                   + ((in.readByte() & 0x0ff) << 8)
-                   + ((in.readByte() & 0x0ff) << 16);
+            length = in.readUnsignedByte()
+                   | (in.readUnsignedByte() << 8)
+                   | (in.readUnsignedByte() << 16);
             break;
         case 64:
-            length = (in.readByte() & 0x0ff)
-                    + ((in.readByte() & 0x0ff) << 8)
-                    + ((in.readByte() & 0x0ff) << 16)
-                    + ((in.readByte() & 0x0ff) << 24);
+            length = in.readUnsignedByte()
+                    | (in.readUnsignedByte() << 8)
+                    | (in.readUnsignedByte() << 16)
+                    | (in.readUnsignedByte() << 24);
             break;
         default:
             length = tag >> 2 & 0x3F;
@@ -368,9 +368,8 @@ public class Snappy {
      */
     private static void decodeCopyWith1ByteOffset(byte tag, ByteBuf in, ByteBuf out) {
         int initialIndex = in.readerIndex();
-        int length = 4 + ((tag & 0x0c) >> 2);
-        int offset = 1 + ((tag & 0x0e0) << 8)
-                   + (in.readByte() & 0x0ff);
+        int length = 4 + ((tag & 0x01c) >> 2);
+        int offset = 1 + ((tag & 0x0e0) << 8 | in.readUnsignedByte());
 
         validateOffset(offset, initialIndex);
 
@@ -394,8 +393,7 @@ public class Snappy {
     private static void decodeCopyWith2ByteOffset(byte tag, ByteBuf in, ByteBuf out) {
         int initialIndex = in.readerIndex();
         int length = 1 + (tag >> 2 & 0x03f);
-        int offset = 1 + (in.readByte() & 0x0ff)
-                   + (in.readByte() & 0x0ff) << 8;
+        int offset = 1 + (in.readUnsignedByte() | in.readUnsignedByte() << 8);
 
         validateOffset(offset, initialIndex);
 
@@ -419,10 +417,10 @@ public class Snappy {
     private static void decodeCopyWith4ByteOffset(byte tag, ByteBuf in, ByteBuf out) {
         int initialIndex = in.readerIndex();
         int length = 1 + (tag >> 2 & 0x03F);
-        int offset = 1 + (in.readByte() & 0x0ff)
-                   + ((in.readByte() & 0x0ff) << 8)
-                   + ((in.readByte() & 0x0ff) << 16)
-                   + ((in.readByte() & 0x0ff) << 24);
+        int offset = 1 + (in.readUnsignedByte() |
+                          in.readUnsignedByte() << 8 |
+                          in.readUnsignedByte() << 16 |
+                          in.readUnsignedByte() << 24);
 
         validateOffset(offset, initialIndex);
 
