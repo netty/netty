@@ -27,8 +27,8 @@ import io.netty.util.AttributeKey;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * {@link AbstractBootstrap} is a helper class that makes it easy to bootstrap a {@link Channel}. It support
@@ -37,12 +37,12 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 abstract class AbstractBootstrap<B extends AbstractBootstrap<?, C>, C extends Channel> implements Cloneable {
 
-    private EventLoopGroup group;
-    private ChannelFactory<? extends C> channelFactory;
-    private SocketAddress localAddress;
-    private final Map<ChannelOption<?>, Object> options = new ConcurrentHashMap<ChannelOption<?>, Object>();
-    private final Map<AttributeKey<?>, Object> attrs = new ConcurrentHashMap<AttributeKey<?>, Object>();
-    private ChannelHandler handler;
+    private volatile EventLoopGroup group;
+    private volatile ChannelFactory<? extends C> channelFactory;
+    private volatile SocketAddress localAddress;
+    private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
+    private final Map<AttributeKey<?>, Object> attrs = new LinkedHashMap<AttributeKey<?>, Object>();
+    private volatile ChannelHandler handler;
 
     AbstractBootstrap() {
         // Disallow extending from a different package.
@@ -53,8 +53,12 @@ abstract class AbstractBootstrap<B extends AbstractBootstrap<?, C>, C extends Ch
         channelFactory = bootstrap.channelFactory;
         handler = bootstrap.handler;
         localAddress = bootstrap.localAddress;
-        options.putAll(bootstrap.options);
-        attrs.putAll(bootstrap.attrs);
+        synchronized (bootstrap.options) {
+            options.putAll(bootstrap.options);
+        }
+        synchronized (bootstrap.attrs) {
+            attrs.putAll(bootstrap.attrs);
+        }
     }
 
     /**
@@ -146,9 +150,13 @@ abstract class AbstractBootstrap<B extends AbstractBootstrap<?, C>, C extends Ch
             throw new NullPointerException("option");
         }
         if (value == null) {
-            options.remove(option);
+            synchronized (options) {
+                options.remove(option);
+            }
         } else {
-            options.put(option, value);
+            synchronized (options) {
+                options.put(option, value);
+            }
         }
         return (B) this;
     }
@@ -162,9 +170,13 @@ abstract class AbstractBootstrap<B extends AbstractBootstrap<?, C>, C extends Ch
             throw new NullPointerException("key");
         }
         if (value == null) {
-            attrs.remove(key);
+            synchronized (attrs) {
+                attrs.remove(key);
+            }
         } else {
-            attrs.put(key, value);
+            synchronized (attrs) {
+                attrs.put(key, value);
+            }
         }
 
         @SuppressWarnings("unchecked")
@@ -307,15 +319,19 @@ abstract class AbstractBootstrap<B extends AbstractBootstrap<?, C>, C extends Ch
             buf.append(localAddress);
             buf.append(", ");
         }
-        if (options != null && !options.isEmpty()) {
-            buf.append("options: ");
-            buf.append(options);
-            buf.append(", ");
+        synchronized (options) {
+            if (!options.isEmpty()) {
+                buf.append("options: ");
+                buf.append(options);
+                buf.append(", ");
+            }
         }
-        if (attrs != null && !attrs.isEmpty()) {
-            buf.append("attrs: ");
-            buf.append(attrs);
-            buf.append(", ");
+        synchronized (attrs) {
+            if (!attrs.isEmpty()) {
+                buf.append("attrs: ");
+                buf.append(attrs);
+                buf.append(", ");
+            }
         }
         if (handler != null) {
             buf.append("handler: ");
