@@ -263,7 +263,7 @@ public class Snappy {
             inputLength = readPreamble(in);
         }
 
-        if (inputLength == 0  || in.readerIndex() - inIndex + in.readableBytes() < maxLength) {
+        if (inputLength == 0  || in.readerIndex() - inIndex + in.readableBytes() < maxLength - 5) {
             // Wait until we've got the entire chunk before continuing
             return;
         }
@@ -368,7 +368,7 @@ public class Snappy {
      */
     private static void decodeCopyWith1ByteOffset(byte tag, ByteBuf in, ByteBuf out) {
         int initialIndex = in.readerIndex();
-        int length = 4 + ((tag & 0x0c) >> 2);
+        int length = 4 + ((tag & 0x01c) >> 2);
         int offset = 1 + ((tag & 0x0e0) << 8)
                    + (in.readByte() & 0x0ff);
 

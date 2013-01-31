@@ -131,9 +131,9 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
                     throw new CompressionException("Received UNCOMPRESSED_DATA tag before STREAM_IDENTIFIER");
                 }
                 checksum = in.readByte() & 0x0ff
-                        + (in.readByte() << 8 & 0x0ff)
-                        + (in.readByte() << 16 & 0x0ff)
-                        + (in.readByte() << 24 & 0x0ff);
+                        + (in.readByte() & 0x0ff << 8)
+                        + (in.readByte() & 0x0ff << 16)
+                        + (in.readByte() & 0x0ff << 24);
                 if (validateChecksums) {
                     ByteBuf data = in.readBytes(chunkLength);
                     validateChecksum(data, checksum);
@@ -147,9 +147,9 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
                     throw new CompressionException("Received COMPRESSED_DATA tag before STREAM_IDENTIFIER");
                 }
                 checksum = in.readByte() & 0x0ff
-                        + (in.readByte() << 8 & 0x0ff)
-                        + (in.readByte() << 16 & 0x0ff)
-                        + (in.readByte() << 24 & 0x0ff);
+                        + (in.readByte() & 0x0ff << 8)
+                        + (in.readByte() & 0x0ff << 16)
+                        + (in.readByte() & 0x0ff << 24);
                 if (validateChecksums) {
                     ByteBuf uncompressed = ctx.alloc().buffer();
                     snappy.decode(in, uncompressed, chunkLength);
