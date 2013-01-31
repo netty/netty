@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
 import java.net.SocketOption;
@@ -57,6 +58,7 @@ final class DefaultAioSocketChannelConfig extends DefaultChannelConfig
      */
     DefaultAioSocketChannelConfig(AioSocketChannel channel) {
         super(channel);
+        enableTcpNoDelay();
     }
 
     /**
@@ -65,6 +67,18 @@ final class DefaultAioSocketChannelConfig extends DefaultChannelConfig
     DefaultAioSocketChannelConfig(AioSocketChannel channel, NetworkChannel javaChannel) {
         super(channel);
         this.javaChannel.set(javaChannel);
+        enableTcpNoDelay();
+    }
+
+    private void enableTcpNoDelay() {
+        // Enable TCP_NODELAY by default if possible.
+        if (PlatformDependent.canEnableTcpNoDelayByDefault()) {
+            try {
+                setTcpNoDelay(true);
+            } catch (Exception e) {
+                // Ignore.
+            }
+        }
     }
 
     @Override

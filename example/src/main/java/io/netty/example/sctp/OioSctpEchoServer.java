@@ -20,7 +20,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.sctp.SctpChannel;
-import io.netty.channel.sctp.SctpChannelOption;
 import io.netty.channel.sctp.oio.OioSctpServerChannel;
 import io.netty.channel.socket.oio.OioEventLoopGroup;
 import io.netty.handler.logging.LogLevel;
@@ -44,7 +43,6 @@ public class OioSctpEchoServer {
             b.group(new OioEventLoopGroup(), new OioEventLoopGroup())
              .channel(OioSctpServerChannel.class)
              .option(ChannelOption.SO_BACKLOG, 100)
-             .childOption(SctpChannelOption.SCTP_NODELAY, true)
              .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new ChannelInitializer<SctpChannel>() {
                  @Override

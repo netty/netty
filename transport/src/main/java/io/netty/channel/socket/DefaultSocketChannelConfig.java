@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.util.internal.PlatformDependent;
 
 import java.net.Socket;
 import java.net.SocketException;
@@ -44,6 +45,15 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
             throw new NullPointerException("javaSocket");
         }
         this.javaSocket = javaSocket;
+
+        // Enable TCP_NODELAY by default if possible.
+        if (PlatformDependent.canEnableTcpNoDelayByDefault()) {
+            try {
+                setTcpNoDelay(true);
+            } catch (Exception e) {
+                // Ignore.
+            }
+        }
     }
 
     @Override

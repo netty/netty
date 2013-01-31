@@ -46,13 +46,17 @@ public interface SctpChannelConfig extends ChannelConfig {
 
     /**
      * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
-     *     {@code SCTP_NODELAY}</a> option.
+     * {@code SCTP_NODELAY}</a> option.  Please note that the default value of this option is {@code true} unlike the
+     * operating system default ({@code false}). However, for some buggy platforms, such as Android, that shows erratic
+     * behavior with Nagle's algorithm disabled, the default value remains to be {@code false}.
      */
     boolean isSctpNoDelay();
 
     /**
      * Sets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">
-     *     {@code SCTP_NODELAY}</a> option.
+     * {@code SCTP_NODELAY}</a> option.  Please note that the default value of this option is {@code true} unlike the
+     * operating system default ({@code false}). However, for some buggy platforms, such as Android, that shows erratic
+     * behavior with Nagle's algorithm disabled, the default value remains to be {@code false}.
      */
     SctpChannelConfig setSctpNoDelay(boolean sctpNoDelay);
 
