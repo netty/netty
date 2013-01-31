@@ -17,6 +17,7 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.CharsetUtil;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -27,11 +28,11 @@ public class SnappyIntegrationTest {
     
     @Test
     public void testEncoderDecoderIdentity() throws Exception {
-        ByteBuf in = Unpooled.wrappedBuffer(
-            ("Netty has been designed carefully with the experiences " +
+        ByteBuf in = Unpooled.copiedBuffer(
+            "Netty has been designed carefully with the experiences " +
             "earned from the implementation of a lot of protocols " +
             "such as FTP, SMTP, HTTP, and various binary and " +
-            "text-based legacy protocols").getBytes("US-ASCII")
+            "text-based legacy protocols", CharsetUtil.US_ASCII
         );
         ByteBuf encoded = Unpooled.buffer();
         encoder.encode(null, in, encoded);

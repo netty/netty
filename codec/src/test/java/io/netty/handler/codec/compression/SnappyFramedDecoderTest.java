@@ -15,14 +15,16 @@
  */
 package io.netty.handler.codec.compression;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import org.junit.Test;
-
 import static org.junit.Assert.*;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.embedded.EmbeddedByteChannel;
+
+import org.junit.Test;
+
 public class SnappyFramedDecoderTest {
-    private final SnappyFramedDecoder decoder = new SnappyFramedDecoder();
+    private final EmbeddedByteChannel channel = new EmbeddedByteChannel(new SnappyFramedDecoder());
 
     @Test(expected = CompressionException.class)
     public void testReservedUnskippableChunkTypeCausesError() throws Exception {
@@ -30,7 +32,7 @@ public class SnappyFramedDecoderTest {
             0x03, 0x01, 0x00, 0x00
         });
 
-        decoder.decode(null, in, null);
+        channel.writeInbound(in);
     }
 
     @Test(expected = CompressionException.class)
@@ -39,7 +41,7 @@ public class SnappyFramedDecoderTest {
             -0x80, 0x05, 0x00, 'n', 'e', 't', 't', 'y'
         });
 
-        decoder.decode(null, in, null);
+        channel.writeInbound(in);
     }
 
     @Test(expected = CompressionException.class)
@@ -48,7 +50,7 @@ public class SnappyFramedDecoderTest {
             -0x80, 0x06, 0x00, 's', 'n', 'e', 't', 't', 'y'
         });
 
-        decoder.decode(null, in, null);
+        channel.writeInbound(in);
     }
 
     @Test(expected = CompressionException.class)
@@ -57,7 +59,7 @@ public class SnappyFramedDecoderTest {
             -0x7f, 0x06, 0x00, 's', 'n', 'e', 't', 't', 'y'
         });
 
-        decoder.decode(null, in, null);
+        channel.writeInbound(in);
     }
 
     @Test(expected = CompressionException.class)
@@ -66,7 +68,7 @@ public class SnappyFramedDecoderTest {
             0x01, 0x05, 0x00, 'n', 'e', 't', 't', 'y'
         });
 
-        decoder.decode(null, in, null);
+        channel.writeInbound(in);
     }
 
     @Test(expected = CompressionException.class)
@@ -75,7 +77,7 @@ public class SnappyFramedDecoderTest {
             0x00, 0x05, 0x00, 'n', 'e', 't', 't', 'y'
         });
 
-        decoder.decode(null, in, null);
+        channel.writeInbound(in);
     }
 
     @Test
@@ -85,9 +87,8 @@ public class SnappyFramedDecoderTest {
            -0x7f, 0x05, 0x00, 'n', 'e', 't', 't', 'y'
         });
 
-        ByteBuf out = Unpooled.unmodifiableBuffer(Unpooled.EMPTY_BUFFER);
-
-        decoder.decode(null, in, out);
+        channel.writeInbound(in);
+        assertNull(channel.readInbound());
 
         assertEquals(17, in.readerIndex());
     }
@@ -99,14 +100,12 @@ public class SnappyFramedDecoderTest {
            0x01, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
         });
 
-        ByteBuf out = Unpooled.buffer(5);
-
-        decoder.decode(null, in, out);
+        channel.writeInbound(in);
 
         byte[] expected = {
             'n', 'e', 't', 't', 'y'
         };
-        assertArrayEquals(expected, out.array());
+        assertArrayEquals(expected, ((ByteBuf) channel.readInbound()).array());
     }
 
     @Test
@@ -119,13 +118,11 @@ public class SnappyFramedDecoderTest {
                  0x6e, 0x65, 0x74, 0x74, 0x79 // "netty"
         });
 
-        ByteBuf out = Unpooled.buffer(5);
-
-        decoder.decode(null, in, out);
+        channel.writeInbound(in);
 
         byte[] expected = {
             'n', 'e', 't', 't', 'y'
         };
-        assertArrayEquals(expected, out.array());
+        assertArrayEquals(expected, ((ByteBuf) channel.readInbound()).array());
     }
 }
