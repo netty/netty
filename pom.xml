@@ -267,6 +267,8 @@
         <version>2.5.1</version>
         <configuration>
           <encoding>UTF-8</encoding>
+          <compilerVersion>1.7</compilerVersion>
+          <fork>true</fork>
           <source>1.6</source>
           <target>1.6</target>
           <debug>true</debug>
@@ -274,6 +276,7 @@
           <showDeprecation>true</showDeprecation>
           <showWarnings>true</showWarnings>
           <compilerArguments>
+            <Xlint:-options/>
             <Xlint:unchecked/>
             <Xlint:deprecation/>
           </compilerArguments>
