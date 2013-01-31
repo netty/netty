@@ -19,12 +19,12 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Queue;
 
-final class QueueBackedMessageBuf<T> implements MessageBuf<T> {
+final class QueueBackedMessageBuf<T> extends AbstractMessageBuf<T> {
 
     private final Queue<T> queue;
-    private boolean freed;
 
     QueueBackedMessageBuf(Queue<T> queue) {
+        super(Integer.MAX_VALUE);
         if (queue == null) {
             throw new NullPointerException("queue");
         }
@@ -32,167 +32,95 @@ final class QueueBackedMessageBuf<T> implements MessageBuf<T> {
     }
 
     @Override
-    public BufType type() {
-        return BufType.MESSAGE;
-    }
-
-    @Override
-    public boolean add(T e) {
-        ensureValid();
-        return queue.add(e);
-    }
-
-    @Override
     public boolean offer(T e) {
-        ensureValid();
-        return queue.offer(e);
-    }
-
-    @Override
-    public T remove() {
-        ensureValid();
-        return queue.remove();
+        checkUnfreed();
+        return isWritable() && queue.offer(e);
     }
 
     @Override
     public T poll() {
-        ensureValid();
+        checkUnfreed();
         return queue.poll();
     }
 
     @Override
-    public T element() {
-        ensureValid();
-        return queue.element();
-    }
-
-    @Override
     public T peek() {
-        ensureValid();
+        checkUnfreed();
         return queue.peek();
     }
 
     @Override
     public int size() {
-        ensureValid();
         return queue.size();
     }
 
     @Override
     public boolean isEmpty() {
-        ensureValid();
         return queue.isEmpty();
     }
 
     @Override
     public boolean contains(Object o) {
-        ensureValid();
+        checkUnfreed();
         return queue.contains(o);
     }
 
     @Override
     public Iterator<T> iterator() {
-        ensureValid();
+        checkUnfreed();
         return queue.iterator();
     }
 
     @Override
     public Object[] toArray() {
-        ensureValid();
+        checkUnfreed();
         return queue.toArray();
     }
 
     @Override
     public <E> E[] toArray(E[] a) {
-        ensureValid();
+        checkUnfreed();
         return queue.toArray(a);
     }
 
     @Override
     public boolean remove(Object o) {
-        ensureValid();
+        checkUnfreed();
         return queue.remove(o);
     }
 
     @Override
     public boolean containsAll(Collection<?> c) {
-        ensureValid();
+        checkUnfreed();
         return queue.containsAll(c);
     }
 
     @Override
     public boolean addAll(Collection<? extends T> c) {
-        ensureValid();
-        return queue.addAll(c);
+        checkUnfreed();
+        return isWritable(c.size()) && queue.addAll(c);
     }
 
     @Override
     public boolean removeAll(Collection<?> c) {
-        ensureValid();
+        checkUnfreed();
         return queue.removeAll(c);
     }
 
     @Override
     public boolean retainAll(Collection<?> c) {
-        ensureValid();
+        checkUnfreed();
         return queue.retainAll(c);
     }
 
     @Override
     public void clear() {
-        ensureValid();
+        checkUnfreed();
         queue.clear();
     }
 
     @Override
-    public int drainTo(Collection<? super T> c) {
-        ensureValid();
-        int cnt = 0;
-        for (;;) {
-            T o = poll();
-            if (o == null) {
-                break;
-            }
-            c.add(o);
-            cnt ++;
-        }
-        return cnt;
-    }
-
-    @Override
-    public int drainTo(Collection<? super T> c, int maxElements) {
-        ensureValid();
-        int cnt = 0;
-        while (cnt < maxElements) {
-            T o = poll();
-            if (o == null) {
-                break;
-            }
-            c.add(o);
-            cnt ++;
-        }
-        return cnt;
-    }
-
-    @Override
-    public boolean isFreed() {
-        return freed;
-    }
-
-    @Override
-    public void free() {
-        freed = true;
-        queue.clear();
-    }
-
-    @Override
-    public String toString() {
-        return queue.toString();
-    }
-
-    private void ensureValid() {
-        if (freed) {
-            throw new IllegalBufferAccessException();
-        }
+    protected void doFree() {
+        clear();
     }
 }

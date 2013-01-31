@@ -54,7 +54,7 @@ public class WebSocket00FrameEncoder extends MessageToByteEncoder<WebSocketFrame
             // Binary frame
             ByteBuf data = msg.data();
             int dataLen = data.readableBytes();
-            out.ensureWritableBytes(dataLen + 5);
+            out.ensureWritable(dataLen + 5);
 
             // Encode type.
             out.writeByte((byte) 0x80);
