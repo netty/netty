@@ -21,8 +21,8 @@ import io.netty.channel.sctp.nio.NioSctpChannel;
 import io.netty.channel.sctp.nio.NioSctpServerChannel;
 import io.netty.channel.sctp.oio.OioSctpChannel;
 import io.netty.channel.sctp.oio.OioSctpServerChannel;
-import io.netty.channel.socket.nio.NioEventLoopGroup;
-import io.netty.channel.socket.oio.OioEventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.oio.OioEventLoopGroup;
 import io.netty.testsuite.util.TestUtils;
 
 import java.util.ArrayList;
