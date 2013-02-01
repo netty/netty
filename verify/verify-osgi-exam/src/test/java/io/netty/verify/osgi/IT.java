@@ -80,9 +80,16 @@ public class IT {
                 /** install netty bundle */
                 mavenBundle("io.netty", "netty-transport").versionAsInProject(),
 
-                /** install netty bundle */
-                mavenBundle("io.netty", "netty-transport-rxtx")
-                        .versionAsInProject(),
+                /**
+                 * DO NOT install netty-transport-rxtx bundle due to rxtx
+                 * depencency:
+                 * <p>
+                 * 1) rxtx does not have automatic native library loader
+                 * <p>
+                 * 2) rxtx does not have osgi bundle
+                 */
+                // mavenBundle("io.netty", "netty-transport-rxtx")
+                // .versionAsInProject(),
 
                 /** install netty bundle */
                 mavenBundle("io.netty", "netty-transport-sctp")
