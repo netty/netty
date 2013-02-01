@@ -48,7 +48,7 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundByteHandlerAdapte
          .channel(NioSocketChannel.class)
          .handler(new HexDumpProxyBackendHandler(inboundChannel));
 
-        ChannelFuture f = b.connect(remoteHost, remotePort);
+        ChannelFuture f = b.remoteAddress(remoteHost, remotePort).connect();
         outboundChannel = f.channel();
         f.addListener(new ChannelFutureListener() {
             @Override
