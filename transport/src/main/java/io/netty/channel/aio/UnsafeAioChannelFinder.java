@@ -13,27 +13,29 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.socket.aio;
+package io.netty.channel.aio;
+
+import io.netty.util.internal.PlatformDependent;
 
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * {@link AioChannelFinder} implementation which use reflection for find the right {@link AbstractAioChannel}.
+ * {@link AioChannelFinder} implementation which uses {@code sun.misc.Unsafe}.
  */
-final class ReflectiveAioChannelFinder implements AioChannelFinder {
-    private static volatile Map<Class<?>, Field> fieldCache = new HashMap<Class<?>, Field>();
+final class UnsafeAioChannelFinder implements AioChannelFinder {
+    private static volatile Map<Class<?>, Long> offsetCache = new HashMap<Class<?>, Long>();
 
     @Override
     public AbstractAioChannel findChannel(Runnable command) throws Exception {
-        Field f;
+        Long offset;
         for (;;) {
-            f = findField(command);
-            if (f == null) {
+            offset = findFieldOffset(command);
+            if (offset == null) {
                 return null;
             }
-            Object next = f.get(command);
+            Object next = PlatformDependent.getObject(command, offset);
             if (next instanceof AbstractAioChannel) {
                 return (AbstractAioChannel) next;
             }
@@ -41,37 +43,38 @@ final class ReflectiveAioChannelFinder implements AioChannelFinder {
         }
     }
 
-    private static Field findField(Object command) throws Exception {
-        Map<Class<?>, Field> fieldCache = ReflectiveAioChannelFinder.fieldCache;
+    private static Long findFieldOffset(Object command) throws Exception {
+        Map<Class<?>, Long> offsetCache = UnsafeAioChannelFinder.offsetCache;
         Class<?> commandType = command.getClass();
-        Field res = fieldCache.get(commandType);
+        Long res = offsetCache.get(commandType);
         if (res != null) {
             return res;
         }
 
         for (Field f: commandType.getDeclaredFields()) {
             if (f.getType() == Runnable.class) {
-                f.setAccessible(true);
-                put(fieldCache, commandType, f);
-                return f;
+                res = PlatformDependent.objectFieldOffset(f);
+                put(offsetCache, commandType, res);
+                return res;
             }
 
             if (f.getType() == Object.class) {
                 f.setAccessible(true);
                 Object candidate = f.get(command);
                 if (candidate instanceof AbstractAioChannel) {
-                    put(fieldCache, commandType, f);
-                    return f;
+                    res = PlatformDependent.objectFieldOffset(f);
+                    put(offsetCache, commandType, res);
+                    return res;
                 }
             }
         }
         return null;
     }
 
-    private static void put(Map<Class<?>, Field> oldCache, Class<?> key, Field value) {
-        Map<Class<?>, Field> newCache = new HashMap<Class<?>, Field>(oldCache.size());
+    private static void put(Map<Class<?>, Long> oldCache, Class<?> key, Long value) {
+        Map<Class<?>, Long> newCache = new HashMap<Class<?>, Long>(oldCache.size());
         newCache.putAll(oldCache);
         newCache.put(key, value);
-        fieldCache = newCache;
+        offsetCache = newCache;
     }
 }

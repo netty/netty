@@ -13,13 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.socket.aio;
 
-public class UnsafeAioChannelFinderTest extends AbstractAioChannelFinderTest {
-
-    @Override
-    protected AioChannelFinder create() {
-        return new UnsafeAioChannelFinder();
-    }
-
-}
+/**
+ * <a href="http://en.wikipedia.org/wiki/New_I/O">NIO</a>-based channel
+ * API implementation - recommended for a large number of connections (&gt;= 1000).
+ */
+package io.netty.channel.nio;

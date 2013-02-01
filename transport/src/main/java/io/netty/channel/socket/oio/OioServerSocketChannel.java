@@ -20,6 +20,7 @@ import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
@@ -106,6 +107,11 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
         }
         this.socket = socket;
         config = new DefaultOioServerSocketChannelConfig(this, socket);
+    }
+
+    @Override
+    public InetSocketAddress localAddress() {
+        return (InetSocketAddress) super.localAddress();
     }
 
     @Override

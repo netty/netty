@@ -1,4 +1,4 @@
-package io.netty.channel.socket.aio;
+package io.netty.channel.aio;
 
 import static org.junit.Assert.*;
 import static org.easymock.EasyMock.*;
