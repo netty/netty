@@ -84,6 +84,7 @@
     <module>handler</module>
     <module>example</module>
     <module>testsuite</module>
+    <module>verify</module>
     <module>all</module>
     <module>tarball</module>
   </modules>
@@ -421,6 +422,12 @@
           <tagNameFormat>netty-@{project.version}</tagNameFormat>
         </configuration>
       </plugin>
+      <!-- always produce osgi bundles -->
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <extensions>true</extensions>
+      </plugin>             
        
     </plugins>
 

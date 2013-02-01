@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright 2012 The Netty Project
+  ~ Copyright 2013 The Netty Project
   ~
   ~ The Netty Project licenses this file to you under the Apache License,
   ~ version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,36 +17,29 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
+  
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.0.1.Alpha8-SNAPSHOT</version>
+    <version>4.0.0.Beta1-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty-microbench</artifactId>
-  <packaging>bundle</packaging>
+  <artifactId>netty-verify</artifactId>
+  <packaging>pom</packaging>
 
-  <name>Netty/Microbench</name>
+  <name>Netty/Verify</name>
+  <description>parent for build constrains modules</description>
 
-  <dependencies>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>netty-handler</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec-http</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.google.caliper</groupId>
-      <artifactId>caliper</artifactId>
-    </dependency>
-  </dependencies>
+  <modules>
+    <module>verify-osgi-split</module>
+    <module>verify-osgi-deps</module>
+    <module>verify-osgi-exam</module>
+  </modules>
 
   <build>
     <plugins>
+    
+      <!-- do not deploy this artifact -->
       <plugin>
         <artifactId>maven-deploy-plugin</artifactId>
         <configuration>
@@ -55,5 +48,5 @@
       </plugin>
     </plugins>
   </build>
+  
 </project>
-
