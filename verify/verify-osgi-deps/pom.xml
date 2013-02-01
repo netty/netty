@@ -70,11 +70,19 @@
         <artifactId>netty-transport</artifactId>
         <version>${project.version}</version>
     </dependency>
-    <dependency>
-        <groupId>${project.groupId}</groupId>
-        <artifactId>netty-transport-rxtx</artifactId>
-        <version>${project.version}</version>
-    </dependency>
+<!-- 
+                 * DO NOT install netty-transport-rxtx bundle due to rxtx
+                 * depencency:
+                 * <p>
+                 * 1) rxtx does not have automatic native library loader
+                 * <p>
+                 * 2) rxtx does not have osgi bundle
+ -->    
+<!--     <dependency> -->
+<!--         <groupId>${project.groupId}</groupId> -->
+<!--         <artifactId>netty-transport-rxtx</artifactId> -->
+<!--         <version>${project.version}</version> -->
+<!--     </dependency> -->
     <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>netty-transport-sctp</artifactId>
