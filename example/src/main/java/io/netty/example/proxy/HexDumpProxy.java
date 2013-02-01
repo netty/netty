@@ -43,7 +43,7 @@ public class HexDumpProxy {
              .channel(NioServerSocketChannel.class)
              .childHandler(new HexDumpProxyInitializer(remoteHost, remotePort));
 
-            b.bind(localPort).sync().channel().closeFuture().sync();
+            b.localAddress(localPort).bind().sync().channel().closeFuture().sync();
         } finally {
             b.shutdown();
         }
