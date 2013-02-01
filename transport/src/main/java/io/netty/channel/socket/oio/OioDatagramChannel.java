@@ -26,6 +26,7 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.DefaultDatagramChannelConfig;
+import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
@@ -145,6 +146,16 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
         socket.bind(localAddress);
+    }
+
+    @Override
+    public InetSocketAddress localAddress() {
+        return (InetSocketAddress) super.localAddress();
+    }
+
+    @Override
+    public InetSocketAddress remoteAddress() {
+        return (InetSocketAddress) super.remoteAddress();
     }
 
     @Override

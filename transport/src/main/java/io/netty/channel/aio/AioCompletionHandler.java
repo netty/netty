@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.socket.aio;
+package io.netty.channel.aio;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
@@ -23,7 +23,7 @@ import java.nio.channels.CompletionHandler;
 /**
  * Special {@link CompletionHandler} which makes sure that the callback methods gets executed in the {@link EventLoop}
  */
-abstract class AioCompletionHandler<V, A extends Channel> implements CompletionHandler<V, A> {
+public abstract class AioCompletionHandler<V, A extends Channel> implements CompletionHandler<V, A> {
 
     /**
      * See {@link CompletionHandler#completed(Object, Object)}

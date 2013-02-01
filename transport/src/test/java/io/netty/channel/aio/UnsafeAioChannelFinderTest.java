@@ -13,13 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.socket.aio;
+package io.netty.channel.aio;
 
-public class ReflectiveAioChannelFinderTest extends AbstractAioChannelFinderTest {
+public class UnsafeAioChannelFinderTest extends AbstractAioChannelFinderTest {
 
     @Override
     protected AioChannelFinder create() {
-        return new ReflectiveAioChannelFinder();
+        return new UnsafeAioChannelFinder();
     }
 
 }

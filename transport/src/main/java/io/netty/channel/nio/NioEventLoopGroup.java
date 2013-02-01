@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.socket.nio;
+package io.netty.channel.nio;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelTaskScheduler;

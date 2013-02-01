@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.socket.nio;
+package io.netty.channel.nio;
 
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
@@ -25,7 +25,6 @@ import io.netty.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.ConnectException;
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectableChannel;
@@ -92,16 +91,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
-    }
-
-    @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
-    }
-
-    @Override
     public NioUnsafe unsafe() {
         return (NioUnsafe) super.unsafe();
     }
@@ -126,7 +115,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     /**
      * Return {@code true} if the input of this {@link Channel} is shutdown
      */
-    boolean isInputShutdown() {
+    protected boolean isInputShutdown() {
         return inputShutdown;
     }
 

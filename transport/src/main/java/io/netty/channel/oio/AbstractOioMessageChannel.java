@@ -13,14 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.socket.oio;
+package io.netty.channel.oio;
 
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 
 /**
  * Abstract base class for OIO which reads and writes objects from/to a Socket
@@ -32,16 +31,6 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
      */
     protected AbstractOioMessageChannel(Channel parent, Integer id) {
         super(parent, id);
-    }
-
-    @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
-    }
-
-    @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
     }
 
     @Override

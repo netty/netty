@@ -20,12 +20,16 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
+import io.netty.channel.aio.AbstractAioChannel;
+import io.netty.channel.aio.AioCompletionHandler;
+import io.netty.channel.aio.AioEventLoopGroup;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.ServerSocketChannelConfig;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousCloseException;
@@ -75,6 +79,16 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     public AioServerSocketChannel(AsynchronousServerSocketChannel channel) {
         super(null, null, channel);
         config = new AioServerSocketChannelConfig(this, channel);
+    }
+
+    @Override
+    public InetSocketAddress localAddress() {
+        return (InetSocketAddress) super.localAddress();
+    }
+
+    @Override
+    public InetSocketAddress remoteAddress() {
+        return (InetSocketAddress) super.remoteAddress();
     }
 
     @Override
@@ -153,7 +167,8 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     protected Runnable doRegister() throws Exception {
         Runnable task = super.doRegister();
         if (ch == null) {
-            AsynchronousServerSocketChannel channel = newSocket(((AioEventLoopGroup) eventLoop().parent()).group);
+            AsynchronousServerSocketChannel channel =
+                    newSocket(((AioEventLoopGroup) eventLoop().parent()).channelGroup());
             ch = channel;
             config.assign(channel);
         }

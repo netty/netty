@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.socket.aio;
+package io.netty.channel.aio;
 
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
@@ -21,7 +21,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 
 import java.net.ConnectException;
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.AsynchronousChannel;
 import java.util.concurrent.ScheduledFuture;
@@ -31,7 +30,7 @@ import java.util.concurrent.TimeUnit;
  * Abstract base class for {@link Channel} implementations that use the new {@link AsynchronousChannel} which is part
  * of NIO.2.
  */
-abstract class AbstractAioChannel extends AbstractChannel {
+public abstract class AbstractAioChannel extends AbstractChannel {
 
     protected volatile AsynchronousChannel ch;
 
@@ -58,16 +57,6 @@ abstract class AbstractAioChannel extends AbstractChannel {
     protected AbstractAioChannel(Channel parent, Integer id, AsynchronousChannel ch) {
         super(parent, id);
         this.ch = ch;
-    }
-
-    @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
-    }
-
-    @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
     }
 
     /**
@@ -149,13 +138,13 @@ abstract class AbstractAioChannel extends AbstractChannel {
             }
         }
 
-        protected void connectFailed(Throwable t) {
+        public void connectFailed(Throwable t) {
             connectPromise.setFailure(t);
             pipeline().fireExceptionCaught(t);
             closeIfClosed();
         }
 
-        protected void connectSuccess() {
+        public void connectSuccess() {
             assert eventLoop().inEventLoop();
             assert connectPromise != null;
             try {

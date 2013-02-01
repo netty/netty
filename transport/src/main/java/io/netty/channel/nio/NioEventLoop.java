@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.socket.nio;
+package io.netty.channel.nio;
 
 
 import io.netty.channel.Channel;
@@ -21,7 +21,7 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelTaskScheduler;
 import io.netty.channel.EventLoopException;
 import io.netty.channel.SingleThreadEventLoop;
-import io.netty.channel.socket.nio.AbstractNioChannel.NioUnsafe;
+import io.netty.channel.nio.AbstractNioChannel.NioUnsafe;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
