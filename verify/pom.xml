@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright 2012 The Netty Project
+  ~ Copyright 2013 The Netty Project
   ~
   ~ The Netty Project licenses this file to you under the Apache License,
   ~ version 2.0 (the "License"); you may not use this file except in compliance
@@ -24,49 +24,29 @@
     <version>4.0.0.Beta1-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty-common</artifactId>
-  <packaging>bundle</packaging>
+  <artifactId>netty-verify</artifactId>
+  <packaging>pom</packaging>
 
-  <name>Netty/Common</name>
+  <name>Netty/Verify</name>
+  <description>parent for build constrains modules</description>
 
-  <dependencies>
-    <!-- Logging frameworks - completely optional -->
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>commons-logging</groupId>
-      <artifactId>commons-logging</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>log4j</groupId>
-      <artifactId>log4j</artifactId>
-      <optional>true</optional>
-    </dependency>
-  </dependencies>
+  <modules>
+    <module>verify-osgi-split</module>
+    <module>verify-osgi-deps</module>
+    <module>verify-osgi-exam</module>
+  </modules>
 
   <build>
     <plugins>
+    
+      <!-- do not deploy this artifact -->
       <plugin>
-        <groupId>org.apache.felix</groupId>
-        <artifactId>maven-bundle-plugin</artifactId>
+        <artifactId>maven-deploy-plugin</artifactId>
         <configuration>
-          <instructions>
-            <!-- enforce JVM vendor package as optional -->
-            <Import-Package>
-              sun.misc.*;resolution:=optional,
-              *
-            </Import-Package>
-            <!-- override "internal" private package convention -->
-            <Private-Package>
-              !*
-            </Private-Package>
-          </instructions>
+          <skip>true</skip>
         </configuration>
-      </plugin>             
+      </plugin>
     </plugins>
   </build>
+  
 </project>
