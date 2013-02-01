@@ -16,7 +16,7 @@
 package io.netty.example.factorial;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.socket.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 /**

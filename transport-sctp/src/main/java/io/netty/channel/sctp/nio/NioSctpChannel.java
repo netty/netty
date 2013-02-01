@@ -28,7 +28,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.sctp.SctpServerChannel;
-import io.netty.channel.socket.nio.AbstractNioMessageChannel;
+import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.sctp.DefaultSctpChannelConfig;
 import io.netty.channel.sctp.SctpChannelConfig;
 import io.netty.channel.sctp.SctpMessage;
@@ -114,6 +114,16 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
 
             throw new ChannelException("Failed to enter non-blocking mode.", e);
         }
+    }
+
+    @Override
+    public InetSocketAddress localAddress() {
+        return (InetSocketAddress) super.localAddress();
+    }
+
+    @Override
+    public InetSocketAddress remoteAddress() {
+        return (InetSocketAddress) super.remoteAddress();
     }
 
     @Override

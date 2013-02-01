@@ -21,7 +21,7 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.sctp.SctpChannel;
 import io.netty.channel.sctp.SctpChannelOption;
 import io.netty.channel.sctp.oio.OioSctpChannel;
-import io.netty.channel.socket.oio.OioEventLoopGroup;
+import io.netty.channel.oio.OioEventLoopGroup;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 

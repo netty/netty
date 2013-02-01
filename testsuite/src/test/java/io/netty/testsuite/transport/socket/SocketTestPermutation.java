@@ -20,15 +20,15 @@ import io.netty.bootstrap.ChannelFactory;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.socket.InternetProtocolFamily;
-import io.netty.channel.socket.aio.AioEventLoopGroup;
+import io.netty.channel.aio.AioEventLoopGroup;
 import io.netty.channel.socket.aio.AioServerSocketChannel;
 import io.netty.channel.socket.aio.AioSocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
-import io.netty.channel.socket.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.socket.oio.OioDatagramChannel;
-import io.netty.channel.socket.oio.OioEventLoopGroup;
+import io.netty.channel.oio.OioEventLoopGroup;
 import io.netty.channel.socket.oio.OioServerSocketChannel;
 import io.netty.channel.socket.oio.OioSocketChannel;
 

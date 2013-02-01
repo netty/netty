@@ -18,7 +18,7 @@ package io.netty.channel.udt.util;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.socket.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.udt.nio.NioUdtProvider;
 
 import java.net.InetSocketAddress;

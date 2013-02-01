@@ -22,7 +22,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.CharsetUtil;
 
