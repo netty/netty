@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.socket.nio;
+package io.netty.channel.nio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -30,7 +30,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.WritableByteChannel;
 
 /**
- * {@link AbstractNioChannel} base class for {@link Channel}s that operate on bytes.
+ * {@link io.netty.channel.nio.AbstractNioChannel} base class for {@link Channel}s that operate on bytes.
  */
 public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 

@@ -25,6 +25,9 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
+import io.netty.channel.aio.AbstractAioChannel;
+import io.netty.channel.aio.AioCompletionHandler;
+import io.netty.channel.aio.AioEventLoopGroup;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
@@ -100,6 +103,16 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             AioServerSocketChannel parent, Integer id, AsynchronousSocketChannel ch) {
         super(parent, id, ch);
         config = new DefaultAioSocketChannelConfig(this, ch);
+    }
+
+    @Override
+    public InetSocketAddress localAddress() {
+        return (InetSocketAddress) super.localAddress();
+    }
+
+    @Override
+    public InetSocketAddress remoteAddress() {
+        return (InetSocketAddress) super.remoteAddress();
     }
 
     @Override
@@ -201,7 +214,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     protected Runnable doRegister() throws Exception {
         super.doRegister();
         if (ch == null) {
-            ch = newSocket(((AioEventLoopGroup) eventLoop().parent()).group);
+            ch = newSocket(((AioEventLoopGroup) eventLoop().parent()).channelGroup());
             config.assign(javaChannel());
         }
 

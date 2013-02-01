@@ -13,21 +13,21 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.socket.nio;
+package io.netty.channel.aio;
 
 import io.netty.channel.AbstractEventLoopTest;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.socket.aio.AioServerSocketChannel;
 
-public class NioEventLoopTest extends AbstractEventLoopTest {
-
+public class AioEventLoopTest extends AbstractEventLoopTest {
     @Override
     protected EventLoopGroup newEventLoopGroup() {
-        return new NioEventLoopGroup();
+        return new AioEventLoopGroup();
     }
 
     @Override
     protected Class<? extends ServerSocketChannel> newChannel() {
-        return NioServerSocketChannel.class;
+        return AioServerSocketChannel.class;
     }
 }
