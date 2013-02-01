@@ -84,6 +84,7 @@
     <module>handler</module>
     <module>example</module>
     <module>testsuite</module>
+    <!-- add "verify" back after karaf release -->
     <module>all</module>
     <module>tarball</module>
   </modules>
