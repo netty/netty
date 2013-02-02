@@ -31,14 +31,42 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
 import java.util.Random;
+import java.util.regex.Pattern;
 
 /**
  * This encoder will help to encode Request for a FORM as POST.
  */
 public class HttpPostRequestEncoder implements ChunkedInput {
+
+    /**
+     * Different modes to use to encode form data.
+     */
+    public enum EncoderMode {
+        /**
+         * Legacy mode which should work for most. It is known to not work with OAUTH. For OAUTH use
+         * {@link EncoderMode#RFC3986}. The W3C form recommentations this for submitting post form data.
+         */
+        RFC1738,
+
+        /**
+         * Mode which is more new and is used for OAUTH
+         */
+        RFC3986
+    }
+
+    private static final Map<Pattern, String> percentEncodings = new HashMap<Pattern, String>();
+
+    static {
+        percentEncodings.put(Pattern.compile("\\*"), "%2A");
+        percentEncodings.put(Pattern.compile("\\+"), "%20");
+        percentEncodings.put(Pattern.compile("%7E"), "~");
+    }
+
     /**
      * Factory used to create InterfaceHttpData
      */
@@ -88,6 +116,8 @@ public class HttpPostRequestEncoder implements ChunkedInput {
      */
     private boolean headerFinalized;
 
+    private final EncoderMode encoderMode;
+
     /**
     *
     * @param request the request to encode
@@ -125,6 +155,21 @@ public class HttpPostRequestEncoder implements ChunkedInput {
      */
     public HttpPostRequestEncoder(HttpDataFactory factory, HttpRequest request,
             boolean multipart, Charset charset) throws ErrorDataEncoderException {
+        this(factory, request, multipart, charset, EncoderMode.RFC1738);
+    }
+
+    /**
+     *
+     * @param factory the factory used to create InterfaceHttpData
+     * @param request the request to encode
+     * @param multipart True if the FORM is a ENCTYPE="multipart/form-data"
+     * @param charset the charset to use as default
+    +  @param encoderMode the mode for the encoder to use. See {@link EncoderMode} for the details.
+     * @throws NullPointerException for request or charset or factory
+     * @throws ErrorDataEncoderException if the request is not a POST
+     */
+    public HttpPostRequestEncoder(HttpDataFactory factory, HttpRequest request, boolean multipart,
+                                   Charset charset, EncoderMode encoderMode) throws ErrorDataEncoderException {
         if (factory == null) {
             throw new NullPointerException("factory");
         }
@@ -140,6 +185,7 @@ public class HttpPostRequestEncoder implements ChunkedInput {
         this.request = request;
         this.charset = charset;
         this.factory = factory;
+        this.encoderMode = encoderMode;
         // Fill default values
         bodyListDatas = new ArrayList<InterfaceHttpData>();
         // default mode
@@ -151,7 +197,6 @@ public class HttpPostRequestEncoder implements ChunkedInput {
             initDataMultipart();
         }
     }
-
     /**
      * Clean all HttpDatas (on Disk) for the current request.
  */
@@ -660,13 +705,20 @@ public class HttpPostRequestEncoder implements ChunkedInput {
      * @return the encoded attribute
      * @throws ErrorDataEncoderException if the encoding is in error
      */
-    private static String encodeAttribute(String s, Charset charset)
+    private String encodeAttribute(String s, Charset charset)
             throws ErrorDataEncoderException {
         if (s == null) {
             return "";
         }
         try {
-            return URLEncoder.encode(s, charset.name());
+            String encoded = URLEncoder.encode(s, charset.name());
+            if (encoderMode == EncoderMode.RFC3986) {
+                for (Map.Entry<Pattern, String> entry : percentEncodings.entrySet()) {
+                    String replacement = entry.getValue();
+                    encoded = entry.getKey().matcher(encoded).replaceAll(replacement);
+                }
+            }
+            return encoded;
         } catch (UnsupportedEncodingException e) {
             throw new ErrorDataEncoderException(charset.name(), e);
         }
