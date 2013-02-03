@@ -112,6 +112,14 @@
     </dependency>
     
     <!-- TEST -->
+
+    <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>netty-transport-udt</artifactId>
+        <version>${project.version}</version>
+        <classifier>tests</classifier>
+        <scope>test</scope>
+    </dependency>
     
     <dependency>
         <groupId>org.ops4j.pax.exam</groupId>
@@ -152,6 +160,12 @@
     <dependency>
         <groupId>org.ops4j.pax.url</groupId>
         <artifactId>pax-url-aether</artifactId>
+        <version>${url.version}</version>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.ops4j.pax.url</groupId>
+        <artifactId>pax-url-wrap</artifactId>
         <version>${url.version}</version>
         <scope>test</scope>
     </dependency>

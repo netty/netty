@@ -15,35 +15,24 @@
  */
 package io.netty.verify.osgi;
 
-import static org.junit.Assert.*;
 import static org.ops4j.pax.exam.CoreOptions.*;
 
-import javax.inject.Inject;
+import java.util.Arrays;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.ops4j.pax.exam.Configuration;
 import org.ops4j.pax.exam.Option;
-import org.ops4j.pax.exam.junit.PaxExam;
-import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
-import org.ops4j.pax.exam.spi.reactors.PerSuite;
-import org.osgi.framework.BundleContext;
 
 /**
- * Invoke Netty Tests inside configured OSGI framework.
+ * Unit Test Utilities.
  */
-@RunWith(PaxExam.class)
-@ExamReactorStrategy(PerSuite.class)
-public class FrameworkIT {
+public class UnitHelp {
 
-    @Inject
-    private BundleContext bundleContext;
+    private UnitHelp() {
+    }
 
-    @Inject
-    private NettyService nettyService;
-
-    @Configuration
-    public Option[] config() {
+    /**
+     * Default framework test configuration.
+     */
+    public static Option[] config() {
         return options(
                 /** install logging */
                 mavenBundle("org.slf4j", "slf4j-api").versionAsInProject(),
@@ -110,11 +99,20 @@ public class FrameworkIT {
                 junitBundles());
     }
 
-    @Test
-    public void verifyNettyService() {
-        assertNotNull(bundleContext);
-        assertNotNull(nettyService);
-        assertEquals("hello netty", nettyService.getHelloNetty());
+    /**
+     * Combine default framework options with custom options.
+     */
+    public static Option[] config(final Option... options) {
+        return concat(config(), options);
+    }
+
+    /**
+     * Concatenate generic arrays.
+     */
+    public static <T> T[] concat(final T[] first, final T[] second) {
+        final T[] result = Arrays.copyOf(first, first.length + second.length);
+        System.arraycopy(second, 0, result, first.length, second.length);
+        return result;
     }
 
 }
