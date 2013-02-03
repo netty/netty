@@ -18,8 +18,13 @@ package io.netty.verify.osgi;
 import static org.ops4j.pax.exam.CoreOptions.*;
 
 import java.util.Arrays;
+import java.util.List;
 
 import org.ops4j.pax.exam.Option;
+import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.wiring.BundleWire;
+import org.osgi.framework.wiring.BundleWiring;
 
 /**
  * Unit Test Utilities.
@@ -34,12 +39,16 @@ public class UnitHelp {
      */
     public static Option[] config() {
         return options(
+
+                /** set test logging level inside osgi container */
+                systemProperty("org.ops4j.pax.logging.DefaultServiceLog.level")
+                        .value("INFO"),
+
                 /** install logging */
-                mavenBundle("org.slf4j", "slf4j-api").versionAsInProject(),
-                mavenBundle("ch.qos.logback", "logback-core")
-                        .versionAsInProject(),
-                mavenBundle("ch.qos.logback", "logback-classic")
-                        .versionAsInProject(),
+                // mavenBundle().groupId("org.ops4j.pax.logging").artifactId(
+                // "pax-logging-api"),
+                // mavenBundle().groupId("org.ops4j.pax.logging").artifactId(
+                // "pax-logging-service"),
 
                 /** install scr annotations */
                 mavenBundle("com.carrotgarden.osgi",
@@ -97,6 +106,7 @@ public class UnitHelp {
 
                 /** install java unit bundles */
                 junitBundles());
+
     }
 
     /**
@@ -113,6 +123,24 @@ public class UnitHelp {
         final T[] result = Arrays.copyOf(first, first.length + second.length);
         System.arraycopy(second, 0, result, first.length, second.length);
         return result;
+    }
+
+    /**
+     * Display bundle dependencies.
+     */
+    public static void logBundleWires(final BundleContext context) {
+        for (final Bundle bundle : context.getBundles()) {
+            final BundleWiring wiring = bundle.adapt(BundleWiring.class);
+            System.out.println("#   bundle=" + bundle);
+            final List<BundleWire> provided = wiring.getProvidedWires(null);
+            for (final BundleWire wire : provided) {
+                System.out.println("#      provided=" + wire);
+            }
+            final List<BundleWire> required = wiring.getRequiredWires(null);
+            for (final BundleWire wire : required) {
+                System.out.println("#      required=" + wire);
+            }
+        }
     }
 
 }

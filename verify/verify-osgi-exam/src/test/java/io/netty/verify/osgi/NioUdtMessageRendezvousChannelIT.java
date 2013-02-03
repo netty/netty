@@ -17,7 +17,7 @@ package io.netty.verify.osgi;
 
 import static org.junit.Assert.*;
 import static org.ops4j.pax.exam.CoreOptions.*;
-import io.netty.channel.udt.nio.NioUdtMessageRendezvousChannelTest;
+import io.netty.test.udt.nio.NioUdtMessageRendezvousChannelTest;
 
 import javax.inject.Inject;
 
@@ -46,17 +46,25 @@ public class NioUdtMessageRendezvousChannelIT extends
 
         return UnitHelp.config(
 
-        /** install UDT tests bundle */
-        wrappedBundle(maven().groupId("io.netty")
-                .artifactId("netty-transport-udt").classifier("tests")
-                .versionAsInProject())
+                /** install UDT tests bundle */
+                wrappedBundle(maven().groupId("io.netty")
+                        .artifactId("netty-transport-udt").classifier("tests")
+                        .versionAsInProject()),
+
+                /** install tests dependency */
+                wrappedBundle(maven().groupId("com.yammer.metrics")
+                        .artifactId("metrics-core").versionAsInProject()),
+                /** install tests dependency */
+                wrappedBundle(maven().groupId("com.google.caliper")
+                        .artifactId("caliper").versionAsInProject())
 
         );
     }
 
     @Test
-    public void verify() {
+    public void verify() throws Exception {
         assertNotNull(bundleContext);
+        super.basicEcho();
     }
 
 }
