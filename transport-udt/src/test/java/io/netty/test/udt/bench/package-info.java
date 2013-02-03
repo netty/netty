@@ -17,5 +17,5 @@
 /**
  * UDT Benchmarks
  */
-package io.netty.channel.udt.bench;
+package io.netty.test.udt.bench;
 

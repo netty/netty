@@ -15,7 +15,7 @@
  * under the License.
  */
 
-package io.netty.channel.udt.util;
+package io.netty.test.udt.util;
 
 import com.google.caliper.ConfiguredBenchmark;
 import com.google.caliper.Environment;

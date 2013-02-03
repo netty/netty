@@ -14,11 +14,11 @@
  * under the License.
  */
 
-package io.netty.channel.udt.bench;
+package io.netty.test.udt.bench;
 
-import io.netty.channel.udt.util.CaliperBench;
-import io.netty.channel.udt.util.CaliperRunner;
-import io.netty.channel.udt.util.TrafficControl;
+import io.netty.test.udt.util.CaliperBench;
+import io.netty.test.udt.util.CaliperRunner;
+import io.netty.test.udt.util.TrafficControl;
 
 import java.util.List;
 

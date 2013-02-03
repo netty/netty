@@ -14,16 +14,18 @@
  * under the License.
  */
 
-package io.netty.channel.udt.nio;
+package io.netty.test.udt.nio;
 
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Meter;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.BufType;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.udt.util.BootHelp;
-import io.netty.channel.udt.util.EchoMessageHandler;
-import io.netty.channel.udt.util.UnitHelp;
+import io.netty.channel.udt.nio.NioUdtByteRendezvousChannel;
+import io.netty.test.udt.util.BootHelp;
+import io.netty.test.udt.util.EchoByteHandler;
+import io.netty.test.udt.util.UnitHelp;
+
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +35,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
-public class NioUdtMessageRendezvousChannelTest extends AbstractUdtTest {
+public class NioUdtByteRendezvousChannelTest extends AbstractUdtTest {
 
     protected static final Logger log = LoggerFactory.getLogger(NioUdtByteAcceptorChannelTest.class);
 
@@ -43,13 +45,13 @@ public class NioUdtMessageRendezvousChannelTest extends AbstractUdtTest {
     @Test
     public void metadata() throws Exception {
 
-        assertEquals(BufType.MESSAGE, new NioUdtMessageRendezvousChannel()
-                .metadata().bufferType());
+        assertEquals(BufType.BYTE, new NioUdtByteRendezvousChannel().metadata()
+                .bufferType());
 
     }
 
     /**
-     * verify basic echo message rendezvous
+     * verify basic echo byte rendezvous
      */
     @Test(timeout = 10 * 1000)
     public void basicEcho() throws Exception {
@@ -68,15 +70,11 @@ public class NioUdtMessageRendezvousChannelTest extends AbstractUdtTest {
         final InetSocketAddress addr1 = UnitHelp.localSocketAddress();
         final InetSocketAddress addr2 = UnitHelp.localSocketAddress();
 
-        final EchoMessageHandler handler1 = new EchoMessageHandler(rate1,
-                messageSize);
-        final EchoMessageHandler handler2 = new EchoMessageHandler(rate2,
-                messageSize);
+        final EchoByteHandler handler1 = new EchoByteHandler(rate1, messageSize);
+        final EchoByteHandler handler2 = new EchoByteHandler(rate2, messageSize);
 
-        final Bootstrap boot1 = BootHelp
-                .messagePeerBoot(addr1, addr2, handler1);
-        final Bootstrap boot2 = BootHelp
-                .messagePeerBoot(addr2, addr1, handler2);
+        final Bootstrap boot1 = BootHelp.bytePeerBoot(addr1, addr2, handler1);
+        final Bootstrap boot2 = BootHelp.bytePeerBoot(addr2, addr1, handler2);
 
         final ChannelFuture connectFuture1 = boot1.connect();
         final ChannelFuture connectFuture2 = boot2.connect();

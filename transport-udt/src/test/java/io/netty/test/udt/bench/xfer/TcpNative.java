@@ -14,11 +14,11 @@
  * under the License.
  */
 
-package io.netty.channel.udt.bench.xfer;
+package io.netty.test.udt.bench.xfer;
 
-import io.netty.channel.udt.bench.BenchXfer;
-import io.netty.channel.udt.util.CaliperRunner;
-import io.netty.channel.udt.util.TrafficControl;
+import io.netty.test.udt.bench.BenchXfer;
+import io.netty.test.udt.util.CaliperRunner;
+import io.netty.test.udt.util.TrafficControl;
 
 import java.util.List;
 

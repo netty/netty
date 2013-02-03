@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package io.netty.channel.udt.util;
+package io.netty.test.udt.util;
 
 import com.google.caliper.SimpleBenchmark;
 import org.slf4j.Logger;

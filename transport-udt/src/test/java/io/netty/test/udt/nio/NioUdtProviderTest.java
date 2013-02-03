@@ -14,9 +14,10 @@
  * under the License.
  */
 
-package io.netty.channel.udt.nio;
+package io.netty.test.udt.nio;
 
 import io.netty.channel.udt.UdtServerChannel;
+import io.netty.channel.udt.nio.NioUdtProvider;
 
 import org.junit.Test;
 import org.slf4j.Logger;

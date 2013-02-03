@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package io.netty.channel.udt.bench.xfer;
+package io.netty.test.udt.bench.xfer;
 
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
@@ -22,11 +22,12 @@ import com.yammer.metrics.core.Meter;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.udt.util.BootHelp;
-import io.netty.channel.udt.util.CustomReporter;
-import io.netty.channel.udt.util.EchoMessageHandler;
-import io.netty.channel.udt.util.TrafficControl;
-import io.netty.channel.udt.util.UnitHelp;
+import io.netty.test.udt.util.BootHelp;
+import io.netty.test.udt.util.CustomReporter;
+import io.netty.test.udt.util.EchoMessageHandler;
+import io.netty.test.udt.util.TrafficControl;
+import io.netty.test.udt.util.UnitHelp;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

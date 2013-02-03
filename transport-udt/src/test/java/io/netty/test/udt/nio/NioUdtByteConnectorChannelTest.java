@@ -14,16 +14,18 @@
  * under the License.
  */
 
-package io.netty.channel.udt.nio;
+package io.netty.test.udt.nio;
 
 import io.netty.buffer.BufType;
+import io.netty.channel.udt.nio.NioUdtByteConnectorChannel;
+
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.*;
 
-public class NioUdtMessageAcceptorChannelTest extends AbstractUdtTest {
+public class NioUdtByteConnectorChannelTest extends AbstractUdtTest {
 
     protected static final Logger log = LoggerFactory.getLogger(NioUdtByteAcceptorChannelTest.class);
 
@@ -33,8 +35,8 @@ public class NioUdtMessageAcceptorChannelTest extends AbstractUdtTest {
     @Test
     public void metadata() throws Exception {
 
-        assertEquals(BufType.MESSAGE, new NioUdtMessageAcceptorChannel()
-                .metadata().bufferType());
+        assertEquals(BufType.BYTE, new NioUdtByteConnectorChannel().metadata()
+                .bufferType());
 
     }
 

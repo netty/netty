@@ -14,15 +14,16 @@
  * under the License.
  */
 
-package io.netty.channel.udt.bench.xfer;
+package io.netty.test.udt.bench.xfer;
 
 import com.barchart.udt.SocketUDT;
 import com.barchart.udt.StatusUDT;
 import com.barchart.udt.TypeUDT;
 import com.google.caliper.Param;
-import io.netty.channel.udt.bench.BenchXfer;
-import io.netty.channel.udt.util.CaliperRunner;
-import io.netty.channel.udt.util.TrafficControl;
+
+import io.netty.test.udt.bench.BenchXfer;
+import io.netty.test.udt.util.CaliperRunner;
+import io.netty.test.udt.util.TrafficControl;
 
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -32,7 +33,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static io.netty.channel.udt.util.UnitHelp.*;
+import static io.netty.test.udt.util.UnitHelp.*;
 
 /**
  * perform two way native UDT socket send/recv
