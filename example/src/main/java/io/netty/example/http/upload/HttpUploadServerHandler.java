@@ -27,9 +27,11 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.http.ServerCookieEncoder;
 import io.netty.handler.codec.http.multipart.Attribute;
@@ -95,6 +97,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+    	//System.out.println(msg.getClass().getName());
         if (msg instanceof HttpRequest) {
             // clean previous FileUpload if Any
             if (decoder != null) {
@@ -146,6 +149,11 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
                 }
             }
             responseContent.append("\r\n\r\n");
+            
+            if(request.getMethod()==HttpMethod.GET){
+            	writeResponse(ctx.channel());
+            	return;
+            }
 
             // if GET Method: should not try to create a HttpPostRequestDecoder
             try {
@@ -179,7 +187,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
                 writeResponse(ctx.channel());
             }
         }
-        if (msg instanceof HttpContent) {
+        if (msg instanceof HttpContent && msg != LastHttpContent.EMPTY_LAST_CONTENT) {
             // New chunk is received
             HttpContent chunk = (HttpContent) msg;
             try {
