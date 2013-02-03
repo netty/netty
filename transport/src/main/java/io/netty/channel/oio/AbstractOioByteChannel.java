@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.socket.oio;
+package io.netty.channel.oio;
 
 import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
@@ -40,7 +40,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
         super(parent, id);
     }
 
-    boolean isInputShutdown() {
+    protected boolean isInputShutdown() {
         return inputShutdown;
     }
 

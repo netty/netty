@@ -22,7 +22,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
-import io.netty.channel.socket.nio.AbstractNioByteChannel;
+import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.udt.DefaultUdtChannelConfig;
 import io.netty.channel.udt.UdtChannel;
 import io.netty.channel.udt.UdtChannelConfig;
@@ -192,4 +192,13 @@ public class NioUdtByteConnectorChannel extends AbstractNioByteChannel
         return javaChannel().socket().getRemoteSocketAddress();
     }
 
+    @Override
+    public InetSocketAddress localAddress() {
+        return (InetSocketAddress) super.localAddress();
+    }
+
+    @Override
+    public InetSocketAddress remoteAddress() {
+        return (InetSocketAddress) super.remoteAddress();
+    }
 }

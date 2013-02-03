@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.socket.aio;
+package io.netty.channel.aio;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelTaskScheduler;
@@ -59,7 +59,11 @@ public class AioEventLoopGroup extends MultithreadEventLoopGroup {
     }
 
     private final AioExecutorService groupExecutor = new AioExecutorService();
-    final AsynchronousChannelGroup group;
+    private final AsynchronousChannelGroup group;
+
+    public AsynchronousChannelGroup channelGroup() {
+        return group;
+    }
 
     /**
      * Create a new instance which use the default number of threads of {@link #DEFAULT_POOL_SIZE}.

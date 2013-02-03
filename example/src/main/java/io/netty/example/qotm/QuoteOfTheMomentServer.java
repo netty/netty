@@ -18,7 +18,7 @@ package io.netty.example.qotm;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.nio.NioDatagramChannel;
-import io.netty.channel.socket.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 
 /**
  * A UDP server that responds to the QOTM (quote of the moment) request to a

@@ -18,12 +18,11 @@ package io.netty.channel.udt.nio;
 import static java.nio.channels.SelectionKey.*;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelException;
-import io.netty.channel.socket.nio.AbstractNioMessageChannel;
+import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.channel.udt.DefaultUdtServerChannelConfig;
 import io.netty.channel.udt.UdtServerChannel;
-import io.netty.channel.udt.UdtChannelConfig;
 import io.netty.channel.udt.UdtServerChannelConfig;
 
 import java.net.InetSocketAddress;
@@ -114,6 +113,10 @@ public abstract class NioUdtAcceptorChannel extends AbstractNioMessageChannel
     @Override
     protected SocketAddress localAddress0() {
         return javaChannel().socket().getLocalSocketAddress();
+    }
+    @Override
+    public InetSocketAddress localAddress() {
+        return (InetSocketAddress) super.localAddress();
     }
 
     @Override

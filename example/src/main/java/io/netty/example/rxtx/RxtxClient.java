@@ -20,7 +20,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.rxtx.RxtxChannel;
 import io.netty.channel.rxtx.RxtxDeviceAddress;
-import io.netty.channel.socket.oio.OioEventLoopGroup;
+import io.netty.channel.oio.OioEventLoopGroup;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;

@@ -17,7 +17,7 @@ package io.netty.example.http.snoop;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.socket.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.ClientCookieEncoder;
 import io.netty.handler.codec.http.DefaultCookie;

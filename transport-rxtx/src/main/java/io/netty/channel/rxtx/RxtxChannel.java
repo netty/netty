@@ -18,7 +18,7 @@ package io.netty.channel.rxtx;
 import static io.netty.channel.rxtx.RxtxChannelOption.*;
 
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.socket.oio.OioByteStreamChannel;
+import io.netty.channel.oio.OioByteStreamChannel;
 
 import java.net.SocketAddress;
 import java.util.concurrent.TimeUnit;
