@@ -97,8 +97,10 @@ public class FrameworkIT {
                 mavenBundle("io.netty", "netty-transport-sctp")
                         .versionAsInProject(),
 
-                /** install netty bundle */
+                /** install netty bundle with dependency */
                 mavenBundle("io.netty", "netty-transport-udt")
+                        .versionAsInProject(),
+                mavenBundle("com.barchart.udt", "barchart-udt-bundle")
                         .versionAsInProject(),
 
                 /** install this module bundle */
