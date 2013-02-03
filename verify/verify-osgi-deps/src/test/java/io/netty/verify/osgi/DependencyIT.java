@@ -23,9 +23,9 @@ import org.apache.commons.io.FileUtils;
 import org.junit.Test;
 
 /**
- * Integration Tests.
+ * Dependency Integration Tests.
  */
-public class IT {
+public class DependencyIT {
 
     /**
      * Default location of generated karaf features file.
@@ -46,6 +46,8 @@ public class IT {
         if (text.contains("wrap:")) {
             System.err.println(text);
             fail("karaf feature.xml contains 'wrap:' protocol: some transitive dependencies are not osgi bundles");
+        } else {
+            System.out.println("all transitive dependencies are osgi bundles");
         }
 
     }

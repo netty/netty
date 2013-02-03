@@ -16,7 +16,10 @@
 package io.netty.verify.osgi;
 
 /**
- * Placeholder class.
+ * Placeholder class to generate valid OSGI bundle.
+ * <p>
+ * maven-bundle-plugin enforces OSGI specification and rejects to build non
+ * fragment bundles which export no packages / no classes.
  */
 public class Dummy {
 

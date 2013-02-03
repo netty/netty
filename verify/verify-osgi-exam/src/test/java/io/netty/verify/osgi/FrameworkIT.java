@@ -34,7 +34,7 @@ import org.osgi.framework.BundleContext;
  */
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
-public class IT {
+public class FrameworkIT {
 
     @Inject
     private BundleContext bundleContext;
@@ -47,8 +47,10 @@ public class IT {
         return options(
                 /** install logging */
                 mavenBundle("org.slf4j", "slf4j-api").versionAsInProject(),
-                mavenBundle("ch.qos.logback", "logback-core", "1.0.9"),
-                mavenBundle("ch.qos.logback", "logback-classic", "1.0.9"),
+                mavenBundle("ch.qos.logback", "logback-core")
+                        .versionAsInProject(),
+                mavenBundle("ch.qos.logback", "logback-classic")
+                        .versionAsInProject(),
 
                 /** install scr annotations */
                 mavenBundle("com.carrotgarden.osgi",

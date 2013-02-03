@@ -20,7 +20,7 @@ package io.netty.verify.osgi;
  */
 public interface NettyService {
 
-    /** verify osgi starup */
+    /** verify osgi startup */
     String getHelloNetty();
 
 }
