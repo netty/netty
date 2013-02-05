@@ -1507,9 +1507,13 @@ public class HttpPostRequestDecoder {
                                 index = 0;
                                 lastPosition = undecodedChunk.readerIndex() - 2;
                             }
-                            else
+                            else {
+                                // save last valid position
+                                lastPosition = undecodedChunk.readerIndex() - 1;
+
                                 // Unread next byte.
-                                undecodedChunk.readerIndex(undecodedChunk.readerIndex() - 1);
+                                undecodedChunk.readerIndex(lastPosition);
+                            }
                         }
                     } else if (nextByte == HttpConstants.LF) {
                         newLine = true;
@@ -1530,9 +1534,13 @@ public class HttpPostRequestDecoder {
                             index = 0;
                             lastPosition = undecodedChunk.readerIndex() - 2;
                         }
-                        else
+                        else {
+                            // save last valid position
+                            lastPosition = undecodedChunk.readerIndex() - 1;
+
                             // Unread next byte.
-                            undecodedChunk.readerIndex(undecodedChunk.readerIndex() - 1);
+                            undecodedChunk.readerIndex(lastPosition);
+                        }
                     }
                 } else if (nextByte == HttpConstants.LF) {
                     newLine = true;
@@ -1618,9 +1626,13 @@ public class HttpPostRequestDecoder {
                                 index = 0;
                                 lastrealpos = sao.pos - 2;
                             }
-                            else
-                                // Unread next byte.
+                            else {
+                                // unread next byte
                                 sao.pos--;
+
+                                // save last valid position
+                                lastrealpos = sao.pos;
+                            }
                         }
                     } else if (nextByte == HttpConstants.LF) {
                         newLine = true;
@@ -1641,9 +1653,13 @@ public class HttpPostRequestDecoder {
                             index = 0;
                             lastrealpos = sao.pos - 2;
                         }
-                        else
-                            // Unread next byte.
+                        else {
+                            // unread next byte
                             sao.pos--;
+
+                            // save last valid position
+                            lastrealpos = sao.pos;
+                        }
                     }
                 } else if (nextByte == HttpConstants.LF) {
                     newLine = true;
