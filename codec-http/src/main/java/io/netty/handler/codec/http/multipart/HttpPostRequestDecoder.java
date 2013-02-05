@@ -1498,20 +1498,20 @@ public class HttpPostRequestDecoder {
                 } else {
                     newLine = false;
                     index = 0;
+
+                    int newLineShift = 1;
+
                     // continue until end of line
-                    if (nextByte == HttpConstants.CR) {
-                        if (undecodedChunk.isReadable()) {
-                            nextByte = undecodedChunk.readByte();
-                            if (nextByte == HttpConstants.LF) {
-                                newLine = true;
-                                index = 0;
-                                lastPosition = undecodedChunk.readerIndex() - 2;
-                            }
-                        }
-                    } else if (nextByte == HttpConstants.LF) {
+                    while (nextByte == HttpConstants.CR && undecodedChunk.readable()) {
+                        nextByte = undecodedChunk.readByte();
+
+                        newLineShift = 2;
+                    }
+
+                    if (nextByte == HttpConstants.LF) {
                         newLine = true;
                         index = 0;
-                        lastPosition = undecodedChunk.readerIndex() - 1;
+                        lastPosition = undecodedChunk.readerIndex() - newLineShift;
                     } else {
                         // save last valid position
                         lastPosition = undecodedChunk.readerIndex();
