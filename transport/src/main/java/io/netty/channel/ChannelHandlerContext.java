@@ -174,7 +174,10 @@ public interface ChannelHandlerContext
     /**
      * Return the bound {@link ByteBuf} for inbound data if {@link #hasInboundByteBuffer()} returned
      * {@code true}. If {@link #hasInboundByteBuffer()} returned {@code false} it will throw a
-     * {@link UnsupportedOperationException}
+     * {@link UnsupportedOperationException}.
+     * <p/>
+     * This method can only be called from within the event-loop, otherwise it will throw an
+     * {@link IllegalStateException}.
      */
     ByteBuf inboundByteBuffer();
 
@@ -182,6 +185,9 @@ public interface ChannelHandlerContext
      * Return the bound {@link MessageBuf} for inbound data if {@link #hasInboundMessageBuffer()} returned
      * {@code true}. If {@link #hasInboundMessageBuffer()} returned {@code false} it will throw a
      * {@link UnsupportedOperationException}.
+     * <p/>
+     * This method can only be called from within the event-loop, otherwise it will throw an
+     * {@link IllegalStateException}.
      */
     <T> MessageBuf<T> inboundMessageBuffer();
 
@@ -202,13 +208,19 @@ public interface ChannelHandlerContext
      * Return the bound {@link ByteBuf} for outbound data if {@link #hasOutboundByteBuffer()} returned
      * {@code true}. If {@link #hasOutboundByteBuffer()} returned {@code false} it will throw
      * a {@link UnsupportedOperationException}.
+     * <p/>
+     * This method can only be called from within the event-loop, otherwise it will throw an
+     * {@link IllegalStateException}.
      */
     ByteBuf outboundByteBuffer();
 
     /**
      * Return the bound {@link MessageBuf} for outbound data if {@link #hasOutboundMessageBuffer()} returned
      * {@code true}. If {@link #hasOutboundMessageBuffer()} returned {@code false} it will throw a
-     * {@link UnsupportedOperationException}
+     * {@link UnsupportedOperationException}.
+     * <p/>
+     * This method can only be called from within the event-loop, otherwise it will throw an
+     * {@link IllegalStateException}.
      */
     <T> MessageBuf<T> outboundMessageBuffer();
 

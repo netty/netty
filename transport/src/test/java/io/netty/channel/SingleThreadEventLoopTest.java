@@ -137,7 +137,7 @@ public class SingleThreadEventLoopTest {
                 timestamps.add(System.nanoTime());
                 if (empty) {
                     try {
-                        Thread.sleep(400);
+                        Thread.sleep(401);
                     } catch (InterruptedException e) {
                         // Ignore
                     }
@@ -176,7 +176,7 @@ public class SingleThreadEventLoopTest {
             public void run() {
                 timestamps.add(System.nanoTime());
                 try {
-                    Thread.sleep(50);
+                    Thread.sleep(51);
                 } catch (InterruptedException e) {
                     // Ignore
                 }

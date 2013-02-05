@@ -788,7 +788,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             if (ctx.hasInboundByteBuffer()) {
                 if (ctx.executor().inEventLoop()) {
                     return ctx.inboundByteBuffer();
-                } else {
+                }
+                if (executor().inEventLoop()) {
                     ByteBridge bridge = ctx.inByteBridge;
                     if (bridge == null) {
                         bridge = new ByteBridge(ctx);
@@ -798,6 +799,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     }
                     return bridge.byteBuf;
                 }
+                throw new IllegalStateException("nextInboundByteBuffer() called from outside the eventLoop");
             }
             ctx = ctx.next;
         }
@@ -824,7 +826,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             if (ctx.hasInboundMessageBuffer()) {
                 if (ctx.executor().inEventLoop()) {
                     return ctx.inboundMessageBuffer();
-                } else {
+                }
+                if (executor().inEventLoop()) {
                     MessageBridge bridge = ctx.inMsgBridge;
                     if (bridge == null) {
                         bridge = new MessageBridge();
@@ -834,6 +837,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     }
                     return bridge.msgBuf;
                 }
+                throw new IllegalStateException("nextInboundMessageBuffer() called from outside the eventLoop");
             }
             ctx = ctx.next;
         }
@@ -847,7 +851,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             if (ctx.hasOutboundByteBuffer()) {
                 if (ctx.executor().inEventLoop()) {
                     return ctx.outboundByteBuffer();
-                } else {
+                }
+                if (executor().inEventLoop()) {
                     ByteBridge bridge = ctx.outByteBridge;
                     if (bridge == null) {
                         bridge = new ByteBridge(ctx);
@@ -857,6 +862,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     }
                     return bridge.byteBuf;
                 }
+                throw new IllegalStateException("nextOutboundByteBuffer() called from outside the eventLoop");
             }
             ctx = ctx.prev;
 
@@ -884,7 +890,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             if (ctx.hasOutboundMessageBuffer()) {
                 if (ctx.executor().inEventLoop()) {
                     return ctx.outboundMessageBuffer();
-                } else {
+                }
+                if (executor().inEventLoop()) {
                     MessageBridge bridge = ctx.outMsgBridge;
                     if (bridge == null) {
                         bridge = new MessageBridge();
@@ -894,6 +901,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     }
                     return bridge.msgBuf;
                 }
+                throw new IllegalStateException("nextOutboundMessageBuffer() called from outside the eventLoop");
             }
             ctx = ctx.prev;
 
