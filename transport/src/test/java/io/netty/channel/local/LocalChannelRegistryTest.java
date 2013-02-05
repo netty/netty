@@ -25,6 +25,8 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import org.junit.Test;
 
+import java.util.concurrent.CountDownLatch;
+
 import static org.junit.Assert.*;
 
 public class LocalChannelRegistryTest {
@@ -59,12 +61,19 @@ public class LocalChannelRegistryTest {
             // Start server
             Channel sc = sb.bind(addr).sync().channel();
 
+            final CountDownLatch latch = new CountDownLatch(1);
             // Connect to the server
-            Channel cc = cb.connect(addr).sync().channel();
-
-            // Send a message event up the pipeline.
-            cc.pipeline().inboundMessageBuffer().add("Hello, World");
-            cc.pipeline().fireInboundBufferUpdated();
+            final Channel cc = cb.connect(addr).sync().channel();
+            cc.eventLoop().execute(new Runnable() {
+                @Override
+                public void run() {
+                    // Send a message event up the pipeline.
+                    cc.pipeline().inboundMessageBuffer().add("Hello, World");
+                    cc.pipeline().fireInboundBufferUpdated();
+                    latch.countDown();
+                }
+            });
+            latch.await();
 
             // Close the channel
             cc.close().sync();
