@@ -23,8 +23,8 @@
     <version>4.0.0.Beta1-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty</artifactId>
-  <packaging>bundle</packaging>
+  <artifactId>netty-all</artifactId>
+  <packaging>jar</packaging>
 
   <name>Netty/All-in-One</name>
 
@@ -278,31 +278,6 @@
           <locale>en_US</locale>
         </configuration>
       </plugin>
-      
-      <plugin>
-        <groupId>org.apache.felix</groupId>
-        <artifactId>maven-bundle-plugin</artifactId>
-        <extensions>true</extensions>
-        <configuration>
-          <instructions>
-            <Import-Package>
-              com.sun.nio.sctp;resolution:=optional,
-              sun.misc;resolution:=optional,
-              sun.net.util;resolution:=optional,
-              !io.netty.*,
-              *
-            </Import-Package>
-            <Export-Package>
-              !io.netty.example.*,            
-              !io.netty.*.internal.*,            
-              io.netty.*
-            </Export-Package>
-            <Private-Package>
-              io.netty.*.internal.*
-            </Private-Package>
-          </instructions>
-        </configuration>
-      </plugin>      
     </plugins>
   </build>
 </project>
