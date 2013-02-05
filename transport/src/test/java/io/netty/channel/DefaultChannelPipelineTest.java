@@ -32,7 +32,7 @@ public class DefaultChannelPipelineTest {
     public void testFreeCalled() throws InterruptedException{
         final CountDownLatch free = new CountDownLatch(1);
 
-        Freeable holder = new Freeable() {
+        final Freeable holder = new Freeable() {
             @Override
             public void free() {
                 free.countDown();
@@ -46,13 +46,18 @@ public class DefaultChannelPipelineTest {
         LocalChannel channel = new LocalChannel();
         LocalEventLoopGroup group = new LocalEventLoopGroup();
         group.register(channel).awaitUninterruptibly();
-        DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
+        final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
 
         StringInboundHandler handler = new StringInboundHandler();
         pipeline.addLast(handler);
-        pipeline.fireChannelActive();
-        pipeline.inboundMessageBuffer().add(holder);
-        pipeline.fireInboundBufferUpdated();
+        channel.eventLoop().execute(new Runnable() {
+            @Override
+            public void run() {
+                pipeline.fireChannelActive();
+                pipeline.inboundMessageBuffer().add(holder);
+                pipeline.fireInboundBufferUpdated();
+            }
+        });
 
         assertTrue(free.await(10, TimeUnit.SECONDS));
         assertTrue(handler.called);
