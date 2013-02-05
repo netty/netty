@@ -1506,8 +1506,7 @@ public class HttpPostRequestDecoder {
                                 newLine = true;
                                 index = 0;
                                 lastPosition = undecodedChunk.readerIndex() - 2;
-                            }
-                            else {
+                            } else {
                                 // save last valid position
                                 lastPosition = undecodedChunk.readerIndex() - 1;
 
@@ -1533,8 +1532,7 @@ public class HttpPostRequestDecoder {
                             newLine = true;
                             index = 0;
                             lastPosition = undecodedChunk.readerIndex() - 2;
-                        }
-                        else {
+                        } else {
                             // save last valid position
                             lastPosition = undecodedChunk.readerIndex() - 1;
 
@@ -1625,8 +1623,7 @@ public class HttpPostRequestDecoder {
                                 newLine = true;
                                 index = 0;
                                 lastrealpos = sao.pos - 2;
-                            }
-                            else {
+                            } else {
                                 // unread next byte
                                 sao.pos--;
 
@@ -1652,8 +1649,7 @@ public class HttpPostRequestDecoder {
                             newLine = true;
                             index = 0;
                             lastrealpos = sao.pos - 2;
-                        }
-                        else {
+                        } else {
                             // unread next byte
                             sao.pos--;
 
