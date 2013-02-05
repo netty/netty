@@ -1498,20 +1498,23 @@ public class HttpPostRequestDecoder {
                 } else {
                     newLine = false;
                     index = 0;
-
-                    int newLineShift = 1;
-
                     // continue until end of line
-                    while (nextByte == HttpConstants.CR && undecodedChunk.readable()) {
-                        nextByte = undecodedChunk.readByte();
-
-                        newLineShift = 2;
-                    }
-
-                    if (nextByte == HttpConstants.LF) {
+                    if (nextByte == HttpConstants.CR) {
+                        if (undecodedChunk.isReadable()) {
+                            nextByte = undecodedChunk.readByte();
+                            if (nextByte == HttpConstants.LF) {
+                                newLine = true;
+                                index = 0;
+                                lastPosition = undecodedChunk.readerIndex() - 2;
+                            }
+                            else
+                                // Unread next byte.
+                                undecodedChunk.readerIndex(undecodedChunk.readerIndex() - 1);
+                        }
+                    } else if (nextByte == HttpConstants.LF) {
                         newLine = true;
                         index = 0;
-                        lastPosition = undecodedChunk.readerIndex() - newLineShift;
+                        lastPosition = undecodedChunk.readerIndex() - 1;
                     } else {
                         // save last valid position
                         lastPosition = undecodedChunk.readerIndex();
@@ -1527,6 +1530,9 @@ public class HttpPostRequestDecoder {
                             index = 0;
                             lastPosition = undecodedChunk.readerIndex() - 2;
                         }
+                        else
+                            // Unread next byte.
+                            undecodedChunk.readerIndex(undecodedChunk.readerIndex() - 1);
                     }
                 } else if (nextByte == HttpConstants.LF) {
                     newLine = true;
@@ -1612,6 +1618,9 @@ public class HttpPostRequestDecoder {
                                 index = 0;
                                 lastrealpos = sao.pos - 2;
                             }
+                            else
+                                // Unread next byte.
+                                sao.pos--;
                         }
                     } else if (nextByte == HttpConstants.LF) {
                         newLine = true;
@@ -1632,6 +1641,9 @@ public class HttpPostRequestDecoder {
                             index = 0;
                             lastrealpos = sao.pos - 2;
                         }
+                        else
+                            // Unread next byte.
+                            sao.pos--;
                     }
                 } else if (nextByte == HttpConstants.LF) {
                     newLine = true;
