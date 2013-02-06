@@ -16,7 +16,7 @@
 package io.netty.handler.traffic;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelOutboundByteHandler;
@@ -43,7 +43,7 @@ import java.util.concurrent.TimeUnit;
  * or start the monitoring, to change the checkInterval directly, or to have access to its values.</li>
  * </ul>
  */
-public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapter
+public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
         implements ChannelInboundByteHandler, ChannelOutboundByteHandler {
 
     /**

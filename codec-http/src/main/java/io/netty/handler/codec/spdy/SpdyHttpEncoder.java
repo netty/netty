@@ -120,7 +120,7 @@ import java.util.Map;
  * All pushed resources should be sent before sending the response
  * that corresponds to the initial request.
  */
-public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
+public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
 
     private final int spdyVersion;
     private volatile int currentStreamId;
@@ -141,7 +141,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
     }
 
     @Override
-    public Object encode(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public Object encode(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
 
         List<Object> out = new ArrayList<Object>();
         if (msg instanceof HttpRequest) {
@@ -288,7 +288,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
     }
 
     @Override
-    protected void freeOutboundMessage(Object msg) throws Exception {
+    protected void freeOutboundMessage(HttpObject msg) throws Exception {
         if (msg instanceof HttpContent) {
             // Will be freed later as the content of them is just reused here
             return;

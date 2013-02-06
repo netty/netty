@@ -17,14 +17,14 @@ package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
-import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPromise;
 
-public abstract class ByteToMessageCodec<I> extends ChannelHandlerAdapter
+public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler
         implements ChannelInboundByteHandler, ChannelOutboundMessageHandler<I> {
 
     private final Class<?>[] encodableMessageTypes;

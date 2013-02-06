@@ -59,11 +59,11 @@ public abstract class AbstractEventLoopTest {
         assertSame(executor, future.channel().pipeline().context(TestChannelHandler2.class).executor());
     }
 
-    private static final class TestChannelHandler extends ChannelHandlerAdapter {
+    private static final class TestChannelHandler extends ChannelDuplexHandler {
 
     }
 
-    private static final class TestChannelHandler2 extends ChannelHandlerAdapter {
+    private static final class TestChannelHandler2 extends ChannelDuplexHandler {
 
     }
 

@@ -436,7 +436,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
             boolean closed = false;
             boolean read = false;
-            boolean firedInboundBufferSuspended = false;
+            boolean firedChannelReadSuspended = false;
             try {
                 int localReadAmount = result.intValue();
                 if (localReadAmount > 0) {
@@ -458,8 +458,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 }
 
                 if (!closed && channel.isOpen()) {
-                    firedInboundBufferSuspended = true;
-                    pipeline.fireInboundBufferSuspended();
+                    firedChannelReadSuspended = true;
+                    pipeline.fireChannelReadSuspended();
                 }
 
                 pipeline.fireExceptionCaught(t);
@@ -478,8 +478,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                             channel.unsafe().close(channel.unsafe().voidFuture());
                         }
                     }
-                } else if (!firedInboundBufferSuspended) {
-                    pipeline.fireInboundBufferSuspended();
+                } else if (!firedChannelReadSuspended) {
+                    pipeline.fireChannelReadSuspended();
                 }
             }
         }

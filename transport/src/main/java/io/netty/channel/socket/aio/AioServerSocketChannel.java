@@ -185,7 +185,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
             channel.pipeline().inboundMessageBuffer().add(
                     new AioSocketChannel(channel, null, ch));
             channel.pipeline().fireInboundBufferUpdated();
-            channel.pipeline().fireInboundBufferSuspended();
+            channel.pipeline().fireChannelReadSuspended();
         }
 
         @Override

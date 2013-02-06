@@ -24,7 +24,7 @@ import io.netty.buffer.Unpooled;
  * @param <I>   The type of the messages to handle
  */
 public abstract class ChannelOutboundMessageHandlerAdapter<I>
-        extends ChannelOutboundHandlerAdapter implements ChannelOutboundMessageHandler<I> {
+        extends ChannelOperationHandlerAdapter implements ChannelOutboundMessageHandler<I> {
 
     @Override
     public MessageBuf<I> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {

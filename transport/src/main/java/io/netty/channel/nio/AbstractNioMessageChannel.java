@@ -55,7 +55,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             final MessageBuf<Object> msgBuf = pipeline.inboundMessageBuffer();
             boolean closed = false;
             boolean read = false;
-            boolean firedInboundBufferSuspended = false;
+            boolean firedChannelReadSuspended = false;
             try {
                 for (;;) {
                     int localReadAmount = doReadMessages(msgBuf);
@@ -77,8 +77,8 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 if (t instanceof IOException) {
                     closed = true;
                 } else if (!closed) {
-                    firedInboundBufferSuspended = true;
-                    pipeline.fireInboundBufferSuspended();
+                    firedChannelReadSuspended = true;
+                    pipeline.fireChannelReadSuspended();
                 }
 
                 pipeline().fireExceptionCaught(t);
@@ -88,8 +88,8 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 }
                 if (closed && isOpen()) {
                     close(voidFuture());
-                } else if (!firedInboundBufferSuspended) {
-                    pipeline.fireInboundBufferSuspended();
+                } else if (!firedChannelReadSuspended) {
+                    pipeline.fireChannelReadSuspended();
                 }
             }
         }

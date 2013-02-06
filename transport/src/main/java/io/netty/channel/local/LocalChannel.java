@@ -222,7 +222,7 @@ public class LocalChannel extends AbstractChannel {
         }
 
         pipeline.fireInboundBufferUpdated();
-        pipeline.fireInboundBufferSuspended();
+        pipeline.fireChannelReadSuspended();
     }
 
     @Override
@@ -259,7 +259,7 @@ public class LocalChannel extends AbstractChannel {
         if (peer.readInProgress) {
             peer.readInProgress = false;
             peerPipeline.fireInboundBufferUpdated();
-            peerPipeline.fireInboundBufferSuspended();
+            peerPipeline.fireChannelReadSuspended();
         }
     }
 
