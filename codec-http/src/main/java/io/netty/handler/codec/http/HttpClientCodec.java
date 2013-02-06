@@ -119,7 +119,7 @@ public final class HttpClientCodec
 
     @Override
     public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-
+        encoder.freeOutboundBuffer(ctx);
     }
 
     private final class Encoder extends HttpRequestEncoder {
