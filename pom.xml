@@ -354,7 +354,6 @@
       </plugin>
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.12</version>
         <configuration>
           <includes>
              <include>**/*Test*.java</include>
@@ -421,11 +420,27 @@
           <tagNameFormat>netty-@{project.version}</tagNameFormat>
         </configuration>
       </plugin>
+      <!-- always produce osgi bundles -->
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <extensions>true</extensions>
+      </plugin>             
        
     </plugins>
 
     <pluginManagement>
       <plugins>
+        <!-- keep surefire and failsafe in sync -->
+        <plugin>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>2.12</version>
+        </plugin>
+        <!-- keep surefire and failsafe in sync -->
+        <plugin>
+          <artifactId>maven-failsafe-plugin</artifactId>
+          <version>2.12</version>
+        </plugin>
         <plugin>
           <artifactId>maven-clean-plugin</artifactId>
           <version>2.5</version>

@@ -24,7 +24,7 @@
   </parent>
 
   <artifactId>netty-codec-socks</artifactId>
-  <packaging>jar</packaging>
+  <packaging>bundle</packaging>
 
   <name>Netty/Codec/Socks</name>
 
