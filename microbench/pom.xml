@@ -24,7 +24,7 @@
   </parent>
 
   <artifactId>netty-microbench</artifactId>
-  <packaging>jar</packaging>
+  <packaging>bundle</packaging>
 
   <name>Netty/Microbench</name>
 
