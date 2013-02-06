@@ -242,7 +242,7 @@ public class DefaultChannelPipelineTest {
     }
 
     @Sharable
-    private static class TestHandler extends ChannelHandlerAdapter {
+    private static class TestHandler extends ChannelDuplexHandler {
         // Dummy
     }
 }

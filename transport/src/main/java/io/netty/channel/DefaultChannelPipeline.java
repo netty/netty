@@ -583,8 +583,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     private static void callBeforeAdd(ChannelHandlerContext ctx) {
         ChannelHandler handler = ctx.handler();
-        if (handler instanceof ChannelStateHandlerAdapter) {
-            ChannelStateHandlerAdapter h = (ChannelStateHandlerAdapter) handler;
+        if (handler instanceof ChannelHandlerAdapter) {
+            ChannelHandlerAdapter h = (ChannelHandlerAdapter) handler;
             if (!h.isSharable() && h.added) {
                 throw new ChannelPipelineException(
                         h.getClass().getName()  +

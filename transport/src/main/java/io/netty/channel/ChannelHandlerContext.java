@@ -47,7 +47,7 @@ import java.util.Set;
  * You can keep the {@link ChannelHandlerContext} for later use, such as
  * triggering an event outside the handler methods, even from a different thread.
  * <pre>
- * public class MyHandler extends {@link ChannelHandlerAdapter} {
+ * public class MyHandler extends {@link ChannelDuplexHandler} {
  *
  *     <b>private {@link ChannelHandlerContext} ctx;</b>
  *

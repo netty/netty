@@ -20,7 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelInboundMessageHandler;
@@ -331,7 +331,7 @@ public class LocalTransportThreadModelTest {
     }
 
     private static class ThreadNameAuditor
-            extends ChannelHandlerAdapter
+            extends ChannelDuplexHandler
             implements ChannelInboundMessageHandler<Object>,
                        ChannelOutboundMessageHandler<Object> {
 
@@ -394,7 +394,7 @@ public class LocalTransportThreadModelTest {
      * Converts integers into a binary stream.
      */
     private static class MessageForwarder1
-            extends ChannelHandlerAdapter
+            extends ChannelDuplexHandler
             implements ChannelInboundMessageHandler<Integer>, ChannelOutboundByteHandler {
 
         private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
@@ -502,7 +502,7 @@ public class LocalTransportThreadModelTest {
      * Converts a binary stream into integers.
      */
     private static class MessageForwarder2
-            extends ChannelHandlerAdapter
+            extends ChannelDuplexHandler
             implements ChannelInboundByteHandler, ChannelOutboundMessageHandler<Integer> {
 
         private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
@@ -605,7 +605,7 @@ public class LocalTransportThreadModelTest {
      * Simply forwards the received object to the next handler.
      */
     private static class MessageForwarder3
-            extends ChannelHandlerAdapter
+            extends ChannelDuplexHandler
             implements ChannelInboundMessageHandler<Object>, ChannelOutboundMessageHandler<Object> {
 
         private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
@@ -695,7 +695,7 @@ public class LocalTransportThreadModelTest {
      * Discards all received messages.
      */
     private static class MessageDiscarder
-            extends ChannelHandlerAdapter
+            extends ChannelDuplexHandler
             implements ChannelInboundMessageHandler<Object>, ChannelOutboundMessageHandler<Object> {
 
         private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();

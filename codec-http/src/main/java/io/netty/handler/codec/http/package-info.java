@@ -18,7 +18,7 @@
  * Encoder, decoder and their related message types for HTTP.
  *
  * @apiviz.exclude ^java\.lang\.
- * @apiviz.exclude OneToOne(Encoder|Decoder)$
+ * @apiviz.exclude OneToOne(Encoder|HttpClientDecoder)$
  * @apiviz.exclude \.HttpHeaders\.
  * @apiviz.exclude \.codec\.replay\.
  * @apiviz.exclude \.(Simple)?Channel[A-Za-z]*Handler$

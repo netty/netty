@@ -18,11 +18,11 @@ package io.netty.handler.stream;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPipeline;
@@ -67,7 +67,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @apiviz.has io.netty.handler.stream.ChunkedInput oneway - - reads from
  */
 public class ChunkedWriteHandler
-        extends ChannelHandlerAdapter implements ChannelOutboundMessageHandler<Object> {
+        extends ChannelDuplexHandler implements ChannelOutboundMessageHandler<Object> {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(ChunkedWriteHandler.class);
