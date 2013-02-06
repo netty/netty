@@ -25,7 +25,7 @@ import java.util.Arrays;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertTrue;
 
-/** {@link HttpPostRequestDecoderTest} class */
+/** {@link HttpPostRequestDecoder} test case. */
 public class HttpPostRequestDecoderTest {
     @Test
     public void testBinaryStreamUpload() throws Exception {
