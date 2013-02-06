@@ -33,6 +33,9 @@ final class QueueBackedMessageBuf<T> extends AbstractMessageBuf<T> {
 
     @Override
     public boolean offer(T e) {
+        if (e == null) {
+            throw new NullPointerException("e");
+        }
         checkUnfreed();
         return isWritable() && queue.offer(e);
     }
