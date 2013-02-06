@@ -64,37 +64,12 @@ public final class ChannelHandlerUtil {
         }
 
         if (inbound) {
-            if (ctx.hasNextInboundMessageBuffer()) {
-                ctx.nextInboundMessageBuffer().add(msg);
-                return true;
-            }
-
-            if (msg instanceof ByteBuf && ctx.hasNextInboundByteBuffer()) {
-                ByteBuf altDst = ctx.nextInboundByteBuffer();
-                ByteBuf src = (ByteBuf) msg;
-                altDst.writeBytes(src, src.readerIndex(), src.readableBytes());
-                return true;
-            }
-        } else {
-            if (ctx.hasNextOutboundMessageBuffer()) {
-                ctx.nextOutboundMessageBuffer().add(msg);
-                return true;
-            }
-
-            if (msg instanceof ByteBuf && ctx.hasNextOutboundByteBuffer()) {
-                ByteBuf altDst = ctx.nextOutboundByteBuffer();
-                ByteBuf src = (ByteBuf) msg;
-                altDst.writeBytes(src, src.readerIndex(), src.readableBytes());
-                return true;
-            }
+            ctx.nextInboundMessageBuffer().add(msg);
+            return true;
         }
 
-        throw new NoSuchBufferException(String.format(
-                "the handler '%s' could not find a %s which accepts a %s.",
-                ctx.name(),
-                inbound? ChannelInboundHandler.class.getSimpleName()
-                       : ChannelOutboundHandler.class.getSimpleName(),
-                msg.getClass().getSimpleName()));
+        ctx.nextOutboundMessageBuffer().add(msg);
+        return true;
     }
 
     private static final Class<?>[] EMPTY_TYPES = new Class<?>[0];

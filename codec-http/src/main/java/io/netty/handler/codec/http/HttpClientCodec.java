@@ -16,9 +16,12 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.CombinedChannelHandler;
+import io.netty.channel.ChannelInboundByteHandler;
+import io.netty.channel.ChannelOutboundMessageHandler;
+import io.netty.channel.CombinedChannelDuplexHandler;
 import io.netty.handler.codec.PrematureChannelClosureException;
 
 import java.util.ArrayDeque;
@@ -42,13 +45,15 @@ import java.util.concurrent.atomic.AtomicLong;
  * @apiviz.has io.netty.handler.codec.http.HttpResponseDecoder
  * @apiviz.has io.netty.handler.codec.http.HttpRequestEncoder
  */
-public class HttpClientCodec extends CombinedChannelHandler {
+public final class HttpClientCodec
+        extends CombinedChannelDuplexHandler
+        implements ChannelInboundByteHandler, ChannelOutboundMessageHandler<HttpObject> {
 
     /** A queue that is used for correlating a request and a response. */
-    final Queue<HttpMethod> queue = new ArrayDeque<HttpMethod>();
+    private final Queue<HttpMethod> queue = new ArrayDeque<HttpMethod>();
 
     /** If true, decoding stops (i.e. pass-through) */
-    volatile boolean done;
+    private volatile boolean done;
 
     private final AtomicLong requestResponseCounter = new AtomicLong();
     private final boolean failOnMissingResponse;
@@ -65,25 +70,53 @@ public class HttpClientCodec extends CombinedChannelHandler {
     /**
      * Creates a new instance with the specified decoder options.
      */
-    public HttpClientCodec(
-            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
+    public HttpClientCodec(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
         this(maxInitialLineLength, maxHeaderSize, maxChunkSize, false);
     }
 
     public HttpClientCodec(
-            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
-            boolean failOnMissingResponse) {
-
-        init(
-                new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize),
-                new Encoder());
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse) {
+        init(new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize), new Encoder());
         this.failOnMissingResponse = failOnMissingResponse;
+    }
+
+    private Decoder decoder() {
+        return (Decoder) stateHandler();
+    }
+
+    private Encoder encoder() {
+        return (Encoder) operationHandler();
+    }
+
+    @Override
+    public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return decoder().newInboundBuffer(ctx);
+    }
+
+    @Override
+    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+        decoder().discardInboundReadBytes(ctx);
+    }
+
+    @Override
+    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        decoder().freeInboundBuffer(ctx);
+    }
+
+    @Override
+    public MessageBuf<HttpObject> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return encoder().newOutboundBuffer(ctx);
+    }
+
+    @Override
+    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        encoder().freeOutboundBuffer(ctx);
     }
 
     private final class Encoder extends HttpRequestEncoder {
         @Override
         protected void encode(
-                ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
+                ChannelHandlerContext ctx, HttpObject msg, ByteBuf out) throws Exception {
             if (msg instanceof HttpRequest && !done) {
                 queue.offer(((HttpRequest) msg).getMethod());
             }

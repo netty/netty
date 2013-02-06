@@ -15,7 +15,12 @@
  */
 package io.netty.handler.codec.spdy;
 
-import io.netty.channel.CombinedChannelHandler;
+import io.netty.buffer.MessageBuf;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundMessageHandler;
+import io.netty.channel.ChannelOutboundMessageHandler;
+import io.netty.channel.CombinedChannelDuplexHandler;
+import io.netty.handler.codec.http.HttpObject;
 
 
 /**
@@ -23,14 +28,42 @@ import io.netty.channel.CombinedChannelHandler;
  * @apiviz.has io.netty.handler.codec.sdpy.SpdyHttpDecoder
  * @apiviz.has io.netty.handler.codec.spdy.SpdyHttpEncoder
  */
-public class SpdyHttpCodec extends CombinedChannelHandler {
+public final class SpdyHttpCodec
+        extends CombinedChannelDuplexHandler
+        implements ChannelInboundMessageHandler<Object>, ChannelOutboundMessageHandler<HttpObject> {
 
     /**
      * Creates a new instance with the specified decoder options.
      */
     public SpdyHttpCodec(int version, int maxContentLength) {
-        super(
-                new SpdyHttpDecoder(version, maxContentLength),
-                new SpdyHttpEncoder(version));
+        super(new SpdyHttpDecoder(version, maxContentLength), new SpdyHttpEncoder(version));
+    }
+
+    private SpdyHttpDecoder decoder() {
+        return (SpdyHttpDecoder) stateHandler();
+    }
+
+    private SpdyHttpEncoder encoder() {
+        return (SpdyHttpEncoder) operationHandler();
+    }
+
+    @Override
+    public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return decoder().newInboundBuffer(ctx);
+    }
+
+    @Override
+    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        decoder().freeInboundBuffer(ctx);
+    }
+
+    @Override
+    public MessageBuf<HttpObject> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return encoder().newOutboundBuffer(ctx);
+    }
+
+    @Override
+    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        encoder().freeOutboundBuffer(ctx);
     }
 }

@@ -43,9 +43,7 @@ public class SctpOutboundByteStreamHandler extends ChannelOutboundByteHandlerAda
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        ByteBuf in = ctx.outboundByteBuffer();
-
+    protected void flush(ChannelHandlerContext ctx, ByteBuf in, ChannelPromise promise) throws Exception {
         try {
             MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
             ByteBuf payload = Unpooled.buffer(in.readableBytes());
