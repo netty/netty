@@ -52,11 +52,11 @@ public final class HttpServerCodec
     }
 
     private HttpRequestDecoder decoder() {
-        return (HttpRequestDecoder) stateHandler;
+        return (HttpRequestDecoder) stateHandler();
     }
 
     private HttpResponseEncoder encoder() {
-        return (HttpResponseEncoder) operationHandler;
+        return (HttpResponseEncoder) operationHandler();
     }
 
     @Override

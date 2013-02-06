@@ -36,17 +36,15 @@ public final class SpdyHttpCodec
      * Creates a new instance with the specified decoder options.
      */
     public SpdyHttpCodec(int version, int maxContentLength) {
-        super(
-                new SpdyHttpDecoder(version, maxContentLength),
-                new SpdyHttpEncoder(version));
+        super(new SpdyHttpDecoder(version, maxContentLength), new SpdyHttpEncoder(version));
     }
 
     private SpdyHttpDecoder decoder() {
-        return (SpdyHttpDecoder) stateHandler;
+        return (SpdyHttpDecoder) stateHandler();
     }
 
     private SpdyHttpEncoder encoder() {
-        return (SpdyHttpEncoder) operationHandler;
+        return (SpdyHttpEncoder) operationHandler();
     }
     @Override
     public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {

@@ -23,56 +23,45 @@ import java.net.SocketAddress;
  */
 public class CombinedChannelDuplexHandler extends ChannelDuplexHandler {
 
-    protected final ChannelStateHandler stateHandler;
-    protected final ChannelOperationHandler operationHandler;
-
-    protected CombinedChannelDuplexHandler() {
-        ChannelStateHandler stateHandler = newStateHandler();
-        ChannelOperationHandler operationHandler = newOperationHandler();
-        validate(stateHandler, operationHandler);
-        this.stateHandler = stateHandler;
-        this.operationHandler = operationHandler;
-    }
+    private ChannelStateHandler stateHandler;
+    private ChannelOperationHandler operationHandler;
 
     /**
-     * Combine the given {@link ChannelStateHandler} and {@link ChannelOperationHandler}.
+     * Creates a new uninitialized instance. A class that extends this handler must invoke
+     * {@link #init(ChannelStateHandler, ChannelOperationHandler)} before adding this handler into a
+     * {@link ChannelPipeline}.
+     */
+    protected CombinedChannelDuplexHandler() { }
+
+    /**
+     * Creates a new instance that combines the specified two handlers into one.
      */
     public CombinedChannelDuplexHandler(ChannelStateHandler stateHandler, ChannelOperationHandler operationHandler) {
+        init(stateHandler, operationHandler);
+    }
+
+    /**
+     * Initialized this handler with the specified handlers.
+     *
+     * @throws IllegalStateException if this handler was not constructed via the default constructor or
+     *                               if this handler does not implement all required handler interfaces
+     * @throws IllegalArgumentException if the specified handlers cannot be combined into one due to a conflict
+     *                                  in the type hierarchy
+     */
+    protected final void init(ChannelStateHandler stateHandler, ChannelOperationHandler operationHandler) {
         validate(stateHandler, operationHandler);
         this.stateHandler = stateHandler;
         this.operationHandler = operationHandler;
-    }
-
-    /**
-     * Creates a new {@link ChannelStateHandler} that this handler delegates events to.  Please note this method
-     * is only invoked when this handler was constructed via
-     * {@linkplain #CombinedChannelDuplexHandler() the default constructor} rather than
-     * {@linkplain #CombinedChannelDuplexHandler(ChannelStateHandler, ChannelOperationHandler) the other one}.
-     */
-    protected ChannelStateHandler newStateHandler() {
-        fail();
-        return null;
-    }
-
-    /**
-     * Creates a new {@link ChannelOperationHandler} that this handler delegates events to.  Please note this method
-     * is only invoked when this handler was constructed via
-     * {@linkplain #CombinedChannelDuplexHandler() the default constructor} rather than
-     * {@linkplain #CombinedChannelDuplexHandler(ChannelStateHandler, ChannelOperationHandler) the other one}.
-     */
-    protected ChannelOperationHandler newOperationHandler() {
-        fail();
-        return null;
-    }
-
-    private static void fail() {
-        throw new IllegalStateException(
-                "subclass must implement this method to call the default constructor of " +
-                        CombinedChannelDuplexHandler.class.getSimpleName());
     }
 
     @SuppressWarnings("InstanceofIncompatibleInterface")
     private void validate(ChannelStateHandler stateHandler, ChannelOperationHandler operationHandler) {
+        if (this.stateHandler != null) {
+            throw new IllegalStateException(
+                    "init() can not be invoked if " + CombinedChannelDuplexHandler.class.getSimpleName() +
+                            " was constructed with non-default constructor.");
+        }
+
         if (stateHandler == null) {
             throw new NullPointerException("stateHandler");
         }
@@ -91,20 +80,20 @@ public class CombinedChannelDuplexHandler extends ChannelDuplexHandler {
         }
 
         if (stateHandler instanceof ChannelInboundByteHandler && !(this instanceof ChannelInboundByteHandler)) {
-            throw new IllegalArgumentException(
+            throw new IllegalStateException(
                     getClass().getSimpleName() + " must implement " + ChannelInboundByteHandler.class.getSimpleName() +
                     " if stateHandler implements " + ChannelInboundByteHandler.class.getSimpleName());
         }
 
         if (stateHandler instanceof ChannelInboundMessageHandler && !(this instanceof ChannelInboundMessageHandler)) {
-            throw new IllegalArgumentException(
+            throw new IllegalStateException(
                     getClass().getSimpleName() + " must implement " +
                     ChannelInboundMessageHandler.class.getSimpleName() + " if stateHandler implements " +
                     ChannelInboundMessageHandler.class.getSimpleName());
         }
 
         if (operationHandler instanceof ChannelOutboundByteHandler && !(this instanceof ChannelOutboundByteHandler)) {
-            throw new IllegalArgumentException(
+            throw new IllegalStateException(
                     getClass().getSimpleName() + " must implement " +
                     ChannelOutboundByteHandler.class.getSimpleName() + " if operationHandler implements " +
                     ChannelOutboundByteHandler.class.getSimpleName());
@@ -112,15 +101,30 @@ public class CombinedChannelDuplexHandler extends ChannelDuplexHandler {
 
         if (operationHandler instanceof ChannelOutboundMessageHandler &&
             !(this instanceof ChannelOutboundMessageHandler)) {
-            throw new IllegalArgumentException(
+            throw new IllegalStateException(
                     getClass().getSimpleName() + " must implement " +
                     ChannelOutboundMessageHandler.class.getSimpleName() + " if operationHandler implements " +
                     ChannelOutboundMessageHandler.class.getSimpleName());
         }
     }
 
+    protected final ChannelStateHandler stateHandler() {
+        return stateHandler;
+    }
+
+    protected final ChannelOperationHandler operationHandler() {
+        return operationHandler;
+    }
+
     @Override
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
+        if (stateHandler == null) {
+            throw new IllegalStateException(
+                    "init() must be invoked before being added to a " + ChannelPipeline.class.getSimpleName() +
+                    " if " +  CombinedChannelDuplexHandler.class.getSimpleName() +
+                    " was constructed with the default constructor.");
+        }
+
         try {
             stateHandler.beforeAdd(ctx);
         } finally {
@@ -209,20 +213,17 @@ public class CombinedChannelDuplexHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void disconnect(
-            ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         operationHandler.disconnect(ctx, promise);
     }
 
     @Override
-    public void close(
-            ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         operationHandler.close(ctx, promise);
     }
 
     @Override
-    public void deregister(
-            ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         operationHandler.deregister(ctx, promise);
     }
 
@@ -232,12 +233,8 @@ public class CombinedChannelDuplexHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void flush(
-            ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         operationHandler.flush(ctx, promise);
-        if (operationHandler instanceof ChannelOutboundByteHandler) {
-            ((ChannelOutboundByteHandler) operationHandler).discardOutboundReadBytes(ctx);
-        }
     }
 
     @Override

@@ -56,11 +56,11 @@ public final class SpdyFrameCodec
     }
 
     private SpdyFrameDecoder decoder() {
-        return (SpdyFrameDecoder) stateHandler;
+        return (SpdyFrameDecoder) stateHandler();
     }
 
     private SpdyFrameEncoder encoder() {
-        return (SpdyFrameEncoder) operationHandler;
+        return (SpdyFrameEncoder) operationHandler();
     }
 
     @Override

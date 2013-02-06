@@ -20,9 +20,7 @@ import io.netty.buffer.MessageBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandler;
-import io.netty.channel.ChannelOperationHandler;
 import io.netty.channel.ChannelOutboundMessageHandler;
-import io.netty.channel.ChannelStateHandler;
 import io.netty.channel.CombinedChannelDuplexHandler;
 import io.netty.handler.codec.PrematureChannelClosureException;
 
@@ -51,9 +49,6 @@ public final class HttpClientCodec
         extends CombinedChannelDuplexHandler
         implements ChannelInboundByteHandler, ChannelOutboundMessageHandler<HttpObject> {
 
-    private final Decoder decoder;
-    private final Encoder encoder;
-
     /** A queue that is used for correlating a request and a response. */
     private final Queue<HttpMethod> queue = new ArrayDeque<HttpMethod>();
 
@@ -81,45 +76,41 @@ public final class HttpClientCodec
 
     public HttpClientCodec(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse) {
-
-        decoder = new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize);
-        encoder = new Encoder();
+        init(new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize), new Encoder());
         this.failOnMissingResponse = failOnMissingResponse;
     }
 
-    @Override
-    protected ChannelStateHandler newStateHandler() {
-        return decoder;
+    private Decoder decoder() {
+        return (Decoder) stateHandler();
     }
 
-    @Override
-    protected ChannelOperationHandler newOperationHandler() {
-        return encoder;
+    private Encoder encoder() {
+        return (Encoder) operationHandler();
     }
 
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return decoder.newInboundBuffer(ctx);
+        return decoder().newInboundBuffer(ctx);
     }
 
     @Override
     public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-        decoder.discardInboundReadBytes(ctx);
+        decoder().discardInboundReadBytes(ctx);
     }
 
     @Override
     public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        decoder.freeInboundBuffer(ctx);
+        decoder().freeInboundBuffer(ctx);
     }
 
     @Override
     public MessageBuf<HttpObject> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return encoder.newOutboundBuffer(ctx);
+        return encoder().newOutboundBuffer(ctx);
     }
 
     @Override
     public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        encoder.freeOutboundBuffer(ctx);
+        encoder().freeOutboundBuffer(ctx);
     }
 
     private final class Encoder extends HttpRequestEncoder {
