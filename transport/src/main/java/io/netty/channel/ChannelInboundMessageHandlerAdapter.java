@@ -41,7 +41,7 @@ import io.netty.buffer.Unpooled;
  * @param <I>   The type of the messages to handle
  */
 public abstract class ChannelInboundMessageHandlerAdapter<I>
-        extends ChannelInboundHandlerAdapter implements ChannelInboundMessageHandler<I> {
+        extends ChannelStateHandlerAdapter implements ChannelInboundMessageHandler<I> {
 
     private final Class<?>[] acceptedMsgTypes;
 

@@ -21,7 +21,7 @@ import io.netty.buffer.ByteBuf;
  * Abstract base class which handles outgoing bytes.
  */
 public abstract class ChannelOutboundByteHandlerAdapter
-        extends ChannelOutboundHandlerAdapter implements ChannelOutboundByteHandler {
+        extends ChannelOperationHandlerAdapter implements ChannelOutboundByteHandler {
     @Override
     public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return ctx.alloc().buffer();
