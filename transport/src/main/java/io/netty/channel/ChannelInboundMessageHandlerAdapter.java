@@ -82,7 +82,7 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
                 try {
                     if (!isSupported(msg)) {
                         if (out == null) {
-                            out = ctx.nextOutboundMessageBuffer();
+                            out = ctx.nextInboundMessageBuffer();
                         }
                         out.add(msg);
                         unsupportedFound = true;
