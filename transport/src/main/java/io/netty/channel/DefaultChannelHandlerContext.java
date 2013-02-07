@@ -1457,38 +1457,34 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         validateFuture(promise);
 
         DefaultChannelHandlerContext ctx = prev;
-        final DefaultChannelHandlerContext initialCtx = ctx;
         EventExecutor executor;
-        boolean msgBuf = false;
-        for (;;) {
-            if (ctx.hasOutboundMessageBuffer()) {
-                msgBuf = true;
-                executor = ctx.executor();
-                break;
-            }
+        final boolean msgBuf;
 
-            if (message instanceof ByteBuf && ctx.hasOutboundByteBuffer()) {
-                executor = ctx.executor();
-                break;
-            }
-
-            ctx = ctx.prev;
-
-            if (ctx == null) {
-                if (initialCtx.next != null) {
-                    throw new NoSuchBufferException(String.format(
-                            "the handler '%s' could not find a %s which accepts a %s, and " +
-                                    "the transport does not accept it as-is.",
-                            initialCtx.next.name(),
-                            ChannelOutboundHandler.class.getSimpleName(),
-                            message.getClass().getSimpleName()));
-                } else {
-                    throw new NoSuchBufferException(String.format(
-                            "the pipeline does not contain a %s which accepts a %s, and " +
-                                    "the transport does not accept it as-is.",
-                            ChannelOutboundHandler.class.getSimpleName(),
-                            message.getClass().getSimpleName()));
+        if (message instanceof ByteBuf) {
+            for (;;) {
+                if (ctx.hasOutboundByteBuffer()) {
+                    msgBuf = false;
+                    executor = ctx.executor();
+                    break;
                 }
+
+                if (ctx.hasOutboundMessageBuffer()) {
+                    msgBuf = true;
+                    executor = ctx.executor();
+                    break;
+                }
+
+                ctx = ctx.prev;
+            }
+        } else {
+            msgBuf = true;
+            for (;;) {
+                if (ctx.hasOutboundMessageBuffer()) {
+                    executor = ctx.executor();
+                    break;
+                }
+
+                ctx = ctx.prev;
             }
         }
 
@@ -1497,12 +1493,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             return promise;
         }
 
-        final boolean msgBuf0 = msgBuf;
         final DefaultChannelHandlerContext ctx0 = ctx;
         executor.execute(new Runnable() {
             @Override
             public void run() {
-                ctx0.write0(message, promise, msgBuf0);
+                ctx0.write0(message, promise, msgBuf);
             }
         });
 
