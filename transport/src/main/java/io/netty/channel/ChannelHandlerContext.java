@@ -293,40 +293,22 @@ public interface ChannelHandlerContext
     <T> MessageBuf<T> replaceOutboundMessageBuffer(MessageBuf<T> newOutboundMsgBuf);
 
     /**
-     * Return the {@link ByteBuf} of the next {@link ChannelHandlerContext} if {@link #hasNextInboundByteBuffer()}
-     * returned {@code true}, otherwise a {@link UnsupportedOperationException} is thrown.
+     * Return the {@link ByteBuf} of the next {@link ChannelHandlerContext}.
      */
     ByteBuf nextInboundByteBuffer();
 
     /**
-     * Return the {@link MessageBuf} of the next {@link ChannelHandlerContext} if
-     * {@link #hasNextInboundMessageBuffer()} returned {@code true}, otherwise a
-     * {@link UnsupportedOperationException} is thrown.
+     * Return the {@link MessageBuf} of the next {@link ChannelHandlerContext}.
      */
     MessageBuf<Object> nextInboundMessageBuffer();
 
     /**
-     * Return {@code true} if the next {@link ChannelHandlerContext} has a {@link ByteBuf} for handling outbound
-     * data.
-     */
-    boolean hasNextOutboundByteBuffer();
-
-    /**
-     * Return {@code true} if the next {@link ChannelHandlerContext} has a {@link MessageBuf} for handling
-     * outbound data.
-     */
-    boolean hasNextOutboundMessageBuffer();
-
-    /**
-     * Return the {@link ByteBuf} of the next {@link ChannelHandlerContext} if {@link #hasNextOutboundByteBuffer()}
-     * returned {@code true}, otherwise a {@link UnsupportedOperationException} is thrown.
+     * Return the {@link ByteBuf} of the next {@link ChannelHandlerContext}.
      */
     ByteBuf nextOutboundByteBuffer();
 
     /**
-     * Return the {@link MessageBuf} of the next {@link ChannelHandlerContext} if
-     * {@link #hasNextOutboundMessageBuffer()} returned {@code true}, otherwise a
-     * {@link UnsupportedOperationException} is thrown.
+     * Return the {@link MessageBuf} of the next {@link ChannelHandlerContext}.
      */
     MessageBuf<Object> nextOutboundMessageBuffer();
 }

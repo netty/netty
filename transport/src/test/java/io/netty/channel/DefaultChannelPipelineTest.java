@@ -31,7 +31,7 @@ import static org.junit.Assert.*;
 
 public class DefaultChannelPipelineTest {
     @Test
-    public void testMessageCatchAllSink() throws Exception {
+    public void testMessageCatchAllInboundSink() throws Exception {
         LocalChannel channel = new LocalChannel();
         LocalEventLoopGroup group = new LocalEventLoopGroup();
         group.register(channel).awaitUninterruptibly();
@@ -61,7 +61,7 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test
-    public void testByteCatchAllSink() throws Exception {
+    public void testByteCatchAllInboundSink() throws Exception {
         LocalChannel channel = new LocalChannel();
         LocalEventLoopGroup group = new LocalEventLoopGroup();
         group.register(channel).awaitUninterruptibly();
@@ -85,6 +85,35 @@ public class DefaultChannelPipelineTest {
             }
         }).get();
 
+        assertTrue(forwarded.get());
+    }
+
+    @Test
+    public void testByteCatchAllOutboundSink() throws Exception {
+        LocalChannel channel = new LocalChannel();
+        LocalEventLoopGroup group = new LocalEventLoopGroup();
+        group.register(channel).awaitUninterruptibly();
+        final AtomicBoolean forwarded = new AtomicBoolean();
+        final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
+        pipeline.addLast(new ChannelOutboundByteHandlerAdapter() {
+            @Override
+            protected void flush(ChannelHandlerContext ctx, ByteBuf in, ChannelPromise promise) throws Exception {
+                ByteBuf out = ctx.nextOutboundByteBuffer();
+                out.writeBytes(in);
+                forwarded.set(true);
+                ctx.flush(promise);
+            }
+        });
+        channel.eventLoop().submit(new Runnable() {
+            @Override
+            public void run() {
+                pipeline.fireChannelActive();
+                pipeline.outboundByteBuffer().writeByte(0);
+                pipeline.flush();
+            }
+        }).get();
+
+        Thread.sleep(1000);
         assertTrue(forwarded.get());
     }
 
