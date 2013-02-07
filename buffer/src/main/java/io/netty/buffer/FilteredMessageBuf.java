@@ -80,7 +80,7 @@ public abstract class FilteredMessageBuf implements MessageBuf<Object> {
         }
 
         e = filter(e);
-        assert e != null;
+        ensureNonNull(e);
 
         return buf.add(e);
     }
@@ -92,9 +92,15 @@ public abstract class FilteredMessageBuf implements MessageBuf<Object> {
         }
 
         e = filter(e);
-        assert e != null;
+        ensureNonNull(e);
 
         return buf.offer(e);
+    }
+
+    private void ensureNonNull(Object e) {
+        if (e == null) {
+            throw new IllegalStateException(getClass().getSimpleName() + ".filter() returned null");
+        }
     }
 
     @Override
@@ -167,9 +173,8 @@ public abstract class FilteredMessageBuf implements MessageBuf<Object> {
             }
 
             e = filter(e);
-            if (e != null) {
-                added |= buf.add(e);
-            }
+            ensureNonNull(e);
+            added |= buf.add(e);
         }
         return added;
     }

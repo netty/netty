@@ -46,6 +46,7 @@ public final class SpdyHttpCodec
     private SpdyHttpEncoder encoder() {
         return (SpdyHttpEncoder) operationHandler();
     }
+
     @Override
     public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return decoder().newInboundBuffer(ctx);

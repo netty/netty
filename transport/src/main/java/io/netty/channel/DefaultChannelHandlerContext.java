@@ -155,11 +155,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             try {
                 buf = ((ChannelInboundHandler) handler).newInboundBuffer(this);
             } catch (Exception e) {
-                throw new ChannelPipelineException("A user handler failed to create a new inbound buffer.", e);
-            }
-
-            if (buf == null) {
-                throw new ChannelPipelineException("A user handler's newInboundBuffer() returned null");
+                throw new ChannelPipelineException(
+                        handler.getClass().getSimpleName() + ".newInboundBuffer() raised an exception.", e);
             }
 
             if (buf instanceof ByteBuf) {
@@ -167,20 +164,19 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             } else if (buf instanceof MessageBuf) {
                 inMsgBuf = (MessageBuf<Object>) buf;
             } else {
-                throw new Error();
+                throw new ChannelPipelineException(
+                        handler.getClass().getSimpleName() + ".newInboundBuffer() returned neither " +
+                        ByteBuf.class.getSimpleName() + " nor " + MessageBuf.class.getSimpleName() + ": " + buf);
             }
         }
 
         if (handler instanceof ChannelOutboundHandler) {
             Buf buf;
             try {
-                buf = ((ChannelOutboundHandler) handler()).newOutboundBuffer(this);
+                buf = ((ChannelOutboundHandler) handler).newOutboundBuffer(this);
             } catch (Exception e) {
-                throw new ChannelPipelineException("A user handler failed to create a new outbound buffer.", e);
-            }
-
-            if (buf == null) {
-                throw new ChannelPipelineException("A user handler's newOutboundBuffer() returned null");
+                throw new ChannelPipelineException(
+                        handler.getClass().getSimpleName() + ".newOutboundBuffer() raised an exception.", e);
             }
 
             if (buf instanceof ByteBuf) {
@@ -190,7 +186,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 MessageBuf<Object> msgBuf = (MessageBuf<Object>) buf;
                 outMsgBuf = msgBuf;
             } else {
-                throw new Error();
+                throw new ChannelPipelineException(
+                        handler.getClass().getSimpleName() + ".newOutboundBuffer() returned neither " +
+                        ByteBuf.class.getSimpleName() + " nor " + MessageBuf.class.getSimpleName() + ": " + buf);
             }
         }
     }
