@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -34,7 +36,6 @@ import io.netty.handler.codec.http.HttpVersion;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 
 /**
  * <p>
@@ -48,7 +49,7 @@ import java.util.Arrays;
  */
 public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
 
-    private byte[] expectedChallengeResponseBytes;
+    private ByteBuf expectedChallengeResponseBytes;
 
     /**
      * Constructor specifying the destination web socket location and version to initiate
@@ -127,7 +128,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         System.arraycopy(number1Array, 0, challenge, 0, 4);
         System.arraycopy(number2Array, 0, challenge, 4, 4);
         System.arraycopy(key3, 0, challenge, 8, 8);
-        expectedChallengeResponseBytes = WebSocketUtil.md5(challenge);
+        expectedChallengeResponseBytes = Unpooled.wrappedBuffer(WebSocketUtil.md5(challenge));
 
         // Get path
         URI wsURL = uri();
@@ -239,8 +240,8 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
                     + connection);
         }
 
-        byte[] challenge = response.data().array();
-        if (!Arrays.equals(challenge, expectedChallengeResponseBytes)) {
+        ByteBuf challenge = response.data();
+        if (!challenge.equals(expectedChallengeResponseBytes)) {
             throw new WebSocketHandshakeException("Invalid challenge");
         }
 
