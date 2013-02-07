@@ -15,27 +15,27 @@
  */
 package io.netty.handler.codec.bytes;
 
+import io.netty.buffer.BufType;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.embedded.EmbeddedMessageChannel;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.util.Random;
+
 import static io.netty.buffer.Unpooled.*;
 import static org.hamcrest.core.Is.*;
 import static org.hamcrest.core.IsNull.*;
 import static org.junit.Assert.*;
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.embedded.EmbeddedMessageChannel;
 
-import java.util.Random;
-
-import org.junit.Before;
-import org.junit.Test;
-
-/**
- */
+@SuppressWarnings("ZeroLengthArrayAllocation")
 public class ByteArrayEncoderTest {
 
     private EmbeddedMessageChannel ch;
 
     @Before
     public void setUp() {
-        ch = new EmbeddedMessageChannel(new ByteArrayEncoder());
+        ch = new EmbeddedMessageChannel(new ByteArrayEncoder(BufType.MESSAGE));
     }
 
     @Test

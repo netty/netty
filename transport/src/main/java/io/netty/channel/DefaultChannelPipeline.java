@@ -1274,23 +1274,32 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-            int msgSinkSize = msgSink.size();
-            if (msgSinkSize != 0) {
-                MessageBuf<Object> in = msgSink;
-                for (;;) {
-                    Object m = in.poll();
-                    if (m == null) {
-                        break;
-                    }
-
-                    if (m instanceof Freeable) {
-                        ((Freeable) m).free();
-                    }
+            int discardedMessages = 0;
+            MessageBuf<Object> in = msgSink;
+            for (;;) {
+                Object m = in.poll();
+                if (m == null) {
+                    break;
                 }
+
+                if (m instanceof ByteBuf) {
+                    ByteBuf src = (ByteBuf) m;
+                    byteSink.writeBytes(src, src.readerIndex(), src.readableBytes());
+                } else {
+                    discardedMessages ++;
+                }
+
+                if (m instanceof Freeable) {
+                    ((Freeable) m).free();
+                }
+            }
+
+            if (discardedMessages != 0) {
                 logger.warn(
                         "Discarded {} outbound message(s) that reached at the end of the pipeline. " +
-                                "Please check your pipeline configuration.", msgSinkSize);
+                        "Please check your pipeline configuration.", discardedMessages);
             }
+
             unsafe.flush(promise);
         }
     }

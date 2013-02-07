@@ -15,13 +15,16 @@
  */
 package io.netty.handler.codec.string;
 
+import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.LineBasedFrameDecoder;
-import io.netty.handler.codec.MessageToMessageEncoder;
 
 import java.nio.charset.Charset;
 
@@ -48,32 +51,67 @@ import java.nio.charset.Charset;
  * @apiviz.landmark
  */
 @Sharable
-public class StringEncoder extends MessageToMessageEncoder<CharSequence> {
+public class StringEncoder extends ChannelOutboundMessageHandlerAdapter<CharSequence> {
 
+    private final BufType nextBufferType;
     // TODO Use CharsetEncoder instead.
     private final Charset charset;
 
     /**
      * Creates a new instance with the current system character set.
      */
-    public StringEncoder() {
-        this(Charset.defaultCharset());
+    public StringEncoder(BufType nextBufferType) {
+        this(nextBufferType, Charset.defaultCharset());
     }
 
     /**
      * Creates a new instance with the specified character set.
      */
-    public StringEncoder(Charset charset) {
-        super(CharSequence.class);
-
+    public StringEncoder(BufType nextBufferType, Charset charset) {
+        if (nextBufferType == null) {
+            throw new NullPointerException("nextBufferType");
+        }
         if (charset == null) {
             throw new NullPointerException("charset");
         }
+        this.nextBufferType = nextBufferType;
         this.charset = charset;
     }
 
     @Override
-    protected Object encode(ChannelHandlerContext ctx, CharSequence msg) throws Exception {
-        return Unpooled.copiedBuffer(msg, charset);
+    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        MessageBuf<Object> in = ctx.outboundMessageBuffer();
+        MessageBuf<Object> msgOut = ctx.nextOutboundMessageBuffer();
+        ByteBuf byteOut = ctx.nextOutboundByteBuffer();
+
+        try {
+            for (;;) {
+                Object m = in.poll();
+                if (m == null) {
+                    break;
+                }
+
+                if (!(m instanceof CharSequence)) {
+                    msgOut.add(m);
+                    continue;
+                }
+
+                CharSequence s = (CharSequence) m;
+                ByteBuf encoded = Unpooled.copiedBuffer(s, charset);
+
+                switch (nextBufferType) {
+                case BYTE:
+                    byteOut.writeBytes(encoded);
+                    break;
+                case MESSAGE:
+                    msgOut.add(encoded);
+                    break;
+                default:
+                    throw new Error();
+                }
+            }
+        } finally {
+            ctx.flush(promise);
+        }
     }
 }
