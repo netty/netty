@@ -64,6 +64,7 @@ public class SocketShutdownOutputByPeerTest extends AbstractServerSocketTest {
             assertTrue(h.ch.isInputShutdown());
             assertFalse(h.ch.isOutputShutdown());
             assertEquals(1, h.closure.getCount());
+            Thread.sleep(100);
             assertEquals(1, h.halfClosureCount.intValue());
         } finally {
             s.close();
@@ -101,6 +102,7 @@ public class SocketShutdownOutputByPeerTest extends AbstractServerSocketTest {
             assertTrue(h.ch.isOutputShutdown());
 
             assertEquals(1, h.halfClosure.getCount());
+            Thread.sleep(100);
             assertEquals(0, h.halfClosureCount.intValue());
         } finally {
             s.close();
