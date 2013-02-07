@@ -705,22 +705,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     public ByteBuf nextInboundByteBuffer() {
         DefaultChannelHandlerContext ctx = next;
         for (;;) {
-            if (ctx == null) {
-                if (prev != null) {
-                    throw new NoSuchBufferException(String.format(
-                            "the handler '%s' could not find a %s whose inbound buffer is %s.",
-                            name, ChannelInboundHandler.class.getSimpleName(),
-                            ByteBuf.class.getSimpleName()));
-                } else {
-                    throw new NoSuchBufferException(String.format(
-                            "the pipeline does not contain a %s whose inbound buffer is %s.",
-                            ChannelInboundHandler.class.getSimpleName(),
-                            ByteBuf.class.getSimpleName()));
-                }
-            }
             if (ctx.hasInboundByteBuffer()) {
                 if (ctx.executor().inEventLoop()) {
-                    return ctx.inboundByteBuffer();
+                    return ctx.inByteBuf;
                 }
                 if (executor().inEventLoop()) {
                     ByteBridge bridge = ctx.inByteBridge;
@@ -742,23 +729,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     public MessageBuf<Object> nextInboundMessageBuffer() {
         DefaultChannelHandlerContext ctx = next;
         for (;;) {
-            if (ctx == null) {
-                if (prev != null) {
-                    throw new NoSuchBufferException(String.format(
-                            "the handler '%s' could not find a %s whose inbound buffer is %s.",
-                            name, ChannelInboundHandler.class.getSimpleName(),
-                            MessageBuf.class.getSimpleName()));
-                } else {
-                    throw new NoSuchBufferException(String.format(
-                            "the pipeline does not contain a %s whose inbound buffer is %s.",
-                            ChannelInboundHandler.class.getSimpleName(),
-                            MessageBuf.class.getSimpleName()));
-                }
-            }
-
             if (ctx.hasInboundMessageBuffer()) {
                 if (ctx.executor().inEventLoop()) {
-                    return ctx.inboundMessageBuffer();
+                    return ctx.inMsgBuf;
                 }
                 if (executor().inEventLoop()) {
                     MessageBridge bridge = ctx.inMsgBridge;

@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.MessageBuf;
@@ -822,7 +823,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         private int outboundBufSize() {
             final int bufSize;
             final ChannelHandlerContext ctx = directOutboundContext();
-            if (ctx.hasOutboundByteBuffer()) {
+            if (metadata().bufferType() == BufType.BYTE) {
                 bufSize = ctx.outboundByteBuffer().readableBytes();
             } else {
                 bufSize = ctx.outboundMessageBuffer().size();
@@ -869,7 +870,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             ChannelHandlerContext ctx = directOutboundContext();
             Throwable cause = null;
             try {
-                if (ctx.hasOutboundByteBuffer()) {
+                if (metadata().bufferType() == BufType.BYTE) {
                     ByteBuf out = ctx.outboundByteBuffer();
                     int oldSize = out.readableBytes();
                     try {
@@ -877,7 +878,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     } catch (Throwable t) {
                         cause = t;
                     } finally {
-                        flushFutureNotifier.increaseWriteCounter(oldSize - out.readableBytes());
+                        int delta = oldSize - out.readableBytes();
+                        out.discardSomeReadBytes();
+                        flushFutureNotifier.increaseWriteCounter(delta);
                     }
                 } else {
                     MessageBuf<Object> out = ctx.outboundMessageBuffer();
