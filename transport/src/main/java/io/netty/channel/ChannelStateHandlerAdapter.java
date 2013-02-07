@@ -90,6 +90,6 @@ public abstract class ChannelStateHandlerAdapter extends ChannelHandlerAdapter i
 
     @Override
     public void channelReadSuspended(ChannelHandlerContext ctx) throws Exception {
-        ctx.fireInboundBufferSuspended();
+        ctx.fireChannelReadSuspended();
     }
 }

@@ -30,7 +30,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.WritableByteChannel;
 
 /**
- * {@link io.netty.channel.nio.AbstractNioChannel} base class for {@link Channel}s that operate on bytes.
+ * {@link AbstractNioChannel} base class for {@link Channel}s that operate on bytes.
  */
 public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
@@ -62,7 +62,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             final ByteBuf byteBuf = pipeline.inboundByteBuffer();
             boolean closed = false;
             boolean read = false;
-            boolean firedInboundBufferSuspended = false;
+            boolean firedChannelReadSuspended = false;
             try {
                 expandReadBuffer(byteBuf);
                 loop: for (;;) {
@@ -103,8 +103,8 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 if (t instanceof IOException) {
                     closed = true;
                 } else if (!closed) {
-                    firedInboundBufferSuspended = true;
-                    pipeline.fireInboundBufferSuspended();
+                    firedChannelReadSuspended = true;
+                    pipeline.fireChannelReadSuspended();
                 }
                 pipeline().fireExceptionCaught(t);
             } finally {
@@ -121,8 +121,8 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                             close(voidFuture());
                         }
                     }
-                } else if (!firedInboundBufferSuspended) {
-                    pipeline.fireInboundBufferSuspended();
+                } else if (!firedChannelReadSuspended) {
+                    pipeline.fireChannelReadSuspended();
                 }
             }
         }

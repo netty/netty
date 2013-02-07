@@ -904,8 +904,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public void fireInboundBufferSuspended() {
-        head.fireInboundBufferSuspended();
+    public void fireChannelReadSuspended() {
+        head.fireChannelReadSuspended();
         if (channel.config().isAutoRead()) {
             read();
         }
@@ -1075,18 +1075,74 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private static final class TailHandler extends ChannelInboundMessageHandlerAdapter<Freeable> {
-        public TailHandler() {
-            super(Freeable.class);
+    private static final class TailHandler implements ChannelInboundMessageHandler<Object> {
+
+        @Override
+        public void channelRegistered(ChannelHandlerContext ctx) throws Exception { }
+
+        @Override
+        public void channelUnregistered(ChannelHandlerContext ctx) throws Exception { }
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception { }
+
+        @Override
+        public void channelInactive(ChannelHandlerContext ctx) throws Exception { }
+
+        @Override
+        public void channelReadSuspended(ChannelHandlerContext ctx) throws Exception { }
+
+        @Override
+        public void beforeAdd(ChannelHandlerContext ctx) throws Exception { }
+
+        @Override
+        public void afterAdd(ChannelHandlerContext ctx) throws Exception { }
+
+        @Override
+        public void beforeRemove(ChannelHandlerContext ctx) throws Exception { }
+
+        @Override
+        public void afterRemove(ChannelHandlerContext ctx) throws Exception { }
+
+        @Override
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception { }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            logger.warn(
+                    "An exceptionCaught() event was fired, and it reached at the end of the pipeline. " +
+                            "It usually means the last handler in the pipeline did not handle the exception.", cause);
         }
 
         @Override
-        protected void messageReceived(ChannelHandlerContext ctx, Freeable msg) throws Exception {
-            if (logger.isWarnEnabled()) {
-                logger.warn("Freeable reached end-of-pipeline, call " + msg + ".free() to" +
-                        " guard against resource leakage!");
+        public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            // Well written application will never use this buffer - start at minimum capacity.
+            return Unpooled.messageBuffer(0);
+        }
+
+        @Override
+        public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            ctx.inboundMessageBuffer().free();
+        }
+
+        @Override
+        public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+            MessageBuf<Object> in = ctx.inboundMessageBuffer();
+            for (;;) {
+                Object m = in.poll();
+                if (m == null) {
+                    break;
+                }
+
+                if (m instanceof Freeable) {
+                    if (logger.isWarnEnabled()) {
+                        logger.warn(
+                                "Freeing a {} that reached at the end of the pipeline: {}",
+                                Freeable.class.getSimpleName(), m);
+                    }
+                    ((Freeable) m).free();
+                }
             }
-            msg.free();
         }
     }
 

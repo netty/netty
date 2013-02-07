@@ -73,6 +73,7 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
 
         try {
             MessageBuf<I> in = ctx.inboundMessageBuffer();
+            MessageBuf<Object> out = ctx.nextInboundMessageBuffer();
             for (;;) {
                 Object msg = in.poll();
                 if (msg == null) {
@@ -80,7 +81,7 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
                 }
                 try {
                     if (!isSupported(msg)) {
-                        ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg);
+                        out.add(msg);
                         unsupportedFound = true;
                         continue;
                     }

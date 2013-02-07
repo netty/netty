@@ -94,7 +94,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private Runnable invokeChannelInactiveTask;
     private Runnable invokeInboundBufferUpdatedTask;
     private Runnable fireInboundBufferUpdated0Task;
-    private Runnable invokeInboundBufferSuspendedTask;
+    private Runnable invokeChannelReadSuspendedTask;
     private Runnable invokeFreeInboundBuffer0Task;
     private Runnable invokeFreeOutboundBuffer0Task;
     private Runnable invokeRead0Task;
@@ -925,22 +925,20 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     public void fireChannelRegistered() {
         lazyInitOutboundBuffer();
         final DefaultChannelHandlerContext next = findContextInbound();
-        if (next != null) {
-            EventExecutor executor = next.executor();
-            if (executor.inEventLoop()) {
-                next.invokeChannelRegistered();
-            } else {
-                Runnable task = next.invokeChannelRegisteredTask;
-                if (task == null) {
-                    next.invokeChannelRegisteredTask = task = new Runnable() {
-                        @Override
-                        public void run() {
-                            next.invokeChannelRegistered();
-                        }
-                    };
-                }
-                executor.execute(task);
+        EventExecutor executor = next.executor();
+        if (executor.inEventLoop()) {
+            next.invokeChannelRegistered();
+        } else {
+            Runnable task = next.invokeChannelRegisteredTask;
+            if (task == null) {
+                next.invokeChannelRegisteredTask = task = new Runnable() {
+                    @Override
+                    public void run() {
+                        next.invokeChannelRegistered();
+                    }
+                };
             }
+            executor.execute(task);
         }
     }
 
@@ -957,22 +955,20 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public void fireChannelUnregistered() {
         final DefaultChannelHandlerContext next = findContextInbound();
-        if (next != null) {
-            EventExecutor executor = next.executor();
-            if (prev != null && executor.inEventLoop()) {
-                next.invokeChannelUnregistered();
-            } else {
-                Runnable task = next.invokeChannelUnregisteredTask;
-                if (task == null) {
-                    next.invokeChannelUnregisteredTask = task = new Runnable() {
-                        @Override
-                        public void run() {
-                            next.invokeChannelUnregistered();
-                        }
-                    };
-                }
-                executor.execute(task);
+        EventExecutor executor = next.executor();
+        if (prev != null && executor.inEventLoop()) {
+            next.invokeChannelUnregistered();
+        } else {
+            Runnable task = next.invokeChannelUnregisteredTask;
+            if (task == null) {
+                next.invokeChannelUnregisteredTask = task = new Runnable() {
+                    @Override
+                    public void run() {
+                        next.invokeChannelUnregistered();
+                    }
+                };
             }
+            executor.execute(task);
         }
     }
 
@@ -987,22 +983,20 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public void fireChannelActive() {
         final DefaultChannelHandlerContext next = findContextInbound();
-        if (next != null) {
-            EventExecutor executor = next.executor();
-            if (executor.inEventLoop()) {
-                next.invokeChannelActive();
-            } else {
-                Runnable task = next.invokeChannelActiveTask;
-                if (task == null) {
-                    next.invokeChannelActiveTask = task = new Runnable() {
-                        @Override
-                        public void run() {
-                            next.invokeChannelActive();
-                        }
-                    };
-                }
-                executor.execute(task);
+        EventExecutor executor = next.executor();
+        if (executor.inEventLoop()) {
+            next.invokeChannelActive();
+        } else {
+            Runnable task = next.invokeChannelActiveTask;
+            if (task == null) {
+                next.invokeChannelActiveTask = task = new Runnable() {
+                    @Override
+                    public void run() {
+                        next.invokeChannelActive();
+                    }
+                };
             }
+            executor.execute(task);
         }
     }
 
@@ -1019,22 +1013,20 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public void fireChannelInactive() {
         final DefaultChannelHandlerContext next = findContextInbound();
-        if (next != null) {
-            EventExecutor executor = next.executor();
-            if (prev != null && executor.inEventLoop()) {
-                next.invokeChannelInactive();
-            } else {
-                Runnable task = next.invokeChannelInactiveTask;
-                if (task == null) {
-                    next.invokeChannelInactiveTask = task = new Runnable() {
-                        @Override
-                        public void run() {
-                            next.invokeChannelInactive();
-                        }
-                    };
-                }
-                executor.execute(task);
+        EventExecutor executor = next.executor();
+        if (prev != null && executor.inEventLoop()) {
+            next.invokeChannelInactive();
+        } else {
+            Runnable task = next.invokeChannelInactiveTask;
+            if (task == null) {
+                next.invokeChannelInactiveTask = task = new Runnable() {
+                    @Override
+                    public void run() {
+                        next.invokeChannelInactive();
+                    }
+                };
             }
+            executor.execute(task);
         }
     }
 
@@ -1055,30 +1047,23 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
 
         final DefaultChannelHandlerContext next = this.next;
-        if (next != null) {
-            EventExecutor executor = next.executor();
-            if (prev != null && executor.inEventLoop()) {
-                next.invokeExceptionCaught(cause);
-            } else {
-                try {
-                    executor.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            next.invokeExceptionCaught(cause);
-                        }
-                    });
-                } catch (Throwable t) {
-                    if (logger.isWarnEnabled()) {
-                        logger.warn("Failed to submit an exceptionCaught() event.", t);
-                        logger.warn("The exceptionCaught() event that was failed to submit was:", cause);
+        EventExecutor executor = next.executor();
+        if (prev != null && executor.inEventLoop()) {
+            next.invokeExceptionCaught(cause);
+        } else {
+            try {
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        next.invokeExceptionCaught(cause);
                     }
+                });
+            } catch (Throwable t) {
+                if (logger.isWarnEnabled()) {
+                    logger.warn("Failed to submit an exceptionCaught() event.", t);
+                    logger.warn("The exceptionCaught() event that was failed to submit was:", cause);
                 }
             }
-        } else {
-            logger.warn(
-                    "An exceptionCaught() event was fired, and it reached at the end of the " +
-                            "pipeline.  It usually means the last inbound handler in the pipeline did not " +
-                            "handle the exception.", cause);
         }
     }
 
@@ -1103,18 +1088,16 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
 
         final DefaultChannelHandlerContext next = this.next;
-        if (next != null) {
-            EventExecutor executor = next.executor();
-            if (executor.inEventLoop()) {
-                next.invokeUserEventTriggered(event);
-            } else {
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        next.invokeUserEventTriggered(event);
-                    }
-                });
-            }
+        EventExecutor executor = next.executor();
+        if (executor.inEventLoop()) {
+            next.invokeUserEventTriggered(event);
+        } else {
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    next.invokeUserEventTriggered(event);
+                }
+            });
         }
     }
 
@@ -1149,7 +1132,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void fireInboundBufferUpdated0() {
         final DefaultChannelHandlerContext next = findContextInbound();
-        if (next != null && !next.isInboundBufferFreed()) {
+        if (!next.isInboundBufferFreed()) {
             next.fillBridge();
             // This comparison is safe because this method is always executed from the executor.
             if (next.executor == executor) {
@@ -1191,28 +1174,26 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public void fireInboundBufferSuspended() {
+    public void fireChannelReadSuspended() {
         final DefaultChannelHandlerContext next = findContextInbound();
-        if (next != null) {
-            EventExecutor executor = next.executor();
-            if (prev != null && executor.inEventLoop()) {
-                next.invokeInboundBufferSuspended();
-            } else {
-                Runnable task = next.invokeInboundBufferSuspendedTask;
-                if (task == null) {
-                    next.invokeInboundBufferSuspendedTask = task = new Runnable() {
-                        @Override
-                        public void run() {
-                            next.invokeInboundBufferSuspended();
-                        }
-                    };
-                }
-                executor.execute(task);
+        EventExecutor executor = next.executor();
+        if (prev != null && executor.inEventLoop()) {
+            next.invokeChannelReadSuspended();
+        } else {
+            Runnable task = next.invokeChannelReadSuspendedTask;
+            if (task == null) {
+                next.invokeChannelReadSuspendedTask = task = new Runnable() {
+                    @Override
+                    public void run() {
+                        next.invokeChannelReadSuspended();
+                    }
+                };
             }
+            executor.execute(task);
         }
     }
 
-    private void invokeInboundBufferSuspended() {
+    private void invokeChannelReadSuspended() {
         try {
             ((ChannelStateHandler) handler()).channelReadSuspended(this);
         } catch (Throwable t) {
@@ -1701,12 +1682,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             }
         }
 
-        DefaultChannelHandlerContext nextCtx = findContextInbound();
-        if (nextCtx != null) {
+        if (next != null) {
+            DefaultChannelHandlerContext nextCtx = findContextInbound();
             nextCtx.invokeFreeInboundBuffer();
         } else {
             // Freed all inbound buffers. Free all outbound buffers in a reverse order.
-            pipeline.tail.findContextOutbound().invokeFreeOutboundBuffer();
+            findContextOutbound().invokeFreeOutboundBuffer();
         }
     }
 
@@ -1741,9 +1722,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             }
         }
 
-        DefaultChannelHandlerContext nextCtx = findContextOutbound();
-        if (nextCtx != null) {
-            nextCtx.invokeFreeOutboundBuffer();
+        if (prev != null) {
+            findContextOutbound().invokeFreeOutboundBuffer();
         }
     }
 
@@ -1790,7 +1770,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         DefaultChannelHandlerContext ctx = this;
         do {
             ctx = ctx.next;
-        } while (ctx != null && !(ctx.handler() instanceof ChannelStateHandler));
+        } while (!(ctx.handler() instanceof ChannelStateHandler));
         return ctx;
     }
 
@@ -1798,7 +1778,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         DefaultChannelHandlerContext ctx = this;
         do {
             ctx = ctx.prev;
-        } while (ctx != null && !(ctx.handler() instanceof ChannelOperationHandler));
+        } while (!(ctx.handler() instanceof ChannelOperationHandler));
         return ctx;
     }
 

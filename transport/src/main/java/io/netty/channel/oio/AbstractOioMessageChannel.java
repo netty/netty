@@ -39,7 +39,7 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
         final MessageBuf<Object> msgBuf = pipeline.inboundMessageBuffer();
         boolean closed = false;
         boolean read = false;
-        boolean firedInboundBufferSuspended = false;
+        boolean firedChannelReadSuspended = false;
         try {
             int localReadAmount = doReadMessages(msgBuf);
             if (localReadAmount > 0) {
@@ -52,8 +52,8 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
                 read = false;
                 pipeline.fireInboundBufferUpdated();
             }
-            firedInboundBufferSuspended = true;
-            pipeline.fireInboundBufferSuspended();
+            firedChannelReadSuspended = true;
+            pipeline.fireChannelReadSuspended();
             pipeline.fireExceptionCaught(t);
             if (t instanceof IOException) {
                 unsafe().close(unsafe().voidFuture());
@@ -62,8 +62,8 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
             if (read) {
                 pipeline.fireInboundBufferUpdated();
             }
-            if (!firedInboundBufferSuspended) {
-                pipeline.fireInboundBufferSuspended();
+            if (!firedChannelReadSuspended) {
+                pipeline.fireChannelReadSuspended();
             }
             if (closed && isOpen()) {
                 unsafe().close(unsafe().voidFuture());
