@@ -67,6 +67,7 @@ public abstract class MessageToMessageDecoder<I>
     public void inboundBufferUpdated(ChannelHandlerContext ctx)
             throws Exception {
         MessageBuf<I> in = ctx.inboundMessageBuffer();
+        MessageBuf<Object> out = ctx.nextInboundMessageBuffer();
         boolean notify = false;
         for (;;) {
             try {
@@ -75,7 +76,7 @@ public abstract class MessageToMessageDecoder<I>
                     break;
                 }
                 if (!isDecodable(msg)) {
-                    ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg);
+                    out.add(msg);
                     notify = true;
                     continue;
                 }

@@ -18,10 +18,10 @@ package io.netty.handler.ssl;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFlushPromiseNotifier;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelOutboundByteHandler;
@@ -142,7 +142,7 @@ import java.util.regex.Pattern;
  * @apiviz.uses io.netty.handler.ssl.SslBufferPool
  */
 public class SslHandler
-        extends ChannelHandlerAdapter
+        extends ChannelDuplexHandler
         implements ChannelInboundByteHandler, ChannelOutboundByteHandler {
 
     private static final InternalLogger logger =

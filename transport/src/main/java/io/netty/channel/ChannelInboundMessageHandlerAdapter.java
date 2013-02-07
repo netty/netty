@@ -41,7 +41,7 @@ import io.netty.buffer.Unpooled;
  * @param <I>   The type of the messages to handle
  */
 public abstract class ChannelInboundMessageHandlerAdapter<I>
-        extends ChannelInboundHandlerAdapter implements ChannelInboundMessageHandler<I> {
+        extends ChannelStateHandlerAdapter implements ChannelInboundMessageHandler<I> {
 
     private final Class<?>[] acceptedMsgTypes;
 
@@ -73,6 +73,7 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
 
         try {
             MessageBuf<I> in = ctx.inboundMessageBuffer();
+            MessageBuf<Object> out = null;
             for (;;) {
                 Object msg = in.poll();
                 if (msg == null) {
@@ -80,7 +81,10 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
                 }
                 try {
                     if (!isSupported(msg)) {
-                        ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg);
+                        if (out == null) {
+                            out = ctx.nextOutboundMessageBuffer();
+                        }
+                        out.add(msg);
                         unsupportedFound = true;
                         continue;
                     }

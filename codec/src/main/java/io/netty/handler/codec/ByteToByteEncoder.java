@@ -47,8 +47,7 @@ import io.netty.channel.PartialFlushException;
 public abstract class ByteToByteEncoder extends ChannelOutboundByteHandlerAdapter {
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        ByteBuf in = ctx.outboundByteBuffer();
+    protected void flush(ChannelHandlerContext ctx, ByteBuf in, ChannelPromise promise) throws Exception {
         ByteBuf out = ctx.nextOutboundByteBuffer();
         boolean encoded = false;
 

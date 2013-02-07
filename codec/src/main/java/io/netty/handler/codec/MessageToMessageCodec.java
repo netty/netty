@@ -16,7 +16,7 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.MessageBuf;
-import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundMessageHandler;
@@ -49,7 +49,7 @@ import io.netty.channel.ChannelPromise;
  * </pre>
  */
 public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
-        extends ChannelHandlerAdapter
+        extends ChannelDuplexHandler
         implements ChannelInboundMessageHandler<INBOUND_IN>,
                    ChannelOutboundMessageHandler<OUTBOUND_IN> {
 

@@ -144,7 +144,7 @@ public class LocalServerChannel extends AbstractServerChannel {
         }
 
         pipeline.fireInboundBufferUpdated();
-        pipeline.fireInboundBufferSuspended();
+        pipeline.fireChannelReadSuspended();
     }
 
     LocalChannel serve(final LocalChannel peer) {
@@ -160,7 +160,7 @@ public class LocalServerChannel extends AbstractServerChannel {
             if (acceptInProgress) {
                 acceptInProgress = false;
                 pipeline.fireInboundBufferUpdated();
-                pipeline.fireInboundBufferSuspended();
+                pipeline.fireChannelReadSuspended();
             }
         } else {
             eventLoop().execute(new Runnable() {

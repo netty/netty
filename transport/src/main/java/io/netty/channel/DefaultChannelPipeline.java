@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.Buf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Freeable;
 import io.netty.buffer.MessageBuf;
@@ -56,7 +57,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     final Map<EventExecutorGroup, EventExecutor> childExecutors =
             new IdentityHashMap<EventExecutorGroup, EventExecutor>();
 
-    private static final TailHandler TAIL_HANDLER = new TailHandler();
     volatile boolean inboundBufferFreed;
     volatile boolean outboundBufferFreed;
 
@@ -66,7 +66,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
         this.channel = channel;
 
-        tail = new DefaultChannelHandlerContext(this, null, generateName(TAIL_HANDLER), TAIL_HANDLER);
+        TailHandler tailHandler = new TailHandler();
+        tail = new DefaultChannelHandlerContext(this, generateName(tailHandler), tailHandler);
 
         HeadHandler headHandler;
         switch (channel.metadata().bufferType()) {
@@ -80,7 +81,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             throw new Error("unknown buffer type: " + channel.metadata().bufferType());
         }
 
-        head = new DefaultChannelHandlerContext(this, null, generateName(headHandler), headHandler, true);
+        head = new DefaultChannelHandlerContext(this, generateName(headHandler), headHandler);
 
         head.next = tail;
         tail.prev = head;
@@ -583,8 +584,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     private static void callBeforeAdd(ChannelHandlerContext ctx) {
         ChannelHandler handler = ctx.handler();
-        if (handler instanceof ChannelStateHandlerAdapter) {
-            ChannelStateHandlerAdapter h = (ChannelStateHandlerAdapter) handler;
+        if (handler instanceof ChannelHandlerAdapter) {
+            ChannelHandlerAdapter h = (ChannelHandlerAdapter) handler;
             if (!h.isSharable() && h.added) {
                 throw new ChannelPipelineException(
                         h.getClass().getName()  +
@@ -904,8 +905,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public void fireInboundBufferSuspended() {
-        head.fireInboundBufferSuspended();
+    public void fireChannelReadSuspended() {
+        head.fireChannelReadSuspended();
         if (channel.config().isAutoRead()) {
             read();
         }
@@ -1075,22 +1076,110 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private static final class TailHandler extends ChannelInboundMessageHandlerAdapter<Freeable> {
-        public TailHandler() {
-            super(Freeable.class);
+    // A special catch-all handler that handles both bytes and messages.
+    static final class TailHandler implements ChannelInboundHandler {
+
+        final ByteBuf byteSink = Unpooled.buffer(0);
+        final MessageBuf<Object> msgSink = Unpooled.messageBuffer(0);
+
+        @Override
+        public void channelRegistered(ChannelHandlerContext ctx) throws Exception { }
+
+        @Override
+        public void channelUnregistered(ChannelHandlerContext ctx) throws Exception { }
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception { }
+
+        @Override
+        public void channelInactive(ChannelHandlerContext ctx) throws Exception { }
+
+        @Override
+        public void channelReadSuspended(ChannelHandlerContext ctx) throws Exception { }
+
+        @Override
+        public void beforeAdd(ChannelHandlerContext ctx) throws Exception { }
+
+        @Override
+        public void afterAdd(ChannelHandlerContext ctx) throws Exception { }
+
+        @Override
+        public void beforeRemove(ChannelHandlerContext ctx) throws Exception { }
+
+        @Override
+        public void afterRemove(ChannelHandlerContext ctx) throws Exception { }
+
+        @Override
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception { }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            logger.warn(
+                    "An exceptionCaught() event was fired, and it reached at the end of the pipeline. " +
+                            "It usually means the last handler in the pipeline did not handle the exception.", cause);
         }
 
         @Override
-        protected void messageReceived(ChannelHandlerContext ctx, Freeable msg) throws Exception {
-            if (logger.isWarnEnabled()) {
-                logger.warn("Freeable reached end-of-pipeline, call " + msg + ".free() to" +
-                        " guard against resource leakage!");
+        public Buf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            throw new Error();
+        }
+
+        @Override
+        public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            byteSink.free();
+            msgSink.free();
+        }
+
+        @Override
+        public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+            int byteSinkSize = byteSink.readableBytes();
+            if (byteSinkSize != 0) {
+                byteSink.clear();
+                logger.warn(
+                        "Discarded {} inbound byte(s) that reached at the end of the pipeline. " +
+                        "Please check your pipeline configuration.", byteSinkSize);
             }
-            msg.free();
+
+            int msgSinkSize = msgSink.size();
+            if (msgSinkSize != 0) {
+                MessageBuf<Object> in = msgSink;
+                for (;;) {
+                    Object m = in.poll();
+                    if (m == null) {
+                        break;
+                    }
+
+                    if (m instanceof Freeable) {
+                        ((Freeable) m).free();
+                    }
+                }
+                logger.warn(
+                        "Discarded {} inbound message(s) that reached at the end of the pipeline. " +
+                        "Please check your pipeline configuration.", msgSinkSize);
+            }
         }
     }
 
-    private abstract class HeadHandler implements ChannelOutboundHandler {
+    abstract class HeadHandler implements ChannelOutboundHandler {
+
+        ByteBuf byteSink;
+        MessageBuf<Object> msgSink;
+
+        void init(ChannelHandlerContext ctx) {
+            switch (ctx.channel().metadata().bufferType()) {
+            case BYTE:
+                byteSink = ctx.alloc().ioBuffer();
+                msgSink = Unpooled.messageBuffer(0);
+                break;
+            case MESSAGE:
+                byteSink = Unpooled.buffer(0);
+                msgSink = Unpooled.messageBuffer();
+                break;
+            default:
+                throw new Error();
+            }
+        }
+
         @Override
         public final void beforeAdd(ChannelHandlerContext ctx) throws Exception {
             // NOOP
@@ -1147,11 +1236,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public final void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-            unsafe.flush(promise);
-        }
-
-        @Override
         public final void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             ctx.fireExceptionCaught(cause);
         }
@@ -1166,36 +1250,54 @@ final class DefaultChannelPipeline implements ChannelPipeline {
                 ChannelHandlerContext ctx, FileRegion region, ChannelPromise promise) throws Exception {
             unsafe.sendFile(region, promise);
         }
-    }
 
-    private final class ByteHeadHandler extends HeadHandler implements ChannelOutboundByteHandler {
         @Override
-        public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return ctx.alloc().ioBuffer();
+        public final Buf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            throw new Error();
         }
 
         @Override
-        public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-            if (ctx.hasOutboundByteBuffer()) {
-                ctx.outboundByteBuffer().discardSomeReadBytes();
+        public final void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            msgSink.free();
+            byteSink.free();
+        }
+    }
+
+    private final class ByteHeadHandler extends HeadHandler {
+        @Override
+        public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            int msgSinkSize = msgSink.size();
+            if (msgSinkSize != 0) {
+                MessageBuf<Object> in = msgSink;
+                for (;;) {
+                    Object m = in.poll();
+                    if (m == null) {
+                        break;
+                    }
+
+                    if (m instanceof Freeable) {
+                        ((Freeable) m).free();
+                    }
+                }
+                logger.warn(
+                        "Discarded {} outbound message(s) that reached at the end of the pipeline. " +
+                                "Please check your pipeline configuration.", msgSinkSize);
             }
-        }
-
-        @Override
-        public void freeOutboundBuffer(ChannelHandlerContext ctx) {
-            ctx.outboundByteBuffer().free();
+            unsafe.flush(promise);
         }
     }
 
-    private final class MessageHeadHandler extends HeadHandler implements ChannelOutboundMessageHandler<Object> {
+    private final class MessageHeadHandler extends HeadHandler {
         @Override
-        public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return Unpooled.messageBuffer();
-        }
-
-        @Override
-        public void freeOutboundBuffer(ChannelHandlerContext ctx) {
-            ctx.outboundMessageBuffer().free();
+        public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            int byteSinkSize = byteSink.readableBytes();
+            if (byteSinkSize != 0) {
+                byteSink.clear();
+                logger.warn(
+                        "Discarded {} outbound byte(s) that reached at the end of the pipeline. " +
+                                "Please check your pipeline configuration.", byteSinkSize);
+            }
+            unsafe.flush(promise);
         }
     }
 }

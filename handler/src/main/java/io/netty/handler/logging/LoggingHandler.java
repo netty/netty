@@ -15,9 +15,9 @@
  */
 package io.netty.handler.logging;
 
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.logging.InternalLogLevel;
@@ -32,7 +32,7 @@ import java.net.SocketAddress;
  * @apiviz.landmark
  */
 @Sharable
-public class LoggingHandler extends ChannelHandlerAdapter {
+public class LoggingHandler extends ChannelDuplexHandler {
 
     private static final LogLevel DEFAULT_LEVEL = LogLevel.DEBUG;
 

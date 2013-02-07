@@ -16,7 +16,7 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelOutboundByteHandler;
@@ -53,7 +53,7 @@ import io.netty.channel.ChannelPromise;
  * </pre>
  */
 public abstract class ByteToByteCodec
-        extends ChannelHandlerAdapter
+        extends ChannelDuplexHandler
         implements ChannelInboundByteHandler, ChannelOutboundByteHandler {
 
     private final ByteToByteEncoder encoder = new ByteToByteEncoder() {

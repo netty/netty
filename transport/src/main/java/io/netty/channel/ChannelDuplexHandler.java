@@ -17,7 +17,14 @@ package io.netty.channel;
 
 import java.net.SocketAddress;
 
-public abstract class ChannelOperationHandlerAdapter extends ChannelHandlerAdapter implements ChannelOperationHandler {
+/**
+ * {@link ChannelHandler} implementation which represents a combination out of a {@link ChannelStateHandler} and
+ * the {@link ChannelOperationHandler}.
+ *
+ * It is a good starting point if your {@link ChannelHandler} implementation needs to intercept operations and also
+ * state updates.
+ */
+public abstract class ChannelDuplexHandler extends ChannelStateHandlerAdapter implements ChannelOperationHandler {
 
     /**
      * Calls {@link ChannelHandlerContext#bind(SocketAddress, ChannelPromise)} to forward
@@ -27,8 +34,8 @@ public abstract class ChannelOperationHandlerAdapter extends ChannelHandlerAdapt
      */
     @Override
     public void bind(ChannelHandlerContext ctx, SocketAddress localAddress,
-            ChannelPromise promise) throws Exception {
-        ctx.bind(localAddress, promise);
+                     ChannelPromise future) throws Exception {
+        ctx.bind(localAddress, future);
     }
 
     /**
@@ -39,8 +46,8 @@ public abstract class ChannelOperationHandlerAdapter extends ChannelHandlerAdapt
      */
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-            SocketAddress localAddress, ChannelPromise promise) throws Exception {
-        ctx.connect(remoteAddress, localAddress, promise);
+                        SocketAddress localAddress, ChannelPromise future) throws Exception {
+        ctx.connect(remoteAddress, localAddress, future);
     }
 
     /**
@@ -50,9 +57,9 @@ public abstract class ChannelOperationHandlerAdapter extends ChannelHandlerAdapt
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise)
+    public void disconnect(ChannelHandlerContext ctx, ChannelPromise future)
             throws Exception {
-        ctx.disconnect(promise);
+        ctx.disconnect(future);
     }
 
     /**
@@ -62,9 +69,9 @@ public abstract class ChannelOperationHandlerAdapter extends ChannelHandlerAdapt
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise)
+    public void close(ChannelHandlerContext ctx, ChannelPromise future)
             throws Exception {
-        ctx.close(promise);
+        ctx.close(future);
     }
 
     /**
@@ -74,9 +81,9 @@ public abstract class ChannelOperationHandlerAdapter extends ChannelHandlerAdapt
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise)
+    public void deregister(ChannelHandlerContext ctx, ChannelPromise future)
             throws Exception {
-        ctx.deregister(promise);
+        ctx.deregister(future);
     }
 
     @Override
@@ -90,18 +97,18 @@ public abstract class ChannelOperationHandlerAdapter extends ChannelHandlerAdapt
      *
      * Sub-classes may override this method to change behavior.
      *
-     * Be aware that if your class also implement {@link ChannelOutboundHandler} it need to {@code override} this
-     * method!
+     * Be aware that if your class also implement {@link ChannelOutboundHandler} it need to {@code @Override} this
+     * method and provide some proper implementation. Fail to do so, will result in an {@link IllegalStateException}!
      */
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise promise)
+    public void flush(ChannelHandlerContext ctx, ChannelPromise future)
             throws Exception {
         if (this instanceof ChannelOutboundHandler) {
             throw new IllegalStateException(
                     "flush(...) must be overridden by " + getClass().getName() +
-                    ", which implements " + ChannelOutboundHandler.class.getSimpleName());
+                            ", which implements " + ChannelOutboundHandler.class.getSimpleName());
         }
-        ctx.flush(promise);
+        ctx.flush(future);
     }
 
     /**
@@ -111,7 +118,7 @@ public abstract class ChannelOperationHandlerAdapter extends ChannelHandlerAdapt
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise promise) throws Exception {
-        ctx.sendFile(region, promise);
+    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise future) throws Exception {
+        ctx.sendFile(region, future);
     }
 }

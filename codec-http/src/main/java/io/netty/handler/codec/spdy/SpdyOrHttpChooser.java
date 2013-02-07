@@ -16,8 +16,8 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelInboundMessageHandler;
@@ -35,7 +35,7 @@ import javax.net.ssl.SSLEngine;
  * much about the low-level details.
  *
  */
-public abstract class SpdyOrHttpChooser extends ChannelHandlerAdapter implements ChannelInboundByteHandler {
+public abstract class SpdyOrHttpChooser extends ChannelDuplexHandler implements ChannelInboundByteHandler {
 
     public enum SelectedProtocol {
         SpdyVersion2,

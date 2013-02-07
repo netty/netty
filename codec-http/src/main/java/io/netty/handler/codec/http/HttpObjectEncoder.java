@@ -39,7 +39,7 @@ import static io.netty.handler.codec.http.HttpConstants.*;
  * implement all abstract methods properly.
  * @apiviz.landmark
  */
-public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageToByteEncoder<Object> {
+public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageToByteEncoder<HttpObject> {
 
     private static final int ST_INIT = 0;
     private static final int ST_CONTENT_NON_CHUNK = 1;
@@ -56,17 +56,17 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    protected void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, HttpObject msg, ByteBuf out) throws Exception {
         if (msg instanceof HttpMessage) {
             if (state != ST_INIT) {
                 throw new IllegalStateException("unexpected message type: " + msg.getClass().getSimpleName());
             }
 
-            HttpMessage m = (HttpMessage) msg;
+            @SuppressWarnings({ "unchecked", "CastConflictsWithInstanceof" })
+            H m = (H) msg;
 
             // Encode the message.
-            encodeInitialLine(out, (H) m);
+            encodeInitialLine(out, m);
             encodeHeaders(out, m);
             out.writeByte(CR);
             out.writeByte(LF);
