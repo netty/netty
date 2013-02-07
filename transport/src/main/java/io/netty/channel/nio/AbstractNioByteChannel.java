@@ -30,7 +30,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.WritableByteChannel;
 
 /**
- * {@link io.netty.channel.nio.AbstractNioChannel} base class for {@link Channel}s that operate on bytes.
+ * {@link AbstractNioChannel} base class for {@link Channel}s that operate on bytes.
  */
 public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
@@ -56,7 +56,10 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         public void read() {
             assert eventLoop().inEventLoop();
             final SelectionKey key = selectionKey();
-            key.interestOps(key.interestOps() & ~readInterestOp);
+            if (!config().isAutoRead()) {
+                // only remove readInterestOp if needed
+                key.interestOps(key.interestOps() & ~readInterestOp);
+            }
 
             final ChannelPipeline pipeline = pipeline();
             final ByteBuf byteBuf = pipeline.inboundByteBuffer();

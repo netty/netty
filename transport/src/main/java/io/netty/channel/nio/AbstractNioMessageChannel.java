@@ -24,7 +24,7 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 
 /**
- * {@link io.netty.channel.nio.AbstractNioChannel} base class for {@link Channel}s that operate on messages.
+ * {@link AbstractNioChannel} base class for {@link Channel}s that operate on messages.
  */
 public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
 
@@ -46,7 +46,10 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
         public void read() {
             assert eventLoop().inEventLoop();
             final SelectionKey key = selectionKey();
-            key.interestOps(key.interestOps() & ~readInterestOp);
+            if (!config().isAutoRead()) {
+                // only remove readInterestOp if needed
+                key.interestOps(key.interestOps() & ~readInterestOp);
+            }
 
             final ChannelPipeline pipeline = pipeline();
             final MessageBuf<Object> msgBuf = pipeline.inboundMessageBuffer();
