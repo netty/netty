@@ -293,18 +293,6 @@ public interface ChannelHandlerContext
     <T> MessageBuf<T> replaceOutboundMessageBuffer(MessageBuf<T> newOutboundMsgBuf);
 
     /**
-     * Return {@code true} if the next {@link ChannelHandlerContext} has a {@link ByteBuf} for handling
-     * inbound data.
-     */
-    boolean hasNextInboundByteBuffer();
-
-    /**
-     * Return {@code true} if the next {@link ChannelHandlerContext} has a {@link MessageBuf} for handling
-     * inbound data.
-     */
-    boolean hasNextInboundMessageBuffer();
-
-    /**
      * Return the {@link ByteBuf} of the next {@link ChannelHandlerContext} if {@link #hasNextInboundByteBuffer()}
      * returned {@code true}, otherwise a {@link UnsupportedOperationException} is thrown.
      */

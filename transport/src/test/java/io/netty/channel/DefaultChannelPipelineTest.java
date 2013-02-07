@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Freeable;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.local.LocalChannel;
@@ -24,10 +25,69 @@ import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.*;
 
 public class DefaultChannelPipelineTest {
+    @Test
+    public void testMessageCatchAllSink() throws Exception {
+        LocalChannel channel = new LocalChannel();
+        LocalEventLoopGroup group = new LocalEventLoopGroup();
+        group.register(channel).awaitUninterruptibly();
+        final AtomicBoolean forwarded = new AtomicBoolean();
+        final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
+        pipeline.addLast(new ChannelInboundMessageHandlerAdapter<Object>() {
+            @Override
+            protected void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+                forwarded.set(ctx.nextInboundMessageBuffer().add(msg));
+            }
+
+            @Override
+            protected void endMessageReceived(ChannelHandlerContext ctx) throws Exception {
+                ctx.fireInboundBufferUpdated();
+            }
+        });
+        channel.eventLoop().submit(new Runnable() {
+            @Override
+            public void run() {
+                pipeline.fireChannelActive();
+                pipeline.inboundMessageBuffer().add(new Object());
+                pipeline.fireInboundBufferUpdated();
+            }
+        }).get();
+
+        assertTrue(forwarded.get());
+    }
+
+    @Test
+    public void testByteCatchAllSink() throws Exception {
+        LocalChannel channel = new LocalChannel();
+        LocalEventLoopGroup group = new LocalEventLoopGroup();
+        group.register(channel).awaitUninterruptibly();
+        final AtomicBoolean forwarded = new AtomicBoolean();
+        final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
+        pipeline.addLast(new ChannelInboundByteHandlerAdapter() {
+            @Override
+            protected void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+                ByteBuf out = ctx.nextInboundByteBuffer();
+                out.writeBytes(in);
+                forwarded.set(true);
+                ctx.fireInboundBufferUpdated();
+            }
+        });
+        channel.eventLoop().submit(new Runnable() {
+            @Override
+            public void run() {
+                pipeline.fireChannelActive();
+                pipeline.inboundByteBuffer().writeByte(0);
+                pipeline.fireInboundBufferUpdated();
+            }
+        }).get();
+
+        assertTrue(forwarded.get());
+    }
+
     @Test
     public void testFreeCalled() throws InterruptedException{
         final CountDownLatch free = new CountDownLatch(1);

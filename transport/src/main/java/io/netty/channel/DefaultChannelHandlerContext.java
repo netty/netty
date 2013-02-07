@@ -197,6 +197,21 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         this.needsLazyBufInit = needsLazyBufInit;
     }
 
+    DefaultChannelHandlerContext(DefaultChannelPipeline pipeline, String name, TailHandler handler) {
+        type = null;
+        channel = pipeline.channel;
+        this.pipeline = pipeline;
+        this.name = name;
+        this.handler = handler;
+        executor = null;
+
+        inByteBuf = handler.byteSink;
+        inByteBridge = null;
+        inMsgBuf = handler.msgSink;
+        inMsgBridge = null;
+        needsLazyBufInit = false;
+    }
+
     void forwardBufferContent() {
         if (hasOutboundByteBuffer() && outboundByteBuffer().isReadable()) {
             nextOutboundByteBuffer().writeBytes(outboundByteBuffer());
@@ -706,34 +721,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
         outMsgBuf = (MessageBuf<Object>) newOutboundMsgBuf;
         return currentOutboundMsgBuf;
-    }
-
-    @Override
-    public boolean hasNextInboundByteBuffer() {
-        DefaultChannelHandlerContext ctx = next;
-        for (;;) {
-            if (ctx == null) {
-                return false;
-            }
-            if (ctx.hasInboundByteBuffer()) {
-                return true;
-            }
-            ctx = ctx.next;
-        }
-    }
-
-    @Override
-    public boolean hasNextInboundMessageBuffer() {
-        DefaultChannelHandlerContext ctx = next;
-        for (;;) {
-            if (ctx == null) {
-                return false;
-            }
-            if (ctx.hasInboundMessageBuffer()) {
-                return true;
-            }
-            ctx = ctx.next;
-        }
     }
 
     @Override

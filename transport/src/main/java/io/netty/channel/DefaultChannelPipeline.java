@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.Buf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Freeable;
 import io.netty.buffer.MessageBuf;
@@ -56,7 +57,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     final Map<EventExecutorGroup, EventExecutor> childExecutors =
             new IdentityHashMap<EventExecutorGroup, EventExecutor>();
 
-    private static final TailHandler TAIL_HANDLER = new TailHandler();
     volatile boolean inboundBufferFreed;
     volatile boolean outboundBufferFreed;
 
@@ -66,7 +66,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
         this.channel = channel;
 
-        tail = new DefaultChannelHandlerContext(this, null, generateName(TAIL_HANDLER), TAIL_HANDLER);
+        TailHandler tailHandler = new TailHandler();
+        tail = new DefaultChannelHandlerContext(this, generateName(tailHandler), tailHandler);
 
         HeadHandler headHandler;
         switch (channel.metadata().bufferType()) {
@@ -1075,7 +1076,11 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private static final class TailHandler implements ChannelInboundMessageHandler<Object> {
+    // A special catch-all handler that handles both bytes and messages.
+    static final class TailHandler implements ChannelInboundHandler {
+
+        final ByteBuf byteSink = Unpooled.buffer(0);
+        final MessageBuf<Object> msgSink = Unpooled.messageBuffer(0);
 
         @Override
         public void channelRegistered(ChannelHandlerContext ctx) throws Exception { }
@@ -1115,33 +1120,42 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            // Well written application will never use this buffer - start at minimum capacity.
-            return Unpooled.messageBuffer(0);
+        public Buf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            throw new Error();
         }
 
         @Override
         public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            ctx.inboundMessageBuffer().free();
+            byteSink.free();
+            msgSink.free();
         }
 
         @Override
         public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-            MessageBuf<Object> in = ctx.inboundMessageBuffer();
-            for (;;) {
-                Object m = in.poll();
-                if (m == null) {
-                    break;
-                }
+            int byteSinkSize = byteSink.readableBytes();
+            if (byteSinkSize != 0) {
+                byteSink.clear();
+                logger.warn(
+                        "Discarded {} byte(s) that reached at the end of the pipeline. " +
+                        "Please check your pipeline configuration.", byteSinkSize);
+            }
 
-                if (m instanceof Freeable) {
-                    if (logger.isWarnEnabled()) {
-                        logger.warn(
-                                "Freeing a {} that reached at the end of the pipeline: {}",
-                                Freeable.class.getSimpleName(), m);
+            int msgSinkSize = msgSink.size();
+            if (msgSinkSize != 0) {
+                MessageBuf<Object> in = msgSink;
+                for (;;) {
+                    Object m = in.poll();
+                    if (m == null) {
+                        break;
                     }
-                    ((Freeable) m).free();
+
+                    if (m instanceof Freeable) {
+                        ((Freeable) m).free();
+                    }
                 }
+                logger.warn(
+                        "Discarded {} message(s) that reached at the end of the pipeline. " +
+                        "Please check your pipeline configuration.", msgSinkSize);
             }
         }
     }
