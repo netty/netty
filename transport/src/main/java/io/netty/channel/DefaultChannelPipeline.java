@@ -1158,7 +1158,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    static abstract class HeadHandler implements ChannelOutboundHandler {
+    abstract static class HeadHandler implements ChannelOutboundHandler {
 
         protected final Unsafe unsafe;
         ByteBuf byteSink;
