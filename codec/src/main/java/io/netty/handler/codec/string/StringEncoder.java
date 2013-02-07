@@ -68,6 +68,7 @@ public class StringEncoder extends ChannelOutboundMessageHandlerAdapter<CharSequ
      * Creates a new instance with the specified character set.
      */
     public StringEncoder(BufType nextBufferType, Charset charset) {
+        super(CharSequence.class);
         if (nextBufferType == null) {
             throw new NullPointerException("nextBufferType");
         }

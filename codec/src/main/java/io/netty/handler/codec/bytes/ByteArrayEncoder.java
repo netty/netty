@@ -54,6 +54,7 @@ public class ByteArrayEncoder extends ChannelOutboundMessageHandlerAdapter<byte[
     private final BufType nextBufferType;
 
     public ByteArrayEncoder(BufType nextBufferType) {
+        super(byte[].class);
         if (nextBufferType == null) {
             throw new NullPointerException("nextBufferType");
         }
