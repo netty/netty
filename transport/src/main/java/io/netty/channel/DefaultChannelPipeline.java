@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Freeable;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel.Unsafe;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
@@ -44,7 +45,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultChannelPipeline.class);
 
     final Channel channel;
-    private final Channel.Unsafe unsafe;
 
     final DefaultChannelHandlerContext head;
     final DefaultChannelHandlerContext tail;
@@ -72,10 +72,10 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         HeadHandler headHandler;
         switch (channel.metadata().bufferType()) {
         case BYTE:
-            headHandler = new ByteHeadHandler();
+            headHandler = new ByteHeadHandler(channel.unsafe());
             break;
         case MESSAGE:
-            headHandler = new MessageHeadHandler();
+            headHandler = new MessageHeadHandler(channel.unsafe());
             break;
         default:
             throw new Error("unknown buffer type: " + channel.metadata().bufferType());
@@ -85,8 +85,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         head.next = tail;
         tail.prev = head;
-
-        unsafe = channel.unsafe();
     }
 
     @Override
@@ -1160,10 +1158,15 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    abstract class HeadHandler implements ChannelOutboundHandler {
+    static abstract class HeadHandler implements ChannelOutboundHandler {
 
+        protected final Unsafe unsafe;
         ByteBuf byteSink;
         MessageBuf<Object> msgSink;
+
+        protected HeadHandler(Unsafe unsafe) {
+            this.unsafe = unsafe;
+        }
 
         void init(ChannelHandlerContext ctx) {
             switch (ctx.channel().metadata().bufferType()) {
@@ -1263,7 +1266,12 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private final class ByteHeadHandler extends HeadHandler {
+    private static final class ByteHeadHandler extends HeadHandler {
+
+        private ByteHeadHandler(Unsafe unsafe) {
+            super(unsafe);
+        }
+
         @Override
         public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
             int msgSinkSize = msgSink.size();
@@ -1287,7 +1295,12 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private final class MessageHeadHandler extends HeadHandler {
+    private static final class MessageHeadHandler extends HeadHandler {
+
+        private MessageHeadHandler(Unsafe unsafe) {
+            super(unsafe);
+        }
+
         @Override
         public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
             int byteSinkSize = byteSink.readableBytes();
