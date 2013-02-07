@@ -706,10 +706,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         DefaultChannelHandlerContext ctx = next;
         for (;;) {
             if (ctx.hasInboundByteBuffer()) {
-                if (ctx.executor().inEventLoop()) {
+                Thread currentThread = Thread.currentThread();
+                if (ctx.executor().inEventLoop(currentThread)) {
                     return ctx.inByteBuf;
                 }
-                if (executor().inEventLoop()) {
+                if (executor().inEventLoop(currentThread)) {
                     ByteBridge bridge = ctx.inByteBridge;
                     if (bridge == null) {
                         bridge = new ByteBridge(ctx);
@@ -730,10 +731,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         DefaultChannelHandlerContext ctx = next;
         for (;;) {
             if (ctx.hasInboundMessageBuffer()) {
-                if (ctx.executor().inEventLoop()) {
+                Thread currentThread = Thread.currentThread();
+                if (ctx.executor().inEventLoop(currentThread)) {
                     return ctx.inMsgBuf;
                 }
-                if (executor().inEventLoop()) {
+                if (executor().inEventLoop(currentThread)) {
                     MessageBridge bridge = ctx.inMsgBridge;
                     if (bridge == null) {
                         bridge = new MessageBridge();
@@ -752,13 +754,13 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public ByteBuf nextOutboundByteBuffer() {
         DefaultChannelHandlerContext ctx = prev;
-        final DefaultChannelHandlerContext initialCtx = ctx;
         for (;;) {
             if (ctx.hasOutboundByteBuffer()) {
-                if (ctx.executor().inEventLoop()) {
+                Thread currentThread = Thread.currentThread();
+                if (ctx.executor().inEventLoop(currentThread)) {
                     return ctx.outboundByteBuffer();
                 }
-                if (executor().inEventLoop()) {
+                if (executor().inEventLoop(currentThread)) {
                     ByteBridge bridge = ctx.outByteBridge;
                     if (bridge == null) {
                         bridge = new ByteBridge(ctx);
@@ -771,33 +773,19 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 throw new IllegalStateException("nextOutboundByteBuffer() called from outside the eventLoop");
             }
             ctx = ctx.prev;
-
-            if (ctx == null) {
-                if (initialCtx != null && initialCtx.next != null) {
-                    throw new NoSuchBufferException(String.format(
-                            "the handler '%s' could not find a %s whose outbound buffer is %s.",
-                            initialCtx.next.name(), ChannelOutboundHandler.class.getSimpleName(),
-                            ByteBuf.class.getSimpleName()));
-                } else {
-                    throw new NoSuchBufferException(String.format(
-                            "the pipeline does not contain a %s whose outbound buffer is %s.",
-                            ChannelOutboundHandler.class.getSimpleName(),
-                            ByteBuf.class.getSimpleName()));
-                }
-            }
         }
     }
 
     @Override
     public MessageBuf<Object> nextOutboundMessageBuffer() {
         DefaultChannelHandlerContext ctx = prev;
-        final DefaultChannelHandlerContext initialCtx = ctx;
         for (;;) {
             if (ctx.hasOutboundMessageBuffer()) {
-                if (ctx.executor().inEventLoop()) {
+                Thread currentThread = Thread.currentThread();
+                if (ctx.executor().inEventLoop(currentThread)) {
                     return ctx.outboundMessageBuffer();
                 }
-                if (executor().inEventLoop()) {
+                if (executor().inEventLoop(currentThread)) {
                     MessageBridge bridge = ctx.outMsgBridge;
                     if (bridge == null) {
                         bridge = new MessageBridge();
@@ -810,20 +798,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 throw new IllegalStateException("nextOutboundMessageBuffer() called from outside the eventLoop");
             }
             ctx = ctx.prev;
-
-            if (ctx == null) {
-                if (initialCtx.next != null) {
-                    throw new NoSuchBufferException(String.format(
-                            "the handler '%s' could not find a %s whose outbound buffer is %s.",
-                            initialCtx.next.name(), ChannelOutboundHandler.class.getSimpleName(),
-                            MessageBuf.class.getSimpleName()));
-                } else {
-                    throw new NoSuchBufferException(String.format(
-                            "the pipeline does not contain a %s whose outbound buffer is %s.",
-                            ChannelOutboundHandler.class.getSimpleName(),
-                            MessageBuf.class.getSimpleName()));
-                }
-            }
         }
     }
 
