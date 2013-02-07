@@ -36,4 +36,11 @@ public abstract class ChannelOutboundByteHandlerAdapter
     public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         ctx.outboundByteBuffer().free();
     }
+
+    @Override
+    public final void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        flush(ctx, ctx.outboundByteBuffer(), promise);
+    }
+
+    protected abstract void flush(ChannelHandlerContext ctx, ByteBuf in, ChannelPromise promise) throws Exception;
 }
