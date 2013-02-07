@@ -16,11 +16,12 @@
 package io.netty.example.rxtx;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.BufType;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.oio.OioEventLoopGroup;
 import io.netty.channel.rxtx.RxtxChannel;
 import io.netty.channel.rxtx.RxtxDeviceAddress;
-import io.netty.channel.oio.OioEventLoopGroup;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
@@ -40,7 +41,7 @@ public final class RxtxClient {
                  public void initChannel(RxtxChannel ch) throws Exception {
                      ch.pipeline().addLast(
                          new LineBasedFrameDecoder(32768),
-                         new StringEncoder(),
+                         new StringEncoder(BufType.BYTE),
                          new StringDecoder(),
                          new RxtxClientHandler()
                      );

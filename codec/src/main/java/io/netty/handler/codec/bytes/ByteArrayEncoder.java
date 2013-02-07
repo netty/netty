@@ -15,14 +15,16 @@
  */
 package io.netty.handler.codec.bytes;
 
+import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
-import io.netty.handler.codec.MessageToMessageEncoder;
 
 /**
  * Encodes the requested array of bytes into a {@link ByteBuf}.
@@ -48,22 +50,53 @@ import io.netty.handler.codec.MessageToMessageEncoder;
  * }
  * </pre>
  */
-public class ByteArrayEncoder extends MessageToMessageEncoder<byte[]> {
+public class ByteArrayEncoder extends ChannelOutboundMessageHandlerAdapter<byte[]> {
 
-    public ByteArrayEncoder() {
-        super(byte[].class);
-    }
+    private final BufType nextBufferType;
 
-    @Override
-    public MessageBuf<byte[]> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return Unpooled.messageBuffer();
-    }
-
-    @Override
-    protected ByteBuf encode(ChannelHandlerContext ctx, byte[] msg) throws Exception {
-        if (msg.length == 0) {
-            return null;
+    public ByteArrayEncoder(BufType nextBufferType) {
+        if (nextBufferType == null) {
+            throw new NullPointerException("nextBufferType");
         }
-        return Unpooled.wrappedBuffer(msg);
+        this.nextBufferType = nextBufferType;
+    }
+
+    @Override
+    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        MessageBuf<Object> in = ctx.outboundMessageBuffer();
+        MessageBuf<Object> msgOut = ctx.nextOutboundMessageBuffer();
+        ByteBuf byteOut = ctx.nextOutboundByteBuffer();
+
+        try {
+            for (;;) {
+                Object m = in.poll();
+                if (m == null) {
+                    break;
+                }
+
+                if (!(m instanceof byte[])) {
+                    msgOut.add(m);
+                    continue;
+                }
+
+                byte[] a = (byte[]) m;
+                if (a.length == 0) {
+                    continue;
+                }
+
+                switch (nextBufferType) {
+                    case BYTE:
+                        byteOut.writeBytes(a);
+                        break;
+                    case MESSAGE:
+                        msgOut.add(Unpooled.wrappedBuffer(a));
+                        break;
+                    default:
+                        throw new Error();
+                }
+            }
+        } finally {
+            ctx.flush(promise);
+        }
     }
 }

@@ -17,6 +17,7 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.BufType;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -76,7 +77,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
             public void initChannel(SocketChannel sch) throws Exception {
                 ChannelPipeline p = sch.pipeline();
                 p.addLast("logger", new ByteLoggingHandler(LOG_LEVEL));
-                p.addLast(new LineBasedFrameDecoder(64), new StringDecoder(), new StringEncoder());
+                p.addLast(new LineBasedFrameDecoder(64), new StringDecoder(), new StringEncoder(BufType.BYTE));
                 p.addLast(executor, sh);
             }
         });
@@ -86,7 +87,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
             public void initChannel(SocketChannel sch) throws Exception {
                 ChannelPipeline p = sch.pipeline();
                 p.addLast("logger", new ByteLoggingHandler(LOG_LEVEL));
-                p.addLast(new LineBasedFrameDecoder(64), new StringDecoder(), new StringEncoder());
+                p.addLast(new LineBasedFrameDecoder(64), new StringDecoder(), new StringEncoder(BufType.BYTE));
                 p.addLast(executor, ch);
             }
         });

@@ -17,6 +17,7 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.BufType;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
@@ -66,7 +67,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
             public void initChannel(SocketChannel sch) throws Exception {
                 sch.pipeline().addLast("framer", new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
                 sch.pipeline().addLast("decoder", new StringDecoder(CharsetUtil.ISO_8859_1));
-                sch.pipeline().addBefore("decoder", "encoder", new StringEncoder(CharsetUtil.ISO_8859_1));
+                sch.pipeline().addBefore("decoder", "encoder", new StringEncoder(BufType.BYTE, CharsetUtil.ISO_8859_1));
                 sch.pipeline().addAfter("decoder", "handler", sh);
             }
         });
@@ -76,7 +77,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
             public void initChannel(SocketChannel sch) throws Exception {
                 sch.pipeline().addLast("framer", new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
                 sch.pipeline().addLast("decoder", new StringDecoder(CharsetUtil.ISO_8859_1));
-                sch.pipeline().addBefore("decoder", "encoder", new StringEncoder(CharsetUtil.ISO_8859_1));
+                sch.pipeline().addBefore("decoder", "encoder", new StringEncoder(BufType.BYTE, CharsetUtil.ISO_8859_1));
                 sch.pipeline().addAfter("decoder", "handler", ch);
             }
         });

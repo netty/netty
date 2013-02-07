@@ -15,6 +15,7 @@
  */
 package io.netty.example.securechat;
 
+import io.netty.buffer.BufType;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
@@ -51,7 +52,7 @@ public class SecureChatClientInitializer extends ChannelInitializer<SocketChanne
         pipeline.addLast("framer", new DelimiterBasedFrameDecoder(
                 8192, Delimiters.lineDelimiter()));
         pipeline.addLast("decoder", new StringDecoder());
-        pipeline.addLast("encoder", new StringEncoder());
+        pipeline.addLast("encoder", new StringEncoder(BufType.BYTE));
 
         // and then business logic.
         pipeline.addLast("handler", new SecureChatClientHandler());

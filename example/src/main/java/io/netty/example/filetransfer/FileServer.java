@@ -16,14 +16,15 @@
 package io.netty.example.filetransfer;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.BufType;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultFileRegion;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.string.StringDecoder;
@@ -58,7 +59,7 @@ public class FileServer {
                  @Override
                  public void initChannel(SocketChannel ch) throws Exception {
                      ch.pipeline().addLast(
-                             new StringEncoder(CharsetUtil.UTF_8),
+                             new StringEncoder(BufType.BYTE, CharsetUtil.UTF_8),
                              new LineBasedFrameDecoder(8192),
                              new StringDecoder(CharsetUtil.UTF_8),
                              new FileHandler());
