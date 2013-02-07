@@ -79,39 +79,27 @@ public class StringEncoder extends ChannelOutboundMessageHandlerAdapter<CharSequ
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void messageFlushed(ChannelHandlerContext ctx, CharSequence msg) throws Exception {
         MessageBuf<Object> in = ctx.outboundMessageBuffer();
         MessageBuf<Object> msgOut = ctx.nextOutboundMessageBuffer();
         ByteBuf byteOut = ctx.nextOutboundByteBuffer();
 
-        try {
-            for (;;) {
-                Object m = in.poll();
-                if (m == null) {
-                    break;
-                }
+        ByteBuf encoded = Unpooled.copiedBuffer(msg, charset);
 
-                if (!(m instanceof CharSequence)) {
-                    msgOut.add(m);
-                    continue;
-                }
-
-                CharSequence s = (CharSequence) m;
-                ByteBuf encoded = Unpooled.copiedBuffer(s, charset);
-
-                switch (nextBufferType) {
-                case BYTE:
-                    byteOut.writeBytes(encoded);
-                    break;
-                case MESSAGE:
-                    msgOut.add(encoded);
-                    break;
-                default:
-                    throw new Error();
-                }
-            }
-        } finally {
-            ctx.flush(promise);
+        switch (nextBufferType) {
+            case BYTE:
+                byteOut.writeBytes(encoded);
+                break;
+            case MESSAGE:
+                msgOut.add(encoded);
+                break;
+            default:
+                throw new Error();
         }
+    }
+
+    @Override
+    protected void allMessageConsumed(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        ctx.flush(promise);
     }
 }

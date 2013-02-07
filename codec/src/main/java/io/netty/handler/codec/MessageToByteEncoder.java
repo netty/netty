@@ -17,7 +17,9 @@ package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOperationHandlerAdapter;
 import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
@@ -42,7 +44,8 @@ import io.netty.channel.ChannelPromise;
  *     }
  * </pre>
  */
-public abstract class MessageToByteEncoder<I> extends ChannelOutboundMessageHandlerAdapter<I> {
+public abstract class MessageToByteEncoder<I>
+        extends ChannelOperationHandlerAdapter implements ChannelOutboundMessageHandler<I> {
 
     private final Class<?>[] acceptedMsgTypes;
 
@@ -84,6 +87,16 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundMessageHand
         }
 
         ctx.flush(promise);
+    }
+
+    @Override
+    public MessageBuf<I> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return Unpooled.messageBuffer();
+    }
+
+    @Override
+    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        ctx.outboundMessageBuffer().free();
     }
 
     /**
