@@ -18,16 +18,21 @@ package io.netty.util.internal;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.IdentityHashMap;
+import java.util.Map;
 
 public final class TypeParameterFinder {
 
-    // TODO: Use a weak key map
-    private static final ConcurrentMap<Class<?>, Class<?>> typeMap = new ConcurrentHashMap<Class<?>, Class<?>>();
+    private static final ThreadLocal<Map<Class<?>, Class<?>>> typeMap = new ThreadLocal<Map<Class<?>, Class<?>>>() {
+        @Override
+        protected Map<Class<?>, Class<?>> initialValue() {
+            return new IdentityHashMap<Class<?>, Class<?>>();
+        }
+    };
 
     public static Class<?> findActualTypeParameter(
             final Object object, final Class<?> parameterizedSuperClass, final int typeParamIndex) {
+        final Map<Class<?>, Class<?>> typeMap = TypeParameterFinder.typeMap.get();
         final Class<?> thisClass = object.getClass();
         Class<?> messageType = typeMap.get(thisClass);
         if (messageType == null) {
