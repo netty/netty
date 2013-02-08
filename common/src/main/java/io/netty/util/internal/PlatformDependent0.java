@@ -127,6 +127,10 @@ final class PlatformDependent0 {
         return UNALIGNED;
     }
 
+    static long arrayBaseOffset() {
+        return UNSAFE.arrayBaseOffset(byte[].class);
+    }
+
     static Object getObject(Object object, long fieldOffset) {
         return UNSAFE.getObject(object, fieldOffset);
     }
@@ -173,6 +177,10 @@ final class PlatformDependent0 {
 
     static void copyMemory(long srcAddr, long dstAddr, long length) {
         UNSAFE.copyMemory(srcAddr, dstAddr, length);
+    }
+
+    static void copyMemory(Object src, long srcOffset, Object dst, long dstOffset, long length) {
+        UNSAFE.copyMemory(src, srcOffset, dst, dstOffset, length);
     }
 
     private PlatformDependent0() {

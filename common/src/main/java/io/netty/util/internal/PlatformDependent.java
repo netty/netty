@@ -47,8 +47,10 @@ public final class PlatformDependent {
     private static final boolean HAS_UNSAFE = hasUnsafe0();
     private static final boolean CAN_FREE_DIRECT_BUFFER = canFreeDirectBuffer0();
     private static final boolean IS_UNALIGNED = isUnaligned0();
+    private static final long ARRAY_BASE_OFFSET = arrayBaseOffset0();
 
     private static final boolean HAS_JAVASSIST = hasJavassist0();
+
 
     /**
      * Returns {@code true} if and only if the current platform is Android
@@ -173,6 +175,14 @@ public final class PlatformDependent {
         PlatformDependent0.copyMemory(srcAddr, dstAddr, length);
     }
 
+    public static void copyMemory(byte[] src, int srcIndex, long dstAddr, long length) {
+        PlatformDependent0.copyMemory(src, ARRAY_BASE_OFFSET + srcIndex, null, dstAddr, length);
+    }
+
+    public static void copyMemory(long srcAddr, byte[] dst, int dstIndex, long length) {
+        PlatformDependent0.copyMemory(null, srcAddr, dst, ARRAY_BASE_OFFSET + dstIndex, length);
+    }
+
     private static boolean isAndroid0() {
         boolean android;
         try {
@@ -282,6 +292,14 @@ public final class PlatformDependent {
         }
 
         return PlatformDependent0.isUnaligned();
+    }
+
+    private static long arrayBaseOffset0() {
+        if (!hasUnsafe()) {
+            return -1;
+        }
+
+        return PlatformDependent0.arrayBaseOffset();
     }
 
     private static boolean hasJavassist0() {

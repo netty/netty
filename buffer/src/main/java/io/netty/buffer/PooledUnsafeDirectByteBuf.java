@@ -106,7 +106,7 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
             PooledUnsafeDirectByteBuf bbdst = (PooledUnsafeDirectByteBuf) dst;
             PlatformDependent.copyMemory(addr(index), bbdst.addr(dstIndex), length);
         } else if (dst.hasArray()) {
-            getBytes(index, dst.array(), dst.arrayOffset() + dstIndex, length);
+            PlatformDependent.copyMemory(addr(index), dst.array(), dst.arrayOffset() + dstIndex, length);
         } else {
             dst.setBytes(dstIndex, this, index, length);
         }
@@ -207,7 +207,7 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
             PooledUnsafeDirectByteBuf bbsrc = (PooledUnsafeDirectByteBuf) src;
             PlatformDependent.copyMemory(bbsrc.addr(srcIndex), addr(index), length);
         } else if (src.hasArray()) {
-            setBytes(index, src.array(), src.arrayOffset() + srcIndex, length);
+            PlatformDependent.copyMemory(src.array(), src.arrayOffset() + srcIndex, addr(index), length);
         } else {
             src.getBytes(srcIndex, this, index, length);
         }
