@@ -19,43 +19,49 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPromise;
+import io.netty.util.internal.TypeParameterFinder;
 
 public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler
         implements ChannelInboundByteHandler, ChannelOutboundMessageHandler<I> {
 
-    private final Class<?>[] encodableMessageTypes;
-    private final MessageToByteEncoder<I> encoder;
-    private final ByteToMessageDecoder decoder;
+    private final Class<?> acceptedOutboundMsgType;
+    private final MessageToByteEncoder<I> encoder  = new MessageToByteEncoder<I>() {
+        @Override
+        public boolean acceptOutboundMessage(Object msg) throws Exception {
+            return ByteToMessageCodec.this.acceptOutboundMessage(msg);
+        }
 
-    protected ByteToMessageCodec(Class<?>... encodableMessageTypes) {
-        this.encodableMessageTypes = ChannelHandlerUtil.acceptedMessageTypes(encodableMessageTypes);
-        encoder = new MessageToByteEncoder<I>() {
-            @Override
-            public boolean isEncodable(Object msg) throws Exception {
-                return ByteToMessageCodec.this.isEncodable(msg);
-            }
+        @Override
+        protected void encode(ChannelHandlerContext ctx, I msg, ByteBuf out) throws Exception {
+            ByteToMessageCodec.this.encode(ctx, msg, out);
+        }
+    };
 
-            @Override
-            protected void encode(ChannelHandlerContext ctx, I msg, ByteBuf out) throws Exception {
-                ByteToMessageCodec.this.encode(ctx, msg, out);
-            }
-        };
+    private final ByteToMessageDecoder decoder = new ByteToMessageDecoder() {
+        @Override
+        public Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+            return ByteToMessageCodec.this.decode(ctx, in);
+        }
 
-        decoder = new ByteToMessageDecoder() {
-            @Override
-            public Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-                return ByteToMessageCodec.this.decode(ctx, in);
-            }
+        @Override
+        protected Object decodeLast(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+            return ByteToMessageCodec.this.decodeLast(ctx, in);
+        }
+    };
 
-            @Override
-            protected Object decodeLast(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-                return ByteToMessageCodec.this.decodeLast(ctx, in);
-            }
-        };
+    protected ByteToMessageCodec() {
+        this(ByteToMessageCodec.class, 0);
+    }
+
+    protected ByteToMessageCodec(
+            @SuppressWarnings("rawtypes")
+            Class<? extends ByteToMessageCodec> parameterizedHandlerType,
+            int messageTypeParamIndex) {
+        acceptedOutboundMsgType =
+                TypeParameterFinder.findActualTypeParameter(this, parameterizedHandlerType, messageTypeParamIndex);
     }
 
     @Override
@@ -98,8 +104,8 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler
         encoder.flush(ctx, promise);
     }
 
-    public boolean isEncodable(Object msg) throws Exception {
-        return ChannelHandlerUtil.acceptMessage(encodableMessageTypes, msg);
+    public boolean acceptOutboundMessage(Object msg) throws Exception {
+        return acceptedOutboundMsgType.isInstance(msg);
     }
 
     protected abstract void encode(ChannelHandlerContext ctx, I msg, ByteBuf out) throws Exception;

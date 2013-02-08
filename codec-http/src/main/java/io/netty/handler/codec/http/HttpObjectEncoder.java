@@ -48,13 +48,6 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     @SuppressWarnings("RedundantFieldInitialization")
     private int state = ST_INIT;
 
-    /**
-     * Creates a new instance.
-     */
-    protected HttpObjectEncoder() {
-        super(HttpObject.class);
-    }
-
     @Override
     protected void encode(ChannelHandlerContext ctx, HttpObject msg, ByteBuf out) throws Exception {
         if (msg instanceof HttpMessage) {

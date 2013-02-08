@@ -59,7 +59,7 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
     private final MessageToMessageEncoder<Object> encoder =
             new MessageToMessageEncoder<Object>() {
         @Override
-        public boolean isEncodable(Object msg) throws Exception {
+        public boolean acceptOutboundMessage(Object msg) throws Exception {
             return MessageToMessageCodec.this.acceptOutboundMessage(msg);
         }
 

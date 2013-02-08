@@ -28,7 +28,7 @@ import io.netty.util.CharsetUtil;
 public class RtspResponseEncoder extends RtspObjectEncoder<HttpResponse> {
 
     @Override
-    public boolean isEncodable(Object msg) throws Exception {
+    public boolean acceptOutboundMessage(Object msg) throws Exception {
         return msg instanceof FullHttpResponse;
     }
 

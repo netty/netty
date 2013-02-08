@@ -36,15 +36,11 @@ import java.io.Serializable;
  * @apiviz.has io.netty.handler.codec.serialization.ObjectEncoderOutputStream - - - compatible with
  */
 @Sharable
-public class ObjectEncoder extends MessageToByteEncoder<Object> {
+public class ObjectEncoder extends MessageToByteEncoder<Serializable> {
     private static final byte[] LENGTH_PLACEHOLDER = new byte[4];
 
-    public ObjectEncoder() {
-        super(Serializable.class);
-    }
-
     @Override
-    protected void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, Serializable msg, ByteBuf out) throws Exception {
         int startIdx = out.writerIndex();
 
         ByteBufOutputStream bout = new ByteBufOutputStream(out);

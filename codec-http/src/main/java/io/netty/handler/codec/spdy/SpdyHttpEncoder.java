@@ -131,8 +131,6 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
      * @param version the protocol version
      */
     public SpdyHttpEncoder(int version) {
-        super(HttpObject.class);
-
         if (version < SpdyConstants.SPDY_MIN_VERSION || version > SpdyConstants.SPDY_MAX_VERSION) {
             throw new IllegalArgumentException(
                     "unsupported version: " + version);

@@ -21,8 +21,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelHandlerUtil;
-import io.netty.channel.ChannelPromise;
 
 
 /**
@@ -44,55 +42,30 @@ import io.netty.channel.ChannelPromise;
  */
 public abstract class MessageToByteEncoder<I> extends ChannelOutboundMessageHandlerAdapter<I> {
 
-    private final Class<?>[] acceptedMsgTypes;
-
     /**
      * The types which will be accepted by the encoder. If a received message is an other type it will be just forwared
      * to the next {@link ChannelOutboundMessageHandler} in the {@link ChannelPipeline}
      */
-    protected MessageToByteEncoder(Class<?>... acceptedMsgTypes) {
-        this.acceptedMsgTypes = ChannelHandlerUtil.acceptedMessageTypes(acceptedMsgTypes);
+    protected MessageToByteEncoder() {
+        this(MessageToByteEncoder.class, 0);
+    }
+
+    protected MessageToByteEncoder(
+            @SuppressWarnings("rawtypes")
+            Class<? extends MessageToByteEncoder> parameterizedHandlerType,
+            int messageTypeParamIndex) {
+        super(parameterizedHandlerType, messageTypeParamIndex);
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        MessageBuf<I> in = ctx.outboundMessageBuffer();
-        ByteBuf out = ctx.nextOutboundByteBuffer();
-
-        for (;;) {
-            Object msg = in.poll();
-            if (msg == null) {
-                break;
-            }
-
-            if (!isEncodable(msg)) {
-                ChannelHandlerUtil.addToNextOutboundBuffer(ctx, msg);
-                continue;
-            }
-
-            @SuppressWarnings("unchecked")
-            I imsg = (I) msg;
-            try {
-                encode(ctx, imsg, out);
-            } catch (Throwable t) {
-                if (t instanceof CodecException) {
-                    ctx.fireExceptionCaught(t);
-                } else {
-                    ctx.fireExceptionCaught(new EncoderException(t));
-                }
-            }
+    protected void flush(ChannelHandlerContext ctx, I msg) throws Exception {
+        try {
+            encode(ctx, msg, ctx.nextOutboundByteBuffer());
+        } catch (CodecException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new CodecException(e);
         }
-
-        ctx.flush(promise);
-    }
-
-    /**
-     * Returns {@code true} if and only if the specified message can be encoded by this encoder.
-     *
-     * @param msg the message
-     */
-    public boolean isEncodable(Object msg) throws Exception {
-        return ChannelHandlerUtil.acceptMessage(acceptedMsgTypes, msg);
     }
 
     /**

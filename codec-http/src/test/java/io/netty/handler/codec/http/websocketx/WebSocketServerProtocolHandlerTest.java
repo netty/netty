@@ -16,10 +16,12 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.MessageBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
-import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
+import io.netty.channel.ChannelOperationHandlerAdapter;
+import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedMessageChannel;
 import io.netty.handler.codec.http.DefaultHttpRequest;
@@ -138,7 +140,19 @@ public class WebSocketServerProtocolHandlerTest {
         return (FullHttpResponse) outbound.poll();
     }
 
-    private static class MockOutboundHandler extends ChannelOutboundMessageHandlerAdapter<Object> {
+    private static class MockOutboundHandler
+        extends ChannelOperationHandlerAdapter implements ChannelOutboundMessageHandler<Object> {
+
+        @Override
+        public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            return Unpooled.messageBuffer();
+        }
+
+        @Override
+        public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            ctx.outboundMessageBuffer().free();
+        }
+
         @Override
         public void flush(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
             //NoOp
