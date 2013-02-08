@@ -98,8 +98,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private boolean strValActive;
     private String strVal;
 
-    private AbstractUnsafe.FlushTask flushTaskInProgress;
-
     /**
      * Creates a new instance.
      *
@@ -489,6 +487,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
         };
 
+        private FlushTask flushTaskInProgress;
+
         @Override
         public final void sendFile(final FileRegion region, final ChannelPromise promise) {
 
@@ -515,7 +515,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         private void sendFile0(FileRegion region, ChannelPromise promise) {
-            if (flushTaskInProgress == null) {
+            FlushTask task = flushTaskInProgress;
+            if (task == null) {
                 flushTaskInProgress = new FlushTask(region, promise);
                 try {
                     // the first FileRegion to flush so trigger it now!
@@ -527,7 +528,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
-            FlushTask task = flushTaskInProgress;
             for (;;) {
                 FlushTask next = task.next;
                 if (next == null) {
@@ -789,10 +789,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         @Override
         public void flush(final ChannelPromise promise) {
             if (eventLoop().inEventLoop()) {
-
-                if (flushTaskInProgress != null) {
-                    FlushTask task = flushTaskInProgress;
-
+                FlushTask task = flushTaskInProgress;
+                if (task != null) {
                     // loop over the tasks to find the last one
                     for (;;) {
                         FlushTask t = task.next;
