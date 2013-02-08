@@ -16,12 +16,9 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.MessageBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundMessageHandler;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelStateHandlerAdapter;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 
 /**
  * {@link ChannelInboundMessageHandler} which decodes from one message to an other message
@@ -45,81 +42,25 @@ import io.netty.channel.ChannelStateHandlerAdapter;
  * </pre>
  *
  */
-public abstract class MessageToMessageDecoder<I>
-        extends ChannelStateHandlerAdapter implements ChannelInboundMessageHandler<I> {
+public abstract class MessageToMessageDecoder<I> extends ChannelInboundMessageHandlerAdapter<I> {
 
-    private final Class<?>[] acceptedMsgTypes;
+    protected MessageToMessageDecoder() {
+        super(MessageToMessageDecoder.class, 0);
+    }
 
-    /**
-     * The types which will be accepted by the decoder. If a received message is an other type it will be just forwarded
-     * to the next {@link ChannelInboundMessageHandler} in the {@link ChannelPipeline}
-     */
-    protected MessageToMessageDecoder(Class<?>... acceptedMsgTypes) {
-        this.acceptedMsgTypes = ChannelHandlerUtil.acceptedMessageTypes(acceptedMsgTypes);
+    protected MessageToMessageDecoder(
+            @SuppressWarnings("rawtypes")
+            Class<? extends ChannelInboundMessageHandlerAdapter> parameterizedHandlerType,
+            int messageTypeParamIndex) {
+        super(parameterizedHandlerType, messageTypeParamIndex);
     }
 
     @Override
-    public MessageBuf<I> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return Unpooled.messageBuffer();
-    }
-
-    @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx)
-            throws Exception {
-        MessageBuf<I> in = ctx.inboundMessageBuffer();
-        MessageBuf<Object> out = ctx.nextInboundMessageBuffer();
-        boolean notify = false;
-        for (;;) {
-            try {
-                Object msg = in.poll();
-                if (msg == null) {
-                    break;
-                }
-                if (!isDecodable(msg)) {
-                    out.add(msg);
-                    notify = true;
-                    continue;
-                }
-
-                @SuppressWarnings("unchecked")
-                I imsg = (I) msg;
-                boolean free = true;
-                try {
-                    Object omsg = decode(ctx, imsg);
-                    if (omsg == null) {
-                        // Decoder consumed a message but returned null.
-                        // Probably it needs more messages because it's an aggregator.
-                        continue;
-                    }
-                    if (omsg == imsg) {
-                        free = false;
-                    }
-                    if (ChannelHandlerUtil.unfoldAndAdd(ctx, omsg, true)) {
-                        notify = true;
-                    }
-                } finally {
-                    if (free) {
-                        freeInboundMessage(imsg);
-                    }
-                }
-            } catch (Throwable t) {
-                if (t instanceof CodecException) {
-                    ctx.fireExceptionCaught(t);
-                } else {
-                    ctx.fireExceptionCaught(new DecoderException(t));
-                }
-            }
+    protected final void messageReceived(ChannelHandlerContext ctx, I msg) throws Exception {
+        Object decoded = decode(ctx, msg);
+        if (decoded != null) {
+            ctx.nextInboundMessageBuffer().add(decoded);
         }
-        if (notify) {
-            ctx.fireInboundBufferUpdated();
-        }
-    }
-
-    /**
-     * Returns {@code true} if and only if the specified message can be decoded by this decoder.
-     */
-    public boolean isDecodable(Object msg) throws Exception {
-        return ChannelHandlerUtil.acceptMessage(acceptedMsgTypes, msg);
     }
 
     /**
@@ -133,18 +74,4 @@ public abstract class MessageToMessageDecoder<I>
      * @throws Exception    is thrown if an error accour
      */
     protected abstract Object decode(ChannelHandlerContext ctx, I msg) throws Exception;
-
-    /**
-     * Is called after a message was processed via {@link #decode(ChannelHandlerContext, Object)} to free
-     * up any resources that is held by the inbound message. You may want to override this if your implementation
-     * just pass-through the input message or need it for later usage.
-     */
-    protected void freeInboundMessage(I msg) throws Exception {
-        ChannelHandlerUtil.freeMessage(msg);
-    }
-
-    @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        ctx.inboundMessageBuffer().free();
-    }
 }

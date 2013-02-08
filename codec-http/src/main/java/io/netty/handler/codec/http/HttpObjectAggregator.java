@@ -66,8 +66,6 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
      *        a {@link TooLongFrameException} will be raised.
      */
     public HttpObjectAggregator(int maxContentLength) {
-        super(HttpObject.class);
-
         if (maxContentLength <= 0) {
             throw new IllegalArgumentException(
                     "maxContentLength must be a positive integer: " +
