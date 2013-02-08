@@ -25,6 +25,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpHeaders.Values;
 import io.netty.handler.codec.http.HttpObjectAggregator;
@@ -112,14 +113,9 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      *
      * 8jKS'y:G*Co,Wxa-
      * </pre>
-     *
-     * @param channel
-     *            Channel
-     * @param req
-     *            HTTP request
      */
     @Override
-    public ChannelFuture handshake(Channel channel, FullHttpRequest req, ChannelPromise promise) {
+    public ChannelFuture handshake(Channel channel, FullHttpRequest req, HttpHeaders headers, ChannelPromise promise) {
 
         if (logger.isDebugEnabled()) {
             logger.debug(String.format("Channel %s WS Version 00 server handshake", channel.id()));
@@ -137,6 +133,10 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
         // Create the WebSocket handshake response.
         FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, new HttpResponseStatus(101,
                 isHixie76 ? "WebSocket Protocol Handshake" : "Web Socket Protocol Handshake"));
+        if (headers != null) {
+            res.headers().add(headers);
+        }
+
         res.headers().add(Names.UPGRADE, WEBSOCKET);
         res.headers().add(CONNECTION, Values.UPGRADE);
 

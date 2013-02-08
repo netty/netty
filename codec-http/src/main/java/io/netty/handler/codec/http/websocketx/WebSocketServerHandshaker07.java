@@ -23,6 +23,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
@@ -102,14 +103,9 @@ public class WebSocketServerHandshaker07 extends WebSocketServerHandshaker {
      * Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
      * Sec-WebSocket-Protocol: chat
      * </pre>
-     *
-     * @param channel
-     *            Channel
-     * @param req
-     *            HTTP request
      */
     @Override
-    public ChannelFuture handshake(Channel channel, FullHttpRequest req, ChannelPromise promise) {
+    public ChannelFuture handshake(Channel channel, FullHttpRequest req, HttpHeaders headers, ChannelPromise promise) {
 
         if (logger.isDebugEnabled()) {
             logger.debug(String.format("Channel %s WS Version 7 server handshake", channel.id()));
@@ -117,6 +113,10 @@ public class WebSocketServerHandshaker07 extends WebSocketServerHandshaker {
 
         FullHttpResponse res =
                 new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
+
+        if (headers != null) {
+            res.headers().add(headers);
+        }
 
         String key = req.headers().get(Names.SEC_WEBSOCKET_KEY);
         if (key == null) {
