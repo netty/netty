@@ -28,8 +28,8 @@ public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
     private static final char SLASH = '/';
 
     @Override
-    public boolean isEncodable(Object msg) throws Exception {
-        return super.isEncodable(msg) && !(msg instanceof HttpResponse);
+    public boolean acceptOutboundMessage(Object msg) throws Exception {
+        return super.acceptOutboundMessage(msg) && !(msg instanceof HttpResponse);
     }
 
     @Override

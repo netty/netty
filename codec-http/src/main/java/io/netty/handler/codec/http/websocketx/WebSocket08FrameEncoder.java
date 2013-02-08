@@ -90,13 +90,11 @@ public class WebSocket08FrameEncoder extends MessageToByteEncoder<WebSocketFrame
      *            false.
      */
     public WebSocket08FrameEncoder(boolean maskPayload) {
-        super(WebSocketFrame.class);
         this.maskPayload = maskPayload;
     }
 
     @Override
-    public void encode(
-            ChannelHandlerContext ctx, WebSocketFrame msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, ByteBuf out) throws Exception {
 
         byte[] mask;
 

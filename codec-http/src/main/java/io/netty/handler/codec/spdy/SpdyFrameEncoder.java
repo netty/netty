@@ -50,8 +50,6 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
      * Creates a new instance with the specified parameters.
      */
     public SpdyFrameEncoder(int version, int compressionLevel, int windowBits, int memLevel) {
-        super(SpdyDataFrame.class, SpdyControlFrame.class);
-
         if (version < SpdyConstants.SPDY_MIN_VERSION || version > SpdyConstants.SPDY_MAX_VERSION) {
             throw new IllegalArgumentException(
                     "unknown version: " + version);
@@ -59,6 +57,11 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
         this.version = version;
         headerBlockCompressor = SpdyHeaderBlockCompressor.newInstance(
                 version, compressionLevel, windowBits, memLevel);
+    }
+
+    @Override
+    public boolean acceptOutboundMessage(Object msg) throws Exception {
+        return msg instanceof SpdyDataFrame || msg instanceof SpdyControlFrame;
     }
 
     @Override

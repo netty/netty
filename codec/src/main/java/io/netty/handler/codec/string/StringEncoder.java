@@ -17,13 +17,11 @@ package io.netty.handler.codec.string;
 
 import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 
 import java.nio.charset.Charset;
@@ -79,39 +77,18 @@ public class StringEncoder extends ChannelOutboundMessageHandlerAdapter<CharSequ
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        MessageBuf<Object> in = ctx.outboundMessageBuffer();
-        MessageBuf<Object> msgOut = ctx.nextOutboundMessageBuffer();
-        ByteBuf byteOut = ctx.nextOutboundByteBuffer();
+    protected void flush(ChannelHandlerContext ctx, CharSequence msg) throws Exception {
+        ByteBuf encoded = Unpooled.copiedBuffer(msg, charset);
 
-        try {
-            for (;;) {
-                Object m = in.poll();
-                if (m == null) {
-                    break;
-                }
-
-                if (!(m instanceof CharSequence)) {
-                    msgOut.add(m);
-                    continue;
-                }
-
-                CharSequence s = (CharSequence) m;
-                ByteBuf encoded = Unpooled.copiedBuffer(s, charset);
-
-                switch (nextBufferType) {
-                case BYTE:
-                    byteOut.writeBytes(encoded);
-                    break;
-                case MESSAGE:
-                    msgOut.add(encoded);
-                    break;
-                default:
-                    throw new Error();
-                }
-            }
-        } finally {
-            ctx.flush(promise);
+        switch (nextBufferType) {
+        case BYTE:
+            ctx.nextOutboundByteBuffer().writeBytes(encoded);
+            break;
+        case MESSAGE:
+            ctx.nextOutboundMessageBuffer().add(encoded);
+            break;
+        default:
+            throw new Error();
         }
     }
 }

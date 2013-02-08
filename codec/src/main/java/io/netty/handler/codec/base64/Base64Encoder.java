@@ -54,8 +54,6 @@ public class Base64Encoder extends MessageToMessageEncoder<ByteBuf> {
     }
 
     public Base64Encoder(boolean breakLines, Base64Dialect dialect) {
-        super(ByteBuf.class);
-
         if (dialect == null) {
             throw new NullPointerException("dialect");
         }

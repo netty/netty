@@ -78,10 +78,7 @@ public class LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
      * @throws IllegalArgumentException
      *         if {@code lengthFieldLength} is not 1, 2, 3, 4, or 8
      */
-    public LengthFieldPrepender(
-            int lengthFieldLength, boolean lengthIncludesLengthFieldLength) {
-        super(ByteBuf.class);
-
+    public LengthFieldPrepender(int lengthFieldLength, boolean lengthIncludesLengthFieldLength) {
         if (lengthFieldLength != 1 && lengthFieldLength != 2 &&
             lengthFieldLength != 3 && lengthFieldLength != 4 &&
             lengthFieldLength != 8) {
