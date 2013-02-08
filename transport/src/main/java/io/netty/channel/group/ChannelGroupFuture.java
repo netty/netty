@@ -166,7 +166,7 @@ public interface ChannelGroupFuture extends Iterable<ChannelFuture> {
      * {@linkplain #isDone() done}.  If this future is already
      * completed, the specified listener is notified immediately.
      */
-    void addListener(ChannelGroupFutureListener listener);
+    ChannelGroupFuture addListener(ChannelGroupFutureListener listener);
 
     /**
      * Removes the specified listener from this future.
@@ -175,7 +175,7 @@ public interface ChannelGroupFuture extends Iterable<ChannelFuture> {
      * future is already completed, this method has no effect
      * and returns silently.
      */
-    void removeListener(ChannelGroupFutureListener listener);
+    ChannelGroupFuture removeListener(ChannelGroupFutureListener listener);
 
     /**
      * Waits for this future to be completed.
