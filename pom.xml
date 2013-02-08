@@ -191,6 +191,15 @@
   </dependencyManagement>
 
   <dependencies>
+    <!-- Byte code generator - completely optional -->
+    <dependency>
+      <groupId>org.javassist</groupId>
+      <artifactId>javassist</artifactId>
+      <version>3.17.1-GA</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+
     <!-- Testing frameworks and related dependencies -->
     <dependency>
       <groupId>junit</groupId>
