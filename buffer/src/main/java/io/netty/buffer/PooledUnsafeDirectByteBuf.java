@@ -102,13 +102,15 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     @Override
     public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
         checkIndex(index, length);
-        if (dst instanceof PooledUnsafeDirectByteBuf) {
-            PooledUnsafeDirectByteBuf bbdst = (PooledUnsafeDirectByteBuf) dst;
-            PlatformDependent.copyMemory(addr(index), bbdst.addr(dstIndex), length);
-        } else if (dst.hasArray()) {
-            PlatformDependent.copyMemory(addr(index), dst.array(), dst.arrayOffset() + dstIndex, length);
-        } else {
-            dst.setBytes(dstIndex, this, index, length);
+        if (length != 0) {
+            if (dst instanceof PooledUnsafeDirectByteBuf) {
+                PooledUnsafeDirectByteBuf bbdst = (PooledUnsafeDirectByteBuf) dst;
+                PlatformDependent.copyMemory(addr(index), bbdst.addr(dstIndex), length);
+            } else if (dst.hasArray()) {
+                PlatformDependent.copyMemory(addr(index), dst.array(), dst.arrayOffset() + dstIndex, length);
+            } else {
+                dst.setBytes(dstIndex, this, index, length);
+            }
         }
         return this;
     }
@@ -116,10 +118,9 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     @Override
     public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
         checkIndex(index, length);
-        ByteBuffer tmpBuf = internalNioBuffer();
-        index = idx(index);
-        tmpBuf.clear().position(index).limit(index + length);
-        tmpBuf.get(dst, dstIndex, length);
+        if (length != 0) {
+            PlatformDependent.copyMemory(addr(index), dst, dstIndex, length);
+        }
         return this;
     }
 
@@ -137,15 +138,11 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     @Override
     public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
         checkIndex(index, length);
-        if (length == 0) {
-            return this;
+        if (length != 0) {
+            byte[] tmp = new byte[length];
+            PlatformDependent.copyMemory(addr(index), tmp, 0, length);
+            out.write(tmp);
         }
-
-        byte[] tmp = new byte[length];
-        ByteBuffer tmpBuf = internalNioBuffer();
-        tmpBuf.clear().position(idx(index));
-        tmpBuf.get(tmp);
-        out.write(tmp);
         return this;
     }
 
@@ -203,13 +200,15 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     @Override
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         checkIndex(index, length);
-        if (src instanceof PooledUnsafeDirectByteBuf) {
-            PooledUnsafeDirectByteBuf bbsrc = (PooledUnsafeDirectByteBuf) src;
-            PlatformDependent.copyMemory(bbsrc.addr(srcIndex), addr(index), length);
-        } else if (src.hasArray()) {
-            PlatformDependent.copyMemory(src.array(), src.arrayOffset() + srcIndex, addr(index), length);
-        } else {
-            src.getBytes(srcIndex, this, index, length);
+        if (length != 0) {
+            if (src instanceof PooledUnsafeDirectByteBuf) {
+                PooledUnsafeDirectByteBuf bbsrc = (PooledUnsafeDirectByteBuf) src;
+                PlatformDependent.copyMemory(bbsrc.addr(srcIndex), addr(index), length);
+            } else if (src.hasArray()) {
+                PlatformDependent.copyMemory(src.array(), src.arrayOffset() + srcIndex, addr(index), length);
+            } else {
+                src.getBytes(srcIndex, this, index, length);
+            }
         }
         return this;
     }
@@ -217,10 +216,9 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     @Override
     public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
         checkIndex(index, length);
-        ByteBuffer tmpBuf = internalNioBuffer();
-        index = idx(index);
-        tmpBuf.clear().position(index).limit(index + length);
-        tmpBuf.put(src, srcIndex, length);
+        if (length != 0) {
+            PlatformDependent.copyMemory(src, srcIndex, addr(index), length);
+        }
         return this;
     }
 
@@ -243,12 +241,9 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
         checkIndex(index, length);
         byte[] tmp = new byte[length];
         int readBytes = in.read(tmp);
-        if (readBytes <= 0) {
-            return readBytes;
+        if (readBytes > 0) {
+            PlatformDependent.copyMemory(tmp, 0, addr(index), readBytes);
         }
-        ByteBuffer tmpNioBuf = internalNioBuffer();
-        tmpNioBuf.clear().position(idx(index));
-        tmpNioBuf.put(tmp, 0, readBytes);
         return readBytes;
     }
 
@@ -269,8 +264,10 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     public ByteBuf copy(int index, int length) {
         checkIndex(index, length);
         PooledUnsafeDirectByteBuf copy = (PooledUnsafeDirectByteBuf) alloc().directBuffer(capacity(), maxCapacity());
-        PlatformDependent.copyMemory(addr(index), copy.addr(index), length);
-        copy.setIndex(index, index + length);
+        if (length != 0) {
+            PlatformDependent.copyMemory(addr(index), copy.addr(index), length);
+            copy.setIndex(index, index + length);
+        }
         return copy;
     }
 
