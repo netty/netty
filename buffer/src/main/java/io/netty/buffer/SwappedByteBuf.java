@@ -245,7 +245,7 @@ public final class SwappedByteBuf implements ByteBuf {
 
     @Override
     public short getShort(int index) {
-        return ByteBufUtil.swapShort(buf.getShort(index));
+        return BufUtil.swapShort(buf.getShort(index));
     }
 
     @Override
@@ -255,7 +255,7 @@ public final class SwappedByteBuf implements ByteBuf {
 
     @Override
     public int getMedium(int index) {
-        return ByteBufUtil.swapMedium(buf.getMedium(index));
+        return BufUtil.swapMedium(buf.getMedium(index));
     }
 
     @Override
@@ -265,7 +265,7 @@ public final class SwappedByteBuf implements ByteBuf {
 
     @Override
     public int getInt(int index) {
-        return ByteBufUtil.swapInt(buf.getInt(index));
+        return BufUtil.swapInt(buf.getInt(index));
     }
 
     @Override
@@ -275,7 +275,7 @@ public final class SwappedByteBuf implements ByteBuf {
 
     @Override
     public long getLong(int index) {
-        return ByteBufUtil.swapLong(buf.getLong(index));
+        return BufUtil.swapLong(buf.getLong(index));
     }
 
     @Override
@@ -354,25 +354,25 @@ public final class SwappedByteBuf implements ByteBuf {
 
     @Override
     public ByteBuf setShort(int index, int value) {
-        buf.setShort(index, ByteBufUtil.swapShort((short) value));
+        buf.setShort(index, BufUtil.swapShort((short) value));
         return this;
     }
 
     @Override
     public ByteBuf setMedium(int index, int value) {
-        buf.setMedium(index, ByteBufUtil.swapMedium(value));
+        buf.setMedium(index, BufUtil.swapMedium(value));
         return this;
     }
 
     @Override
     public ByteBuf setInt(int index, int value) {
-        buf.setInt(index, ByteBufUtil.swapInt(value));
+        buf.setInt(index, BufUtil.swapInt(value));
         return this;
     }
 
     @Override
     public ByteBuf setLong(int index, long value) {
-        buf.setLong(index, ByteBufUtil.swapLong(value));
+        buf.setLong(index, BufUtil.swapLong(value));
         return this;
     }
 
@@ -463,7 +463,7 @@ public final class SwappedByteBuf implements ByteBuf {
 
     @Override
     public short readShort() {
-        return ByteBufUtil.swapShort(buf.readShort());
+        return BufUtil.swapShort(buf.readShort());
     }
 
     @Override
@@ -473,7 +473,7 @@ public final class SwappedByteBuf implements ByteBuf {
 
     @Override
     public int readMedium() {
-        return ByteBufUtil.swapMedium(buf.readMedium());
+        return BufUtil.swapMedium(buf.readMedium());
     }
 
     @Override
@@ -483,7 +483,7 @@ public final class SwappedByteBuf implements ByteBuf {
 
     @Override
     public int readInt() {
-        return ByteBufUtil.swapInt(buf.readInt());
+        return BufUtil.swapInt(buf.readInt());
     }
 
     @Override
@@ -493,7 +493,7 @@ public final class SwappedByteBuf implements ByteBuf {
 
     @Override
     public long readLong() {
-        return ByteBufUtil.swapLong(buf.readLong());
+        return BufUtil.swapLong(buf.readLong());
     }
 
     @Override
@@ -588,25 +588,25 @@ public final class SwappedByteBuf implements ByteBuf {
 
     @Override
     public ByteBuf writeShort(int value) {
-        buf.writeShort(ByteBufUtil.swapShort((short) value));
+        buf.writeShort(BufUtil.swapShort((short) value));
         return this;
     }
 
     @Override
     public ByteBuf writeMedium(int value) {
-        buf.writeMedium(ByteBufUtil.swapMedium(value));
+        buf.writeMedium(BufUtil.swapMedium(value));
         return this;
     }
 
     @Override
     public ByteBuf writeInt(int value) {
-        buf.writeInt(ByteBufUtil.swapInt(value));
+        buf.writeInt(BufUtil.swapInt(value));
         return this;
     }
 
     @Override
     public ByteBuf writeLong(long value) {
-        buf.writeLong(ByteBufUtil.swapLong(value));
+        buf.writeLong(BufUtil.swapLong(value));
         return this;
     }
 
@@ -836,14 +836,14 @@ public final class SwappedByteBuf implements ByteBuf {
             return true;
         }
         if (obj instanceof ByteBuf) {
-            return ByteBufUtil.equals(this, (ByteBuf) obj);
+            return BufUtil.equals(this, (ByteBuf) obj);
         }
         return false;
     }
 
     @Override
     public int compareTo(ByteBuf buffer) {
-        return ByteBufUtil.compare(this, buffer);
+        return BufUtil.compare(this, buffer);
     }
 
     @Override

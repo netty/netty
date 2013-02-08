@@ -27,9 +27,10 @@ import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
 
 /**
- * Utility class for operate on a {@link ByteBuf}
+ * A collection of utility methods that is related with handling {@link ByteBuf}, {@link MessageBuf}, and their
+ * elements.
  */
-public final class ByteBufUtil {
+public final class BufUtil {
 
     private static final char[] HEXDUMP_TABLE = new char[256 * 4];
 
@@ -38,6 +39,21 @@ public final class ByteBufUtil {
         for (int i = 0; i < 256; i ++) {
             HEXDUMP_TABLE[ i << 1     ] = DIGITS[i >>> 4 & 0x0F];
             HEXDUMP_TABLE[(i << 1) + 1] = DIGITS[i       & 0x0F];
+        }
+    }
+
+    /**
+     * Try to call {@link Freeable#free()} if the specified message implements {@link Freeable}.  If the specified
+     * message doesn't implement {@link Freeable}, this method does nothing.
+     */
+    public static void free(Object msg) {
+        if (msg instanceof Freeable) {
+            try {
+                ((Freeable) msg).free();
+            } catch (UnsupportedOperationException e) {
+                // This can happen for derived buffers
+                // TODO: Think about this
+            }
         }
     }
 
@@ -370,5 +386,5 @@ public final class ByteBufUtil {
         return dst.flip().toString();
     }
 
-    private ByteBufUtil() { }
+    private BufUtil() { }
 }

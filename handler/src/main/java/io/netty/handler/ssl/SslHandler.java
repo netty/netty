@@ -15,8 +15,8 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFlushPromiseNotifier;
@@ -779,7 +779,7 @@ public class SslHandler
         if (packetLength == -1) {
             // Bad data - discard the buffer and raise an exception.
             NotSslRecordException e = new NotSslRecordException(
-                    "not an SSL/TLS record: " + ByteBufUtil.hexDump(in));
+                    "not an SSL/TLS record: " + BufUtil.hexDump(in));
             in.skipBytes(in.readableBytes());
             ctx.fireExceptionCaught(e);
             setHandshakeFailure(e);

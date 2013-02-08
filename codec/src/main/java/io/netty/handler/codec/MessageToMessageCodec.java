@@ -15,10 +15,10 @@
  */
 package io.netty.handler.codec;
 
+import io.netty.buffer.BufUtil;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelOutboundMessageHandler;
@@ -174,10 +174,10 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
     protected abstract Object decode(ChannelHandlerContext ctx, INBOUND_IN msg) throws Exception;
 
     protected void freeInboundMessage(INBOUND_IN msg) throws Exception {
-        ChannelHandlerUtil.freeMessage(msg);
+        BufUtil.free(msg);
     }
 
     protected void freeOutboundMessage(OUTBOUND_IN msg) throws Exception {
-        ChannelHandlerUtil.freeMessage(msg);
+        BufUtil.free(msg);
     }
 }

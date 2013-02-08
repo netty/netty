@@ -16,8 +16,8 @@
 package io.netty.channel.sctp;
 
 import com.sun.nio.sctp.MessageInfo;
+import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.DefaultByteBufHolder;
 
 /**
@@ -144,6 +144,6 @@ public final class SctpMessage extends DefaultByteBufHolder {
         }
         return "SctpFrame{" +
                 "streamIdentifier=" + streamIdentifier + ", protocolIdentifier=" + protocolIdentifier +
-                ", data=" + ByteBufUtil.hexDump(data()) + '}';
+                ", data=" + BufUtil.hexDump(data()) + '}';
     }
 }
