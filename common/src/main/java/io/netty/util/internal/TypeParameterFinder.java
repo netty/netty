@@ -42,7 +42,7 @@ public final class TypeParameterFinder {
                     Type[] types = ((ParameterizedType) currentClass.getGenericSuperclass()).getActualTypeArguments();
                     if (types.length - 1 < typeParamIndex || !(types[0] instanceof Class)) {
                         throw new IllegalStateException(
-                                "cannot determine the inbound message type of " + thisClass.getSimpleName());
+                                "cannot determine the type of the type parameter of " + thisClass.getSimpleName());
                     }
 
                     messageType = (Class<?>) types[0];
