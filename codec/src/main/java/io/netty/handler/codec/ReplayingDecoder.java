@@ -342,20 +342,27 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
     }
 
     @Override
-    public ByteBuf newInboundBuffer(
-            ChannelHandlerContext ctx) throws Exception {
-        cumulation = ctx.alloc().buffer();
+    public final ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        cumulation = newInboundBuffer0(ctx);
         replayable = new ReplayingDecoderBuffer(cumulation);
         return cumulation;
     }
 
+    protected ByteBuf newInboundBuffer0(ChannelHandlerContext ctx) throws Exception {
+        return super.newInboundBuffer(ctx);
+    }
+
     @Override
-    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+    public final void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
         ByteBuf in = ctx.inboundByteBuffer();
         final int oldReaderIndex = in.readerIndex();
-        super.discardInboundReadBytes(ctx);
+        discardInboundReadBytes0(ctx);
         final int newReaderIndex = in.readerIndex();
         checkpoint -= oldReaderIndex - newReaderIndex;
+    }
+
+    protected void discardInboundReadBytes0(ChannelHandlerContext ctx) throws Exception {
+        super.discardInboundReadBytes(ctx);
     }
 
     @Override
