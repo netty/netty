@@ -22,7 +22,7 @@ import io.netty.buffer.Unpooled;
 /**
  * A SPDY Protocol Data Frame
  */
-public interface SpdyDataFrame extends ByteBufHolder, SpdyStreamFrame {
+public interface SpdyDataFrame extends ByteBufHolder, SpdyStreamFrame, SpdyDataOrControlFrame {
 
     @Override
     SpdyDataFrame setStreamId(int streamID);

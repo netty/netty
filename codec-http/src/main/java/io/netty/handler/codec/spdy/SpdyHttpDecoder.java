@@ -37,7 +37,7 @@ import java.util.Map;
  * Decodes {@link SpdySynStreamFrame}s, {@link SpdySynReplyFrame}s,
  * and {@link SpdyDataFrame}s into {@link FullHttpRequest}s and {@link FullHttpResponse}s.
  */
-public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
+public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyDataOrControlFrame> {
 
     private final int spdyVersion;
     private final int maxContentLength;
@@ -65,12 +65,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
     }
 
     @Override
-    public boolean acceptInboundMessage(Object msg) throws Exception {
-        return msg instanceof SpdyDataFrame || msg instanceof SpdyControlFrame;
-    }
-
-    @Override
-    protected Object decode(ChannelHandlerContext ctx, Object msg) throws Exception {
+    protected Object decode(ChannelHandlerContext ctx, SpdyDataOrControlFrame msg) throws Exception {
         if (msg instanceof SpdySynStreamFrame) {
 
             // HTTP requests/responses are mapped one-to-one to SPDY streams.

@@ -31,7 +31,7 @@ import io.netty.channel.CombinedChannelDuplexHandler;
  */
 public final class SpdyFrameCodec
         extends CombinedChannelDuplexHandler
-        implements ChannelInboundByteHandler, ChannelOutboundMessageHandler<Object> {
+        implements ChannelInboundByteHandler, ChannelOutboundMessageHandler<SpdyDataOrControlFrame> {
 
     /**
      * Creates a new instance with the specified {@code version} and
@@ -79,7 +79,7 @@ public final class SpdyFrameCodec
     }
 
     @Override
-    public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+    public MessageBuf<SpdyDataOrControlFrame> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return encoder().newOutboundBuffer(ctx);
     }
 
