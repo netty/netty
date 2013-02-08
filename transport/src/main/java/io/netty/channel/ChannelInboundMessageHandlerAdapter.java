@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.BufUtil;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.internal.TypeParameterMatcher;
@@ -170,6 +171,6 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
      * just pass-through the input message or need it for later usage.
      */
     protected void freeInboundMessage(I msg) throws Exception {
-        ChannelHandlerUtil.freeMessage(msg);
+        BufUtil.free(msg);
     }
 }

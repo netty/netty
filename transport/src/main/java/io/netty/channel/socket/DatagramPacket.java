@@ -15,8 +15,8 @@
  */
 package io.netty.channel.socket;
 
+import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.DefaultByteBufHolder;
 
 import java.net.InetSocketAddress;
@@ -62,6 +62,6 @@ public final class DatagramPacket extends DefaultByteBufHolder {
                     ", data=(FREED)}";
         }
         return "DatagramPacket{remoteAddress=" + remoteAddress().toString() +
-                ", data=" + ByteBufUtil.hexDump(data()) + '}';
+                ", data=" + BufUtil.hexDump(data()) + '}';
     }
 }
