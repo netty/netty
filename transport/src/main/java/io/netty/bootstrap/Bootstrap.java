@@ -188,11 +188,12 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     }
 
     @Override
-    public void validate() {
+    public Bootstrap validate() {
         super.validate();
         if (handler() == null) {
             throw new IllegalStateException("handler not set");
         }
+        return this;
     }
 
     @Override

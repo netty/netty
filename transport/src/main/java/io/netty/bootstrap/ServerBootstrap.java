@@ -203,7 +203,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
     }
 
     @Override
-    public void validate() {
+    public ServerBootstrap validate() {
         super.validate();
         if (childHandler == null) {
             throw new IllegalStateException("childHandler not set");
@@ -212,6 +212,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
             logger.warn("childGroup is not set. Using parentGroup instead.");
             childGroup = group();
         }
+        return this;
     }
 
     @SuppressWarnings("unchecked")
