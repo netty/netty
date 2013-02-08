@@ -33,7 +33,7 @@ import io.netty.handler.codec.MessageToByteEncoder;
 public class WebSocket00FrameEncoder extends MessageToByteEncoder<WebSocketFrame> {
 
     @Override
-    public void encode(ChannelHandlerContext ctx, WebSocketFrame msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, ByteBuf out) throws Exception {
         if (msg instanceof TextWebSocketFrame) {
             // Text frame
             ByteBuf data = msg.data();

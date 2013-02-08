@@ -139,7 +139,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
     }
 
     @Override
-    public Object encode(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
+    protected Object encode(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
 
         List<Object> out = new ArrayList<Object>();
         if (msg instanceof HttpRequest) {

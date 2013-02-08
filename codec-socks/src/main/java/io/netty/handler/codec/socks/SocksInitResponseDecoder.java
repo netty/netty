@@ -40,7 +40,7 @@ public class SocksInitResponseDecoder extends ReplayingDecoder<SocksInitResponse
     }
 
     @Override
-    public SocksResponse decode(ChannelHandlerContext ctx, ByteBuf byteBuf) throws Exception {
+    protected SocksResponse decode(ChannelHandlerContext ctx, ByteBuf byteBuf) throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
                 version = SocksMessage.ProtocolVersion.fromByte(byteBuf.readByte());

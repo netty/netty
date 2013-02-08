@@ -67,7 +67,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
     }
 
     @Override
-    public Object encode(ChannelHandlerContext ctx, HttpObject msg)
+    protected Object encode(ChannelHandlerContext ctx, HttpObject msg)
             throws Exception {
 
         if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().code() == 100) {

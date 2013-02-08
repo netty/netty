@@ -43,7 +43,7 @@ public class SocksInitRequestDecoder extends ReplayingDecoder<SocksInitRequestDe
     }
 
     @Override
-    public Object decode(ChannelHandlerContext ctx, ByteBuf byteBuf) throws Exception {
+    protected Object decode(ChannelHandlerContext ctx, ByteBuf byteBuf) throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
                 version = SocksMessage.ProtocolVersion.fromByte(byteBuf.readByte());

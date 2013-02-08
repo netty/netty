@@ -39,7 +39,7 @@ public class SocksAuthResponseDecoder extends ReplayingDecoder<SocksAuthResponse
     }
 
     @Override
-    public Object decode(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf) throws Exception {
+    protected Object decode(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf) throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
                 version = SocksMessage.SubnegotiationVersion.fromByte(byteBuf.readByte());
