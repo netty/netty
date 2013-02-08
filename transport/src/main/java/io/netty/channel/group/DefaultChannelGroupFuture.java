@@ -161,7 +161,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
     }
 
     @Override
-    public void addListener(ChannelGroupFutureListener listener) {
+    public ChannelGroupFuture addListener(ChannelGroupFutureListener listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
         }
@@ -185,10 +185,11 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
         if (notifyNow) {
             notifyListener(listener);
         }
+        return this;
     }
 
     @Override
-    public void removeListener(ChannelGroupFutureListener listener) {
+    public ChannelGroupFuture removeListener(ChannelGroupFutureListener listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
         }
@@ -206,6 +207,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
                 }
             }
         }
+        return this;
     }
 
     @Override
