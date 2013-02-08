@@ -285,6 +285,11 @@ public final class PlatformDependent {
     }
 
     private static boolean hasJavassist0() {
+        boolean noJavassist = SystemPropertyUtil.getBoolean("io.netty.noJavassist", false);
+        if (noJavassist) {
+            return false;
+        }
+
         try {
             JavassistTypeParameterMatcherGenerator.generate(Object.class, PlatformDependent.class.getClassLoader());
             return true;
