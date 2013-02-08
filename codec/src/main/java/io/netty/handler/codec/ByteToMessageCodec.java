@@ -32,7 +32,7 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler
     private final ByteToMessageDecoder decoder;
 
     protected ByteToMessageCodec(Class<?>... encodableMessageTypes) {
-        this.encodableMessageTypes = encodableMessageTypes;
+        this.encodableMessageTypes = ChannelHandlerUtil.acceptedMessageTypes(encodableMessageTypes);
         encoder = new MessageToByteEncoder<I>() {
             @Override
             public boolean isEncodable(Object msg) throws Exception {
