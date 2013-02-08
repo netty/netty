@@ -328,6 +328,14 @@ public class DefaultChannelPipelineTest {
 
     @Sharable
     private static class TestHandler extends ChannelDuplexHandler {
-        // Dummy
+        @Override
+        public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            ctx.flush(promise);
+        }
+
+        @Override
+        public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+            ctx.fireInboundBufferUpdated();
+        }
     }
 }

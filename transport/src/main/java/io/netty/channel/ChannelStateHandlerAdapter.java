@@ -69,25 +69,6 @@ public abstract class ChannelStateHandlerAdapter extends ChannelHandlerAdapter i
         ctx.fireChannelInactive();
     }
 
-    /**
-     * Calls {@link ChannelHandlerContext#fireInboundBufferUpdated()} to forward
-     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
-     *
-     * Sub-classes may override this method to change behavior.
-     *
-     * Be aware that if your class also implement {@link ChannelInboundHandler} it need to {@code @Override} this
-     * method and provide some proper implementation. Fail to do so, will result in an {@link IllegalStateException}!
-     */
-    @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-        if (this instanceof ChannelInboundHandler) {
-            throw new IllegalStateException(
-                    "inboundBufferUpdated(...) must be overridden by " + getClass().getName() +
-                    ", which implements " + ChannelInboundHandler.class.getSimpleName());
-        }
-        ctx.fireInboundBufferUpdated();
-    }
-
     @Override
     public void channelReadSuspended(ChannelHandlerContext ctx) throws Exception {
         ctx.fireChannelReadSuspended();

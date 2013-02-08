@@ -60,11 +60,26 @@ public abstract class AbstractEventLoopTest {
     }
 
     private static final class TestChannelHandler extends ChannelDuplexHandler {
+        @Override
+        public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            ctx.flush(promise);
+        }
 
+        @Override
+        public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+            ctx.fireInboundBufferUpdated();
+        }
     }
 
     private static final class TestChannelHandler2 extends ChannelDuplexHandler {
+        @Override
+        public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            ctx.flush(promise);
+        }
 
+        @Override
+        public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+        }
     }
 
     protected abstract EventLoopGroup newEventLoopGroup();

@@ -85,26 +85,6 @@ public abstract class ChannelOperationHandlerAdapter extends ChannelHandlerAdapt
     }
 
     /**
-     * Calls {@link ChannelHandlerContext#flush(ChannelPromise)} to forward
-     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
-     *
-     * Sub-classes may override this method to change behavior.
-     *
-     * Be aware that if your class also implement {@link ChannelOutboundHandler} it need to {@code override} this
-     * method!
-     */
-    @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise promise)
-            throws Exception {
-        if (this instanceof ChannelOutboundHandler) {
-            throw new IllegalStateException(
-                    "flush(...) must be overridden by " + getClass().getName() +
-                    ", which implements " + ChannelOutboundHandler.class.getSimpleName());
-        }
-        ctx.flush(promise);
-    }
-
-    /**
      * Calls {@link ChannelHandlerContext#sendFile(FileRegion, ChannelPromise)} to forward
      * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
      *
