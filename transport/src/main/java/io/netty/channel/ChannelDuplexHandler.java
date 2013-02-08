@@ -92,26 +92,6 @@ public abstract class ChannelDuplexHandler extends ChannelStateHandlerAdapter im
     }
 
     /**
-     * Calls {@link ChannelHandlerContext#flush(ChannelPromise)} to forward
-     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
-     *
-     * Sub-classes may override this method to change behavior.
-     *
-     * Be aware that if your class also implement {@link ChannelOutboundHandler} it need to {@code @Override} this
-     * method and provide some proper implementation. Fail to do so, will result in an {@link IllegalStateException}!
-     */
-    @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise future)
-            throws Exception {
-        if (this instanceof ChannelOutboundHandler) {
-            throw new IllegalStateException(
-                    "flush(...) must be overridden by " + getClass().getName() +
-                            ", which implements " + ChannelOutboundHandler.class.getSimpleName());
-        }
-        ctx.flush(future);
-    }
-
-    /**
      * Calls {@link ChannelHandlerContext#sendFile(FileRegion, ChannelPromise)} to forward
      * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
      *

@@ -153,6 +153,11 @@ public class ChunkedWriteHandler
     }
 
     @Override
+    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+        ctx.fireInboundBufferUpdated();
+    }
+
+    @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         doFlush(ctx);
         super.channelInactive(ctx);

@@ -83,4 +83,9 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelState
             }
         }
     }
+
+    @Override
+    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+        ctx.fireInboundBufferUpdated();
+    }
 }
