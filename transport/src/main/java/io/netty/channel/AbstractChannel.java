@@ -575,10 +575,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             assert eventLoop().inEventLoop();
 
-            if (!ensureOpen(promise)) {
-                return;
-            }
-
             // check if the eventLoop which was given is currently in the eventloop.
             // if that is the case we are safe to call register, if not we need to
             // schedule the execution as otherwise we may say some race-conditions.
@@ -598,6 +594,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         private void register0(ChannelPromise promise) {
             try {
+                // check if the channel is still open as it could be closed in the mean time when the register
+                // call was outside of the eventLoop
+                if (!ensureOpen(promise)) {
+                    return;
+                }
                 Runnable postRegisterTask = doRegister();
                 registered = true;
                 promise.setSuccess();
