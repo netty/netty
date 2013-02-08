@@ -48,10 +48,6 @@ import io.netty.handler.codec.MessageToMessageDecoder;
  */
 public class ByteArrayDecoder extends MessageToMessageDecoder<ByteBuf> {
 
-    public ByteArrayDecoder() {
-        super(ByteBuf.class);
-    }
-
     @Override
     protected Object decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
         byte[] array;

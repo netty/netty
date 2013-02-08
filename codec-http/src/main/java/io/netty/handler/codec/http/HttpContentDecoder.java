@@ -41,21 +41,14 @@ import io.netty.handler.codec.MessageToMessageDecoder;
  * so that this handler can intercept HTTP requests after {@link HttpObjectDecoder}
  * converts {@link ByteBuf}s into HTTP requests.
  */
-public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object> {
+public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObject> {
 
     private EmbeddedByteChannel decoder;
     private HttpMessage message;
     private boolean decodeStarted;
 
-    /**
-     * Creates a new instance.
-     */
-    protected HttpContentDecoder() {
-        super(HttpObject.class);
-    }
-
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Object msg) throws Exception {
+    protected Object decode(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
         if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().code() == 100) {
             // 100-continue response must be passed through.
             return msg;
@@ -115,7 +108,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
     }
 
     @Override
-    protected void freeInboundMessage(Object msg) throws Exception {
+    protected void freeInboundMessage(HttpObject msg) throws Exception {
         if (decoder == null) {
             // if the decoder was null we returned the original message so we are not allowed to free it
             return;

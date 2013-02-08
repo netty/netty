@@ -52,8 +52,6 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
      *        a {@link TooLongFrameException} will be raised.
      */
     public SpdyHttpDecoder(int version, int maxContentLength) {
-        super(SpdyDataFrame.class, SpdyControlFrame.class);
-
         if (version < SpdyConstants.SPDY_MIN_VERSION || version > SpdyConstants.SPDY_MAX_VERSION) {
             throw new IllegalArgumentException(
                     "unsupported version: " + version);
@@ -64,6 +62,11 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<Object> {
         }
         spdyVersion = version;
         this.maxContentLength = maxContentLength;
+    }
+
+    @Override
+    public boolean acceptInboundMessage(Object msg) throws Exception {
+        return msg instanceof SpdyDataFrame || msg instanceof SpdyControlFrame;
     }
 
     @Override

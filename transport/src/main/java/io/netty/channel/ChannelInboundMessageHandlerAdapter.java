@@ -18,7 +18,8 @@ package io.netty.channel;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 
-import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -50,34 +51,36 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
     private static final ConcurrentMap<Class<?>, Class<?>> messageTypeMap =
             new ConcurrentHashMap<Class<?>, Class<?>>();
 
-    private final Class<?> acceptedMsgType = findMessageType();
+    private final Class<?> acceptedMsgType;
 
-    private Class<?> findMessageType() {
-        Class<?> thisClass = getClass();
+    protected ChannelInboundMessageHandlerAdapter() {
+        this(ChannelInboundMessageHandlerAdapter.class, 0);
+    }
+
+    protected ChannelInboundMessageHandlerAdapter(
+            @SuppressWarnings("rawtypes")
+            Class<? extends ChannelInboundMessageHandlerAdapter> parameterizedHandlerType,
+            int messageTypeParamIndex) {
+        acceptedMsgType = findMessageType(parameterizedHandlerType, messageTypeParamIndex);
+    }
+
+    private Class<?> findMessageType(Class<?> parameterizedHandlerType, int messageTypeParamIndex) {
+        final Class<?> thisClass = getClass();
         Class<?> messageType = messageTypeMap.get(thisClass);
         if (messageType == null) {
-            for (Method m: getClass().getDeclaredMethods()) {
-                if (!"messageReceived".equals(m.getName())) {
-                    continue;
-                }
-                if (m.isSynthetic() || m.isBridge()) {
-                    continue;
-                }
-                Class<?>[] p = m.getParameterTypes();
-                if (p.length != 2) {
-                    continue;
-                }
-                if (p[0] != ChannelHandlerContext.class) {
-                    continue;
-                }
+            Class<?> currentClass = thisClass;
+            for (;;) {
+                if (currentClass.getSuperclass() == parameterizedHandlerType) {
+                    Type[] types = ((ParameterizedType) currentClass.getGenericSuperclass()).getActualTypeArguments();
+                    if (types.length - 1 < messageTypeParamIndex || !(types[0] instanceof Class)) {
+                        throw new IllegalStateException(
+                                "cannot determine the inbound message type of " + thisClass.getSimpleName());
+                    }
 
-                messageType = p[1];
-                break;
-            }
-
-            if (messageType == null) {
-                throw new IllegalStateException(
-                        "cannot determine the inbound message type of " + thisClass.getSimpleName());
+                    messageType = (Class<?>) types[0];
+                    break;
+                }
+                currentClass = currentClass.getSuperclass();
             }
 
             messageTypeMap.put(thisClass, messageType);
@@ -114,7 +117,7 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
                 }
 
                 try {
-                    if (!isSupported(msg)) {
+                    if (!acceptInboundMessage(msg)) {
                         out.add(msg);
                         unsupportedFound = true;
                         continue;
@@ -153,7 +156,7 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
      *
      * @param msg the message
      */
-    public boolean isSupported(Object msg) throws Exception {
+    public boolean acceptInboundMessage(Object msg) throws Exception {
         return acceptedMsgType.isInstance(msg);
     }
 

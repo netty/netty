@@ -15,6 +15,9 @@
  */
 package io.netty.handler.codec.protobuf;
 
+import com.google.protobuf.ExtensionRegistry;
+import com.google.protobuf.Message;
+import com.google.protobuf.MessageLite;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.ChannelHandler.Sharable;
@@ -24,10 +27,6 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.MessageToMessageDecoder;
-
-import com.google.protobuf.ExtensionRegistry;
-import com.google.protobuf.Message;
-import com.google.protobuf.MessageLite;
 
 /**
  * Decodes a received {@link ByteBuf} into a
@@ -74,8 +73,6 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
     }
 
     public ProtobufDecoder(MessageLite prototype, ExtensionRegistry extensionRegistry) {
-        super(ByteBuf.class);
-
         if (prototype == null) {
             throw new NullPointerException("prototype");
         }

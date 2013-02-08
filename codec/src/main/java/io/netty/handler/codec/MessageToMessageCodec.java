@@ -73,9 +73,10 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
 
     private final MessageToMessageDecoder<INBOUND_IN> decoder =
             new MessageToMessageDecoder<INBOUND_IN>() {
+
         @Override
-        public boolean isDecodable(Object msg) throws Exception {
-            return MessageToMessageCodec.this.isDecodable(msg);
+        public boolean acceptInboundMessage(Object msg) throws Exception {
+            return isDecodable(msg);
         }
 
         @Override
