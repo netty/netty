@@ -21,21 +21,31 @@ import java.lang.reflect.Type;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
-public final class TypeParameterFinder {
+public abstract class TypeParameterMatcher {
 
-    private static final ThreadLocal<Map<Class<?>, Class<?>>> typeMap = new ThreadLocal<Map<Class<?>, Class<?>>>() {
+    private static final TypeParameterMatcher NOOP = new TypeParameterMatcher() {
         @Override
-        protected Map<Class<?>, Class<?>> initialValue() {
-            return new IdentityHashMap<Class<?>, Class<?>>();
+        public boolean match(Object msg) {
+            return true;
         }
     };
 
-    public static Class<?> findActualTypeParameter(
+    private static final ThreadLocal<Map<Class<?>, TypeParameterMatcher>> typeMap =
+            new ThreadLocal<Map<Class<?>, TypeParameterMatcher>>() {
+                @Override
+                protected Map<Class<?>, TypeParameterMatcher> initialValue() {
+                    return new IdentityHashMap<Class<?>, TypeParameterMatcher>();
+                }
+            };
+
+    public static TypeParameterMatcher find(
             final Object object, final Class<?> parameterizedSuperClass, final int typeParamIndex) {
-        final Map<Class<?>, Class<?>> typeMap = TypeParameterFinder.typeMap.get();
+
+        final Map<Class<?>, TypeParameterMatcher> typeMap = TypeParameterMatcher.typeMap.get();
         final Class<?> thisClass = object.getClass();
-        Class<?> messageType = typeMap.get(thisClass);
-        if (messageType == null) {
+
+        TypeParameterMatcher matcher = typeMap.get(thisClass);
+        if (matcher == null) {
             Class<?> currentClass = thisClass;
             for (;;) {
                 if (currentClass.getSuperclass() == parameterizedSuperClass) {
@@ -45,17 +55,37 @@ public final class TypeParameterFinder {
                                 "cannot determine the type of the type parameter of " + thisClass.getSimpleName());
                     }
 
-                    messageType = (Class<?>) types[0];
+                    Class<?> messageType = (Class<?>) types[0];
+                    if (messageType == Object.class) {
+                        matcher = NOOP;
+                    } else {
+                        matcher = new ReflectiveMatcher(messageType);
+                    }
                     break;
                 }
                 currentClass = currentClass.getSuperclass();
             }
 
-            typeMap.put(thisClass, messageType);
+            typeMap.put(thisClass, matcher);
         }
 
-        return messageType;
+        return matcher;
     }
 
-    private TypeParameterFinder() { }
+    public abstract boolean match(Object msg);
+
+    private static final class ReflectiveMatcher extends TypeParameterMatcher {
+        private final Class<?> type;
+
+        ReflectiveMatcher(Class<?> type) {
+            this.type = type;
+        }
+
+        @Override
+        public boolean match(Object msg) {
+            return type.isInstance(msg);
+        }
+    }
+
+    TypeParameterMatcher() { }
 }

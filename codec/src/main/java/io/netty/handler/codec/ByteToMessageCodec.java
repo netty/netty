@@ -22,12 +22,12 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPromise;
-import io.netty.util.internal.TypeParameterFinder;
+import io.netty.util.internal.TypeParameterMatcher;
 
 public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler
         implements ChannelInboundByteHandler, ChannelOutboundMessageHandler<I> {
 
-    private final Class<?> acceptedOutboundMsgType;
+    private final TypeParameterMatcher outboundMsgMatcher;
     private final MessageToByteEncoder<I> encoder  = new MessageToByteEncoder<I>() {
         @Override
         public boolean acceptOutboundMessage(Object msg) throws Exception {
@@ -60,8 +60,7 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler
             @SuppressWarnings("rawtypes")
             Class<? extends ByteToMessageCodec> parameterizedHandlerType,
             int messageTypeParamIndex) {
-        acceptedOutboundMsgType =
-                TypeParameterFinder.findActualTypeParameter(this, parameterizedHandlerType, messageTypeParamIndex);
+        outboundMsgMatcher = TypeParameterMatcher.find(this, parameterizedHandlerType, messageTypeParamIndex);
     }
 
     @Override
@@ -105,7 +104,7 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler
     }
 
     public boolean acceptOutboundMessage(Object msg) throws Exception {
-        return acceptedOutboundMsgType.isInstance(msg);
+        return outboundMsgMatcher.match(msg);
     }
 
     protected abstract void encode(ChannelHandlerContext ctx, I msg, ByteBuf out) throws Exception;
