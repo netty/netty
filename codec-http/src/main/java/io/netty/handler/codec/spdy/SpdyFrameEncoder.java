@@ -31,7 +31,7 @@ import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 /**
  * Encodes a SPDY Data or Control Frame into a {@link ByteBuf}.
  */
-public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
+public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyDataOrControlFrame> {
 
     private final int version;
     private volatile boolean finished;
@@ -60,11 +60,6 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
     }
 
     @Override
-    public boolean acceptOutboundMessage(Object msg) throws Exception {
-        return msg instanceof SpdyDataFrame || msg instanceof SpdyControlFrame;
-    }
-
-    @Override
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
         ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
             @Override
@@ -81,7 +76,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, SpdyDataOrControlFrame msg, ByteBuf out) throws Exception {
         if (msg instanceof SpdyDataFrame) {
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;

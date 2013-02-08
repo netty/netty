@@ -30,7 +30,7 @@ import io.netty.handler.codec.http.HttpObject;
  */
 public final class SpdyHttpCodec
         extends CombinedChannelDuplexHandler
-        implements ChannelInboundMessageHandler<Object>, ChannelOutboundMessageHandler<HttpObject> {
+        implements ChannelInboundMessageHandler<SpdyDataOrControlFrame>, ChannelOutboundMessageHandler<HttpObject> {
 
     /**
      * Creates a new instance with the specified decoder options.
@@ -48,7 +48,7 @@ public final class SpdyHttpCodec
     }
 
     @Override
-    public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+    public MessageBuf<SpdyDataOrControlFrame> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return decoder().newInboundBuffer(ctx);
     }
 
