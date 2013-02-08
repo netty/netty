@@ -155,10 +155,6 @@ public class DefaultChannelPipelineTest {
     private static final class StringInboundHandler extends ChannelInboundMessageHandlerAdapter<String> {
         boolean called;
 
-        public StringInboundHandler() {
-            super(String.class);
-        }
-
         @Override
         public boolean isSupported(Object msg) throws Exception {
             called = true;

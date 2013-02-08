@@ -34,10 +34,6 @@ public final class SocksServerHandler extends ChannelInboundMessageHandlerAdapte
         return name;
     }
 
-    public SocksServerHandler() {
-        super(SocksRequest.class);
-    }
-
     @Override
     public void messageReceived(ChannelHandlerContext ctx, SocksRequest socksRequest) throws Exception {
         switch (socksRequest.requestType()) {

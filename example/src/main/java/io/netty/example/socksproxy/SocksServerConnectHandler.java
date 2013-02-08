@@ -37,12 +37,7 @@ public final class SocksServerConnectHandler extends ChannelInboundMessageHandle
         return name;
     }
 
-    private final Bootstrap b;
-
-    public SocksServerConnectHandler() {
-        super(SocksCmdRequest.class);
-        b = new Bootstrap();
-    }
+    private final Bootstrap b = new Bootstrap();
 
     @Override
     public void messageReceived(final ChannelHandlerContext ctx, final SocksCmdRequest request) throws Exception {

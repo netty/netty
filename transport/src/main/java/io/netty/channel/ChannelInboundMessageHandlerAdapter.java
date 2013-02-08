@@ -18,6 +18,10 @@ package io.netty.channel;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 
+import java.lang.reflect.Method;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
 /**
  * {@link ChannelHandler} which handles inbound messages of a specific type.
  *
@@ -43,14 +47,43 @@ import io.netty.buffer.Unpooled;
 public abstract class ChannelInboundMessageHandlerAdapter<I>
         extends ChannelStateHandlerAdapter implements ChannelInboundMessageHandler<I> {
 
-    private final Class<?>[] acceptedMsgTypes;
+    private static final ConcurrentMap<Class<?>, Class<?>> messageTypeMap =
+            new ConcurrentHashMap<Class<?>, Class<?>>();
 
-    /**
-     * The types which will be accepted by the message handler. If a received message is an other type it will be just
-     * forwarded  to the next {@link ChannelInboundMessageHandler} in the {@link ChannelPipeline}.
-     */
-    protected ChannelInboundMessageHandlerAdapter(Class<?>... acceptedMsgTypes) {
-        this.acceptedMsgTypes = ChannelHandlerUtil.acceptedMessageTypes(acceptedMsgTypes);
+    private final Class<?> acceptedMsgType = findMessageType();
+
+    private Class<?> findMessageType() {
+        Class<?> thisClass = getClass();
+        Class<?> messageType = messageTypeMap.get(thisClass);
+        if (messageType == null) {
+            for (Method m: getClass().getDeclaredMethods()) {
+                if (!"messageReceived".equals(m.getName())) {
+                    continue;
+                }
+                if (m.isSynthetic() || m.isBridge()) {
+                    continue;
+                }
+                Class<?>[] p = m.getParameterTypes();
+                if (p.length != 2) {
+                    continue;
+                }
+                if (p[0] != ChannelHandlerContext.class) {
+                    continue;
+                }
+
+                messageType = p[1];
+                break;
+            }
+
+            if (messageType == null) {
+                throw new IllegalStateException(
+                        "cannot determine the inbound message type of " + thisClass.getSimpleName());
+            }
+
+            messageTypeMap.put(thisClass, messageType);
+        }
+
+        return messageType;
     }
 
     @Override
@@ -121,7 +154,7 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
      * @param msg the message
      */
     public boolean isSupported(Object msg) throws Exception {
-        return ChannelHandlerUtil.acceptMessage(acceptedMsgTypes, msg);
+        return acceptedMsgType.isInstance(msg);
     }
 
     /**
