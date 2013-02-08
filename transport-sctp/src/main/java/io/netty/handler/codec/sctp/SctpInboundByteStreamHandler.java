@@ -40,14 +40,14 @@ public class SctpInboundByteStreamHandler extends ChannelInboundMessageHandlerAd
     }
 
     @Override
-    public boolean acceptInboundMessage(Object msg) throws Exception {
+    public final boolean acceptInboundMessage(Object msg) throws Exception {
         if (super.acceptInboundMessage(msg)) {
-            return isDecodable((SctpMessage) msg);
+            return acceptInboundMessage((SctpMessage) msg);
         }
         return false;
     }
 
-    protected boolean isDecodable(SctpMessage msg) {
+    protected boolean acceptInboundMessage(SctpMessage msg) {
         return msg.protocolIdentifier() == protocolIdentifier && msg.streamIdentifier() == streamIdentifier;
     }
 
