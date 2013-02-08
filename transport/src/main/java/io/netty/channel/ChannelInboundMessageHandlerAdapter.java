@@ -69,30 +69,30 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
             return;
         }
 
-        boolean unsupportedFound = false;
-
+        MessageBuf<I> in = ctx.inboundMessageBuffer();
+        MessageBuf<Object> out = ctx.nextInboundMessageBuffer();
+        int oldOutSize = out.size();
         try {
-            MessageBuf<I> in = ctx.inboundMessageBuffer();
-            MessageBuf<Object> out = null;
+            boolean unsupportedFound = false;
             for (;;) {
                 Object msg = in.poll();
                 if (msg == null) {
                     break;
                 }
+
                 try {
                     if (!isSupported(msg)) {
-                        if (out == null) {
-                            out = ctx.nextInboundMessageBuffer();
-                        }
                         out.add(msg);
                         unsupportedFound = true;
                         continue;
                     }
+
                     if (unsupportedFound) {
                         // the last message were unsupported, but now we received one that is supported.
                         // So reset the flag and notify the next context
                         unsupportedFound = false;
                         ctx.fireInboundBufferUpdated();
+                        oldOutSize = out.size();
                     }
 
                     @SuppressWarnings("unchecked")
@@ -107,12 +107,12 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
                 }
             }
         } finally {
-            if (unsupportedFound) {
+            if (oldOutSize != out.size()) {
                 ctx.fireInboundBufferUpdated();
             }
-        }
 
-        endMessageReceived(ctx);
+            endMessageReceived(ctx);
+        }
     }
 
     /**
@@ -132,8 +132,9 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
      *
      * This will return {@code true} by default, and may get overriden by sub-classes for
      * special handling.
+     *
+     * @param ctx           the {@link ChannelHandlerContext} which this {@link ChannelHandler} belongs to
      */
-    @SuppressWarnings("unused")
     protected boolean beginMessageReceived(ChannelHandlerContext ctx) throws Exception {
         return true;
     }
@@ -155,7 +156,6 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
      * @param ctx           the {@link ChannelHandlerContext} which this {@link ChannelHandler} belongs to
      * @throws Exception    thrown when an error accour
      */
-    @SuppressWarnings("unused")
     protected void endMessageReceived(ChannelHandlerContext ctx) throws Exception {
         // NOOP
     }
