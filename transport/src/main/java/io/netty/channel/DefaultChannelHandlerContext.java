@@ -401,17 +401,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public ByteBuf inboundByteBuffer() {
         if (inByteBuf == null) {
-            if (handler() instanceof ChannelInboundHandler) {
-                throw new NoSuchBufferException(String.format(
-                        "the handler '%s' has no inbound byte buffer; it implements %s, but " +
-                        "its newInboundBuffer() method created a %s.",
-                        name, ChannelInboundHandler.class.getSimpleName(),
-                        MessageBuf.class.getSimpleName()));
-            } else {
-                throw new NoSuchBufferException(String.format(
-                        "the handler '%s' has no inbound byte buffer; it does not implement %s.",
-                        name, ChannelInboundHandler.class.getSimpleName()));
-            }
+            throw new NoSuchBufferException(String.format(
+                    "the handler '%s' has no inbound byte buffer; it does not implement %s.",
+                    name, ChannelInboundByteHandler.class.getSimpleName()));
         }
         return inByteBuf;
     }
@@ -420,17 +412,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @SuppressWarnings("unchecked")
     public <T> MessageBuf<T> inboundMessageBuffer() {
         if (inMsgBuf == null) {
-            if (handler() instanceof ChannelInboundHandler) {
-                throw new NoSuchBufferException(String.format(
-                        "the handler '%s' has no inbound message buffer; it implements %s, but " +
-                        "its newInboundBuffer() method created a %s.",
-                        name, ChannelInboundHandler.class.getSimpleName(),
-                        ByteBuf.class.getSimpleName()));
-            } else {
-                throw new NoSuchBufferException(String.format(
-                        "the handler '%s' has no inbound message buffer; it does not implement %s.",
-                        name, ChannelInboundHandler.class.getSimpleName()));
-            }
+            throw new NoSuchBufferException(String.format(
+                    "the handler '%s' has no inbound message buffer; it does not implement %s.",
+                    name, ChannelInboundMessageHandler.class.getSimpleName()));
         }
         return (MessageBuf<T>) inMsgBuf;
     }
@@ -448,17 +432,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public ByteBuf outboundByteBuffer() {
         if (outByteBuf == null) {
-            if (handler() instanceof ChannelOutboundHandler) {
-                throw new NoSuchBufferException(String.format(
-                        "the handler '%s' has no outbound byte buffer; it implements %s, but " +
-                        "its newOutboundBuffer() method created a %s.",
-                        name, ChannelOutboundHandler.class.getSimpleName(),
-                        MessageBuf.class.getSimpleName()));
-            } else {
-                throw new NoSuchBufferException(String.format(
-                        "the handler '%s' has no outbound byte buffer; it does not implement %s.",
-                        name, ChannelOutboundHandler.class.getSimpleName()));
-            }
+            throw new NoSuchBufferException(String.format(
+                    "the handler '%s' has no outbound byte buffer; it does not implement %s.",
+                    name, ChannelOutboundByteHandler.class.getSimpleName()));
         }
         return outByteBuf;
     }
@@ -467,17 +443,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @SuppressWarnings("unchecked")
     public <T> MessageBuf<T> outboundMessageBuffer() {
         if (outMsgBuf == null) {
-            if (handler() instanceof ChannelOutboundHandler) {
-                throw new NoSuchBufferException(String.format(
-                        "the handler '%s' has no outbound message buffer; it implements %s, but " +
-                        "its newOutboundBuffer() method created a %s.",
-                        name, ChannelOutboundHandler.class.getSimpleName(),
-                        ByteBuf.class.getSimpleName()));
-            } else {
-                throw new NoSuchBufferException(String.format(
-                        "the handler '%s' has no outbound message buffer; it does not implement %s.",
-                        name, ChannelOutboundHandler.class.getSimpleName()));
-            }
+            throw new NoSuchBufferException(String.format(
+                    "the handler '%s' has no outbound message buffer; it does not implement %s.",
+                    name, ChannelOutboundMessageHandler.class.getSimpleName()));
         }
         return (MessageBuf<T>) outMsgBuf;
     }
