@@ -199,13 +199,15 @@ abstract class AbstractBootstrap<B extends AbstractBootstrap<?, C>, C extends Ch
      * Validate all the parameters. Sub-classes may override this, but should
      * call the super method in that case.
      */
-    public void validate() {
+    @SuppressWarnings("unchecked")
+    public B validate() {
         if (group == null) {
             throw new IllegalStateException("group not set");
         }
         if (channelFactory == null) {
             throw new IllegalStateException("factory not set");
         }
+        return (B) this;
     }
 
     /**
