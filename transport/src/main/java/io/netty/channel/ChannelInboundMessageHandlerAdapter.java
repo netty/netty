@@ -17,7 +17,7 @@ package io.netty.channel;
 
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.util.internal.TypeParameterFinder;
+import io.netty.util.internal.TypeParameterMatcher;
 
 /**
  * {@link ChannelHandler} which handles inbound messages of a specific type.
@@ -44,7 +44,7 @@ import io.netty.util.internal.TypeParameterFinder;
 public abstract class ChannelInboundMessageHandlerAdapter<I>
         extends ChannelStateHandlerAdapter implements ChannelInboundMessageHandler<I> {
 
-    private final Class<?> acceptedMsgType;
+    private final TypeParameterMatcher msgMatcher;
 
     protected ChannelInboundMessageHandlerAdapter() {
         this(ChannelInboundMessageHandlerAdapter.class, 0);
@@ -54,8 +54,7 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
             @SuppressWarnings("rawtypes")
             Class<? extends ChannelInboundMessageHandlerAdapter> parameterizedHandlerType,
             int messageTypeParamIndex) {
-        acceptedMsgType = TypeParameterFinder.findActualTypeParameter(
-                this, parameterizedHandlerType, messageTypeParamIndex);
+        msgMatcher = TypeParameterMatcher.find(this, parameterizedHandlerType, messageTypeParamIndex);
     }
 
     @Override
@@ -126,7 +125,7 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
      * @param msg the message
      */
     public boolean acceptInboundMessage(Object msg) throws Exception {
-        return acceptedMsgType.isInstance(msg);
+        return msgMatcher.match(msg);
     }
 
     /**

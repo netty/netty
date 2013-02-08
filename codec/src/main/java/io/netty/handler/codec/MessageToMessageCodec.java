@@ -24,7 +24,7 @@ import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.util.internal.TypeParameterFinder;
+import io.netty.util.internal.TypeParameterMatcher;
 
 /**
  * A Codec for on-the-fly encoding/decoding of message.
@@ -97,12 +97,12 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
         }
     };
 
-    private final Class<?> acceptedInboundMsgType;
-    private final Class<?> acceptedOutboundMsgType;
+    private final TypeParameterMatcher inboundMsgMatcher;
+    private final TypeParameterMatcher outboundMsgMatcher;
 
     protected MessageToMessageCodec() {
-        acceptedInboundMsgType = TypeParameterFinder.findActualTypeParameter(this, MessageToMessageCodec.class, 0);
-        acceptedOutboundMsgType = TypeParameterFinder.findActualTypeParameter(this, MessageToMessageCodec.class, 1);
+        inboundMsgMatcher = TypeParameterMatcher.find(this, MessageToMessageCodec.class, 0);
+        outboundMsgMatcher = TypeParameterMatcher.find(this, MessageToMessageCodec.class, 1);
     }
 
     protected MessageToMessageCodec(
@@ -113,9 +113,9 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
             Class<? extends ChannelOutboundMessageHandlerAdapter> parameterizedOutboundHandlerType,
             int outboundMessageTypeParamIndex) {
 
-        acceptedInboundMsgType = TypeParameterFinder.findActualTypeParameter(
+        inboundMsgMatcher = TypeParameterMatcher.find(
                 this, parameterizedInboundHandlerType, inboundMessageTypeParamIndex);
-        acceptedOutboundMsgType = TypeParameterFinder.findActualTypeParameter(
+        outboundMsgMatcher = TypeParameterMatcher.find(
                 this, parameterizedOutboundHandlerType, outboundMessageTypeParamIndex);
     }
 
@@ -158,7 +158,7 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
      * @param msg the message
      */
     public boolean acceptInboundMessage(Object msg) throws Exception {
-        return acceptedInboundMsgType.isInstance(msg);
+        return inboundMsgMatcher.match(msg);
     }
 
     /**
@@ -167,7 +167,7 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
      * @param msg the message
      */
     public boolean acceptOutboundMessage(Object msg) throws Exception {
-        return acceptedOutboundMsgType.isInstance(msg);
+        return outboundMsgMatcher.match(msg);
     }
 
     protected abstract Object encode(ChannelHandlerContext ctx, OUTBOUND_IN msg) throws Exception;
