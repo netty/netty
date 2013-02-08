@@ -1,4 +1,4 @@
-/*
+io.netty.channel.DefaultChannelPromise.setFailure/*
  * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
@@ -1052,12 +1052,12 @@ public class SslHandler
         }
 
         @Override
-        public void setSuccess() {
+        public ChannelPromise setSuccess() {
             throw new IllegalStateException();
         }
 
         @Override
-        public void setFailure(Throwable cause) {
+        public ChannelPromise setFailure(Throwable cause) {
             throw new IllegalStateException();
         }
     }

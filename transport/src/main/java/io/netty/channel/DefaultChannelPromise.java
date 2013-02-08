@@ -327,10 +327,10 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
     }
 
     @Override
-    public void setSuccess() {
+    public ChannelPromise setSuccess() {
         if (success0()) {
             notifyListeners();
-            return;
+            return this;
         }
         throw new IllegalStateException();
     }
@@ -358,10 +358,10 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
     }
 
     @Override
-    public void setFailure(Throwable cause) {
+    public ChannelPromise setFailure(Throwable cause) {
         if (failure0(cause)) {
             notifyListeners();
-            return;
+            return this;
         }
         throw new IllegalStateException();
     }

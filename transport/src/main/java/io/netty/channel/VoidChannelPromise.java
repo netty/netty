@@ -127,11 +127,13 @@ final class VoidChannelPromise implements ChannelFuture.Unsafe, ChannelPromise {
         return this;
     }
     @Override
-    public void setFailure(Throwable cause) {
+    public ChannelPromise setFailure(Throwable cause) {
+        return this;
     }
 
     @Override
-    public void setSuccess() {
+    public ChannelPromise setSuccess() {
+        return this;
     }
 
     @Override
