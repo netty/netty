@@ -51,7 +51,6 @@ public final class PlatformDependent {
 
     private static final boolean HAS_JAVASSIST = hasJavassist0();
 
-
     /**
      * Returns {@code true} if and only if the current platform is Android
      */
