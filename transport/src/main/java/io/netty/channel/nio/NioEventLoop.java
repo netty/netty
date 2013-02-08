@@ -295,10 +295,10 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
                 cancelledKeys = 0;
 
-                runAllTasks();
+                processSelectedKeys();
                 selector = this.selector;
 
-                processSelectedKeys();
+                runAllTasks();
                 selector = this.selector;
 
                 if (isShutdown()) {
@@ -502,7 +502,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     @Override
     protected void wakeup(boolean inEventLoop) {
-        if (wakenUp.compareAndSet(false, true)) {
+        if (!inEventLoop && wakenUp.compareAndSet(false, true)) {
             selector.wakeup();
         }
     }
