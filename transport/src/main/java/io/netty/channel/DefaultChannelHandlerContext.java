@@ -1023,7 +1023,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     public void fireChannelReadSuspended() {
         final DefaultChannelHandlerContext next = findContextInbound();
         EventExecutor executor = next.executor();
-        if (prev != null && executor.inEventLoop()) {
+        if (executor.inEventLoop()) {
             next.invokeChannelReadSuspended();
         } else {
             Runnable task = next.invokeChannelReadSuspendedTask;
