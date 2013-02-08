@@ -63,8 +63,7 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundMessageH
     @Override
     protected final void flush(ChannelHandlerContext ctx, I msg) throws Exception {
         try {
-            Object encoded = encode(ctx, msg);
-            ctx.nextOutboundMessageBuffer().add(encoded);
+            ctx.nextOutboundMessageBuffer().unfoldAndAdd(encode(ctx, msg));
         } catch (CodecException e) {
             throw e;
         } catch (Exception e) {

@@ -57,10 +57,7 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundMessageHa
 
     @Override
     protected final void messageReceived(ChannelHandlerContext ctx, I msg) throws Exception {
-        Object decoded = decode(ctx, msg);
-        if (decoded != null) {
-            ctx.nextInboundMessageBuffer().add(decoded);
-        }
+        ctx.nextInboundMessageBuffer().unfoldAndAdd(decode(ctx, msg));
     }
 
     /**
