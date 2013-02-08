@@ -48,6 +48,8 @@ public final class PlatformDependent {
     private static final boolean CAN_FREE_DIRECT_BUFFER = canFreeDirectBuffer0();
     private static final boolean IS_UNALIGNED = isUnaligned0();
 
+    private static final boolean HAS_JAVASSIST = hasJavassist0();
+
     /**
      * Returns {@code true} if and only if the current platform is Android
      */
@@ -104,6 +106,13 @@ public final class PlatformDependent {
      */
     public static boolean isUnaligned() {
         return IS_UNALIGNED;
+    }
+
+    /**
+     * Returns {@code true} if and only if Javassist is available.
+     */
+    public static boolean hasJavassist() {
+        return HAS_JAVASSIST;
     }
 
     public static long directBufferAddress(ByteBuffer buffer) {
@@ -273,6 +282,15 @@ public final class PlatformDependent {
         }
 
         return PlatformDependent0.isUnaligned();
+    }
+
+    private static boolean hasJavassist0() {
+        try {
+            JavassistTypeParameterMatcherGenerator.generate(Object.class, PlatformDependent.class.getClassLoader());
+            return true;
+        } catch (Throwable t) {
+            return false;
+        }
     }
 
     private PlatformDependent() {

@@ -23,12 +23,7 @@ import java.util.Map;
 
 public abstract class TypeParameterMatcher {
 
-    private static final TypeParameterMatcher NOOP = new TypeParameterMatcher() {
-        @Override
-        public boolean match(Object msg) {
-            return true;
-        }
-    };
+    private static final TypeParameterMatcher NOOP = new NoOpTypeParameterMatcher();
 
     private static final ThreadLocal<Map<Class<?>, TypeParameterMatcher>> typeMap =
             new ThreadLocal<Map<Class<?>, TypeParameterMatcher>>() {
@@ -58,6 +53,13 @@ public abstract class TypeParameterMatcher {
                     Class<?> messageType = (Class<?>) types[typeParamIndex];
                     if (messageType == Object.class) {
                         matcher = NOOP;
+                    } else if (PlatformDependent.hasJavassist()) {
+                        try {
+                            matcher = JavassistTypeParameterMatcherGenerator.generate(messageType);
+                        } catch (Exception e) {
+                            // Will not usually happen, but just in case.
+                            matcher = new ReflectiveMatcher(messageType);
+                        }
                     } else {
                         matcher = new ReflectiveMatcher(messageType);
                     }
@@ -87,5 +89,5 @@ public abstract class TypeParameterMatcher {
         }
     }
 
-    TypeParameterMatcher() { }
+    protected TypeParameterMatcher() { }
 }
