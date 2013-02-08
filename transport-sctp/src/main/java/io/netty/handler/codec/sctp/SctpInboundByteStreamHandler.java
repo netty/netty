@@ -35,7 +35,6 @@ public class SctpInboundByteStreamHandler extends ChannelInboundMessageHandlerAd
      * @param protocolIdentifier supported application protocol.
      */
     public SctpInboundByteStreamHandler(int protocolIdentifier, int streamIdentifier) {
-        super(SctpMessage.class);
         this.protocolIdentifier = protocolIdentifier;
         this.streamIdentifier = streamIdentifier;
     }

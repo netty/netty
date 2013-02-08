@@ -58,7 +58,6 @@ public class WebSocketServerProtocolHandler extends ChannelInboundMessageHandler
     }
 
     public WebSocketServerProtocolHandler(String websocketPath, String subprotocols, boolean allowExtensions) {
-        super(WebSocketFrame.class);
         this.websocketPath = websocketPath;
         this.subprotocols = subprotocols;
         this.allowExtensions = allowExtensions;
