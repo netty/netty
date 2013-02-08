@@ -50,12 +50,12 @@ public abstract class TypeParameterMatcher {
             for (;;) {
                 if (currentClass.getSuperclass() == parameterizedSuperClass) {
                     Type[] types = ((ParameterizedType) currentClass.getGenericSuperclass()).getActualTypeArguments();
-                    if (types.length - 1 < typeParamIndex || !(types[0] instanceof Class)) {
+                    if (types.length - 1 < typeParamIndex || !(types[typeParamIndex] instanceof Class)) {
                         throw new IllegalStateException(
                                 "cannot determine the type of the type parameter of " + thisClass.getSimpleName());
                     }
 
-                    Class<?> messageType = (Class<?>) types[0];
+                    Class<?> messageType = (Class<?>) types[typeParamIndex];
                     if (messageType == Object.class) {
                         matcher = NOOP;
                     } else {
