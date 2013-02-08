@@ -69,7 +69,7 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
             return;
         }
 
-        MessageBuf<I> in = ctx.inboundMessageBuffer();
+        MessageBuf<Object> in = ctx.inboundMessageBuffer();
         MessageBuf<Object> out = ctx.nextInboundMessageBuffer();
         int oldOutSize = out.size();
         try {
