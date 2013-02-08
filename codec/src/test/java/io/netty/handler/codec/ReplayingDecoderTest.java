@@ -15,14 +15,14 @@
  */
 package io.netty.handler.codec;
 
-import static org.junit.Assert.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufIndexFinder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedByteChannel;
-
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 public class ReplayingDecoderTest {
 
@@ -53,7 +53,7 @@ public class ReplayingDecoderTest {
         }
 
         @Override
-        public ByteBuf decode(ChannelHandlerContext ctx, ByteBuf in) {
+        protected ByteBuf decode(ChannelHandlerContext ctx, ByteBuf in) {
             ByteBuf msg = in.readBytes(in.bytesBefore(ByteBufIndexFinder.LF));
             in.skipBytes(1);
             return msg;

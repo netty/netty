@@ -58,7 +58,7 @@ public abstract class ByteToByteCodec
 
     private final ByteToByteEncoder encoder = new ByteToByteEncoder() {
         @Override
-        public void encode(
+        protected void encode(
                 ChannelHandlerContext ctx,
                 ByteBuf in, ByteBuf out) throws Exception {
             ByteToByteCodec.this.encode(ctx, in, out);
@@ -67,7 +67,7 @@ public abstract class ByteToByteCodec
 
     private final ByteToByteDecoder decoder = new ByteToByteDecoder() {
         @Override
-        public void decode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
+        protected void decode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
             ByteToByteCodec.this.decode(ctx, in, out);
         }
 

@@ -29,7 +29,7 @@ import java.math.BigInteger;
 public class NumberEncoder extends MessageToByteEncoder<Number> {
 
     @Override
-    public void encode(ChannelHandlerContext ctx, Number msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, Number msg, ByteBuf out) throws Exception {
         // Convert to a BigInteger first for easier implementation.
         BigInteger v;
         if (msg instanceof BigInteger) {

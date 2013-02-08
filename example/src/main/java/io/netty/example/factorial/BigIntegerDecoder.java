@@ -31,7 +31,7 @@ import java.math.BigInteger;
 public class BigIntegerDecoder extends ByteToMessageDecoder {
 
     @Override
-    public BigInteger decode(ChannelHandlerContext ctx, ByteBuf in) {
+    protected BigInteger decode(ChannelHandlerContext ctx, ByteBuf in) {
         // Wait until the length prefix is available.
         if (in.readableBytes() < 5) {
             return null;
