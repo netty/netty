@@ -17,11 +17,7 @@ package io.netty.channel;
 
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
-
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import io.netty.util.internal.TypeParameterFinder;
 
 /**
  * {@link ChannelHandler} which handles inbound messages of a specific type.
@@ -48,9 +44,6 @@ import java.util.concurrent.ConcurrentMap;
 public abstract class ChannelInboundMessageHandlerAdapter<I>
         extends ChannelStateHandlerAdapter implements ChannelInboundMessageHandler<I> {
 
-    private static final ConcurrentMap<Class<?>, Class<?>> messageTypeMap =
-            new ConcurrentHashMap<Class<?>, Class<?>>();
-
     private final Class<?> acceptedMsgType;
 
     protected ChannelInboundMessageHandlerAdapter() {
@@ -61,32 +54,8 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
             @SuppressWarnings("rawtypes")
             Class<? extends ChannelInboundMessageHandlerAdapter> parameterizedHandlerType,
             int messageTypeParamIndex) {
-        acceptedMsgType = findMessageType(parameterizedHandlerType, messageTypeParamIndex);
-    }
-
-    private Class<?> findMessageType(Class<?> parameterizedHandlerType, int messageTypeParamIndex) {
-        final Class<?> thisClass = getClass();
-        Class<?> messageType = messageTypeMap.get(thisClass);
-        if (messageType == null) {
-            Class<?> currentClass = thisClass;
-            for (;;) {
-                if (currentClass.getSuperclass() == parameterizedHandlerType) {
-                    Type[] types = ((ParameterizedType) currentClass.getGenericSuperclass()).getActualTypeArguments();
-                    if (types.length - 1 < messageTypeParamIndex || !(types[0] instanceof Class)) {
-                        throw new IllegalStateException(
-                                "cannot determine the inbound message type of " + thisClass.getSimpleName());
-                    }
-
-                    messageType = (Class<?>) types[0];
-                    break;
-                }
-                currentClass = currentClass.getSuperclass();
-            }
-
-            messageTypeMap.put(thisClass, messageType);
-        }
-
-        return messageType;
+        acceptedMsgType = TypeParameterFinder.findActualTypeParameter(
+                this, parameterizedHandlerType, messageTypeParamIndex);
     }
 
     @Override
