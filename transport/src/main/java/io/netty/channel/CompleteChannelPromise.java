@@ -23,7 +23,7 @@ abstract class CompleteChannelPromise extends CompleteChannelFuture implements C
     }
 
     @Override
-    public void setFailure(Throwable cause) {
+    public ChannelPromise setFailure(Throwable cause) {
         throw new IllegalStateException();
     }
 
@@ -33,7 +33,7 @@ abstract class CompleteChannelPromise extends CompleteChannelFuture implements C
     }
 
     @Override
-    public void setSuccess() {
+    public ChannelPromise setSuccess() {
         throw new IllegalStateException();
     }
 

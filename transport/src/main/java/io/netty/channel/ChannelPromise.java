@@ -26,7 +26,7 @@ public interface ChannelPromise extends ChannelFuture {
      *
      * If it is success or failed already it will throw an {@link IllegalStateException}.
      */
-    void setSuccess();
+    ChannelPromise setSuccess();
 
     /**
      * Marks this future as a success and notifies all
@@ -44,7 +44,7 @@ public interface ChannelPromise extends ChannelFuture {
      *
      * If it is success or failed already it will throw an {@link IllegalStateException}.
      */
-    void setFailure(Throwable cause);
+    ChannelPromise setFailure(Throwable cause);
 
     /**
      * Marks this future as a failure and notifies all
