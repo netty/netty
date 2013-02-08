@@ -17,7 +17,6 @@ package io.netty.example.http.snoop;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
@@ -177,17 +176,22 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
         }
 
         // Write the response.
-        ChannelFuture future = ctx.write(response);
+        ctx.nextOutboundMessageBuffer().add(response);
 
         // Close the non-keep-alive connection after the write operation is done.
         if (!keepAlive) {
-            future.addListener(ChannelFutureListener.CLOSE);
+            ctx.flush().addListener(ChannelFutureListener.CLOSE);
         }
     }
 
     private static void send100Continue(ChannelHandlerContext ctx) {
         HttpResponse response = new DefaultHttpResponse(HTTP_1_1, CONTINUE);
-        ctx.write(response);
+        ctx.nextOutboundMessageBuffer().add(response);
+    }
+
+    @Override
+    protected void endMessageReceived(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
     }
 
     @Override
