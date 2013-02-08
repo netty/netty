@@ -47,21 +47,12 @@ import java.util.Queue;
  * so that this handler can intercept HTTP responses before {@link HttpObjectEncoder}
  * converts them into {@link ByteBuf}s.
  */
-public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessage, Object> {
+public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessage, HttpObject> {
 
     private final Queue<String> acceptEncodingQueue = new ArrayDeque<String>();
     private EmbeddedByteChannel encoder;
     private HttpMessage message;
     private boolean encodeStarted;
-
-    /**
-     * Creates a new instance.
-     */
-    protected HttpContentEncoder() {
-        super(
-                new Class<?>[] { HttpMessage.class },
-                new Class<?>[] { HttpObject.class });
-    }
 
     @Override
     protected Object decode(ChannelHandlerContext ctx, HttpMessage msg)
@@ -76,7 +67,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
     }
 
     @Override
-    public Object encode(ChannelHandlerContext ctx, Object msg)
+    public Object encode(ChannelHandlerContext ctx, HttpObject msg)
             throws Exception {
 
         if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().code() == 100) {
@@ -176,7 +167,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
     }
 
     @Override
-    protected void freeOutboundMessage(Object msg) throws Exception {
+    protected void freeOutboundMessage(HttpObject msg) throws Exception {
         if (encoder == null) {
             // if the decoder was null we returned the original message so we are not allowed to free it
             return;

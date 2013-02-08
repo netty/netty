@@ -52,6 +52,5 @@ public final class TypeParameterFinder {
         return messageType;
     }
 
-
     private TypeParameterFinder() { }
 }
