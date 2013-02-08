@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 
 
@@ -177,7 +178,8 @@ import java.util.NoSuchElementException;
  * @apiviz.composedOf io.netty.channel.ChannelHandlerContext
  * @apiviz.owns       io.netty.channel.ChannelHandler
  */
-public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundInvoker {
+public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundInvoker,
+        Iterable<Entry<String, ChannelHandler>> {
 
     /**
      * Return the bound {@link MessageBuf} of the first {@link ChannelInboundMessageHandler} in the
