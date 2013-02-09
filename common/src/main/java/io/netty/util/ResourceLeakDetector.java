@@ -131,6 +131,8 @@ public final class ResourceLeakDetector<T> {
                 break;
             }
 
+            ref.clear();
+
             if (!ref.close()) {
                 continue;
             }
@@ -172,7 +174,6 @@ public final class ResourceLeakDetector<T> {
 
         @Override
         public boolean close() {
-            clear();
             if (freed.compareAndSet(false, true)) {
                 synchronized (head) {
                     active --;
