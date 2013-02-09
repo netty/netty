@@ -102,6 +102,7 @@ public class SnappyFramedEncoder extends ByteToByteEncoder {
     private static void writeChunkLength(ByteBuf out, int chunkLength) {
         out.writeByte(chunkLength & 0xff);
         out.writeByte(chunkLength >>> 8 & 0xff);
+        out.writeByte(chunkLength >>> 16 & 0xff);
     }
 
     /**
