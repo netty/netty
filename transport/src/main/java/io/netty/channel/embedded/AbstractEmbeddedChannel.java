@@ -23,6 +23,7 @@ import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandler;
@@ -302,7 +303,11 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
      */
     public boolean writeOutbound(Object data) {
         ensureOpen();
-        write(data);
+        ChannelFuture future = write(data);
+        assert future.isDone();
+        if (future.cause() != null) {
+            recordException(future.cause());
+        }
         runPendingTasks();
         checkException();
         return hasReadableOutboundBuffer();
