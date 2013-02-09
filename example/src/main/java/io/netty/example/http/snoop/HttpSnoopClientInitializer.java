@@ -56,7 +56,7 @@ public class HttpSnoopClientInitializer extends ChannelInitializer<SocketChannel
         p.addLast("inflater", new HttpContentDecompressor());
 
         // Uncomment the following line if you don't want to handle HttpChunks.
-        //pipeline.addLast("aggregator", new HttpChunkAggregator(1048576));
+        //p.addLast("aggregator", new HttpObjectAggregator(1048576));
 
         p.addLast("handler", new HttpSnoopClientHandler());
     }
