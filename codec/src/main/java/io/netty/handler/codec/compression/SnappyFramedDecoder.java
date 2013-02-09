@@ -168,11 +168,13 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
                                  | in.readUnsignedByte() << 16
                                  | in.readUnsignedByte() << 24;
                     if (validateChecksums) {
+                        // TODO: Optimize me.
                         ByteBuf uncompressed = ctx.alloc().buffer();
-                        snappy.decode(in, uncompressed, chunkLength);
+                        snappy.decode(in.readSlice(chunkLength - 4), uncompressed, chunkLength);
                         validateChecksum(uncompressed, checksum);
+                        out.writeBytes(uncompressed);
                     } else {
-                        snappy.decode(in, out, chunkLength);
+                        snappy.decode(in.readSlice(chunkLength - 4), out, chunkLength);
                     }
                     snappy.reset();
                     break;
