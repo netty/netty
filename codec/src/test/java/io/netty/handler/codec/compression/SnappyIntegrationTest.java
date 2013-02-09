@@ -16,31 +16,31 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.util.CharsetUtil;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.util.Random;
+
+import static io.netty.buffer.Unpooled.*;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
 public class SnappyIntegrationTest {
     @Test
-    public void testEncoderDecoderIdentity() throws Exception {
-        ByteBuf in = Unpooled.copiedBuffer(
+    public void testText() throws Exception {
+        testIdentity(copiedBuffer(
                 "Netty has been designed carefully with the experiences earned from the implementation of a lot of " +
                 "protocols such as FTP, SMTP, HTTP, and various binary and text-based legacy protocols",
-                CharsetUtil.US_ASCII);
-
-        testEncoderDecoderIdentity(in);
+                CharsetUtil.US_ASCII));
     }
 
     @Test
     @Ignore // FIXME: Make it pass.
-    public void testEncoderDecoderIdentity2() throws Exception {
+    public void test1002() throws Exception {
         // Data from https://github.com/netty/netty/issues/1002
-        ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
+        testIdentity(wrappedBuffer(new byte[] {
                   11,    0,    0,    0,    0,    0,   16,   65,   96,  119,  -22,   79,  -43,   76,  -75,  -93,
                   11,  104,   96,  -99,  126,  -98,   27,  -36,   40,  117,  -65,   -3,  -57,  -83,  -58,    7,
                  114,  -14,   68, -122,  124,   88,  118,   54,   45,  -26,  117,   13,  -45,   -9,   60,  -73,
@@ -59,17 +59,24 @@ public class SnappyIntegrationTest {
                   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,
                   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,
                   -1,   -1
-        });
-
-        testEncoderDecoderIdentity(in);
+        }));
     }
 
-    private static void testEncoderDecoderIdentity(ByteBuf in) {
+    @Test
+    @Ignore // FIXME: Make it pass.
+    public void testRandom() throws Exception {
+        byte[] data = new byte[16 * 1048576];
+        new Random().nextBytes(data);
+        testIdentity(wrappedBuffer(data));
+    }
+
+    private static void testIdentity(ByteBuf in) {
         EmbeddedByteChannel encoder = new EmbeddedByteChannel(new SnappyFramedEncoder());
         EmbeddedByteChannel decoder = new EmbeddedByteChannel(new SnappyFramedDecoder());
 
         encoder.writeOutbound(in.copy());
         ByteBuf compressed = encoder.readOutbound();
+        assertThat(compressed, is(notNullValue()));
         assertThat(compressed, is(not(in)));
         decoder.writeInbound(compressed);
         assertFalse(compressed.isReadable());
