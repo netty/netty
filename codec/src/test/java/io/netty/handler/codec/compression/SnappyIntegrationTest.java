@@ -22,12 +22,10 @@ import io.netty.util.CharsetUtil;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
 public class SnappyIntegrationTest {
-    private final EmbeddedByteChannel channel = new EmbeddedByteChannel(new SnappyFramedEncoder(),
-                                                                        new SnappyFramedDecoder());
-
     @Test
     public void testEncoderDecoderIdentity() throws Exception {
         ByteBuf in = Unpooled.copiedBuffer(
@@ -35,9 +33,7 @@ public class SnappyIntegrationTest {
                 "protocols such as FTP, SMTP, HTTP, and various binary and text-based legacy protocols",
                 CharsetUtil.US_ASCII);
 
-        channel.writeOutbound(in.copy());
-        channel.writeInbound(channel.readOutbound());
-        assertEquals(in, channel.readInbound());
+        testEncoderDecoderIdentity(in);
     }
 
     @Test
@@ -65,8 +61,19 @@ public class SnappyIntegrationTest {
                   -1,   -1
         });
 
-        channel.writeOutbound(in.copy());
-        channel.writeInbound(channel.readOutbound());
-        assertEquals(in, channel.readInbound());
+        testEncoderDecoderIdentity(in);
+    }
+
+    private static void testEncoderDecoderIdentity(ByteBuf in) {
+        EmbeddedByteChannel encoder = new EmbeddedByteChannel(new SnappyFramedEncoder());
+        EmbeddedByteChannel decoder = new EmbeddedByteChannel(new SnappyFramedDecoder());
+
+        encoder.writeOutbound(in.copy());
+        ByteBuf compressed = encoder.readOutbound();
+        assertThat(compressed, is(not(in)));
+        decoder.writeInbound(compressed);
+        assertFalse(compressed.isReadable());
+        ByteBuf decompressed = (ByteBuf) decoder.readInbound();
+        assertEquals(in, decompressed);
     }
 }

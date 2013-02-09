@@ -114,8 +114,8 @@ public class SnappyFramedEncoder extends ByteToByteEncoder {
     private static void calculateAndWriteChecksum(ByteBuf slice, ByteBuf out) {
         int checksum = calculateChecksum(slice);
         out.writeByte(checksum & 0x0ff);
-        out.writeByte(checksum >> 8 & 0x0ff);
-        out.writeByte(checksum >> 16 & 0x0ff);
-        out.writeByte(checksum >> 24 & 0x0ff);
+        out.writeByte(checksum >>> 8 & 0x0ff);
+        out.writeByte(checksum >>> 16 & 0x0ff);
+        out.writeByte(checksum >>> 24);
     }
 }
