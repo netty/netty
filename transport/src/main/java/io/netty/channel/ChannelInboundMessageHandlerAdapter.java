@@ -85,32 +85,30 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
                     break;
                 }
 
+                if (!acceptInboundMessage(msg)) {
+                    out.add(msg);
+                    unsupportedFound = true;
+                    continue;
+                }
+
+                if (unsupportedFound) {
+                    // the last message were unsupported, but now we received one that is supported.
+                    // So reset the flag and notify the next context
+                    unsupportedFound = false;
+                    ctx.fireInboundBufferUpdated();
+                    oldOutSize = out.size();
+                }
+
+                @SuppressWarnings("unchecked")
+                I imsg = (I) msg;
                 try {
-                    if (!acceptInboundMessage(msg)) {
-                        out.add(msg);
-                        unsupportedFound = true;
-                        continue;
-                    }
-
-                    if (unsupportedFound) {
-                        // the last message were unsupported, but now we received one that is supported.
-                        // So reset the flag and notify the next context
-                        unsupportedFound = false;
-                        ctx.fireInboundBufferUpdated();
-                        oldOutSize = out.size();
-                    }
-
-                    @SuppressWarnings("unchecked")
-                    I imsg = (I) msg;
-                    try {
-                        messageReceived(ctx, imsg);
-                    } finally {
-                        freeInboundMessage(imsg);
-                    }
-                } catch (Throwable t) {
-                    exceptionCaught(ctx, t);
+                    messageReceived(ctx, imsg);
+                } finally {
+                    freeInboundMessage(imsg);
                 }
             }
+        } catch (Throwable t) {
+            exceptionCaught(ctx, t);
         } finally {
             if (oldOutSize != out.size()) {
                 ctx.fireInboundBufferUpdated();
@@ -140,7 +138,8 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link ChannelHandler} belongs to
      */
-    protected boolean beginMessageReceived(ChannelHandlerContext ctx) throws Exception {
+    protected boolean beginMessageReceived(
+            @SuppressWarnings("UnusedParameters") ChannelHandlerContext ctx) throws Exception {
         return true;
     }
 
@@ -149,19 +148,18 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link ChannelHandler} belongs to
      * @param msg           the message to handle
-     * @throws Exception    thrown when an error accour
      */
     protected abstract void messageReceived(ChannelHandlerContext ctx, I msg) throws Exception;
 
     /**
-     * Is called after all messages of the {@link MessageBuf} was consumed.
+     * Is called when {@link #messageReceived(ChannelHandlerContext, Object)} returns.
      *
      * Super-classes may-override this for special handling.
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link ChannelHandler} belongs to
-     * @throws Exception    thrown when an error accour
      */
-    protected void endMessageReceived(ChannelHandlerContext ctx) throws Exception {
+    protected void endMessageReceived(
+            @SuppressWarnings("UnusedParameters") ChannelHandlerContext ctx) throws Exception {
         // NOOP
     }
 

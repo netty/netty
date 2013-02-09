@@ -18,6 +18,7 @@ package io.netty.channel;
 import io.netty.buffer.BufUtil;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.internal.TypeParameterMatcher;
 
 /**
@@ -29,6 +30,7 @@ public abstract class ChannelOutboundMessageHandlerAdapter<I>
         extends ChannelOperationHandlerAdapter implements ChannelOutboundMessageHandler<I> {
 
     private final TypeParameterMatcher msgMatcher;
+    private boolean closeOnFailedFlush = true;
 
     protected ChannelOutboundMessageHandlerAdapter() {
         this(ChannelOutboundMessageHandlerAdapter.class, 0);
@@ -39,6 +41,14 @@ public abstract class ChannelOutboundMessageHandlerAdapter<I>
             Class<? extends ChannelOutboundMessageHandlerAdapter> parameterizedHandlerType,
             int messageTypeParamIndex) {
         msgMatcher = TypeParameterMatcher.find(this, parameterizedHandlerType, messageTypeParamIndex);
+    }
+
+    protected final boolean isCloseOnFailedFlush() {
+        return closeOnFailedFlush;
+    }
+
+    protected final void setCloseOnFailedFlush(boolean closeOnFailedFlush) {
+        this.closeOnFailedFlush = closeOnFailedFlush;
     }
 
     @Override
@@ -64,51 +74,86 @@ public abstract class ChannelOutboundMessageHandlerAdapter<I>
     public final void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         MessageBuf<Object> in = ctx.outboundMessageBuffer();
         MessageBuf<Object> out = null;
-        ChannelPromise nextPromise = promise;
+
+        final int inSize = in.size();
+        int processed = 0;
+
         try {
+            beginFlush(ctx);
             for (;;) {
                 Object msg = in.poll();
                 if (msg == null) {
                     break;
                 }
 
-                try {
-                    if (!acceptOutboundMessage(msg)) {
-                        if (out == null) {
-                            out = ctx.nextOutboundMessageBuffer();
-                        }
-                        out.add(msg);
-                        continue;
+                if (!acceptOutboundMessage(msg)) {
+                    if (out == null) {
+                        out = ctx.nextOutboundMessageBuffer();
                     }
+                    out.add(msg);
+                    processed ++;
+                    continue;
+                }
 
-                    @SuppressWarnings("unchecked")
-                    I imsg = (I) msg;
-                    try {
-                        flush(ctx, imsg);
-                    } finally {
-                        freeOutboundMessage(imsg);
-                    }
-                } catch (Throwable t) {
-                    if (!promise.isDone()) {
-                        promise.setFailure(new PartialFlushException(
-                                "faied to encode all messages associated with the future", t));
-                        nextPromise = ctx.newPromise();
-                    }
+                @SuppressWarnings("unchecked")
+                I imsg = (I) msg;
+                try {
+                    flush(ctx, imsg);
+                    processed ++;
+                } finally {
+                    freeOutboundMessage(imsg);
                 }
             }
-        } finally {
-            ctx.flush(nextPromise);
+        } catch (Throwable t) {
+            fail(ctx, promise, new PartialFlushException(
+                    processed + " out of " + inSize + " message(s) flushed; " + in.size() + " left", t));
+        }
+
+        try {
+            endFlush(ctx);
+        } catch (Throwable t) {
+            if (promise.isDone()) {
+                InternalLoggerFactory.getInstance(getClass()).warn(
+                        "endFlush() raised a masked exception due to failed flush().", t);
+            } else {
+                fail(ctx, promise, t);
+            }
+            return;
+        }
+
+        ctx.flush(promise);
+    }
+
+    private void fail(ChannelHandlerContext ctx, ChannelPromise promise, Throwable cause) {
+        promise.setFailure(cause);
+        if (isCloseOnFailedFlush()) {
+            ctx.close();
         }
     }
+
+    /**
+     * Will get notified once {@link #flush(ChannelHandlerContext, ChannelPromise)} was called.
+     *
+     * @param ctx           the {@link ChannelHandlerContext} which this {@link ChannelHandler} belongs to
+     */
+    protected void beginFlush(@SuppressWarnings("UnusedParameters") ChannelHandlerContext ctx) throws Exception { }
 
     /**
      * Is called once a message is being flushed.
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link ChannelHandler} belongs to
      * @param msg           the message to handle
-     * @throws Exception    thrown when an error accour
      */
     protected abstract void flush(ChannelHandlerContext ctx, I msg) throws Exception;
+
+    /**
+     * Is called when {@link #flush(ChannelHandlerContext, ChannelPromise)} returns.
+     *
+     * Super-classes may-override this for special handling.
+     *
+     * @param ctx           the {@link ChannelHandlerContext} which this {@link ChannelHandler} belongs to
+     */
+    protected void endFlush(@SuppressWarnings("UnusedParameters") ChannelHandlerContext ctx) throws Exception { }
 
     /**
      * Is called after a message was processed via {@link #flush(ChannelHandlerContext, Object)} to free
