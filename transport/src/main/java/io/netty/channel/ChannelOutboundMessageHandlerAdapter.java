@@ -19,6 +19,7 @@ import io.netty.buffer.BufUtil;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.Signal;
 import io.netty.util.internal.TypeParameterMatcher;
 
 /**
@@ -28,6 +29,11 @@ import io.netty.util.internal.TypeParameterMatcher;
  */
 public abstract class ChannelOutboundMessageHandlerAdapter<I>
         extends ChannelOperationHandlerAdapter implements ChannelOutboundMessageHandler<I> {
+
+    /**
+     * Thrown by {@link #flush(ChannelHandlerContext, Object)} to abort message processing.
+     */
+    protected static final Signal ABORT = new Signal(ChannelOutboundMessageHandlerAdapter.class.getName() + ".ABORT");
 
     private final TypeParameterMatcher msgMatcher;
     private boolean closeOnFailedFlush = true;
@@ -76,8 +82,12 @@ public abstract class ChannelOutboundMessageHandlerAdapter<I>
         MessageBuf<Object> out = null;
 
         final int inSize = in.size();
-        int processed = 0;
+        if (inSize == 0) {
+            ctx.flush(promise);
+            return;
+        }
 
+        int processed = 0;
         try {
             beginFlush(ctx);
             for (;;) {
@@ -105,8 +115,16 @@ public abstract class ChannelOutboundMessageHandlerAdapter<I>
                 }
             }
         } catch (Throwable t) {
-            fail(ctx, promise, new PartialFlushException(
-                    processed + " out of " + inSize + " message(s) flushed; " + in.size() + " left", t));
+            PartialFlushException pfe;
+            String msg = processed + " out of " + inSize + " message(s) flushed";
+            if (t instanceof Signal) {
+                Signal abort = (Signal) t;
+                abort.expect(ABORT);
+                pfe = new PartialFlushException("aborted by " + getClass().getSimpleName() + ": " + msg);
+            } else {
+                pfe = new PartialFlushException(msg, t);
+            }
+            fail(ctx, promise, pfe);
         }
 
         try {

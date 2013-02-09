@@ -18,6 +18,7 @@ package io.netty.channel;
 import io.netty.buffer.BufUtil;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.internal.Signal;
 import io.netty.util.internal.TypeParameterMatcher;
 
 /**
@@ -45,6 +46,11 @@ import io.netty.util.internal.TypeParameterMatcher;
 public abstract class ChannelInboundMessageHandlerAdapter<I>
         extends ChannelStateHandlerAdapter implements ChannelInboundMessageHandler<I> {
 
+    /**
+     * Thrown by {@link #messageReceived(ChannelHandlerContext, Object)} to abort message processing.
+     */
+    protected static final Signal ABORT = new Signal(ChannelInboundMessageHandlerAdapter.class.getName() + ".ABORT");
+
     private final TypeParameterMatcher msgMatcher;
 
     protected ChannelInboundMessageHandlerAdapter() {
@@ -70,11 +76,11 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
 
     @Override
     public final void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-        if (!beginMessageReceived(ctx)) {
+        MessageBuf<Object> in = ctx.inboundMessageBuffer();
+        if (in.isEmpty() || !beginMessageReceived(ctx)) {
             return;
         }
 
-        MessageBuf<Object> in = ctx.inboundMessageBuffer();
         MessageBuf<Object> out = ctx.nextInboundMessageBuffer();
         int oldOutSize = out.size();
         try {
@@ -103,6 +109,9 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
                 I imsg = (I) msg;
                 try {
                     messageReceived(ctx, imsg);
+                } catch (Signal abort) {
+                    abort.expect(ABORT);
+                    break;
                 } finally {
                     freeInboundMessage(imsg);
                 }

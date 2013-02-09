@@ -23,8 +23,12 @@ package io.netty.channel;
 public class PartialFlushException extends RuntimeException {
     private static final long serialVersionUID = 990261865971015004L;
 
-    public PartialFlushException(String msg, Throwable cause) {
-        super(msg, cause);
+    public PartialFlushException(String message) {
+        super(message);
+    }
+
+    public PartialFlushException(String message, Throwable cause) {
+        super(message, cause);
     }
 
     public PartialFlushException(Throwable cause) {
