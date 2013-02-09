@@ -56,7 +56,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
         if (msg instanceof HttpMessage) {
             assert message == null;
             message = (HttpMessage) msg;
-
+            decodeStarted = false;
             cleanup();
         }
 
@@ -100,11 +100,15 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                 }
                 return new Object[] { message, c };
             }
-            return decodeContent(null, c);
+
+            if (decoder != null) {
+                return decodeContent(null, c);
+            } else {
+                return c;
+            }
         }
 
-        // Because FullHttpMessage and HttpChunk is a mutable object, we can simply forward it.
-        return msg;
+        return null;
     }
 
     @Override
