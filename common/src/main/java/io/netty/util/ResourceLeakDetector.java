@@ -59,7 +59,7 @@ public final class ResourceLeakDetector<T> {
     private long active;
     private final AtomicBoolean loggedTooManyActive = new AtomicBoolean();
 
-    private static volatile long leakCheckCnt;
+    private long leakCheckCnt;
 
     public ResourceLeakDetector(Class<?> resourceType) {
         this(resourceType.getSimpleName());
