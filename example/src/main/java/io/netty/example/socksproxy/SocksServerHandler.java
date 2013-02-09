@@ -55,7 +55,6 @@ public final class SocksServerHandler extends ChannelInboundMessageHandlerAdapte
                     ctx.pipeline().addLast(SocksServerConnectHandler.getName(), new SocksServerConnectHandler());
                     ctx.pipeline().remove(this);
                     ctx.nextInboundMessageBuffer().add(socksRequest);
-                    ctx.fireInboundBufferUpdated();
                 } else {
                     ctx.close();
                 }

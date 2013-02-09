@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.AttributeKey;
@@ -86,7 +87,6 @@ public class WebSocketServerProtocolHandler extends ChannelInboundMessageHandler
         }
 
         ctx.nextInboundMessageBuffer().add(frame);
-        ctx.fireInboundBufferUpdated();
     }
 
     @Override
@@ -102,11 +102,7 @@ public class WebSocketServerProtocolHandler extends ChannelInboundMessageHandler
 
     @Override
     protected void freeInboundMessage(WebSocketFrame msg) throws Exception {
-        if (msg instanceof PingWebSocketFrame || msg instanceof CloseWebSocketFrame) {
-            // Will be freed once wrote back
-            return;
-        }
-        super.freeInboundMessage(msg);
+        // Do not free; other handlers will.
     }
 
     static WebSocketServerHandshaker getHandshaker(ChannelHandlerContext ctx) {
@@ -118,19 +114,13 @@ public class WebSocketServerProtocolHandler extends ChannelInboundMessageHandler
     }
 
     static ChannelHandler forbiddenHttpRequestResponder() {
-        return new ChannelInboundMessageHandlerAdapter<Object>() {
+        return new ChannelInboundMessageHandlerAdapter<FullHttpRequest>() {
             @Override
-            public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-                if (!(msg instanceof WebSocketFrame)) {
-                    FullHttpResponse response =
-                            new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.FORBIDDEN);
-                    ctx.channel().write(response);
-                } else {
-                    ctx.nextInboundMessageBuffer().add(msg);
-                    ctx.fireInboundBufferUpdated();
-                }
+            public void messageReceived(ChannelHandlerContext ctx, FullHttpRequest msg) throws Exception {
+                FullHttpResponse response =
+                        new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.FORBIDDEN);
+                ctx.channel().write(response);
             }
         };
     }
-
 }
