@@ -19,26 +19,54 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.util.CharsetUtil;
-
-import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 public class SnappyIntegrationTest {
     private final EmbeddedByteChannel channel = new EmbeddedByteChannel(new SnappyFramedEncoder(),
                                                                         new SnappyFramedDecoder());
-    
+
     @Test
     public void testEncoderDecoderIdentity() throws Exception {
         ByteBuf in = Unpooled.copiedBuffer(
-            "Netty has been designed carefully with the experiences " +
-            "earned from the implementation of a lot of protocols " +
-            "such as FTP, SMTP, HTTP, and various binary and " +
-            "text-based legacy protocols", CharsetUtil.US_ASCII
-        );
-        channel.writeOutbound(in);
-        
+                "Netty has been designed carefully with the experiences earned from the implementation of a lot of " +
+                "protocols such as FTP, SMTP, HTTP, and various binary and text-based legacy protocols",
+                CharsetUtil.US_ASCII);
+
+        channel.writeOutbound(in.copy());
         channel.writeInbound(channel.readOutbound());
-        
-        Assert.assertEquals(in, channel.readInbound());
+        assertEquals(in, channel.readInbound());
+    }
+
+    @Test
+    @Ignore // FIXME: Make it pass.
+    public void testEncoderDecoderIdentity2() throws Exception {
+        // Data from https://github.com/netty/netty/issues/1002
+        ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
+                  11,    0,    0,    0,    0,    0,   16,   65,   96,  119,  -22,   79,  -43,   76,  -75,  -93,
+                  11,  104,   96,  -99,  126,  -98,   27,  -36,   40,  117,  -65,   -3,  -57,  -83,  -58,    7,
+                 114,  -14,   68, -122,  124,   88,  118,   54,   45,  -26,  117,   13,  -45,   -9,   60,  -73,
+                 -53,  -44,   53,   68,  -77,  -71,  109,   43,  -38,   59,  100,  -12,  -87,   44, -106,  123,
+                -107,   38,   13, -117,  -23,  -49,   29,   21,   26,   66,    1,   -1,   -1,   -1,   -1,   -1,
+                  -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,
+                  -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,
+                  -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,
+                  -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   66,    0, -104,  -49,
+                  16, -120,   22,    8,  -52,  -54, -102,  -52, -119, -124,  -92,  -71,  101, -120,  -52,  -48,
+                  45,  -26,  -24,   26,   41,  -13,   36,   64,  -47,   15, -124,   -7,  -16,   91,   96,    0,
+                 -93,  -42,  101,   20,  -74,   39, -124,   35,   43,  -49,  -21,  -92,  -20,  -41,   79,   41,
+                 110, -105,   42,  -96,   90,   -9, -100,  -22,  -62,   91,    2,   35,  113,  117,  -71,   66,
+                   1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,
+                  -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,
+                  -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,
+                  -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,
+                  -1,   -1
+        });
+
+        channel.writeOutbound(in.copy());
+        channel.writeInbound(channel.readOutbound());
+        assertEquals(in, channel.readInbound());
     }
 }

@@ -41,12 +41,13 @@ public class Snappy {
 
     public void encode(ByteBuf in, ByteBuf out, int length) {
         // Write the preamble length to the output buffer
-        int bytesToEncode = 1 + bitsToEncode(length - 1) / 7;
-        for (int i = 0; i < bytesToEncode; i++) {
-            if (i == bytesToEncode - 1) {
-                out.writeByte(length >> i * 7);
+        for (int i = 0;; i ++) {
+            int b = length >>> i * 7;
+            if ((b & 0xFFFFFF80) != 0) {
+                out.writeByte(b & 0x7f | 0x80);
             } else {
-                out.writeByte(0x80 | length >> i * 7);
+                out.writeByte(b);
+                break;
             }
         }
 
@@ -301,10 +302,10 @@ public class Snappy {
     private static int readPreamble(ByteBuf in) {
         int length = 0;
         int byteIndex = 0;
-        while (in.readableBytes() > 0) {
-            int current = in.readByte() & 0x0ff;
-            length += current << byteIndex++ * 7;
-            if ((current & 0x80) != 0x80) {
+        while (in.isReadable()) {
+            int current = in.readUnsignedByte();
+            length |= (current & 0x7f) << byteIndex++ * 7;
+            if ((current & 0x80) == 0) {
                 return length;
             }
 
@@ -334,18 +335,18 @@ public class Snappy {
             break;
         case 61:
             length = in.readUnsignedByte()
-                   | (in.readUnsignedByte() << 8);
+                   | in.readUnsignedByte() << 8;
             break;
         case 62:
             length = in.readUnsignedByte()
-                   | (in.readUnsignedByte() << 8)
-                   | (in.readUnsignedByte() << 16);
+                   | in.readUnsignedByte() << 8
+                   | in.readUnsignedByte() << 16;
             break;
         case 64:
             length = in.readUnsignedByte()
-                    | (in.readUnsignedByte() << 8)
-                    | (in.readUnsignedByte() << 16)
-                    | (in.readUnsignedByte() << 24);
+                   | in.readUnsignedByte() << 8
+                   | in.readUnsignedByte() << 16
+                   | in.readUnsignedByte() << 24;
             break;
         default:
             length = tag >> 2 & 0x3F;

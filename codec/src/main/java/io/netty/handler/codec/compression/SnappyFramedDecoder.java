@@ -43,8 +43,6 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
     private final Snappy snappy = new Snappy();
     private final boolean validateChecksums;
 
-    private int chunkLength;
-    private ChunkType chunkType;
     private boolean started;
     private boolean corrupted;
 
@@ -71,52 +69,38 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
-        if (!in.isReadable()) {
-            return;
-        }
-
         if (corrupted) {
             in.skipBytes(in.readableBytes());
             return;
         }
 
         try {
-            while (in.isReadable()) {
-                if (chunkLength == 0) {
-                    if (in.readableBytes() < 3) {
-                        // We need to be at least able to read the chunk type identifier (one byte),
-                        // and the length of the chunk (2 bytes) in order to proceed
-                        return;
-                    }
+            int idx = in.readerIndex();
+            final int inSize = in.writerIndex() - idx;
+            if (inSize < 4) {
+                // We need to be at least able to read the chunk type identifier (one byte),
+                // and the length of the chunk (3 bytes) in order to proceed
+                return;
+            }
 
-                    byte type = in.readByte();
-                    chunkType = mapChunkType(type);
-                    chunkLength = in.readUnsignedByte() | in.readUnsignedByte() << 8;
+            final int chunkTypeVal = in.getUnsignedByte(idx);
+            final ChunkType chunkType = mapChunkType((byte) chunkTypeVal);
+            final int chunkLength = in.getUnsignedByte(idx + 1)
+                                  | in.getUnsignedByte(idx + 2) << 8
+                                  | in.getUnsignedByte(idx + 3) << 16;
 
-                    // The spec mandates that reserved unskippable chunks must immediately
-                    // return an error, as we must assume that we cannot decode the stream
-                    // correctly
-                    if (chunkType == ChunkType.RESERVED_UNSKIPPABLE) {
-                        throw new CompressionException("Found reserved unskippable chunk type: " + type);
-                    }
-                }
-
-                if (chunkLength == 0 || in.readableBytes() < chunkLength) {
-                    // Wait until the entire chunk is available, as it will prevent us from
-                    // having to buffer the data here instead
-                    return;
-                }
-
-                int checksum;
-
-                switch(chunkType) {
+            switch (chunkType) {
                 case STREAM_IDENTIFIER:
                     if (chunkLength != SNAPPY.length) {
                         throw new CompressionException("Unexpected length of stream identifier: " + chunkLength);
                     }
 
+                    if (inSize < 4 + SNAPPY.length) {
+                        break;
+                    }
+
                     byte[] identifier = new byte[chunkLength];
-                    in.readBytes(identifier);
+                    in.skipBytes(4).readBytes(identifier);
 
                     if (!Arrays.equals(identifier, SNAPPY)) {
                         throw new CompressionException("Unexpected stream identifier contents. Mismatched snappy " +
@@ -124,38 +108,65 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
                     }
 
                     started = true;
-
                     break;
                 case RESERVED_SKIPPABLE:
                     if (!started) {
                         throw new CompressionException("Received RESERVED_SKIPPABLE tag before STREAM_IDENTIFIER");
                     }
-                    in.skipBytes(chunkLength);
+
+                    if (inSize < 4 + chunkLength) {
+                        // TODO: Don't keep skippable bytes
+                        return;
+                    }
+
+                    in.skipBytes(4 + chunkLength);
                     break;
+                case RESERVED_UNSKIPPABLE:
+                    // The spec mandates that reserved unskippable chunks must immediately
+                    // return an error, as we must assume that we cannot decode the stream
+                    // correctly
+                    throw new CompressionException(
+                            "Found reserved unskippable chunk type: 0x" + Integer.toHexString(chunkTypeVal));
                 case UNCOMPRESSED_DATA:
                     if (!started) {
                         throw new CompressionException("Received UNCOMPRESSED_DATA tag before STREAM_IDENTIFIER");
                     }
-                    checksum = in.readUnsignedByte()
-                             | in.readUnsignedByte() << 8
-                             | in.readUnsignedByte() << 16
-                             | in.readUnsignedByte() << 24;
+                    if (chunkLength > 65536 + 4) {
+                        throw new CompressionException("Received UNCOMPRESSED_DATA larger than 65540 bytes");
+                    }
+
+                    if (inSize < 4 + chunkLength) {
+                        return;
+                    }
+
+                    in.skipBytes(4);
                     if (validateChecksums) {
-                        ByteBuf data = in.readBytes(chunkLength);
+                        int checksum = in.readUnsignedByte()
+                                     | in.readUnsignedByte() << 8
+                                     | in.readUnsignedByte() << 16
+                                     | in.readUnsignedByte() << 24;
+                        ByteBuf data = in.readSlice(chunkLength - 4);
                         validateChecksum(data, checksum);
                         out.writeBytes(data);
                     } else {
-                        in.readBytes(out, chunkLength);
+                        in.skipBytes(4);
+                        in.readBytes(out, chunkLength - 4);
                     }
                     break;
                 case COMPRESSED_DATA:
                     if (!started) {
                         throw new CompressionException("Received COMPRESSED_DATA tag before STREAM_IDENTIFIER");
                     }
-                    checksum = in.readUnsignedByte()
-                             | in.readUnsignedByte() << 8
-                             | in.readUnsignedByte() << 16
-                             | in.readUnsignedByte() << 24;
+
+                    if (inSize < 4 + chunkLength) {
+                        return;
+                    }
+
+                    in.skipBytes(4);
+                    int checksum = in.readUnsignedByte()
+                                 | in.readUnsignedByte() << 8
+                                 | in.readUnsignedByte() << 16
+                                 | in.readUnsignedByte() << 24;
                     if (validateChecksums) {
                         ByteBuf uncompressed = ctx.alloc().buffer();
                         snappy.decode(in, uncompressed, chunkLength);
@@ -165,9 +176,6 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
                     }
                     snappy.reset();
                     break;
-                }
-
-                chunkLength = 0;
             }
         } catch (Exception e) {
             corrupted = true;
