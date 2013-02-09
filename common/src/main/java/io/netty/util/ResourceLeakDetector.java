@@ -20,8 +20,8 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.internal.SystemPropertyUtil;
 
+import java.lang.ref.PhantomReference;
 import java.lang.ref.ReferenceQueue;
-import java.lang.ref.WeakReference;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -131,6 +131,8 @@ public final class ResourceLeakDetector<T> {
                 break;
             }
 
+            ref.clear();
+
             if (!ref.close()) {
                 continue;
             }
@@ -141,7 +143,7 @@ public final class ResourceLeakDetector<T> {
         }
     }
 
-    private final class DefaultResourceLeak extends WeakReference<Object> implements ResourceLeak {
+    private final class DefaultResourceLeak extends PhantomReference<Object> implements ResourceLeak {
 
         private final ResourceLeakException exception;
         private final AtomicBoolean freed;
