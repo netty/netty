@@ -149,7 +149,7 @@ public class SslHandler
         InternalLoggerFactory.getInstance(SslHandler.class);
 
     private static final Pattern IGNORABLE_CLASS_IN_STACK = Pattern.compile(
-            "^.*(Socket|DatagramChannel|SctpChannel).*$");
+            "^.*(?:Socket|Datagram|Sctp)Channel.*$");
     private static final Pattern IGNORABLE_ERROR_MESSAGE = Pattern.compile(
             "^.*(?:connection.*reset|connection.*closed|broken.*pipe).*$",
             Pattern.CASE_INSENSITIVE);
@@ -164,6 +164,7 @@ public class SslHandler
 
     private final Queue<ChannelPromise> handshakePromises = new ArrayDeque<ChannelPromise>();
     private final SSLEngineInboundCloseFuture sslCloseFuture = new SSLEngineInboundCloseFuture();
+    private final CloseNotifyListener closeNotifyWriteListener = new CloseNotifyListener();
 
     private volatile long handshakeTimeoutMillis = 10000;
     private volatile long closeNotifyTimeoutMillis = 3000;
@@ -349,7 +350,14 @@ public class SslHandler
             @Override
             public void run() {
                 engine.closeOutbound();
-                ctx.flush(future);
+                future.addListener(closeNotifyWriteListener);
+                try {
+                    flush(ctx, future);
+                } catch (Exception e) {
+                    if (!future.tryFailure(e)) {
+                        logger.warn("flush() raised a masked exception.", e);
+                    }
+                }
             }
         });
 
@@ -572,14 +580,6 @@ public class SslHandler
         try {
             inboundBufferUpdated(ctx);
         } finally {
-            engine.closeOutbound();
-            try {
-                engine.closeInbound();
-            } catch (SSLException ex) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Failed to clean up SSLEngine.", ex);
-                }
-            }
             ctx.fireChannelInactive();
         }
     }
@@ -588,12 +588,11 @@ public class SslHandler
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (ignoreException(cause)) {
             // It is safe to ignore the 'connection reset by peer' or
-            // 'broken pipe' error after sending closure_notify.
+            // 'broken pipe' error after sending close_notify.
             if (logger.isDebugEnabled()) {
                 logger.debug(
-                        "Swallowing a 'connection reset by peer / " +
-                        "broken pipe' error occurred while writing " +
-                        "'closure_notify'", cause);
+                        "Swallowing a harmless 'connection reset by peer / broken pipe' error that occurred " +
+                        "while writing close_notify in response to the peer's close_notify", cause);
             }
 
             // Close the connection explicitly just in case the transport
@@ -601,9 +600,9 @@ public class SslHandler
             if (ctx.channel().isActive()) {
                 ctx.close();
             }
-            return;
+        } else {
+            ctx.fireExceptionCaught(cause);
         }
-        super.exceptionCaught(ctx, cause);
     }
 
     /**
@@ -616,7 +615,7 @@ public class SslHandler
      *
      */
     private boolean ignoreException(Throwable t) {
-        if (!(t instanceof SSLException) && t instanceof IOException && engine.isOutboundDone()) {
+        if (!(t instanceof SSLException) && t instanceof IOException && sslCloseFuture.isDone()) {
             String message = String.valueOf(t.getMessage()).toLowerCase();
 
             // first try to match connection reset / broke peer based on the regex. This is the fastest way
@@ -898,29 +897,37 @@ public class SslHandler
      * Notify all the handshake futures about the failure during the handshake.
      */
     private void setHandshakeFailure(Throwable cause) {
+
         // Release all resources such as internal buffers that SSLEngine
         // is managing.
         engine.closeOutbound();
+
+        final boolean disconnected = cause == null || cause instanceof ClosedChannelException;
         try {
             engine.closeInbound();
         } catch (SSLException e) {
-            if (logger.isDebugEnabled()) {
-                logger.debug(
-                        "SSLEngine.closeInbound() raised an exception after " +
-                        "a handshake failure.", e);
+            if (!disconnected) {
+                logger.warn("SSLEngine.closeInbound() raised an exception after a handshake failure.", e);
+            } else if (!closeNotifyWriteListener.done) {
+                logger.warn("SSLEngine.closeInbound() raised an exception due to closed connection.", e);
+            } else {
+                // cause == null && sentCloseNotify
+                // closeInbound() will raise an exception with bogus truncation attack warning.
             }
         }
 
-        if (cause == null) {
-            cause = new ClosedChannelException();
-        }
-
-        for (;;) {
-            ChannelPromise p = handshakePromises.poll();
-            if (p == null) {
-                break;
+        if (!handshakePromises.isEmpty()) {
+            if (cause == null) {
+                cause = new ClosedChannelException();
             }
-            p.setFailure(cause);
+
+            for (;;) {
+                ChannelPromise p = handshakePromises.poll();
+                if (p == null) {
+                    break;
+                }
+                p.setFailure(cause);
+            }
         }
 
         flush0(ctx, 0, cause);
@@ -939,7 +946,7 @@ public class SslHandler
 
         engine.closeOutbound();
 
-        ChannelPromise closeNotifyFuture = ctx.newPromise();
+        ChannelPromise closeNotifyFuture = ctx.newPromise().addListener(closeNotifyWriteListener);
         flush0(ctx, closeNotifyFuture, true);
         safeClose(ctx, closeNotifyFuture, promise);
     }
@@ -1020,6 +1027,20 @@ public class SslHandler
                 }
             }
         });
+    }
+
+    private static final class CloseNotifyListener implements ChannelFutureListener {
+        volatile boolean done;
+
+        @Override
+        public void operationComplete(ChannelFuture future) throws Exception {
+            if (future.isSuccess()) {
+                if (done) {
+                    throw new IllegalStateException("notified twice");
+                }
+                done = true;
+            }
+        }
     }
 
     private final class SSLEngineInboundCloseFuture extends DefaultChannelPromise {
