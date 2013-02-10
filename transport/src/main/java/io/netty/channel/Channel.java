@@ -77,7 +77,7 @@ import java.net.SocketAddress;
 public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPropertyAccess, Comparable<Channel> {
 
     /**
-     * Returns the unique integer ID of this channel.
+     * Returns the unique integer ID of this channel. The returned value MUST be non {@code null}.
      */
     Integer id();
 
@@ -266,7 +266,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
         /**
          * Send a {@link FileRegion} to the remote peer and notify the {@link ChannelPromise} once it completes
          * or an error was detected. Once the {@link FileRegion} was transfered or an error was thrown it will
-         * automaticly closed via {@link FileRegion#close()}.
+         * automaticly call {@link FileRegion#release()}.
          */
         void sendFile(FileRegion region, ChannelPromise promise);
     }
