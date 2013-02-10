@@ -61,7 +61,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
         }
 
         if (msg instanceof HttpContent) {
-            HttpContent c = (HttpContent) msg;
+            final HttpContent c = (HttpContent) msg;
 
             if (!decodeStarted) {
                 decodeStarted = true;
@@ -98,26 +98,20 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                     }
                     return decoded;
                 }
+
+                c.retain();
                 return new Object[] { message, c };
             }
 
             if (decoder != null) {
                 return decodeContent(null, c);
             } else {
+                c.retain();
                 return c;
             }
         }
 
         return null;
-    }
-
-    @Override
-    protected void freeInboundMessage(HttpObject msg) throws Exception {
-        if (decoder == null) {
-            // if the decoder was null we returned the original message so we are not allowed to free it
-            return;
-        }
-        super.freeInboundMessage(msg);
     }
 
     private Object[] decodeContent(HttpMessage header, HttpContent c) {

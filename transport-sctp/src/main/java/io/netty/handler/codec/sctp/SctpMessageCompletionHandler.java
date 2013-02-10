@@ -84,15 +84,12 @@ public class SctpMessageCompletionHandler extends ChannelInboundMessageHandlerAd
             //first incomplete message
             fragments.put(streamIdentifier, byteBuf);
         }
+
+        byteBuf.retain();
     }
 
     private void handleAssembledMessage(ChannelHandlerContext ctx, SctpMessage assembledMsg) {
         ctx.nextInboundMessageBuffer().add(assembledMsg);
         assembled = true;
-    }
-
-    @Override
-    protected void freeInboundMessage(SctpMessage msg) throws Exception {
-        // It is an aggregator so not free it yet
     }
 }

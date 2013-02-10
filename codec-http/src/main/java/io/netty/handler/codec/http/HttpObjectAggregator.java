@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
@@ -127,6 +128,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             if (!m.getDecoderResult().isSuccess()) {
                 removeTransferEncodingChunked(m);
                 this.currentMessage = null;
+                BufUtil.retain(m);
                 return m;
             }
             if (msg instanceof HttpRequest) {
@@ -156,7 +158,6 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             CompositeByteBuf content = (CompositeByteBuf) currentMessage.data();
 
             if (content.readableBytes() > maxContentLength - chunk.data().readableBytes()) {
-                chunk.release();
                 // TODO: Respond with 413 Request Entity Too Large
                 //   and discard the traffic or close the connection.
                 //       No need to notify the upstream handlers - just log.
@@ -168,10 +169,9 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
 
             // Append the content of the chunk
             if (chunk.data().isReadable()) {
+                chunk.retain();
                 content.addComponent(chunk.data());
                 content.writerIndex(content.writerIndex() + chunk.data().readableBytes());
-            } else {
-                chunk.release();
             }
 
             final boolean last;
@@ -180,7 +180,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
                         DecoderResult.partialFailure(chunk.getDecoderResult().cause()));
                 last = true;
             } else {
-                last = msg instanceof LastHttpContent;
+                last = chunk instanceof LastHttpContent;
             }
 
             if (last) {
@@ -205,11 +205,6 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
         } else {
             throw new Error();
         }
-    }
-
-    @Override
-    protected void freeInboundMessage(HttpObject msg) throws Exception {
-        // decode() frees HttpContents.
     }
 
     @Override

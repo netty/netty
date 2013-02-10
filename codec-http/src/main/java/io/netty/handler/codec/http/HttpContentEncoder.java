@@ -158,26 +158,15 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
                 }
                 return encoded;
             }
+
             if (encoder != null) {
                 return encodeContent(null, c);
             }
-            return msg;
+
+            c.retain();
+            return c;
         }
         return null;
-    }
-
-    @Override
-    protected void freeOutboundMessage(HttpObject msg) throws Exception {
-        if (encoder == null) {
-            // if the decoder was null we returned the original message so we are not allowed to free it
-            return;
-        }
-        super.freeOutboundMessage(msg);
-    }
-
-    @Override
-    protected void freeInboundMessage(HttpMessage msg) throws Exception {
-        // not free it as it is only passed through
     }
 
     private Object[] encodeContent(HttpMessage header, HttpContent c) {

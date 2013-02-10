@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.spdy;
 
+import io.netty.buffer.BufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.handler.codec.http.HttpMessage;
@@ -43,6 +44,8 @@ public class SpdyHttpResponseStreamIdHandler extends
         if (id != null && id.intValue() != NO_ID && !msg.headers().contains(SpdyHttpHeaders.Names.STREAM_ID)) {
             SpdyHttpHeaders.setStreamId(msg, id);
         }
+
+        BufUtil.retain(msg);
         return msg;
     }
 
@@ -59,16 +62,7 @@ public class SpdyHttpResponseStreamIdHandler extends
             ids.remove(((SpdyRstStreamFrame) msg).getStreamId());
         }
 
+        BufUtil.retain(msg);
         return msg;
-    }
-
-    @Override
-    protected void freeInboundMessage(Object msg) throws Exception {
-        // just pass through so no free
-    }
-
-    @Override
-    protected void freeOutboundMessage(HttpMessage msg) throws Exception {
-        // just pass through so no free
     }
 }
