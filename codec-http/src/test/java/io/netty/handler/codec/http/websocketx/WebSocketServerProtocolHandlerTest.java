@@ -150,7 +150,7 @@ public class WebSocketServerProtocolHandlerTest {
 
         @Override
         public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            ctx.outboundMessageBuffer().free();
+            ctx.outboundMessageBuffer().release();
         }
 
         @Override

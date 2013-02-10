@@ -34,7 +34,7 @@ import java.util.Queue;
  * and {@link Unpooled#wrappedBuffer(ByteBuffer)} instead of calling the
  * constructor explicitly.
  */
-final class UnpooledDirectByteBuf extends AbstractByteBuf {
+final class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     private final ResourceLeak leak = leakDetector.open(this);
     private final ByteBufAllocator alloc;
@@ -134,7 +134,7 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf capacity(int newCapacity) {
-        checkUnfreed();
+        ensureAccessible();
         if (newCapacity < 0 || newCapacity > maxCapacity()) {
             throw new IllegalArgumentException("newCapacity: " + newCapacity);
         }
@@ -197,37 +197,37 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
 
     @Override
     public byte getByte(int index) {
-        checkUnfreed();
+        ensureAccessible();
         return buffer.get(index);
     }
 
     @Override
     public short getShort(int index) {
-        checkUnfreed();
+        ensureAccessible();
         return buffer.getShort(index);
     }
 
     @Override
     public int getUnsignedMedium(int index) {
-        checkUnfreed();
+        ensureAccessible();
         return (getByte(index) & 0xff) << 16 | (getByte(index + 1) & 0xff) << 8 | getByte(index + 2) & 0xff;
     }
 
     @Override
     public int getInt(int index) {
-        checkUnfreed();
+        ensureAccessible();
         return buffer.getInt(index);
     }
 
     @Override
     public long getLong(int index) {
-        checkUnfreed();
+        ensureAccessible();
         return buffer.getLong(index);
     }
 
     @Override
     public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
-        checkUnfreed();
+        ensureAccessible();
         if (dst instanceof UnpooledDirectByteBuf) {
             UnpooledDirectByteBuf bbdst = (UnpooledDirectByteBuf) dst;
             ByteBuffer data = bbdst.internalNioBuffer();
@@ -274,21 +274,21 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf setByte(int index, int value) {
-        checkUnfreed();
+        ensureAccessible();
         buffer.put(index, (byte) value);
         return this;
     }
 
     @Override
     public ByteBuf setShort(int index, int value) {
-        checkUnfreed();
+        ensureAccessible();
         buffer.putShort(index, (short) value);
         return this;
     }
 
     @Override
     public ByteBuf setMedium(int index, int value) {
-        checkUnfreed();
+        ensureAccessible();
         setByte(index, (byte) (value >>> 16));
         setByte(index + 1, (byte) (value >>> 8));
         setByte(index + 2, (byte) value);
@@ -297,21 +297,21 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf setInt(int index, int value) {
-        checkUnfreed();
+        ensureAccessible();
         buffer.putInt(index, value);
         return this;
     }
 
     @Override
     public ByteBuf setLong(int index, long value) {
-        checkUnfreed();
+        ensureAccessible();
         buffer.putLong(index, value);
         return this;
     }
 
     @Override
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
-        checkUnfreed();
+        ensureAccessible();
         if (src instanceof UnpooledDirectByteBuf) {
             UnpooledDirectByteBuf bbsrc = (UnpooledDirectByteBuf) src;
             ByteBuffer data = bbsrc.internalNioBuffer();
@@ -328,7 +328,7 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
-        checkUnfreed();
+        ensureAccessible();
         ByteBuffer tmpBuf = internalNioBuffer();
         tmpBuf.clear().position(index).limit(index + length);
         tmpBuf.put(src, srcIndex, length);
@@ -337,7 +337,7 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf setBytes(int index, ByteBuffer src) {
-        checkUnfreed();
+        ensureAccessible();
         ByteBuffer tmpBuf = internalNioBuffer();
         if (src == tmpBuf) {
             src = src.duplicate();
@@ -350,7 +350,7 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
-        checkUnfreed();
+        ensureAccessible();
         if (length == 0) {
             return this;
         }
@@ -369,7 +369,7 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
 
     @Override
     public int getBytes(int index, GatheringByteChannel out, int length) throws IOException {
-        checkUnfreed();
+        ensureAccessible();
         if (length == 0) {
             return 0;
         }
@@ -381,7 +381,7 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
 
     @Override
     public int setBytes(int index, InputStream in, int length) throws IOException {
-        checkUnfreed();
+        ensureAccessible();
         if (buffer.hasArray()) {
             return in.read(buffer.array(), buffer.arrayOffset() + index, length);
         } else {
@@ -399,7 +399,7 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
 
     @Override
     public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
-        checkUnfreed();
+        ensureAccessible();
         ByteBuffer tmpNioBuf = internalNioBuffer();
         tmpNioBuf.clear().position(index).limit(index + length);
         try {
@@ -416,7 +416,7 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuffer nioBuffer(int index, int length) {
-        checkUnfreed();
+        ensureAccessible();
         if (index == 0 && length == capacity()) {
             return buffer.duplicate();
         } else {
@@ -431,7 +431,7 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf copy(int index, int length) {
-        checkUnfreed();
+        ensureAccessible();
         ByteBuffer src;
         try {
             src = (ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length);
@@ -456,12 +456,7 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public boolean isFreed() {
-        return buffer == null;
-    }
-
-    @Override
-    public void free() {
+    protected void deallocate() {
         ByteBuffer buffer = this.buffer;
         if (buffer == null) {
             return;
@@ -478,6 +473,7 @@ final class UnpooledDirectByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf suspendIntermediaryDeallocations() {
+        ensureAccessible();
         if (suspendedDeallocations == null) {
             suspendedDeallocations = new ArrayDeque<ByteBuffer>(2);
         }

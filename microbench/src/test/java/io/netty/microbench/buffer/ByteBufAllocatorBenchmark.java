@@ -51,7 +51,7 @@ public class ByteBufAllocatorBenchmark extends DefaultBenchmark {
     @Override
     protected void tearDown() throws Exception {
         for (ByteBuf b: queue) {
-            b.free();
+            b.release();
         }
         queue.clear();
     }
@@ -63,7 +63,7 @@ public class ByteBufAllocatorBenchmark extends DefaultBenchmark {
 
         for (int i = 0; i < reps; i ++) {
             queue.add(alloc.buffer(size));
-            queue.removeFirst().free();
+            queue.removeFirst().release();
         }
     }
 

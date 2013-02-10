@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http.multipart;
 
+import io.netty.buffer.AbstractReferenceCounted;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelException;
 import io.netty.handler.codec.http.HttpConstants;
@@ -25,7 +26,7 @@ import java.nio.charset.Charset;
 /**
  * Abstract HttpData implementation
  */
-public abstract class AbstractHttpData implements HttpData {
+public abstract class AbstractHttpData extends AbstractReferenceCounted implements HttpData {
 
     protected final String name;
     protected long definedSize;
@@ -110,8 +111,7 @@ public abstract class AbstractHttpData implements HttpData {
     }
 
     @Override
-    public void free() {
+    protected void deallocate() {
         delete();
     }
-
 }

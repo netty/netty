@@ -16,15 +16,9 @@
 package io.netty.buffer;
 
 /**
- * A packet which is send or receive. The contract for a {@link ByteBufHolder} is the
- * following:
- *
- * When send a {@link ByteBufHolder} the {@link ByteBufHolder} will be freed by calling {@link #free()}
- * in the actual transport implementation. When receive a {@link ByteBufHolder} the {@link #free()}
- * must be called once is is processed.
- *
+ * A packet which is send or receive.
  */
-public interface ByteBufHolder extends Freeable {
+public interface ByteBufHolder extends ReferenceCounted {
 
     /**
      * Return the data which is held by this {@link ByteBufHolder}.
@@ -33,20 +27,7 @@ public interface ByteBufHolder extends Freeable {
     ByteBuf data();
 
     /**
-     * Create a copy of this {@link ByteBufHolder} which can be used even after {@link #free()}
-     * is called.
+     * Create a deep copy of this {@link ByteBufHolder}.
      */
     ByteBufHolder copy();
-
-    /**
-     * Free of the resources that are hold by this instance. This includes the {@link ByteBuf}.
-     */
-    @Override
-    void free();
-
-    /**
-     * Returns {@code true} if and only if this instances was freed.
-     */
-    @Override
-    boolean isFreed();
 }

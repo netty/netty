@@ -195,13 +195,33 @@ public abstract class FilteredMessageBuf implements MessageBuf<Object> {
     }
 
     @Override
-    public boolean isFreed() {
-        return buf.isFreed();
+    public boolean unfoldAndAdd(Object o) {
+        return buf.unfoldAndAdd(o);
     }
 
     @Override
-    public void free() {
-        buf.free();
+    public int refCnt() {
+        return buf.refCnt();
+    }
+
+    @Override
+    public void retain() {
+        buf.retain();
+    }
+
+    @Override
+    public void retain(int increment) {
+        buf.retain(increment);
+    }
+
+    @Override
+    public boolean release() {
+        return buf.release();
+    }
+
+    @Override
+    public boolean release(int decrement) {
+        return buf.release(decrement);
     }
 
     @Override

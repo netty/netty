@@ -182,7 +182,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
 
     @Override
     public ByteBuf discardReadBytes() {
-        checkUnfreed();
+        ensureAccessible();
         if (readerIndex == 0) {
             return this;
         }
@@ -201,7 +201,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
 
     @Override
     public ByteBuf discardSomeReadBytes() {
-        checkUnfreed();
+        ensureAccessible();
         if (readerIndex == 0) {
             return this;
         }
@@ -972,7 +972,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
 
     @Override
     public String toString() {
-        if (isFreed()) {
+        if (refCnt() == 0) {
             return getClass().getSimpleName() + "(freed)";
         }
 
@@ -999,7 +999,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
     }
 
     protected final void checkIndex(int index) {
-        checkUnfreed();
+        ensureAccessible();
         if (index < 0 || index >= capacity()) {
             throw new IndexOutOfBoundsException(String.format(
                     "index: %d (expected: range(0, %d))", index, capacity()));
@@ -1007,7 +1007,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
     }
 
     protected final void checkIndex(int index, int fieldLength) {
-        checkUnfreed();
+        ensureAccessible();
         if (fieldLength < 0) {
             throw new IllegalArgumentException("length: " + fieldLength + " (expected: >= 0)");
         }
@@ -1023,7 +1023,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
      * than the specified value.
      */
     protected final void checkReadableBytes(int minimumReadableBytes) {
-        checkUnfreed();
+        ensureAccessible();
         if (readerIndex > writerIndex - minimumReadableBytes) {
             throw new IndexOutOfBoundsException(String.format(
                     "readerIndex(%d) + length(%d) exceeds writerIndex(%d): %s",
@@ -1031,8 +1031,8 @@ public abstract class AbstractByteBuf implements ByteBuf {
         }
     }
 
-    protected final void checkUnfreed() {
-        if (isFreed()) {
+    protected final void ensureAccessible() {
+        if (refCnt() <= 0) {
             throw new IllegalBufferAccessException();
         }
     }

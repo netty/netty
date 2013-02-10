@@ -137,7 +137,7 @@ public final class SctpMessage extends DefaultByteBufHolder {
 
     @Override
     public String toString() {
-        if (isFreed()) {
+        if (refCnt() <= 0) {
             return "SctpFrame{" +
                     "streamIdentifier=" + streamIdentifier + ", protocolIdentifier=" + protocolIdentifier +
                     ", data=(FREED)}";

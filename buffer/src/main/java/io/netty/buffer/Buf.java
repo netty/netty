@@ -18,7 +18,7 @@ package io.netty.buffer;
 /**
  * A buffer to operate on
  */
-public interface Buf extends Freeable {
+public interface Buf extends ReferenceCounted {
     /**
      * The BufType which will be handled by the Buf implementation
      */

@@ -30,6 +30,7 @@ import java.util.Random;
 import java.util.Set;
 
 import static io.netty.buffer.Unpooled.*;
+import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
 /**
@@ -62,8 +63,16 @@ public abstract class AbstractByteBufTest {
     @After
     public void dispose() {
         if (buffer != null) {
+            if (buffer.unwrap() == null) {
+                assertThat(buffer.release(), is(true));
+                assertThat(buffer.refCnt(), is(0));
+            } else {
+                assertThat(buffer.release(), is(false));
+                assertThat(buffer.refCnt(), is(1));
+            }
+
             try {
-                buffer.free();
+                buffer.release();
             } catch (Exception e) {
                 // Ignore.
             }
@@ -872,8 +881,8 @@ public abstract class AbstractByteBufTest {
             }
         }
 
-        value.free();
-        expectedValue.free();
+        value.release();
+        expectedValue.release();
     }
 
     @Test
@@ -1049,7 +1058,7 @@ public abstract class AbstractByteBufTest {
             assertEquals(0, value.writerIndex());
         }
 
-        value.free();
+        value.release();
     }
 
     @Test
@@ -1090,7 +1099,7 @@ public abstract class AbstractByteBufTest {
             assertEquals(valueOffset + BLOCK_SIZE, value.writerIndex());
         }
 
-        value.free();
+        value.release();
     }
 
     @Test
@@ -1623,8 +1632,8 @@ public abstract class AbstractByteBufTest {
         assertFalse(set.contains(elemB));
         assertEquals(0, set.size());
 
-        elemB.free();
-        elemBCopy.free();
+        elemB.release();
+        elemBCopy.release();
     }
 
     // Test case for https://github.com/netty/netty/issues/325

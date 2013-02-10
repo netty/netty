@@ -20,7 +20,9 @@ package io.netty.buffer;
  *
  */
 public class DefaultByteBufHolder implements ByteBufHolder {
+
     private final ByteBuf data;
+
     public DefaultByteBufHolder(ByteBuf data) {
         if (data == null) {
             throw new NullPointerException("data");
@@ -34,25 +36,40 @@ public class DefaultByteBufHolder implements ByteBufHolder {
 
     @Override
     public ByteBuf data() {
-        if (data.isFreed()) {
+        if (data.refCnt() <= 0) {
             throw new IllegalBufferAccessException();
         }
         return data;
     }
 
     @Override
-    public void free() {
-        data.free();
-    }
-
-    @Override
-    public boolean isFreed() {
-        return data.isFreed();
-    }
-
-    @Override
     public ByteBufHolder copy() {
-        return new DefaultByteBufHolder(data().copy());
+        return new DefaultByteBufHolder(data.copy());
+    }
+
+    @Override
+    public int refCnt() {
+        return data.refCnt();
+    }
+
+    @Override
+    public void retain() {
+        data.retain();
+    }
+
+    @Override
+    public void retain(int increment) {
+        data.retain(increment);
+    }
+
+    @Override
+    public boolean release() {
+        return data.release();
+    }
+
+    @Override
+    public boolean release(int decrement) {
+        return data.release(decrement);
     }
 
     @Override

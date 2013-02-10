@@ -76,7 +76,7 @@ final class DefaultMessageBuf<T> extends AbstractMessageBuf<T> {
     }
 
     @Override
-    protected void doFree() {
+    protected void deallocate() {
         elements = null;
         head = 0;
         tail = 0;

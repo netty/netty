@@ -154,7 +154,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel
                 maximumMessageSize);
 
         if (receivedMessageSize <= 0) {
-            byteBuf.free();
+            byteBuf.release();
             return 0;
         }
 
@@ -216,7 +216,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel
 
         messageQueue.remove();
 
-        message.free();
+        message.release();
 
         return 1;
     }

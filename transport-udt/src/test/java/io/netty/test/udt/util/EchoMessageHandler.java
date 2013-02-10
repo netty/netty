@@ -55,7 +55,6 @@ public class EchoMessageHandler extends
         }
 
         message = new UdtMessage(byteBuf);
-
     }
 
     @Override
@@ -67,24 +66,17 @@ public class EchoMessageHandler extends
         final MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
 
         out.add(message);
-
         ctx.flush();
-
     }
 
     @Override
-    public void exceptionCaught(final ChannelHandlerContext ctx,
-            final Throwable e) {
-
-        log.error("exception : {}", e.getMessage());
-
+    public void exceptionCaught(final ChannelHandlerContext ctx, final Throwable e) {
+        log.error("exception", e);
         ctx.close();
-
     }
 
     @Override
-    protected void messageReceived(final ChannelHandlerContext ctx,
-            final UdtMessage message) throws Exception {
+    protected void messageReceived(final ChannelHandlerContext ctx, final UdtMessage message) throws Exception {
 
         final ByteBuf byteBuf = message.data();
 
@@ -94,10 +86,8 @@ public class EchoMessageHandler extends
 
         final MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
 
+        message.retain();
         out.add(message);
-
         ctx.flush();
-
     }
-
 }

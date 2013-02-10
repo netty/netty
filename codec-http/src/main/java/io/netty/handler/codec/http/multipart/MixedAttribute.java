@@ -210,12 +210,27 @@ public class MixedAttribute implements Attribute {
     }
 
     @Override
-    public void free() {
-       attribute.free();
+    public int refCnt() {
+        return attribute.refCnt();
     }
 
     @Override
-    public boolean isFreed() {
-        return attribute.isFreed();
+    public void retain() {
+        attribute.retain();
+    }
+
+    @Override
+    public void retain(int increment) {
+        attribute.retain(increment);
+    }
+
+    @Override
+    public boolean release() {
+        return attribute.release();
+    }
+
+    @Override
+    public boolean release(int decrement) {
+        return attribute.release(decrement);
     }
 }

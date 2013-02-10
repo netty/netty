@@ -64,7 +64,7 @@ public abstract class ChannelOutboundMessageHandlerAdapter<I>
 
     @Override
     public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        ctx.outboundMessageBuffer().free();
+        ctx.outboundMessageBuffer().release();
     }
 
     /**
@@ -179,6 +179,6 @@ public abstract class ChannelOutboundMessageHandlerAdapter<I>
      * just pass-through the input message or need it for later usage.
      */
     protected void freeOutboundMessage(I msg) throws Exception {
-        BufUtil.free(msg);
+        BufUtil.release(msg);
     }
 }

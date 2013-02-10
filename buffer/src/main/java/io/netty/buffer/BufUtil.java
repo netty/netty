@@ -43,18 +43,45 @@ public final class BufUtil {
     }
 
     /**
-     * Try to call {@link Freeable#free()} if the specified message implements {@link Freeable}.  If the specified
-     * message doesn't implement {@link Freeable}, this method does nothing.
+     * Try to call {@link ReferenceCounted#retain()} if the specified message implements {@link ReferenceCounted}.
+     * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.
      */
-    public static void free(Object msg) {
-        if (msg instanceof Freeable) {
-            try {
-                ((Freeable) msg).free();
-            } catch (UnsupportedOperationException e) {
-                // This can happen for derived buffers
-                // TODO: Think about this
-            }
+    public static void retain(Object msg) {
+        if (msg instanceof ReferenceCounted) {
+            ((ReferenceCounted) msg).retain();
         }
+    }
+
+    /**
+     * Try to call {@link ReferenceCounted#retain()} if the specified message implements {@link ReferenceCounted}.
+     * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.
+     */
+    public static void retain(Object msg, int increment) {
+        if (msg instanceof ReferenceCounted) {
+            ((ReferenceCounted) msg).retain(increment);
+        }
+    }
+
+    /**
+     * Try to call {@link ReferenceCounted#release()} if the specified message implements {@link ReferenceCounted}.
+     * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.
+     */
+    public static boolean release(Object msg) {
+        if (msg instanceof ReferenceCounted) {
+            return ((ReferenceCounted) msg).release();
+        }
+        return false;
+    }
+
+    /**
+     * Try to call {@link ReferenceCounted#release()} if the specified message implements {@link ReferenceCounted}.
+     * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.
+     */
+    public static boolean release(Object msg, int decrement) {
+        if (msg instanceof ReferenceCounted) {
+            return ((ReferenceCounted) msg).release(decrement);
+        }
+        return false;
     }
 
     /**

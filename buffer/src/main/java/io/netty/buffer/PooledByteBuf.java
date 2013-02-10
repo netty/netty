@@ -23,7 +23,7 @@ import java.nio.ByteOrder;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
-abstract class PooledByteBuf<T> extends AbstractByteBuf {
+abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
 
     private final ResourceLeak leak = leakDetector.open(this);
 
@@ -74,7 +74,7 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf {
 
     @Override
     public final ByteBuf capacity(int newCapacity) {
-        checkUnfreed();
+        ensureAccessible();
 
         // If the request capacity does not require reallocation, just update the length of the memory.
         if (chunk.unpooled) {
@@ -144,7 +144,7 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf {
 
     @Override
     public final ByteBuf suspendIntermediaryDeallocations() {
-        checkUnfreed();
+        ensureAccessible();
         if (suspendedDeallocations == null) {
             suspendedDeallocations = new ArrayDeque<Allocation<T>>(2);
         }
@@ -153,7 +153,6 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf {
 
     @Override
     public final ByteBuf resumeIntermediaryDeallocations() {
-        checkUnfreed();
         if (suspendedDeallocations == null) {
             return this;
         }
@@ -172,12 +171,7 @@ abstract class PooledByteBuf<T> extends AbstractByteBuf {
     }
 
     @Override
-    public final boolean isFreed() {
-        return memory == null;
-    }
-
-    @Override
-    public final void free() {
+    protected final void deallocate() {
         if (handle >= 0) {
             resumeIntermediaryDeallocations();
             final long handle = this.handle;

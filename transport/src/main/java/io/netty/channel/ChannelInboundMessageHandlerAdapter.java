@@ -71,7 +71,7 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
 
     @Override
     public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        ctx.inboundMessageBuffer().free();
+        ctx.inboundMessageBuffer().release();
     }
 
     @Override
@@ -178,6 +178,6 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
      * just pass-through the input message or need it for later usage.
      */
     protected void freeInboundMessage(I msg) throws Exception {
-        BufUtil.free(msg);
+        BufUtil.release(msg);
     }
 }

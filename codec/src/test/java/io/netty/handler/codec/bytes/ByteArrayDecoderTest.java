@@ -47,9 +47,8 @@ public class ByteArrayDecoderTest {
 
     @Test
     public void testDecodeEmpty() {
-        byte[] b = new byte[0];
-        ch.writeInbound(wrappedBuffer(b));
-        assertThat((byte[]) ch.readInbound(), is(b));
+        ch.writeInbound(EMPTY_BUFFER);
+        assertThat((byte[]) ch.readInbound(), is(new byte[0]));
     }
 
     @Test
