@@ -141,7 +141,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
         SelectionKey key = channel.selectionKey();
         channel.writableTasks.offer(task);
-        key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+        if (!key.isWritable()) {
+            key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+        }
     }
 
     public void rebuildSelector() {
