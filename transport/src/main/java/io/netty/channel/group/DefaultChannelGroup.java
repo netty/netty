@@ -249,6 +249,21 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     }
 
     @Override
+    public ChannelGroupFuture deregister() {
+        Map<Integer, ChannelFuture> futures =
+                new LinkedHashMap<Integer, ChannelFuture>(size());
+
+        for (Channel c: serverChannels.values()) {
+            futures.put(c.id(), c.deregister());
+        }
+        for (Channel c: nonServerChannels.values()) {
+            futures.put(c.id(), c.deregister());
+        }
+
+        return new DefaultChannelGroupFuture(this, futures);
+    }
+
+    @Override
     public int hashCode() {
         return System.identityHashCode(this);
     }
