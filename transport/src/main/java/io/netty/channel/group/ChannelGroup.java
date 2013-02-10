@@ -21,6 +21,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelStateHandlerAdapter;
+import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
 import io.netty.channel.ServerChannel;
 import io.netty.util.CharsetUtil;
@@ -153,4 +154,13 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
      *         the operation is done for all channels
      */
     ChannelGroupFuture close();
+
+    /**
+     * Deregister all {@link Channel}s in this group from their {@link EventLoop}.
+     * Please note that this operation is asynchronous as {@link Channel#deregister()} is.
+     *
+     * @return the {@link ChannelGroupFuture} instance that notifies when
+     *         the operation is done for all channels
+     */
+    ChannelGroupFuture deregister();
 }
