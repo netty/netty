@@ -192,14 +192,14 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     } else {
                         writtenBytes += localWrittenBytes;
                         if (writtenBytes >= region.count()) {
-                            region.close();
+                            region.release();
                             promise.setSuccess();
                             return;
                         }
                     }
                 }
             } catch (Throwable cause) {
-                region.close();
+                region.release();
                 promise.setFailure(cause);
             }
         }
@@ -217,7 +217,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             }
 
             if (writtenBytes < region.count()) {
-                region.close();
+                region.release();
                 if (!isOpen()) {
                     promise.setFailure(new ClosedChannelException());
                 } else {

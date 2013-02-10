@@ -522,7 +522,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     // the first FileRegion to flush so trigger it now!
                     doFlushFileRegion(region, promise);
                 } catch (Throwable cause) {
-                    region.close();
+                    region.release();
                     promise.setFailure(cause);
                 }
                 return;

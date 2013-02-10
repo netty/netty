@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -21,6 +21,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelStateHandlerAdapter;
+import io.netty.channel.FileRegion;
 import io.netty.channel.ServerChannel;
 import io.netty.util.CharsetUtil;
 
@@ -115,6 +116,25 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
      *         the operation is done for all channels
      */
     ChannelGroupFuture write(Object message);
+
+    /**
+     * Writes the specified {@link FileRegion} to all {@link Channel}s in this
+     * group. Please note that this operation is asynchronous as
+     * {@link Channel#sendFile(FileRegion)} is.
+     *
+     * @return the {@link ChannelGroupFuture} instance that notifies when
+     *         the operation is done for all channels
+     */
+    ChannelGroupFuture sendFile(FileRegion region);
+
+    /**
+     * Flush all {@link Channel} in this group. Please note that this operation
+     * is asynchronous as {@link Channel#flush()} is.
+     *
+     * @return the {@link ChannelGroupFuture} instance that notifies when
+     *         the operation is done for all channels
+     */
+    ChannelGroupFuture flush();
 
     /**
      * Disconnects all {@link Channel}s in this group from their remote peers.
