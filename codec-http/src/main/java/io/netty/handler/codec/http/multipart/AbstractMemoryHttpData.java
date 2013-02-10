@@ -138,7 +138,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
     @Override
     public byte[] get() {
         if (byteBuf == null) {
-            return new byte[0];
+            return EMPTY_BUFFER.array();
         }
         byte[] array = new byte[byteBuf.readableBytes()];
         byteBuf.getBytes(byteBuf.readerIndex(), array);
@@ -225,10 +225,5 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
     @Override
     public File getFile() throws IOException {
         throw new IOException("Not represented by a file");
-    }
-
-    @Override
-    public boolean isFreed() {
-        return data().isFreed();
     }
 }

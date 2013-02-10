@@ -217,7 +217,7 @@ public final class NioDatagramChannel
             throw new ChannelException(cause);
         }  finally {
             if (free) {
-                buffer.free();
+                buffer.release();
             }
         }
     }
@@ -258,7 +258,7 @@ public final class NioDatagramChannel
         buf.remove();
 
         // packet was written free up buffer
-        packet.free();
+        packet.release();
 
         if (buf.isEmpty()) {
             // Wrote the outbound buffer completely - clear OP_WRITE.

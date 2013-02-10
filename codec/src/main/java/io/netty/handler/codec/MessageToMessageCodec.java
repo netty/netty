@@ -174,10 +174,10 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
     protected abstract Object decode(ChannelHandlerContext ctx, INBOUND_IN msg) throws Exception;
 
     protected void freeInboundMessage(INBOUND_IN msg) throws Exception {
-        BufUtil.free(msg);
+        BufUtil.release(msg);
     }
 
     protected void freeOutboundMessage(OUTBOUND_IN msg) throws Exception {
-        BufUtil.free(msg);
+        BufUtil.release(msg);
     }
 }

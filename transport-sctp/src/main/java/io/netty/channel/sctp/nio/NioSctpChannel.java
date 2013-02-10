@@ -27,12 +27,12 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.sctp.SctpServerChannel;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.sctp.DefaultSctpChannelConfig;
 import io.netty.channel.sctp.SctpChannelConfig;
 import io.netty.channel.sctp.SctpMessage;
 import io.netty.channel.sctp.SctpNotificationHandler;
+import io.netty.channel.sctp.SctpServerChannel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
@@ -288,7 +288,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
             throw new ChannelException(cause);
         }  finally {
             if (free) {
-                buffer.free();
+                buffer.release();
             }
         }
     }
@@ -333,7 +333,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         buf.remove();
 
         // packet was written free up buffer
-        packet.free();
+        packet.release();
 
         if (buf.isEmpty()) {
             // Wrote the outbound buffer completely - clear OP_WRITE.

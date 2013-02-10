@@ -285,7 +285,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
 
         @Override
         public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            ctx.inboundMessageBuffer().free();
+            ctx.inboundMessageBuffer().release();
         }
     }
 

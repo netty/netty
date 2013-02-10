@@ -29,7 +29,7 @@ import java.nio.channels.ScatteringByteChannel;
  * parent.  It is recommended to use {@link ByteBuf#duplicate()} instead
  * of calling the constructor explicitly.
  */
-public class DuplicatedByteBuf extends AbstractByteBuf {
+public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     private final ByteBuf buffer;
 
@@ -230,26 +230,6 @@ public class DuplicatedByteBuf extends AbstractByteBuf {
     @Override
     public ByteBuffer[] nioBuffers(int index, int length) {
         return buffer.nioBuffers(index, length);
-    }
-
-    @Override
-    public boolean isFreed() {
-        return buffer.isFreed();
-    }
-
-    @Override
-    public void free() {
-        throw new UnsupportedOperationException("derived");
-    }
-
-    @Override
-    public ByteBuf suspendIntermediaryDeallocations() {
-        throw new UnsupportedOperationException("derived");
-    }
-
-    @Override
-    public ByteBuf resumeIntermediaryDeallocations() {
-        throw new UnsupportedOperationException("derived");
     }
 }
 

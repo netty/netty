@@ -1914,19 +1914,4 @@ public interface ByteBuf extends Buf, Comparable<ByteBuf> {
      */
     @Override
     String toString();
-
-    /**
-     * Deallocates the internal memory block of this buffer or returns it to the allocator or pool it came from.
-     * The result of accessing a released buffer is unspecified and can even cause JVM crash.
-     *
-     * @throws UnsupportedOperationException if this buffer is derived
-     */
-    @Override
-    void free();
-
-    /**
-     * Returns {@code true} if and only if this buffer has been deallocated by {@link #free()}.
-     */
-    @Override
-    boolean isFreed();
 }

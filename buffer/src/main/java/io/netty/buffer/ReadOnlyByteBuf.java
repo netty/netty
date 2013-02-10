@@ -29,7 +29,7 @@ import java.nio.channels.ScatteringByteChannel;
  * recommended to use {@link Unpooled#unmodifiableBuffer(ByteBuf)}
  * instead of calling the constructor explicitly.
  */
-public class ReadOnlyByteBuf extends AbstractByteBuf {
+public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
 
     private final ByteBuf buffer;
 
@@ -228,25 +228,5 @@ public class ReadOnlyByteBuf extends AbstractByteBuf {
     @Override
     public ByteBuf capacity(int newCapacity) {
         throw new ReadOnlyBufferException();
-    }
-
-    @Override
-    public boolean isFreed() {
-        return buffer.isFreed();
-    }
-
-    @Override
-    public void free() {
-        throw new UnsupportedOperationException("derived");
-    }
-
-    @Override
-    public ByteBuf suspendIntermediaryDeallocations() {
-        throw new UnsupportedOperationException("derived");
-    }
-
-    @Override
-    public ByteBuf resumeIntermediaryDeallocations() {
-        throw new UnsupportedOperationException("derived");
     }
 }

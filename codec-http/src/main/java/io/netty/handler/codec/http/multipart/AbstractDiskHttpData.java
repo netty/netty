@@ -352,13 +352,4 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
     public File getFile() throws IOException {
         return file;
     }
-
-    @Override
-    public boolean isFreed() {
-        if (file == null || !file.exists()) {
-            return true;
-        }
-        return false;
-    }
-
 }

@@ -424,7 +424,7 @@ public class LocalTransportThreadModelTest {
 
         @Override
         public void freeOutboundBuffer(ChannelHandlerContext ctx) {
-            ctx.outboundByteBuffer().free();
+            ctx.outboundByteBuffer().release();
         }
 
         @Override
@@ -523,7 +523,7 @@ public class LocalTransportThreadModelTest {
 
         @Override
         public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            ctx.inboundByteBuffer().free();
+            ctx.inboundByteBuffer().release();
         }
 
         @Override

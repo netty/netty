@@ -72,7 +72,7 @@ public abstract class SpdyOrHttpChooser extends ChannelDuplexHandler implements 
 
     @Override
     public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        ctx.inboundByteBuffer().free();
+        ctx.inboundByteBuffer().release();
     }
 
     @Override

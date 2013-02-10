@@ -32,7 +32,8 @@ public class DiscardClientHandler extends ChannelInboundByteHandlerAdapter {
     private static final Logger logger = Logger.getLogger(
             DiscardClientHandler.class.getName());
 
-    private final byte[] content;
+    private final int messageSize;
+    private ByteBuf content;
     private ChannelHandlerContext ctx;
 
     public DiscardClientHandler(int messageSize) {
@@ -40,13 +41,17 @@ public class DiscardClientHandler extends ChannelInboundByteHandlerAdapter {
             throw new IllegalArgumentException(
                     "messageSize: " + messageSize);
         }
-        content = new byte[messageSize];
+        this.messageSize = messageSize;
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx)
             throws Exception {
         this.ctx = ctx;
+
+        // Initialize the message.
+        content = ctx.alloc().directBuffer(messageSize).writeZero(messageSize);
+
         // Send the initial messages.
         generateTraffic();
     }
@@ -75,7 +80,7 @@ public class DiscardClientHandler extends ChannelInboundByteHandlerAdapter {
         // Fill the outbound buffer up to 64KiB
         ByteBuf out = ctx.nextOutboundByteBuffer();
         while (out.readableBytes() < 65536) {
-            out.writeBytes(content);
+            out.writeBytes(content, 0, content.readableBytes());
         }
 
         // Flush the outbound buffer to the socket.

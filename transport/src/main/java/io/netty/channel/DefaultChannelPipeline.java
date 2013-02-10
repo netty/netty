@@ -17,8 +17,8 @@ package io.netty.channel;
 
 import io.netty.buffer.Buf;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Freeable;
 import io.netty.buffer.MessageBuf;
+import io.netty.buffer.ReferenceCounted;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel.Unsafe;
 import io.netty.logging.InternalLogger;
@@ -1125,8 +1125,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            byteSink.free();
-            msgSink.free();
+            byteSink.release();
+            msgSink.release();
         }
 
         @Override
@@ -1148,8 +1148,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
                         break;
                     }
 
-                    if (m instanceof Freeable) {
-                        ((Freeable) m).free();
+                    if (m instanceof ReferenceCounted) {
+                        ((ReferenceCounted) m).release();
                     }
                 }
                 logger.warn(
@@ -1262,8 +1262,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public final void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            msgSink.free();
-            byteSink.free();
+            msgSink.release();
+            byteSink.release();
         }
     }
 
@@ -1290,8 +1290,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
                     discardedMessages ++;
                 }
 
-                if (m instanceof Freeable) {
-                    ((Freeable) m).free();
+                if (m instanceof ReferenceCounted) {
+                    ((ReferenceCounted) m).release();
                 }
             }
 

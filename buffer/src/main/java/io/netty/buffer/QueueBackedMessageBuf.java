@@ -21,7 +21,7 @@ import java.util.Queue;
 
 final class QueueBackedMessageBuf<T> extends AbstractMessageBuf<T> {
 
-    private final Queue<T> queue;
+    private Queue<T> queue;
 
     QueueBackedMessageBuf(Queue<T> queue) {
         super(Integer.MAX_VALUE);
@@ -36,19 +36,19 @@ final class QueueBackedMessageBuf<T> extends AbstractMessageBuf<T> {
         if (e == null) {
             throw new NullPointerException("e");
         }
-        checkUnfreed();
+        ensureAccessible();
         return isWritable() && queue.offer(e);
     }
 
     @Override
     public T poll() {
-        checkUnfreed();
+        ensureAccessible();
         return queue.poll();
     }
 
     @Override
     public T peek() {
-        checkUnfreed();
+        ensureAccessible();
         return queue.peek();
     }
 
@@ -64,66 +64,66 @@ final class QueueBackedMessageBuf<T> extends AbstractMessageBuf<T> {
 
     @Override
     public boolean contains(Object o) {
-        checkUnfreed();
+        ensureAccessible();
         return queue.contains(o);
     }
 
     @Override
     public Iterator<T> iterator() {
-        checkUnfreed();
+        ensureAccessible();
         return queue.iterator();
     }
 
     @Override
     public Object[] toArray() {
-        checkUnfreed();
+        ensureAccessible();
         return queue.toArray();
     }
 
     @Override
     public <E> E[] toArray(E[] a) {
-        checkUnfreed();
+        ensureAccessible();
         return queue.toArray(a);
     }
 
     @Override
     public boolean remove(Object o) {
-        checkUnfreed();
+        ensureAccessible();
         return queue.remove(o);
     }
 
     @Override
     public boolean containsAll(Collection<?> c) {
-        checkUnfreed();
+        ensureAccessible();
         return queue.containsAll(c);
     }
 
     @Override
     public boolean addAll(Collection<? extends T> c) {
-        checkUnfreed();
+        ensureAccessible();
         return isWritable(c.size()) && queue.addAll(c);
     }
 
     @Override
     public boolean removeAll(Collection<?> c) {
-        checkUnfreed();
+        ensureAccessible();
         return queue.removeAll(c);
     }
 
     @Override
     public boolean retainAll(Collection<?> c) {
-        checkUnfreed();
+        ensureAccessible();
         return queue.retainAll(c);
     }
 
     @Override
     public void clear() {
-        checkUnfreed();
+        ensureAccessible();
         queue.clear();
     }
 
     @Override
-    protected void doFree() {
-        clear();
+    protected void deallocate() {
+        queue = null;
     }
 }

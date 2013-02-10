@@ -1695,7 +1695,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     try {
                         out.writeBytes(data);
                     } finally {
-                        data.free();
+                        data.release();
                     }
                 }
             }

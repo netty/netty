@@ -52,7 +52,7 @@ public class UnpooledTest {
         assertEquals(12 + 512, buffer.readableBytes());
         assertEquals(2, buffer.nioBufferCount());
 
-        buffer.free();
+        buffer.release();
     }
 
     @Test
@@ -160,11 +160,8 @@ public class UnpooledTest {
     @Test
     public void shouldReturnEmptyBufferWhenLengthIsZero() {
         assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[0]));
-        assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[0]).order(LITTLE_ENDIAN));
         assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[8], 0, 0));
-        assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[8], 0, 0).order(LITTLE_ENDIAN));
         assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[8], 8, 0));
-        assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[8], 8, 0).order(LITTLE_ENDIAN));
         assertSame(EMPTY_BUFFER, wrappedBuffer(ByteBuffer.allocateDirect(0)));
         assertSame(EMPTY_BUFFER, wrappedBuffer(EMPTY_BUFFER));
         assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[0][]));
@@ -177,11 +174,8 @@ public class UnpooledTest {
         assertSame(EMPTY_BUFFER, wrappedBuffer(buffer(0), buffer(0)));
 
         assertSame(EMPTY_BUFFER, copiedBuffer(new byte[0]));
-        assertSame(EMPTY_BUFFER, copiedBuffer(new byte[0]).order(LITTLE_ENDIAN));
         assertSame(EMPTY_BUFFER, copiedBuffer(new byte[8], 0, 0));
-        assertSame(EMPTY_BUFFER, copiedBuffer(new byte[8], 0, 0).order(LITTLE_ENDIAN));
         assertSame(EMPTY_BUFFER, copiedBuffer(new byte[8], 8, 0));
-        assertSame(EMPTY_BUFFER, copiedBuffer(new byte[8], 8, 0).order(LITTLE_ENDIAN));
         assertSame(EMPTY_BUFFER, copiedBuffer(ByteBuffer.allocateDirect(0)));
         assertSame(EMPTY_BUFFER, copiedBuffer(EMPTY_BUFFER));
         assertSame(EMPTY_BUFFER, copiedBuffer(new byte[0][]));

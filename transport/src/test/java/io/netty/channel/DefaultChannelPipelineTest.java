@@ -17,7 +17,7 @@ package io.netty.channel;
 
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Freeable;
+import io.netty.buffer.ReferenceCounted;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalEventLoopGroup;
@@ -121,15 +121,35 @@ public class DefaultChannelPipelineTest {
     public void testFreeCalled() throws InterruptedException{
         final CountDownLatch free = new CountDownLatch(1);
 
-        final Freeable holder = new Freeable() {
+        final ReferenceCounted holder = new ReferenceCounted() {
             @Override
-            public void free() {
-                free.countDown();
+            public int refCnt() {
+                return (int) free.getCount();
             }
 
             @Override
-            public boolean isFreed() {
-                return free.getCount() == 0;
+            public void retain() {
+                fail();
+            }
+
+            @Override
+            public void retain(int increment) {
+                fail();
+            }
+
+            @Override
+            public boolean release() {
+                assertEquals(1, refCnt());
+                free.countDown();
+                return true;
+            }
+
+            @Override
+            public boolean release(int decrement) {
+                for (int i = 0; i < decrement; i ++) {
+                    release();
+                }
+                return true;
             }
         };
         LocalChannel channel = new LocalChannel();

@@ -55,13 +55,24 @@ public interface LastHttpContent extends HttpContent {
         }
 
         @Override
-        public boolean isFreed() {
+        public int refCnt() {
+            return 1;
+        }
+
+        @Override
+        public void retain() { }
+
+        @Override
+        public void retain(int increment) { }
+
+        @Override
+        public boolean release() {
             return false;
         }
 
         @Override
-        public void free() {
-            // NOOP
+        public boolean release(int decrement) {
+            return false;
         }
     };
 

@@ -98,7 +98,7 @@ public class ChunkedWriteHandler
 
     @Override
     public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        queue.free();
+        queue.release();
     }
 
     private boolean isWritable() {

@@ -26,6 +26,7 @@ import java.nio.charset.Charset;
  * Mixed implementation using both in Memory and in File with a limit of size
  */
 public class MixedFileUpload implements FileUpload {
+
     private FileUpload fileUpload;
 
     private final long limitSize;
@@ -235,12 +236,27 @@ public class MixedFileUpload implements FileUpload {
     }
 
     @Override
-    public void free() {
-        fileUpload.free();
+    public int refCnt() {
+        return fileUpload.refCnt();
     }
 
     @Override
-    public boolean isFreed() {
-        return fileUpload.isFreed();
+    public void retain() {
+        fileUpload.retain();
+    }
+
+    @Override
+    public void retain(int increment) {
+        fileUpload.retain(increment);
+    }
+
+    @Override
+    public boolean release() {
+        return fileUpload.release();
+    }
+
+    @Override
+    public boolean release(int decrement) {
+        return fileUpload.release(decrement);
     }
 }

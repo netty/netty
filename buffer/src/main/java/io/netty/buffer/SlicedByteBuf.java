@@ -30,7 +30,7 @@ import java.nio.channels.ScatteringByteChannel;
  * {@link ByteBuf#slice(int, int)} instead of calling the constructor
  * explicitly.
  */
-public class SlicedByteBuf extends AbstractByteBuf {
+public class SlicedByteBuf extends AbstractDerivedByteBuf {
 
     private final ByteBuf buffer;
     private final int adjustment;
@@ -281,25 +281,5 @@ public class SlicedByteBuf extends AbstractByteBuf {
     public ByteBuffer[] nioBuffers(int index, int length) {
         checkIndex(index, length);
         return buffer.nioBuffers(index, length);
-    }
-
-    @Override
-    public boolean isFreed() {
-        return buffer.isFreed();
-    }
-
-    @Override
-    public void free() {
-        throw new UnsupportedOperationException("derived");
-    }
-
-    @Override
-    public ByteBuf suspendIntermediaryDeallocations() {
-        throw new UnsupportedOperationException("derived");
-    }
-
-    @Override
-    public ByteBuf resumeIntermediaryDeallocations() {
-        throw new UnsupportedOperationException("derived");
     }
 }

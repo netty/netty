@@ -27,12 +27,12 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.sctp.SctpServerChannel;
 import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.sctp.DefaultSctpChannelConfig;
 import io.netty.channel.sctp.SctpChannelConfig;
 import io.netty.channel.sctp.SctpMessage;
 import io.netty.channel.sctp.SctpNotificationHandler;
+import io.netty.channel.sctp.SctpServerChannel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
@@ -209,7 +209,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                     throw new ChannelException(cause);
                 }  finally {
                     if (free) {
-                        buffer.free();
+                        buffer.release();
                     }
                 }
             }
@@ -252,7 +252,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
 
                     ch.send(nioData, mi);
                 } finally {
-                    packet.free();
+                    packet.release();
                 }
             }
             writableKeys.clear();

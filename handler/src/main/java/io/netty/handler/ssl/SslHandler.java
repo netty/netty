@@ -388,7 +388,7 @@ public class SslHandler
 
     @Override
     public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        ctx.inboundByteBuffer().free();
+        ctx.inboundByteBuffer().release();
     }
 
     @Override
@@ -403,7 +403,7 @@ public class SslHandler
 
     @Override
     public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        ctx.outboundByteBuffer().free();
+        ctx.outboundByteBuffer().release();
     }
 
     @Override

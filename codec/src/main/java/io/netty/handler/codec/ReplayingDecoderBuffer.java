@@ -879,12 +879,27 @@ final class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
-    public boolean isFreed() {
-        return buffer.isFreed();
+    public int refCnt() {
+        return buffer.refCnt();
     }
 
     @Override
-    public void free() {
+    public void retain() {
+        throw new UnreplayableOperationException();
+    }
+
+    @Override
+    public void retain(int increment) {
+        throw new UnreplayableOperationException();
+    }
+
+    @Override
+    public boolean release() {
+        throw new UnreplayableOperationException();
+    }
+
+    @Override
+    public boolean release(int decrement) {
         throw new UnreplayableOperationException();
     }
 

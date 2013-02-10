@@ -40,7 +40,7 @@ import java.util.Queue;
  * is recommended to use {@link Unpooled#wrappedBuffer(ByteBuf...)}
  * instead of calling the constructor explicitly.
  */
-public class DefaultCompositeByteBuf extends AbstractByteBuf implements CompositeByteBuf {
+public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf implements CompositeByteBuf {
 
     private static final ByteBuffer[] EMPTY_NIOBUFFERS = new ByteBuffer[0];
 
@@ -1293,7 +1293,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             }
 
             if (suspendedDeallocations == null) {
-                buf.free(); // We should not get a NPE here. If so, it must be a bug.
+                buf.release(); // We should not get a NPE here. If so, it must be a bug.
             } else {
                 suspendedDeallocations.add(buf);
             }
@@ -1531,12 +1531,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     }
 
     @Override
-    public boolean isFreed() {
-        return freed;
-    }
-
-    @Override
-    public void free() {
+    protected void deallocate() {
         if (freed) {
             return;
         }
@@ -1552,6 +1547,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
     @Override
     public CompositeByteBuf suspendIntermediaryDeallocations() {
+        ensureAccessible();
         if (suspendedDeallocations == null) {
             suspendedDeallocations = new ArrayDeque<ByteBuf>(2);
         }
@@ -1568,7 +1564,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         this.suspendedDeallocations = null;
 
         for (ByteBuf buf: suspendedDeallocations) {
-            buf.free();
+            buf.release();
         }
         return this;
     }

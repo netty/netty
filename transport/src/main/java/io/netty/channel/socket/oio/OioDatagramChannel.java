@@ -22,11 +22,11 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.DefaultDatagramChannelConfig;
-import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
@@ -230,7 +230,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
             throw new ChannelException(cause);
         } finally {
             if (free) {
-                buffer.free();
+                buffer.release();
             }
         }
     }
@@ -255,7 +255,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
             }
             socket.send(tmpPacket);
         } finally {
-            p.free();
+            p.release();
         }
     }
 

@@ -43,7 +43,7 @@ public abstract class ChannelInboundByteHandlerAdapter
 
     @Override
     public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        ctx.inboundByteBuffer().free();
+        ctx.inboundByteBuffer().release();
     }
 
     @Override
