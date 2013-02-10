@@ -117,7 +117,7 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
             long localWritten = region.transferTo(outChannel, written);
             if (localWritten == -1) {
                 checkEOF(region, written);
-                region.close();
+                region.release();
                 promise.setSuccess();
                 return;
             }

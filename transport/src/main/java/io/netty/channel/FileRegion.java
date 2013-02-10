@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.ReferenceCounted;
+
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
@@ -50,7 +52,7 @@ import java.nio.channels.WritableByteChannel;
  *
  * Currently, the NIO transport is the only transport that supports {@link FileRegion}.
  */
-public interface FileRegion {
+public interface FileRegion extends ReferenceCounted {
 
     /**
      * Returns the offset in the file where the transfer began.
@@ -73,9 +75,4 @@ public interface FileRegion {
      *                  byte of the region transferred.
      */
     long transferTo(WritableByteChannel target, long position) throws IOException;
-
-    /**
-     * Close the {@link FileRegion}. After calling this method accessing the {@link FileRegion} may fail.
-     */
-    void close();
 }

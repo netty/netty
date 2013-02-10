@@ -552,7 +552,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                         written += result;
 
                         if (written >= region.count()) {
-                            region.close();
+                            region.release();
                             promise.setSuccess();
                             return;
                         }
@@ -562,14 +562,14 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                             region.transferTo(WritableByteChannelAdapter.this, written);
                         }
                     } catch (Throwable cause) {
-                        region.close();
+                        region.release();
                         promise.setFailure(cause);
                     }
                 }
 
                 @Override
                 public void failed(Throwable exc, Object attachment) {
-                    region.close();
+                    region.release();
                     promise.setFailure(exc);
                 }
             });

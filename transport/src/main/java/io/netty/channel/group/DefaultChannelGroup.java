@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -19,6 +19,7 @@ import io.netty.buffer.BufUtil;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.FileRegion;
 import io.netty.channel.ServerChannel;
 
 import java.util.AbstractSet;
@@ -218,6 +219,32 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
         }
 
         BufUtil.release(message);
+        return new DefaultChannelGroupFuture(this, futures);
+    }
+
+    @Override
+    public ChannelGroupFuture sendFile(FileRegion region) {
+        if (region == null) {
+            throw new NullPointerException("region");
+        }
+
+        Map<Integer, ChannelFuture> futures = new LinkedHashMap<Integer, ChannelFuture>(size());
+        for (Channel c: nonServerChannels.values()) {
+            BufUtil.retain(region);
+            futures.put(c.id(), c.sendFile(region));
+        }
+
+        BufUtil.release(region);
+        return new DefaultChannelGroupFuture(this, futures);
+    }
+
+    @Override
+    public ChannelGroupFuture flush() {
+        Map<Integer, ChannelFuture> futures = new LinkedHashMap<Integer, ChannelFuture>(size());
+        for (Channel c: nonServerChannels.values()) {
+            futures.put(c.id(), c.flush());
+        }
+
         return new DefaultChannelGroupFuture(this, futures);
     }
 
