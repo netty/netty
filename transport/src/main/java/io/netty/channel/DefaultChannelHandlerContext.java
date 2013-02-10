@@ -338,6 +338,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 ((ChannelInboundHandler) handler).freeInboundBuffer(this);
             } catch (Exception e) {
                 pipeline.notifyHandlerException(e);
+            } finally {
+                freeInboundBridge();
             }
         }
         if (handler instanceof ChannelOutboundHandler) {
@@ -345,7 +347,33 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 ((ChannelOutboundHandler) handler).freeOutboundBuffer(this);
             } catch (Exception e) {
                 pipeline.notifyHandlerException(e);
+            } finally {
+                freeOutboundBridge();
             }
+        }
+    }
+
+    private void freeInboundBridge() {
+        ByteBridge inByteBridge = this.inByteBridge;
+        if (inByteBridge != null) {
+            inByteBridge.release();
+        }
+
+        MessageBridge inMsgBridge = this.inMsgBridge;
+        if (inMsgBridge != null) {
+            inMsgBridge.release();
+        }
+    }
+
+    private void freeOutboundBridge() {
+        ByteBridge outByteBridge = this.outByteBridge;
+        if (outByteBridge != null) {
+            outByteBridge.release();
+        }
+
+        MessageBridge outMsgBridge = this.outMsgBridge;
+        if (outMsgBridge != null) {
+            outMsgBridge.release();
         }
     }
 
@@ -680,6 +708,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     if (bridge == null) {
                         bridge = new ByteBridge(ctx);
                         if (!IN_BYTE_BRIDGE_UPDATER.compareAndSet(ctx, null, bridge)) {
+                            // release it as it was set before
+                            bridge.release();
+
                             bridge = ctx.inByteBridge;
                         }
                     }
@@ -705,6 +736,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     if (bridge == null) {
                         bridge = new MessageBridge();
                         if (!IN_MSG_BRIDGE_UPDATER.compareAndSet(ctx, null, bridge)) {
+                            // release it as it was set before
+                            bridge.release();
+
                             bridge = ctx.inMsgBridge;
                         }
                     }
@@ -730,6 +764,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     if (bridge == null) {
                         bridge = new ByteBridge(ctx);
                         if (!OUT_BYTE_BRIDGE_UPDATER.compareAndSet(ctx, null, bridge)) {
+                            // release it as it was set before
+                            bridge.release();
+
                             bridge = ctx.outByteBridge;
                         }
                     }
@@ -755,6 +792,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     if (bridge == null) {
                         bridge = new MessageBridge();
                         if (!OUT_MSG_BRIDGE_UPDATER.compareAndSet(ctx, null, bridge)) {
+                            // release it as it was set before
+                            bridge.release();
+
                             bridge = ctx.outMsgBridge;
                         }
                     }
@@ -1520,6 +1560,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 h.freeInboundBuffer(this);
             } catch (Throwable t) {
                 pipeline.notifyHandlerException(t);
+            } finally {
+                freeInboundBridge();
             }
         }
 
@@ -1560,6 +1602,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 h.freeOutboundBuffer(this);
             } catch (Throwable t) {
                 pipeline.notifyHandlerException(t);
+            } finally {
+                freeOutboundBridge();
             }
         }
 
@@ -1647,6 +1691,10 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 Collections.addAll(out, data);
             }
         }
+
+        private void release() {
+            msgBuf.release();
+        }
     }
 
     private static final class ByteBridge {
@@ -1699,6 +1747,10 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     }
                 }
             }
+        }
+
+        private void release() {
+            byteBuf.release();
         }
     }
 }
