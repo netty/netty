@@ -32,15 +32,18 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
 
     @Override
     public final void retain() {
-        do {
+        for (;;) {
             int refCnt = this.refCnt;
-            if (refCnt <= 0) {
+            if (refCnt == 0) {
                 throw new IllegalBufferAccessException();
             }
             if (refCnt == Integer.MAX_VALUE) {
                 throw new IllegalBufferAccessException("refCnt overflow");
             }
-        } while (!refCntUpdater.compareAndSet(this, refCnt, refCnt + 1));
+            if (refCntUpdater.compareAndSet(this, refCnt, refCnt + 1)) {
+                break;
+            }
+        }
     }
 
     @Override
@@ -49,22 +52,25 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
             throw new IllegalArgumentException("increment: " + increment + " (expected: > 0)");
         }
 
-        do {
+        for (;;) {
             int refCnt = this.refCnt;
-            if (refCnt <= 0) {
+            if (refCnt == 0) {
                 throw new IllegalBufferAccessException();
             }
             if (refCnt > Integer.MAX_VALUE - increment) {
                 throw new IllegalBufferAccessException("refCnt overflow");
             }
-        } while (!refCntUpdater.compareAndSet(this, refCnt, refCnt + increment));
+            if (refCntUpdater.compareAndSet(this, refCnt, refCnt + increment)) {
+                break;
+            }
+        }
     }
 
     @Override
     public final boolean release() {
         for (;;) {
             int refCnt = this.refCnt;
-            if (refCnt <= 0) {
+            if (refCnt == 0) {
                 throw new IllegalBufferAccessException();
             }
 

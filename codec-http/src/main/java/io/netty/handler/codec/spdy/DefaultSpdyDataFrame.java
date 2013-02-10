@@ -101,7 +101,7 @@ public class DefaultSpdyDataFrame extends DefaultByteBufHolder implements SpdyDa
         buf.append(streamId);
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Size = ");
-        if (refCnt() <= 0) {
+        if (refCnt() == 0) {
             buf.append("(freed)");
         } else {
             buf.append(data().readableBytes());

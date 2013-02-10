@@ -254,7 +254,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         try {
             if (buf.isReadable()) {
                 for (;;) {
-                    if (buf.refCnt() <= 0) {
+                    if (buf.refCnt() == 0) {
                         break;
                     }
                     // Ensure the readerIndex of the buffer is 0 before beginning an async write.
@@ -370,7 +370,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             channel.writeInProgress = false;
 
             ByteBuf buf = channel.unsafe().directOutboundContext().outboundByteBuffer();
-            if (buf.refCnt() <= 0) {
+            if (buf.refCnt() == 0) {
                 return;
             }
 
