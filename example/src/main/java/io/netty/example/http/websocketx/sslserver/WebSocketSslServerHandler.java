@@ -107,10 +107,12 @@ public class WebSocketSslServerHandler extends ChannelInboundMessageHandlerAdapt
 
         // Check for closing frame
         if (frame instanceof CloseWebSocketFrame) {
+            frame.retain();
             handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
             return;
         }
         if (frame instanceof PingWebSocketFrame) {
+            frame.data().retain();
             ctx.channel().write(new PongWebSocketFrame(frame.data()));
             return;
         }
@@ -150,14 +152,5 @@ public class WebSocketSslServerHandler extends ChannelInboundMessageHandlerAdapt
 
     private static String getWebSocketLocation(FullHttpRequest req) {
         return "wss://" + req.headers().get(HOST) + WEBSOCKET_PATH;
-    }
-
-    @Override
-    protected void freeInboundMessage(Object msg) throws Exception {
-        if (msg instanceof PingWebSocketFrame || msg instanceof CloseWebSocketFrame) {
-            // Will be freed once wrote back
-            return;
-        }
-        super.freeInboundMessage(msg);
     }
 }

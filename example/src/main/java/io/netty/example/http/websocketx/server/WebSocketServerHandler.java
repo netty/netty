@@ -105,10 +105,12 @@ public class WebSocketServerHandler extends ChannelInboundMessageHandlerAdapter<
 
         // Check for closing frame
         if (frame instanceof CloseWebSocketFrame) {
+            frame.retain();
             handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
             return;
         }
         if (frame instanceof PingWebSocketFrame) {
+            frame.data().retain();
             ctx.channel().write(new PongWebSocketFrame(frame.data()));
             return;
         }
@@ -144,15 +146,6 @@ public class WebSocketServerHandler extends ChannelInboundMessageHandlerAdapter<
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         cause.printStackTrace();
         ctx.close();
-    }
-
-    @Override
-    protected void freeInboundMessage(Object msg) throws Exception {
-        if (msg instanceof PingWebSocketFrame || msg instanceof CloseWebSocketFrame) {
-            // Will be freed once wrote back
-            return;
-        }
-        super.freeInboundMessage(msg);
     }
 
     private static String getWebSocketLocation(FullHttpRequest req) {

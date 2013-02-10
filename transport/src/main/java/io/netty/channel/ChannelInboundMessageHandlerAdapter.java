@@ -113,7 +113,7 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
                     abort.expect(ABORT);
                     break;
                 } finally {
-                    freeInboundMessage(imsg);
+                    BufUtil.release(imsg);
                 }
             }
         } catch (Throwable t) {
@@ -170,14 +170,5 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
     protected void endMessageReceived(
             @SuppressWarnings("UnusedParameters") ChannelHandlerContext ctx) throws Exception {
         // NOOP
-    }
-
-    /**
-     * Is called after a message was processed via {@link #messageReceived(ChannelHandlerContext, Object)} to free
-     * up any resources that is held by the inbound message. You may want to override this if your implementation
-     * just pass-through the input message or need it for later usage.
-     */
-    protected void freeInboundMessage(I msg) throws Exception {
-        BufUtil.release(msg);
     }
 }

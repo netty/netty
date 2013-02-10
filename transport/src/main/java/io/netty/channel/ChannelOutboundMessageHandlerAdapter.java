@@ -111,7 +111,7 @@ public abstract class ChannelOutboundMessageHandlerAdapter<I>
                     flush(ctx, imsg);
                     processed ++;
                 } finally {
-                    freeOutboundMessage(imsg);
+                    BufUtil.release(imsg);
                 }
             }
         } catch (Throwable t) {
@@ -172,13 +172,4 @@ public abstract class ChannelOutboundMessageHandlerAdapter<I>
      * @param ctx           the {@link ChannelHandlerContext} which this {@link ChannelHandler} belongs to
      */
     protected void endFlush(@SuppressWarnings("UnusedParameters") ChannelHandlerContext ctx) throws Exception { }
-
-    /**
-     * Is called after a message was processed via {@link #flush(ChannelHandlerContext, Object)} to free
-     * up any resources that is held by the outbound message. You may want to override this if your implementation
-     * just pass-through the input message or need it for later usage.
-     */
-    protected void freeOutboundMessage(I msg) throws Exception {
-        BufUtil.release(msg);
-    }
 }

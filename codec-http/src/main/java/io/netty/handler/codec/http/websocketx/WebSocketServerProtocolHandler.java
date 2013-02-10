@@ -78,14 +78,18 @@ public class WebSocketServerProtocolHandler extends ChannelInboundMessageHandler
     public void messageReceived(ChannelHandlerContext ctx, WebSocketFrame frame) throws Exception {
         if (frame instanceof CloseWebSocketFrame) {
             WebSocketServerHandshaker handshaker = getHandshaker(ctx);
+            frame.retain();
             handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
             return;
         }
+
         if (frame instanceof PingWebSocketFrame) {
+            frame.data().retain();
             ctx.channel().write(new PongWebSocketFrame(frame.data()));
             return;
         }
 
+        frame.retain();
         ctx.nextInboundMessageBuffer().add(frame);
     }
 
@@ -98,11 +102,6 @@ public class WebSocketServerProtocolHandler extends ChannelInboundMessageHandler
         } else {
             ctx.close();
         }
-    }
-
-    @Override
-    protected void freeInboundMessage(WebSocketFrame msg) throws Exception {
-        // Do not free; other handlers will.
     }
 
     static WebSocketServerHandshaker getHandshaker(ChannelHandlerContext ctx) {

@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.buffer.BufUtil;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -68,12 +67,6 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
         protected Object encode(ChannelHandlerContext ctx, Object msg) throws Exception {
             return MessageToMessageCodec.this.encode(ctx, (OUTBOUND_IN) msg);
         }
-
-        @Override
-        @SuppressWarnings("unchecked")
-        protected void freeOutboundMessage(Object msg) throws Exception {
-            MessageToMessageCodec.this.freeOutboundMessage((OUTBOUND_IN) msg);
-        }
     };
 
     private final MessageToMessageDecoder<Object> decoder =
@@ -88,12 +81,6 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
         @SuppressWarnings("unchecked")
         protected Object decode(ChannelHandlerContext ctx, Object msg) throws Exception {
             return MessageToMessageCodec.this.decode(ctx, (INBOUND_IN) msg);
-        }
-
-        @Override
-        @SuppressWarnings("unchecked")
-        protected void freeInboundMessage(Object msg) throws Exception {
-            MessageToMessageCodec.this.freeInboundMessage((INBOUND_IN) msg);
         }
     };
 
@@ -172,12 +159,4 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
 
     protected abstract Object encode(ChannelHandlerContext ctx, OUTBOUND_IN msg) throws Exception;
     protected abstract Object decode(ChannelHandlerContext ctx, INBOUND_IN msg) throws Exception;
-
-    protected void freeInboundMessage(INBOUND_IN msg) throws Exception {
-        BufUtil.release(msg);
-    }
-
-    protected void freeOutboundMessage(OUTBOUND_IN msg) throws Exception {
-        BufUtil.release(msg);
-    }
 }
