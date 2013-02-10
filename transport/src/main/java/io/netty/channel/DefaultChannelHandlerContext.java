@@ -706,7 +706,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 if (executor().inEventLoop(currentThread)) {
                     ByteBridge bridge = ctx.inByteBridge;
                     if (bridge == null) {
-                        bridge = new ByteBridge(ctx);
+                        bridge = new ByteBridge(ctx, true);
                         if (!IN_BYTE_BRIDGE_UPDATER.compareAndSet(ctx, null, bridge)) {
                             // release it as it was set before
                             bridge.release();
@@ -762,7 +762,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 if (executor().inEventLoop(currentThread)) {
                     ByteBridge bridge = ctx.outByteBridge;
                     if (bridge == null) {
-                        bridge = new ByteBridge(ctx);
+                        bridge = new ByteBridge(ctx, false);
                         if (!OUT_BYTE_BRIDGE_UPDATER.compareAndSet(ctx, null, bridge)) {
                             // release it as it was set before
                             bridge.release();
@@ -1703,10 +1703,21 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         private final Queue<ByteBuf> exchangeBuf = new ConcurrentLinkedQueue<ByteBuf>();
         private final ChannelHandlerContext ctx;
 
-        ByteBridge(ChannelHandlerContext ctx) {
+        ByteBridge(ChannelHandlerContext ctx, boolean inbound) {
             this.ctx = ctx;
-            // TODO Choose whether to use heap or direct buffer depending on the context's buffer type.
-            byteBuf = ctx.alloc().buffer();
+            if (inbound) {
+                if (ctx.inboundByteBuffer().isDirect()) {
+                    byteBuf = ctx.alloc().directBuffer();
+                } else {
+                    byteBuf = ctx.alloc().heapBuffer();
+                }
+            } else {
+                if (ctx.outboundByteBuffer().isDirect()) {
+                    byteBuf = ctx.alloc().directBuffer();
+                } else {
+                    byteBuf = ctx.alloc().heapBuffer();
+                }
+            }
         }
 
         private void fill() {
