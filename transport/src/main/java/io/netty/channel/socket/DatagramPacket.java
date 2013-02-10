@@ -57,7 +57,7 @@ public final class DatagramPacket extends DefaultByteBufHolder {
 
     @Override
     public String toString() {
-        if (refCnt() <= 0) {
+        if (refCnt() == 0) {
             return "DatagramPacket{remoteAddress=" + remoteAddress().toString() +
                     ", data=(FREED)}";
         }

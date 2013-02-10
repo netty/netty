@@ -1032,7 +1032,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
     }
 
     protected final void ensureAccessible() {
-        if (refCnt() <= 0) {
+        if (refCnt() == 0) {
             throw new IllegalBufferAccessException();
         }
     }
