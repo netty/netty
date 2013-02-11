@@ -31,19 +31,19 @@ import io.netty.channel.ChannelConfig;
  * <tr>
  * <th>Name</th><th>Associated setter method</th>
  * </tr><tr>
- * <td>{@link io.netty.channel.rxtx.RxtxChannelOption#BAUD_RATE}</td><td>{@link #setBaudrate(int)}</td>
+ * <td>{@link RxtxChannelOption#BAUD_RATE}</td><td>{@link #setBaudrate(int)}</td>
  * </tr><tr>
- * <td>{@link io.netty.channel.rxtx.RxtxChannelOption#DTR}</td><td>{@link #setDtr(boolean)}</td>
+ * <td>{@link RxtxChannelOption#DTR}</td><td>{@link #setDtr(boolean)}</td>
  * </tr><tr>
- * <td>{@link io.netty.channel.rxtx.RxtxChannelOption#RTS}</td><td>{@link #setRts(boolean)}</td>
+ * <td>{@link RxtxChannelOption#RTS}</td><td>{@link #setRts(boolean)}</td>
  * </tr><tr>
- * <td>{@link io.netty.channel.rxtx.RxtxChannelOption#STOP_BITS}</td><td>{@link #setStopbits(Stopbits)}</td>
+ * <td>{@link RxtxChannelOption#STOP_BITS}</td><td>{@link #setStopbits(Stopbits)}</td>
  * </tr><tr>
- * <td>{@link io.netty.channel.rxtx.RxtxChannelOption#DATA_BITS}</td><td>{@link #setDatabits(Databits)}</td>
+ * <td>{@link RxtxChannelOption#DATA_BITS}</td><td>{@link #setDatabits(Databits)}</td>
  * </tr><tr>
- * <td>{@link io.netty.channel.rxtx.RxtxChannelOption#PARITY_BIT}</td><td>{@link #setParitybit(Paritybit)}</td>
+ * <td>{@link RxtxChannelOption#PARITY_BIT}</td><td>{@link #setParitybit(Paritybit)}</td>
  * </tr><tr>
- * <td>{@link io.netty.channel.rxtx.RxtxChannelOption#WAIT_TIME}</td><td>{@link #setWaitTimeMillis(int)}</td>
+ * <td>{@link RxtxChannelOption#WAIT_TIME}</td><td>{@link #setWaitTimeMillis(int)}</td>
  * </tr>
  * </table>
  */

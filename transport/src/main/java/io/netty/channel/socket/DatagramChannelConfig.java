@@ -17,6 +17,8 @@ package io.netty.channel.socket;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelOption;
+
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.StandardSocketOptions;
@@ -33,27 +35,27 @@ import java.net.StandardSocketOptions;
  * <tr>
  * <th>Name</th><th>Associated setter method</th>
  * </tr><tr>
- * <td>{@link io.netty.channel.ChannelOption#SO_BROADCAST}</td><td>{@link #setBroadcast(boolean)}</td>
+ * <td>{@link ChannelOption#SO_BROADCAST}</td><td>{@link #setBroadcast(boolean)}</td>
  * </tr><tr>
- * <td>{@link io.netty.channel.ChannelOption#IP_MULTICAST_ADDR}</td><td>{@link #setInterface(InetAddress)}</td>
+ * <td>{@link ChannelOption#IP_MULTICAST_ADDR}</td><td>{@link #setInterface(InetAddress)}</td>
  * </tr><tr>
- * <td>{@link io.netty.channel.ChannelOption#IP_MULTICAST_LOOP_DISABLED}</td>
+ * <td>{@link ChannelOption#IP_MULTICAST_LOOP_DISABLED}</td>
  * <td>{@link #setLoopbackModeDisabled(boolean)}</td>
  * </tr><tr>
- * <td>{@link io.netty.channel.ChannelOption#IP_MULTICAST_IF}</td>
+ * <td>{@link ChannelOption#IP_MULTICAST_IF}</td>
  * <td>{@link #setNetworkInterface(NetworkInterface)}</td>
  * </tr><tr>
- * <td>{@link io.netty.channel.ChannelOption#SO_REUSEADDR}</td><td>{@link #setReuseAddress(boolean)}</td>
+ * <td>{@link ChannelOption#SO_REUSEADDR}</td><td>{@link #setReuseAddress(boolean)}</td>
  * </tr><tr>
- * <td>{@link io.netty.channel.ChannelOption#SO_RCVBUF}</td><td>{@link #setReceiveBufferSize(int)}</td>
+ * <td>{@link ChannelOption#SO_RCVBUF}</td><td>{@link #setReceiveBufferSize(int)}</td>
  * </tr><tr>
- * <td>{@link io.netty.channel.ChannelOption#SO_SNDBUF}</td><td>{@link #setSendBufferSize(int)}</td>
+ * <td>{@link ChannelOption#SO_SNDBUF}</td><td>{@link #setSendBufferSize(int)}</td>
  * </tr><tr>
- * <td>{@link io.netty.channel.ChannelOption#IP_MULTICAST_TTL}</td><td>{@link #setTimeToLive(int)}</td>
+ * <td>{@link ChannelOption#IP_MULTICAST_TTL}</td><td>{@link #setTimeToLive(int)}</td>
  * </tr><tr>
- * <td>{@link io.netty.channel.ChannelOption#IP_TOS}</td><td>{@link #setTrafficClass(int)}</td>
+ * <td>{@link ChannelOption#IP_TOS}</td><td>{@link #setTrafficClass(int)}</td>
  * </tr><tr>
- * <td>{@link io.netty.channel.ChannelOption#UDP_RECEIVE_PACKET_SIZE}</td><td>{@link #setReceivePacketSize(int)}</td>
+ * <td>{@link ChannelOption#UDP_RECEIVE_PACKET_SIZE}</td><td>{@link #setReceivePacketSize(int)}</td>
  * </tr>
  * </table>
  */

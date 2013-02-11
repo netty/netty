@@ -17,12 +17,12 @@ package io.netty.testsuite.transport.sctp;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.oio.OioEventLoopGroup;
 import io.netty.channel.sctp.nio.NioSctpChannel;
 import io.netty.channel.sctp.nio.NioSctpServerChannel;
 import io.netty.channel.sctp.oio.OioSctpChannel;
 import io.netty.channel.sctp.oio.OioSctpServerChannel;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.oio.OioEventLoopGroup;
 import io.netty.testsuite.util.TestUtils;
 
 import java.util.ArrayList;
@@ -30,8 +30,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class SctpTestPermutation {
-
+public final class SctpTestPermutation {
 
     static List<Factory<ServerBootstrap>> sctpServerChannel() {
         if (!TestUtils.isSctpSupported()) {

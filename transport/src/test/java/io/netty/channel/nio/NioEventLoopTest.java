@@ -17,9 +17,8 @@ package io.netty.channel.nio;
 
 import io.netty.channel.AbstractEventLoopTest;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 public class NioEventLoopTest extends AbstractEventLoopTest {
 

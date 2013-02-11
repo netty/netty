@@ -19,7 +19,6 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
-import io.netty.testsuite.transport.sctp.SctpTestPermutation;
 import io.netty.testsuite.transport.sctp.SctpTestPermutation.Factory;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.NetUtil;
