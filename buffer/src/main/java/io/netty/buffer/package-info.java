@@ -129,6 +129,11 @@
  *
  * @apiviz.landmark
  * @apiviz.exclude ^java\.lang\.
- * @apiviz.exclude ^java\.io\.[^\.]+Stream$
+ * @apiviz.exclude netty\.((?!buffer).)+$
+ * @apiviz.exclude (In|Out)putStream$
+ * @apiviz.exclude \.(Abstract|Default)((?!ByteBufAllocator).)*$
+ * @apiviz.exclude \.(BufType|BufUtil)$
+ * @apiviz.exclude \.[^\.]+Exception$
+ * @apiviz.exclude \.(Empty|Swapped|Default|Sliced|Duplicated|ReadOnly)[^\.]*ByteBuf$
  */
 package io.netty.buffer;

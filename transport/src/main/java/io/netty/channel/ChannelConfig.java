@@ -60,9 +60,6 @@ import java.util.Map;
  * example, you can configure the parameters which are specific to a TCP/IP
  * socket as explained in {@link SocketChannelConfig}.
  *
- * @apiviz.has io.netty.channel.ChannelPipelineFactory
- * @apiviz.composedOf io.netty.channel.ReceiveBufferSizePredictor
- *
  * @apiviz.excludeSubtypes
  */
 public interface ChannelConfig {
