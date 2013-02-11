@@ -18,8 +18,8 @@ package io.netty.channel;
 import io.netty.buffer.BufUtil;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.internal.Signal;
+import io.netty.util.Signal;
+import io.netty.util.internal.InternalLoggerFactory;
 import io.netty.util.internal.TypeParameterMatcher;
 
 /**

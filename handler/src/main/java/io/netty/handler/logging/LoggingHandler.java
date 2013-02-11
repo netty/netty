@@ -20,15 +20,16 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.logging.InternalLogLevel;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.InternalLogLevel;
+import io.netty.util.internal.InternalLogger;
+import io.netty.util.internal.InternalLoggerFactory;
 
 import java.net.SocketAddress;
 
 /**
- * A {@link ChannelHandler} that logs all events via {@link InternalLogger}.
+ * A {@link ChannelHandler} that logs all events using a logging framework.
  * By default, all events are logged at <tt>DEBUG</tt> level.
+ *
  * @apiviz.landmark
  */
 @Sharable
@@ -115,7 +116,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
     }
 
     /**
-     * Returns the {@link InternalLogLevel} that this handler uses to log
+     * Returns the {@link LogLevel} that this handler uses to log
      */
     public LogLevel level() {
         return level;

@@ -13,18 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.logging;
+package io.netty.util.internal;
 
-import org.junit.Test;
+import org.apache.log4j.Logger;
 
-import static org.junit.Assert.*;
+/**
+ * Logger factory which creates an
+ * <a href="http://logging.apache.org/log4j/1.2/index.html">Apache Log4J</a>
+ * logger.
+ */
+public class Log4JLoggerFactory extends InternalLoggerFactory {
 
-public class CommonsLoggerFactoryTest {
-
-    @Test
-    public void testCreation() {
-        InternalLogger logger = new CommonsLoggerFactory().newInstance("foo");
-        assertTrue(logger instanceof CommonsLogger);
-        assertEquals("foo", logger.name());
+    @Override
+    public InternalLogger newInstance(String name) {
+        return new Log4JLogger(Logger.getLogger(name));
     }
 }

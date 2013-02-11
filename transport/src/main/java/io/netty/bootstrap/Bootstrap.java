@@ -20,9 +20,9 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.AttributeKey;
+import io.netty.util.internal.InternalLogger;
+import io.netty.util.internal.InternalLoggerFactory;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;

@@ -45,8 +45,6 @@ import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.Incompatible
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.NotEnoughDataDecoderException;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData.HttpDataType;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.CharsetUtil;
 
 import java.io.IOException;
@@ -56,13 +54,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import static io.netty.buffer.Unpooled.*;
 import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 
 public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter<Object> {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(HttpUploadServerHandler.class);
+    private static final Logger logger = Logger.getLogger(HttpUploadServerHandler.class.getName());
 
     private HttpRequest request;
 
@@ -422,7 +422,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        logger.error(responseContent.toString(), cause);
+        logger.log(Level.WARNING, responseContent.toString(), cause);
         ctx.channel().close();
     }
 }

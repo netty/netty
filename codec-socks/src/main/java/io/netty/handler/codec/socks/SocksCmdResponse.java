@@ -24,9 +24,9 @@ import io.netty.buffer.ByteBuf;
  * @see SocksCmdResponseDecoder
  */
 public final class SocksCmdResponse extends SocksResponse {
-    private final CmdStatus cmdStatus;
+    private final SocksCmdStatus cmdStatus;
 
-    private final AddressType addressType;
+    private final SocksAddressType addressType;
     // All arrays are initialized on construction time to 0/false/null remove array Initialization
     private static final byte[] IPv4_HOSTNAME_ZEROED = {0x00, 0x00, 0x00, 0x00};
     private static final byte[] IPv6_HOSTNAME_ZEROED = {0x00, 0x00, 0x00, 0x00,
@@ -34,7 +34,7 @@ public final class SocksCmdResponse extends SocksResponse {
             0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00};
 
-    public SocksCmdResponse(CmdStatus cmdStatus, AddressType addressType) {
+    public SocksCmdResponse(SocksCmdStatus cmdStatus, SocksAddressType addressType) {
         super(SocksResponseType.CMD);
         if (cmdStatus == null) {
             throw new NullPointerException("cmdStatus");
@@ -47,29 +47,29 @@ public final class SocksCmdResponse extends SocksResponse {
     }
 
     /**
-     * Returns the {@link CmdStatus} of this {@link SocksCmdResponse}
+     * Returns the {@link SocksCmdStatus} of this {@link SocksCmdResponse}
      *
-     * @return The {@link CmdStatus} of this {@link SocksCmdResponse}
+     * @return The {@link SocksCmdStatus} of this {@link SocksCmdResponse}
      */
-    public CmdStatus cmdStatus() {
+    public SocksCmdStatus cmdStatus() {
         return cmdStatus;
     }
 
     /**
-     * Returns the {@link AddressType} of this {@link SocksCmdResponse}
+     * Returns the {@link SocksAddressType} of this {@link SocksCmdResponse}
      *
-     * @return The {@link AddressType} of this {@link SocksCmdResponse}
+     * @return The {@link SocksAddressType} of this {@link SocksCmdResponse}
      */
-    public AddressType addressType() {
+    public SocksAddressType addressType() {
         return addressType;
     }
 
     @Override
     public void encodeAsByteBuf(ByteBuf byteBuf) {
-        byteBuf.writeByte(protocolVersion().getByteValue());
-        byteBuf.writeByte(cmdStatus.getByteValue());
+        byteBuf.writeByte(protocolVersion().byteValue());
+        byteBuf.writeByte(cmdStatus.byteValue());
         byteBuf.writeByte(0x00);
-        byteBuf.writeByte(addressType.getByteValue());
+        byteBuf.writeByte(addressType.byteValue());
         switch (addressType) {
             case IPv4: {
                 byteBuf.writeBytes(IPv4_HOSTNAME_ZEROED);

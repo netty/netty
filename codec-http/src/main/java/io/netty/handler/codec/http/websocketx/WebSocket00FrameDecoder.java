@@ -25,9 +25,6 @@ import io.netty.handler.codec.TooLongFrameException;
  * <p>
  * For the detailed instruction on adding add Web Socket support to your HTTP server, take a look into the
  * <tt>WebSocketServer</tt> example located in the {@code io.netty.example.http.websocket} package.
- *
- * @apiviz.landmark
- * @apiviz.uses io.netty.handler.codec.http.websocket.WebSocketFrame
  */
 public class WebSocket00FrameDecoder extends ReplayingDecoder<Void> {
 

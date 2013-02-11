@@ -16,5 +16,8 @@
 
 /**
  * Encoder, decoder and their related message types for Socks.
+ *
+ * @apiviz.exclude \.Socks.*(Type|Version|Status|Scheme)$
  */
 package io.netty.handler.codec.socks;
+// TODO: Combine decoders into one.

@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.logging;
+package io.netty.util.internal;
 
 /**
  * Creates an {@link InternalLogger} or changes the default factory
@@ -29,7 +29,7 @@ package io.netty.logging;
  * {@link #setDefaultFactory(InternalLoggerFactory)} should be called as early
  * as possible and shouldn't be called more than once.
  * @apiviz.landmark
- * @apiviz.has io.netty.logging.InternalLogger oneway - - creates
+ * @apiviz.has io.netty.util.internal.InternalLogger oneway - - creates
  */
 public abstract class InternalLoggerFactory {
     private static volatile InternalLoggerFactory defaultFactory;

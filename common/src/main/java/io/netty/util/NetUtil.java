@@ -15,8 +15,8 @@
  */
 package io.netty.util;
 
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.InternalLogger;
+import io.netty.util.internal.InternalLoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.FileReader;

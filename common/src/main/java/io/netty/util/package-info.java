@@ -21,6 +21,6 @@
  * @apiviz.exclude ^java\.(lang|util)\.
  * @apiviz.exclude \.netty\.(?!util)[a-z0-9]+\.
  * @apiviz.exclude Util$
- * @apiviz.exclude \.EstimatableObjectWrapper$
+ * @apiviz.exclude Exception$
  */
 package io.netty.util;

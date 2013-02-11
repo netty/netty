@@ -30,9 +30,9 @@ import io.netty.channel.ChannelStateHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.AttributeKey;
+import io.netty.util.internal.InternalLogger;
+import io.netty.util.internal.InternalLoggerFactory;
 
 import java.net.SocketAddress;
 import java.util.LinkedHashMap;

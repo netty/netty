@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,25 +13,32 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.logging;
 
+package io.netty.handler.codec.socks;
 
-import org.apache.commons.logging.LogFactory;
+public enum SocksAuthScheme {
+    NO_AUTH((byte) 0x00),
+    AUTH_GSSAPI((byte) 0x01),
+    AUTH_PASSWORD((byte) 0x02),
+    UNKNOWN((byte) 0xff);
 
-import java.util.HashMap;
-import java.util.Map;
+    private final byte b;
 
-/**
- * Logger factory which creates an
- * <a href="http://commons.apache.org/logging/">Apache Commons Logging</a>
- * logger.
- */
-public class CommonsLoggerFactory extends InternalLoggerFactory {
+    SocksAuthScheme(byte b) {
+        this.b = b;
+    }
 
-    Map<String, InternalLogger> loggerMap = new HashMap<String, InternalLogger>();
+    public static SocksAuthScheme fromByte(byte b) {
+        for (SocksAuthScheme code : values()) {
+            if (code.b == b) {
+                return code;
+            }
+        }
+        return UNKNOWN;
+    }
 
-    @Override
-    public InternalLogger newInstance(String name) {
-        return new CommonsLogger(LogFactory.getLog(name), name);
+    public byte byteValue() {
+        return b;
     }
 }
+

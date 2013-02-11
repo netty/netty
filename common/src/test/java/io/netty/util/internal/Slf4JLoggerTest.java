@@ -13,208 +13,223 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.logging;
+package io.netty.util.internal;
+
+import org.junit.Test;
+import org.slf4j.Logger;
 
 import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
 
-import org.apache.commons.logging.Log;
-import org.junit.Test;
-
-public class CommonsLoggerTest {
+public class Slf4JLoggerTest {
     private static final Exception e = new Exception();
 
     @Test
     public void testIsTraceEnabled() {
-        Log mock =
-            createStrictMock(Log.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         expect(mock.isTraceEnabled()).andReturn(true);
         replay(mock);
 
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new Slf4JLogger(mock);
         assertTrue(logger.isTraceEnabled());
         verify(mock);
     }
 
     @Test
     public void testIsDebugEnabled() {
-        Log mock =
-            createStrictMock(Log.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         expect(mock.isDebugEnabled()).andReturn(true);
         replay(mock);
 
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new Slf4JLogger(mock);
         assertTrue(logger.isDebugEnabled());
         verify(mock);
     }
 
     @Test
     public void testIsInfoEnabled() {
-        Log mock =
-            createStrictMock(Log.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         expect(mock.isInfoEnabled()).andReturn(true);
         replay(mock);
 
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new Slf4JLogger(mock);
         assertTrue(logger.isInfoEnabled());
         verify(mock);
     }
 
     @Test
     public void testIsWarnEnabled() {
-        Log mock =
-            createStrictMock(Log.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         expect(mock.isWarnEnabled()).andReturn(true);
         replay(mock);
 
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new Slf4JLogger(mock);
         assertTrue(logger.isWarnEnabled());
         verify(mock);
     }
 
     @Test
     public void testIsErrorEnabled() {
-        Log mock =
-            createStrictMock(Log.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         expect(mock.isErrorEnabled()).andReturn(true);
         replay(mock);
 
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new Slf4JLogger(mock);
         assertTrue(logger.isErrorEnabled());
         verify(mock);
     }
 
     @Test
     public void testTrace() {
-        Log mock =
-            createStrictMock(Log.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         mock.trace("a");
         replay(mock);
 
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new Slf4JLogger(mock);
         logger.trace("a");
         verify(mock);
     }
 
     @Test
     public void testTraceWithException() {
-        Log mock =
-            createStrictMock(Log.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         mock.trace("a", e);
         replay(mock);
 
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new Slf4JLogger(mock);
         logger.trace("a", e);
         verify(mock);
     }
 
     @Test
     public void testDebug() {
-        Log mock =
-            createStrictMock(Log.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         mock.debug("a");
         replay(mock);
 
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new Slf4JLogger(mock);
         logger.debug("a");
         verify(mock);
     }
 
     @Test
     public void testDebugWithException() {
-        Log mock =
-            createStrictMock(Log.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         mock.debug("a", e);
         replay(mock);
 
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new Slf4JLogger(mock);
         logger.debug("a", e);
         verify(mock);
     }
 
     @Test
     public void testInfo() {
-        Log mock =
-            createStrictMock(Log.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         mock.info("a");
         replay(mock);
 
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new Slf4JLogger(mock);
         logger.info("a");
         verify(mock);
     }
 
     @Test
     public void testInfoWithException() {
-        Log mock =
-            createStrictMock(Log.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         mock.info("a", e);
         replay(mock);
 
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new Slf4JLogger(mock);
         logger.info("a", e);
         verify(mock);
     }
 
     @Test
     public void testWarn() {
-        Log mock =
-            createStrictMock(Log.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         mock.warn("a");
         replay(mock);
 
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new Slf4JLogger(mock);
         logger.warn("a");
         verify(mock);
     }
 
     @Test
     public void testWarnWithException() {
-        Log mock =
-            createStrictMock(Log.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         mock.warn("a", e);
         replay(mock);
 
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new Slf4JLogger(mock);
         logger.warn("a", e);
         verify(mock);
     }
 
     @Test
     public void testError() {
-        Log mock =
-            createStrictMock(Log.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         mock.error("a");
         replay(mock);
 
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new Slf4JLogger(mock);
         logger.error("a");
         verify(mock);
     }
 
     @Test
     public void testErrorWithException() {
-        Log mock =
-            createStrictMock(Log.class);
+        Logger mock =
+            createStrictMock(Logger.class);
 
+        expect(mock.getName()).andReturn("foo");
         mock.error("a", e);
         replay(mock);
 
-        InternalLogger logger = new CommonsLogger(mock, "foo");
+        InternalLogger logger = new Slf4JLogger(mock);
         logger.error("a", e);
         verify(mock);
     }

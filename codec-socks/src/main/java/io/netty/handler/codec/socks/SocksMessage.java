@@ -26,10 +26,10 @@ import io.netty.buffer.ByteBuf;
  */
 
 public abstract class SocksMessage {
-    private final MessageType type;
-    private final ProtocolVersion protocolVersion = ProtocolVersion.SOCKS5;
+    private final SocksMessageType type;
+    private final SocksProtocolVersion protocolVersion = SocksProtocolVersion.SOCKS5;
 
-    protected SocksMessage(MessageType type) {
+    protected SocksMessage(SocksMessageType type) {
         if (type == null) {
             throw new NullPointerException("type");
         }
@@ -37,209 +37,20 @@ public abstract class SocksMessage {
     }
 
     /**
-     * Returns the {@link MessageType} of this {@link SocksMessage}
+     * Returns the {@link SocksMessageType} of this {@link SocksMessage}
      *
-     * @return The {@link MessageType} of this {@link SocksMessage}
+     * @return The {@link SocksMessageType} of this {@link SocksMessage}
      */
-    public MessageType type() {
+    public SocksMessageType type() {
         return type;
     }
 
-    public enum MessageType {
-        REQUEST,
-        RESPONSE,
-        UNKNOWN
-    }
-
-    public enum AuthScheme {
-        NO_AUTH((byte) 0x00),
-        AUTH_GSSAPI((byte) 0x01),
-        AUTH_PASSWORD((byte) 0x02),
-        UNKNOWN((byte) 0xff);
-
-        private final byte b;
-
-        AuthScheme(byte b) {
-            this.b = b;
-        }
-
-        public static AuthScheme fromByte(byte b) {
-            for (AuthScheme code : values()) {
-                if (code.b == b) {
-                    return code;
-                }
-            }
-            return UNKNOWN;
-        }
-
-        public byte getByteValue() {
-            return b;
-        }
-    }
-
-    public enum CmdType {
-        CONNECT((byte) 0x01),
-        BIND((byte) 0x02),
-        UDP((byte) 0x03),
-        UNKNOWN((byte) 0xff);
-
-        private final byte b;
-
-        CmdType(byte b) {
-            this.b = b;
-        }
-
-        public static CmdType fromByte(byte b) {
-            for (CmdType code : values()) {
-                if (code.b == b) {
-                    return code;
-                }
-            }
-            return UNKNOWN;
-        }
-
-        public byte getByteValue() {
-            return b;
-        }
-    }
-
-    public enum AddressType {
-        IPv4((byte) 0x01),
-        DOMAIN((byte) 0x03),
-        IPv6((byte) 0x04),
-        UNKNOWN((byte) 0xff);
-
-        private final byte b;
-
-        AddressType(byte b) {
-            this.b = b;
-        }
-
-        public static AddressType fromByte(byte b) {
-            for (AddressType code : values()) {
-                if (code.b == b) {
-                    return code;
-                }
-            }
-            return UNKNOWN;
-        }
-
-        public byte getByteValue() {
-            return b;
-        }
-    }
-
-    public enum AuthStatus {
-        SUCCESS((byte) 0x00),
-        FAILURE((byte) 0xff);
-
-        private final byte b;
-
-        AuthStatus(byte b) {
-            this.b = b;
-        }
-
-        public static AuthStatus fromByte(byte b) {
-            for (AuthStatus code : values()) {
-                if (code.b == b) {
-                    return code;
-                }
-            }
-            return FAILURE;
-        }
-
-        public byte getByteValue() {
-            return b;
-        }
-    }
-
-    public enum CmdStatus {
-        SUCCESS((byte) 0x00),
-        FAILURE((byte) 0x01),
-        FORBIDDEN((byte) 0x02),
-        NETWORK_UNREACHABLE((byte) 0x03),
-        HOST_UNREACHABLE((byte) 0x04),
-        REFUSED((byte) 0x05),
-        TTL_EXPIRED((byte) 0x06),
-        COMMAND_NOT_SUPPORTED((byte) 0x07),
-        ADDRESS_NOT_SUPPORTED((byte) 0x08),
-        UNASSIGNED((byte) 0xff);
-
-        private final byte b;
-
-        CmdStatus(byte b) {
-            this.b = b;
-        }
-
-        public static CmdStatus fromByte(byte b) {
-            for (CmdStatus code : values()) {
-                if (code.b == b) {
-                    return code;
-                }
-            }
-            return UNASSIGNED;
-        }
-
-        public byte getByteValue() {
-            return b;
-        }
-    }
-
-    public enum ProtocolVersion {
-        SOCKS4a((byte) 0x04),
-        SOCKS5((byte) 0x05),
-        UNKNOWN((byte) 0xff);
-
-        private final byte b;
-
-        ProtocolVersion(byte b) {
-            this.b = b;
-        }
-
-        public static ProtocolVersion fromByte(byte b) {
-            for (ProtocolVersion code : values()) {
-                if (code.b == b) {
-                    return code;
-                }
-            }
-            return UNKNOWN;
-        }
-
-        public byte getByteValue() {
-            return b;
-        }
-    }
-
-    public enum SubnegotiationVersion {
-        AUTH_PASSWORD((byte) 0x01),
-        UNKNOWN((byte) 0xff);
-
-        private final byte b;
-
-        SubnegotiationVersion(byte b) {
-            this.b = b;
-        }
-
-        public static SubnegotiationVersion fromByte(byte b) {
-            for (SubnegotiationVersion code : values()) {
-                if (code.b == b) {
-                    return code;
-                }
-            }
-            return UNKNOWN;
-        }
-
-        public byte getByteValue() {
-            return b;
-        }
-    }
-
     /**
-     * Returns the {@link ProtocolVersion} of this {@link SocksMessage}
+     * Returns the {@link SocksProtocolVersion} of this {@link SocksMessage}
      *
-     * @return The {@link ProtocolVersion} of this {@link SocksMessage}
+     * @return The {@link SocksProtocolVersion} of this {@link SocksMessage}
      */
-    public ProtocolVersion protocolVersion() {
+    public SocksProtocolVersion protocolVersion() {
         return protocolVersion;
     }
 

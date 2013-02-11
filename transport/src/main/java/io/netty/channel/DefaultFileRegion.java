@@ -16,8 +16,8 @@
 package io.netty.channel;
 
 import io.netty.buffer.AbstractReferenceCounted;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.InternalLogger;
+import io.netty.util.internal.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;

@@ -22,7 +22,10 @@ import java.net.URI;
 import static io.netty.handler.codec.http.websocketx.WebSocketVersion.*;
 
 /**
- * Instances the appropriate handshake class to use for clients
+ * Creates a new {@link WebSocketClientHandshaker} of desired protocol version.
+ *
+ * @apiviz.landmark
+ * @apiviz.has io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker oneway - - creates
  */
 public final class WebSocketClientHandshakerFactory {
 

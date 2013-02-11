@@ -13,19 +13,18 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.util;
+package io.netty.util.internal;
 
-/**
- * Holds {@link Attribute}s which can be accessed via {@link AttributeKey}.
- *
- * Implementations must be Thread-safe.
- *
- * @apiviz.composedOf io.netty.util.Attribute oneway - - creates
- */
-public interface AttributeMap {
-    /**
-     * Get the {@link Attribute} for the given {@link AttributeKey}. This method will never return null, but may return
-     * an {@link AttributeKey} which has not value set yet.
-     */
-    <T> Attribute<T> attr(AttributeKey<T> key);
+import org.junit.Test;
+
+import static org.junit.Assert.*;
+
+public class JdkLoggerFactoryTest {
+
+    @Test
+    public void testCreation() {
+        InternalLogger logger = new JdkLoggerFactory().newInstance("foo");
+        assertTrue(logger instanceof JdkLogger);
+        assertEquals("foo", logger.name());
+    }
 }

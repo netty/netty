@@ -33,9 +33,9 @@
  * {@code io.netty.example.http.websocket} package.
  * </p>
  *
- * @apiviz.exclude OneToOne(Encoder|Decoder)$
- * @apiviz.exclude \.codec\.replay\.
- * @apiviz.exclude \.Default
+ * @apiviz.exclude [0-9][0-9]
+ * @apiviz.exclude Exception$
+ * @apiviz.exclude Version$
  */
 package io.netty.handler.codec.http.websocketx;
 

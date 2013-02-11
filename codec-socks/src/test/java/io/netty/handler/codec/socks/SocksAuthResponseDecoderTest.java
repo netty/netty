@@ -24,7 +24,7 @@ import static org.junit.Assert.*;
 
 public class SocksAuthResponseDecoderTest {
     private static final Logger logger = LoggerFactory.getLogger(SocksAuthResponseDecoderTest.class);
-    private static void testSocksAuthResponseDecoderWithDifferentParams(SocksMessage.AuthStatus authStatus){
+    private static void testSocksAuthResponseDecoderWithDifferentParams(SocksAuthStatus authStatus){
         logger.debug("Testing SocksAuthResponseDecoder with authStatus: "+ authStatus);
         SocksAuthResponse msg = new SocksAuthResponse(authStatus);
         SocksAuthResponseDecoder decoder = new SocksAuthResponseDecoder();
@@ -37,7 +37,7 @@ public class SocksAuthResponseDecoderTest {
 
     @Test
     public void testSocksCmdResponseDecoder(){
-        for (SocksMessage.AuthStatus authStatus: SocksMessage.AuthStatus.values()){
+        for (SocksAuthStatus authStatus: SocksAuthStatus.values()){
                 testSocksAuthResponseDecoderWithDifferentParams(authStatus);
         }
     }

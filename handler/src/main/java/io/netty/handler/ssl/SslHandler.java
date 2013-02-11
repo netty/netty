@@ -28,8 +28,8 @@ import io.netty.channel.ChannelOutboundByteHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.InternalLogger;
+import io.netty.util.internal.InternalLoggerFactory;
 import io.netty.util.internal.PlatformDependent;
 
 import javax.net.ssl.SSLEngine;

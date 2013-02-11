@@ -34,8 +34,6 @@ import io.netty.handler.codec.http.multipart.HttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder.ErrorDataEncoderException;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -44,13 +42,15 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * This class is meant to be run against {@link HttpUploadServer}.
  */
 public class HttpUploadClient {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(HttpUploadClient.class);
+    private static final Logger logger = Logger.getLogger(HttpUploadClient.class.getName());
 
     private final String baseUri;
     private final String filePath;
@@ -75,7 +75,7 @@ public class HttpUploadClient {
         try {
             uriSimple = new URI(postSimple);
         } catch (URISyntaxException e) {
-            logger.error("Invalid URI syntax" + e.getCause());
+            logger.log(Level.WARNING, "Invalid URI syntax", e);
             return;
         }
         String scheme = uriSimple.getScheme() == null ? "http" : uriSimple.getScheme();
@@ -90,7 +90,7 @@ public class HttpUploadClient {
         }
 
         if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
-            logger.error("Only HTTP(S) is supported.");
+            logger.log(Level.WARNING, "Only HTTP(S) is supported.");
             return;
         }
 
@@ -100,12 +100,12 @@ public class HttpUploadClient {
         try {
             uriFile = new URI(postFile);
         } catch (URISyntaxException e) {
-            logger.error("Error: " + e.getMessage());
+            logger.log(Level.WARNING, "Error: ", e);
             return;
         }
         File file = new File(filePath);
         if (!file.canRead()) {
-            logger.error("A correct path is needed");
+            logger.log(Level.WARNING, "A correct path is needed");
             return;
         }
 
@@ -172,7 +172,7 @@ public class HttpUploadClient {
         try {
             uriGet = new URI(encoder.toString());
         } catch (URISyntaxException e) {
-            logger.error("Error: " + e.getMessage());
+            logger.log(Level.WARNING, "Error: ", e);
             return null;
         }
 

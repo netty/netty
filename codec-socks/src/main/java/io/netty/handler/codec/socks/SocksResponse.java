@@ -28,7 +28,7 @@ public abstract class SocksResponse extends SocksMessage {
     private final SocksResponseType responseType;
 
     protected SocksResponse(SocksResponseType responseType) {
-        super(MessageType.RESPONSE);
+        super(SocksMessageType.RESPONSE);
         if (responseType == null) {
             throw new NullPointerException("responseType");
         }
@@ -42,15 +42,5 @@ public abstract class SocksResponse extends SocksMessage {
      */
     public SocksResponseType responseType() {
         return responseType;
-    }
-
-    /**
-     * Type of socks response
-     */
-    public enum SocksResponseType {
-        INIT,
-        AUTH,
-        CMD,
-        UNKNOWN
     }
 }
