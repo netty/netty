@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 
 import java.util.zip.CRC32;
 
-public final class SnappyChecksumUtil {
+final class SnappyChecksumUtil {
     /**
      * Computes the CRC32 checksum of the supplied data, performs the "mask" operation
      * on the computed checksum, and then compares the resulting masked checksum to the
