@@ -35,7 +35,7 @@ import java.util.Map;
  * method-chaining to provide an easy way to configure the {@link AbstractBootstrap}.
  *
  */
-abstract class AbstractBootstrap<B extends AbstractBootstrap<?, C>, C extends Channel> implements Cloneable {
+abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C extends Channel> implements Cloneable {
 
     private volatile EventLoopGroup group;
     private volatile ChannelFactory<? extends C> channelFactory;
