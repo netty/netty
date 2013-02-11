@@ -33,8 +33,8 @@ public class SocksInitRequestDecoder extends ReplayingDecoder<SocksInitRequestDe
         return name;
     }
 
-    private final List<SocksMessage.AuthScheme> authSchemes = new ArrayList<SocksMessage.AuthScheme>();
-    private SocksMessage.ProtocolVersion version;
+    private final List<SocksAuthScheme> authSchemes = new ArrayList<SocksAuthScheme>();
+    private SocksProtocolVersion version;
     private byte authSchemeNum;
     private SocksRequest msg = SocksCommonUtils.UNKNOWN_SOCKS_REQUEST;
 
@@ -46,8 +46,8 @@ public class SocksInitRequestDecoder extends ReplayingDecoder<SocksInitRequestDe
     protected Object decode(ChannelHandlerContext ctx, ByteBuf byteBuf) throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
-                version = SocksMessage.ProtocolVersion.fromByte(byteBuf.readByte());
-                if (version != SocksMessage.ProtocolVersion.SOCKS5) {
+                version = SocksProtocolVersion.fromByte(byteBuf.readByte());
+                if (version != SocksProtocolVersion.SOCKS5) {
                     break;
                 }
                 checkpoint(State.READ_AUTH_SCHEMES);
@@ -56,7 +56,7 @@ public class SocksInitRequestDecoder extends ReplayingDecoder<SocksInitRequestDe
                 authSchemes.clear();
                 authSchemeNum = byteBuf.readByte();
                 for (int i = 0; i < authSchemeNum; i++) {
-                    authSchemes.add(SocksMessage.AuthScheme.fromByte(byteBuf.readByte()));
+                    authSchemes.add(SocksAuthScheme.fromByte(byteBuf.readByte()));
                 }
                 msg = new SocksInitRequest(authSchemes);
                 break;

@@ -27,9 +27,9 @@ import java.util.List;
  * @see SocksInitRequestDecoder
  */
 public final class SocksInitRequest extends SocksRequest {
-    private final List<AuthScheme> authSchemes;
+    private final List<SocksAuthScheme> authSchemes;
 
-    public SocksInitRequest(List<AuthScheme> authSchemes) {
+    public SocksInitRequest(List<SocksAuthScheme> authSchemes) {
         super(SocksRequestType.INIT);
         if (authSchemes == null) {
             throw new NullPointerException("authSchemes");
@@ -38,20 +38,20 @@ public final class SocksInitRequest extends SocksRequest {
     }
 
     /**
-     * Returns the List<{@link AuthScheme}> of this {@link SocksInitRequest}
+     * Returns the List<{@link SocksAuthScheme}> of this {@link SocksInitRequest}
      *
-     * @return The List<{@link AuthScheme}> of this {@link SocksInitRequest}
+     * @return The List<{@link SocksAuthScheme}> of this {@link SocksInitRequest}
      */
-    public List<AuthScheme> authSchemes() {
+    public List<SocksAuthScheme> authSchemes() {
         return Collections.unmodifiableList(authSchemes);
     }
 
     @Override
     public void encodeAsByteBuf(ByteBuf byteBuf) {
-        byteBuf.writeByte(protocolVersion().getByteValue());
+        byteBuf.writeByte(protocolVersion().byteValue());
         byteBuf.writeByte(authSchemes.size());
-        for (AuthScheme authScheme : authSchemes) {
-            byteBuf.writeByte(authScheme.getByteValue());
+        for (SocksAuthScheme authScheme : authSchemes) {
+            byteBuf.writeByte(authScheme.byteValue());
         }
     }
 }

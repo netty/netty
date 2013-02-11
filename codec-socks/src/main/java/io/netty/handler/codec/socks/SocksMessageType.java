@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,19 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.util;
 
-/**
- * Holds {@link Attribute}s which can be accessed via {@link AttributeKey}.
- *
- * Implementations must be Thread-safe.
- *
- * @apiviz.composedOf io.netty.util.Attribute oneway - - creates
- */
-public interface AttributeMap {
-    /**
-     * Get the {@link Attribute} for the given {@link AttributeKey}. This method will never return null, but may return
-     * an {@link AttributeKey} which has not value set yet.
-     */
-    <T> Attribute<T> attr(AttributeKey<T> key);
+package io.netty.handler.codec.socks;
+
+public enum SocksMessageType {
+    REQUEST,
+    RESPONSE,
+    UNKNOWN
 }

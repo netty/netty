@@ -24,9 +24,9 @@ import io.netty.buffer.ByteBuf;
  * @see SocksInitResponseDecoder
  */
 public final class SocksInitResponse extends SocksResponse {
-    private final AuthScheme authScheme;
+    private final SocksAuthScheme authScheme;
 
-    public SocksInitResponse(AuthScheme authScheme) {
+    public SocksInitResponse(SocksAuthScheme authScheme) {
         super(SocksResponseType.INIT);
         if (authScheme == null) {
             throw new NullPointerException("authScheme");
@@ -35,17 +35,17 @@ public final class SocksInitResponse extends SocksResponse {
     }
 
     /**
-     * Returns the {@link AuthScheme} of this {@link SocksInitResponse}
+     * Returns the {@link SocksAuthScheme} of this {@link SocksInitResponse}
      *
-     * @return The {@link AuthScheme} of this {@link SocksInitResponse}
+     * @return The {@link SocksAuthScheme} of this {@link SocksInitResponse}
      */
-    public AuthScheme authScheme() {
+    public SocksAuthScheme authScheme() {
         return authScheme;
     }
 
     @Override
     public void encodeAsByteBuf(ByteBuf byteBuf) {
-        byteBuf.writeByte(protocolVersion().getByteValue());
-        byteBuf.writeByte(authScheme.getByteValue());
+        byteBuf.writeByte(protocolVersion().byteValue());
+        byteBuf.writeByte(authScheme.byteValue());
     }
 }

@@ -16,18 +16,19 @@
 package io.netty.handler.codec.socks;
 
 import org.junit.Test;
-import static org.junit.Assert.assertTrue;
+
+import static org.junit.Assert.*;
 
 public class SocksCmdResponseTest {
     @Test
     public void testConstructorParamsAreNotNull() {
         try {
-            new SocksCmdResponse(null, SocksMessage.AddressType.UNKNOWN);
+            new SocksCmdResponse(null, SocksAddressType.UNKNOWN);
         } catch (Exception e) {
             assertTrue(e instanceof NullPointerException);
         }
         try {
-            new SocksCmdResponse(SocksMessage.CmdStatus.UNASSIGNED, null);
+            new SocksCmdResponse(SocksCmdStatus.UNASSIGNED, null);
         } catch (Exception e) {
             assertTrue(e instanceof NullPointerException);
         }

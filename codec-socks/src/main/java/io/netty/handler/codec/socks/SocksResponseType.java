@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,24 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package io.netty.handler.codec.socks;
 
-import io.netty.buffer.ByteBuf;
-
 /**
- * An unknown socks message.
- *
- * @see UnknownSocksRequest
- * @see UnknownSocksResponse
+ * Type of socks response
  */
-public final class UnknownSocksMessage extends SocksMessage {
-
-    public UnknownSocksMessage() {
-        super(MessageType.UNKNOWN);
-    }
-
-    @Override
-    public void encodeAsByteBuf(ByteBuf byteBuf) {
-        // NOOP
-    }
+public enum SocksResponseType {
+    INIT,
+    AUTH,
+    CMD,
+    UNKNOWN
 }
