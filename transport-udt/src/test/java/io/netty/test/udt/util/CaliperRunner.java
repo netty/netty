@@ -28,8 +28,8 @@ import com.google.caliper.Scenario;
 import com.google.caliper.ScenarioResult;
 import com.google.caliper.SimpleBenchmark;
 import com.yammer.metrics.core.TimerContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.netty.util.internal.InternalLogger;
+import io.netty.util.internal.InternalLoggerFactory;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -50,8 +50,7 @@ import java.util.TreeSet;
  */
 public final class CaliperRunner {
 
-    private final static Logger log = LoggerFactory
-            .getLogger(CaliperRunner.class);
+    private final static InternalLogger log = InternalLoggerFactory.getInstance(CaliperRunner.class);
 
     private CaliperRunner() {
     }

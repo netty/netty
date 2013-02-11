@@ -16,6 +16,7 @@
 package io.netty.example.udt.echo.rendevous;
 
 import java.net.InetSocketAddress;
+import java.util.logging.Logger;
 
 /**
  * UDT Message Flow Peer
@@ -24,6 +25,8 @@ import java.net.InetSocketAddress;
  * to the other peer.
  */
 public class MsgEchoPeerOne extends MsgEchoPeerBase {
+
+    private static final Logger log = Logger.getLogger(MsgEchoPeerOne.class.getName());
 
     public MsgEchoPeerOne(final InetSocketAddress self,
             final InetSocketAddress peer, final int messageSize) {

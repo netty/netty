@@ -18,8 +18,8 @@ package io.netty.test.udt.util;
 
 import com.barchart.udt.SocketUDT;
 import com.barchart.udt.StatusUDT;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.netty.util.internal.InternalLogger;
+import io.netty.util.internal.InternalLoggerFactory;
 
 import java.io.File;
 import java.net.InetAddress;
@@ -37,7 +37,7 @@ import java.util.regex.Pattern;
  */
 public final class UnitHelp {
 
-    private static final Logger log = LoggerFactory.getLogger(UnitHelp.class);
+    private static final InternalLogger log = InternalLoggerFactory.getInstance(UnitHelp.class);
     private static final Pattern SPACES = Pattern.compile("\\s+");
 
     /**
