@@ -27,9 +27,8 @@ import io.netty.test.udt.util.CustomReporter;
 import io.netty.test.udt.util.EchoMessageHandler;
 import io.netty.test.udt.util.TrafficControl;
 import io.netty.test.udt.util.UnitHelp;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.netty.util.internal.InternalLogger;
+import io.netty.util.internal.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
@@ -43,7 +42,7 @@ public final class UdtNetty {
     private UdtNetty() {
     }
 
-    static final Logger log = LoggerFactory.getLogger(UdtNetty.class);
+    static final InternalLogger log = InternalLoggerFactory.getInstance(UdtNetty.class);
 
     /** benchmark duration */
     static final int time = 10 * 60 * 1000;

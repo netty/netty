@@ -16,8 +16,8 @@
 
 package io.netty.test.udt.util;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.netty.util.internal.InternalLogger;
+import io.netty.util.internal.InternalLoggerFactory;
 
 /**
  * Introduce traffic control, such as transfer latency.
@@ -28,8 +28,7 @@ import org.slf4j.LoggerFactory;
  */
 public final class TrafficControl {
 
-    private static final Logger log = LoggerFactory
-            .getLogger(TrafficControl.class.getName());
+    private static final InternalLogger log = InternalLoggerFactory.getInstance(TrafficControl.class);
 
     private TrafficControl() {
     }

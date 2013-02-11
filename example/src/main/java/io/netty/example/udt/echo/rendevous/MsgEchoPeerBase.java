@@ -19,13 +19,11 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.udt.UdtChannel;
+import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.example.udt.util.UtilThreadFactory;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.channel.udt.UdtChannel;
-import io.netty.channel.udt.nio.NioUdtProvider;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.ThreadFactory;
@@ -37,9 +35,6 @@ import java.util.concurrent.ThreadFactory;
  * to the other peer.
  */
 public abstract class MsgEchoPeerBase {
-
-    protected static final Logger log = LoggerFactory
-            .getLogger(MsgEchoPeerBase.class);
 
     protected final int messageSize;
     protected final InetSocketAddress self;

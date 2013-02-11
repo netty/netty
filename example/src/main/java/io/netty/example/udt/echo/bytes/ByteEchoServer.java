@@ -25,10 +25,9 @@ import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.example.udt.util.UtilThreadFactory;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ThreadFactory;
+import java.util.logging.Logger;
 
 /**
  * UDT Byte Stream Server
@@ -37,8 +36,7 @@ import java.util.concurrent.ThreadFactory;
  */
 public class ByteEchoServer {
 
-    private static final Logger log = LoggerFactory
-            .getLogger(ByteEchoServer.class);
+    private static final Logger log = Logger.getLogger(ByteEchoServer.class.getName());
 
     private final int port;
 
