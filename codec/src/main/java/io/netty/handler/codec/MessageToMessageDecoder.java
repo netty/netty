@@ -44,17 +44,6 @@ import io.netty.channel.ChannelInboundMessageHandlerAdapter;
  */
 public abstract class MessageToMessageDecoder<I> extends ChannelInboundMessageHandlerAdapter<I> {
 
-    protected MessageToMessageDecoder() {
-        super(MessageToMessageDecoder.class, 0);
-    }
-
-    protected MessageToMessageDecoder(
-            @SuppressWarnings("rawtypes")
-            Class<? extends ChannelInboundMessageHandlerAdapter> parameterizedHandlerType,
-            int messageTypeParamIndex) {
-        super(parameterizedHandlerType, messageTypeParamIndex);
-    }
-
     @Override
     protected final void messageReceived(ChannelHandlerContext ctx, I msg) throws Exception {
         ctx.nextInboundMessageBuffer().unfoldAndAdd(decode(ctx, msg));

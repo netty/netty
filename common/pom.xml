@@ -30,6 +30,11 @@
   <name>Netty/Common</name>
 
   <dependencies>
+    <dependency>
+        <groupId>com.fasterxml</groupId>
+        <artifactId>classmate</artifactId>
+    </dependency>
+
     <!-- Logging frameworks - completely optional -->
     <dependency>
       <groupId>org.slf4j</groupId>
@@ -66,7 +71,35 @@
             </Private-Package>
           </instructions>
         </configuration>
-      </plugin>             
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <artifactSet>
+                <includes>
+                  <include>com.fasterxml:classmate</include>
+                </includes>
+              </artifactSet>
+              <relocations>
+                <relocation>
+                  <pattern>com/fasterxml/classmate</pattern>
+                  <shadedPattern>io.netty.util.internal.classmate</shadedPattern>
+                </relocation>
+              </relocations>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ComponentsXmlResourceTransformer"/>
+              </transformers>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 </project>
