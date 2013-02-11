@@ -33,8 +33,9 @@ import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.InternalLogger;
-import io.netty.util.internal.InternalLoggerFactory;
+
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 import static io.netty.handler.codec.http.HttpHeaders.*;
@@ -46,7 +47,7 @@ import static io.netty.handler.codec.http.HttpVersion.*;
  * Handles handshakes and messages
  */
 public class WebSocketSslServerHandler extends ChannelInboundMessageHandlerAdapter<Object> {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketSslServerHandler.class);
+    private static final Logger logger = Logger.getLogger(WebSocketSslServerHandler.class.getName());
 
     private static final String WEBSOCKET_PATH = "/websocket";
 
@@ -123,8 +124,8 @@ public class WebSocketSslServerHandler extends ChannelInboundMessageHandlerAdapt
 
         // Send the uppercase string back.
         String request = ((TextWebSocketFrame) frame).text();
-        if (logger.isDebugEnabled()) {
-            logger.debug(String.format("Channel %s received %s", ctx.channel().id(), request));
+        if (logger.isLoggable(Level.FINE)) {
+            logger.fine(String.format("Channel %s received %s", ctx.channel().id(), request));
         }
         ctx.channel().write(new TextWebSocketFrame(request.toUpperCase()));
     }
