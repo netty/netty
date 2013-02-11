@@ -807,7 +807,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public void fireChannelRegistered() {
+    public ChannelHandlerContext fireChannelRegistered() {
         lazyInitHeadHandler();
         final DefaultChannelHandlerContext next = findContextInbound();
         EventExecutor executor = next.executor();
@@ -825,6 +825,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             }
             executor.execute(task);
         }
+        return this;
     }
 
     private void invokeChannelRegistered() {
@@ -838,7 +839,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public void fireChannelUnregistered() {
+    public ChannelHandlerContext fireChannelUnregistered() {
         final DefaultChannelHandlerContext next = findContextInbound();
         EventExecutor executor = next.executor();
         if (prev != null && executor.inEventLoop()) {
@@ -855,6 +856,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             }
             executor.execute(task);
         }
+        return this;
     }
 
     private void invokeChannelUnregistered() {
@@ -866,7 +868,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public void fireChannelActive() {
+    public ChannelHandlerContext fireChannelActive() {
         lazyInitHeadHandler();
         final DefaultChannelHandlerContext next = findContextInbound();
         EventExecutor executor = next.executor();
@@ -884,6 +886,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             }
             executor.execute(task);
         }
+        return this;
     }
 
     private void invokeChannelActive() {
@@ -897,7 +900,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public void fireChannelInactive() {
+    public ChannelHandlerContext fireChannelInactive() {
         final DefaultChannelHandlerContext next = findContextInbound();
         EventExecutor executor = next.executor();
         if (prev != null && executor.inEventLoop()) {
@@ -914,6 +917,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             }
             executor.execute(task);
         }
+        return this;
     }
 
     private void invokeChannelInactive() {
@@ -927,7 +931,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public void fireExceptionCaught(final Throwable cause) {
+    public ChannelHandlerContext fireExceptionCaught(final Throwable cause) {
         if (cause == null) {
             throw new NullPointerException("cause");
         }
@@ -951,6 +955,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 }
             }
         }
+        return this;
     }
 
     private void invokeExceptionCaught(Throwable cause) {
@@ -968,7 +973,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public void fireUserEventTriggered(final Object event) {
+    public ChannelHandlerContext fireUserEventTriggered(final Object event) {
         if (event == null) {
             throw new NullPointerException("event");
         }
@@ -985,6 +990,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 }
             });
         }
+        return this;
     }
 
     private void invokeUserEventTriggered(Object event) {
@@ -998,7 +1004,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public void fireInboundBufferUpdated() {
+    public ChannelHandlerContext fireInboundBufferUpdated() {
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
             fireInboundBufferUpdated0();
@@ -1014,6 +1020,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             }
             executor.execute(task);
         }
+        return this;
     }
 
     private void fireInboundBufferUpdated0() {
@@ -1060,7 +1067,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public void fireChannelReadSuspended() {
+    public ChannelHandlerContext fireChannelReadSuspended() {
         final DefaultChannelHandlerContext next = findContextInbound();
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
@@ -1077,6 +1084,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             }
             executor.execute(task);
         }
+        return this;
     }
 
     private void invokeChannelReadSuspended() {

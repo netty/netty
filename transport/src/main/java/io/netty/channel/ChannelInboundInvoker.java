@@ -28,7 +28,7 @@ interface ChannelInboundInvoker {
      * called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    void fireChannelRegistered();
+    ChannelInboundInvoker fireChannelRegistered();
 
     /**
      * A {@link Channel} was unregistered from its {@link EventLoop}.
@@ -37,7 +37,7 @@ interface ChannelInboundInvoker {
      * called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    void fireChannelUnregistered();
+    ChannelInboundInvoker fireChannelUnregistered();
 
     /**
      * A {@link Channel} is active now, which means it is connected.
@@ -46,7 +46,7 @@ interface ChannelInboundInvoker {
      * called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    void fireChannelActive();
+    ChannelInboundInvoker fireChannelActive();
 
     /**
      * A {@link Channel} is inactive now, which means it is closed.
@@ -55,7 +55,7 @@ interface ChannelInboundInvoker {
      * called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    void fireChannelInactive();
+    ChannelInboundInvoker fireChannelInactive();
 
     /**
      * A {@link Channel} received an {@link Throwable} in one of its inbound operations.
@@ -64,7 +64,7 @@ interface ChannelInboundInvoker {
      * method  called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    void fireExceptionCaught(Throwable cause);
+    ChannelInboundInvoker fireExceptionCaught(Throwable cause);
 
     /**
      * A {@link Channel} received an user defined event.
@@ -73,7 +73,7 @@ interface ChannelInboundInvoker {
      * method  called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    void fireUserEventTriggered(Object event);
+    ChannelInboundInvoker fireUserEventTriggered(Object event);
 
     /**
      * A {@link Channel} received bytes which are now ready to read from its inbound buffer.
@@ -82,11 +82,11 @@ interface ChannelInboundInvoker {
      * method  called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    void fireInboundBufferUpdated();
+    ChannelInboundInvoker fireInboundBufferUpdated();
 
     /**
      * Triggers an {@link ChannelStateHandler#channelReadSuspended(ChannelHandlerContext) channelReadSuspended}
      * event to the next {@link ChannelStateHandler} in the {@link ChannelPipeline}.
      */
-    void fireChannelReadSuspended();
+    ChannelInboundInvoker fireChannelReadSuspended();
 }

@@ -735,4 +735,28 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
      * handler names and whose values are handlers.
      */
     Map<String, ChannelHandler> toMap();
+
+    @Override
+    ChannelPipeline fireChannelRegistered();
+
+    @Override
+    ChannelPipeline fireChannelUnregistered();
+
+    @Override
+    ChannelPipeline fireChannelActive();
+
+    @Override
+    ChannelPipeline fireChannelInactive();
+
+    @Override
+    ChannelPipeline fireExceptionCaught(Throwable cause);
+
+    @Override
+    ChannelPipeline fireUserEventTriggered(Object event);
+
+    @Override
+    ChannelPipeline fireInboundBufferUpdated();
+
+    @Override
+    ChannelPipeline fireChannelReadSuspended();
 }

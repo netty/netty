@@ -311,4 +311,28 @@ public interface ChannelHandlerContext
      * Return the {@link MessageBuf} of the next {@link ChannelHandlerContext}.
      */
     MessageBuf<Object> nextOutboundMessageBuffer();
+
+    @Override
+    ChannelHandlerContext fireChannelRegistered();
+
+    @Override
+    ChannelHandlerContext fireChannelUnregistered();
+
+    @Override
+    ChannelHandlerContext fireChannelActive();
+
+    @Override
+    ChannelHandlerContext fireChannelInactive();
+
+    @Override
+    ChannelHandlerContext fireExceptionCaught(Throwable cause);
+
+    @Override
+    ChannelHandlerContext fireUserEventTriggered(Object event);
+
+    @Override
+    ChannelHandlerContext fireInboundBufferUpdated();
+
+    @Override
+    ChannelHandlerContext fireChannelReadSuspended();
 }
