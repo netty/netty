@@ -20,7 +20,7 @@ import java.net.SocketAddress;
 /**
  * Interface which is shared by others which need to execute outbound logic.
  */
-public interface ChannelOutboundInvoker {
+interface ChannelOutboundInvoker {
 
     /**
      * Bind to the given {@link SocketAddress} and notify the {@link ChannelFuture} once the operation completes,
