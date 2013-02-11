@@ -18,7 +18,6 @@ package io.netty.handler.codec.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.util.CharsetUtil;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Random;
@@ -37,7 +36,6 @@ public class SnappyIntegrationTest {
     }
 
     @Test
-    @Ignore // FIXME: Make it pass.
     public void test1002() throws Exception {
         // Data from https://github.com/netty/netty/issues/1002
         testIdentity(wrappedBuffer(new byte[] {
@@ -63,7 +61,6 @@ public class SnappyIntegrationTest {
     }
 
     @Test
-    @Ignore // FIXME: Make it pass.
     public void testRandom() throws Exception {
         byte[] data = new byte[16 * 1048576];
         new Random().nextBytes(data);
