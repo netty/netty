@@ -22,15 +22,15 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.InternalLogger;
-import io.netty.util.internal.InternalLoggerFactory;
+
+import java.util.logging.Logger;
 
 /**
  * Handler that just dumps the contents of the response from the server
  */
 public class HttpUploadClientHandler extends ChannelInboundMessageHandlerAdapter<Object> {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(HttpUploadClientHandler.class);
+    private static final Logger logger = Logger.getLogger(HttpUploadClientHandler.class.getName());
 
     private boolean readingChunks;
 
