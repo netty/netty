@@ -24,10 +24,10 @@ import io.netty.buffer.ByteBuf;
  * @see SocksAuthResponseDecoder
  */
 public final class SocksAuthResponse extends SocksResponse {
-    private static final SubnegotiationVersion SUBNEGOTIATION_VERSION = SubnegotiationVersion.AUTH_PASSWORD;
-    private final AuthStatus authStatus;
+    private static final SocksSubnegotiationVersion SUBNEGOTIATION_VERSION = SocksSubnegotiationVersion.AUTH_PASSWORD;
+    private final SocksAuthStatus authStatus;
 
-    public SocksAuthResponse(AuthStatus authStatus) {
+    public SocksAuthResponse(SocksAuthStatus authStatus) {
         super(SocksResponseType.AUTH);
         if (authStatus == null) {
             throw new NullPointerException("authStatus");
@@ -36,17 +36,17 @@ public final class SocksAuthResponse extends SocksResponse {
     }
 
     /**
-     * Returns the {@link AuthStatus} of this {@link SocksAuthResponse}
+     * Returns the {@link SocksAuthStatus} of this {@link SocksAuthResponse}
      *
-     * @return The {@link AuthStatus} of this {@link SocksAuthResponse}
+     * @return The {@link SocksAuthStatus} of this {@link SocksAuthResponse}
      */
-    public AuthStatus authStatus() {
+    public SocksAuthStatus authStatus() {
         return authStatus;
     }
 
     @Override
     public void encodeAsByteBuf(ByteBuf byteBuf) {
-        byteBuf.writeByte(SUBNEGOTIATION_VERSION.getByteValue());
-        byteBuf.writeByte(authStatus.getByteValue());
+        byteBuf.writeByte(SUBNEGOTIATION_VERSION.byteValue());
+        byteBuf.writeByte(authStatus.byteValue());
     }
 }

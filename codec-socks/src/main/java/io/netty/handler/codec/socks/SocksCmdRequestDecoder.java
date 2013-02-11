@@ -31,10 +31,10 @@ public class SocksCmdRequestDecoder extends ReplayingDecoder<SocksCmdRequestDeco
         return name;
     }
 
-    private SocksMessage.ProtocolVersion version;
+    private SocksProtocolVersion version;
     private int fieldLength;
-    private SocksMessage.CmdType cmdType;
-    private SocksMessage.AddressType addressType;
+    private SocksCmdType cmdType;
+    private SocksAddressType addressType;
     private byte reserved;
     private String host;
     private int port;
@@ -48,16 +48,16 @@ public class SocksCmdRequestDecoder extends ReplayingDecoder<SocksCmdRequestDeco
     protected Object decode(ChannelHandlerContext ctx, ByteBuf byteBuf) throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
-                version = SocksMessage.ProtocolVersion.fromByte(byteBuf.readByte());
-                if (version != SocksMessage.ProtocolVersion.SOCKS5) {
+                version = SocksProtocolVersion.fromByte(byteBuf.readByte());
+                if (version != SocksProtocolVersion.SOCKS5) {
                     break;
                 }
                 checkpoint(State.READ_CMD_HEADER);
             }
             case READ_CMD_HEADER: {
-                cmdType = SocksMessage.CmdType.fromByte(byteBuf.readByte());
+                cmdType = SocksCmdType.fromByte(byteBuf.readByte());
                 reserved = byteBuf.readByte();
-                addressType = SocksMessage.AddressType.fromByte(byteBuf.readByte());
+                addressType = SocksAddressType.fromByte(byteBuf.readByte());
                 checkpoint(State.READ_CMD_ADDRESS);
             }
             case READ_CMD_ADDRESS: {
