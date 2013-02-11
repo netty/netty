@@ -72,7 +72,7 @@ public abstract class ChannelOutboundMessageHandlerAdapter<I>
      *
      * @param msg the message
      */
-    public boolean acceptOutboundMessage(Object msg) throws Exception {
+    protected boolean acceptOutboundMessage(Object msg) throws Exception {
         return msgMatcher.match(msg);
     }
 

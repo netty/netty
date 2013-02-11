@@ -27,7 +27,7 @@ import static io.netty.handler.codec.http.HttpConstants.*;
 public class HttpResponseEncoder extends HttpObjectEncoder<HttpResponse> {
 
     @Override
-    public boolean acceptOutboundMessage(Object msg) throws Exception {
+    protected boolean acceptOutboundMessage(Object msg) throws Exception {
         return super.acceptOutboundMessage(msg) && !(msg instanceof HttpRequest);
     }
 
