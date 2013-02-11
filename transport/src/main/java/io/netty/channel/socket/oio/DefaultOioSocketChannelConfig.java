@@ -15,6 +15,7 @@
  */
 package io.netty.channel.socket.oio;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
@@ -62,12 +63,13 @@ public class DefaultOioSocketChannelConfig extends DefaultSocketChannelConfig im
     }
 
     @Override
-    public void setSoTimeout(int timeout) {
+    public OioSocketChannelConfig setSoTimeout(int timeout) {
         try {
             javaSocket.setSoTimeout(timeout);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
+        return this;
     }
 
     @Override
@@ -77,5 +79,83 @@ public class DefaultOioSocketChannelConfig extends DefaultSocketChannelConfig im
         } catch (IOException e) {
             throw new ChannelException(e);
         }
+    }
+
+    @Override
+    public OioSocketChannelConfig setTcpNoDelay(boolean tcpNoDelay) {
+        super.setTcpNoDelay(tcpNoDelay);
+        return this;
+    }
+
+    @Override
+    public OioSocketChannelConfig setSoLinger(int soLinger) {
+        super.setSoLinger(soLinger);
+        return this;
+    }
+
+    @Override
+    public OioSocketChannelConfig setSendBufferSize(int sendBufferSize) {
+        super.setSendBufferSize(sendBufferSize);
+        return this;
+    }
+
+    @Override
+    public OioSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+        super.setReceiveBufferSize(receiveBufferSize);
+        return this;
+    }
+
+    @Override
+    public OioSocketChannelConfig setKeepAlive(boolean keepAlive) {
+        super.setKeepAlive(keepAlive);
+        return this;
+    }
+
+    @Override
+    public OioSocketChannelConfig setTrafficClass(int trafficClass) {
+        super.setTrafficClass(trafficClass);
+        return this;
+    }
+
+    @Override
+    public OioSocketChannelConfig setReuseAddress(boolean reuseAddress) {
+        super.setReuseAddress(reuseAddress);
+        return this;
+    }
+
+    @Override
+    public OioSocketChannelConfig setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
+        super.setPerformancePreferences(connectionTime, latency, bandwidth);
+        return this;
+    }
+
+    @Override
+    public OioSocketChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
+        super.setAllowHalfClosure(true);
+        return this;
+    }
+
+    @Override
+    public OioSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
+        super.setConnectTimeoutMillis(connectTimeoutMillis);
+        return this;
+    }
+
+    @Override
+    public OioSocketChannelConfig setWriteSpinCount(int writeSpinCount) {
+        super.setWriteSpinCount(writeSpinCount);
+        return this;
+    }
+
+    @Override
+    public OioSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
+        super.setAllocator(allocator);
+        return this;
+    }
+
+    @Override
+    public OioSocketChannelConfig setAutoRead(boolean autoRead) {
+        super.setAutoRead(autoRead);
+        return this;
     }
 }

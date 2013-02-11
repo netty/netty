@@ -15,6 +15,8 @@
  */
 package io.netty.channel.socket.oio;
 
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.ServerSocketChannelConfig;
 
 
@@ -31,7 +33,7 @@ import io.netty.channel.socket.ServerSocketChannelConfig;
  * <tr>
  * <th>Name</th><th>Associated setter method</th>
  * </tr><tr>
- * <td>{@link io.netty.channel.ChannelOption#SO_TIMEOUT}</td><td>{@link #setSoTimeout(int)}</td>
+ * <td>{@link ChannelOption#SO_TIMEOUT}</td><td>{@link #setSoTimeout(int)}</td>
  * </tr>
  * </table>
  */
@@ -40,10 +42,34 @@ public interface OioServerSocketChannelConfig extends ServerSocketChannelConfig 
     /**
      * Sets the maximal time a operation on the underlying socket may block.
      */
-    void setSoTimeout(int timeout);
+    OioServerSocketChannelConfig setSoTimeout(int timeout);
 
     /**
      * Returns the maximal time a operation on the underlying socket may block.
      */
     int getSoTimeout();
+
+    @Override
+    OioServerSocketChannelConfig setBacklog(int backlog);
+
+    @Override
+    OioServerSocketChannelConfig setReuseAddress(boolean reuseAddress);
+
+    @Override
+    OioServerSocketChannelConfig setReceiveBufferSize(int receiveBufferSize);
+
+    @Override
+    OioServerSocketChannelConfig setPerformancePreferences(int connectionTime, int latency, int bandwidth);
+
+    @Override
+    OioServerSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
+
+    @Override
+    OioServerSocketChannelConfig setWriteSpinCount(int writeSpinCount);
+
+    @Override
+    OioServerSocketChannelConfig setAllocator(ByteBufAllocator allocator);
+
+    @Override
+    OioServerSocketChannelConfig setAutoRead(boolean autoRead);
 }

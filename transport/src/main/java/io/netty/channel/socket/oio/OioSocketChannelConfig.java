@@ -15,7 +15,9 @@
  */
 package io.netty.channel.socket.oio;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.SocketChannelConfig;
 
 /**
@@ -31,7 +33,7 @@ import io.netty.channel.socket.SocketChannelConfig;
  * <tr>
  * <th>Name</th><th>Associated setter method</th>
  * </tr><tr>
- * <td>{@link io.netty.channel.ChannelOption#SO_TIMEOUT}</td><td>{@link #setSoTimeout(int)}</td>
+ * <td>{@link ChannelOption#SO_TIMEOUT}</td><td>{@link #setSoTimeout(int)}</td>
  * </tr>
  * </table>
  */
@@ -40,10 +42,49 @@ public interface OioSocketChannelConfig extends SocketChannelConfig {
     /**
      * Sets the maximal time a operation on the underlying socket may block.
      */
-    void setSoTimeout(int timeout);
+    OioSocketChannelConfig setSoTimeout(int timeout);
 
     /**
      * Returns the maximal time a operation on the underlying socket may block.
      */
     int getSoTimeout();
+
+    @Override
+    OioSocketChannelConfig setTcpNoDelay(boolean tcpNoDelay);
+
+    @Override
+    OioSocketChannelConfig setSoLinger(int soLinger);
+
+    @Override
+    OioSocketChannelConfig setSendBufferSize(int sendBufferSize);
+
+    @Override
+    OioSocketChannelConfig setReceiveBufferSize(int receiveBufferSize);
+
+    @Override
+    OioSocketChannelConfig setKeepAlive(boolean keepAlive);
+
+    @Override
+    OioSocketChannelConfig setTrafficClass(int trafficClass);
+
+    @Override
+    OioSocketChannelConfig setReuseAddress(boolean reuseAddress);
+
+    @Override
+    OioSocketChannelConfig setPerformancePreferences(int connectionTime, int latency, int bandwidth);
+
+    @Override
+    OioSocketChannelConfig setAllowHalfClosure(boolean allowHalfClosure);
+
+    @Override
+    OioSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
+
+    @Override
+    OioSocketChannelConfig setWriteSpinCount(int writeSpinCount);
+
+    @Override
+    OioSocketChannelConfig setAllocator(ByteBufAllocator allocator);
+
+    @Override
+    OioSocketChannelConfig setAutoRead(boolean autoRead);
 }
