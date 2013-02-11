@@ -77,9 +77,22 @@ final class DefaultMessageBuf<T> extends AbstractMessageBuf<T> {
 
     @Override
     protected void deallocate() {
+        int head = this.head;
+        int tail = this.tail;
+        if (head != tail) {
+            this.head = this.tail = 0;
+            final int mask = elements.length - 1;
+            int i = head;
+            do {
+                BufUtil.release(elements[i]);
+                elements[i] = null;
+                i = i + 1 & mask;
+            } while (i != tail);
+        }
+
         elements = null;
-        head = 0;
-        tail = 0;
+        this.head = 0;
+        this.tail = 0;
     }
 
     @Override

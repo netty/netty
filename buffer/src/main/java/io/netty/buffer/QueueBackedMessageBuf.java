@@ -124,6 +124,9 @@ final class QueueBackedMessageBuf<T> extends AbstractMessageBuf<T> {
 
     @Override
     protected void deallocate() {
+        for (T e: queue) {
+            BufUtil.release(e);
+        }
         queue = null;
     }
 }
