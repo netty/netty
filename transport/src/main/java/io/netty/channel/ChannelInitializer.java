@@ -58,7 +58,7 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelState
      * @param ch            the {@link Channel} which was registered.
      * @throws Exception    is thrown if an error accours. In that case the {@link Channel} will be closed.
      */
-    public abstract void initChannel(C ch) throws Exception;
+    protected abstract void initChannel(C ch) throws Exception;
 
     @SuppressWarnings("unchecked")
     @Override
