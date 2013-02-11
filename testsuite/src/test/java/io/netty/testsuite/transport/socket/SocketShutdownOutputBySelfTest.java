@@ -26,7 +26,7 @@ import org.junit.Test;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import static org.junit.Assert.*;
 
@@ -79,7 +79,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
 
     private static class TestHandler extends ChannelInboundByteHandlerAdapter {
         volatile SocketChannel ch;
-        final BlockingQueue<Byte> queue = new SynchronousQueue<Byte>();
+        final BlockingQueue<Byte> queue = new LinkedBlockingQueue<Byte>();
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
