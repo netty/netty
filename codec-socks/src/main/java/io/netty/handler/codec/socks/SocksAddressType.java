@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,18 +13,32 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.logging;
 
-import org.junit.Test;
+package io.netty.handler.codec.socks;
 
-import static org.junit.Assert.*;
+public enum SocksAddressType {
+    IPv4((byte) 0x01),
+    DOMAIN((byte) 0x03),
+    IPv6((byte) 0x04),
+    UNKNOWN((byte) 0xff);
 
-public class JdkLoggerFactoryTest {
+    private final byte b;
 
-    @Test
-    public void testCreation() {
-        InternalLogger logger = new JdkLoggerFactory().newInstance("foo");
-        assertTrue(logger instanceof JdkLogger);
-        assertEquals("foo", logger.name());
+    SocksAddressType(byte b) {
+        this.b = b;
+    }
+
+    public static SocksAddressType fromByte(byte b) {
+        for (SocksAddressType code : values()) {
+            if (code.b == b) {
+                return code;
+            }
+        }
+        return UNKNOWN;
+    }
+
+    public byte byteValue() {
+        return b;
     }
 }
+

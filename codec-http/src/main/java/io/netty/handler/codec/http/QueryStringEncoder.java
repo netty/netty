@@ -36,7 +36,7 @@ import java.util.List;
  * @see QueryStringDecoder
  *
  * @apiviz.stereotype utility
- * @apiviz.has        io.netty.handler.codec.http.FullHttpRequest oneway - - encodes
+ * @apiviz.has        io.netty.handler.codec.http.HttpRequest oneway - - encodes URI
  */
 public class QueryStringEncoder {
 
@@ -115,8 +115,9 @@ public class QueryStringEncoder {
     }
 
     private static String encodeComponent(String s, Charset charset) {
+        // TODO: Optimize me.
         try {
-            return URLEncoder.encode(s, charset.name()).replaceAll("\\+", "%20");
+            return URLEncoder.encode(s, charset.name()).replace("+", "%20");
         } catch (UnsupportedEncodingException e) {
             throw new UnsupportedCharsetException(charset.name());
         }

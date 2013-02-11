@@ -19,10 +19,10 @@ import io.netty.buffer.BufType;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
-import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.oio.AbstractOioMessageChannel;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.util.internal.InternalLogger;
+import io.netty.util.internal.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;

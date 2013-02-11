@@ -21,7 +21,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufIndexFinder;
 import io.netty.buffer.SwappedByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.util.internal.Signal;
+import io.netty.util.Signal;
 
 import java.io.InputStream;
 import java.io.OutputStream;

@@ -20,8 +20,8 @@ import io.netty.channel.ChannelTaskScheduler;
 import io.netty.channel.EventExecutor;
 import io.netty.channel.EventLoopException;
 import io.netty.channel.MultithreadEventLoopGroup;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.InternalLogger;
+import io.netty.util.internal.InternalLoggerFactory;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;

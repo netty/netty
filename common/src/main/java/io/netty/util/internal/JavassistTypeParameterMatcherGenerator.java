@@ -16,8 +16,6 @@
 
 package io.netty.util.internal;
 
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.Modifier;

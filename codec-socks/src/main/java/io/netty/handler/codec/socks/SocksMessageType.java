@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,18 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.logging;
 
-import org.junit.Test;
+package io.netty.handler.codec.socks;
 
-import static org.junit.Assert.*;
-
-public class Slf4JLoggerFactoryTest {
-
-    @Test
-    public void testCreation() {
-        InternalLogger logger = new Slf4JLoggerFactory().newInstance("foo");
-        assertTrue(logger instanceof Slf4JLogger);
-        assertEquals("foo", logger.name());
-    }
+public enum SocksMessageType {
+    REQUEST,
+    RESPONSE,
+    UNKNOWN
 }

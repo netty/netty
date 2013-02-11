@@ -13,11 +13,18 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package io.netty.util.internal;
 
-/**
- * Simplistic <em>internal-use-only</em> logging layer which allows a user to
- * decide what logging framework Netty should use.
- *
- * @apiviz.hidden
- */
-package io.netty.logging;
+import org.junit.Test;
+
+import static org.junit.Assert.*;
+
+public class CommonsLoggerFactoryTest {
+
+    @Test
+    public void testCreation() {
+        InternalLogger logger = new CommonsLoggerFactory().newInstance("foo");
+        assertTrue(logger instanceof CommonsLogger);
+        assertEquals("foo", logger.name());
+    }
+}

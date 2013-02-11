@@ -26,8 +26,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.socks.SocksCmdRequest;
 import io.netty.handler.codec.socks.SocksCmdResponse;
-import io.netty.handler.codec.socks.SocksMessage;
-
+import io.netty.handler.codec.socks.SocksCmdStatus;
 
 @ChannelHandler.Sharable
 public final class SocksServerConnectHandler extends ChannelInboundMessageHandlerAdapter<SocksCmdRequest> {
@@ -44,7 +43,7 @@ public final class SocksServerConnectHandler extends ChannelInboundMessageHandle
         CallbackNotifier cb = new CallbackNotifier() {
             @Override
             public void onSuccess(final ChannelHandlerContext outboundCtx) {
-                ctx.channel().write(new SocksCmdResponse(SocksMessage.CmdStatus.SUCCESS, request.addressType()))
+                ctx.channel().write(new SocksCmdResponse(SocksCmdStatus.SUCCESS, request.addressType()))
                              .addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture channelFuture) throws Exception {
@@ -57,7 +56,7 @@ public final class SocksServerConnectHandler extends ChannelInboundMessageHandle
 
             @Override
             public void onFailure(ChannelHandlerContext outboundCtx, Throwable cause) {
-                ctx.channel().write(new SocksCmdResponse(SocksMessage.CmdStatus.FAILURE, request.addressType()));
+                ctx.channel().write(new SocksCmdResponse(SocksCmdStatus.FAILURE, request.addressType()));
                 SocksServerUtils.closeOnFlush(ctx.channel());
             }
         };

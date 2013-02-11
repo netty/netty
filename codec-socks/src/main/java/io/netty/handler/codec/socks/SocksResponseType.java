@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,20 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.logging;
 
-
-import java.util.logging.Logger;
+package io.netty.handler.codec.socks;
 
 /**
- * Logger factory which creates a
- * <a href="http://docs.oracle.com/javase/7/docs/technotes/guides/logging/">java.util.logging</a>
- * logger.
+ * Type of socks response
  */
-public class JdkLoggerFactory extends InternalLoggerFactory {
-
-    @Override
-    public InternalLogger newInstance(String name) {
-        return new JdkLogger(Logger.getLogger(name));
-    }
+public enum SocksResponseType {
+    INIT,
+    AUTH,
+    CMD,
+    UNKNOWN
 }

@@ -37,7 +37,7 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  */
-package io.netty.logging;
+package io.netty.util.internal;
 
 import java.util.logging.Level;
 import java.util.logging.LogRecord;

@@ -16,8 +16,8 @@
 
 package io.netty.util;
 
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.InternalLogger;
+import io.netty.util.internal.InternalLoggerFactory;
 import io.netty.util.internal.SystemPropertyUtil;
 
 import java.lang.ref.PhantomReference;
@@ -26,6 +26,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * @apiviz.has io.netty.util.ResourceLeak oneway - - creates
+ */
 public final class ResourceLeakDetector<T> {
 
     private static final boolean ENABLED = SystemPropertyUtil.getBoolean("io.netty.resourceLeakDetection", false);

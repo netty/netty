@@ -13,24 +13,30 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.socks;
-
-import io.netty.buffer.ByteBuf;
+package io.netty.util.internal;
 
 /**
- * An unknown socks message.
- *
- * @see UnknownSocksRequest
- * @see UnknownSocksResponse
+ * The log level that {@link InternalLogger} can log at.
  */
-public final class UnknownSocksMessage extends SocksMessage {
-
-    public UnknownSocksMessage() {
-        super(MessageType.UNKNOWN);
-    }
-
-    @Override
-    public void encodeAsByteBuf(ByteBuf byteBuf) {
-        // NOOP
-    }
+public enum InternalLogLevel {
+    /**
+     * 'TRACE' log level.
+     */
+    TRACE,
+    /**
+     * 'DEBUG' log level.
+     */
+    DEBUG,
+    /**
+     * 'INFO' log level.
+     */
+    INFO,
+    /**
+     * 'WARN' log level.
+     */
+    WARN,
+    /**
+     * 'ERROR' log level.
+     */
+    ERROR
 }

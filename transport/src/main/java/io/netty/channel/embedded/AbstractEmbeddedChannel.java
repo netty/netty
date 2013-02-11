@@ -33,8 +33,8 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelStateHandlerAdapter;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.InternalLogger;
+import io.netty.util.internal.InternalLoggerFactory;
 
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;

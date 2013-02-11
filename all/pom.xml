@@ -345,8 +345,7 @@
             -group "Central interface for all I/O operations" io.netty.channel*
             -group "Client &amp; Server bootstrapping utilities" io.netty.bootstrap*
             -group "Reusable I/O event interceptors" io.netty.handler*
-            -group "Miscellaneous" io.netty.logging*:io.netty.util*:io.netty.monitor:io.netty.monitor.spi
-            -group "Yammer monitoring support" io.netty.monitor.yammer*
+            -group "Miscellaneous" io.netty.util*
 
             -sourceclasspath ${project.build.outputDirectory}
             -nopackagediagram

@@ -13,18 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.util.internal;
+package io.netty.util;
 
-
-import io.netty.util.UniqueName;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * A special {@link Error} which is used to signal some state via an {@link Error}.
- *
- * This instance will have no stacktrace filled or any cause set to safe the overhead.
+ * A special {@link Error} which is used to signal some state or request by throwing it.
+ * {@link Signal} has an empty stack trace and has no cause to save the instantiation overhead.
  */
 public final class Signal extends Error {
 
