@@ -16,13 +16,14 @@
 package org.jboss.netty.handler.codec.socks;
 
 import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 import static org.junit.Assert.*;
 
 public class SocksCmdResponseDecoderTest {
-    private static final Logger logger = LoggerFactory.getLogger(SocksCmdResponseDecoderTest.class);
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(SocksCmdResponseDecoderTest.class);
 
     private static void testSocksCmdResponseDecoderWithDifferentParams(SocksMessage.CmdStatus cmdStatus,
                     SocksMessage.AddressType addressType) throws Exception {

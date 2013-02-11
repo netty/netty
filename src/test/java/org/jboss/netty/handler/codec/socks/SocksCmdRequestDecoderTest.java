@@ -16,15 +16,15 @@
 package org.jboss.netty.handler.codec.socks;
 
 import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import sun.net.util.IPAddressUtil;
 
 import static org.junit.Assert.*;
 
 public class SocksCmdRequestDecoderTest {
-    private static final Logger logger = LoggerFactory.getLogger(SocksCmdRequestDecoderTest.class);
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(SocksCmdRequestDecoderTest.class);
 
     private static void testSocksCmdRequestDecoderWithDifferentParams(SocksMessage.CmdType cmdType,
                                       SocksMessage.AddressType addressType, String host, int port) throws Exception {

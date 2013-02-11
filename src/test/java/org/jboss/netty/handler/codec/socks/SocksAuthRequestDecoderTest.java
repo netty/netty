@@ -17,13 +17,10 @@ package org.jboss.netty.handler.codec.socks;
 
 import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.*;
 
 public class SocksAuthRequestDecoderTest {
-    private static final Logger logger = LoggerFactory.getLogger(SocksAuthRequestDecoderTest.class);
     @Test
     public void testAuthRequestDecoder() throws Exception{
         String username = "test";
