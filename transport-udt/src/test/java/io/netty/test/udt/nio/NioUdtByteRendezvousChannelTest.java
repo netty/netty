@@ -22,11 +22,11 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.BufType;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.udt.nio.NioUdtByteRendezvousChannel;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 import io.netty.test.udt.util.BootHelp;
 import io.netty.test.udt.util.EchoByteHandler;
 import io.netty.test.udt.util.UnitHelp;
+import io.netty.util.internal.InternalLogger;
+import io.netty.util.internal.InternalLoggerFactory;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;

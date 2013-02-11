@@ -47,8 +47,8 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 package io.netty.util.internal.jzlib;
 
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.InternalLogger;
+import io.netty.util.internal.InternalLoggerFactory;
 import io.netty.util.internal.jzlib.JZlib.WrapperType;
 
 public final class ZStream {

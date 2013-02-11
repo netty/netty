@@ -13,20 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.logging;
+package io.netty.util.internal;
 
-
-import java.util.logging.Logger;
+import org.apache.log4j.Logger;
 
 /**
- * Logger factory which creates a
- * <a href="http://docs.oracle.com/javase/7/docs/technotes/guides/logging/">java.util.logging</a>
+ * Logger factory which creates an
+ * <a href="http://logging.apache.org/log4j/1.2/index.html">Apache Log4J</a>
  * logger.
  */
-public class JdkLoggerFactory extends InternalLoggerFactory {
+public class Log4JLoggerFactory extends InternalLoggerFactory {
 
     @Override
     public InternalLogger newInstance(String name) {
-        return new JdkLogger(Logger.getLogger(name));
+        return new Log4JLogger(Logger.getLogger(name));
     }
 }

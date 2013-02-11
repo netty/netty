@@ -15,9 +15,6 @@
  */
 package io.netty.util.internal;
 
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
-
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;

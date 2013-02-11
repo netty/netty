@@ -37,7 +37,7 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  */
-package io.netty.logging;
+package io.netty.util.internal;
 
 /**
  * <em>Internal-use-only</em> logger used by Netty.  <strong>DO NOT</strong>

@@ -15,7 +15,7 @@
  */
 package io.netty.handler.logging;
 
-import io.netty.logging.InternalLogLevel;
+import io.netty.util.internal.InternalLogLevel;
 
 public enum LogLevel {
     TRACE(InternalLogLevel.TRACE),

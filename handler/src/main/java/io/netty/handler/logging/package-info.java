@@ -15,8 +15,7 @@
  */
 
 /**
- * Logs a {@link io.netty.channel.ChannelEvent} for debugging purpose
- * using an {@link io.netty.logging.InternalLogger}.
+ * Logs a {@link io.netty.channel.ChannelEvent} for debugging purpose.
  *
  * @apiviz.hidden
  * @apiviz.exclude \.channel\.

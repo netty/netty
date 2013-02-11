@@ -15,21 +15,21 @@
  */
 package io.netty.channel.udt.nio;
 
-import static java.nio.channels.SelectionKey.*;
+import com.barchart.udt.TypeUDT;
+import com.barchart.udt.nio.ServerSocketChannelUDT;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelException;
 import io.netty.channel.nio.AbstractNioMessageChannel;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 import io.netty.channel.udt.DefaultUdtServerChannelConfig;
 import io.netty.channel.udt.UdtServerChannel;
 import io.netty.channel.udt.UdtServerChannelConfig;
+import io.netty.util.internal.InternalLogger;
+import io.netty.util.internal.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
-import com.barchart.udt.TypeUDT;
-import com.barchart.udt.nio.ServerSocketChannelUDT;
+import static java.nio.channels.SelectionKey.*;
 
 /**
  * Common base for Netty Byte/Message UDT Stream/Datagram acceptors.
