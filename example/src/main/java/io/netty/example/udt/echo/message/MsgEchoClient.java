@@ -25,11 +25,10 @@ import io.netty.example.udt.util.UtilConsoleReporter;
 import io.netty.example.udt.util.UtilThreadFactory;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
 /**
  * UDT Message Flow client
@@ -41,8 +40,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class MsgEchoClient {
 
-    private static final Logger log = LoggerFactory
-            .getLogger(MsgEchoClient.class);
+    private static final Logger log = Logger.getLogger(MsgEchoClient.class.getName());
 
     private final String host;
     private final int port;

@@ -24,8 +24,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.udt.UdtMessage;
 import io.netty.channel.udt.nio.NioUdtProvider;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.netty.util.internal.InternalLogger;
+import io.netty.util.internal.InternalLoggerFactory;
 
 /**
  * Handler implementation for the echo peer. It initiates the ping-pong traffic
@@ -35,8 +35,7 @@ import org.slf4j.LoggerFactory;
 public class EchoMessageHandler extends
         ChannelInboundMessageHandlerAdapter<UdtMessage> {
 
-    private static final Logger log = LoggerFactory
-            .getLogger(EchoMessageHandler.class.getName());
+    private static final InternalLogger log = InternalLoggerFactory.getInstance(EchoMessageHandler.class);
 
     private final Meter meter;
     private final UdtMessage message;

@@ -16,14 +16,15 @@
 package io.netty.handler.codec.socks;
 
 import io.netty.channel.embedded.EmbeddedByteChannel;
+import io.netty.util.internal.InternalLogger;
+import io.netty.util.internal.InternalLoggerFactory;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.*;
 
 public class SocksAuthResponseDecoderTest {
-    private static final Logger logger = LoggerFactory.getLogger(SocksAuthResponseDecoderTest.class);
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(SocksAuthResponseDecoderTest.class);
+
     private static void testSocksAuthResponseDecoderWithDifferentParams(SocksAuthStatus authStatus){
         logger.debug("Testing SocksAuthResponseDecoder with authStatus: "+ authStatus);
         SocksAuthResponse msg = new SocksAuthResponse(authStatus);
