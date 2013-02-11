@@ -115,6 +115,7 @@ public class QueryStringEncoder {
     }
 
     private static String encodeComponent(String s, Charset charset) {
+        // TODO: Optimize me.
         try {
             return URLEncoder.encode(s, charset.name()).replace("+", "%20");
         } catch (UnsupportedEncodingException e) {
