@@ -35,14 +35,23 @@ public final class ChannelPromiseAggregator implements ChannelFutureListener {
         this.aggregatePromise = aggregatePromise;
     }
 
-    public void addFuture(ChannelPromise promise) {
+    public ChannelPromiseAggregator add(ChannelPromise... promises) {
+        if (promises == null) {
+            throw new NullPointerException("promises");
+        }
         synchronized (this) {
             if (pendingPromises == null) {
                 pendingPromises = new HashSet<ChannelPromise>();
             }
-            pendingPromises.add(promise);
+            for (ChannelPromise p: promises) {
+                if (p == null) {
+                    continue;
+                }
+                pendingPromises.add(p);
+                p.addListener(this);
+            }
         }
-        promise.addListener(this);
+        return this;
     }
 
     @Override
