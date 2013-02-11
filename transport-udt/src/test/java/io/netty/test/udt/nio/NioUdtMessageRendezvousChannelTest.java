@@ -22,13 +22,12 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.BufType;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.udt.nio.NioUdtMessageRendezvousChannel;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 import io.netty.test.udt.util.BootHelp;
 import io.netty.test.udt.util.EchoMessageHandler;
 import io.netty.test.udt.util.UnitHelp;
-
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
@@ -37,16 +36,14 @@ import static org.junit.Assert.*;
 
 public class NioUdtMessageRendezvousChannelTest extends AbstractUdtTest {
 
-    protected static final Logger log = LoggerFactory.getLogger(NioUdtByteAcceptorChannelTest.class);
+    private static final InternalLogger log = InternalLoggerFactory.getInstance(NioUdtByteAcceptorChannelTest.class);
 
     /**
      * verify channel meta data
      */
     @Test
     public void metadata() throws Exception {
-
-        assertEquals(BufType.MESSAGE, new NioUdtMessageRendezvousChannel()
-                .metadata().bufferType());
+        assertEquals(BufType.MESSAGE, new NioUdtMessageRendezvousChannel().metadata().bufferType());
 
     }
 
@@ -86,7 +83,7 @@ public class NioUdtMessageRendezvousChannelTest extends AbstractUdtTest {
         while (handler1.meter().count() < transferLimit
                 && handler2.meter().count() < transferLimit) {
 
-            NioUdtByteAcceptorChannelTest.log.info("progress : {} {}", handler1.meter().count(), handler2
+            log.info("progress : {} {}", handler1.meter().count(), handler2
                     .meter().count());
 
             Thread.sleep(1000);
@@ -96,8 +93,8 @@ public class NioUdtMessageRendezvousChannelTest extends AbstractUdtTest {
         connectFuture1.channel().close().sync();
         connectFuture2.channel().close().sync();
 
-        NioUdtByteAcceptorChannelTest.log.info("handler1 : {}", handler1.meter().count());
-        NioUdtByteAcceptorChannelTest.log.info("handler2 : {}", handler2.meter().count());
+        log.info("handler1 : {}", handler1.meter().count());
+        log.info("handler2 : {}", handler2.meter().count());
 
         assertTrue(handler1.meter().count() >= transferLimit);
         assertTrue(handler2.meter().count() >= transferLimit);

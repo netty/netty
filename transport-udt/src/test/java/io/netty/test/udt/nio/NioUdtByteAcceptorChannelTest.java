@@ -18,25 +18,17 @@ package io.netty.test.udt.nio;
 
 import io.netty.buffer.BufType;
 import io.netty.channel.udt.nio.NioUdtByteAcceptorChannel;
-
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.*;
 
 public class NioUdtByteAcceptorChannelTest extends AbstractUdtTest {
-
-    protected static final Logger log = LoggerFactory.getLogger(NioUdtByteAcceptorChannelTest.class);
 
     /**
      * verify channel meta data
      */
     @Test
     public void metadata() throws Exception {
-
-        assertEquals(BufType.BYTE, new NioUdtByteAcceptorChannel().metadata()
-                .bufferType());
-
+        assertEquals(BufType.BYTE, new NioUdtByteAcceptorChannel().metadata().bufferType());
     }
 }
