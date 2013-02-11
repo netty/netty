@@ -22,6 +22,8 @@ import java.util.Queue;
  * Buf which operates on messages.
  *
  * @param <T>   the type of the messages that are hold by this {@link MessageBuf}
+ *
+ * @apiviz.landmark
  */
 public interface MessageBuf<T> extends Buf, Queue<T> {
 
