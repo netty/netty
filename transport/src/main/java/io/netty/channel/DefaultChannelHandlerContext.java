@@ -28,7 +28,6 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -160,8 +159,10 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
             if (buf instanceof ByteBuf) {
                 inByteBuf = (ByteBuf) buf;
+                inMsgBuf = null;
             } else if (buf instanceof MessageBuf) {
                 inMsgBuf = (MessageBuf<Object>) buf;
+                inByteBuf = null;
             } else {
                 throw new ChannelPipelineException(
                         handler.getClass().getSimpleName() + ".newInboundBuffer() returned neither " +
@@ -211,6 +212,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         executor = null;
         inByteBuf = handler.byteSink;
         inMsgBuf = handler.msgSink;
+        outByteBuf = null;
+        outMsgBuf = null;
     }
 
     void forwardBufferContent() {
@@ -480,30 +483,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     /**
      * Executes a task on the event loop and waits for it to finish.  If the task is interrupted, then the
-     * current thread will be interrupted and this will return {@code null}.  It is expected that the task
-     * performs any appropriate locking.
-     * <p>
-     * If the {@link Callable#call()} call throws a {@link Throwable}, but it is not an instance of
-     * {@link Error}, {@link RuntimeException}, or {@link Exception}, then it is wrapped inside an
-     * {@link AssertionError} and that is thrown instead.</p>
-     *
-     * @param c execute this callable and return its value
-     * @param <T> the return value type
-     * @return the task's return value, or {@code null} if the task was interrupted.
-     * @see Callable#call()
-     * @see Future#get()
-     * @throws Error if the task threw this.
-     * @throws RuntimeException if the task threw this.
-     * @throws Exception if the task threw this.
-     * @throws ChannelPipelineException with a {@link Throwable} as a cause, if the task threw another type of
-     *         {@link Throwable}.
-     */
-    private <T> T executeOnEventLoop(Callable<T> c) throws Exception {
-        return getFromFuture(executor().submit(c));
-    }
-
-    /**
-     * Executes a task on the event loop and waits for it to finish.  If the task is interrupted, then the
      * current thread will be interrupted.  It is expected that the task performs any appropriate locking.
      * <p>
      * If the {@link Runnable#run()} call throws a {@link Throwable}, but it is not an instance of
@@ -590,108 +569,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
             Thread.currentThread().interrupt();
         }
-    }
-
-    @Override
-    public ByteBuf replaceInboundByteBuffer(final ByteBuf newInboundByteBuf) {
-        if (newInboundByteBuf == null) {
-            throw new NullPointerException("newInboundByteBuf");
-        }
-
-        if (!executor().inEventLoop()) {
-            try {
-                return executeOnEventLoop(new Callable<ByteBuf>() {
-                        @Override
-                        public ByteBuf call() {
-                            return replaceInboundByteBuffer(newInboundByteBuf);
-                        }
-                    });
-            } catch (Exception ex) {
-                throw new ChannelPipelineException("failed to replace an inbound byte buffer", ex);
-            }
-        }
-
-        ByteBuf currentInboundByteBuf = inboundByteBuffer();
-
-        inByteBuf = newInboundByteBuf;
-        return currentInboundByteBuf;
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <T> MessageBuf<T> replaceInboundMessageBuffer(final MessageBuf<T> newInboundMsgBuf) {
-        if (newInboundMsgBuf == null) {
-            throw new NullPointerException("newInboundMsgBuf");
-        }
-
-        if (!executor().inEventLoop()) {
-            try {
-                return executeOnEventLoop(new Callable<MessageBuf<T>>() {
-                    @Override
-                    public MessageBuf<T> call() {
-                        return replaceInboundMessageBuffer(newInboundMsgBuf);
-                    }
-                });
-            } catch (Exception ex) {
-                throw new ChannelPipelineException("failed to replace an inbound message buffer", ex);
-            }
-        }
-
-        MessageBuf<T> currentInboundMsgBuf = inboundMessageBuffer();
-
-        inMsgBuf = (MessageBuf<Object>) newInboundMsgBuf;
-        return currentInboundMsgBuf;
-    }
-
-    @Override
-    public ByteBuf replaceOutboundByteBuffer(final ByteBuf newOutboundByteBuf) {
-        if (newOutboundByteBuf == null) {
-            throw new NullPointerException("newOutboundByteBuf");
-        }
-
-        if (!executor().inEventLoop()) {
-            try {
-                return executeOnEventLoop(new Callable<ByteBuf>() {
-                    @Override
-                    public ByteBuf call() {
-                        return replaceOutboundByteBuffer(newOutboundByteBuf);
-                    }
-                });
-            } catch (Exception ex) {
-                throw new ChannelPipelineException("failed to replace an outbound byte buffer", ex);
-            }
-        }
-
-        ByteBuf currentOutboundByteBuf = outboundByteBuffer();
-
-        outByteBuf = newOutboundByteBuf;
-        return currentOutboundByteBuf;
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <T> MessageBuf<T> replaceOutboundMessageBuffer(final MessageBuf<T> newOutboundMsgBuf) {
-        if (newOutboundMsgBuf == null) {
-            throw new NullPointerException("newOutboundMsgBuf");
-        }
-
-        if (!executor().inEventLoop()) {
-            try {
-                return executeOnEventLoop(new Callable<MessageBuf<T>>() {
-                    @Override
-                    public MessageBuf<T> call() {
-                        return replaceOutboundMessageBuffer(newOutboundMsgBuf);
-                    }
-                });
-            } catch (Exception ex) {
-                throw new ChannelPipelineException("failed to replace an outbound message buffer", ex);
-            }
-        }
-
-        MessageBuf<T> currentOutboundMsgBuf = outboundMessageBuffer();
-
-        outMsgBuf = (MessageBuf<Object>) newOutboundMsgBuf;
-        return currentOutboundMsgBuf;
     }
 
     @Override
