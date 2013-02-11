@@ -13,19 +13,25 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.logging;
+package io.netty.util.internal;
 
-import org.apache.log4j.Logger;
+
+import org.apache.commons.logging.LogFactory;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Logger factory which creates an
- * <a href="http://logging.apache.org/log4j/1.2/index.html">Apache Log4J</a>
+ * <a href="http://commons.apache.org/logging/">Apache Commons Logging</a>
  * logger.
  */
-public class Log4JLoggerFactory extends InternalLoggerFactory {
+public class CommonsLoggerFactory extends InternalLoggerFactory {
+
+    Map<String, InternalLogger> loggerMap = new HashMap<String, InternalLogger>();
 
     @Override
     public InternalLogger newInstance(String name) {
-        return new Log4JLogger(Logger.getLogger(name));
+        return new CommonsLogger(LogFactory.getLog(name), name);
     }
 }

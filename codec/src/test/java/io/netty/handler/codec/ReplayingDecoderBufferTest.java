@@ -18,7 +18,7 @@ package io.netty.handler.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.Signal;
+import io.netty.util.Signal;
 import org.junit.Test;
 
 import static org.junit.Assert.*;

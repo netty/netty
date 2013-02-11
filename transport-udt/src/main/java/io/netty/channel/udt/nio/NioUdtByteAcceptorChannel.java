@@ -15,22 +15,16 @@
  */
 package io.netty.channel.udt.nio;
 
+import com.barchart.udt.TypeUDT;
+import com.barchart.udt.nio.SocketChannelUDT;
 import io.netty.buffer.BufType;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelMetadata;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
-
-import com.barchart.udt.TypeUDT;
-import com.barchart.udt.nio.SocketChannelUDT;
 
 /**
  * Byte Channel Acceptor for UDT Streams.
  */
 public class NioUdtByteAcceptorChannel extends NioUdtAcceptorChannel {
-
-    private static final InternalLogger logger = InternalLoggerFactory
-            .getInstance(NioUdtByteAcceptorChannel.class);
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(
             BufType.BYTE, false);

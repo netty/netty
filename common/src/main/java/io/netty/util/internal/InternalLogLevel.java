@@ -13,18 +13,30 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.logging;
+package io.netty.util.internal;
 
-import org.junit.Test;
-
-import static org.junit.Assert.*;
-
-public class CommonsLoggerFactoryTest {
-
-    @Test
-    public void testCreation() {
-        InternalLogger logger = new CommonsLoggerFactory().newInstance("foo");
-        assertTrue(logger instanceof CommonsLogger);
-        assertEquals("foo", logger.name());
-    }
+/**
+ * The log level that {@link InternalLogger} can log at.
+ */
+public enum InternalLogLevel {
+    /**
+     * 'TRACE' log level.
+     */
+    TRACE,
+    /**
+     * 'DEBUG' log level.
+     */
+    DEBUG,
+    /**
+     * 'INFO' log level.
+     */
+    INFO,
+    /**
+     * 'WARN' log level.
+     */
+    WARN,
+    /**
+     * 'ERROR' log level.
+     */
+    ERROR
 }
