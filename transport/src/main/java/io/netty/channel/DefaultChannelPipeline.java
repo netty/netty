@@ -846,22 +846,24 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public void fireChannelRegistered() {
+    public ChannelPipeline fireChannelRegistered() {
         head.fireChannelRegistered();
+        return this;
     }
 
     @Override
-    public void fireChannelUnregistered() {
+    public ChannelPipeline fireChannelUnregistered() {
         head.fireChannelUnregistered();
 
         // Free all buffers if channel is closed and unregistered.
         if (!channel.isOpen()) {
             head.invokeFreeInboundBuffer();
         }
+        return this;
     }
 
     @Override
-    public void fireChannelActive() {
+    public ChannelPipeline fireChannelActive() {
         firedChannelActive = true;
         head.fireChannelActive();
 
@@ -873,42 +875,48 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             fireInboundBufferUpdatedOnActivation = false;
             head.fireInboundBufferUpdated();
         }
+        return this;
     }
 
     @Override
-    public void fireChannelInactive() {
+    public ChannelPipeline fireChannelInactive() {
         // Some implementations such as EmbeddedChannel can trigger inboundBufferUpdated()
         // after deactivation, so it's safe not to revert the firedChannelActive flag here.
         // Also, all known transports never get re-activated.
         //firedChannelActive = false;
         head.fireChannelInactive();
+        return this;
     }
 
     @Override
-    public void fireExceptionCaught(Throwable cause) {
+    public ChannelPipeline fireExceptionCaught(Throwable cause) {
         head.fireExceptionCaught(cause);
+        return this;
     }
 
     @Override
-    public void fireUserEventTriggered(Object event) {
+    public ChannelPipeline fireUserEventTriggered(Object event) {
         head.fireUserEventTriggered(event);
+        return this;
     }
 
     @Override
-    public void fireInboundBufferUpdated() {
+    public ChannelPipeline fireInboundBufferUpdated() {
         if (!firedChannelActive) {
             fireInboundBufferUpdatedOnActivation = true;
-            return;
+            return this;
         }
         head.fireInboundBufferUpdated();
+        return this;
     }
 
     @Override
-    public void fireChannelReadSuspended() {
+    public ChannelPipeline fireChannelReadSuspended() {
         head.fireChannelReadSuspended();
         if (channel.config().isAutoRead()) {
             read();
         }
+        return this;
     }
 
     @Override
