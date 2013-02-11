@@ -29,7 +29,7 @@ final class SnappyChecksumUtil {
      * @param checksum The checksum decoded from the stream to compare against
      * @throws CompressionException If the calculated and supplied checksums do not match
      */
-    public static void validateChecksum(ByteBuf slice, int checksum) {
+    static void validateChecksum(ByteBuf slice, int checksum) {
         if (calculateChecksum(slice) != checksum) {
             throw new CompressionException("Uncompressed data did not match checksum");
         }
@@ -41,7 +41,7 @@ final class SnappyChecksumUtil {
      *
      * @param slice The input data to calculate the CRC32 checksum of
      */
-    public static int calculateChecksum(ByteBuf slice) {
+    static int calculateChecksum(ByteBuf slice) {
         CRC32 crc32 = new CRC32();
         try {
             byte[] array = new byte[slice.readableBytes()];
