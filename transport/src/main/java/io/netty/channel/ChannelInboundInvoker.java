@@ -19,7 +19,7 @@ package io.netty.channel;
 /**
  * Interface which is shared by others which need to fire inbound events
  */
-public interface ChannelInboundInvoker {
+interface ChannelInboundInvoker {
 
     /**
      * A {@link Channel} was registered to its {@link EventLoop}.
