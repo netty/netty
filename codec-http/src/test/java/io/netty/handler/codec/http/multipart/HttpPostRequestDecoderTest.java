@@ -17,14 +17,17 @@ package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.DecoderResult;
-import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
 import java.util.Arrays;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /** {@link HttpPostRequestDecoder} test case. */
 public class HttpPostRequestDecoderTest {
@@ -42,13 +45,13 @@ public class HttpPostRequestDecoderTest {
         final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
 
         for (String data : Arrays.asList("", "\r", "\r\r", "\r\r\r")) {
-            final String body = ""
-                + "--" + boundary + "\r\n" +
-                "Content-Disposition: form-data; name=\"file\"; filename=\"tmp-0.txt\"\r\n" +
-                "Content-Type: image/gif\r\n" +
-                "\r\n" +
-                data + "\r\n" +
-                "--" + boundary + "--\r\n";
+            final String body =
+                    "--" + boundary + "\r\n" +
+                    "Content-Disposition: form-data; name=\"file\"; filename=\"tmp-0.txt\"\r\n" +
+                    "Content-Type: image/gif\r\n" +
+                    "\r\n" +
+                    data + "\r\n" +
+                    "--" + boundary + "--\r\n";
 
             // Create decoder instance to test.
             final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);

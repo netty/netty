@@ -18,8 +18,6 @@ package io.netty.channel.udt;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
 
-import java.net.InetSocketAddress;
-
 /**
  * UDT {@link ServerChannel}.
  * <p>
