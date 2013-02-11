@@ -15,6 +15,7 @@
  */
 package io.netty.channel.socket.oio;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
@@ -24,7 +25,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.Map;
 
-import static io.netty.channel.ChannelOption.SO_TIMEOUT;
+import static io.netty.channel.ChannelOption.*;
 
 /**
  * Default {@link OioServerSocketChannelConfig} implementation
@@ -64,12 +65,13 @@ public class DefaultOioServerSocketChannelConfig extends DefaultServerSocketChan
     }
 
     @Override
-    public void setSoTimeout(int timeout) {
+    public OioServerSocketChannelConfig setSoTimeout(int timeout) {
         try {
             javaSocket.setSoTimeout(timeout);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
+        return this;
     }
 
     @Override
@@ -79,5 +81,53 @@ public class DefaultOioServerSocketChannelConfig extends DefaultServerSocketChan
         } catch (IOException e) {
             throw new ChannelException(e);
         }
+    }
+
+    @Override
+    public OioServerSocketChannelConfig setBacklog(int backlog) {
+        super.setBacklog(backlog);
+        return this;
+    }
+
+    @Override
+    public OioServerSocketChannelConfig setReuseAddress(boolean reuseAddress) {
+        super.setReuseAddress(reuseAddress);
+        return this;
+    }
+
+    @Override
+    public OioServerSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+        super.setReceiveBufferSize(receiveBufferSize);
+        return this;
+    }
+
+    @Override
+    public OioServerSocketChannelConfig setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
+        super.setPerformancePreferences(connectionTime, latency, bandwidth);
+        return this;
+    }
+
+    @Override
+    public OioServerSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
+        super.setConnectTimeoutMillis(connectTimeoutMillis);
+        return this;
+    }
+
+    @Override
+    public OioServerSocketChannelConfig setWriteSpinCount(int writeSpinCount) {
+        super.setWriteSpinCount(writeSpinCount);
+        return this;
+    }
+
+    @Override
+    public OioServerSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
+        super.setAllocator(allocator);
+        return this;
+    }
+
+    @Override
+    public OioServerSocketChannelConfig setAutoRead(boolean autoRead) {
+        super.setAutoRead(autoRead);
+        return this;
     }
 }

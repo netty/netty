@@ -35,8 +35,7 @@ import static io.netty.channel.ChannelOption.*;
 /**
  * The Async {@link ServerSocketChannelConfig} implementation.
  */
-final class AioServerSocketChannelConfig extends DefaultChannelConfig
-                                              implements ServerSocketChannelConfig {
+final class AioServerSocketChannelConfig extends DefaultChannelConfig implements ServerSocketChannelConfig {
 
     private final AtomicReference<AsynchronousServerSocketChannel> javaChannel
             = new AtomicReference<AsynchronousServerSocketChannel>();
@@ -107,7 +106,7 @@ final class AioServerSocketChannelConfig extends DefaultChannelConfig
     }
 
     @Override
-    public ServerSocketChannelConfig setReuseAddress(boolean reuseAddress) {
+    public AioServerSocketChannelConfig setReuseAddress(boolean reuseAddress) {
         setOption(StandardSocketOptions.SO_REUSEADDR, reuseAddress);
         return this;
     }
@@ -118,13 +117,13 @@ final class AioServerSocketChannelConfig extends DefaultChannelConfig
     }
 
     @Override
-    public ServerSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+    public AioServerSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         setOption(StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
         return this;
     }
 
     @Override
-    public ServerSocketChannelConfig setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
+    public AioServerSocketChannelConfig setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
         throw new UnsupportedOperationException();
     }
 
@@ -134,7 +133,7 @@ final class AioServerSocketChannelConfig extends DefaultChannelConfig
     }
 
     @Override
-    public ServerSocketChannelConfig setBacklog(int backlog) {
+    public AioServerSocketChannelConfig setBacklog(int backlog) {
         if (backlog < 0) {
             throw new IllegalArgumentException("backlog: " + backlog);
         }
@@ -202,22 +201,26 @@ final class AioServerSocketChannelConfig extends DefaultChannelConfig
     }
 
     @Override
-    public ServerSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-        return (ServerSocketChannelConfig) super.setConnectTimeoutMillis(connectTimeoutMillis);
+    public AioServerSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
+        super.setConnectTimeoutMillis(connectTimeoutMillis);
+        return this;
     }
 
     @Override
-    public ServerSocketChannelConfig setWriteSpinCount(int writeSpinCount) {
-        return (ServerSocketChannelConfig) super.setWriteSpinCount(writeSpinCount);
+    public AioServerSocketChannelConfig setWriteSpinCount(int writeSpinCount) {
+        super.setWriteSpinCount(writeSpinCount);
+        return this;
     }
 
     @Override
-    public ServerSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
-        return (ServerSocketChannelConfig) super.setAllocator(allocator);
+    public AioServerSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
+        super.setAllocator(allocator);
+        return this;
     }
 
     @Override
-    public ServerSocketChannelConfig setAutoRead(boolean autoRead) {
-        return (ServerSocketChannelConfig) super.setAutoRead(autoRead);
+    public AioServerSocketChannelConfig setAutoRead(boolean autoRead) {
+        super.setAutoRead(autoRead);
+        return this;
     }
 }

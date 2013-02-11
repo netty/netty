@@ -138,6 +138,7 @@ public final class EmptyByteBuf implements ByteBuf {
     }
 
     @Override
+    @Deprecated
     public boolean readable() {
         return false;
     }
@@ -148,6 +149,7 @@ public final class EmptyByteBuf implements ByteBuf {
     }
 
     @Override
+    @Deprecated
     public boolean writable() {
         return false;
     }
@@ -199,6 +201,7 @@ public final class EmptyByteBuf implements ByteBuf {
     }
 
     @Override
+    @Deprecated
     public ByteBuf ensureWritableBytes(int minWritableBytes) {
         return ensureWritable(minWritableBytes);
     }

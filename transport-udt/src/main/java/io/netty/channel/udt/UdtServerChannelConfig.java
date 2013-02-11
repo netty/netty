@@ -15,12 +15,12 @@
  */
 package io.netty.channel.udt;
 
+import com.barchart.udt.TypeUDT;
+import com.barchart.udt.nio.KindUDT;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
-
-import com.barchart.udt.TypeUDT;
-import com.barchart.udt.nio.KindUDT;
 
 /**
  * A {@link ChannelConfig} for a {@link UdtServerChannel}.
@@ -43,6 +43,18 @@ public interface UdtServerChannelConfig extends UdtChannelConfig {
      * {@link ChannelOption#SO_BACKLOG}.
      */
     UdtServerChannelConfig setBacklog(int backlog);
+
+    @Override
+    UdtServerChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
+
+    @Override
+    UdtServerChannelConfig setWriteSpinCount(int writeSpinCount);
+
+    @Override
+    UdtServerChannelConfig setAllocator(ByteBufAllocator allocator);
+
+    @Override
+    UdtServerChannelConfig setAutoRead(boolean autoRead);
 
     @Override
     UdtServerChannelConfig setProtocolReceiveBufferSize(int size);

@@ -15,14 +15,14 @@
  */
 package io.netty.channel.udt;
 
-import static io.netty.channel.ChannelOption.*;
+import com.barchart.udt.nio.ChannelUDT;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
 
 import java.io.IOException;
 import java.util.Map;
 
-import com.barchart.udt.SocketUDT;
-import com.barchart.udt.nio.ChannelUDT;
+import static io.netty.channel.ChannelOption.*;
 
 /**
  * The default {@link UdtServerChannelConfig} implementation.
@@ -32,9 +32,8 @@ public class DefaultUdtServerChannelConfig extends DefaultUdtChannelConfig
 
     private volatile int backlog = 64;
 
-    public DefaultUdtServerChannelConfig(final UdtChannel channel,
-            final ChannelUDT channelUDT, final boolean apply)
-            throws IOException {
+    public DefaultUdtServerChannelConfig(
+            final UdtChannel channel, final ChannelUDT channelUDT, final boolean apply) throws IOException {
         super(channel, channelUDT, apply);
         if (apply) {
             apply(channelUDT);
@@ -43,7 +42,6 @@ public class DefaultUdtServerChannelConfig extends DefaultUdtChannelConfig
 
     @Override
     protected void apply(final ChannelUDT channelUDT) throws IOException {
-        final SocketUDT socketUDT = channelUDT.socketUDT();
         // nothing to apply for now.
     }
 
@@ -136,4 +134,27 @@ public class DefaultUdtServerChannelConfig extends DefaultUdtChannelConfig
         return this;
     }
 
+    @Override
+    public UdtServerChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
+        super.setConnectTimeoutMillis(connectTimeoutMillis);
+        return this;
+    }
+
+    @Override
+    public UdtServerChannelConfig setWriteSpinCount(int writeSpinCount) {
+        super.setWriteSpinCount(writeSpinCount);
+        return this;
+    }
+
+    @Override
+    public UdtServerChannelConfig setAllocator(ByteBufAllocator allocator) {
+        super.setAllocator(allocator);
+        return this;
+    }
+
+    @Override
+    public UdtServerChannelConfig setAutoRead(boolean autoRead) {
+        super.setAutoRead(autoRead);
+        return this;
+    }
 }

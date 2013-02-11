@@ -16,6 +16,7 @@
 package io.netty.channel.socket.aio;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.SocketChannelConfig;
 
 import java.nio.channels.InterruptedByTimeoutException;
@@ -32,13 +33,46 @@ import java.nio.channels.InterruptedByTimeoutException;
  * <tr>
  * <th>Name</th><th>Associated setter method</th>
  * </tr><tr>
- * <td>{@link io.netty.channel.ChannelOption#AIO_READ_TIMEOUT}</td><td>{@link #setReadTimeout(long)}</td>
+ * <td>{@link ChannelOption#AIO_READ_TIMEOUT}</td><td>{@link #setReadTimeout(long)}</td>
  * </tr><tr>
- * <td>{@link io.netty.channel.ChannelOption#AIO_WRITE_TIMEOUT}</td><td>{@link #setWriteTimeout(long)}</td>
+ * <td>{@link ChannelOption#AIO_WRITE_TIMEOUT}</td><td>{@link #setWriteTimeout(long)}</td>
  * </tr>
  * </table>
  */
 public interface AioSocketChannelConfig extends SocketChannelConfig {
+
+    /**
+     * Return the read timeout in milliseconds after which a {@link InterruptedByTimeoutException} will get thrown.
+     * Once such an exception was detected it will get propagated to the handlers first. After that the channel
+     * will get closed as it may be in an unknown state.
+     *
+     * To disable it just use {@code 0}.
+     */
+    AioSocketChannelConfig setReadTimeout(long readTimeoutInMillis);
+
+    /**
+     * Return the write timeout in milliseconds after which a {@link InterruptedByTimeoutException} will get thrown.
+     * Once such an exception was detected it will get propagated to the handlers first. After that the channel
+     * will get closed as it may be in an unknown state.
+     *
+     * To disable it just use {@code 0}.
+     */
+    AioSocketChannelConfig setWriteTimeout(long writeTimeoutInMillis);
+
+    /**
+     * Return the read timeout in milliseconds after which a {@link InterruptedByTimeoutException} will get thrown.
+     *
+     * The default is {@code 0}
+     */
+    long getReadTimeout();
+
+    /**
+     * Return the write timeout in milliseconds after which a {@link InterruptedByTimeoutException} will get thrown.
+     *
+     * The default is {@code 0}
+     */
+    long getWriteTimeout();
+
     @Override
     AioSocketChannelConfig setTcpNoDelay(boolean tcpNoDelay);
 
@@ -77,37 +111,4 @@ public interface AioSocketChannelConfig extends SocketChannelConfig {
 
     @Override
     AioSocketChannelConfig setAutoRead(boolean autoRead);
-
-    /**
-     * Return the read timeout in milliseconds after which a {@link InterruptedByTimeoutException} will get thrown.
-     * Once such an exception was detected it will get propagated to the handlers first. After that the channel
-     * will get closed as it may be in an unknown state.
-     *
-     * To disable it just use {@code 0}.
-     */
-    AioSocketChannelConfig setReadTimeout(long readTimeoutInMillis);
-
-    /**
-     * Return the write timeout in milliseconds after which a {@link InterruptedByTimeoutException} will get thrown.
-     * Once such an exception was detected it will get propagated to the handlers first. After that the channel
-     * will get closed as it may be in an unknown state.
-     *
-     * To disable it just use {@code 0}.
-     */
-    AioSocketChannelConfig setWriteTimeout(long writeTimeoutInMillis);
-
-    /**
-     * Return the read timeout in milliseconds after which a {@link InterruptedByTimeoutException} will get thrown.
-     *
-     * The default is {@code 0}
-     */
-    long getReadTimeout();
-
-    /**
-     * Return the write timeout in milliseconds after which a {@link InterruptedByTimeoutException} will get thrown.
-     *
-     * The default is {@code 0}
-     */
-    long getWriteTimeout();
-
 }
