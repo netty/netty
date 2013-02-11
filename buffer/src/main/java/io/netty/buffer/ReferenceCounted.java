@@ -22,6 +22,11 @@ package io.netty.buffer;
  * {@link #retain()} increases the reference count, and {@link #release()} decreases the reference count.
  * If the reference count is decreased to {@code 0}, the object will be deallocated explicitly, and accessing
  * the deallocated object will usually result in an access violation.
+ * </p>
+ * <p>
+ * If this object is a container such as {@link MessageBuf} and {@link CompositeByteBuf}, its elements whose type is
+ * {@link ReferenceCounted} will also be released when this object is deallocated.
+ * </p>
  */
 public interface ReferenceCounted {
     /**
@@ -40,14 +45,16 @@ public interface ReferenceCounted {
     void retain(int increment);
 
     /**
-     * Decreases the reference count by {@code 1}.
+     * Decreases the reference count by {@code 1} and deallocates this object if the reference count reaches at
+     * {@code 0}.
      *
      * @return {@code true} if and only if the reference count became {@code 0} and this object has been deallocated
      */
     boolean release();
 
     /**
-     * Decreases the reference count by the specified {@code decrement}.
+     * Decreases the reference count by the specified {@code decrement} and deallocates this object if the reference
+     * count reaches at {@code 0}.
      *
      * @return {@code true} if and only if the reference count became {@code 0} and this object has been deallocated
      */
