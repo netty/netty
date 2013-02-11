@@ -16,17 +16,15 @@
 
 package io.netty.test.udt.util;
 
+import com.yammer.metrics.core.Meter;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.udt.nio.NioUdtProvider;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.yammer.metrics.core.Meter;
+import io.netty.util.internal.InternalLogger;
+import io.netty.util.internal.InternalLoggerFactory;
 
 /**
  * Handler implementation for the echo client. It initiates the ping-pong
@@ -35,8 +33,7 @@ import com.yammer.metrics.core.Meter;
  */
 public class EchoByteHandler extends ChannelInboundByteHandlerAdapter {
 
-    private static final Logger log = LoggerFactory
-            .getLogger(EchoByteHandler.class.getName());
+    private static final InternalLogger log = InternalLoggerFactory.getInstance(EchoByteHandler.class);
 
     private final ByteBuf message;
 

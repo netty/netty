@@ -17,8 +17,8 @@
 package io.netty.test.udt.util;
 
 import com.google.caliper.SimpleBenchmark;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.netty.util.internal.InternalLogger;
+import io.netty.util.internal.InternalLoggerFactory;
 
 /**
  * Base class for caliper/metrics benchmarks.
@@ -41,7 +41,7 @@ public abstract class CaliperBench extends SimpleBenchmark {
         });
     }
 
-    protected final Logger log = LoggerFactory.getLogger(getClass());
+    protected final InternalLogger log = InternalLoggerFactory.getInstance(getClass());
 
     private volatile CaliperMeasure measure;
 

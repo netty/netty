@@ -15,6 +15,8 @@
  */
 package io.netty.example.udt.echo.bytes;
 
+import com.yammer.metrics.Metrics;
+import com.yammer.metrics.core.Meter;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -23,12 +25,8 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.udt.nio.NioUdtProvider;
 
 import java.util.concurrent.TimeUnit;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.yammer.metrics.Metrics;
-import com.yammer.metrics.core.Meter;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Handler implementation for the echo client. It initiates the ping-pong
@@ -37,8 +35,7 @@ import com.yammer.metrics.core.Meter;
  */
 public class ByteEchoClientHandler extends ChannelInboundByteHandlerAdapter {
 
-    private static final Logger log = LoggerFactory
-            .getLogger(ByteEchoClientHandler.class.getName());
+    private static final Logger log = Logger.getLogger(ByteEchoClientHandler.class.getName());
 
     private final ByteBuf message;
 
@@ -55,8 +52,7 @@ public class ByteEchoClientHandler extends ChannelInboundByteHandlerAdapter {
 
     @Override
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
-        log.info("ECHO active {}", NioUdtProvider.socketUDT(ctx.channel())
-                .toStringOptions());
+        log.info("ECHO active " + NioUdtProvider.socketUDT(ctx.channel()).toStringOptions());
         ctx.write(message);
     }
 
@@ -73,7 +69,7 @@ public class ByteEchoClientHandler extends ChannelInboundByteHandlerAdapter {
     @Override
     public void exceptionCaught(final ChannelHandlerContext ctx,
             final Throwable cause) {
-        log.error("close the connection when an exception is raised", cause);
+        log.log(Level.WARNING, "close the connection when an exception is raised", cause);
         ctx.close();
     }
 

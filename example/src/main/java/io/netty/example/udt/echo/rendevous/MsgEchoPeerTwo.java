@@ -19,6 +19,7 @@ import io.netty.example.udt.util.UtilConsoleReporter;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
 /**
  * UDT Message Flow Peer
@@ -27,6 +28,8 @@ import java.util.concurrent.TimeUnit;
  * to the other peer.
  */
 public class MsgEchoPeerTwo extends MsgEchoPeerBase {
+
+    private static final Logger log = Logger.getLogger(MsgEchoPeerTwo.class.getName());
 
     public MsgEchoPeerTwo(final InetSocketAddress self,
             final InetSocketAddress peer, final int messageSize) {
