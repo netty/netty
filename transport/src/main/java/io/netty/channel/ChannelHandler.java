@@ -72,7 +72,7 @@ import java.lang.annotation.Target;
  *     // your methods here
  * }
  *
- * public class DataServerHandler extends {@link ChannelInboundMessageHandlerAdapter}&ltMessage&gt {
+ * public class DataServerHandler extends {@link ChannelInboundMessageHandlerAdapter}&lt;Message&gt; {
  *
  *     <b>private boolean loggedIn;</b>
  *
@@ -121,7 +121,7 @@ import java.lang.annotation.Target;
  * }
  *
  * {@code @Sharable}
- * public class DataServerHandler extends {@link ChannelInboundMessageHandlerAdapter}&ltMessage&gt {
+ * public class DataServerHandler extends {@link ChannelInboundMessageHandlerAdapter}&lt;Message&gt; {
  *   private final {@link AttributeKey}&lt{@link Boolean}&gt auth =
  *           new {@link AttributeKey}&lt{@link Boolean}&gt("auth");
  *
