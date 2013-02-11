@@ -176,7 +176,7 @@ public class DefaultChannelPipelineTest {
         boolean called;
 
         @Override
-        public boolean acceptInboundMessage(Object msg) throws Exception {
+        protected boolean acceptInboundMessage(Object msg) throws Exception {
             called = true;
             return super.acceptInboundMessage(msg);
         }

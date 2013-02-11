@@ -40,7 +40,7 @@ public class SctpInboundByteStreamHandler extends ChannelInboundMessageHandlerAd
     }
 
     @Override
-    public final boolean acceptInboundMessage(Object msg) throws Exception {
+    protected final boolean acceptInboundMessage(Object msg) throws Exception {
         if (super.acceptInboundMessage(msg)) {
             return acceptInboundMessage((SctpMessage) msg);
         }
