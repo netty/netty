@@ -62,7 +62,7 @@
           <instructions>
             <!-- enforce JVM vendor package as optional -->
             <Import-Package>
-              sun.misc.*;resolution:=optional,
+              sun.misc.*;resolution:=optional,!com.fasterxml.classmate.*,
               *
             </Import-Package>
             <!-- override "internal" private package convention -->
