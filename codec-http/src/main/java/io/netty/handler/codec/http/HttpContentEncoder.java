@@ -129,10 +129,12 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
                 Result result = beginEncode(message, c, acceptEncoding);
 
                 if (result == null) {
+                    ByteBuf data = c.data();
+                    data.retain();
                     if (c instanceof LastHttpContent) {
-                        return new Object[] { message, new DefaultLastHttpContent(c.data()) };
+                        return new Object[] { message, new DefaultLastHttpContent(data) };
                     } else {
-                        return new Object[] { message, new DefaultHttpContent(c.data()) };
+                        return new Object[] { message, new DefaultHttpContent(data) };
                     }
                 }
 
