@@ -83,7 +83,8 @@
               <goal>shade</goal>
             </goals>
             <configuration>
-              <artifactSet>
+                <minimizeJar>true</minimizeJar>
+                <artifactSet>
                 <includes>
                   <include>com.fasterxml:classmate</include>
                 </includes>
