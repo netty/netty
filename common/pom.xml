@@ -62,7 +62,8 @@
           <instructions>
             <!-- enforce JVM vendor package as optional -->
             <Import-Package>
-              sun.misc.*;resolution:=optional,!com.fasterxml.classmate.*,
+              sun.misc.*;resolution:=optional,
+              !com.fasterxml.classmate.*,
               *
             </Import-Package>
             <!-- override "internal" private package convention -->
@@ -93,9 +94,6 @@
                   <shadedPattern>io.netty.util.internal.classmate</shadedPattern>
                 </relocation>
               </relocations>
-              <transformers>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ComponentsXmlResourceTransformer"/>
-              </transformers>
             </configuration>
           </execution>
         </executions>
