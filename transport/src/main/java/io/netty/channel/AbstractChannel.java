@@ -833,7 +833,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         private ChannelFuture flushNotifier(ChannelPromise promise) {
             // Append flush future to the notification list.
             if (promise != voidPromise) {
-                flushFutureNotifier.addFlushFuture(promise, outboundBufSize());
+                flushFutureNotifier.add(promise, outboundBufSize());
             }
             return promise;
         }
