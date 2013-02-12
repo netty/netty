@@ -80,14 +80,6 @@ Bloch of Google, Inc:
   * LICENSE:
     * license/LICENSE.deque.txt (Public Domain)
 
-This product optionally depends on 'Metrics', Yammer's JVM- and application-
-level metrics library, which can be obtained at:
-
-  * LICENSE:
-    * license/LICENSE.metrics.txt (Apache License 2.0)
-  * HOMEPAGE:
-    * http://metrics.codahale.com/
-
 This product optionally depends on 'Protocol Buffers', Google's data
 interchange format, which can be obtained at:
 
