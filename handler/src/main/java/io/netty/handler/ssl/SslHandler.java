@@ -157,7 +157,7 @@ public class SslHandler
     private volatile ChannelHandlerContext ctx;
     private final SSLEngine engine;
     private final Executor delegatedTaskExecutor;
-    private final ChannelFlushPromiseNotifier flushFutureNotifier = new ChannelFlushPromiseNotifier();
+    private final ChannelFlushPromiseNotifier flushFutureNotifier = new ChannelFlushPromiseNotifier(true);
 
     private final boolean startTls;
     private boolean sentFirstMessage;
@@ -442,10 +442,10 @@ public class SslHandler
         }
 
         if (ctx.executor() == ctx.channel().eventLoop()) {
-            flushFutureNotifier.addFlushFuture(promise, in.readableBytes());
+            flushFutureNotifier.add(promise, in.readableBytes());
         } else {
             synchronized (flushFutureNotifier) {
-                flushFutureNotifier.addFlushFuture(promise, in.readableBytes());
+                flushFutureNotifier.add(promise, in.readableBytes());
             }
         }
 
