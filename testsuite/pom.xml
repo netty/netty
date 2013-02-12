@@ -28,6 +28,17 @@
 
   <name>Netty/Testsuite</name>
 
+  <!-- markdown syntax -->
+  <description>
+<![CDATA[
+### Netty Testsuite
+
+Netty is an asynchronous event-driven network application framework for
+rapid development of maintainable high performance protocol servers and clients.
+
+]]>
+  </description>
+
   <dependencies>
     <dependency>
         <groupId>${project.groupId}</groupId>

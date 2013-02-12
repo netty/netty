@@ -30,10 +30,16 @@
 
   <name>Netty</name>
   <url>http://netty.io/</url>
+  
+  <!-- markdown syntax -->
   <description>
-    Netty is an asynchronous event-driven network application framework for 
-    rapid development of maintainable high performance protocol servers and
-    clients.
+<![CDATA[
+### Netty Parent
+
+Netty is an asynchronous event-driven network application framework for
+rapid development of maintainable high performance protocol servers and clients.
+
+]]>
   </description>
 
   <organization>
@@ -84,9 +90,9 @@
     <module>handler</module>
     <module>example</module>
     <module>testsuite</module>
-    <!-- add "verify" back after karaf release -->
     <module>all</module>
     <module>tarball</module>
+    <!-- add "verify" back after karaf release -->
   </modules>
 
   <dependencyManagement>
@@ -564,4 +570,38 @@
       </plugins>
     </pluginManagement>
   </build>
+  
+  <profiles>
+    <!-- generate readme.md from pom.xml description for each module -->
+    <!-- mvn validate -P create-readme -->
+    <profile>
+      <id>create-readme</id>
+        <build>
+          <plugins>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>groovy-maven-plugin</artifactId>
+				<version>1.5</version>
+				<executions>
+					<execution>
+						<id>create-readme</id>
+						<phase>validate</phase>
+						<goals>
+							<goal>execute</goal>
+						</goals>
+						<configuration>
+							<source>
+				<![CDATA[
+				new File("$project.basedir/readme.md").write("$project.description")
+				]]>
+							</source>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+          </plugins>
+        </build>
+    </profile>
+  </profiles>
+  
 </project>

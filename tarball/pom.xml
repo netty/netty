@@ -28,6 +28,17 @@
 
   <name>Netty/Tarball</name>
 
+  <!-- markdown syntax -->
+  <description>
+<![CDATA[
+### Netty Tarball
+
+Netty is an asynchronous event-driven network application framework for
+rapid development of maintainable high performance protocol servers and clients.
+
+]]>
+  </description>
+
   <dependencies>
     <!-- The example depends on all modules either directly or transitively -->
     <dependency>
