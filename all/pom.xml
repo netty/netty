@@ -194,8 +194,7 @@
               <goal>unpack-dependencies</goal>
             </goals>
             <configuration>
-              <includes>io/netty/**</includes>
-              <excludes>io/netty/example/**</excludes>
+              <includes>io/netty/**,META-INF/*.marker</includes>
               <outputDirectory>${project.build.outputDirectory}</outputDirectory>
             </configuration>
           </execution>

@@ -20,26 +20,44 @@
   
   <parent>
     <groupId>io.netty</groupId>
-    <artifactId>netty-parent</artifactId>
+    <artifactId>netty-verify</artifactId>
     <version>4.0.0.Beta1-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty-verify</artifactId>
-  <packaging>pom</packaging>
+  <artifactId>netty-verify-netty-all</artifactId>
+  <packaging>jar</packaging>
 
-  <name>Netty/Verify</name>
-  <description>parent for build constrains modules</description>
+  <name>Netty/Verify/Netty-All-in-One</name>
+  <description>verify completeness of netty-all assembly</description>
 
-  <modules>
-    <module>verify-netty-all</module>
-    <module>verify-osgi-split</module>
-    <module>verify-osgi-deps</module>
-    <module>verify-osgi-exam</module>
-  </modules>
+  <dependencies>
+  
+    <!-- module under test -->
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-all</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    
+  </dependencies>
 
   <build>
+  
     <plugins>
     
+      <!-- invoke integration tests -->
+      <plugin>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      
       <!-- do not deploy this artifact -->
       <plugin>
         <artifactId>maven-deploy-plugin</artifactId>
@@ -47,7 +65,9 @@
           <skip>true</skip>
         </configuration>
       </plugin>
+      
     </plugins>
+    
   </build>
-  
+    
 </project>
