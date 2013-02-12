@@ -31,10 +31,11 @@ public abstract class TypeParameterMatcher {
         TypeResolver resolver = new TypeResolver();
         ResolvedType type = resolver.resolve(object.getClass());
         final ResolvedType superType = type.typeParametersFor(parameterizedSuperClass).get(index);
+        final Class<?> clazz = superType.getErasedType();
         return new TypeParameterMatcher() {
             @Override
             public boolean match(Object msg) {
-                return superType.getErasedType().isInstance(msg);
+                return clazz.isInstance(msg);
             }
         };
     }
