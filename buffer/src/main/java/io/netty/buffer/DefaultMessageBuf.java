@@ -90,7 +90,7 @@ final class DefaultMessageBuf<T> extends AbstractMessageBuf<T> {
             } while (i != tail);
         }
 
-        elements = null;
+        elements =  cast(new Object[2]);
         this.head = 0;
         this.tail = 0;
     }
