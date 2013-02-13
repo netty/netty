@@ -809,10 +809,14 @@ public final class EmptyByteBuf implements ByteBuf {
     }
 
     @Override
-    public void retain() { }
+    public ByteBuf retain() {
+        return this;
+    }
 
     @Override
-    public void retain(int increment) { }
+    public ByteBuf retain(int increment) {
+        return this;
+    }
 
     @Override
     public boolean release() {

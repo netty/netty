@@ -49,4 +49,10 @@ public interface Buf extends ReferenceCounted {
      * elements.
      */
     boolean isWritable(int size);
+
+    @Override
+    Buf retain();
+
+    @Override
+    Buf retain(int increment);
 }

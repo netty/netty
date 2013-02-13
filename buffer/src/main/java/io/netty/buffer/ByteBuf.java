@@ -1915,4 +1915,10 @@ public interface ByteBuf extends Buf, Comparable<ByteBuf> {
      */
     @Override
     String toString();
+
+    @Override
+    ByteBuf retain(int increment);
+
+    @Override
+    ByteBuf retain();
 }

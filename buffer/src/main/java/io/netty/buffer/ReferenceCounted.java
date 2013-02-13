@@ -37,12 +37,12 @@ public interface ReferenceCounted {
     /**
      * Increases the reference count by {@code 1}.
      */
-    void retain();
+    ReferenceCounted retain();
 
     /**
      * Increases the reference count by the specified {@code increment}.
      */
-    void retain(int increment);
+    ReferenceCounted retain(int increment);
 
     /**
      * Decreases the reference count by {@code 1} and deallocates this object if the reference count reaches at

@@ -60,10 +60,14 @@ public interface LastHttpContent extends HttpContent {
         }
 
         @Override
-        public void retain() { }
+        public LastHttpContent retain() {
+            return this;
+        }
 
         @Override
-        public void retain(int increment) { }
+        public LastHttpContent retain(int increment) {
+            return this;
+        }
 
         @Override
         public boolean release() {
@@ -80,4 +84,10 @@ public interface LastHttpContent extends HttpContent {
 
     @Override
     LastHttpContent copy();
+
+    @Override
+    LastHttpContent retain(int increment);
+
+    @Override
+    LastHttpContent retain();
 }

@@ -40,7 +40,8 @@ import java.util.Queue;
  * is recommended to use {@link Unpooled#wrappedBuffer(ByteBuf...)}
  * instead of calling the constructor explicitly.
  */
-public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf implements CompositeByteBuf {
+public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf
+        implements CompositeByteBuf {
 
     private static final ByteBuffer[] EMPTY_NIOBUFFERS = new ByteBuffer[0];
 
@@ -1512,6 +1513,16 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf imp
     @Override
     public CompositeByteBuf writeZero(int length) {
         return (CompositeByteBuf) super.writeZero(length);
+    }
+
+    @Override
+    public CompositeByteBuf retain(int increment) {
+        return (CompositeByteBuf) super.retain(increment);
+    }
+
+    @Override
+    public CompositeByteBuf retain() {
+        return (CompositeByteBuf) super.retain();
     }
 
     @Override

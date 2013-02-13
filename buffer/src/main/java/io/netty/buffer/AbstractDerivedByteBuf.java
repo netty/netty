@@ -28,10 +28,14 @@ public abstract class AbstractDerivedByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public final void retain() { }
+    public final ByteBuf retain() {
+        return this;
+    }
 
     @Override
-    public final void retain(int increment) { }
+    public final ByteBuf retain(int increment) {
+        return this;
+    }
 
     @Override
     public final boolean release() {

@@ -36,7 +36,7 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public final void retain() {
+    public ByteBuf retain() {
         for (;;) {
             int refCnt = this.refCnt;
             if (refCnt == 0) {
@@ -49,10 +49,11 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
                 break;
             }
         }
+        return this;
     }
 
     @Override
-    public final void retain(int increment) {
+    public ByteBuf retain(int increment) {
         if (increment <= 0) {
             throw new IllegalArgumentException("increment: " + increment + " (expected: > 0)");
         }
@@ -69,6 +70,7 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
                 break;
             }
         }
+        return this;
     }
 
     @Override

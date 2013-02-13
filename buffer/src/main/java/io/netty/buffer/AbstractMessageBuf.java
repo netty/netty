@@ -42,7 +42,7 @@ public abstract class AbstractMessageBuf<T> extends AbstractQueue<T> implements 
     }
 
     @Override
-    public final void retain() {
+    public final MessageBuf<T> retain() {
         int refCnt = this.refCnt;
         if (refCnt <= 0) {
             throw new IllegalBufferAccessException();
@@ -53,10 +53,11 @@ public abstract class AbstractMessageBuf<T> extends AbstractQueue<T> implements 
         }
 
         this.refCnt = refCnt + 1;
+        return this;
     }
 
     @Override
-    public final void retain(int increment) {
+    public final MessageBuf<T> retain(int increment) {
         if (increment <= 0) {
             throw new IllegalArgumentException("increment: " + increment + " (expected: > 0)");
         }
@@ -71,6 +72,7 @@ public abstract class AbstractMessageBuf<T> extends AbstractQueue<T> implements 
         }
 
         this.refCnt = refCnt + 1;
+        return this;
     }
 
     @Override

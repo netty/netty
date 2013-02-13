@@ -374,4 +374,10 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
 
     @Override
     CompositeByteBuf resumeIntermediaryDeallocations();
+
+    @Override
+    CompositeByteBuf retain(int increment);
+
+    @Override
+    CompositeByteBuf retain();
 }

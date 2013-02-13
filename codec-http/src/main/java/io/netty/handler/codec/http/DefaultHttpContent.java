@@ -50,13 +50,15 @@ public class DefaultHttpContent extends DefaultHttpObject implements HttpContent
     }
 
     @Override
-    public void retain() {
+    public HttpContent retain() {
         content.retain();
+        return this;
     }
 
     @Override
-    public void retain(int increment) {
+    public HttpContent retain(int increment) {
         content.retain(increment);
+        return this;
     }
 
     @Override

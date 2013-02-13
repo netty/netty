@@ -41,4 +41,10 @@ public interface SpdyDataFrame extends ByteBufHolder, SpdyStreamFrame, SpdyDataO
 
     @Override
     SpdyDataFrame copy();
+
+    @Override
+    SpdyDataFrame retain();
+
+    @Override
+    SpdyDataFrame retain(int increment);
 }

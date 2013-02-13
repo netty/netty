@@ -53,13 +53,15 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     }
 
     @Override
-    public void retain() {
+    public FullHttpRequest retain() {
         content.retain();
+        return this;
     }
 
     @Override
-    public void retain(int increment) {
+    public FullHttpRequest retain(int increment) {
         content.retain(increment);
+        return this;
     }
 
     @Override

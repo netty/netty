@@ -30,4 +30,10 @@ import io.netty.channel.ChannelPipeline;
 public interface HttpContent extends HttpObject, ByteBufHolder {
     @Override
     HttpContent copy();
+
+    @Override
+    HttpContent retain();
+
+    @Override
+    HttpContent retain(int increment);
 }
