@@ -637,7 +637,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-        private void callAfterRemove(final DefaultChannelHandlerContext ctx, boolean forward) {
+    private void callAfterRemove(final DefaultChannelHandlerContext ctx, boolean forward) {
         final ChannelHandler handler = ctx.handler();
 
         // Notify the complete removal.
