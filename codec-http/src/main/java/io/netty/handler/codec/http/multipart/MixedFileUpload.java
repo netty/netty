@@ -241,13 +241,15 @@ public class MixedFileUpload implements FileUpload {
     }
 
     @Override
-    public void retain() {
+    public FileUpload retain() {
         fileUpload.retain();
+        return this;
     }
 
     @Override
-    public void retain(int increment) {
+    public FileUpload retain(int increment) {
         fileUpload.retain(increment);
+        return this;
     }
 
     @Override

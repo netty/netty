@@ -205,13 +205,15 @@ public abstract class FilteredMessageBuf implements MessageBuf<Object> {
     }
 
     @Override
-    public void retain() {
+    public MessageBuf<Object> retain() {
         buf.retain();
+        return this;
     }
 
     @Override
-    public void retain(int increment) {
+    public MessageBuf<Object> retain(int increment) {
         buf.retain(increment);
+        return this;
     }
 
     @Override

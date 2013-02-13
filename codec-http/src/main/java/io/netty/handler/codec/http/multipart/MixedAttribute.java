@@ -215,13 +215,15 @@ public class MixedAttribute implements Attribute {
     }
 
     @Override
-    public void retain() {
+    public Attribute retain() {
         attribute.retain();
+        return this;
     }
 
     @Override
-    public void retain(int increment) {
+    public Attribute retain(int increment) {
         attribute.retain(increment);
+        return this;
     }
 
     @Override

@@ -114,4 +114,16 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
     protected void deallocate() {
         delete();
     }
+
+    @Override
+    public HttpData retain() {
+        super.retain();
+        return this;
+    }
+
+    @Override
+    public HttpData retain(int increment) {
+        super.retain(increment);
+        return this;
+    }
 }

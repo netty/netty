@@ -24,6 +24,12 @@ public interface FullHttpResponse extends HttpResponse, FullHttpMessage {
     FullHttpResponse copy();
 
     @Override
+    FullHttpResponse retain(int increment);
+
+    @Override
+    FullHttpResponse retain();
+
+    @Override
     FullHttpResponse setProtocolVersion(HttpVersion version);
 
     @Override

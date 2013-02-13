@@ -128,13 +128,15 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void retain() {
+            public ReferenceCounted retain() {
                 fail();
+                return this;
             }
 
             @Override
-            public void retain(int increment) {
+            public ReferenceCounted retain(int increment) {
                 fail();
+                return this;
             }
 
             @Override

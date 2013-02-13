@@ -31,7 +31,7 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
     }
 
     @Override
-    public final void retain() {
+    public ReferenceCounted retain() {
         for (;;) {
             int refCnt = this.refCnt;
             if (refCnt == 0) {
@@ -44,10 +44,11 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
                 break;
             }
         }
+        return this;
     }
 
     @Override
-    public final void retain(int increment) {
+    public ReferenceCounted retain(int increment) {
         if (increment <= 0) {
             throw new IllegalArgumentException("increment: " + increment + " (expected: > 0)");
         }
@@ -64,6 +65,7 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
                 break;
             }
         }
+        return this;
     }
 
     @Override

@@ -23,4 +23,9 @@ public interface FullHttpMessage extends HttpMessage, LastHttpContent {
     @Override
     FullHttpMessage copy();
 
+    @Override
+    FullHttpMessage retain(int increment);
+
+    @Override
+    FullHttpMessage retain();
 }

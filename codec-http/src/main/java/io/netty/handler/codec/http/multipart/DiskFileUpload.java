@@ -164,7 +164,7 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
     }
 
     @Override
-    public DiskFileUpload copy() {
+    public FileUpload copy() {
         DiskFileUpload upload = new DiskFileUpload(getName(),
                 getFilename(), getContentType(), getContentTransferEncoding(), getCharset(), size);
         ByteBuf buf = data();
@@ -176,5 +176,17 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
             }
         }
         return upload;
+    }
+
+    @Override
+    public FileUpload retain(int increment) {
+        super.retain(increment);
+        return this;
+    }
+
+    @Override
+    public FileUpload retain() {
+        super.retain();
+        return this;
     }
 }
