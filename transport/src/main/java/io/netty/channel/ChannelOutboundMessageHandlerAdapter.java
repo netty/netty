@@ -80,7 +80,6 @@ public abstract class ChannelOutboundMessageHandlerAdapter<I>
     public final void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         MessageBuf<Object> in = ctx.outboundMessageBuffer();
         MessageBuf<Object> out = null;
-        boolean failure = false;
 
         final int inSize = in.size();
         if (inSize == 0) {
@@ -125,9 +124,7 @@ public abstract class ChannelOutboundMessageHandlerAdapter<I>
             } else {
                 pfe = new PartialFlushException(msg, t);
             }
-            t.printStackTrace();
             fail(ctx, promise, pfe);
-            failure = true;
         }
 
         try {
@@ -139,9 +136,9 @@ public abstract class ChannelOutboundMessageHandlerAdapter<I>
             } else {
                 fail(ctx, promise, t);
             }
-            failure = true;
         }
-        if (!failure) {
+
+        if (!promise.isDone()) {
             ctx.flush(promise);
         }
     }
