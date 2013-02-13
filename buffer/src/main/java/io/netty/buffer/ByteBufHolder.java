@@ -30,4 +30,10 @@ public interface ByteBufHolder extends ReferenceCounted {
      * Create a deep copy of this {@link ByteBufHolder}.
      */
     ByteBufHolder copy();
+
+    @Override
+    ByteBufHolder retain();
+
+    @Override
+    ByteBufHolder retain(int increment);
 }

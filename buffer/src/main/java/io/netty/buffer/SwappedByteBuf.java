@@ -821,13 +821,15 @@ public final class SwappedByteBuf implements ByteBuf {
     }
 
     @Override
-    public void retain() {
+    public ByteBuf retain() {
         buf.retain();
+        return this;
     }
 
     @Override
-    public void retain(int increment) {
+    public ByteBuf retain(int increment) {
         buf.retain(increment);
+        return this;
     }
 
     @Override

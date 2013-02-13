@@ -55,13 +55,15 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
     }
 
     @Override
-    public void retain() {
+    public FullHttpResponse retain() {
         content.retain();
+        return this;
     }
 
     @Override
-    public void retain(int increment) {
+    public FullHttpResponse retain(int increment) {
         content.retain(increment);
+        return this;
     }
 
     @Override

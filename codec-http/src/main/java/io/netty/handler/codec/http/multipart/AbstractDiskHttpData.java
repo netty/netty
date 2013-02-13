@@ -32,7 +32,7 @@ import static io.netty.buffer.Unpooled.*;
 /**
  * Abstract Disk HttpData implementation
  */
-public abstract class AbstractDiskHttpData extends AbstractHttpData {
+public abstract class AbstractDiskHttpData<E extends HttpData> extends AbstractHttpData<E> {
 
     protected File file;
     private boolean isRenamed;

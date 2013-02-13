@@ -53,13 +53,15 @@ public class DefaultByteBufHolder implements ByteBufHolder {
     }
 
     @Override
-    public void retain() {
+    public ByteBufHolder retain() {
         data.retain();
+        return this;
     }
 
     @Override
-    public void retain(int increment) {
+    public ByteBufHolder retain(int increment) {
         data.retain(increment);
+        return this;
     }
 
     @Override

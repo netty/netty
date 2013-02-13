@@ -884,12 +884,12 @@ final class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
-    public void retain() {
+    public ByteBuf retain() {
         throw new UnreplayableOperationException();
     }
 
     @Override
-    public void retain(int increment) {
+    public ByteBuf retain(int increment) {
         throw new UnreplayableOperationException();
     }
 

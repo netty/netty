@@ -55,6 +55,18 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
     }
 
     @Override
+    public LastHttpContent retain(int increment) {
+        super.retain(increment);
+        return this;
+    }
+
+    @Override
+    public LastHttpContent retain() {
+        super.retain();
+        return this;
+    }
+
+    @Override
     public HttpHeaders trailingHeaders() {
         return trailingHeaders;
     }

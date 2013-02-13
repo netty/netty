@@ -26,7 +26,7 @@ import java.nio.charset.Charset;
 /**
  * Disk FileUpload implementation that stores file into real files
  */
-public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
+public class DiskFileUpload extends AbstractDiskHttpData<FileUpload> implements FileUpload {
     public static String baseDirectory;
 
     public static boolean deleteOnExitTemporaryFile = true;
@@ -164,7 +164,7 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
     }
 
     @Override
-    public DiskFileUpload copy() {
+    public FileUpload copy() {
         DiskFileUpload upload = new DiskFileUpload(getName(),
                 getFilename(), getContentType(), getContentTransferEncoding(), getCharset(), size);
         ByteBuf buf = data();

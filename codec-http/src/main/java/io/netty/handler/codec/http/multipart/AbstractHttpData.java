@@ -26,7 +26,7 @@ import java.nio.charset.Charset;
 /**
  * Abstract HttpData implementation
  */
-public abstract class AbstractHttpData extends AbstractReferenceCounted implements HttpData {
+public abstract class AbstractHttpData<E extends HttpData> extends AbstractReferenceCounted<E> implements HttpData {
 
     protected final String name;
     protected long definedSize;

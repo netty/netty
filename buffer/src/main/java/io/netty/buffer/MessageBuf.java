@@ -54,4 +54,10 @@ public interface MessageBuf<T> extends Buf, Queue<T> {
      * @return number       the number of objects which was transfered
      */
     int drainTo(Collection<? super T> c, int maxElements);
+
+    @Override
+    MessageBuf<T> retain(int increment);
+
+    @Override
+    MessageBuf<T> retain();
 }
