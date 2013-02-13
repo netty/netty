@@ -101,7 +101,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private Runnable invokeFreeInboundBuffer0Task;
     private Runnable invokeFreeOutboundBuffer0Task;
     private Runnable invokeRead0Task;
-    volatile boolean removed;
+    boolean removed;
 
     @SuppressWarnings("unchecked")
     DefaultChannelHandlerContext(
