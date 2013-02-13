@@ -283,7 +283,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
     }
 
-    private void fillBridge() {
+    private void fillInboundBridge() {
+        if (!(handler instanceof ChannelInboundHandler)) {
+            return;
+        }
+
         if (inMsgBridge != null) {
             MessageBridge bridge = inMsgBridge;
             if (bridge != null) {
@@ -294,6 +298,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             if (bridge != null) {
                 bridge.fill();
             }
+        }
+    }
+
+    private void fillOutboundBridge() {
+        if (!(handler instanceof ChannelOutboundHandler)) {
+            return;
         }
 
         if (outMsgBridge != null) {
@@ -309,7 +319,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
     }
 
-    private void flushBridge() {
+    private void flushInboundBridge() {
         if (inMsgBridge != null) {
             MessageBridge bridge = inMsgBridge;
             if (bridge != null) {
@@ -321,7 +331,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 bridge.flush(inByteBuf);
             }
         }
+    }
 
+    private void flushOutboundBridge() {
         if (outMsgBridge != null) {
             MessageBridge bridge = outMsgBridge;
             if (bridge != null) {
@@ -908,7 +920,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private void fireInboundBufferUpdated0() {
         final DefaultChannelHandlerContext next = findContextInbound();
         if (!next.isInboundBufferFreed()) {
-            next.fillBridge();
+            next.fillInboundBridge();
             // This comparison is safe because this method is always executed from the executor.
             if (next.executor == executor) {
                 next.invokeInboundBufferUpdated();
@@ -931,7 +943,10 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void invokeInboundBufferUpdated() {
         ChannelStateHandler handler = (ChannelStateHandler) handler();
-        flushBridge();
+        if (handler instanceof ChannelInboundHandler) {
+            flushInboundBridge();
+        }
+
         try {
             handler.inboundBufferUpdated(this);
         } catch (Throwable t) {
@@ -1257,7 +1272,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     "Unable to flush as outbound buffer of next handler was freed already"));
             return;
         }
-        prev.fillBridge();
+        prev.fillOutboundBridge();
         prev.invokeFlush(promise, currentThread);
     }
 
@@ -1285,8 +1300,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
 
         ChannelOperationHandler handler = (ChannelOperationHandler) handler();
+        if (handler instanceof ChannelInboundHandler) {
+            flushOutboundBridge();
+        }
+
         try {
-            flushBridge();
             handler.flush(this, promise);
         } catch (Throwable t) {
             pipeline.notifyHandlerException(t);
@@ -1333,9 +1351,13 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     private void invokeSendFile0(FileRegion region, ChannelPromise promise) {
+        ChannelOperationHandler handler = (ChannelOperationHandler) handler();
+        if (handler instanceof ChannelOutboundHandler) {
+            flushOutboundBridge();
+        }
+
         try {
-            flushBridge();
-            ((ChannelOperationHandler) handler()).sendFile(this, region, promise);
+            handler.sendFile(this, region, promise);
         } catch (Throwable t) {
             pipeline.notifyHandlerException(t);
         } finally {
