@@ -1551,35 +1551,41 @@ public class SslHandler extends FrameDecoder
      * See <a href="https://github.com/netty/netty/issues/305">#305</a> for more details.
      */
     @Override
-    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        Throwable cause = null;
-        synchronized (pendingUnencryptedWrites) {
-            for (;;) {
-                PendingWrite pw = pendingUnencryptedWrites.poll();
-                if (pw == null) {
-                    break;
-                }
-                if (cause == null) {
-                    cause = new ClosedChannelException();
-                }
-                pw.future.setFailure(cause);
-            }
+    public void channelClosed(final ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+        // Move the fail of the writes to the IO-Thread to prevent possible deadlock
+        // See https://github.com/netty/netty/issues/989
+        ctx.getPipeline().execute(new Runnable() {
+            public void run() {
+                Throwable cause = null;
+                synchronized (pendingUnencryptedWrites) {
+                    for (;;) {
+                        PendingWrite pw = pendingUnencryptedWrites.poll();
+                        if (pw == null) {
+                            break;
+                        }
+                        if (cause == null) {
+                            cause = new ClosedChannelException();
+                        }
+                        pw.future.setFailure(cause);
+                    }
 
-            for (;;) {
-                MessageEvent ev = pendingEncryptedWrites.poll();
-                if (ev == null) {
-                    break;
+                    for (;;) {
+                        MessageEvent ev = pendingEncryptedWrites.poll();
+                        if (ev == null) {
+                            break;
+                        }
+                        if (cause == null) {
+                            cause = new ClosedChannelException();
+                        }
+                        ev.getFuture().setFailure(cause);
+                    }
                 }
-                if (cause == null) {
-                    cause = new ClosedChannelException();
-                }
-                ev.getFuture().setFailure(cause);
-            }
-        }
 
-        if (cause != null) {
-            fireExceptionCaught(ctx, cause);
-        }
+                if (cause != null) {
+                    fireExceptionCaught(ctx, cause);
+                }
+            }
+        });
 
         super.channelClosed(ctx, e);
     }
