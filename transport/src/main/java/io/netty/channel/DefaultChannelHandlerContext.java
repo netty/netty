@@ -53,8 +53,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     // child executor.
     final EventExecutor executor;
 
-    private MessageBuf<Object> inMsgBuf;
-    private ByteBuf inByteBuf;
+    private final MessageBuf<Object> inMsgBuf;
+    private final ByteBuf inByteBuf;
     private MessageBuf<Object> outMsgBuf;
     private ByteBuf outByteBuf;
 
@@ -168,6 +168,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                         handler.getClass().getSimpleName() + ".newInboundBuffer() returned neither " +
                         ByteBuf.class.getSimpleName() + " nor " + MessageBuf.class.getSimpleName() + ": " + buf);
             }
+        } else {
+            inByteBuf = null;
+            inMsgBuf = null;
         }
 
         if (handler instanceof ChannelOutboundHandler) {
@@ -200,6 +203,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         this.name = name;
         this.handler = handler;
         executor = null;
+        inByteBuf = null;
+        inMsgBuf = null;
         needsLazyBufInit = true;
     }
 
