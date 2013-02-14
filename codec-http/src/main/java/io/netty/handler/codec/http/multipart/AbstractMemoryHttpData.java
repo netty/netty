@@ -32,7 +32,7 @@ import static io.netty.buffer.Unpooled.*;
 /**
  * Abstract Memory HttpData implementation
  */
-public abstract class AbstractMemoryHttpData<E extends HttpData> extends AbstractHttpData<E> {
+public abstract class AbstractMemoryHttpData extends AbstractHttpData {
 
     private ByteBuf byteBuf;
     private int chunkPosition;
@@ -226,5 +226,4 @@ public abstract class AbstractMemoryHttpData<E extends HttpData> extends Abstrac
     public File getFile() throws IOException {
         throw new IOException("Not represented by a file");
     }
-
 }

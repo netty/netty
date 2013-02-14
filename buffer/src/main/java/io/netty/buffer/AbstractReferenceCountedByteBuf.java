@@ -18,9 +18,8 @@ package io.netty.buffer;
 
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-public abstract class AbstractReferenceCountedByteBuf<E extends ByteBuf> extends AbstractByteBuf {
+public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
 
-    @SuppressWarnings("rawtypes")
     private static final AtomicIntegerFieldUpdater<AbstractReferenceCountedByteBuf> refCntUpdater =
             AtomicIntegerFieldUpdater.newUpdater(AbstractReferenceCountedByteBuf.class, "refCnt");
 
@@ -36,9 +35,8 @@ public abstract class AbstractReferenceCountedByteBuf<E extends ByteBuf> extends
         return refCnt;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public final E retain() {
+    public ByteBuf retain() {
         for (;;) {
             int refCnt = this.refCnt;
             if (refCnt == 0) {
@@ -51,12 +49,11 @@ public abstract class AbstractReferenceCountedByteBuf<E extends ByteBuf> extends
                 break;
             }
         }
-        return (E) this;
+        return this;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public final E retain(int increment) {
+    public ByteBuf retain(int increment) {
         if (increment <= 0) {
             throw new IllegalArgumentException("increment: " + increment + " (expected: > 0)");
         }
@@ -73,7 +70,7 @@ public abstract class AbstractReferenceCountedByteBuf<E extends ByteBuf> extends
                 break;
             }
         }
-        return (E) this;
+        return this;
     }
 
     @Override

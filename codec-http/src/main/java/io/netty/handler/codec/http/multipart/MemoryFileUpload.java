@@ -27,7 +27,7 @@ import java.nio.charset.Charset;
  *
  * Warning: be aware of the memory limitation.
  */
-public class MemoryFileUpload extends AbstractMemoryHttpData<FileUpload> implements FileUpload {
+public class MemoryFileUpload extends AbstractMemoryHttpData implements FileUpload {
 
     private String filename;
 
@@ -143,5 +143,17 @@ public class MemoryFileUpload extends AbstractMemoryHttpData<FileUpload> impleme
             }
         }
         return upload;
+    }
+
+    @Override
+    public FileUpload retain() {
+        super.retain();
+        return this;
+    }
+
+    @Override
+    public FileUpload retain(int increment) {
+        super.retain(increment);
+        return this;
     }
 }

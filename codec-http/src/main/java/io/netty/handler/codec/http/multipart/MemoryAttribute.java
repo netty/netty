@@ -26,7 +26,7 @@ import static io.netty.buffer.Unpooled.*;
 /**
  * Memory implementation of Attributes
  */
-public class MemoryAttribute extends AbstractMemoryHttpData<Attribute> implements Attribute {
+public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute {
 
     public MemoryAttribute(String name) {
         super(name, HttpConstants.DEFAULT_CHARSET, 0);
@@ -114,5 +114,17 @@ public class MemoryAttribute extends AbstractMemoryHttpData<Attribute> implement
             }
         }
         return attr;
+    }
+
+    @Override
+    public Attribute retain() {
+        super.retain();
+        return this;
+    }
+
+    @Override
+    public Attribute retain(int increment) {
+        super.retain(increment);
+        return this;
     }
 }

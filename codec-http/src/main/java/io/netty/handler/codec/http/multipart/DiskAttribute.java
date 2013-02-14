@@ -26,7 +26,7 @@ import static io.netty.buffer.Unpooled.*;
 /**
  * Disk implementation of Attributes
  */
-public class DiskAttribute extends AbstractDiskHttpData<Attribute> implements Attribute {
+public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
     public static String baseDirectory;
 
     public static boolean deleteOnExitTemporaryFile = true;
@@ -153,5 +153,17 @@ public class DiskAttribute extends AbstractDiskHttpData<Attribute> implements At
             }
         }
         return attr;
+    }
+
+    @Override
+    public Attribute retain(int increment) {
+        super.retain(increment);
+        return this;
+    }
+
+    @Override
+    public Attribute retain() {
+        super.retain();
+        return this;
     }
 }

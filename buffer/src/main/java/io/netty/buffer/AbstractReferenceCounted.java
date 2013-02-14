@@ -17,9 +17,8 @@ package io.netty.buffer;
 
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-public abstract class AbstractReferenceCounted<E extends ReferenceCounted> implements ReferenceCounted {
+public abstract class AbstractReferenceCounted implements ReferenceCounted {
 
-    @SuppressWarnings("rawtypes")
     private static final AtomicIntegerFieldUpdater<AbstractReferenceCounted> refCntUpdater =
             AtomicIntegerFieldUpdater.newUpdater(AbstractReferenceCounted.class, "refCnt");
 
@@ -31,9 +30,8 @@ public abstract class AbstractReferenceCounted<E extends ReferenceCounted> imple
         return refCnt;
     }
 
-   @SuppressWarnings("unchecked")
     @Override
-    public final E retain() {
+    public ReferenceCounted retain() {
         for (;;) {
             int refCnt = this.refCnt;
             if (refCnt == 0) {
@@ -46,12 +44,11 @@ public abstract class AbstractReferenceCounted<E extends ReferenceCounted> imple
                 break;
             }
         }
-        return (E) this;
+        return this;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public final E retain(int increment) {
+    public ReferenceCounted retain(int increment) {
         if (increment <= 0) {
             throw new IllegalArgumentException("increment: " + increment + " (expected: > 0)");
         }
@@ -68,7 +65,7 @@ public abstract class AbstractReferenceCounted<E extends ReferenceCounted> imple
                 break;
             }
         }
-        return (E) this;
+        return this;
     }
 
     @Override

@@ -26,7 +26,7 @@ import java.nio.charset.Charset;
 /**
  * Abstract HttpData implementation
  */
-public abstract class AbstractHttpData<E extends HttpData> extends AbstractReferenceCounted<E> implements HttpData {
+public abstract class AbstractHttpData extends AbstractReferenceCounted implements HttpData {
 
     protected final String name;
     protected long definedSize;
@@ -113,5 +113,17 @@ public abstract class AbstractHttpData<E extends HttpData> extends AbstractRefer
     @Override
     protected void deallocate() {
         delete();
+    }
+
+    @Override
+    public HttpData retain() {
+        super.retain();
+        return this;
+    }
+
+    @Override
+    public HttpData retain(int increment) {
+        super.retain(increment);
+        return this;
     }
 }
