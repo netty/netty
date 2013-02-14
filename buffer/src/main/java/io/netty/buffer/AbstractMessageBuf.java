@@ -71,7 +71,7 @@ public abstract class AbstractMessageBuf<T> extends AbstractQueue<T> implements 
             throw new IllegalBufferAccessException("refCnt overflow");
         }
 
-        this.refCnt = refCnt + 1;
+        this.refCnt = refCnt + increment;
         return this;
     }
 
