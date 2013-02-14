@@ -20,13 +20,18 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.0.1.Alpha8-SNAPSHOT</version>
+    <version>4.0.0.Beta1-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-microbench</artifactId>
   <packaging>bundle</packaging>
 
   <name>Netty/Microbench</name>
+
+  <properties>
+    <!-- Skip tests by default; run only if -DskipTests=false is specified -->
+    <skipTests>true</skipTests>
+  </properties>
 
   <dependencies>
     <dependency>
