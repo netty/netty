@@ -317,14 +317,7 @@
         <configuration>
           <skip>${quickbuild}</skip>
           <excludePackageNames>*.internal,*.example</excludePackageNames>
-          <doclet>org.jboss.apiviz.APIviz</doclet>
           <docfilessubdirs>true</docfilessubdirs>
-          <docletArtifact>
-            <groupId>org.jboss.apiviz</groupId>
-            <artifactId>apiviz</artifactId>
-            <version>1.3.2.GA</version>
-          </docletArtifact>
-          <useStandardDocletOptions>true</useStandardDocletOptions>
           <outputDirectory>${project.build.directory}/api</outputDirectory>
           <overview>${basedir}/src/javadoc/overview.html</overview>
           <doctitle>Netty API Reference (${project.version})</doctitle>
@@ -343,9 +336,6 @@
             -group "Client &amp; Server bootstrapping utilities" io.netty.bootstrap*
             -group "Reusable I/O event interceptors" io.netty.handler*
             -group "Miscellaneous" io.netty.util*
-
-            -sourceclasspath ${project.build.outputDirectory}
-            -nopackagediagram
           </additionalparam>
           <locale>en_US</locale>
         </configuration>
