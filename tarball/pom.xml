@@ -40,7 +40,7 @@
     <!-- All-in-one JAR -->
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty</artifactId>
+      <artifactId>netty-all</artifactId>
       <version>${project.version}</version>
       <scope>compile</scope>
       <optional>true</optional>
