@@ -40,8 +40,6 @@ import io.netty.handler.codec.MessageToMessageDecoder;
  * // Encoder
  * pipeline.addLast("base64Encoder", new {@link Base64Encoder}());
  * </pre>
- * @apiviz.landmark
- * @apiviz.uses io.netty.handler.codec.base64.Base64
  */
 @Sharable
 public class Base64Decoder extends MessageToMessageDecoder<ByteBuf> {

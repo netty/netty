@@ -34,7 +34,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * The default {@link ChannelGroup} implementation.
- * @apiviz.landmark
  */
 public class DefaultChannelGroup extends AbstractSet<Channel> implements ChannelGroup {
 

@@ -67,12 +67,6 @@ import java.net.SocketAddress;
  * transport.  Down-cast the {@link Channel} to sub-type to invoke such
  * operations.  For example, with the old I/O datagram transport, multicast
  * join / leave operations are provided by {@link DatagramChannel}.
- *
- * @apiviz.landmark
- * @apiviz.composedOf io.netty.channel.ChannelConfig
- * @apiviz.composedOf io.netty.channel.ChannelPipeline
- *
- * @apiviz.exclude ^io\.netty\.channel\.([a-z]+\.)+[^\.]+Channel$
  */
 public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPropertyAccess, Comparable<Channel> {
 

@@ -15,9 +15,6 @@
  */
 package io.netty.buffer;
 
-/**
- * @apiviz.has io.netty.buffer.ByteBuf oneway - - creates
- */
 public interface ByteBufAllocator {
 
     ByteBuf buffer();

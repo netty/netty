@@ -54,7 +54,6 @@ import static io.netty.buffer.Unpooled.*;
  *     ch.write(res);
  * }
  * </pre>
- * @apiviz.landmark
  */
 @Sharable
 public class ProtobufEncoder extends MessageToMessageEncoder<MessageLiteOrBuilder> {

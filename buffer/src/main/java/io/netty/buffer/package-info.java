@@ -126,14 +126,5 @@
  * easier for a JVM to optimize the buffer access.  More complicated buffer
  * implementation is used only for sliced or composite buffers, and it performs
  * as well as {@link java.nio.ByteBuffer}.
- *
- * @apiviz.landmark
- * @apiviz.exclude ^java\.lang\.
- * @apiviz.exclude netty\.((?!buffer).)+$
- * @apiviz.exclude (In|Out)putStream$
- * @apiviz.exclude \.(Abstract|Default)((?!ByteBufAllocator).)*$
- * @apiviz.exclude \.(BufType|BufUtil)$
- * @apiviz.exclude \.[^\.]+Exception$
- * @apiviz.exclude \.(Empty|Swapped|Default|Sliced|Duplicated|ReadOnly)[^\.]*ByteBuf$
  */
 package io.netty.buffer;

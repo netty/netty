@@ -19,9 +19,6 @@ import io.netty.channel.Channel;
 
 /**
  * A user event triggered by {@link IdleStateHandler} when a {@link Channel} is idle.
- *
- * @apiviz.landmark
- * @apiviz.has io.netty.handler.timeout.IdleState oneway - -
  */
 public final class IdleStateEvent {
     public static final IdleStateEvent FIRST_READER_IDLE_STATE_EVENT = new IdleStateEvent(IdleState.READER_IDLE, true);

@@ -28,7 +28,6 @@ import java.util.Set;
 /**
  * Provides the constants for the standard SPDY HTTP header names and commonly
  * used utility methods that access a {@link SpdyHeaderBlock}.
- * @apiviz.stereotype static
  */
 public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>> {
 
@@ -102,7 +101,6 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
 
     /**
      * SPDY HTTP header names
-     * @apiviz.stereotype static
      */
     public static final class HttpNames {
         /**
@@ -135,7 +133,6 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
 
     /**
      * SPDY/2 HTTP header names
-     * @apiviz.stereotype static
      */
     public static final class Spdy2HttpNames {
         /**

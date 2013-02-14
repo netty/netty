@@ -16,8 +16,5 @@
 
 /**
  * Logs a {@link io.netty.channel.ChannelEvent} for debugging purpose.
- *
- * @apiviz.hidden
- * @apiviz.exclude \.channel\.
  */
 package io.netty.handler.logging;

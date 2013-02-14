@@ -226,8 +226,6 @@ import java.nio.charset.UnsupportedCharsetException;
  *
  * Please refer to {@link ByteBufInputStream} and
  * {@link ByteBufOutputStream}.
- *
- * @apiviz.landmark
  */
 public interface ByteBuf extends Buf, Comparable<ByteBuf> {
 

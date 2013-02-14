@@ -72,8 +72,6 @@ import java.util.Queue;
  * This class also provides various utility methods to help implementation
  * of a new buffer type, generation of hex dump and swapping an integer's
  * byte order.
- * @apiviz.landmark
- * @apiviz.has io.netty.buffer.Buf oneway - - creates
  */
 public final class Unpooled {
 

@@ -34,9 +34,6 @@ import java.util.List;
  * assert encoder.toString().equals("/hello?recipient=world");
  * </pre>
  * @see QueryStringDecoder
- *
- * @apiviz.stereotype utility
- * @apiviz.has        io.netty.handler.codec.http.HttpRequest oneway - - encodes URI
  */
 public class QueryStringEncoder {
 

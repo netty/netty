@@ -186,8 +186,6 @@ import java.lang.annotation.Target;
  * {@link ChannelPipeline} to find out more about inbound and outbound operations,
  * what fundamental differences they have, how they flow in a  pipeline,  and how to handle
  * the operation in your application.
- * @apiviz.landmark
- * @apiviz.exclude ^io\.netty\.handler\..*$
  */
 public interface ChannelHandler {
 

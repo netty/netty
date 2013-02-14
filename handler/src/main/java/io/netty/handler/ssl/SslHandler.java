@@ -138,8 +138,6 @@ import java.util.regex.Pattern;
  * based on monitoring and debugging of it.
  * For more details see
  * <a href="https://github.com/netty/netty/issues/832">#832</a> in our issue tracker.
- * @apiviz.landmark
- * @apiviz.uses io.netty.handler.ssl.SslBufferPool
  */
 public class SslHandler
         extends ChannelDuplexHandler

@@ -173,10 +173,6 @@ import java.util.NoSuchElementException;
  * {@link ChannelPipeline} is thread safe.  For example, you can insert an
  * encryption handler when sensitive information is about to be exchanged,
  * and remove it after the exchange.
- *
- * @apiviz.landmark
- * @apiviz.composedOf io.netty.channel.ChannelHandlerContext
- * @apiviz.owns       io.netty.channel.ChannelHandler
  */
 public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundInvoker,
         Iterable<Entry<String, ChannelHandler>> {

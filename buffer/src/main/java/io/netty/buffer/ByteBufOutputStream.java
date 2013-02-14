@@ -30,8 +30,8 @@ import java.io.OutputStream;
  * This stream implements {@link DataOutput} for your convenience.
  * The endianness of the stream is not always big endian but depends on
  * the endianness of the underlying buffer.
+ *
  * @see ByteBufInputStream
- * @apiviz.uses io.netty.buffer.ByteBuf
  */
 public class ByteBufOutputStream extends OutputStream implements DataOutput {
 

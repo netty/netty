@@ -32,10 +32,6 @@
  * server, take a look into the <tt>WebSocketServerX</tt> example located in the
  * {@code io.netty.example.http.websocket} package.
  * </p>
- *
- * @apiviz.exclude [0-9][0-9]
- * @apiviz.exclude Exception$
- * @apiviz.exclude Version$
  */
 package io.netty.handler.codec.http.websocketx;
 

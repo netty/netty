@@ -21,13 +21,11 @@ import io.netty.handler.codec.http.HttpMessage;
 /**
  * Provides the constants for the header names and the utility methods
  * used by the {@link SpdyHttpDecoder} and {@link SpdyHttpEncoder}.
- * @apiviz.stereotype static
  */
 public final class SpdyHttpHeaders {
 
     /**
      * SPDY HTTP header names
-     * @apiviz.stereotype static
      */
     public static final class Names {
         /**

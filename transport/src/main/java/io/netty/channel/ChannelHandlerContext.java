@@ -123,7 +123,6 @@ import java.util.Set;
  * {@link ChannelPipeline} to find out more about inbound and outbound operations,
  * what fundamental differences they have, how they flow in a  pipeline,  and how to handle
  * the operation in your application.
- * @apiviz.owns io.netty.channel.ChannelHandler
  */
 public interface ChannelHandlerContext
          extends AttributeMap, ChannelPropertyAccess,

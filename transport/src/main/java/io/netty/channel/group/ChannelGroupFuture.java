@@ -100,8 +100,6 @@ import java.util.concurrent.TimeUnit;
  * where it is more convenient to call {@link #await()}. In such a case, please
  * make sure you do not call {@link #await()} in an I/O thread.  Otherwise,
  * {@link IllegalStateException} will be raised to prevent a dead lock.
- *
- * @apiviz.owns io.netty.channel.group.ChannelGroupFutureListener - - notifies
  */
 public interface ChannelGroupFuture extends Iterable<ChannelFuture> {
 

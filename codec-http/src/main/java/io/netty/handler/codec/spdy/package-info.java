@@ -15,13 +15,5 @@
  */
 /**
  * Encoder, decoder, session handler and their related message types for the SPDY protocol.
- *
- * @apiviz.exclude ^java\.lang\.
- * @apiviz.exclude OneToOne(Encoder|Decoder)$
- * @apiviz.exclude \.SpdyHeaders\.
- * @apiviz.exclude \.codec\.frame\.
- * @apiviz.exclude \.(Simple)?Channel[A-Za-z]*Handler$
- * @apiviz.exclude \.Default
- * @apiviz.exclude \.SpdyFrameCodec$
  */
 package io.netty.handler.codec.spdy;

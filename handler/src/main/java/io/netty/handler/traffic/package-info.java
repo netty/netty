@@ -52,8 +52,6 @@
  *
  * <p>Note also that you can create different GlobalTrafficShapingHandler if you want to separate classes of
  * channels (for instance either from business point of view or from bind address point of view).</p>
- *
- * @apiviz.exclude ^java\.lang\.
  */
 package io.netty.handler.traffic;
 
