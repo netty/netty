@@ -20,14 +20,14 @@
   
   <parent>
     <groupId>io.netty</groupId>
-    <artifactId>netty-verify</artifactId>
+    <artifactId>netty-testsuite-osgi-parent</artifactId>
     <version>4.0.0.Beta1-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty-verify-osgi-exam</artifactId>
+  <artifactId>netty-testsuite-osgi-exam</artifactId>
   <packaging>bundle</packaging>
 
-  <name>Netty/Verify/OSGi/Exam</name>
+  <name>Netty/Testsuite/OSGi/Exam</name>
   <description>verify osgi compliance: run tests inside osgi framework</description>
 
   <properties>
