@@ -16,78 +16,111 @@
 
 package io.netty.util.internal;
 
+import java.lang.reflect.GenericDeclaration;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.lang.reflect.TypeVariable;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
-import java.util.List;
 import java.util.Map;
 
 public abstract class TypeParameterMatcher {
 
     private static final TypeParameterMatcher NOOP = new NoOpTypeParameterMatcher();
 
-    private static final ThreadLocal<Map<Class<?>, TypeParameterMatcher>> typeMap =
-            new ThreadLocal<Map<Class<?>, TypeParameterMatcher>>() {
+    private static final ThreadLocal<Map<Class<?>, Map<String, TypeParameterMatcher>>> typeMap =
+            new ThreadLocal<Map<Class<?>, Map<String, TypeParameterMatcher>>>() {
                 @Override
-                protected Map<Class<?>, TypeParameterMatcher> initialValue() {
-                    return new IdentityHashMap<Class<?>, TypeParameterMatcher>();
+                protected Map<Class<?>, Map<String, TypeParameterMatcher>> initialValue() {
+                    return new IdentityHashMap<Class<?>, Map<String, TypeParameterMatcher>>();
                 }
             };
 
     public static TypeParameterMatcher find(
-            final Object object, final Class<?> parameterizedSuperClass, final int typeParamIndex) {
+            final Object object, final GenericDeclaration parameterizedSuperclass, final String typeParamName) {
 
-        final Map<Class<?>, TypeParameterMatcher> typeMap = TypeParameterMatcher.typeMap.get();
+        final Map<Class<?>, Map<String, TypeParameterMatcher>> typeMap = TypeParameterMatcher.typeMap.get();
         final Class<?> thisClass = object.getClass();
 
-        TypeParameterMatcher matcher = typeMap.get(thisClass);
+        Map<String, TypeParameterMatcher> map = typeMap.get(thisClass);
+        if (map == null) {
+            map = new HashMap<String, TypeParameterMatcher>();
+            typeMap.put(thisClass, map);
+        }
+
+        TypeParameterMatcher matcher = map.get(typeParamName);
         if (matcher == null) {
-            Class<?> currentClass = thisClass;
-            for (;;) {
-                if (currentClass.getSuperclass() == parameterizedSuperClass) {
-                    Type[] types = ((ParameterizedType) currentClass.getGenericSuperclass()).getActualTypeArguments();
-                    if (types.length - 1 < typeParamIndex) {
-                        List<Type> typeList = new ArrayList<Type>(types.length);
-                        Collections.addAll(typeList, types);
-                        throw new IllegalStateException(
-                                "invalid typeParamIndex: " + typeParamIndex + " (typeParams: " + typeList + ')');
-                    }
-
-                    Type t = types[typeParamIndex];
-                    Class<?> messageType;
-                    if (t instanceof Class) {
-                        messageType = (Class<?>) t;
-                    } else if (t instanceof ParameterizedType) {
-                        messageType = (Class<?>) ((ParameterizedType) t).getRawType();
-                    } else {
-                        throw new IllegalStateException(
-                                "cannot determine the type of the type parameter of " +
-                                thisClass.getSimpleName() + ": " + t);
-                    }
-
-                    if (messageType == Object.class) {
-                        matcher = NOOP;
-                    } else if (PlatformDependent.hasJavassist()) {
-                        try {
-                            matcher = JavassistTypeParameterMatcherGenerator.generate(messageType);
-                        } catch (Exception e) {
-                            // Will not usually happen, but just in case.
-                            matcher = new ReflectiveMatcher(messageType);
-                        }
-                    } else {
-                        matcher = new ReflectiveMatcher(messageType);
-                    }
-                    break;
+            Class<?> messageType = find0(object, parameterizedSuperclass, typeParamName);
+            if (messageType == Object.class) {
+                matcher = NOOP;
+            } else if (PlatformDependent.hasJavassist()) {
+                try {
+                    matcher = JavassistTypeParameterMatcherGenerator.generate(messageType);
+                } catch (Exception e) {
+                    // Will not usually happen, but just in case.
+                    matcher = new ReflectiveMatcher(messageType);
                 }
-                currentClass = currentClass.getSuperclass();
+            } else {
+                matcher = new ReflectiveMatcher(messageType);
             }
-
-            typeMap.put(thisClass, matcher);
+            map.put(typeParamName, matcher);
         }
 
         return matcher;
+    }
+
+    private static Class<?> find0(
+            final Object object, GenericDeclaration parameterizedSuperclass, String typeParamName) {
+
+        final Class<?> thisClass = object.getClass();
+        Class<?> currentClass = thisClass;
+        for (;;) {
+            if (currentClass.getSuperclass() == parameterizedSuperclass) {
+                int typeParamIndex = -1;
+                TypeVariable<?>[] typeParams = currentClass.getSuperclass().getTypeParameters();
+                for (int i = 0; i < typeParams.length; i ++) {
+                    if (typeParamName.equals(typeParams[i].getName())) {
+                        typeParamIndex = i;
+                        break;
+                    }
+                }
+
+                if (typeParamIndex < 0) {
+                    throw new IllegalStateException(
+                            "unknown type parameter '" + typeParamName + "': " + parameterizedSuperclass);
+                }
+
+                Type[] actualTypeParams =
+                        ((ParameterizedType) currentClass.getGenericSuperclass()).getActualTypeArguments();
+
+                Type actualTypeParam = actualTypeParams[typeParamIndex];
+                if (actualTypeParam instanceof Class) {
+                    return (Class<?>) actualTypeParam;
+                }
+                if (actualTypeParam instanceof ParameterizedType) {
+                    return (Class<?>) ((ParameterizedType) actualTypeParam).getRawType();
+                }
+                if (actualTypeParam instanceof TypeVariable) {
+                    // Resolved type parameter points to another type parameter.
+                    TypeVariable<?> v = (TypeVariable<?>) actualTypeParam;
+                    currentClass = thisClass;
+                    parameterizedSuperclass = v.getGenericDeclaration();
+                    typeParamName = v.getName();
+                    continue;
+                }
+
+                return fail(thisClass, typeParamName);
+            }
+            currentClass = currentClass.getSuperclass();
+            if (currentClass == null) {
+                return fail(thisClass, typeParamName);
+            }
+        }
+    }
+
+    private static Class<?> fail(Class<?> type, String typeParamName) {
+        throw new IllegalStateException(
+                "cannot determine the type of the type parameter '" + typeParamName + "': " + type);
     }
 
     public abstract boolean match(Object msg);
