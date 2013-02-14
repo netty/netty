@@ -16,11 +16,11 @@
 package io.netty.channel;
 
 import io.netty.channel.ChannelFlushPromiseNotifier.FlushCheckpoint;
+import io.netty.util.Signal;
 import io.netty.util.internal.InternalLogger;
 import io.netty.util.internal.InternalLoggerFactory;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.TimeUnit.*;
@@ -42,11 +42,11 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
         }
     };
 
+    private static final Signal SUCCESS = new Signal(DefaultChannelPromise.class.getName() + ".SUCCESS");
+
     private final Channel channel;
 
-    private ChannelFutureListener firstListener;
-    private List<ChannelFutureListener> otherListeners;
-    private boolean done;
+    private Object listeners; // Can be ChannelFutureListener or DefaultChannelPromiseListeners
     private Throwable cause;
     private int waiters;
 
@@ -72,17 +72,21 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
 
     @Override
     public synchronized boolean isDone() {
-        return done;
+        return cause != null;
     }
 
     @Override
     public synchronized boolean isSuccess() {
-        return done && cause == null;
+        return cause == SUCCESS;
     }
 
     @Override
-    public synchronized Throwable cause() {
-        return cause;
+    public Throwable cause() {
+        Throwable cause;
+        synchronized (this) {
+            cause = this.cause;
+        }
+        return cause == SUCCESS? null : cause;
     }
 
     @Override
@@ -93,16 +97,17 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
 
         boolean notifyNow = false;
         synchronized (this) {
-            if (done) {
+            if (cause != null) {
                 notifyNow = true;
             } else {
-                if (firstListener == null) {
-                    firstListener = listener;
+                if (listeners == null) {
+                    listeners = listener;
                 } else {
-                    if (otherListeners == null) {
-                        otherListeners = new ArrayList<ChannelFutureListener>(1);
+                    if (listeners instanceof DefaultChannelPromiseListeners) {
+                        ((DefaultChannelPromiseListeners) listeners).add(listener);
+                    } else {
+                        listeners = new DefaultChannelPromiseListeners((ChannelFutureListener) listeners, listener);
                     }
-                    otherListeners.add(listener);
                 }
             }
         }
@@ -136,15 +141,11 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
         }
 
         synchronized (this) {
-            if (!done) {
-                if (listener == firstListener) {
-                    if (otherListeners != null && !otherListeners.isEmpty()) {
-                        firstListener = otherListeners.remove(0);
-                    } else {
-                        firstListener = null;
-                    }
-                } else if (otherListeners != null) {
-                    otherListeners.remove(listener);
+            if (cause == null) {
+                if (listeners instanceof DefaultChannelPromiseListeners) {
+                    ((DefaultChannelPromiseListeners) listeners).remove(listener);
+                } else if (listeners == listener) {
+                    listeners = null;
                 }
             }
         }
@@ -205,7 +206,7 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
         }
 
         synchronized (this) {
-            while (!done) {
+            while (cause == null) {
                 checkDeadLock();
                 waiters++;
                 try {
@@ -233,7 +234,7 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
     public ChannelPromise awaitUninterruptibly() {
         boolean interrupted = false;
         synchronized (this) {
-            while (!done) {
+            while (cause == null) {
                 checkDeadLock();
                 waiters++;
                 try {
@@ -282,8 +283,8 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
 
         try {
             synchronized (this) {
-                if (done || waitTime <= 0) {
-                    return done;
+                if (cause != null || waitTime <= 0) {
+                    return cause != null;
                 }
 
                 checkDeadLock();
@@ -300,12 +301,12 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
                             }
                         }
 
-                        if (done) {
+                        if (cause != null) {
                             return true;
                         } else {
                             waitTime = timeoutNanos - (System.nanoTime() - startTime);
                             if (waitTime <= 0) {
-                                return done;
+                                return cause != null;
                             }
                         }
                     }
@@ -346,11 +347,11 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
 
     private synchronized boolean success0() {
         // Allow only once.
-        if (done) {
+        if (cause != null) {
             return false;
         }
 
-        done = true;
+        cause = SUCCESS;
         if (waiters > 0) {
             notifyAll();
         }
@@ -377,12 +378,11 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
 
     private synchronized boolean failure0(Throwable cause) {
         // Allow only once.
-        if (done) {
+        if (cause != null) {
             return false;
         }
 
         this.cause = cause;
-        done = true;
         if (waiters > 0) {
             notifyAll();
         }
@@ -396,33 +396,31 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
         // 2) This method is called only when 'done' is true.  Once 'done'
         //    becomes true, the listener list is never modified - see add/removeListener()
 
-        if (firstListener == null) {
+        if (listeners == null) {
             return;
         }
 
         if (channel().eventLoop().inEventLoop()) {
-            notifyListener0(this, firstListener);
-            firstListener = null;
-
-            if (otherListeners != null) {
-                for (ChannelFutureListener l: otherListeners) {
+            if (listeners instanceof DefaultChannelPromiseListeners) {
+                for (ChannelFutureListener l : (DefaultChannelPromiseListeners) listeners) {
                     notifyListener0(this, l);
                 }
-                otherListeners = null;
+            } else {
+                notifyListener0(this, (ChannelFutureListener) listeners);
             }
+            listeners = null;
         } else {
-            final ChannelFutureListener firstListener = this.firstListener;
-            final List<ChannelFutureListener> otherListeners = this.otherListeners;
-            this.firstListener = null;
-            this.otherListeners = null;
+            final Object listeners = this.listeners;
+            this.listeners = null;
             channel().eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
-                    notifyListener0(DefaultChannelPromise.this, firstListener);
-                    if (otherListeners != null) {
-                        for (ChannelFutureListener l: otherListeners) {
+                    if (listeners instanceof DefaultChannelPromiseListeners) {
+                        for (ChannelFutureListener l : (DefaultChannelPromiseListeners) listeners) {
                             notifyListener0(DefaultChannelPromise.this, l);
                         }
+                    } else {
+                        notifyListener0(DefaultChannelPromise.this, (ChannelFutureListener) listeners);
                     }
                 }
             });
@@ -477,5 +475,15 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
     @Override
     ChannelPromise future() {
         return this;
+    }
+
+    private static final class DefaultChannelPromiseListeners extends ArrayList<ChannelFutureListener> {
+        private static final long serialVersionUID = 7414281537694651180L;
+
+        DefaultChannelPromiseListeners(ChannelFutureListener firstListener, ChannelFutureListener secondListener) {
+            super(2);
+            add(firstListener);
+            add(secondListener);
+        }
     }
 }
