@@ -39,14 +39,7 @@ public abstract class ChannelOutboundMessageHandlerAdapter<I>
     private boolean closeOnFailedFlush = true;
 
     protected ChannelOutboundMessageHandlerAdapter() {
-        this(ChannelOutboundMessageHandlerAdapter.class, 0);
-    }
-
-    protected ChannelOutboundMessageHandlerAdapter(
-            @SuppressWarnings("rawtypes")
-            Class<? extends ChannelOutboundMessageHandlerAdapter> parameterizedHandlerType,
-            int messageTypeParamIndex) {
-        msgMatcher = TypeParameterMatcher.find(this, parameterizedHandlerType, messageTypeParamIndex);
+        msgMatcher = TypeParameterMatcher.find(this, ChannelOutboundMessageHandlerAdapter.class, "I");
     }
 
     protected final boolean isCloseOnFailedFlush() {

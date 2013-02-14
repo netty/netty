@@ -54,14 +54,7 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
     private final TypeParameterMatcher msgMatcher;
 
     protected ChannelInboundMessageHandlerAdapter() {
-        this(ChannelInboundMessageHandlerAdapter.class, 0);
-    }
-
-    protected ChannelInboundMessageHandlerAdapter(
-            @SuppressWarnings("rawtypes")
-            Class<? extends ChannelInboundMessageHandlerAdapter> parameterizedHandlerType,
-            int messageTypeParamIndex) {
-        msgMatcher = TypeParameterMatcher.find(this, parameterizedHandlerType, messageTypeParamIndex);
+        msgMatcher = TypeParameterMatcher.find(this, ChannelInboundMessageHandlerAdapter.class, "I");
     }
 
     @Override

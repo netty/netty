@@ -17,9 +17,7 @@ package io.netty.handler.codec;
 
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
-import io.netty.channel.ChannelPipeline;
 
 /**
  * {@link ChannelOutboundMessageHandlerAdapter} which encodes from one message to an other message
@@ -43,22 +41,6 @@ import io.netty.channel.ChannelPipeline;
  *
  */
 public abstract class MessageToMessageEncoder<I> extends ChannelOutboundMessageHandlerAdapter<I> {
-
-    /**
-     * The types which will be accepted by the decoder. If a received message is an other type it will be just forwared
-     * to the next {@link ChannelOutboundMessageHandler} in the {@link ChannelPipeline}
-     */
-    protected MessageToMessageEncoder() {
-        super(MessageToMessageEncoder.class, 0);
-    }
-
-    protected MessageToMessageEncoder(
-            @SuppressWarnings("rawtypes")
-            Class<? extends ChannelOutboundMessageHandlerAdapter> parameterizedHandlerType,
-            int messageTypeParamIndex) {
-
-        super(parameterizedHandlerType, messageTypeParamIndex);
-    }
 
     @Override
     protected final void flush(ChannelHandlerContext ctx, I msg) throws Exception {

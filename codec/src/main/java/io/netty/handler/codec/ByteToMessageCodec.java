@@ -53,14 +53,7 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler
     };
 
     protected ByteToMessageCodec() {
-        this(ByteToMessageCodec.class, 0);
-    }
-
-    protected ByteToMessageCodec(
-            @SuppressWarnings("rawtypes")
-            Class<? extends ByteToMessageCodec> parameterizedHandlerType,
-            int messageTypeParamIndex) {
-        outboundMsgMatcher = TypeParameterMatcher.find(this, parameterizedHandlerType, messageTypeParamIndex);
+        outboundMsgMatcher = TypeParameterMatcher.find(this, ByteToMessageCodec.class, "I");
     }
 
     @Override

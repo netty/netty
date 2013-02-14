@@ -19,9 +19,7 @@ import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandler;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelOutboundMessageHandler;
-import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.internal.TypeParameterMatcher;
 
@@ -88,22 +86,8 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
     private final TypeParameterMatcher outboundMsgMatcher;
 
     protected MessageToMessageCodec() {
-        inboundMsgMatcher = TypeParameterMatcher.find(this, MessageToMessageCodec.class, 0);
-        outboundMsgMatcher = TypeParameterMatcher.find(this, MessageToMessageCodec.class, 1);
-    }
-
-    protected MessageToMessageCodec(
-            @SuppressWarnings("rawtypes")
-            Class<? extends ChannelInboundMessageHandlerAdapter> parameterizedInboundHandlerType,
-            int inboundMessageTypeParamIndex,
-            @SuppressWarnings("rawtypes")
-            Class<? extends ChannelOutboundMessageHandlerAdapter> parameterizedOutboundHandlerType,
-            int outboundMessageTypeParamIndex) {
-
-        inboundMsgMatcher = TypeParameterMatcher.find(
-                this, parameterizedInboundHandlerType, inboundMessageTypeParamIndex);
-        outboundMsgMatcher = TypeParameterMatcher.find(
-                this, parameterizedOutboundHandlerType, outboundMessageTypeParamIndex);
+        inboundMsgMatcher = TypeParameterMatcher.find(this, MessageToMessageCodec.class, "INBOUND_IN");
+        outboundMsgMatcher = TypeParameterMatcher.find(this, MessageToMessageCodec.class, "OUTBOUND_IN");
     }
 
     @Override
