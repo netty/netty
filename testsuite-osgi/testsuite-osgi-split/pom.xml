@@ -17,7 +17,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
-  
+
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-testsuite-osgi-parent</artifactId>
@@ -31,7 +31,7 @@
   <description>verify osgi compliance: prohibit split packages</description>
 
   <dependencies>
-  
+
     <!-- include all osgi bundle release modules -->
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -64,31 +64,31 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
-        <groupId>${project.groupId}</groupId>
-        <artifactId>netty-transport</artifactId>
-        <version>${project.version}</version>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-transport</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
-        <groupId>${project.groupId}</groupId>
-        <artifactId>netty-transport-rxtx</artifactId>
-        <version>${project.version}</version>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-transport-rxtx</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
-        <groupId>${project.groupId}</groupId>
-        <artifactId>netty-transport-sctp</artifactId>
-        <version>${project.version}</version>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-transport-sctp</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
-        <groupId>${project.groupId}</groupId>
-        <artifactId>netty-transport-udt</artifactId>
-        <version>${project.version}</version>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-transport-udt</artifactId>
+      <version>${project.version}</version>
     </dependency>
-    
+
   </dependencies>
 
   <build>
     <plugins>
-    
+
       <!-- fail build on package split -->
       <plugin>
         <groupId>org.apache.felix</groupId>
@@ -102,7 +102,7 @@
           </instructions>
         </configuration>
       </plugin>
-      
+
       <!-- do not deploy this artifact -->
       <plugin>
         <artifactId>maven-deploy-plugin</artifactId>
@@ -110,7 +110,7 @@
           <skip>true</skip>
         </configuration>
       </plugin>
-      
+
     </plugins>
   </build>
 </project>
