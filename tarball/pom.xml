@@ -110,7 +110,7 @@
                 <configuration>
                   <outputDirectory>${project.build.directory}/jars</outputDirectory>
                   <includeGroupIds>${project.groupId}</includeGroupIds>
-                  <excludeArtifactIds>netty</excludeArtifactIds>
+                  <excludeArtifactIds>netty-all</excludeArtifactIds>
                 </configuration>
               </execution>
               <execution>
@@ -123,7 +123,7 @@
                   <classifier>sources</classifier>
                   <outputDirectory>${project.build.directory}/jars</outputDirectory>
                   <includeGroupIds>${project.groupId}</includeGroupIds>
-                  <excludeArtifactIds>netty</excludeArtifactIds>
+                  <excludeArtifactIds>netty-all</excludeArtifactIds>
                 </configuration>
               </execution>
               <execution>
@@ -135,7 +135,7 @@
                 <configuration>
                   <outputDirectory>${project.build.directory}/jars-all</outputDirectory>
                   <includeGroupIds>${project.groupId}</includeGroupIds>
-                  <includeArtifactIds>netty</includeArtifactIds>
+                  <includeArtifactIds>netty-all</includeArtifactIds>
                 </configuration>
               </execution>
               <execution>
@@ -148,7 +148,7 @@
                   <classifier>sources</classifier>
                   <outputDirectory>${project.build.directory}/jars-all</outputDirectory>
                   <includeGroupIds>${project.groupId}</includeGroupIds>
-                  <includeArtifactIds>netty</includeArtifactIds>
+                  <includeArtifactIds>netty-all</includeArtifactIds>
                 </configuration>
               </execution>
             </executions>
