@@ -378,7 +378,7 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
 
     private synchronized boolean failure0(Throwable cause) {
         // Allow only once.
-        if (cause != null) {
+        if (this.cause != null) {
             return false;
         }
 

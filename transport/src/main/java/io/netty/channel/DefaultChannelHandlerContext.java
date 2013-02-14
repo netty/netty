@@ -1295,7 +1295,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private void invokeFlush0(ChannelPromise promise) {
         Channel channel = channel();
         if (!channel.isRegistered() && !channel.isActive()) {
-            promise.tryFailure(new ClosedChannelException());
+            promise.setFailure(new ClosedChannelException());
             return;
         }
 
