@@ -19,7 +19,6 @@ import io.netty.handler.codec.http.HttpVersion;
 
 /**
  * The version of RTSP.
- * @apiviz.exclude
  */
 public final class RtspVersions {
 

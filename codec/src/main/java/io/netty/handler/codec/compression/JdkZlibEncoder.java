@@ -30,8 +30,6 @@ import java.util.zip.Deflater;
 
 /**
  * Compresses a {@link ByteBuf} using the deflate algorithm.
- * @apiviz.landmark
- * @apiviz.has org.jboss.netty.handler.codec.compression.ZlibWrapper
  */
 public class JdkZlibEncoder extends ZlibEncoder {
 

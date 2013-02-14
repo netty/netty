@@ -20,8 +20,6 @@ import io.netty.handler.codec.http.HttpHeaders;
 
 /**
  * Standard RTSP header names and values.
- * @apiviz.exclude
- * @apiviz.stereotype static
  */
 public final class RtspHeaders {
 

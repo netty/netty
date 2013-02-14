@@ -41,9 +41,6 @@ import java.util.concurrent.atomic.AtomicLong;
  * a {@link PrematureChannelClosureException} is thrown.
  *
  * @see HttpServerCodec
- *
- * @apiviz.has io.netty.handler.codec.http.HttpResponseDecoder
- * @apiviz.has io.netty.handler.codec.http.HttpRequestEncoder
  */
 public final class HttpClientCodec
         extends CombinedChannelDuplexHandler

@@ -46,7 +46,6 @@ import java.nio.charset.Charset;
  *     ch.write("Did you say '" + msg + "'?\n");
  * }
  * </pre>
- * @apiviz.landmark
  */
 @Sharable
 public class StringEncoder extends ChannelOutboundMessageHandlerAdapter<CharSequence> {

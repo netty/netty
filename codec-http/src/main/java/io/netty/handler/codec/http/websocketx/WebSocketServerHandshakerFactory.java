@@ -26,9 +26,6 @@ import io.netty.handler.codec.http.HttpVersion;
 /**
  * Auto-detects the version of the Web Socket protocol in use and creates a new proper
  * {@link WebSocketServerHandshaker}.
- *
- * @apiviz.landmark
- * @apiviz.has io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker oneway - - creates
  */
 public class WebSocketServerHandshakerFactory {
 

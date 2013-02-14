@@ -22,7 +22,6 @@ import java.util.Map;
 
 /**
  * The request getMethod of RTSP.
- * @apiviz.exclude
  */
 public final class RtspMethods {
 

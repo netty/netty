@@ -16,9 +16,5 @@
 
 /**
  * Abstract TCP and UDP socket interfaces which extend the core channel API.
- *
- * @apiviz.exclude \.(Abstract|Default).*$
- * @apiviz.exclude \.socket\.[a-z]+\.
- * @apiviz.exclude \.channel\.[A-Z]
  */
 package io.netty.channel.socket;

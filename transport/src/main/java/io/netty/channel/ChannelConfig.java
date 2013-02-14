@@ -59,8 +59,6 @@ import java.util.Map;
  * More options are available in the sub-types of {@link ChannelConfig}.  For
  * example, you can configure the parameters which are specific to a TCP/IP
  * socket as explained in {@link SocketChannelConfig}.
- *
- * @apiviz.excludeSubtypes
  */
 public interface ChannelConfig {
 

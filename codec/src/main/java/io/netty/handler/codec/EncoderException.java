@@ -17,8 +17,6 @@ package io.netty.handler.codec;
 
 /**
  * An {@link CodecException} which is thrown by an encoder.
- *
- * @apiviz.exclude
  */
 public class EncoderException extends CodecException {
 

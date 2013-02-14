@@ -29,8 +29,6 @@ import java.net.SocketAddress;
 /**
  * A {@link ChannelHandler} that logs all events using a logging framework.
  * By default, all events are logged at <tt>DEBUG</tt> level.
- *
- * @apiviz.landmark
  */
 @Sharable
 public class LoggingHandler extends ChannelDuplexHandler {

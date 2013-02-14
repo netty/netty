@@ -18,7 +18,6 @@ package io.netty.handler.codec.spdy;
 /**
  * An {@link Exception} which is thrown when the received frame cannot
  * be decoded by the {@link SpdyFrameDecoder}.
- * @apiviz.exclude
  */
 public class SpdyProtocolException extends Exception {
 

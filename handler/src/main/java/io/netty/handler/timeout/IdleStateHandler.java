@@ -97,10 +97,6 @@ import java.util.concurrent.TimeUnit;
  *
  * @see ReadTimeoutHandler
  * @see WriteTimeoutHandler
- *
- * @apiviz.landmark
- * @apiviz.uses io.netty.util.HashedWheelTimer
- * @apiviz.has io.netty.handler.timeout.IdleStateEvent oneway - - triggers
  */
 public class IdleStateHandler extends ChannelStateHandlerAdapter implements ChannelOperationHandler {
 

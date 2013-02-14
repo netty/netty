@@ -17,7 +17,6 @@ package io.netty.handler.codec.spdy;
 
 /**
  * The SPDY session getStatus code and its description.
- * @apiviz.exclude
  */
 public class SpdySessionStatus implements Comparable<SpdySessionStatus> {
 

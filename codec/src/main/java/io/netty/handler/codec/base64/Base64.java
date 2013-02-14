@@ -29,9 +29,6 @@ import io.netty.buffer.Unpooled;
  * The encoding and decoding algorithm in this class has been derived from
  * <a href="http://iharder.sourceforge.net/current/java/base64/">Robert Harder's Public Domain
  * Base64 Encoder/Decoder</a>.
- *
- * @apiviz.landmark
- * @apiviz.uses io.netty.handler.codec.base64.Base64Dialect
  */
 public final class Base64 {
 

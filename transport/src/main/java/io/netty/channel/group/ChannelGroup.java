@@ -87,8 +87,6 @@ import java.util.Set;
  *     }
  * }
  * </pre>
- * @apiviz.landmark
- * @apiviz.has io.netty.channel.group.ChannelGroupFuture oneway - - returns
  */
 public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
 

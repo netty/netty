@@ -21,9 +21,6 @@ import java.util.concurrent.TimeUnit;
 /**
  * Schedules {@link TimerTask}s for one-time future execution in a background
  * thread.
- * @apiviz.landmark
- * @apiviz.has io.netty.util.TimerTask oneway - - executes
- * @apiviz.has io.netty.util.Timeout oneway - - creates
  */
 public interface Timer {
 

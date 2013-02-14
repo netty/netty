@@ -29,8 +29,6 @@ import java.util.Set;
 /**
  * Provides the constants for the standard HTTP header names and values and
  * commonly used utility methods that accesses an {@link HttpMessage}.
- * @apiviz.landmark
- * @apiviz.stereotype static
  */
 public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>> {
 
@@ -102,11 +100,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     };
 
     /**
-     * Standard and CORS HTTP header names.
-     * For CORS headers, see
-     * https://developer.mozilla.org/en-US/docs/HTTP_access_control
-     *
-     * @apiviz.stereotype static
+     * Standard HTTP header names.
      */
     public static final class Names {
         /**
@@ -408,7 +402,6 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
 
     /**
      * Standard HTTP header values.
-     * @apiviz.stereotype static
      */
     public static final class Values {
         /**

@@ -17,9 +17,5 @@
 /**
  * Adds support for read and write timeout and idle connection notification
  * using a {@link io.netty.util.Timer}.
- *
- * @apiviz.exclude \.channel\.
- * @apiviz.exclude \.DefaultIdleStateEvent$
- * @apiviz.exclude \.ExternalResourceReleasable$
  */
 package io.netty.handler.timeout;

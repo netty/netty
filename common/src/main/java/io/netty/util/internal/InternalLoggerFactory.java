@@ -28,8 +28,6 @@ package io.netty.util.internal;
  * which were loaded after the default factory is changed.  Therefore,
  * {@link #setDefaultFactory(InternalLoggerFactory)} should be called as early
  * as possible and shouldn't be called more than once.
- * @apiviz.landmark
- * @apiviz.has io.netty.util.internal.InternalLogger oneway - - creates
  */
 public abstract class InternalLoggerFactory {
     private static volatile InternalLoggerFactory defaultFactory;

@@ -19,7 +19,6 @@ package io.netty.handler.codec.http;
  * The response code and its description of HTTP or its derived protocols, such as
  * <a href="http://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
  * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
- * @apiviz.exclude
  */
 public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
 

@@ -260,9 +260,6 @@ import io.netty.util.Signal;
  * @param <S>
  *        the state type which is usually an {@link Enum}; use {@link Void} if state management is
  *        unused
- *
- * @apiviz.landmark
- * @apiviz.has io.netty.handler.codec.UnreplayableOperationException oneway - - throws
  */
 public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
 

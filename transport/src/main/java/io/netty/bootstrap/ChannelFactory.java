@@ -20,8 +20,6 @@ import io.netty.channel.Channel;
 /**
  * Factory that creates a new {@link Channel} on {@link Bootstrap#bind()}, {@link Bootstrap#connect()}, and
  * {@link ServerBootstrap#bind()}.
- *
- * @apiviz.exclude
  */
 public interface ChannelFactory<T extends Channel> {
     /**

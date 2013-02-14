@@ -19,7 +19,6 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 
 /**
  * The getStatus code and its description of a RTSP response.
- * @apiviz.exclude
  */
 public final class RtspResponseStatuses {
 

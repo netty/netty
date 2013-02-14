@@ -57,7 +57,6 @@ import io.netty.handler.codec.MessageToMessageDecoder;
  *     ch.write(res);
  * }
  * </pre>
- * @apiviz.landmark
  */
 @Sharable
 public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {

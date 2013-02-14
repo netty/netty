@@ -17,7 +17,6 @@ package io.netty.handler.codec.spdy;
 
 /**
  * The SPDY stream getStatus code and its description.
- * @apiviz.exclude
  */
 public class SpdyStreamStatus implements Comparable<SpdyStreamStatus> {
 

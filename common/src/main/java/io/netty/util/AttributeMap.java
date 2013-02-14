@@ -19,8 +19,6 @@ package io.netty.util;
  * Holds {@link Attribute}s which can be accessed via {@link AttributeKey}.
  *
  * Implementations must be Thread-safe.
- *
- * @apiviz.composedOf io.netty.util.Attribute oneway - - creates
  */
 public interface AttributeMap {
     /**

@@ -25,8 +25,6 @@ import io.netty.handler.codec.http.HttpObject;
 
 /**
  * A combination of {@link SpdyHttpDecoder} and {@link SpdyHttpEncoder}
- * @apiviz.has io.netty.handler.codec.sdpy.SpdyHttpDecoder
- * @apiviz.has io.netty.handler.codec.spdy.SpdyHttpEncoder
  */
 public final class SpdyHttpCodec
         extends CombinedChannelDuplexHandler

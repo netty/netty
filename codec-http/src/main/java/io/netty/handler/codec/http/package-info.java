@@ -16,13 +16,5 @@
 
 /**
  * Encoder, decoder and their related message types for HTTP.
- *
- * @apiviz.exclude ^java\.lang\.
- * @apiviz.exclude \.HttpHeaders\.
- * @apiviz.exclude \.codec\.replay\.
- * @apiviz.exclude \.(Simple)?Channel[A-Za-z]*Handler$
- * @apiviz.exclude \.Rtsp
- * @apiviz.exclude \.Default
- * @apiviz.exclude \.Http(Client|Server)Codec$
  */
 package io.netty.handler.codec.http;

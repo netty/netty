@@ -30,8 +30,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Compresses a {@link ByteBuf} using the deflate algorithm.
- * @apiviz.landmark
- * @apiviz.has io.netty.handler.codec.compression.ZlibWrapper
  */
 public class JZlibEncoder extends ZlibEncoder {
 

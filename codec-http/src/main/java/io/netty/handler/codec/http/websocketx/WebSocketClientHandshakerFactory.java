@@ -23,9 +23,6 @@ import static io.netty.handler.codec.http.websocketx.WebSocketVersion.*;
 
 /**
  * Creates a new {@link WebSocketClientHandshaker} of desired protocol version.
- *
- * @apiviz.landmark
- * @apiviz.has io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker oneway - - creates
  */
 public final class WebSocketClientHandshakerFactory {
 

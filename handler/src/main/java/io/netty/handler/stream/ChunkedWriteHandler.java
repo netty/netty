@@ -63,8 +63,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * {@link ChunkedInput#readChunk(Object)}, resulting in the indefinitely suspended
  * transfer.  To resume the transfer when a new chunk is available, you have to
  * call {@link #resumeTransfer()}.
- * @apiviz.landmark
- * @apiviz.has io.netty.handler.stream.ChunkedInput oneway - - reads from
  */
 public class ChunkedWriteHandler
         extends ChannelDuplexHandler implements ChannelOutboundMessageHandler<Object> {

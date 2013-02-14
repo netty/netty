@@ -44,8 +44,6 @@ import static io.netty.handler.codec.http.HttpHeaders.*;
  * p.addLast("encoder", new {@link HttpResponseEncoder}());
  * p.addLast("handler", new HttpRequestHandler());
  * </pre>
- * @apiviz.landmark
- * @apiviz.has io.netty.handler.codec.http.HttpContent oneway - - filters out
  */
 public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
     public static final int DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS = 1024;

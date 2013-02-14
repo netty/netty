@@ -25,9 +25,6 @@ import io.netty.channel.CombinedChannelDuplexHandler;
 
 /**
  * A combination of {@link SpdyFrameDecoder} and {@link SpdyFrameEncoder}.
- *
- * @apiviz.has io.netty.handler.codec.spdy.SpdyFrameDecoder
- * @apiviz.has io.netty.handler.codec.spdy.SpdyFrameEncoder
  */
 public final class SpdyFrameCodec
         extends CombinedChannelDuplexHandler

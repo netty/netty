@@ -19,10 +19,6 @@ import java.lang.ref.Reference;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- *
- * @apiviz.has io.netty.handler.codec.serialization.ClassResolver oneway - - creates
- */
 public final class ClassResolvers {
 
     /**

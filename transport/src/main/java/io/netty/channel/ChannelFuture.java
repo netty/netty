@@ -15,9 +15,9 @@
  */
 package io.netty.channel;
 
-import java.util.concurrent.TimeUnit;
-
 import io.netty.bootstrap.Bootstrap;
+
+import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -158,8 +158,6 @@ import io.netty.bootstrap.Bootstrap;
  *     // Connection established successfully
  * }
  * </pre>
- * @apiviz.landmark
- * @apiviz.owns io.netty.channel.ChannelFutureListener - - notifies
  */
 public interface ChannelFuture {
 

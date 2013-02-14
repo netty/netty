@@ -36,9 +36,6 @@ import java.util.TreeSet;
  *
  * @see ClientCookieEncoder
  * @see ServerCookieEncoder
- *
- * @apiviz.stereotype utility
- * @apiviz.has        io.netty.handler.codec.http.Cookie oneway - - decodes
  */
 public final class CookieDecoder {
 

@@ -95,7 +95,6 @@ import java.util.List;
  * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
  * To implement the decoder of such a derived protocol, extend this class and
  * implement all abstract methods properly.
- * @apiviz.landmark
  */
 public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecoder.State> {
 
@@ -112,9 +111,8 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
     /**
      * The internal state of {@link HttpObjectDecoder}.
      * <em>Internal use only</em>.
-     * @apiviz.exclude
      */
-    protected enum State {
+    enum State {
         SKIP_CONTROL_CHARS,
         READ_INITIAL,
         READ_HEADER,

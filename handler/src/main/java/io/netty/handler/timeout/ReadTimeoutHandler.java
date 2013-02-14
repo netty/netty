@@ -60,9 +60,6 @@ import java.util.concurrent.TimeUnit;
  * </pre>
  * @see WriteTimeoutHandler
  * @see IdleStateHandler
- *
- * @apiviz.landmark
- * @apiviz.has io.netty.handler.timeout.TimeoutException oneway - - raises
  */
 public class ReadTimeoutHandler extends ChannelStateHandlerAdapter {
 
