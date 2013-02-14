@@ -24,21 +24,20 @@
     <version>4.0.0.Beta1-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty-verify</artifactId>
+  <artifactId>netty-testsuite-osgi-parent</artifactId>
   <packaging>pom</packaging>
 
-  <name>Netty/Verify</name>
+  <name>Netty/Testsuite/OSGi</name>
   <description>parent for build constrains modules</description>
 
   <modules>
-    <module>verify-osgi-split</module>
-    <module>verify-osgi-deps</module>
-    <module>verify-osgi-exam</module>
+    <module>testsuite-osgi-split</module>
+    <module>testsuite-osgi-deps</module>
+    <module>testsuite-osgi-exam</module>
   </modules>
 
   <build>
     <plugins>
-    
       <!-- do not deploy this artifact -->
       <plugin>
         <artifactId>maven-deploy-plugin</artifactId>
@@ -48,5 +47,4 @@
       </plugin>
     </plugins>
   </build>
-  
 </project>

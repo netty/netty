@@ -20,14 +20,14 @@
   
   <parent>
     <groupId>io.netty</groupId>
-    <artifactId>netty-verify</artifactId>
+    <artifactId>netty-testsuite-osgi-parent</artifactId>
     <version>4.0.0.Beta1-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty-verify-osgi-split</artifactId>
+  <artifactId>netty-testsuite-osgi-split</artifactId>
   <packaging>bundle</packaging>
 
-  <name>Netty/Verify/OSGi/Split</name>
+  <name>Netty/Testsuite/OSGi/Split</name>
   <description>verify osgi compliance: prohibit split packages</description>
 
   <dependencies>
@@ -113,5 +113,4 @@
       
     </plugins>
   </build>
-  
 </project>

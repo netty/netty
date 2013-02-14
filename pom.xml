@@ -86,7 +86,10 @@
     <module>handler</module>
     <module>example</module>
     <module>testsuite</module>
-    <!-- add "verify" back after karaf release -->
+    <!--
+    <module>testsuite-osgi</module>
+    <module>microbench</module>
+    -->
     <module>all</module>
     <module>tarball</module>
   </modules>
