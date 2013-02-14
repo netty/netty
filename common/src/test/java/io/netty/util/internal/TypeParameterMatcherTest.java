@@ -23,12 +23,8 @@ import static org.junit.Assert.*;
 public class TypeParameterMatcherTest {
 
     @Test
-    public void testSimple() throws Exception {
-        Object o = new TypeQ();
-
-        TypeParameterMatcher m;
-
-        m = TypeParameterMatcher.find(o, TypeX.class, "A");
+    public void testConcreteClass() throws Exception {
+        TypeParameterMatcher m = TypeParameterMatcher.find(new TypeQ(), TypeX.class, "A");
         assertFalse(m.match(new Object()));
         assertFalse(m.match(new A()));
         assertFalse(m.match(new AA()));
@@ -38,14 +34,16 @@ public class TypeParameterMatcherTest {
         assertFalse(m.match(new BBB()));
         assertFalse(m.match(new C()));
         assertFalse(m.match(new CC()));
+    }
 
-        try {
-            TypeParameterMatcher.find(o, TypeX.class, "B");
-        } catch (IllegalStateException e) {
-            // expected
-        }
+    @Test(expected = IllegalStateException.class)
+    public void testUnsolvedParameter() throws Exception {
+        TypeParameterMatcher.find(new TypeQ(), TypeX.class, "B");
+    }
 
-        m = TypeParameterMatcher.find(new TypeQ<BBB>() { }, TypeX.class, "B");
+    @Test
+    public void testAnonymousClass() throws Exception {
+        TypeParameterMatcher m = TypeParameterMatcher.find(new TypeQ<BBB>() { }, TypeX.class, "B");
         assertFalse(m.match(new Object()));
         assertFalse(m.match(new A()));
         assertFalse(m.match(new AA()));
@@ -55,8 +53,11 @@ public class TypeParameterMatcherTest {
         assertTrue(m.match(new BBB()));
         assertFalse(m.match(new C()));
         assertFalse(m.match(new CC()));
+    }
 
-        m = TypeParameterMatcher.find(o, TypeX.class, "C");
+    @Test
+    public void testAbstractClass() throws Exception {
+        TypeParameterMatcher m = TypeParameterMatcher.find(new TypeQ(), TypeX.class, "C");
         assertFalse(m.match(new Object()));
         assertFalse(m.match(new A()));
         assertFalse(m.match(new AA()));
@@ -76,7 +77,7 @@ public class TypeParameterMatcherTest {
 
     public static class TypeY<D extends C, E extends A, F extends B> extends TypeX<E, F, D> { }
 
-    public static class TypeZ<G extends AA, H extends BB> extends TypeY<CC, G, H> { }
+    public static abstract class TypeZ<G extends AA, H extends BB> extends TypeY<CC, G, H> { }
 
     public static class TypeQ<I extends BBB> extends TypeZ<AAA, I> { }
 
@@ -93,4 +94,15 @@ public class TypeParameterMatcherTest {
     @SuppressWarnings("ClassMayBeInterface")
     public static class C { }
     public static class CC extends C { }
+
+    @Test
+    public void testInaccessibleClass() throws Exception {
+        TypeParameterMatcher m = TypeParameterMatcher.find(new U<T>() { }, U.class, "E");
+        assertFalse(m.match(new Object()));
+        assertTrue(m.match(new T()));
+    }
+
+    @SuppressWarnings("ClassMayBeInterface")
+    private static class T { }
+    private static class U<E> { E a; }
 }

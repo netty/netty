@@ -27,6 +27,7 @@ import java.util.Map;
 public abstract class TypeParameterMatcher {
 
     private static final TypeParameterMatcher NOOP = new NoOpTypeParameterMatcher();
+    private static final Object TEST_OBJECT = new Object();
 
     private static final ThreadLocal<Map<Class<?>, Map<String, TypeParameterMatcher>>> typeMap =
             new ThreadLocal<Map<Class<?>, Map<String, TypeParameterMatcher>>>() {
@@ -56,13 +57,20 @@ public abstract class TypeParameterMatcher {
             } else if (PlatformDependent.hasJavassist()) {
                 try {
                     matcher = JavassistTypeParameterMatcherGenerator.generate(messageType);
+                    matcher.match(TEST_OBJECT);
+                } catch (IllegalAccessError e) {
+                    // Happens if messageType is not public.
+                    matcher = null;
                 } catch (Exception e) {
                     // Will not usually happen, but just in case.
-                    matcher = new ReflectiveMatcher(messageType);
+                    matcher = null;
                 }
-            } else {
+            }
+
+            if (matcher == null) {
                 matcher = new ReflectiveMatcher(messageType);
             }
+
             map.put(typeParamName, matcher);
         }
 
