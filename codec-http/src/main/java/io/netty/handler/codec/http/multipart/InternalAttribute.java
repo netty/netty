@@ -22,8 +22,8 @@ import java.util.List;
  * This Attribute is only for Encoder use to insert special command between object if needed
  * (like Multipart Mixed mode)
  */
-public class InternalAttribute implements InterfaceHttpData {
-    protected final List<String> value = new ArrayList<String>();
+final class InternalAttribute implements InterfaceHttpData {
+    private final List<String> value = new ArrayList<String>();
 
     @Override
     public HttpDataType getHttpDataType() {
