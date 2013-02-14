@@ -30,9 +30,12 @@
   <name>Netty/Common</name>
 
   <dependencies>
+  
+    <!-- Embedded private dependency. -->
     <dependency>
         <groupId>com.fasterxml</groupId>
         <artifactId>classmate</artifactId>
+        <scope>provided</scope>
     </dependency>
 
     <!-- Logging frameworks - completely optional -->
@@ -55,6 +58,7 @@
 
   <build>
     <plugins>
+    
       <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
@@ -73,17 +77,21 @@
           </instructions>
         </configuration>
       </plugin>
+      
+      <!-- Not used. -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
+        <version>2.0</version>
         <executions>
           <execution>
-            <phase>package</phase>
+            <phase>package-xxx</phase>
             <goals>
               <goal>shade</goal>
             </goals>
             <configuration>
                 <minimizeJar>true</minimizeJar>
+                <createDependencyReducedPom>false</createDependencyReducedPom>
                 <artifactSet>
                 <includes>
                   <include>com.fasterxml:classmate</include>
@@ -99,6 +107,34 @@
           </execution>
         </executions>
       </plugin>
+      
+      <!-- Embed private dependencies. -->
+      <plugin>
+        <groupId>org.sonatype.plugins</groupId>
+        <artifactId>jarjar-maven-plugin</artifactId>
+        <version>1.7</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>jarjar</goal>
+            </goals>
+              <configuration>
+                <includes>
+                  <include>com.fasterxml:classmate</include>
+                </includes>
+                <rules>
+                  <rule>
+                    <pattern>com.fasterxml.classmate.**</pattern>
+                    <result>io.netty.util.internal.classmate.@1</result>
+                  </rule>
+                </rules>
+              </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      
     </plugins>
   </build>
+  
 </project>
