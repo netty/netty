@@ -45,9 +45,8 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
     private static final Signal SUCCESS = new Signal(DefaultChannelPromise.class.getName() + ".SUCCESS");
 
     private final Channel channel;
-
+    private volatile Throwable cause;
     private Object listeners; // Can be ChannelFutureListener or DefaultChannelPromiseListeners
-    private Throwable cause;
     private int waiters;
 
     /**
@@ -71,21 +70,18 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
     }
 
     @Override
-    public synchronized boolean isDone() {
+    public boolean isDone() {
         return cause != null;
     }
 
     @Override
-    public synchronized boolean isSuccess() {
+    public boolean isSuccess() {
         return cause == SUCCESS;
     }
 
     @Override
     public Throwable cause() {
-        Throwable cause;
-        synchronized (this) {
-            cause = this.cause;
-        }
+        Throwable cause = this.cause;
         return cause == SUCCESS? null : cause;
     }
 
@@ -95,9 +91,14 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
             throw new NullPointerException("listener");
         }
 
+        if (isDone()) {
+            notifyListener(this, listener);
+            return this;
+        }
+
         boolean notifyNow = false;
         synchronized (this) {
-            if (cause != null) {
+            if (isDone()) {
                 notifyNow = true;
             } else {
                 if (listeners == null) {
@@ -140,8 +141,12 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
             throw new NullPointerException("listener");
         }
 
+        if (isDone()) {
+            return this;
+        }
+
         synchronized (this) {
-            if (cause == null) {
+            if (!isDone()) {
                 if (listeners instanceof DefaultChannelPromiseListeners) {
                     ((DefaultChannelPromiseListeners) listeners).remove(listener);
                 } else if (listeners == listener) {
@@ -201,12 +206,16 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
 
     @Override
     public ChannelPromise await() throws InterruptedException {
+        if (isDone()) {
+            return this;
+        }
+
         if (Thread.interrupted()) {
             throw new InterruptedException();
         }
 
         synchronized (this) {
-            while (cause == null) {
+            while (!isDone()) {
                 checkDeadLock();
                 waiters++;
                 try {
@@ -232,9 +241,13 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
 
     @Override
     public ChannelPromise awaitUninterruptibly() {
+        if (isDone()) {
+            return this;
+        }
+
         boolean interrupted = false;
         synchronized (this) {
-            while (cause == null) {
+            while (!isDone()) {
                 checkDeadLock();
                 waiters++;
                 try {
@@ -273,6 +286,14 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
     }
 
     private boolean await0(long timeoutNanos, boolean interruptable) throws InterruptedException {
+        if (isDone()) {
+            return true;
+        }
+
+        if (timeoutNanos <= 0) {
+            return isDone();
+        }
+
         if (interruptable && Thread.interrupted()) {
             throw new InterruptedException();
         }
@@ -283,8 +304,12 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
 
         try {
             synchronized (this) {
-                if (cause != null || waitTime <= 0) {
-                    return cause != null;
+                if (isDone()) {
+                    return true;
+                }
+
+                if (waitTime <= 0) {
+                    return isDone();
                 }
 
                 checkDeadLock();
@@ -301,12 +326,12 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
                             }
                         }
 
-                        if (cause != null) {
+                        if (isDone()) {
                             return true;
                         } else {
                             waitTime = timeoutNanos - (System.nanoTime() - startTime);
                             if (waitTime <= 0) {
-                                return cause != null;
+                                return isDone();
                             }
                         }
                     }
@@ -345,15 +370,21 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
         return false;
     }
 
-    private synchronized boolean success0() {
-        // Allow only once.
-        if (cause != null) {
+    private boolean success0() {
+        if (isDone()) {
             return false;
         }
 
-        cause = SUCCESS;
-        if (waiters > 0) {
-            notifyAll();
+        synchronized (this) {
+            // Allow only once.
+            if (isDone()) {
+                return false;
+            }
+
+            cause = SUCCESS;
+            if (waiters > 0) {
+                notifyAll();
+            }
         }
         return true;
     }
@@ -376,15 +407,21 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
         return false;
     }
 
-    private synchronized boolean failure0(Throwable cause) {
-        // Allow only once.
-        if (this.cause != null) {
+    private boolean failure0(Throwable cause) {
+        if (isDone()) {
             return false;
         }
 
-        this.cause = cause;
-        if (waiters > 0) {
-            notifyAll();
+        synchronized (this) {
+            // Allow only once.
+            if (isDone()) {
+                return false;
+            }
+
+            this.cause = cause;
+            if (waiters > 0) {
+                notifyAll();
+            }
         }
         return true;
     }
