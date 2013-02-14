@@ -49,8 +49,6 @@ public final class PlatformDependent {
     private static final boolean IS_UNALIGNED = isUnaligned0();
     private static final long ARRAY_BASE_OFFSET = arrayBaseOffset0();
 
-    private static final boolean HAS_JAVASSIST = hasJavassist0();
-
     /**
      * Returns {@code true} if and only if the current platform is Android
      */
@@ -107,13 +105,6 @@ public final class PlatformDependent {
      */
     public static boolean isUnaligned() {
         return IS_UNALIGNED;
-    }
-
-    /**
-     * Returns {@code true} if and only if Javassist is available.
-     */
-    public static boolean hasJavassist() {
-        return HAS_JAVASSIST;
     }
 
     public static long directBufferAddress(ByteBuffer buffer) {
@@ -299,20 +290,6 @@ public final class PlatformDependent {
         }
 
         return PlatformDependent0.arrayBaseOffset();
-    }
-
-    private static boolean hasJavassist0() {
-        boolean noJavassist = SystemPropertyUtil.getBoolean("io.netty.noJavassist", false);
-        if (noJavassist) {
-            return false;
-        }
-
-        try {
-            JavassistTypeParameterMatcherGenerator.generate(Object.class, PlatformDependent.class.getClassLoader());
-            return true;
-        } catch (Throwable t) {
-            return false;
-        }
     }
 
     private PlatformDependent() {

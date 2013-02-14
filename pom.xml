@@ -91,6 +91,12 @@
 
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>com.fasterxml</groupId>
+        <artifactId>classmate</artifactId>
+        <version>0.8.0</version>
+      </dependency>
+
       <!-- JBoss Marshalling - completely optional -->
       <dependency>
         <groupId>org.jboss.marshalling</groupId>
@@ -191,14 +197,6 @@
   </dependencyManagement>
 
   <dependencies>
-    <!-- Byte code generator - completely optional -->
-    <dependency>
-      <groupId>org.javassist</groupId>
-      <artifactId>javassist</artifactId>
-      <version>3.17.1-GA</version>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
 
     <!-- Testing frameworks and related dependencies -->
     <dependency>
