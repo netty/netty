@@ -17,7 +17,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
-  
+
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-testsuite-osgi-parent</artifactId>
@@ -34,9 +34,9 @@
     <exam.version>3.0.0</exam.version>
     <url.version>1.5.0</url.version>
   </properties>
-    
+
   <dependencies>
-  
+
     <!-- MAIN -->
 
     <!-- logging via http://team.ops4j.org/wiki/display/paxlogging/Pax+Logging -->
@@ -57,7 +57,7 @@
       <artifactId>org.apache.felix.scr</artifactId>
       <version>1.6.2</version>
     </dependency>
-    
+
     <!-- include all netty osgi bundle release modules -->
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -90,35 +90,35 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
-        <groupId>${project.groupId}</groupId>
-        <artifactId>netty-transport</artifactId>
-        <version>${project.version}</version>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-transport</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
-        <groupId>${project.groupId}</groupId>
-        <artifactId>netty-transport-rxtx</artifactId>
-        <version>${project.version}</version>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-transport-rxtx</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
-        <groupId>${project.groupId}</groupId>
-        <artifactId>netty-transport-sctp</artifactId>
-        <version>${project.version}</version>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-transport-sctp</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
-        <groupId>${project.groupId}</groupId>
-        <artifactId>netty-transport-udt</artifactId>
-        <version>${project.version}</version>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-transport-udt</artifactId>
+      <version>${project.version}</version>
     </dependency>
-    
+
     <!-- TEST -->
 
     <!-- transport udt tests and deps -->
     <dependency>
-        <groupId>${project.groupId}</groupId>
-        <artifactId>netty-transport-udt</artifactId>
-        <version>${project.version}</version>
-        <classifier>tests</classifier>
-        <scope>test</scope>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-transport-udt</artifactId>
+      <version>${project.version}</version>
+      <classifier>tests</classifier>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.yammer.metrics</groupId>
@@ -133,66 +133,66 @@
 
     <!-- java 7 compatibility http://blog.osgi.org/2012/10/43-companion-code-for-java-7.html -->    
     <dependency>
-        <groupId>org.osgi</groupId>
-        <artifactId>org.osgi.core</artifactId>
-        <version>4.3.1</version>
-        <scope>provided</scope>
+      <groupId>org.osgi</groupId>
+      <artifactId>org.osgi.core</artifactId>
+      <version>4.3.1</version>
+      <scope>provided</scope>
     </dependency>
 
     <!-- pax exam environment -->
     <dependency>
-        <groupId>org.ops4j.pax.exam</groupId>
-        <artifactId>pax-exam-container-native</artifactId>
-        <version>${exam.version}</version>
-        <scope>test</scope>
+      <groupId>org.ops4j.pax.exam</groupId>
+      <artifactId>pax-exam-container-native</artifactId>
+      <version>${exam.version}</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
-        <groupId>org.ops4j.pax.exam</groupId>
-        <artifactId>pax-exam-junit4</artifactId>
-        <version>${exam.version}</version>
-        <scope>test</scope>
+      <groupId>org.ops4j.pax.exam</groupId>
+      <artifactId>pax-exam-junit4</artifactId>
+      <version>${exam.version}</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
-        <groupId>org.ops4j.pax.exam</groupId>
-        <artifactId>pax-exam-invoker-junit</artifactId>
-        <version>${exam.version}</version>
-        <scope>test</scope>
+      <groupId>org.ops4j.pax.exam</groupId>
+      <artifactId>pax-exam-invoker-junit</artifactId>
+      <version>${exam.version}</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
-        <groupId>org.ops4j.pax.exam</groupId>
-        <artifactId>pax-exam-inject</artifactId>
-        <version>${exam.version}</version>
-        <scope>test</scope>
+      <groupId>org.ops4j.pax.exam</groupId>
+      <artifactId>pax-exam-inject</artifactId>
+      <version>${exam.version}</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
-        <groupId>org.ops4j.pax.exam</groupId>
-        <artifactId>pax-exam-extender-service</artifactId>
-        <version>${exam.version}</version>
-        <scope>test</scope>
+      <groupId>org.ops4j.pax.exam</groupId>
+      <artifactId>pax-exam-extender-service</artifactId>
+      <version>${exam.version}</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
-        <groupId>org.ops4j.pax.exam</groupId>
-        <artifactId>pax-exam-link-mvn</artifactId>
-        <version>${exam.version}</version>
-        <scope>test</scope>
+      <groupId>org.ops4j.pax.exam</groupId>
+      <artifactId>pax-exam-link-mvn</artifactId>
+      <version>${exam.version}</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
-        <groupId>org.ops4j.pax.url</groupId>
-        <artifactId>pax-url-aether</artifactId>
-        <version>${url.version}</version>
-        <scope>test</scope>
+      <groupId>org.ops4j.pax.url</groupId>
+      <artifactId>pax-url-aether</artifactId>
+      <version>${url.version}</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
-        <groupId>org.ops4j.pax.url</groupId>
-        <artifactId>pax-url-wrap</artifactId>
-        <version>${url.version}</version>
-        <scope>test</scope>
+      <groupId>org.ops4j.pax.url</groupId>
+      <artifactId>pax-url-wrap</artifactId>
+      <version>${url.version}</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
-        <groupId>org.apache.felix</groupId>
-        <artifactId>org.apache.felix.framework</artifactId>
-        <version>4.0.3</version>
-        <scope>test</scope>
+      <groupId>org.apache.felix</groupId>
+      <artifactId>org.apache.felix.framework</artifactId>
+      <version>4.0.3</version>
+      <scope>test</scope>
     </dependency>
 
   </dependencies>
@@ -210,12 +210,12 @@
             <id>generate-depends-file</id>
             <phase>generate-resources</phase>
             <goals>
-                <goal>generate-depends-file</goal>
+              <goal>generate-depends-file</goal>
             </goals>
           </execution>
         </executions>
       </plugin>
-      
+
       <!-- generate osgi scr component descriptors -->
       <plugin>
         <groupId>com.carrotgarden.maven</groupId>
@@ -231,14 +231,14 @@
             <goals>
               <goal>clean</goal>
             </goals>
-         </execution>
-         <execution>
-           <id>generate</id>
-           <phase>process-classes</phase>
-           <goals>
-           <goal>generate</goal>
-           </goals>
-         </execution>
+          </execution>
+          <execution>
+            <id>generate</id>
+            <phase>process-classes</phase>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+          </execution>
         </executions>
       </plugin>
 
@@ -265,7 +265,7 @@
           </execution>
         </executions>
       </plugin>
-                
+
       <!-- do not deploy this artifact -->
       <plugin>
         <artifactId>maven-deploy-plugin</artifactId>
@@ -273,38 +273,38 @@
           <skip>true</skip>
         </configuration>
       </plugin>
-      
+
     </plugins>
     <pluginManagement>
-    	<plugins>
-    		<!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
-    		<plugin>
-    			<groupId>org.eclipse.m2e</groupId>
-    			<artifactId>lifecycle-mapping</artifactId>
-    			<version>1.0.0</version>
-    			<configuration>
-    				<lifecycleMappingMetadata>
-    					<pluginExecutions>
-    						<pluginExecution>
-    							<pluginExecutionFilter>
-    								<groupId>org.apache.servicemix.tooling</groupId>
-    								<artifactId>depends-maven-plugin</artifactId>
-    								<versionRange>[0,)</versionRange>
-    								<goals>
-    									<goal>generate-depends-file</goal>
-    								</goals>
-    							</pluginExecutionFilter>
-    							<action>
-    								<execute />
-    							</action>
-    						</pluginExecution>
-    					</pluginExecutions>
-    				</lifecycleMappingMetadata>
-    			</configuration>
-    		</plugin>
-    	</plugins>
+      <plugins>
+        <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
+        <plugin>
+          <groupId>org.eclipse.m2e</groupId>
+          <artifactId>lifecycle-mapping</artifactId>
+          <version>1.0.0</version>
+          <configuration>
+            <lifecycleMappingMetadata>
+              <pluginExecutions>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.apache.servicemix.tooling</groupId>
+                    <artifactId>depends-maven-plugin</artifactId>
+                    <versionRange>[0,)</versionRange>
+                    <goals>
+                      <goal>generate-depends-file</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <execute />
+                  </action>
+                </pluginExecution>
+              </pluginExecutions>
+            </lifecycleMappingMetadata>
+          </configuration>
+        </plugin>
+      </plugins>
     </pluginManagement>
-    
+
   </build>
-  
+
 </project>
