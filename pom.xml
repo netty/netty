@@ -86,8 +86,8 @@
     <module>handler</module>
     <module>example</module>
     <module>testsuite</module>
-    <!--
     <module>testsuite-osgi</module>
+    <!--
     <module>microbench</module>
     -->
     <module>all</module>
@@ -429,6 +429,7 @@
           <useReleaseProfile>false</useReleaseProfile>
           <arguments>-P release,sonatype-oss-release,full</arguments>
           <autoVersionSubmodules>true</autoVersionSubmodules>
+          <allowTimestampedSnapshots>true</allowTimestampedSnapshots>
           <tagNameFormat>netty-@{project.version}</tagNameFormat>
         </configuration>
       </plugin>
