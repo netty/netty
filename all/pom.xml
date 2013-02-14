@@ -290,8 +290,6 @@
         </executions>
         <configuration>
           <skip>${quickbuild}</skip>
-          <inputEncoding>UTF-8</inputEncoding>
-          <outputEncoding>UTF-8</outputEncoding>
           <linkJavadoc>true</linkJavadoc>
           <destDir>${project.build.directory}/xref</destDir>
           <javadocDir>${project.build.directory}/api</javadocDir>
@@ -339,7 +337,6 @@
             -link http://www.slf4j.org/apidocs/
             -link http://commons.apache.org/logging/commons-logging-1.1.1/apidocs/
             -link http://logging.apache.org/log4j/1.2/apidocs/
-            -link http://metrics.codahale.com/maven/apidocs/
 
             -group "Low-level data representation" io.netty.buffer*
             -group "Central interface for all I/O operations" io.netty.channel*
@@ -350,7 +347,6 @@
             -sourceclasspath ${project.build.outputDirectory}
             -nopackagediagram
           </additionalparam>
-          <encoding>UTF-8</encoding>
           <locale>en_US</locale>
         </configuration>
       </plugin>
