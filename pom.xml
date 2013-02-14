@@ -289,14 +289,11 @@
           <optimize>true</optimize>
           <showDeprecation>true</showDeprecation>
           <showWarnings>true</showWarnings>
-          <!-- XXX: maven-release-plugin complains - MRELEASE-715 -->
-          <!--
           <compilerArguments>
             <Xlint:-options/>
             <Xlint:unchecked/>
             <Xlint:deprecation/>
           </compilerArguments>
-          -->
         </configuration>
       </plugin>
       <plugin>
