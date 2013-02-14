@@ -28,6 +28,17 @@
 
   <name>Netty/All-in-One</name>
 
+  <!-- markdown syntax -->
+  <description>
+<![CDATA[
+### Netty All
+
+Netty is an asynchronous event-driven network application framework for
+rapid development of maintainable high performance protocol servers and clients.
+
+]]>
+  </description>
+
   <properties>
     <quickbuild>true</quickbuild>
   </properties>

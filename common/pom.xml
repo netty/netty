@@ -29,6 +29,17 @@
 
   <name>Netty/Common</name>
 
+  <!-- markdown syntax -->
+  <description>
+<![CDATA[
+### Netty Common
+
+Netty is an asynchronous event-driven network application framework for
+rapid development of maintainable high performance protocol servers and clients.
+
+]]>
+  </description>
+
   <dependencies>
     <!-- Logging frameworks - completely optional -->
     <dependency>

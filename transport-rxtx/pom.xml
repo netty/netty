@@ -29,6 +29,17 @@
 
   <name>Netty/Transport/RXTX</name>
 
+  <!-- markdown syntax -->
+  <description>
+<![CDATA[
+### Netty Transport RXTX
+
+Netty is an asynchronous event-driven network application framework for
+rapid development of maintainable high performance protocol servers and clients.
+
+]]>
+  </description>
+
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
