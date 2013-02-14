@@ -466,7 +466,9 @@ final class ReplayingDecoderBuffer implements ByteBuf {
 
     @Override
     public ByteBuf readBytes(ByteBuf dst) {
-        throw new UnreplayableOperationException();
+        checkReadableBytes(dst.writableBytes());
+        buffer.readBytes(dst);
+        return this;
     }
 
     @Override
