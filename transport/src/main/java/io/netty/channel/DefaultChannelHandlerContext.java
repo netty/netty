@@ -1651,7 +1651,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
 
         private void flush(ByteBuf out) {
-            while (out.isWritable()) {
+            while (out.maxCapacity() != out.writerIndex()) {
                 ByteBuf data = exchangeBuf.peek();
                 if (data == null) {
                     break;
