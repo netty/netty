@@ -319,32 +319,36 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
     }
 
-    private void flushInboundBridge() {
+    private boolean flushInboundBridge() {
         if (inMsgBridge != null) {
             MessageBridge bridge = inMsgBridge;
             if (bridge != null) {
-                bridge.flush(inMsgBuf);
+                return bridge.flush(inMsgBuf);
             }
         } else if (inByteBridge != null) {
             ByteBridge bridge = inByteBridge;
             if (bridge != null) {
-                bridge.flush(inByteBuf);
+                return bridge.flush(inByteBuf);
             }
         }
+
+        return true;
     }
 
-    private void flushOutboundBridge() {
+    private boolean flushOutboundBridge() {
         if (outMsgBridge != null) {
             MessageBridge bridge = outMsgBridge;
             if (bridge != null) {
-                bridge.flush(outMsgBuf);
+                return bridge.flush(outMsgBuf);
             }
         } else if (outByteBridge != null) {
             ByteBridge bridge = outByteBridge;
             if (bridge != null) {
-                bridge.flush(outByteBuf);
+                return bridge.flush(outByteBuf);
             }
         }
+
+        return true;
     }
 
     void freeHandlerBuffersAfterRemoval() {
@@ -943,23 +947,34 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void invokeInboundBufferUpdated() {
         ChannelStateHandler handler = (ChannelStateHandler) handler();
-        if (handler instanceof ChannelInboundHandler) {
-            flushInboundBridge();
-        }
 
-        try {
-            handler.inboundBufferUpdated(this);
-        } catch (Throwable t) {
-            pipeline.notifyHandlerException(t);
-        } finally {
-            if (handler instanceof ChannelInboundByteHandler && !isInboundBufferFreed()) {
+        if (handler instanceof ChannelInboundHandler) {
+            for (;;) {
                 try {
-                    ((ChannelInboundByteHandler) handler).discardInboundReadBytes(this);
+                    boolean flushedAll = flushInboundBridge();
+                    handler.inboundBufferUpdated(this);
+                    if (flushedAll) {
+                        break;
+                    }
                 } catch (Throwable t) {
                     pipeline.notifyHandlerException(t);
+                } finally {
+                    if (handler instanceof ChannelInboundByteHandler && !isInboundBufferFreed()) {
+                        try {
+                            ((ChannelInboundByteHandler) handler).discardInboundReadBytes(this);
+                        } catch (Throwable t) {
+                            pipeline.notifyHandlerException(t);
+                        }
+                    }
+                    freeHandlerBuffersAfterRemoval();
                 }
             }
-            freeHandlerBuffersAfterRemoval();
+        } else {
+            try {
+                handler.inboundBufferUpdated(this);
+            } catch (Throwable t) {
+                pipeline.notifyHandlerException(t);
+            }
         }
     }
 
@@ -1593,14 +1608,32 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             exchangeBuf.add(data);
         }
 
-        private void flush(MessageBuf<Object> out) {
+        private boolean flush(MessageBuf<Object> out) {
             for (;;) {
-                Object[] data = exchangeBuf.poll();
+                Object[] data = exchangeBuf.peek();
                 if (data == null) {
-                    break;
+                    return true;
                 }
 
-                Collections.addAll(out, data);
+                int i;
+                for (i = 0; i < data.length; i ++) {
+                    Object m = data[i];
+                    if (m == null) {
+                        break;
+                    }
+
+                    if (out.offer(m)) {
+                        data[i] = null;
+                    } else {
+                        System.arraycopy(data, i, data, 0, data.length - i);
+                        for (int j = i + 1; j < data.length; j ++) {
+                            data[j] = null;
+                        }
+                        return false;
+                    }
+                }
+
+                exchangeBuf.remove();
             }
         }
 
@@ -1650,17 +1683,18 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             exchangeBuf.add(data);
         }
 
-        private void flush(ByteBuf out) {
-            while (out.maxCapacity() != out.writerIndex()) {
+        private boolean flush(ByteBuf out) {
+            for (;;) {
                 ByteBuf data = exchangeBuf.peek();
                 if (data == null) {
-                    break;
+                    return true;
                 }
 
                 if (out.writerIndex() > out.maxCapacity() - data.readableBytes()) {
                     // The target buffer is not going to be able to accept all data in the bridge.
                     out.capacity(out.maxCapacity());
                     out.writeBytes(data, out.writableBytes());
+                    return false;
                 } else {
                     exchangeBuf.remove();
                     try {
