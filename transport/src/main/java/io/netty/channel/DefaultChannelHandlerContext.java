@@ -1315,7 +1315,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
 
         ChannelOperationHandler handler = (ChannelOperationHandler) handler();
-        if (handler instanceof ChannelInboundHandler) {
+        if (handler instanceof ChannelOutboundHandler) {
             flushOutboundBridge();
         }
 
