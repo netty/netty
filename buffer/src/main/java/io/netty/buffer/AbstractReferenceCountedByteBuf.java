@@ -18,6 +18,9 @@ package io.netty.buffer;
 
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
+/**
+ * Abstract base class for {@link ByteBuf} implementations that count references.
+ */
 public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
 
     private static final AtomicIntegerFieldUpdater<AbstractReferenceCountedByteBuf> refCntUpdater =

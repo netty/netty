@@ -15,23 +15,97 @@
  */
 package io.netty.buffer;
 
+/**
+ * Implementations are responsible to allocate buffers. Implementations of this interface are expected to be
+ * thread-safe.
+ */
 public interface ByteBufAllocator {
 
+    /**
+     * Allocate a {@link ByteBuf}. If it is a direct or heap buffer
+     * depends on the actual implementation.
+     */
     ByteBuf buffer();
+
+    /**
+     * Allocate a {@link ByteBuf} with the given initial capacity.
+     * If it is a direct or heap buffer depends on the actual implementation.
+     */
     ByteBuf buffer(int initialCapacity);
+
+    /**
+     * Allocate a {@link ByteBuf} with the given initial capacity and the given
+     * maximal capacity. If it is a direct or heap buffer depends on the actual
+     * implementation.
+     */
     ByteBuf buffer(int initialCapacity, int maxCapacity);
+
+    /**
+     * Allocate a heap {@link ByteBuf}.
+     */
     ByteBuf heapBuffer();
+
+    /**
+     * Allocate a heap {@link ByteBuf} with the given initial capacity.
+     */
     ByteBuf heapBuffer(int initialCapacity);
+
+    /**
+     * Allocate a heap {@link ByteBuf} with the given initial capacity and the given
+     * maximal capacity.
+     */
     ByteBuf heapBuffer(int initialCapacity, int maxCapacity);
+
+    /**
+     * Allocate a direct {@link ByteBuf}.
+     */
     ByteBuf directBuffer();
+
+    /**
+     * Allocate a direct {@link ByteBuf} with the given initial capacity.
+     */
     ByteBuf directBuffer(int initialCapacity);
+
+    /**
+     * Allocate a direct {@link ByteBuf} with the given initial capacity and the given
+     * maximal capacity.
+     */
     ByteBuf directBuffer(int initialCapacity, int maxCapacity);
+
+    /**
+     * Allocate a {@link ByteBuf} which is used for reading data in from the actual transport.
+     */
     ByteBuf ioBuffer();
 
+    /**
+     * Allocate a {@link CompositeByteBuf}.
+     * If it is a direct or heap buffer depends on the actual implementation.
+     */
     CompositeByteBuf compositeBuffer();
+
+    /**
+     * Allocate a {@link CompositeByteBuf} with the given maximum number of components that can be stored in it.
+     * If it is a direct or heap buffer depends on the actual implementation.
+     */
     CompositeByteBuf compositeBuffer(int maxNumComponents);
+
+    /**
+     * Allocate a heap {@link CompositeByteBuf}.
+     */
     CompositeByteBuf compositeHeapBuffer();
+
+    /**
+     * Allocate a heap {@link CompositeByteBuf} with the given maximum number of components that can be stored in it.
+     */
     CompositeByteBuf compositeHeapBuffer(int maxNumComponents);
+
+    /**
+     * Allocate a direct {@link CompositeByteBuf}.
+     */
     CompositeByteBuf compositeDirectBuffer();
+
+    /**
+     * Allocate a direct {@link CompositeByteBuf} with the given maximum number of components that can be stored in it.
+     */
     CompositeByteBuf compositeDirectBuffer(int maxNumComponents);
 }
