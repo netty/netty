@@ -1554,6 +1554,21 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         return channel().newFailedFuture(cause);
     }
 
+    @Override
+    public boolean isWritable() {
+        DefaultChannelHandlerContext ctx = prev;
+        for (;;) {
+            if (ctx.hasOutboundByteBuffer()) {
+                return ctx.isWritable();
+            }
+
+            if (ctx.hasOutboundMessageBuffer()) {
+                return ctx.isWritable();
+            }
+            ctx = ctx.prev;
+        }
+    }
+
     private boolean isInboundBufferFreed() {
         return pipeline.inboundBufferFreed;
     }

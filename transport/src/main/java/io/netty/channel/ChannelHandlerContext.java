@@ -129,6 +129,12 @@ public interface ChannelHandlerContext
                  ChannelInboundInvoker, ChannelOutboundInvoker {
 
     /**
+     * Return {@link true} if the {@link ChannelHandlerContext} is writable, which means if the outbound buffer of
+     * the next in the {@link ChannelPipeline} is writable.
+     */
+    boolean isWritable();
+
+    /**
      * Return the {@link Channel} which is bound to the {@link ChannelHandlerContext}.
      */
     Channel channel();
