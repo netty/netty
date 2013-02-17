@@ -19,6 +19,10 @@ package io.netty.buffer;
 import java.util.AbstractQueue;
 import java.util.Collection;
 
+/**
+ * Abstract base class for {@link MessageBuf} implementations.
+ * @param <T>
+ */
 public abstract class AbstractMessageBuf<T> extends AbstractQueue<T> implements MessageBuf<T> {
 
     private final int maxCapacity;

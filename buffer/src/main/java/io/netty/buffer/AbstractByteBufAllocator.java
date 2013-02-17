@@ -16,15 +16,26 @@
 
 package io.netty.buffer;
 
+/**
+ * Skeltal {@link ByteBufAllocator} implementation to extend.
+ */
 public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
 
     private final boolean directByDefault;
     private final ByteBuf emptyBuf;
 
+    /**
+     * Instance use heap buffers by default
+     */
     protected AbstractByteBufAllocator() {
         this(false);
     }
 
+    /**
+     * Create new instance
+     *
+     * @param directByDefault   {@code true} if direct buffers should be used by default.
+     */
     protected AbstractByteBufAllocator(boolean directByDefault) {
         this.directByDefault = directByDefault;
         emptyBuf = new UnpooledHeapByteBuf(this, 0, 0);
@@ -139,6 +150,13 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
         }
     }
 
+    /**
+     * Create a heap {@link ByteBuf} with the given initialCapacity and maxCapacity.
+     */
     protected abstract ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity);
+
+    /**
+     * Create a direct {@link ByteBuf} with the given initialCapacity and maxCapacity.
+     */
     protected abstract ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity);
 }

@@ -16,6 +16,10 @@
 
 package io.netty.buffer;
 
+/**
+ * Abstract base class for {@link ByteBuf} implementations that wrap another
+ * {@link ByteBuf}.
+ */
 public abstract class AbstractDerivedByteBuf extends AbstractByteBuf {
 
     protected AbstractDerivedByteBuf(int maxCapacity) {
