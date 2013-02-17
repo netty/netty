@@ -54,8 +54,8 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundByteHandlerAdapte
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.isSuccess()) {
-                    // Connection attempt succeeded:
-                    // TODO: Begin to accept incoming traffic.
+                    // connection complete start to auto read data
+                    inboundChannel.config().setAutoRead(true);
                 } else {
                     // Close the connection if the connection attempt has failed.
                     inboundChannel.close();

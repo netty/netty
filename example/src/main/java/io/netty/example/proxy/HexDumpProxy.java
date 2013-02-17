@@ -16,6 +16,7 @@
 package io.netty.example.proxy;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
@@ -41,8 +42,8 @@ public class HexDumpProxy {
         try {
             b.group(new NioEventLoopGroup(), new NioEventLoopGroup())
              .channel(NioServerSocketChannel.class)
-             .childHandler(new HexDumpProxyInitializer(remoteHost, remotePort));
-
+             .childHandler(new HexDumpProxyInitializer(remoteHost, remotePort))
+             .childOption(ChannelOption.AUTO_READ, false);
             b.bind(localPort).sync().channel().closeFuture().sync();
         } finally {
             b.shutdown();
