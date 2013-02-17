@@ -109,6 +109,11 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
     boolean isActive();
 
     /**
+     * Return {@code true} if the outbound buffer of the {@link Channel} is writable.
+     */
+    boolean isWritable();
+
+    /**
      * Return the {@link ChannelMetadata} of the {@link Channel} which describe the nature of the {@link Channel}.
      */
     ChannelMetadata metadata();

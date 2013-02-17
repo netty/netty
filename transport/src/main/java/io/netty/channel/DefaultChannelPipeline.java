@@ -1336,4 +1336,9 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     public Iterator<Map.Entry<String, ChannelHandler>> iterator() {
         return toMap().entrySet().iterator();
     }
+
+    @Override
+    public boolean isWritable() {
+        return tail.isWritable();
+    }
 }
