@@ -20,9 +20,6 @@ import io.netty.channel.ChannelTaskScheduler;
 import io.netty.channel.EventExecutor;
 import io.netty.channel.EventLoopException;
 import io.netty.channel.MultithreadEventLoopGroup;
-import io.netty.util.internal.InternalLogger;
-import io.netty.util.internal.InternalLoggerFactory;
-import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
 import java.nio.channels.AsynchronousChannelGroup;
@@ -38,26 +35,6 @@ import java.util.concurrent.TimeUnit;
  *
  */
 public class AioEventLoopGroup extends MultithreadEventLoopGroup {
-    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(AioEventLoopGroup.class);
-    private static final AioChannelFinder CHANNEL_FINDER;
-
-    static {
-        AioChannelFinder finder;
-        try {
-            if (PlatformDependent.hasUnsafe()) {
-                finder = new UnsafeAioChannelFinder();
-            } else {
-                finder = new ReflectiveAioChannelFinder();
-            }
-        } catch (Throwable t) {
-            LOGGER.debug(String.format(
-                    "Failed to instantiate the optimal %s implementation - falling back to %s.",
-                    AioChannelFinder.class.getSimpleName(), ReflectiveAioChannelFinder.class.getSimpleName()), t);
-            finder = new ReflectiveAioChannelFinder();
-        }
-        CHANNEL_FINDER = finder;
-    }
-
     private final AioExecutorService groupExecutor = new AioExecutorService();
     private final AsynchronousChannelGroup group;
 
@@ -135,7 +112,7 @@ public class AioEventLoopGroup extends MultithreadEventLoopGroup {
         return new AioEventLoop(this, threadFactory, scheduler);
     }
 
-    private final class AioExecutorService extends AbstractExecutorService {
+    private static final class AioExecutorService extends AbstractExecutorService {
 
         // It does not shut down the underlying EventExecutor - it merely pretends to be shut down.
         // The actual shut down is done by EventLoopGroup and EventLoop implementation.
@@ -169,34 +146,7 @@ public class AioEventLoopGroup extends MultithreadEventLoopGroup {
 
         @Override
         public void execute(Runnable command) {
-            Class<? extends Runnable> commandType = command.getClass();
-            if (commandType.getName().startsWith("sun.nio.ch.")) {
-                executeAioTask(command);
-            } else {
-                next().execute(command);
-            }
-        }
-
-        private void executeAioTask(Runnable command) {
-            AbstractAioChannel ch = null;
-            try {
-                ch = CHANNEL_FINDER.findChannel(command);
-            } catch (Throwable t) {
-                // Ignore
-            }
-
-            EventExecutor l;
-            if (ch != null) {
-                l = ch.eventLoop();
-            } else {
-                l = next();
-            }
-
-            if (l.isShutdown()) {
-                command.run();
-            } else {
-                l.execute(command);
-            }
+            command.run();
         }
     }
 }
