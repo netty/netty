@@ -39,8 +39,6 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundByteHandlerAdapte
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        // TODO: Suspend incoming traffic until connected to the remote host.
-        //       Currently, we just keep the inbound traffic in the client channel's outbound buffer.
         final Channel inboundChannel = ctx.channel();
 
         // Start the connection attempt.
