@@ -35,59 +35,33 @@ public abstract class AioCompletionHandler<V, A extends Channel> implements Comp
      */
     protected abstract void failed0(Throwable exc, A channel);
 
-    private static final int MAX_STACK_DEPTH = 4;
-    private static final ThreadLocal<Integer> STACK_DEPTH = new ThreadLocal<Integer>() {
-        @Override
-        protected Integer initialValue() {
-            return 0;
-        }
-    };
-
     @Override
     public final void completed(final V result, final A channel) {
         EventLoop loop = channel.eventLoop();
         if (loop.inEventLoop()) {
-            Integer d = STACK_DEPTH.get();
-            if (d < MAX_STACK_DEPTH) {
-                STACK_DEPTH.set(d + 1);
-                try {
+            completed0(result, channel);
+        } else {
+            loop.execute(new Runnable() {
+                @Override
+                public void run() {
                     completed0(result, channel);
-                } finally {
-                    STACK_DEPTH.set(d);
                 }
-                return;
-            }
+            });
         }
-
-        loop.execute(new Runnable() {
-            @Override
-            public void run() {
-                completed0(result, channel);
-            }
-        });
     }
 
     @Override
     public final void failed(final Throwable exc, final A channel) {
         EventLoop loop = channel.eventLoop();
         if (loop.inEventLoop()) {
-            Integer d = STACK_DEPTH.get();
-            if (d < MAX_STACK_DEPTH) {
-                STACK_DEPTH.set(d + 1);
-                try {
+            failed0(exc, channel);
+        } else {
+            loop.execute(new Runnable() {
+                @Override
+                public void run() {
                     failed0(exc, channel);
-                } finally {
-                    STACK_DEPTH.set(d);
                 }
-                return;
-            }
+            });
         }
-
-        loop.execute(new Runnable() {
-            @Override
-            public void run() {
-                failed0(exc, channel);
-            }
-        });
     }
 }
