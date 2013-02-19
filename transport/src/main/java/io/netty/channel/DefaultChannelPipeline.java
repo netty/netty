@@ -1159,6 +1159,9 @@ final class DefaultChannelPipeline implements ChannelPipeline {
                     if (m instanceof ReferenceCounted) {
                         ((ReferenceCounted) m).release();
                     }
+                    logger.debug(
+                            "Discarded inbound message {} that reached at the end of the pipeline. " +
+                                    "Please check your pipeline configuration.", m);
                 }
                 logger.warn(
                         "Discarded {} inbound message(s) that reached at the end of the pipeline. " +
@@ -1295,6 +1298,9 @@ final class DefaultChannelPipeline implements ChannelPipeline {
                     ByteBuf src = (ByteBuf) m;
                     byteSink.writeBytes(src, src.readerIndex(), src.readableBytes());
                 } else {
+                    logger.debug(
+                            "Discarded outbound message {} that reached at the end of the pipeline. " +
+                                    "Please check your pipeline configuration.", m);
                     discardedMessages ++;
                 }
 
