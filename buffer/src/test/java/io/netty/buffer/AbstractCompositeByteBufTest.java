@@ -418,4 +418,16 @@ public abstract class AbstractCompositeByteBufTest extends
         b.readBytes(new byte[4]);
         b.readBytes(new byte[0]);
     }
+
+    // Test for https://github.com/netty/netty/issues/1060
+    @Test
+    public void testReadWithEmptyCompositeBuffer() {
+        ByteBuf buf = compositeBuffer();
+        int n = 65;
+        for (int i=0; i<n; ++i) {
+            buf.writeByte(1);
+            assertEquals(1, buf.readByte());
+        }
+    }
+
 }
