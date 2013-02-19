@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.compression;
 
-import io.netty.util.internal.jzlib.JZlib;
-import io.netty.util.internal.jzlib.ZStream;
+import com.jcraft.jzlib.JZlib;
+import com.jcraft.jzlib.ZStream;
 
 /**
  * Utility methods used by {@link JZlibEncoder} and {@link JZlibDecoder}.
@@ -32,8 +32,8 @@ final class ZlibUtil {
                 (z.msg != null? ": " + z.msg : ""));
     }
 
-    static Enum<?> convertWrapperType(ZlibWrapper wrapper) {
-        Enum<?> convertedWrapperType;
+    static JZlib.WrapperType convertWrapperType(ZlibWrapper wrapper) {
+        JZlib.WrapperType convertedWrapperType;
         switch (wrapper) {
         case NONE:
             convertedWrapperType = JZlib.W_NONE;
@@ -45,7 +45,7 @@ final class ZlibUtil {
             convertedWrapperType = JZlib.W_GZIP;
             break;
         case ZLIB_OR_NONE:
-            convertedWrapperType = JZlib.W_ZLIB_OR_NONE;
+            convertedWrapperType = JZlib.W_ANY;
             break;
         default:
             throw new Error();

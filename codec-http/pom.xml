@@ -39,6 +39,11 @@
       <artifactId>netty-handler</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>com.jcraft</groupId>
+      <artifactId>jzlib</artifactId>
+      <optional>true</optional>
+    </dependency>
   </dependencies>
   
   

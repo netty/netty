@@ -44,6 +44,11 @@
       <artifactId>jboss-marshalling</artifactId>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>com.jcraft</groupId>
+      <artifactId>jzlib</artifactId>
+      <optional>true</optional>
+    </dependency>
     
     <!-- Test dependencies for jboss marshalling encoder/decoder -->
     <dependency>

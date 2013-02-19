@@ -21,8 +21,8 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.util.internal.jzlib.JZlib;
-import io.netty.util.internal.jzlib.ZStream;
+import com.jcraft.jzlib.JZlib;
+import com.jcraft.jzlib.Deflater;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -35,7 +35,7 @@ public class JZlibEncoder extends ZlibEncoder {
 
     private static final byte[] EMPTY_ARRAY = new byte[0];
 
-    private final ZStream z = new ZStream();
+    private final Deflater z = new Deflater();
     private final AtomicBoolean finished = new AtomicBoolean();
     private volatile ChannelHandlerContext ctx;
 
@@ -140,7 +140,7 @@ public class JZlibEncoder extends ZlibEncoder {
         }
 
         synchronized (z) {
-            int resultCode = z.deflateInit(
+            int resultCode = z.init(
                     compressionLevel, windowBits, memLevel,
                     ZlibUtil.convertWrapperType(wrapper));
             if (resultCode != JZlib.Z_OK) {
