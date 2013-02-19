@@ -46,6 +46,7 @@ public final class PlatformDependent {
 
     private static final boolean HAS_UNSAFE = hasUnsafe0();
     private static final boolean CAN_FREE_DIRECT_BUFFER = canFreeDirectBuffer0();
+    private static final boolean UNSAFE_HASE_COPY_METHODS = unsafeHasCopyMethods0();
     private static final boolean IS_UNALIGNED = isUnaligned0();
     private static final long ARRAY_BASE_OFFSET = arrayBaseOffset0();
 
@@ -107,6 +108,13 @@ public final class PlatformDependent {
      */
     public static boolean isUnaligned() {
         return IS_UNALIGNED;
+    }
+
+    /**
+     * Returns {@code true} if unsafe has all needed copy methods which is not the case on latest openjdk6 atm.
+     */
+    public static boolean unsafeHasCopyMethods() {
+        return UNSAFE_HASE_COPY_METHODS;
     }
 
     /**
@@ -293,6 +301,13 @@ public final class PlatformDependent {
         return PlatformDependent0.isUnaligned();
     }
 
+    private static boolean unsafeHasCopyMethods0() {
+        if (!hasUnsafe()) {
+            return false;
+        }
+
+        return PlatformDependent0.hasCopyMethods();
+    }
     private static long arrayBaseOffset0() {
         if (!hasUnsafe()) {
             return -1;

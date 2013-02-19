@@ -32,6 +32,7 @@ final class PlatformDependent0 {
     private static final long CLEANER_FIELD_OFFSET;
     private static final long ADDRESS_FIELD_OFFSET;
     private static final boolean UNALIGNED;
+    private static final boolean HAS_COPY_METHODS;
 
     static {
         Unsafe unsafe;
@@ -48,6 +49,7 @@ final class PlatformDependent0 {
             CLEANER_FIELD_OFFSET = -1;
             ADDRESS_FIELD_OFFSET = -1;
             UNALIGNED = false;
+            HAS_COPY_METHODS = false;
         } else {
             ByteBuffer direct = ByteBuffer.allocateDirect(1);
             Field cleanerField;
@@ -94,6 +96,18 @@ final class PlatformDependent0 {
             }
 
             UNALIGNED = unaligned;
+            boolean hasCopyMethods;
+            try {
+                // Unsafe does not shop all copy methods in latest openjdk update..
+                // https://github.com/netty/netty/issues/1061
+                // http://www.mail-archive.com/jdk6-dev@openjdk.java.net/msg00698.html
+                UNSAFE.getClass().getDeclaredMethod("copyMemory",
+                        new Class[] { Object.class, long.class, Object.class, long.class, long.class });
+                hasCopyMethods = true;
+            } catch (Throwable ignore) {
+                hasCopyMethods = false;
+            }
+            HAS_COPY_METHODS = hasCopyMethods;
         }
     }
 
@@ -125,6 +139,10 @@ final class PlatformDependent0 {
 
     static boolean isUnaligned() {
         return UNALIGNED;
+    }
+
+    static boolean hasCopyMethods() {
+        return HAS_COPY_METHODS;
     }
 
     static long arrayBaseOffset() {

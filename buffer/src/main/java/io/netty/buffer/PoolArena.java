@@ -376,7 +376,7 @@ abstract class PoolArena<T> {
 
         @Override
         protected PooledByteBuf<ByteBuffer> newByteBuf(int maxCapacity) {
-            if (PlatformDependent.isUnaligned()) {
+            if (PlatformDependent.isUnaligned() && PlatformDependent.unsafeHasCopyMethods()) {
                 return new PooledUnsafeDirectByteBuf(maxCapacity);
             } else {
                 return new PooledDirectByteBuf(maxCapacity);
@@ -389,7 +389,7 @@ abstract class PoolArena<T> {
                 return;
             }
 
-            if (PlatformDependent.isUnaligned()) {
+            if (PlatformDependent.isUnaligned() && PlatformDependent.unsafeHasCopyMethods()) {
                 PlatformDependent.copyMemory(
                         PlatformDependent.directBufferAddress(src) + srcOffset,
                         PlatformDependent.directBufferAddress(dst) + dstOffset, length);

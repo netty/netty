@@ -30,7 +30,6 @@ import java.nio.channels.ScatteringByteChannel;
 final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     private static final boolean NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
-
     private long memoryAddress;
 
     PooledUnsafeDirectByteBuf(int maxCapacity) {
