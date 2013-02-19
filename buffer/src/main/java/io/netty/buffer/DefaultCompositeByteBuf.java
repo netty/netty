@@ -451,7 +451,7 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf
             if (nComponents < maxNumComponents) {
                 padding = allocBuffer(paddingLength);
                 padding.setIndex(0, paddingLength);
-                addComponent0(0, padding);
+                addComponent0(components.size(), padding);
             } else {
                 padding = allocBuffer(paddingLength);
                 padding.setIndex(0, paddingLength);
