@@ -17,12 +17,12 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.internal.jzlib.JZlib;
-import io.netty.util.internal.jzlib.ZStream;
+import com.jcraft.jzlib.JZlib;
+import com.jcraft.jzlib.Inflater;
 
 public class JZlibDecoder extends ZlibDecoder {
 
-    private final ZStream z = new ZStream();
+    private final Inflater z = new Inflater();
     private byte[] dictionary;
     private volatile boolean finished;
 
@@ -45,7 +45,7 @@ public class JZlibDecoder extends ZlibDecoder {
             throw new NullPointerException("wrapper");
         }
 
-        int resultCode = z.inflateInit(ZlibUtil.convertWrapperType(wrapper));
+        int resultCode = z.init(ZlibUtil.convertWrapperType(wrapper));
         if (resultCode != JZlib.Z_OK) {
             ZlibUtil.fail(z, "initialization failure", resultCode);
         }

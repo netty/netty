@@ -108,6 +108,12 @@
         <artifactId>protobuf-java</artifactId>
         <version>2.4.1</version>
       </dependency>
+      <dependency>
+        <groupId>com.jcraft</groupId>
+        <artifactId>jzlib</artifactId>
+          <optional>true</optional>
+          <version>1.1.2</version>
+      </dependency>
 
       <dependency>
         <groupId>org.rxtx</groupId>
