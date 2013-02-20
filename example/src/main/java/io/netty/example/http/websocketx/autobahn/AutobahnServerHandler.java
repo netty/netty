@@ -91,29 +91,28 @@ public class AutobahnServerHandler extends ChannelInboundMessageHandlerAdapter<O
         }
 
         if (frame instanceof CloseWebSocketFrame) {
-            frame.retain();
-            handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
+            handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame.retain());
         } else if (frame instanceof PingWebSocketFrame) {
-            frame.data().retain();
-            ctx.channel().write(
-                    new PongWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.data()));
+            ctx.nextOutboundMessageBuffer().add(
+                    new PongWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.data().retain()));
         } else if (frame instanceof TextWebSocketFrame) {
-            frame.data().retain();
-            ctx.channel().write(
-                    new TextWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.data()));
+            ctx.nextOutboundMessageBuffer().add(frame.retain());
         } else if (frame instanceof BinaryWebSocketFrame) {
-            frame.data().retain();
-            ctx.channel().write(
-                    new BinaryWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.data()));
+            ctx.nextOutboundMessageBuffer().add(frame.retain());
         } else if (frame instanceof ContinuationWebSocketFrame) {
-            frame.data().retain();
-            ctx.channel().write(
-                    new ContinuationWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.data()));
+            ctx.nextOutboundMessageBuffer().add(frame.retain());
         } else if (frame instanceof PongWebSocketFrame) {
             // Ignore
         } else {
             throw new UnsupportedOperationException(String.format("%s frame types not supported", frame.getClass()
                     .getName()));
+        }
+    }
+
+    @Override
+    protected void endMessageReceived(ChannelHandlerContext ctx) throws Exception {
+        if (handshaker != null) {
+            ctx.flush().addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
         }
     }
 
