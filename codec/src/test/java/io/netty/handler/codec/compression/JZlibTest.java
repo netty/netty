@@ -25,10 +25,6 @@ import static org.junit.Assert.*;
 
 public class JZlibTest {
 
-    @After
-    public void resetSnappy() {
-    }
-
     @Test
     public void testZLIB() throws Exception {
         ByteBuf data = Unpooled.wrappedBuffer("test".getBytes());
@@ -118,9 +114,7 @@ public class JZlibTest {
           assertEquals(data, chDecoder.readInbound());
         }
 
-
-	// This case will be failed with netty's jzlib.
-      {
+       {
           EmbeddedByteChannel chDecoder =
             new EmbeddedByteChannel(new JZlibDecoder(ZlibWrapper.ZLIB_OR_NONE));
 
