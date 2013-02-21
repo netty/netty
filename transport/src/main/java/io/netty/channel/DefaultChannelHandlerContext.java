@@ -91,15 +91,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 ByteBridge.class, "outByteBridge");
 
     // Lazily instantiated tasks used to trigger events to a handler with different executor.
-    private Runnable invokeChannelRegisteredTask;
-    private Runnable invokeChannelUnregisteredTask;
-    private Runnable invokeChannelActiveTask;
-    private Runnable invokeChannelInactiveTask;
     private Runnable invokeInboundBufferUpdatedTask;
     private Runnable fireInboundBufferUpdated0Task;
     private Runnable invokeChannelReadSuspendedTask;
-    private Runnable invokeFreeInboundBuffer0Task;
-    private Runnable invokeFreeOutboundBuffer0Task;
     private Runnable invokeRead0Task;
     boolean removed;
 
@@ -712,16 +706,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (executor.inEventLoop()) {
             next.invokeChannelRegistered();
         } else {
-            Runnable task = next.invokeChannelRegisteredTask;
-            if (task == null) {
-                next.invokeChannelRegisteredTask = task = new Runnable() {
-                    @Override
-                    public void run() {
-                        next.invokeChannelRegistered();
-                    }
-                };
-            }
-            executor.execute(task);
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    next.invokeChannelRegistered();
+                }
+            });
         }
         return this;
     }
@@ -743,16 +733,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (prev != null && executor.inEventLoop()) {
             next.invokeChannelUnregistered();
         } else {
-            Runnable task = next.invokeChannelUnregisteredTask;
-            if (task == null) {
-                next.invokeChannelUnregisteredTask = task = new Runnable() {
-                    @Override
-                    public void run() {
-                        next.invokeChannelUnregistered();
-                    }
-                };
-            }
-            executor.execute(task);
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    next.invokeChannelUnregistered();
+                }
+            });
         }
         return this;
     }
@@ -773,16 +759,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (executor.inEventLoop()) {
             next.invokeChannelActive();
         } else {
-            Runnable task = next.invokeChannelActiveTask;
-            if (task == null) {
-                next.invokeChannelActiveTask = task = new Runnable() {
-                    @Override
-                    public void run() {
-                        next.invokeChannelActive();
-                    }
-                };
-            }
-            executor.execute(task);
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    next.invokeChannelActive();
+                }
+            });
         }
         return this;
     }
@@ -804,16 +786,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (prev != null && executor.inEventLoop()) {
             next.invokeChannelInactive();
         } else {
-            Runnable task = next.invokeChannelInactiveTask;
-            if (task == null) {
-                next.invokeChannelInactiveTask = task = new Runnable() {
-                    @Override
-                    public void run() {
-                        next.invokeChannelInactive();
-                    }
-                };
-            }
-            executor.execute(task);
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    next.invokeChannelInactive();
+                }
+            });
         }
         return this;
     }
@@ -1465,17 +1443,13 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (prev != null && executor.inEventLoop()) {
             invokeFreeInboundBuffer0();
         } else {
-            Runnable task = invokeFreeInboundBuffer0Task;
-            if (task == null) {
-                invokeFreeInboundBuffer0Task = task = new Runnable() {
-                    @Override
-                    public void run() {
-                        pipeline.shutdownInbound();
-                        invokeFreeInboundBuffer0();
-                    }
-                };
-            }
-            executor.execute(task);
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    pipeline.shutdownInbound();
+                    invokeFreeInboundBuffer0();
+                }
+            });
         }
     }
 
@@ -1509,32 +1483,24 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 pipeline.shutdownOutbound();
                 invokeFreeOutboundBuffer0();
             } else {
-                Runnable task = invokeFreeOutboundBuffer0Task;
-                if (task == null) {
-                    invokeFreeOutboundBuffer0Task = task = new Runnable() {
-                        @Override
-                        public void run() {
-                            pipeline.shutdownOutbound();
-                            invokeFreeOutboundBuffer0();
-                        }
-                    };
-                }
-                executor.execute(task);
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        pipeline.shutdownOutbound();
+                        invokeFreeOutboundBuffer0();
+                    }
+                });
             }
         } else {
             if (executor.inEventLoop()) {
                 invokeFreeOutboundBuffer0();
             } else {
-                Runnable task = invokeFreeOutboundBuffer0Task;
-                if (task == null) {
-                    invokeFreeOutboundBuffer0Task = task = new Runnable() {
-                        @Override
-                        public void run() {
-                            invokeFreeOutboundBuffer0();
-                        }
-                    };
-                }
-                executor.execute(task);
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        invokeFreeOutboundBuffer0();
+                    }
+                });
             }
         }
     }
