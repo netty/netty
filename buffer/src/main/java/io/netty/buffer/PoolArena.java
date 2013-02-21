@@ -354,6 +354,9 @@ abstract class PoolArena<T> {
 
     static final class DirectArena extends PoolArena<ByteBuffer> {
 
+        private static final boolean USE_UNSAFE_DIRECTBUF =
+                PlatformDependent.isUnaligned() && PlatformDependent.unsafeHasCopyMethods();
+
         DirectArena(PooledByteBufAllocator parent, int pageSize, int maxOrder, int pageShifts, int chunkSize) {
             super(parent, pageSize, maxOrder, pageShifts, chunkSize);
         }
@@ -376,7 +379,7 @@ abstract class PoolArena<T> {
 
         @Override
         protected PooledByteBuf<ByteBuffer> newByteBuf(int maxCapacity) {
-            if (PlatformDependent.isUnaligned() && PlatformDependent.unsafeHasCopyMethods()) {
+            if (USE_UNSAFE_DIRECTBUF) {
                 return new PooledUnsafeDirectByteBuf(maxCapacity);
             } else {
                 return new PooledDirectByteBuf(maxCapacity);
