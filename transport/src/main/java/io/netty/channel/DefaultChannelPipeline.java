@@ -58,8 +58,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     final Map<EventExecutorGroup, EventExecutor> childExecutors =
             new IdentityHashMap<EventExecutorGroup, EventExecutor>();
 
-    volatile boolean inboundBufferFreed;
-    volatile boolean outboundBufferFreed;
+    private boolean inboundShutdown;
+    private boolean outboundShutdown;
 
     public DefaultChannelPipeline(Channel channel) {
         if (channel == null) {
@@ -843,6 +843,22 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     public ByteBuf outboundByteBuffer() {
         return tail.nextOutboundByteBuffer();
+    }
+
+    boolean isInboundShutdown() {
+        return inboundShutdown;
+    }
+
+    boolean isOutboundShutdown() {
+        return outboundShutdown;
+    }
+
+    void shutdownInbound() {
+        inboundShutdown = true;
+    }
+
+    void shutdownOutbound() {
+        outboundShutdown = true;
     }
 
     @Override
