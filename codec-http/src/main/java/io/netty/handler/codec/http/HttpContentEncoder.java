@@ -17,6 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.ReferenceCounted;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedByteChannel;
@@ -63,15 +64,22 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
         }
         boolean offered = acceptEncodingQueue.offer(acceptedEncoding);
         assert offered;
+        if (msg instanceof ReferenceCounted) {
+            // need to call retain to not free it
+            ((ReferenceCounted) msg).retain();
+        }
         return msg;
     }
 
     @Override
     protected Object encode(ChannelHandlerContext ctx, HttpObject msg)
             throws Exception {
-
         if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().code() == 100) {
             // 100-continue response must be passed through.
+            if (msg instanceof ReferenceCounted) {
+                // need to call retain to not free it
+                ((ReferenceCounted) msg).retain();
+            }
             return msg;
         }
 
@@ -84,7 +92,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
                 throw new IllegalStateException("cannot send more responses than requests");
             }
 
-            return msg;
+            return ((FullHttpMessage) msg).retain();
         }
 
         if (msg instanceof HttpMessage) {
@@ -163,8 +171,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
                 return encodeContent(null, c);
             }
 
-            c.retain();
-            return c;
+            return c.retain();
         }
         return null;
     }
