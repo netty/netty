@@ -39,7 +39,7 @@
       </releases>
       <snapshots>
         <enabled>true</enabled>
-        <updatePolicy>43200</updatePolicy> <!-- Update every 30 days -->
+        <updatePolicy>interval:43200</updatePolicy> <!-- Update every 30 days -->
       </snapshots>
     </pluginRepository>
   </pluginRepositories>
