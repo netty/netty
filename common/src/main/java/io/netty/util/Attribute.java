@@ -49,8 +49,7 @@ public interface Attribute<T> {
     boolean compareAndSet(T oldValue, T newValue);
 
     /**
-     * Remove the current value which is stored in this {@link Attribute}, which means after this call {@link #get()}
-     * will return {@code null}.
+     * Remove this attribute from the {@link AttributeMap}.
      */
     void remove();
 }

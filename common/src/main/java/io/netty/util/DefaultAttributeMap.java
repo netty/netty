@@ -45,7 +45,7 @@ public class DefaultAttributeMap implements AttributeMap {
         return attr;
     }
 
-    private static final class DefaultAttribute<T> extends AtomicReference<T> implements Attribute<T> {
+    private final class DefaultAttribute<T> extends AtomicReference<T> implements Attribute<T> {
 
         private static final long serialVersionUID = -2661411462200283011L;
 
@@ -62,7 +62,9 @@ public class DefaultAttributeMap implements AttributeMap {
 
         @Override
         public void remove() {
-            set(null);
+            synchronized (DefaultAttributeMap.this) {
+                map.remove(this);
+            }
         }
     }
 }
