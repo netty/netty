@@ -749,9 +749,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     @Override
                     public void run() {
                         next.invokeChannelUnregistered();
-                        if (prev == null) {
-
-                        }
                     }
                 };
             }
