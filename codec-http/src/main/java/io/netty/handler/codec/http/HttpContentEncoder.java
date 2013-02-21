@@ -15,9 +15,9 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.ReferenceCounted;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedByteChannel;
@@ -62,12 +62,8 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
         if (acceptedEncoding == null) {
             acceptedEncoding = HttpHeaders.Values.IDENTITY;
         }
-        boolean offered = acceptEncodingQueue.offer(acceptedEncoding);
-        assert offered;
-        if (msg instanceof ReferenceCounted) {
-            // need to call retain to not free it
-            ((ReferenceCounted) msg).retain();
-        }
+        acceptEncodingQueue.add(acceptedEncoding);
+        BufUtil.retain(msg);
         return msg;
     }
 
@@ -76,10 +72,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
             throws Exception {
         if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().code() == 100) {
             // 100-continue response must be passed through.
-            if (msg instanceof ReferenceCounted) {
-                // need to call retain to not free it
-                ((ReferenceCounted) msg).retain();
-            }
+            BufUtil.retain(msg);
             return msg;
         }
 
