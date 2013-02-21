@@ -23,6 +23,7 @@ import io.netty.util.internal.TypeParameterMatcher;
 
 /**
  * {@link ChannelHandler} which handles inbound messages of a specific type.
+ * For typical message processing, only messageReceived needs to be overridden.
  *
  * <pre>
  *     public class StringHandler extends
@@ -147,6 +148,7 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
 
     /**
      * Is called once a message was received.
+	 * Override this method to process received messages. 
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link ChannelHandler} belongs to
      * @param msg           the message to handle
