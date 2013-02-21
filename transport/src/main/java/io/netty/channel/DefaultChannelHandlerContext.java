@@ -740,7 +740,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     public ChannelHandlerContext fireChannelUnregistered() {
         final DefaultChannelHandlerContext next = findContextInbound();
         EventExecutor executor = next.executor();
-        if (prev != null && executor.inEventLoop()) {
+        if (executor.inEventLoop()) {
             next.invokeChannelUnregistered();
         } else {
             Runnable task = next.invokeChannelUnregisteredTask;
@@ -801,7 +801,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     public ChannelHandlerContext fireChannelInactive() {
         final DefaultChannelHandlerContext next = findContextInbound();
         EventExecutor executor = next.executor();
-        if (prev != null && executor.inEventLoop()) {
+        if (executor.inEventLoop()) {
             next.invokeChannelInactive();
         } else {
             Runnable task = next.invokeChannelInactiveTask;
@@ -836,7 +836,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
         final DefaultChannelHandlerContext next = this.next;
         EventExecutor executor = next.executor();
-        if (prev != null && executor.inEventLoop()) {
+        if (executor.inEventLoop()) {
             next.invokeExceptionCaught(cause);
         } else {
             try {
@@ -1463,7 +1463,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     void invokeFreeInboundBuffer() {
         pipeline.inboundBufferFreed = true;
         EventExecutor executor = executor();
-        if (prev != null && executor.inEventLoop()) {
+        if (executor.inEventLoop()) {
             invokeFreeInboundBuffer0();
         } else {
             Runnable task = invokeFreeInboundBuffer0Task;
