@@ -54,7 +54,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      */
     private ChannelPromise connectPromise;
     private ScheduledFuture<?> connectTimeoutFuture;
-    private ConnectException connectTimeoutException;
+    private SocketAddress requestedRemoteAddress;
 
     /**
      * Create a new instance
@@ -174,6 +174,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                         }
                     } else {
                         connectPromise = promise;
+                        requestedRemoteAddress = remoteAddress;
 
                         // Schedule connect timeout.
                         int connectTimeoutMillis = config().getConnectTimeoutMillis();
@@ -181,11 +182,10 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                             connectTimeoutFuture = eventLoop().schedule(new Runnable() {
                                 @Override
                                 public void run() {
-                                    if (connectTimeoutException == null) {
-                                        connectTimeoutException = new ConnectException("connection timed out");
-                                    }
                                     ChannelPromise connectPromise = AbstractNioChannel.this.connectPromise;
-                                    if (connectPromise != null && connectPromise.tryFailure(connectTimeoutException)) {
+                                    ConnectException cause =
+                                            new ConnectException("connection timed out: " + remoteAddress);
+                                    if (connectPromise != null && connectPromise.tryFailure(cause)) {
                                         close(voidFuture());
                                     }
                                 }
@@ -193,6 +193,11 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                         }
                     }
                 } catch (Throwable t) {
+                    if (t instanceof ConnectException) {
+                        Throwable newT = new ConnectException(t.getMessage() + ": " + remoteAddress);
+                        newT.setStackTrace(t.getStackTrace());
+                        t = newT;
+                    }
                     promise.setFailure(t);
                     closeIfClosed();
                 }
@@ -218,6 +223,12 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     pipeline().fireChannelActive();
                 }
             } catch (Throwable t) {
+                if (t instanceof ConnectException) {
+                    Throwable newT = new ConnectException(t.getMessage() + ": " + requestedRemoteAddress);
+                    newT.setStackTrace(t.getStackTrace());
+                    t = newT;
+                }
+
                 connectPromise.setFailure(t);
                 closeIfClosed();
             } finally {

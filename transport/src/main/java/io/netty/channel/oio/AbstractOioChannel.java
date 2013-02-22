@@ -20,6 +20,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 
+import java.net.ConnectException;
 import java.net.SocketAddress;
 
 /**
@@ -69,6 +70,11 @@ public abstract class AbstractOioChannel extends AbstractChannel {
                         pipeline().fireChannelActive();
                     }
                 } catch (Throwable t) {
+                    if (t instanceof ConnectException) {
+                        Throwable newT = new ConnectException(t.getMessage() + ": " + remoteAddress);
+                        newT.setStackTrace(t.getStackTrace());
+                        t = newT;
+                    }
                     promise.setFailure(t);
                     closeIfClosed();
                 }
