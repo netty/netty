@@ -18,7 +18,6 @@ package io.netty.handler.codec.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.util.CharsetUtil;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Random;
@@ -78,151 +77,126 @@ public class SnappyIntegrationTest {
     //        to shorten the test duration.
 
     @Test
-    @Ignore
     public void test7088170877360183401() {
         testWithSeed(7088170877360183401L);
     }
 
     @Test
-    @Ignore
     public void test7354134887958970957() {
         testWithSeed(7354134887958970957L);
     }
 
     @Test
-    @Ignore
     public void test265123194979327191() {
         testWithSeed(265123194979327191L);
     }
 
     @Test
-    @Ignore
     public void test4730809278569396315() {
         testWithSeed(4730809278569396315L);
     }
 
     @Test
-    @Ignore
     public void test2048930638087468368() {
         testWithSeed(2048930638087468368L);
     }
 
     @Test
-    @Ignore
     public void test7896596325568044047() {
         testWithSeed(7896596325568044047L);
     }
 
     @Test
-    @Ignore
     public void test3397027453071844468() {
         testWithSeed(3397027453071844468L);
     }
 
     @Test
-    @Ignore
     public void test4157969824584948251() {
         testWithSeed(4157969824584948251L);
     }
 
     @Test
-    @Ignore
     public void test4753934068873093038(){
         testWithSeed(4753934068873093038L);
     }
 
     @Test
-    @Ignore
     public void test5925569922155870475(){
         testWithSeed(5925569922155870475L);
     }
 
     @Test
-    @Ignore
     public void test7269843964854027868(){
         testWithSeed(7269843964854027868L);
     }
 
     @Test
-    @Ignore
     public void test3588069159611484749(){
         testWithSeed(3588069159611484749L);
     }
 
     @Test
-    @Ignore
     public void test6779187833722801305(){
         testWithSeed(6779187833722801305L);
     }
 
     @Test
-    @Ignore
     public void test4686313400062453552(){
         testWithSeed(4686313400062453552L);
     }
 
     @Test
-    @Ignore
     public void test2991001407882611338(){
         testWithSeed(2991001407882611338L);
     }
 
     @Test
-    @Ignore
     public void test4943660132286394340(){
         testWithSeed(4943660132286394340L);
     }
 
     @Test
-    @Ignore
     public void test1922387899411087229(){
         testWithSeed(1922387899411087229L);
     }
 
     @Test
-    @Ignore
     public void test1224584698616862175(){
         testWithSeed(1224584698616862175L);
     }
 
     @Test
-    @Ignore
     public void test985619956074250243(){
         testWithSeed(985619956074250243L);
     }
 
     @Test
-    @Ignore
     public void test930789503984237252(){
         testWithSeed(930789503984237252L);
     }
 
     @Test
-    @Ignore
     public void test1480332326718517164(){
         testWithSeed(1480332326718517164L);
     }
 
     @Test
-    @Ignore
     public void test8997827733405782755(){
         testWithSeed(8997827733405782755L);
     }
 
     @Test
-    @Ignore
     public void test7059191520894204311(){
         testWithSeed(7059191520894204311L);
     }
 
     @Test
-    @Ignore
     public void test4484339162540496103(){
         testWithSeed(4484339162540496103L);
     }
 
     @Test
-    @Ignore
     public void test1939623429893866631(){
         testWithSeed(1939623429893866631L);
     }

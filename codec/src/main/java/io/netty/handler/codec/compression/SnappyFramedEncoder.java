@@ -61,12 +61,12 @@ public class SnappyFramedEncoder extends ByteToByteEncoder {
             for (;;) {
                 final int lengthIdx = out.writerIndex() + 1;
                 out.writeInt(0);
-                if (dataLength > 32768) {
-                    ByteBuf slice = in.readSlice(32768);
+                if (dataLength >= 32768) {
+                    ByteBuf slice = in.readSlice(32767);
                     calculateAndWriteChecksum(slice, out);
-                    snappy.encode(slice, out, 32768);
+                    snappy.encode(slice, out, 32767);
                     setChunkLength(out, lengthIdx);
-                    dataLength -= 32768;
+                    dataLength -= 32767;
                 } else {
                     ByteBuf slice = in.readSlice(dataLength);
                     calculateAndWriteChecksum(slice, out);
