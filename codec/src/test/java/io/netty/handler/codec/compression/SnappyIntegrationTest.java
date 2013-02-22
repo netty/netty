@@ -18,6 +18,7 @@ package io.netty.handler.codec.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.util.CharsetUtil;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Random;
@@ -75,6 +76,72 @@ public class SnappyIntegrationTest {
     // FIXME: Fix and unignore these failing test.
     //        Fixing one test might fix other tests, too. In such a case, please remove the redundant tests
     //        to shorten the test duration.
+
+    @Test
+    @Ignore
+    public void test5323211032315942961(){
+        testWithSeed(5323211032315942961L);
+    }
+
+    @Test
+    @Ignore
+    public void test5956997334949727845(){
+        testWithSeed(5956997334949727845L);
+    }
+
+    @Test
+    @Ignore
+    public void test987469642329137223(){
+        testWithSeed(987469642329137223L);
+    }
+
+    @Test
+    @Ignore
+    public void test5798580555644912844(){
+        testWithSeed(5798580555644912844L);
+    }
+
+    @Test
+    @Ignore
+    public void test6700065949554745127(){
+        testWithSeed(6700065949554745127L);
+    }
+
+    @Test
+    @Ignore
+    public void test6262781682093393396(){
+        testWithSeed(6262781682093393396L);
+    }
+
+    @Test
+    @Ignore
+    public void test358737913816100034(){
+        testWithSeed(358737913816100034L);
+    }
+
+    @Test
+    @Ignore
+    public void test7510836247514432004(){
+        testWithSeed(7510836247514432004L);
+    }
+
+    @Test
+    @Ignore
+    public void test2135280061177091902(){
+        testWithSeed(2135280061177091902L);
+    }
+
+    @Test
+    @Ignore
+    public void test6057787589708412305(){
+        testWithSeed(6057787589708412305L);
+    }
+
+    @Test
+    @Ignore
+    public void test8411340917985079134(){
+        testWithSeed(8411340917985079134L);
+    }
 
     @Test
     public void test7088170877360183401() {
