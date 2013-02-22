@@ -86,7 +86,8 @@ public class Snappy {
                     int bytesBetweenHashLookups = skip++ >> 5;
                     nextIndex = inIndex + bytesBetweenHashLookups;
 
-                    if (nextIndex > maxIndex) {
+                    // We need at least 4 remaining bytes to read the hash
+                    if (nextIndex > maxIndex - 4) {
                         break outer;
                     }
 
