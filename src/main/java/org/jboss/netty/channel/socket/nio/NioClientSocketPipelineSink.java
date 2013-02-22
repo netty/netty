@@ -25,6 +25,7 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 
+import java.net.ConnectException;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 
@@ -102,6 +103,7 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
     private void connect(
             final NioClientSocketChannel channel, final ChannelFuture cf,
             SocketAddress remoteAddress) {
+        channel.requestedRemoteAddress = remoteAddress;
         try {
             if (channel.channel.connect(remoteAddress)) {
                 channel.worker.register(channel, cf);
@@ -120,6 +122,11 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
             }
 
         } catch (Throwable t) {
+            if (t instanceof ConnectException) {
+                Throwable newT = new ConnectException(t.getMessage() + ": " + remoteAddress);
+                newT.setStackTrace(t.getStackTrace());
+                t = newT;
+            }
             cf.setFailure(t);
             fireExceptionCaught(channel, t);
             channel.worker.close(channel, succeededFuture(channel));

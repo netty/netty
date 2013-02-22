@@ -15,11 +15,6 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-import static org.jboss.netty.channel.Channels.*;
-
-import java.io.IOException;
-import java.nio.channels.SocketChannel;
-
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
@@ -28,6 +23,12 @@ import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.Timeout;
+
+import java.io.IOException;
+import java.net.SocketAddress;
+import java.nio.channels.SocketChannel;
+
+import static org.jboss.netty.channel.Channels.*;
 
 final class NioClientSocketChannel extends NioSocketChannel {
 
@@ -70,6 +71,7 @@ final class NioClientSocketChannel extends NioSocketChannel {
 
     // Does not need to be volatile as it's accessed by only one thread.
     long connectDeadlineNanos;
+    volatile SocketAddress requestedRemoteAddress;
 
     volatile Timeout timoutTimer;
 

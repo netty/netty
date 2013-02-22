@@ -15,11 +15,6 @@
  */
 package org.jboss.netty.channel.local;
 
-import static org.jboss.netty.channel.Channels.*;
-
-import java.io.IOException;
-import java.net.ConnectException;
-
 import org.jboss.netty.channel.AbstractChannelSink;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
@@ -31,6 +26,11 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+
+import java.io.IOException;
+import java.net.ConnectException;
+
+import static org.jboss.netty.channel.Channels.*;
 
 /**
  */
@@ -101,7 +101,8 @@ final class LocalClientChannelSink extends AbstractChannelSink {
     private void connect(DefaultLocalChannel channel, ChannelFuture future, LocalAddress remoteAddress) {
         Channel remoteChannel = LocalChannelRegistry.getChannel(remoteAddress);
         if (!(remoteChannel instanceof DefaultLocalServerChannel)) {
-            future.setFailure(new ConnectException("connection refused"));
+            future.setFailure(new ConnectException(
+                    "connection refused: " + remoteAddress));
             return;
         }
 

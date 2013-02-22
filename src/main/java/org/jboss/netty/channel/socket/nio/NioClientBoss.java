@@ -133,7 +133,7 @@ public final class NioClientBoss extends AbstractNioSelector implements Boss {
                     currentTimeNanos >= ch.connectDeadlineNanos) {
 
                 if (cause == null) {
-                    cause = new ConnectException("connection timed out");
+                    cause = new ConnectException("connection timed out: " + ch.requestedRemoteAddress);
                 }
 
                 ch.connectFuture.setFailure(cause);
@@ -145,12 +145,18 @@ public final class NioClientBoss extends AbstractNioSelector implements Boss {
 
     private static void connect(SelectionKey k) throws IOException {
         NioClientSocketChannel ch = (NioClientSocketChannel) k.attachment();
-        if (ch.channel.finishConnect()) {
-            k.cancel();
-            if (ch.timoutTimer != null) {
-                ch.timoutTimer.cancel();
+        try {
+            if (ch.channel.finishConnect()) {
+                k.cancel();
+                if (ch.timoutTimer != null) {
+                    ch.timoutTimer.cancel();
+                }
+                ch.worker.register(ch, ch.connectFuture);
             }
-            ch.worker.register(ch, ch.connectFuture);
+        } catch (ConnectException e) {
+            ConnectException newE = new ConnectException(e.getMessage() + ": " + ch.requestedRemoteAddress);
+            newE.setStackTrace(e.getStackTrace());
+            throw newE;
         }
     }
 

@@ -15,12 +15,6 @@
  */
 package org.jboss.netty.channel.socket.oio;
 
-import static org.jboss.netty.channel.Channels.*;
-
-import java.io.PushbackInputStream;
-import java.net.SocketAddress;
-import java.util.concurrent.Executor;
-
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -30,6 +24,13 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
+
+import java.io.PushbackInputStream;
+import java.net.ConnectException;
+import java.net.SocketAddress;
+import java.util.concurrent.Executor;
+
+import static org.jboss.netty.channel.Channels.*;
 
 class OioClientSocketPipelineSink extends AbstractOioChannelSink {
 
@@ -125,6 +126,13 @@ class OioClientSocketPipelineSink extends AbstractOioChannelSink {
                             "Old I/O client worker (" + channel + ')'));
             workerStarted = true;
         } catch (Throwable t) {
+            if (t instanceof ConnectException) {
+                if (t instanceof ConnectException) {
+                    Throwable newT = new ConnectException(t.getMessage() + ": " + remoteAddress);
+                    newT.setStackTrace(t.getStackTrace());
+                    t = newT;
+                }
+            }
             future.setFailure(t);
             fireExceptionCaught(channel, t);
         } finally {
