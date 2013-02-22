@@ -732,11 +732,6 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
      */
     Map<String, ChannelHandler> toMap();
 
-    /**
-     * Return {@code true} if the outbound buffer is writable.
-     */
-    boolean isWritable();
-
     @Override
     ChannelPipeline fireChannelRegistered();
 
