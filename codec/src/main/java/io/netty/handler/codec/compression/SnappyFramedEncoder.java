@@ -60,6 +60,12 @@ public class SnappyFramedEncoder extends ByteToByteEncoder {
         if (dataLength > MIN_COMPRESSIBLE_LENGTH) {
             for (;;) {
                 final int lengthIdx = out.writerIndex() + 1;
+                if (dataLength < MIN_COMPRESSIBLE_LENGTH) {
+                    ByteBuf slice = in.readSlice(dataLength);
+                    writeUnencodedChunk(slice, out, dataLength);
+                    break;
+                }
+
                 out.writeInt(0);
                 if (dataLength >= 32768) {
                     ByteBuf slice = in.readSlice(32767);
@@ -76,11 +82,15 @@ public class SnappyFramedEncoder extends ByteToByteEncoder {
                 }
             }
         } else {
-            out.writeByte(1);
-            writeChunkLength(out, dataLength + 4);
-            calculateAndWriteChecksum(in, out);
-            out.writeBytes(in, dataLength);
+            writeUnencodedChunk(in, out, dataLength);
         }
+    }
+
+    private static void writeUnencodedChunk(ByteBuf in, ByteBuf out, int dataLength) {
+        out.writeByte(1);
+        writeChunkLength(out, dataLength + 4);
+        calculateAndWriteChecksum(in, out);
+        out.writeBytes(in, dataLength);
     }
 
     private static void setChunkLength(ByteBuf out, int lengthIdx) {
