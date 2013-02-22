@@ -912,8 +912,15 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     next.invokeInboundBufferUpdatedTask = task = new Runnable() {
                         @Override
                         public void run() {
-                            if (!pipeline.isInboundShutdown()) {
+                            if (pipeline.isInboundShutdown()) {
+                                return;
+                            }
+
+                            if (findContextInbound() == next) {
                                 next.invokeInboundBufferUpdated();
+                            } else {
+                                // Pipeline changed since the task was submitted; try again.
+                                fireInboundBufferUpdated0();
                             }
                         }
                     };
@@ -968,7 +975,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 next.invokeChannelReadSuspendedTask = task = new Runnable() {
                     @Override
                     public void run() {
-                        next.invokeChannelReadSuspended();
+                        if (findContextInbound() == next) {
+                            next.invokeChannelReadSuspended();
+                        } else {
+                            // Pipeline changed since the task was submitted; try again.
+                            fireChannelReadSuspended();
+                        }
                     }
                 };
             }
