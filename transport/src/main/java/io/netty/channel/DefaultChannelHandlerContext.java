@@ -1555,11 +1555,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         DefaultChannelHandlerContext ctx = prev;
         for (;;) {
             if (ctx.hasOutboundByteBuffer()) {
-                return ctx.outboundByteBuffer().isWritable();
+                return ctx.isWritable();
             }
 
             if (ctx.hasOutboundMessageBuffer()) {
-                return ctx.outboundMessageBuffer().isWritable();
+                return ctx.isWritable();
             }
             ctx = ctx.prev;
         }
