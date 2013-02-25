@@ -6,15 +6,15 @@ Netty is an asynchronous event-driven network application framework for rapid de
 
 - Web Site: http://netty.io/
 
-- Docs: http://netty.io/docs/
+- Docs: http://netty.io/wiki/
 
-- Blog: http://netty.io/blog/
+- Blog: http://netty.io/news/
 
 - Twitter: @netty_project
 
 ## Getting Netty
 
-- Download Page: http://netty.io/downloads/
+- Download Page: http://netty.io/downloads.html
 
 - Maven Repository: 
 
@@ -23,7 +23,7 @@ Netty is an asynchronous event-driven network application framework for rapid de
   ...
   <dependency>
     <groupId>io.netty</groupId>
-    <artifactId>netty</artifactId>
+    <artifactId>netty-all</artifactId>
     <version>X.Y.Z.Q</version>
     <scope>compile</scope>
   </dependency>
