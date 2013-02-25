@@ -18,7 +18,6 @@ package io.netty.handler.codec.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.util.CharsetUtil;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Random;
@@ -73,199 +72,18 @@ public class SnappyIntegrationTest {
 
 
     // These tests were found using testRandom() with large RANDOM_RUNS.
-    // FIXME: Fix and unignore these failing test.
-    //        Fixing one test might fix other tests, too. In such a case, please remove the redundant tests
-    //        to shorten the test duration.
 
+    // Tests that copies do not attempt to overrun into a previous frame chunk
     @Test
-    @Ignore
     public void test5323211032315942961(){
         testWithSeed(5323211032315942961L);
     }
 
-    @Test
-    @Ignore
-    public void test5956997334949727845(){
-        testWithSeed(5956997334949727845L);
-    }
-
-    @Test
-    @Ignore
-    public void test987469642329137223(){
-        testWithSeed(987469642329137223L);
-    }
-
-    @Test
-    @Ignore
-    public void test5798580555644912844(){
-        testWithSeed(5798580555644912844L);
-    }
-
-    @Test
-    @Ignore
-    public void test6700065949554745127(){
-        testWithSeed(6700065949554745127L);
-    }
-
-    @Test
-    @Ignore
-    public void test6262781682093393396(){
-        testWithSeed(6262781682093393396L);
-    }
-
-    @Test
-    @Ignore
-    public void test358737913816100034(){
-        testWithSeed(358737913816100034L);
-    }
-
-    @Test
-    @Ignore
-    public void test7510836247514432004(){
-        testWithSeed(7510836247514432004L);
-    }
-
-    @Test
-    @Ignore
-    public void test2135280061177091902(){
-        testWithSeed(2135280061177091902L);
-    }
-
-    @Test
-    @Ignore
-    public void test6057787589708412305(){
-        testWithSeed(6057787589708412305L);
-    }
-
-    @Test
-    @Ignore
-    public void test8411340917985079134(){
-        testWithSeed(8411340917985079134L);
-    }
-
+    // Tests that when generating the hash lookup table for finding copies, we
+    // do not exceed the length of the input when there are no copies
     @Test
     public void test7088170877360183401() {
         testWithSeed(7088170877360183401L);
-    }
-
-    @Test
-    public void test7354134887958970957() {
-        testWithSeed(7354134887958970957L);
-    }
-
-    @Test
-    public void test265123194979327191() {
-        testWithSeed(265123194979327191L);
-    }
-
-    @Test
-    public void test4730809278569396315() {
-        testWithSeed(4730809278569396315L);
-    }
-
-    @Test
-    public void test2048930638087468368() {
-        testWithSeed(2048930638087468368L);
-    }
-
-    @Test
-    public void test7896596325568044047() {
-        testWithSeed(7896596325568044047L);
-    }
-
-    @Test
-    public void test3397027453071844468() {
-        testWithSeed(3397027453071844468L);
-    }
-
-    @Test
-    public void test4157969824584948251() {
-        testWithSeed(4157969824584948251L);
-    }
-
-    @Test
-    public void test4753934068873093038(){
-        testWithSeed(4753934068873093038L);
-    }
-
-    @Test
-    public void test5925569922155870475(){
-        testWithSeed(5925569922155870475L);
-    }
-
-    @Test
-    public void test7269843964854027868(){
-        testWithSeed(7269843964854027868L);
-    }
-
-    @Test
-    public void test3588069159611484749(){
-        testWithSeed(3588069159611484749L);
-    }
-
-    @Test
-    public void test6779187833722801305(){
-        testWithSeed(6779187833722801305L);
-    }
-
-    @Test
-    public void test4686313400062453552(){
-        testWithSeed(4686313400062453552L);
-    }
-
-    @Test
-    public void test2991001407882611338(){
-        testWithSeed(2991001407882611338L);
-    }
-
-    @Test
-    public void test4943660132286394340(){
-        testWithSeed(4943660132286394340L);
-    }
-
-    @Test
-    public void test1922387899411087229(){
-        testWithSeed(1922387899411087229L);
-    }
-
-    @Test
-    public void test1224584698616862175(){
-        testWithSeed(1224584698616862175L);
-    }
-
-    @Test
-    public void test985619956074250243(){
-        testWithSeed(985619956074250243L);
-    }
-
-    @Test
-    public void test930789503984237252(){
-        testWithSeed(930789503984237252L);
-    }
-
-    @Test
-    public void test1480332326718517164(){
-        testWithSeed(1480332326718517164L);
-    }
-
-    @Test
-    public void test8997827733405782755(){
-        testWithSeed(8997827733405782755L);
-    }
-
-    @Test
-    public void test7059191520894204311(){
-        testWithSeed(7059191520894204311L);
-    }
-
-    @Test
-    public void test4484339162540496103(){
-        testWithSeed(4484339162540496103L);
-    }
-
-    @Test
-    public void test1939623429893866631(){
-        testWithSeed(1939623429893866631L);
     }
 
     @Test
