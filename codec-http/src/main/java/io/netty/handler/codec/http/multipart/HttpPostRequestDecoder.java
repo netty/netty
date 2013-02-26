@@ -205,9 +205,15 @@ public class HttpPostRequestDecoder {
         if (!bodyToDecode) {
             throw new IncompatibleDataDecoderException("No Body to decode");
         }
-        undecodedChunk = buffer();
-        isLastChunk = true;
-        parseBody();
+        if (request instanceof HttpContent) {
+            // Offer automatically if the given request is als type of HttpContent
+            // See #1089
+            offer((HttpContent) request);
+        } else {
+            undecodedChunk = buffer();
+            isLastChunk = true;
+            parseBody();
+        }
     }
 
     /**
