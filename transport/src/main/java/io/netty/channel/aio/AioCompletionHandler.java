@@ -35,6 +35,11 @@ public abstract class AioCompletionHandler<V, A extends Channel> implements Comp
      */
     protected abstract void failed0(Throwable exc, A channel);
 
+    // According to JDK AIO documentation, the ExecutorService a user specified must not call the Runnable given by
+    // JDK AIO implementation directly.  However, we violates that rull by calling Runnable.run() directly for
+    // optimization purposes, and it can result in infinite recursion in combination with the fact that the JDK AIO
+    // implementation often makes recursive invocations.  Therefore, we must make sure we don't go too deep in the
+    // stack.
     private static final int MAX_STACK_DEPTH = 8;
     private static final ThreadLocal<Integer> STACK_DEPTH = new ThreadLocal<Integer>() {
         @Override
