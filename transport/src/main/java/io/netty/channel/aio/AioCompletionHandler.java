@@ -35,11 +35,27 @@ public abstract class AioCompletionHandler<V, A extends Channel> implements Comp
      */
     protected abstract void failed0(Throwable exc, A channel);
 
+    private static final int MAX_STACK_DEPTH = 8;
+    private static final ThreadLocal<Integer> STACK_DEPTH = new ThreadLocal<Integer>() {
+        @Override
+        protected Integer initialValue() {
+            return 0;
+        }
+    };
+
     @Override
     public final void completed(final V result, final A channel) {
         EventLoop loop = channel.eventLoop();
         if (loop.inEventLoop()) {
-            completed0(result, channel);
+            Integer d = STACK_DEPTH.get();
+            if (d < MAX_STACK_DEPTH) {
+                STACK_DEPTH.set(d + 1);
+                try {
+                    completed0(result, channel);
+                } finally {
+                    STACK_DEPTH.set(d);
+                }
+            }
         } else {
             loop.execute(new Runnable() {
                 @Override
@@ -54,7 +70,15 @@ public abstract class AioCompletionHandler<V, A extends Channel> implements Comp
     public final void failed(final Throwable exc, final A channel) {
         EventLoop loop = channel.eventLoop();
         if (loop.inEventLoop()) {
-            failed0(exc, channel);
+            Integer d = STACK_DEPTH.get();
+            if (d < MAX_STACK_DEPTH) {
+                STACK_DEPTH.set(d + 1);
+                try {
+                    failed0(exc, channel);
+                } finally {
+                    STACK_DEPTH.set(d);
+                }
+            }
         } else {
             loop.execute(new Runnable() {
                 @Override
