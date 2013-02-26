@@ -18,8 +18,8 @@ package io.netty.test.udt.util;
 
 import com.barchart.udt.SocketUDT;
 import com.barchart.udt.StatusUDT;
-import io.netty.util.internal.InternalLogger;
-import io.netty.util.internal.InternalLoggerFactory;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.File;
 import java.net.InetAddress;

@@ -37,7 +37,7 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  */
-package io.netty.util.internal;
+package io.netty.util.internal.logging;
 
 import java.text.MessageFormat;
 import java.util.HashMap;

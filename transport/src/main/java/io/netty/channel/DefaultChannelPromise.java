@@ -17,8 +17,8 @@ package io.netty.channel;
 
 import io.netty.channel.ChannelFlushPromiseNotifier.FlushCheckpoint;
 import io.netty.util.Signal;
-import io.netty.util.internal.InternalLogger;
-import io.netty.util.internal.InternalLoggerFactory;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;

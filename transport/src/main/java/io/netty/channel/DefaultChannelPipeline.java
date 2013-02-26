@@ -21,8 +21,8 @@ import io.netty.buffer.MessageBuf;
 import io.netty.buffer.ReferenceCounted;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel.Unsafe;
-import io.netty.util.internal.InternalLogger;
-import io.netty.util.internal.InternalLoggerFactory;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
 import java.util.ArrayList;

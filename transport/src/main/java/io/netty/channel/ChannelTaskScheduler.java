@@ -15,8 +15,8 @@
  */
 package io.netty.channel;
 
-import io.netty.util.internal.InternalLogger;
-import io.netty.util.internal.InternalLoggerFactory;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.Iterator;
 import java.util.concurrent.BlockingQueue;

@@ -19,8 +19,8 @@ import io.netty.buffer.BufUtil;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.Signal;
-import io.netty.util.internal.InternalLoggerFactory;
 import io.netty.util.internal.TypeParameterMatcher;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 /**
  * Abstract base class which handles messages of a specific type.

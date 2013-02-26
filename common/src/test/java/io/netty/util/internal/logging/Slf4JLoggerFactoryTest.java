@@ -13,18 +13,18 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.util.internal;
+package io.netty.util.internal.logging;
 
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-public class CommonsLoggerFactoryTest {
+public class Slf4JLoggerFactoryTest {
 
     @Test
     public void testCreation() {
-        InternalLogger logger = new CommonsLoggerFactory().newInstance("foo");
-        assertTrue(logger instanceof CommonsLogger);
+        InternalLogger logger = new Slf4JLoggerFactory().newInstance("foo");
+        assertTrue(logger instanceof Slf4JLogger);
         assertEquals("foo", logger.name());
     }
 }

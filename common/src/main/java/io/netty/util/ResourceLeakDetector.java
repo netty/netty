@@ -16,9 +16,9 @@
 
 package io.netty.util;
 
-import io.netty.util.internal.InternalLogger;
-import io.netty.util.internal.InternalLoggerFactory;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.lang.ref.PhantomReference;
 import java.lang.ref.ReferenceQueue;

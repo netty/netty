@@ -28,8 +28,8 @@ import com.google.caliper.Scenario;
 import com.google.caliper.ScenarioResult;
 import com.google.caliper.SimpleBenchmark;
 import com.yammer.metrics.core.TimerContext;
-import io.netty.util.internal.InternalLogger;
-import io.netty.util.internal.InternalLoggerFactory;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;

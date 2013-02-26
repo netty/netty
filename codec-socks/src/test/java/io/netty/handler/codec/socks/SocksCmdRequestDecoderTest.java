@@ -16,8 +16,8 @@
 package io.netty.handler.codec.socks;
 
 import io.netty.channel.embedded.EmbeddedByteChannel;
-import io.netty.util.internal.InternalLogger;
-import io.netty.util.internal.InternalLoggerFactory;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Test;
 import sun.net.util.IPAddressUtil;
 
