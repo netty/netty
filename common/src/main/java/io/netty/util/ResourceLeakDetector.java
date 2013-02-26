@@ -16,13 +16,13 @@
 
 package io.netty.util;
 
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.lang.ref.PhantomReference;
 import java.lang.ref.ReferenceQueue;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -51,7 +51,7 @@ public final class ResourceLeakDetector<T> {
     private final DefaultResourceLeak tail = new DefaultResourceLeak(null);
 
     private final ReferenceQueue<Object> refQueue = new ReferenceQueue<Object>();
-    private final ConcurrentMap<Exception, Boolean> reportedLeaks = new ConcurrentHashMap<Exception, Boolean>();
+    private final ConcurrentMap<Exception, Boolean> reportedLeaks = PlatformDependent.newConcurrentHashMap();
 
     private final String resourceType;
     private final int samplingInterval;

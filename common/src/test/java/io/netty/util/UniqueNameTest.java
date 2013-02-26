@@ -15,21 +15,22 @@
  */
 package io.netty.util;
 
-import static org.junit.Assert.*;
-
-import java.util.ArrayList;
-import java.util.concurrent.ConcurrentHashMap;
-
+import io.netty.util.internal.PlatformDependent;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.concurrent.ConcurrentMap;
+
+import static org.junit.Assert.*;
 
 public class UniqueNameTest {
 
     /**
-     * A {@link ConcurrentHashMap} of registered names.
+     * A {@link ConcurrentMap} of registered names.
      * This is set up before each test
      */
-    private ConcurrentHashMap<String, Boolean> names;
+    private ConcurrentMap<String, Boolean> names;
 
     /**
      * Registers a {@link UniqueName}
@@ -43,7 +44,7 @@ public class UniqueNameTest {
 
     @Before
     public void initializeTest() {
-        names = new ConcurrentHashMap<String, Boolean>();
+        names = PlatformDependent.newConcurrentHashMap();
     }
 
     @Test(expected=NullPointerException.class)
@@ -108,7 +109,7 @@ public class UniqueNameTest {
         UniqueName one = registerName("One");
         UniqueName two = registerName("Two");
 
-        ConcurrentHashMap<String, Boolean> mapTwo = new ConcurrentHashMap<String, Boolean>();
+        ConcurrentMap<String, Boolean> mapTwo = PlatformDependent.newConcurrentHashMap();
 
         UniqueName three = new UniqueName(mapTwo, "One");
 

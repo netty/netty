@@ -25,7 +25,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -222,7 +221,7 @@ public class HashedWheelTimer implements Timer {
         Set<HashedWheelTimeout>[] wheel = new Set[ticksPerWheel];
         for (int i = 0; i < wheel.length; i ++) {
             wheel[i] = Collections.newSetFromMap(
-                    new ConcurrentHashMap<HashedWheelTimeout, Boolean>(16, 0.95f, 4));
+                    PlatformDependent.<HashedWheelTimeout, Boolean>newConcurrentHashMap());
         }
         return wheel;
     }

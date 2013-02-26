@@ -16,7 +16,8 @@
 package io.netty.util;
 
 
-import java.util.concurrent.ConcurrentHashMap;
+import io.netty.util.internal.PlatformDependent;
+
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -27,8 +28,7 @@ public final class Signal extends Error {
 
     private static final long serialVersionUID = -221145131122459977L;
 
-    private static final ConcurrentMap<String, Boolean> map =
-            new ConcurrentHashMap<String, Boolean>();
+    private static final ConcurrentMap<String, Boolean> map = PlatformDependent.newConcurrentHashMap();
 
     private final UniqueName uname;
 
