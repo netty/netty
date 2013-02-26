@@ -15,12 +15,17 @@
  */
 package io.netty.util.internal;
 
+import io.netty.util.internal.chmv8.ConcurrentHashMapV8;
+
 import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.ByteBuffer;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Pattern;
 
 
@@ -45,6 +50,7 @@ public final class PlatformDependent {
     private static final boolean CAN_ENABLE_TCP_NODELAY_BY_DEFAULT = !isAndroid();
 
     private static final boolean HAS_UNSAFE = hasUnsafe0();
+    private static final boolean CAN_USE_CHM_V8 = HAS_UNSAFE && JAVA_VERSION < 8;
     private static final boolean CAN_FREE_DIRECT_BUFFER = canFreeDirectBuffer0();
     private static final boolean UNSAFE_HASE_COPY_METHODS = unsafeHasCopyMethods0();
     private static final boolean IS_UNALIGNED = isUnaligned0();
@@ -122,6 +128,62 @@ public final class PlatformDependent {
      */
     public static boolean hasJavassist() {
         return HAS_JAVASSIST;
+    }
+
+    /**
+     * Creates a new fastest {@link ConcurrentMap} implementaion for the current platform.
+     */
+    public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap() {
+        if (CAN_USE_CHM_V8) {
+            return new ConcurrentHashMapV8<K, V>();
+        } else {
+            return new ConcurrentHashMap<K, V>();
+        }
+    }
+
+    /**
+     * Creates a new fastest {@link ConcurrentMap} implementaion for the current platform.
+     */
+    public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(int initialCapacity) {
+        if (CAN_USE_CHM_V8) {
+            return new ConcurrentHashMapV8<K, V>(initialCapacity);
+        } else {
+            return new ConcurrentHashMap<K, V>(initialCapacity);
+        }
+    }
+
+    /**
+     * Creates a new fastest {@link ConcurrentMap} implementaion for the current platform.
+     */
+    public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(int initialCapacity, float loadFactor) {
+        if (CAN_USE_CHM_V8) {
+            return new ConcurrentHashMapV8<K, V>(initialCapacity, loadFactor);
+        } else {
+            return new ConcurrentHashMap<K, V>(initialCapacity, loadFactor);
+        }
+    }
+
+    /**
+     * Creates a new fastest {@link ConcurrentMap} implementaion for the current platform.
+     */
+    public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(
+            int initialCapacity, float loadFactor, int concurrencyLevel) {
+        if (CAN_USE_CHM_V8) {
+            return new ConcurrentHashMapV8<K, V>(initialCapacity, loadFactor, concurrencyLevel);
+        } else {
+            return new ConcurrentHashMap<K, V>(initialCapacity, loadFactor, concurrencyLevel);
+        }
+    }
+
+    /**
+     * Creates a new fastest {@link ConcurrentMap} implementaion for the current platform.
+     */
+    public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(Map<? extends K, ? extends V> map) {
+        if (CAN_USE_CHM_V8) {
+            return new ConcurrentHashMapV8<K, V>(map);
+        } else {
+            return new ConcurrentHashMap<K, V>(map);
+        }
     }
 
     public static long directBufferAddress(ByteBuffer buffer) {
@@ -249,9 +311,14 @@ public final class PlatformDependent {
         }
 
         try {
-            Class.forName(
-                    "java.util.concurrent.LinkedTransferQueue", false,
-                    BlockingQueue.class.getClassLoader());
+            Class.forName("java.time.Clock", false, Object.class.getClassLoader());
+            return 8;
+        } catch (Exception e) {
+            // Ignore
+        }
+
+        try {
+            Class.forName("java.util.concurrent.LinkedTransferQueue", false, BlockingQueue.class.getClassLoader());
             return 7;
         } catch (Exception e) {
             // Ignore

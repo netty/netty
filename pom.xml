@@ -368,7 +368,7 @@
           <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>netty-build</artifactId>
-            <version>16</version>
+            <version>17</version>
           </dependency>
         </dependencies>
       </plugin>

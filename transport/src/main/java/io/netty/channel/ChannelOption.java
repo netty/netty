@@ -17,10 +17,10 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.UniqueName;
+import io.netty.util.internal.PlatformDependent;
 
 import java.net.InetAddress;
 import java.net.NetworkInterface;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -33,7 +33,7 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class ChannelOption<T> extends UniqueName {
 
-    private static final ConcurrentMap<String, Boolean> names = new ConcurrentHashMap<String, Boolean>();
+    private static final ConcurrentMap<String, Boolean> names = PlatformDependent.newConcurrentHashMap();
 
     public static final ChannelOption<ByteBufAllocator> ALLOCATOR = new ChannelOption<ByteBufAllocator>("ALLOCATOR");
     public static final ChannelOption<Integer> CONNECT_TIMEOUT_MILLIS =
