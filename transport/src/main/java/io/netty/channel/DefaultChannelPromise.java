@@ -20,7 +20,7 @@ import io.netty.util.Signal;
 import io.netty.util.internal.InternalLogger;
 import io.netty.util.internal.InternalLoggerFactory;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.TimeUnit.*;
@@ -416,9 +416,7 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
 
         if (channel().eventLoop().inEventLoop()) {
             if (listeners instanceof DefaultChannelPromiseListeners) {
-                for (ChannelFutureListener l : (DefaultChannelPromiseListeners) listeners) {
-                    notifyListener0(this, l);
-                }
+                notifyListeners0(this, (DefaultChannelPromiseListeners) listeners);
             } else {
                 notifyListener0(this, (ChannelFutureListener) listeners);
             }
@@ -430,14 +428,20 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
                 @Override
                 public void run() {
                     if (listeners instanceof DefaultChannelPromiseListeners) {
-                        for (ChannelFutureListener l : (DefaultChannelPromiseListeners) listeners) {
-                            notifyListener0(DefaultChannelPromise.this, l);
-                        }
+                        notifyListeners0(DefaultChannelPromise.this, (DefaultChannelPromiseListeners) listeners);
                     } else {
                         notifyListener0(DefaultChannelPromise.this, (ChannelFutureListener) listeners);
                     }
                 }
             });
+        }
+    }
+
+    private static void notifyListeners0(ChannelFuture f, DefaultChannelPromiseListeners listeners) {
+        final ChannelFutureListener[] a = listeners.listeners();
+        final int size = listeners.size();
+        for (int i = 0; i < size; i ++) {
+            notifyListener0(f, a[i]);
         }
     }
 
@@ -514,13 +518,47 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
         return this;
     }
 
-    private static final class DefaultChannelPromiseListeners extends ArrayList<ChannelFutureListener> {
-        private static final long serialVersionUID = 7414281537694651180L;
+    private static final class DefaultChannelPromiseListeners {
+        private ChannelFutureListener[] listeners;
+        private int size;
 
         DefaultChannelPromiseListeners(ChannelFutureListener firstListener, ChannelFutureListener secondListener) {
-            super(2);
-            add(firstListener);
-            add(secondListener);
+            listeners = new ChannelFutureListener[] { firstListener, secondListener };
+            size = 2;
+        }
+
+        void add(ChannelFutureListener l) {
+            ChannelFutureListener[] listeners = this.listeners;
+            final int size = this.size;
+            if (size == listeners.length) {
+                this.listeners = listeners = Arrays.copyOf(listeners, size << 1);
+            }
+            listeners[size] = l;
+            this.size = size + 1;
+        }
+
+        void remove(ChannelFutureListener l) {
+            final ChannelFutureListener[] listeners = this.listeners;
+            int size = this.size;
+            for (int i = 0; i < size; i ++) {
+                if (listeners[i] == l) {
+                    int listenersToMove = size - i - 1;
+                    if (listenersToMove > 0) {
+                        System.arraycopy(listeners, i + 1, listeners, i, listenersToMove);
+                    }
+                    listeners[-- size] = null;
+                    this.size = size;
+                    return;
+                }
+            }
+        }
+
+        ChannelFutureListener[] listeners() {
+            return listeners;
+        }
+
+        int size() {
+            return size;
         }
     }
 }
