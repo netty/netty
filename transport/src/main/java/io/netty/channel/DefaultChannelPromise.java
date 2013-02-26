@@ -96,11 +96,8 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
             return this;
         }
 
-        boolean notifyNow = false;
         synchronized (this) {
-            if (isDone()) {
-                notifyNow = true;
-            } else {
+            if (!isDone()) {
                 if (listeners == null) {
                     listeners = listener;
                 } else {
@@ -110,13 +107,11 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
                         listeners = new DefaultChannelPromiseListeners((ChannelFutureListener) listeners, listener);
                     }
                 }
+                return this;
             }
         }
 
-        if (notifyNow) {
-            notifyListener(this, listener);
-        }
-
+        notifyListener(this, listener);
         return this;
     }
 
@@ -354,7 +349,7 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
 
     @Override
     public ChannelPromise setSuccess() {
-        if (success0()) {
+        if (set(SUCCESS)) {
             notifyListeners();
             return this;
         }
@@ -363,35 +358,16 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
 
     @Override
     public boolean trySuccess() {
-        if (success0()) {
+        if (set(SUCCESS)) {
             notifyListeners();
             return true;
         }
         return false;
     }
 
-    private boolean success0() {
-        if (isDone()) {
-            return false;
-        }
-
-        synchronized (this) {
-            // Allow only once.
-            if (isDone()) {
-                return false;
-            }
-
-            cause = SUCCESS;
-            if (waiters > 0) {
-                notifyAll();
-            }
-        }
-        return true;
-    }
-
     @Override
     public ChannelPromise setFailure(Throwable cause) {
-        if (failure0(cause)) {
+        if (set(cause)) {
             notifyListeners();
             return this;
         }
@@ -400,14 +376,14 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
 
     @Override
     public boolean tryFailure(Throwable cause) {
-        if (failure0(cause)) {
+        if (set(cause)) {
             notifyListeners();
             return true;
         }
         return false;
     }
 
-    private boolean failure0(Throwable cause) {
+    private boolean set(Throwable cause) {
         if (isDone()) {
             return false;
         }
