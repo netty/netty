@@ -135,6 +135,12 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                     return new Object[] { header,  new DefaultHttpContent(newContent),
                             new DefaultLastHttpContent(lastProduct)};
                 }
+            } else {
+                if (header == null) {
+                    return new Object[] { new DefaultLastHttpContent(newContent) };
+                } else {
+                    return new Object[] { header, new DefaultLastHttpContent(newContent) };
+                }
             }
         }
         if (header == null) {
