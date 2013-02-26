@@ -200,7 +200,7 @@ public final class ChannelFlushPromiseNotifier {
 
         // Avoid overflow
         final long newWriteCounter = this.writeCounter;
-        if (newWriteCounter >= 0x1000000000000000L) {
+        if (newWriteCounter >= 0x8000000000L) {
             // Reset the counter only when the counter grew pretty large
             // so that we can reduce the cost of updating all entries in the notification list.
             this.writeCounter = 0;
