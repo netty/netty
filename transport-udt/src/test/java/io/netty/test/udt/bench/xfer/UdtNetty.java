@@ -27,8 +27,8 @@ import io.netty.test.udt.util.CustomReporter;
 import io.netty.test.udt.util.EchoMessageHandler;
 import io.netty.test.udt.util.TrafficControl;
 import io.netty.test.udt.util.UnitHelp;
-import io.netty.util.internal.InternalLogger;
-import io.netty.util.internal.InternalLoggerFactory;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;

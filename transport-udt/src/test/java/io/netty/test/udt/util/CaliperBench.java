@@ -17,8 +17,8 @@
 package io.netty.test.udt.util;
 
 import com.google.caliper.SimpleBenchmark;
-import io.netty.util.internal.InternalLogger;
-import io.netty.util.internal.InternalLoggerFactory;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 /**
  * Base class for caliper/metrics benchmarks.

@@ -13,20 +13,30 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.util.internal;
-
-
-import java.util.logging.Logger;
+package io.netty.util.internal.logging;
 
 /**
- * Logger factory which creates a
- * <a href="http://docs.oracle.com/javase/7/docs/technotes/guides/logging/">java.util.logging</a>
- * logger.
+ * The log level that {@link InternalLogger} can log at.
  */
-public class JdkLoggerFactory extends InternalLoggerFactory {
-
-    @Override
-    public InternalLogger newInstance(String name) {
-        return new JdkLogger(Logger.getLogger(name));
-    }
+public enum InternalLogLevel {
+    /**
+     * 'TRACE' log level.
+     */
+    TRACE,
+    /**
+     * 'DEBUG' log level.
+     */
+    DEBUG,
+    /**
+     * 'INFO' log level.
+     */
+    INFO,
+    /**
+     * 'WARN' log level.
+     */
+    WARN,
+    /**
+     * 'ERROR' log level.
+     */
+    ERROR
 }

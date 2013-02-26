@@ -37,57 +37,78 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  */
-package io.netty.util.internal;
+package io.netty.util.internal.logging;
 
-import java.util.logging.Level;
-import java.util.logging.LogRecord;
-import java.util.logging.Logger;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 
 /**
- * <a href="http://java.sun.com/javase/6/docs/technotes/guides/logging/index.html">java.util.logging</a>
+ * <a href="http://logging.apache.org/log4j/1.2/index.html">Apache Log4J</a>
  * logger.
  */
-class JdkLogger extends AbstractInternalLogger {
+class Log4JLogger extends AbstractInternalLogger {
 
-    private static final long serialVersionUID = -1767272577989225979L;
+    private static final long serialVersionUID = 2851357342488183058L;
 
     final transient Logger logger;
 
-    JdkLogger(Logger logger) {
+    /**
+     * Following the pattern discussed in pages 162 through 168 of "The complete
+     * log4j manual".
+     */
+    static final String FQCN = Log4JLogger.class.getName();
+
+    // Does the log4j version in use recognize the TRACE level?
+    // The trace level was introduced in log4j 1.2.12.
+    final boolean traceCapable;
+
+    Log4JLogger(Logger logger) {
         super(logger.getName());
         this.logger = logger;
+        traceCapable = isTraceCapable();
+    }
+
+    private boolean isTraceCapable() {
+        try {
+            logger.isTraceEnabled();
+            return true;
+        } catch (NoSuchMethodError e) {
+            return false;
+        }
     }
 
     /**
-     * Is this logger instance enabled for the FINEST level?
+     * Is this logger instance enabled for the TRACE level?
      *
-     * @return True if this Logger is enabled for level FINEST, false otherwise.
+     * @return True if this Logger is enabled for level TRACE, false otherwise.
      */
     @Override
     public boolean isTraceEnabled() {
-        return logger.isLoggable(Level.FINEST);
+        if (traceCapable) {
+            return logger.isTraceEnabled();
+        } else {
+            return logger.isDebugEnabled();
+        }
     }
 
     /**
-     * Log a message object at level FINEST.
+     * Log a message object at level TRACE.
      *
      * @param msg
      *          - the message object to be logged
      */
     @Override
     public void trace(String msg) {
-        if (logger.isLoggable(Level.FINEST)) {
-            log(SELF, Level.FINEST, msg, null);
-        }
+        logger.log(FQCN, traceCapable ? Level.TRACE : Level.DEBUG, msg, null);
     }
 
     /**
-     * Log a message at level FINEST according to the specified format and
+     * Log a message at level TRACE according to the specified format and
      * argument.
      *
      * <p>
      * This form avoids superfluous object creation when the logger is disabled
-     * for level FINEST.
+     * for level TRACE.
      * </p>
      *
      * @param format
@@ -97,19 +118,20 @@ class JdkLogger extends AbstractInternalLogger {
      */
     @Override
     public void trace(String format, Object arg) {
-        if (logger.isLoggable(Level.FINEST)) {
+        if (isTraceEnabled()) {
             FormattingTuple ft = MessageFormatter.format(format, arg);
-            log(SELF, Level.FINEST, ft.getMessage(), ft.getThrowable());
+            logger.log(FQCN, traceCapable ? Level.TRACE : Level.DEBUG, ft
+                    .getMessage(), ft.getThrowable());
         }
     }
 
     /**
-     * Log a message at level FINEST according to the specified format and
+     * Log a message at level TRACE according to the specified format and
      * arguments.
      *
      * <p>
      * This form avoids superfluous object creation when the logger is disabled
-     * for the FINEST level.
+     * for the TRACE level.
      * </p>
      *
      * @param format
@@ -121,36 +143,38 @@ class JdkLogger extends AbstractInternalLogger {
      */
     @Override
     public void trace(String format, Object argA, Object argB) {
-        if (logger.isLoggable(Level.FINEST)) {
+        if (isTraceEnabled()) {
             FormattingTuple ft = MessageFormatter.format(format, argA, argB);
-            log(SELF, Level.FINEST, ft.getMessage(), ft.getThrowable());
+            logger.log(FQCN, traceCapable ? Level.TRACE : Level.DEBUG, ft
+                    .getMessage(), ft.getThrowable());
         }
     }
 
     /**
-     * Log a message at level FINEST according to the specified format and
+     * Log a message at level TRACE according to the specified format and
      * arguments.
      *
      * <p>
      * This form avoids superfluous object creation when the logger is disabled
-     * for the FINEST level.
+     * for the TRACE level.
      * </p>
      *
      * @param format
      *          the format string
-     * @param argArray
+     * @param arguments
      *          an array of arguments
      */
     @Override
-    public void trace(String format, Object... argArray) {
-        if (logger.isLoggable(Level.FINEST)) {
-            FormattingTuple ft = MessageFormatter.arrayFormat(format, argArray);
-            log(SELF, Level.FINEST, ft.getMessage(), ft.getThrowable());
+    public void trace(String format, Object... arguments) {
+        if (isTraceEnabled()) {
+            FormattingTuple ft = MessageFormatter.arrayFormat(format, arguments);
+            logger.log(FQCN, traceCapable ? Level.TRACE : Level.DEBUG, ft
+                    .getMessage(), ft.getThrowable());
         }
     }
 
     /**
-     * Log an exception (throwable) at level FINEST with an accompanying message.
+     * Log an exception (throwable) at level TRACE with an accompanying message.
      *
      * @param msg
      *          the message accompanying the exception
@@ -159,40 +183,37 @@ class JdkLogger extends AbstractInternalLogger {
      */
     @Override
     public void trace(String msg, Throwable t) {
-        if (logger.isLoggable(Level.FINEST)) {
-            log(SELF, Level.FINEST, msg, t);
-        }
+        logger.log(FQCN, traceCapable ? Level.TRACE : Level.DEBUG, msg, t);
     }
 
     /**
-     * Is this logger instance enabled for the FINE level?
+     * Is this logger instance enabled for the DEBUG level?
      *
-     * @return True if this Logger is enabled for level FINE, false otherwise.
+     * @return True if this Logger is enabled for level DEBUG, false otherwise.
      */
     @Override
     public boolean isDebugEnabled() {
-        return logger.isLoggable(Level.FINE);
+        return logger.isDebugEnabled();
     }
 
     /**
-     * Log a message object at level FINE.
+     * Log a message object at level DEBUG.
      *
      * @param msg
      *          - the message object to be logged
      */
     @Override
     public void debug(String msg) {
-        if (logger.isLoggable(Level.FINE)) {
-            log(SELF, Level.FINE, msg, null);
-        }
+        logger.log(FQCN, Level.DEBUG, msg, null);
     }
 
     /**
-     * Log a message at level FINE according to the specified format and argument.
+     * Log a message at level DEBUG according to the specified format and
+     * argument.
      *
      * <p>
      * This form avoids superfluous object creation when the logger is disabled
-     * for level FINE.
+     * for level DEBUG.
      * </p>
      *
      * @param format
@@ -202,19 +223,19 @@ class JdkLogger extends AbstractInternalLogger {
      */
     @Override
     public void debug(String format, Object arg) {
-        if (logger.isLoggable(Level.FINE)) {
+        if (logger.isDebugEnabled()) {
             FormattingTuple ft = MessageFormatter.format(format, arg);
-            log(SELF, Level.FINE, ft.getMessage(), ft.getThrowable());
+            logger.log(FQCN, Level.DEBUG, ft.getMessage(), ft.getThrowable());
         }
     }
 
     /**
-     * Log a message at level FINE according to the specified format and
+     * Log a message at level DEBUG according to the specified format and
      * arguments.
      *
      * <p>
      * This form avoids superfluous object creation when the logger is disabled
-     * for the FINE level.
+     * for the DEBUG level.
      * </p>
      *
      * @param format
@@ -226,36 +247,35 @@ class JdkLogger extends AbstractInternalLogger {
      */
     @Override
     public void debug(String format, Object argA, Object argB) {
-        if (logger.isLoggable(Level.FINE)) {
+        if (logger.isDebugEnabled()) {
             FormattingTuple ft = MessageFormatter.format(format, argA, argB);
-            log(SELF, Level.FINE, ft.getMessage(), ft.getThrowable());
+            logger.log(FQCN, Level.DEBUG, ft.getMessage(), ft.getThrowable());
         }
     }
 
     /**
-     * Log a message at level FINE according to the specified format and
+     * Log a message at level DEBUG according to the specified format and
      * arguments.
      *
      * <p>
      * This form avoids superfluous object creation when the logger is disabled
-     * for the FINE level.
+     * for the DEBUG level.
      * </p>
      *
      * @param format
      *          the format string
-     * @param argArray
-     *          an array of arguments
+     * @param arguments an array of arguments
      */
     @Override
-    public void debug(String format, Object... argArray) {
-        if (logger.isLoggable(Level.FINE)) {
-            FormattingTuple ft = MessageFormatter.arrayFormat(format, argArray);
-            log(SELF, Level.FINE, ft.getMessage(), ft.getThrowable());
+    public void debug(String format, Object... arguments) {
+        if (logger.isDebugEnabled()) {
+            FormattingTuple ft = MessageFormatter.arrayFormat(format, arguments);
+            logger.log(FQCN, Level.DEBUG, ft.getMessage(), ft.getThrowable());
         }
     }
 
     /**
-     * Log an exception (throwable) at level FINE with an accompanying message.
+     * Log an exception (throwable) at level DEBUG with an accompanying message.
      *
      * @param msg
      *          the message accompanying the exception
@@ -264,9 +284,7 @@ class JdkLogger extends AbstractInternalLogger {
      */
     @Override
     public void debug(String msg, Throwable t) {
-        if (logger.isLoggable(Level.FINE)) {
-            log(SELF, Level.FINE, msg, t);
-        }
+        logger.log(FQCN, Level.DEBUG, msg, t);
     }
 
     /**
@@ -276,7 +294,7 @@ class JdkLogger extends AbstractInternalLogger {
      */
     @Override
     public boolean isInfoEnabled() {
-        return logger.isLoggable(Level.INFO);
+        return logger.isInfoEnabled();
     }
 
     /**
@@ -287,9 +305,7 @@ class JdkLogger extends AbstractInternalLogger {
      */
     @Override
     public void info(String msg) {
-        if (logger.isLoggable(Level.INFO)) {
-            log(SELF, Level.INFO, msg, null);
-        }
+        logger.log(FQCN, Level.INFO, msg, null);
     }
 
     /**
@@ -307,9 +323,9 @@ class JdkLogger extends AbstractInternalLogger {
      */
     @Override
     public void info(String format, Object arg) {
-        if (logger.isLoggable(Level.INFO)) {
+        if (logger.isInfoEnabled()) {
             FormattingTuple ft = MessageFormatter.format(format, arg);
-            log(SELF, Level.INFO, ft.getMessage(), ft.getThrowable());
+            logger.log(FQCN, Level.INFO, ft.getMessage(), ft.getThrowable());
         }
     }
 
@@ -331,9 +347,9 @@ class JdkLogger extends AbstractInternalLogger {
      */
     @Override
     public void info(String format, Object argA, Object argB) {
-        if (logger.isLoggable(Level.INFO)) {
+        if (logger.isInfoEnabled()) {
             FormattingTuple ft = MessageFormatter.format(format, argA, argB);
-            log(SELF, Level.INFO, ft.getMessage(), ft.getThrowable());
+            logger.log(FQCN, Level.INFO, ft.getMessage(), ft.getThrowable());
         }
     }
 
@@ -353,9 +369,9 @@ class JdkLogger extends AbstractInternalLogger {
      */
     @Override
     public void info(String format, Object... argArray) {
-        if (logger.isLoggable(Level.INFO)) {
+        if (logger.isInfoEnabled()) {
             FormattingTuple ft = MessageFormatter.arrayFormat(format, argArray);
-            log(SELF, Level.INFO, ft.getMessage(), ft.getThrowable());
+            logger.log(FQCN, Level.INFO, ft.getMessage(), ft.getThrowable());
         }
     }
 
@@ -370,42 +386,37 @@ class JdkLogger extends AbstractInternalLogger {
      */
     @Override
     public void info(String msg, Throwable t) {
-        if (logger.isLoggable(Level.INFO)) {
-            log(SELF, Level.INFO, msg, t);
-        }
+        logger.log(FQCN, Level.INFO, msg, t);
     }
 
     /**
-     * Is this logger instance enabled for the WARNING level?
+     * Is this logger instance enabled for the WARN level?
      *
-     * @return True if this Logger is enabled for the WARNING level, false
-     *         otherwise.
+     * @return True if this Logger is enabled for the WARN level, false otherwise.
      */
     @Override
     public boolean isWarnEnabled() {
-        return logger.isLoggable(Level.WARNING);
+        return logger.isEnabledFor(Level.WARN);
     }
 
     /**
-     * Log a message object at the WARNING level.
+     * Log a message object at the WARN level.
      *
      * @param msg
      *          - the message object to be logged
      */
     @Override
     public void warn(String msg) {
-        if (logger.isLoggable(Level.WARNING)) {
-            log(SELF, Level.WARNING, msg, null);
-        }
+        logger.log(FQCN, Level.WARN, msg, null);
     }
 
     /**
-     * Log a message at the WARNING level according to the specified format and
+     * Log a message at the WARN level according to the specified format and
      * argument.
      *
      * <p>
      * This form avoids superfluous object creation when the logger is disabled
-     * for the WARNING level.
+     * for the WARN level.
      * </p>
      *
      * @param format
@@ -415,19 +426,19 @@ class JdkLogger extends AbstractInternalLogger {
      */
     @Override
     public void warn(String format, Object arg) {
-        if (logger.isLoggable(Level.WARNING)) {
+        if (logger.isEnabledFor(Level.WARN)) {
             FormattingTuple ft = MessageFormatter.format(format, arg);
-            log(SELF, Level.WARNING, ft.getMessage(), ft.getThrowable());
+            logger.log(FQCN, Level.WARN, ft.getMessage(), ft.getThrowable());
         }
     }
 
     /**
-     * Log a message at the WARNING level according to the specified format and
+     * Log a message at the WARN level according to the specified format and
      * arguments.
      *
      * <p>
      * This form avoids superfluous object creation when the logger is disabled
-     * for the WARNING level.
+     * for the WARN level.
      * </p>
      *
      * @param format
@@ -439,19 +450,19 @@ class JdkLogger extends AbstractInternalLogger {
      */
     @Override
     public void warn(String format, Object argA, Object argB) {
-        if (logger.isLoggable(Level.WARNING)) {
+        if (logger.isEnabledFor(Level.WARN)) {
             FormattingTuple ft = MessageFormatter.format(format, argA, argB);
-            log(SELF, Level.WARNING, ft.getMessage(), ft.getThrowable());
+            logger.log(FQCN, Level.WARN, ft.getMessage(), ft.getThrowable());
         }
     }
 
     /**
-     * Log a message at level WARNING according to the specified format and
+     * Log a message at level WARN according to the specified format and
      * arguments.
      *
      * <p>
      * This form avoids superfluous object creation when the logger is disabled
-     * for the WARNING level.
+     * for the WARN level.
      * </p>
      *
      * @param format
@@ -461,14 +472,14 @@ class JdkLogger extends AbstractInternalLogger {
      */
     @Override
     public void warn(String format, Object... argArray) {
-        if (logger.isLoggable(Level.WARNING)) {
+        if (logger.isEnabledFor(Level.WARN)) {
             FormattingTuple ft = MessageFormatter.arrayFormat(format, argArray);
-            log(SELF, Level.WARNING, ft.getMessage(), ft.getThrowable());
+            logger.log(FQCN, Level.WARN, ft.getMessage(), ft.getThrowable());
         }
     }
 
     /**
-     * Log an exception (throwable) at the WARNING level with an accompanying
+     * Log an exception (throwable) at the WARN level with an accompanying
      * message.
      *
      * @param msg
@@ -478,41 +489,37 @@ class JdkLogger extends AbstractInternalLogger {
      */
     @Override
     public void warn(String msg, Throwable t) {
-        if (logger.isLoggable(Level.WARNING)) {
-            log(SELF, Level.WARNING, msg, t);
-        }
+        logger.log(FQCN, Level.WARN, msg, t);
     }
 
     /**
-     * Is this logger instance enabled for level SEVERE?
+     * Is this logger instance enabled for level ERROR?
      *
-     * @return True if this Logger is enabled for level SEVERE, false otherwise.
+     * @return True if this Logger is enabled for level ERROR, false otherwise.
      */
     @Override
     public boolean isErrorEnabled() {
-        return logger.isLoggable(Level.SEVERE);
+        return logger.isEnabledFor(Level.ERROR);
     }
 
     /**
-     * Log a message object at the SEVERE level.
+     * Log a message object at the ERROR level.
      *
      * @param msg
      *          - the message object to be logged
      */
     @Override
     public void error(String msg) {
-        if (logger.isLoggable(Level.SEVERE)) {
-            log(SELF, Level.SEVERE, msg, null);
-        }
+        logger.log(FQCN, Level.ERROR, msg, null);
     }
 
     /**
-     * Log a message at the SEVERE level according to the specified format and
+     * Log a message at the ERROR level according to the specified format and
      * argument.
      *
      * <p>
      * This form avoids superfluous object creation when the logger is disabled
-     * for the SEVERE level.
+     * for the ERROR level.
      * </p>
      *
      * @param format
@@ -522,19 +529,19 @@ class JdkLogger extends AbstractInternalLogger {
      */
     @Override
     public void error(String format, Object arg) {
-        if (logger.isLoggable(Level.SEVERE)) {
+        if (logger.isEnabledFor(Level.ERROR)) {
             FormattingTuple ft = MessageFormatter.format(format, arg);
-            log(SELF, Level.SEVERE, ft.getMessage(), ft.getThrowable());
+            logger.log(FQCN, Level.ERROR, ft.getMessage(), ft.getThrowable());
         }
     }
 
     /**
-     * Log a message at the SEVERE level according to the specified format and
+     * Log a message at the ERROR level according to the specified format and
      * arguments.
      *
      * <p>
      * This form avoids superfluous object creation when the logger is disabled
-     * for the SEVERE level.
+     * for the ERROR level.
      * </p>
      *
      * @param format
@@ -546,36 +553,36 @@ class JdkLogger extends AbstractInternalLogger {
      */
     @Override
     public void error(String format, Object argA, Object argB) {
-        if (logger.isLoggable(Level.SEVERE)) {
+        if (logger.isEnabledFor(Level.ERROR)) {
             FormattingTuple ft = MessageFormatter.format(format, argA, argB);
-            log(SELF, Level.SEVERE, ft.getMessage(), ft.getThrowable());
+            logger.log(FQCN, Level.ERROR, ft.getMessage(), ft.getThrowable());
         }
     }
 
     /**
-     * Log a message at level SEVERE according to the specified format and
+     * Log a message at level ERROR according to the specified format and
      * arguments.
      *
      * <p>
      * This form avoids superfluous object creation when the logger is disabled
-     * for the SEVERE level.
+     * for the ERROR level.
      * </p>
      *
      * @param format
      *          the format string
-     * @param arguments
+     * @param argArray
      *          an array of arguments
      */
     @Override
-    public void error(String format, Object... arguments) {
-        if (logger.isLoggable(Level.SEVERE)) {
-            FormattingTuple ft = MessageFormatter.arrayFormat(format, arguments);
-            log(SELF, Level.SEVERE, ft.getMessage(), ft.getThrowable());
+    public void error(String format, Object... argArray) {
+        if (logger.isEnabledFor(Level.ERROR)) {
+            FormattingTuple ft = MessageFormatter.arrayFormat(format, argArray);
+            logger.log(FQCN, Level.ERROR, ft.getMessage(), ft.getThrowable());
         }
     }
 
     /**
-     * Log an exception (throwable) at the SEVERE level with an accompanying
+     * Log an exception (throwable) at the ERROR level with an accompanying
      * message.
      *
      * @param msg
@@ -585,63 +592,6 @@ class JdkLogger extends AbstractInternalLogger {
      */
     @Override
     public void error(String msg, Throwable t) {
-        if (logger.isLoggable(Level.SEVERE)) {
-            log(SELF, Level.SEVERE, msg, t);
-        }
-    }
-
-    /**
-     * Log the message at the specified level with the specified throwable if any.
-     * This method creates a LogRecord and fills in caller date before calling
-     * this instance's JDK14 logger.
-     *
-     * See bug report #13 for more details.
-     */
-    private void log(String callerFQCN, Level level, String msg, Throwable t) {
-        // millis and thread are filled by the constructor
-        LogRecord record = new LogRecord(level, msg);
-        record.setLoggerName(name());
-        record.setThrown(t);
-        fillCallerData(callerFQCN, record);
-        logger.log(record);
-    }
-
-    static final String SELF = JdkLogger.class.getName();
-    static final String SUPER = AbstractInternalLogger.class.getName();
-
-    /**
-     * Fill in caller data if possible.
-     *
-     * @param record
-     *          The record to update
-     */
-    private static void fillCallerData(String callerFQCN, LogRecord record) {
-        StackTraceElement[] steArray = new Throwable().getStackTrace();
-
-        int selfIndex = -1;
-        for (int i = 0; i < steArray.length; i++) {
-            final String className = steArray[i].getClassName();
-            if (className.equals(callerFQCN) || className.equals(SUPER)) {
-                selfIndex = i;
-                break;
-            }
-        }
-
-        int found = -1;
-        for (int i = selfIndex + 1; i < steArray.length; i++) {
-            final String className = steArray[i].getClassName();
-            if (!(className.equals(callerFQCN) || className.equals(SUPER))) {
-                found = i;
-                break;
-            }
-        }
-
-        if (found != -1) {
-            StackTraceElement ste = steArray[found];
-            // setting the class name has the side effect of setting
-            // the needToInferCaller variable to false.
-            record.setSourceClassName(ste.getClassName());
-            record.setSourceMethodName(ste.getMethodName());
-        }
+        logger.log(FQCN, Level.ERROR, msg, t);
     }
 }

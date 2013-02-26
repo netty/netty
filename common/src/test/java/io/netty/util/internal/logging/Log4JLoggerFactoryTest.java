@@ -13,25 +13,18 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.util.internal;
+package io.netty.util.internal.logging;
 
+import org.junit.Test;
 
-import org.apache.commons.logging.LogFactory;
+import static org.junit.Assert.*;
 
-import java.util.HashMap;
-import java.util.Map;
+public class Log4JLoggerFactoryTest {
 
-/**
- * Logger factory which creates an
- * <a href="http://commons.apache.org/logging/">Apache Commons Logging</a>
- * logger.
- */
-public class CommonsLoggerFactory extends InternalLoggerFactory {
-
-    Map<String, InternalLogger> loggerMap = new HashMap<String, InternalLogger>();
-
-    @Override
-    public InternalLogger newInstance(String name) {
-        return new CommonsLogger(LogFactory.getLog(name), name);
+    @Test
+    public void testCreation() {
+        InternalLogger logger = new Log4JLoggerFactory().newInstance("foo");
+        assertTrue(logger instanceof Log4JLogger);
+        assertEquals("foo", logger.name());
     }
 }

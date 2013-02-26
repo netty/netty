@@ -25,8 +25,8 @@ import io.netty.channel.udt.nio.NioUdtByteRendezvousChannel;
 import io.netty.test.udt.util.BootHelp;
 import io.netty.test.udt.util.EchoByteHandler;
 import io.netty.test.udt.util.UnitHelp;
-import io.netty.util.internal.InternalLogger;
-import io.netty.util.internal.InternalLoggerFactory;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
