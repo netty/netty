@@ -475,7 +475,7 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
         }
     }
 
-    private static void reject() {
+    protected static void reject() {
         throw new RejectedExecutionException("event executor terminated");
     }
 

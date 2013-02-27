@@ -26,7 +26,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadFactory;
 
 /**
@@ -35,6 +37,7 @@ import java.util.concurrent.ThreadFactory;
 final class AioEventLoop extends SingleThreadEventLoop {
 
     private final Set<Channel> channels = Collections.newSetFromMap(new IdentityHashMap<Channel, Boolean>());
+    private LinkedBlockingDeque<Runnable> taskQueue;
 
     private final ChannelFutureListener registrationListener = new ChannelFutureListener() {
         @Override
@@ -99,5 +102,38 @@ final class AioEventLoop extends SingleThreadEventLoop {
         for (Channel ch: channels) {
             ch.unsafe().close(ch.unsafe().voidFuture());
         }
+    }
+
+    @Override
+    protected Queue<Runnable> newTaskQueue() {
+        // use a Deque as we need to be able to also add tasks on the first position.
+        taskQueue = new LinkedBlockingDeque<Runnable>();
+        return taskQueue;
+    }
+
+    @Override
+    protected void addTask(Runnable task) {
+        if (task instanceof RecursionBreakingRunnable) {
+            if (task == null) {
+                throw new NullPointerException("task");
+            }
+            if (isTerminated()) {
+                reject();
+            }
+            // put the task at the first postion of the queue as we just schedule it to
+            // break the recursive operation
+            taskQueue.addFirst(task);
+        } else {
+            super.addTask(task);
+        }
+    }
+
+    /**
+     * Special Runnable which is used by {@link AioCompletionHandler} to break a recursive call and so prevent
+     * from StackOverFlowError. When a task is executed that implement it needs to put on the first position of
+     * the queue to guaranteer execution order and break the recursive call.
+     */
+    interface RecursionBreakingRunnable extends Runnable {
+        // Marker interface
     }
 }

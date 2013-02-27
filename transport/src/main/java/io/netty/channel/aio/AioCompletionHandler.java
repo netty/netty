@@ -60,6 +60,15 @@ public abstract class AioCompletionHandler<V, A extends Channel> implements Comp
                 } finally {
                     STACK_DEPTH.set(d);
                 }
+            } else {
+                // schedule it with a special runnable to make sure we keep the right
+                // order and exist the recursive call to prevent stackoverflow
+                loop.execute(new AioEventLoop.RecursionBreakingRunnable() {
+                    @Override
+                    public void run() {
+                        completed0(result, channel);
+                    }
+                });
             }
         } else {
             loop.execute(new Runnable() {
@@ -83,6 +92,15 @@ public abstract class AioCompletionHandler<V, A extends Channel> implements Comp
                 } finally {
                     STACK_DEPTH.set(d);
                 }
+            } else {
+                // schedule it with a special runnable to make sure we keep the right
+                // order and exist the recursive call to prevent stackoverflow
+                loop.execute(new AioEventLoop.RecursionBreakingRunnable() {
+                    @Override
+                    public void run() {
+                        failed0(exc, channel);
+                    }
+                });
             }
         } else {
             loop.execute(new Runnable() {
