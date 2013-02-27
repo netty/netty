@@ -312,6 +312,82 @@ public final class BufUtil {
         return Long.reverseBytes(value);
     }
 
+    /**
+     * Returns true if the buffer contains a sequence of bytes that may be
+     * interpreted as a valid UTF-8 sequence.  This method does not allow
+     * overlong encodings.
+     */
+    public static boolean isValidUtf8(ByteBuf buf) {
+        int index = buf.readerIndex();
+        final int maxIndex = index + buf.readableBytes();
+
+        for (;;) {
+            if (index >= maxIndex) {
+                return true;
+            }
+
+            byte b = buf.getByte(index++);
+
+            if ((b & 0x80) == 0) {
+                // This codepoint is a single-byte character
+                continue;
+            }
+
+            // Calculate the number of high-order 1s in the leading byte of
+            // this multi-byte character, as these indicate the number of
+            // bytes in the codepoint
+            int accumulator = b;
+            int highOrder1s = 0;
+            while ((b & 0x80) == 0x80) {
+                b <<= 1;
+                highOrder1s++;
+            }
+
+            // the accumulator is the character represented as a 32-bit
+            // integer, which is later compared against the minimum
+            // codepoint values to detect overlong encodings
+            accumulator &= (1 << (7 - highOrder1s)) - 1;
+
+            if (highOrder1s < 2 || highOrder1s > 4) {
+                // Invalid number of character
+                return false;
+            }
+
+            if (maxIndex - index < highOrder1s) {
+                // Partial encoding
+                return false;
+            }
+
+            int minValue = CharsetUtil.MIN_CODEPOINT_VALUES_UTF_8[highOrder1s - 2];
+            while (--highOrder1s > 0) {
+                byte codepoint = buf.getByte(index++);
+                if ((codepoint & 0xc0) != 0x80) {
+                    // Invalid continuation byte
+                    return false;
+                }
+                accumulator = (accumulator << 6) | (codepoint & 0x3f);
+            }
+
+            if (accumulator < minValue) {
+                return false;
+            }
+        }
+    }
+
+    /**
+     * Returns true if the buffer contains a sequence of bytes that may be
+     * interpreted as a valid US-ASCII sequence.
+     */
+    public static boolean isValidAscii(ByteBuf buf) {
+        for (int index = buf.readerIndex(); index < buf.readableBytes(); index++) {
+            if (buf.getUnsignedByte(index) > 0x7F) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private static int firstIndexOf(ByteBuf buffer, int fromIndex, int toIndex, byte value) {
         fromIndex = Math.max(fromIndex, 0);
         if (fromIndex >= toIndex || buffer.capacity() == 0) {
