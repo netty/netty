@@ -22,6 +22,7 @@ import io.netty.channel.EventLoop;
 
 import java.net.ConnectException;
 import java.net.SocketAddress;
+import java.net.SocketTimeoutException;
 import java.nio.channels.AsynchronousChannel;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -114,8 +115,8 @@ public abstract class AbstractAioChannel extends AbstractChannel {
                             @Override
                             public void run() {
                                 ChannelPromise connectFuture = connectPromise;
-                                ConnectException cause =
-                                        new ConnectException("connection timed out: " + remoteAddress);
+                                SocketTimeoutException cause =
+                                        new SocketTimeoutException("connection timed out: " + remoteAddress);
                                 if (connectFuture != null && connectFuture.tryFailure(cause)) {
                                     close(voidFuture());
                                 }
