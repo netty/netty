@@ -38,14 +38,8 @@ public class SlicedByteBuf extends AbstractDerivedByteBuf {
 
     public SlicedByteBuf(ByteBuf buffer, int index, int length) {
         super(length);
-        if (index < 0 || index > buffer.capacity()) {
-            throw new IndexOutOfBoundsException("Invalid index of " + index
-                    + ", maximum is " + buffer.capacity());
-        }
-
-        if (index + length > buffer.capacity()) {
-            throw new IndexOutOfBoundsException("Invalid combined index of "
-                    + (index + length) + ", maximum is " + buffer.capacity());
+        if (index < 0 || index > buffer.capacity() - length) {
+            throw new IndexOutOfBoundsException(buffer.toString() + ".slice(" + index + ", " + length + ')');
         }
 
         if (buffer instanceof SlicedByteBuf) {
