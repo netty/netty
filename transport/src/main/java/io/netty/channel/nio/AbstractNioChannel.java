@@ -26,6 +26,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.SocketAddress;
+import java.net.SocketTimeoutException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
@@ -183,8 +184,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                                 @Override
                                 public void run() {
                                     ChannelPromise connectPromise = AbstractNioChannel.this.connectPromise;
-                                    ConnectException cause =
-                                            new ConnectException("connection timed out: " + remoteAddress);
+                                    SocketTimeoutException cause =
+                                            new SocketTimeoutException("connection timed out: " + remoteAddress);
                                     if (connectPromise != null && connectPromise.tryFailure(cause)) {
                                         close(voidFuture());
                                     }
