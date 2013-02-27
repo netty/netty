@@ -26,7 +26,6 @@ import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.SocketChannel;
 import org.jboss.netty.util.ExternalResourceReleasable;
-import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timer;
 
 /**
@@ -165,7 +164,7 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
     public NioClientSocketChannelFactory(
             Executor bossExecutor, int bossCount,
             WorkerPool<NioWorker> workerPool) {
-        this(bossExecutor, bossCount, workerPool, new HashedWheelTimer());
+        this(new NioClientBossPool(bossExecutor, bossCount), workerPool);
     }
 
     /**
