@@ -1,43 +1,27 @@
-# The Netty Project
+# Netty Project
 
-Netty is an asynchronous event-driven network application framework for rapid development of maintainable high performance protocol servers & clients.
+Netty is an asynchronous event-driven network application framework for rapid development of maintainable high
+performance protocol servers & clients.
 
 ## Links
 
-- Web Site: http://netty.io/
+* [Web Site](http://netty.io/)
+* [Downloads](http://netty.io/downloads.html)
+* [Documentation](http://netty.io/wiki/)
+* [@netty_project](https://twitter.com/netty_project)
 
-- Docs: http://netty.io/wiki/
+## How to build
 
-- Blog: http://netty.io/news/
+You require the following to build Netty:
 
-- Twitter: @netty_project
+* JDK 7
+* Latest stable [Maven](http://maven.apache.org)
 
-## Getting Netty
+Note that this is build-time requirement.  JDK 5 (for 3.x) or 6 (for 4.0) is enough to run your Netty-based
+application.
 
-- Download Page: http://netty.io/downloads.html
+## Branches
 
-- Maven Repository: 
-
-```xml
-<dependencies>
-  ...
-  <dependency>
-    <groupId>io.netty</groupId>
-    <artifactId>netty-all</artifactId>
-    <version>X.Y.Z.Q</version>
-    <scope>compile</scope>
-  </dependency>
-  ...
-</dependencies>
-```
-
-## Developer Information
-
-- Netty is setup to build using [Maven](http://maven.apache.org/)
-
-- You need JDK 7 to __build__ Netty. Netty will run with JDK 5 (3.x) and JDK 6 (4).
-
-- __master__ branch contains code for Netty 4.x
-
-- __3__ branch contains code for Netty 3.x
+* `master` - 4.0
+* `3` - 3.x
 
