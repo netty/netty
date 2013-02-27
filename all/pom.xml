@@ -278,6 +278,33 @@
         </executions>
       </plugin>
       <plugin>
+        <artifactId>maven-jxr-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>generate-xref</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jxr</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <skip>${quickbuild}</skip>
+          <linkJavadoc>true</linkJavadoc>
+          <destDir>${project.build.directory}/xref</destDir>
+          <javadocDir>${project.build.directory}/api</javadocDir>
+          <docTitle>Netty Source Xref (${project.version})</docTitle>
+          <windowTitle>Netty Source Xref (${project.version})</windowTitle>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>netty-build</artifactId>
+            <version>10</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+      <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
         <executions>
           <execution>
