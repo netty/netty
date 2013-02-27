@@ -120,9 +120,9 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
          */
         public static final String SCHEME = ":scheme";
         /**
-         * {@code ":getStatus"}
+         * {@code ":status"}
          */
-        public static final String STATUS = ":getStatus";
+        public static final String STATUS = ":status";
         /**
          * {@code ":version"}
          */
@@ -144,9 +144,9 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
          */
         public static final String SCHEME = "scheme";
         /**
-         * {@code "getStatus"}
+         * {@code "status"}
          */
-        public static final String STATUS = "getStatus";
+        public static final String STATUS = "status";
         /**
          * {@code "url"}
          */
@@ -301,7 +301,7 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-     * Removes the HTTP response getStatus header.
+     * Removes the HTTP response status header.
      */
     public static void removeStatus(int spdyVersion, SpdyHeaderBlock block) {
         if (spdyVersion < 3) {
@@ -312,7 +312,7 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-     * Returns the {@link HttpResponseStatus} represented by the HTTP response getStatus header.
+     * Returns the {@link HttpResponseStatus} represented by the HTTP response status header.
      */
     public static HttpResponseStatus getStatus(int spdyVersion, SpdyHeaderBlock block) {
         try {
@@ -341,7 +341,7 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-     * Sets the HTTP response getStatus header.
+     * Sets the HTTP response status header.
      */
     public static void setStatus(int spdyVersion, SpdyHeaderBlock block, HttpResponseStatus status) {
         if (spdyVersion < 3) {
