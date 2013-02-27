@@ -12,16 +12,18 @@ performance protocol servers & clients.
 
 ## How to build
 
+For the detailed information about building and developing Netty, please visit [the developer guide](http://netty.io/wiki/developer-guide.html).  This page only gives very basic information.
+
 You require the following to build Netty:
 
-* JDK 7
-* Latest stable [Maven](http://maven.apache.org)
+* Latest stable [Oracle JDK 7](ihttp://www.oracle.com/technetwork/java/)
+* Latest stable [Apache Maven](http://maven.apache.org/)
 
 Note that this is build-time requirement.  JDK 5 (for 3.x) or 6 (for 4.0) is enough to run your Netty-based
 application.
 
 ## Branches
 
-* `master` - 4.0
-* `3` - 3.x
+* [4.0](https://github.com/netty/netty)
+* [3.x](https://github.com/netty/netty/tree/3)
 
