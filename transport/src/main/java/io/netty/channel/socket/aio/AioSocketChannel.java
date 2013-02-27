@@ -17,6 +17,7 @@ package io.netty.channel.socket.aio;
 
 import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFlushPromiseNotifier;
 import io.netty.channel.ChannelFuture;
@@ -535,13 +536,13 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
         @Override
         public int write(final ByteBuffer src) {
-            javaChannel().write(src, null, new CompletionHandler<Integer, Object>() {
+            javaChannel().write(src, AioSocketChannel.this, new AioCompletionHandler<Integer, Channel>() {
 
                 @Override
-                public void completed(Integer result, Object attachment) {
+                public void completed0(Integer result, Channel attachment) {
                     try {
                         if (result == 0) {
-                            javaChannel().write(src, null, this);
+                            javaChannel().write(src, AioSocketChannel.this, this);
                             return;
                         }
                         if (result == -1) {
@@ -557,7 +558,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                             return;
                         }
                         if (src.hasRemaining()) {
-                            javaChannel().write(src, null, this);
+                            javaChannel().write(src, AioSocketChannel.this, this);
                         } else {
                             region.transferTo(WritableByteChannelAdapter.this, written);
                         }
@@ -568,7 +569,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 }
 
                 @Override
-                public void failed(Throwable exc, Object attachment) {
+                public void failed0(Throwable exc, Channel attachment) {
                     region.release();
                     promise.setFailure(exc);
                 }
