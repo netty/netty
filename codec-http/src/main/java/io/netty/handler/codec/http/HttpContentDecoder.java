@@ -15,9 +15,9 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.ReferenceCounted;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedByteChannel;
@@ -47,17 +47,28 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
     private EmbeddedByteChannel decoder;
     private HttpMessage message;
     private boolean decodeStarted;
+    private boolean continueResponse;
 
     @Override
     protected Object decode(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
         if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().code() == 100) {
             // 100-continue response must be passed through.
-            if (msg instanceof ReferenceCounted) {
-                // need to call retain to not free it
-                ((ReferenceCounted) msg).retain();
+            BufUtil.retain(msg);
+            if (!(msg instanceof LastHttpContent)) {
+                continueResponse = true;
             }
             return msg;
         }
+
+        if (continueResponse) {
+            if (msg instanceof LastHttpContent) {
+                continueResponse = false;
+            }
+            // 100-continue response must be passed through.
+            BufUtil.retain(msg);
+            return msg;
+        }
+
         if (msg instanceof HttpMessage) {
             assert message == null;
             message = (HttpMessage) msg;
