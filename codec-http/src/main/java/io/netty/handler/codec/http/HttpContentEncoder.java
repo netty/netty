@@ -54,7 +54,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
     private EmbeddedByteChannel encoder;
     private HttpMessage message;
     private boolean encodeStarted;
-
+    private boolean continueResponse;
     @Override
     protected Object decode(ChannelHandlerContext ctx, HttpMessage msg)
             throws Exception {
@@ -71,6 +71,18 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
     protected Object encode(ChannelHandlerContext ctx, HttpObject msg)
             throws Exception {
         if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().code() == 100) {
+            // 100-continue response must be passed through.
+            BufUtil.retain(msg);
+            if (!(msg instanceof LastHttpContent)) {
+                continueResponse = true;
+            }
+            return msg;
+        }
+
+        if (continueResponse) {
+            if (msg instanceof LastHttpContent) {
+                continueResponse = false;
+            }
             // 100-continue response must be passed through.
             BufUtil.retain(msg);
             return msg;
