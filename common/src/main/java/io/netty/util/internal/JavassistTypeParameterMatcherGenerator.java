@@ -40,7 +40,8 @@ final class JavassistTypeParameterMatcherGenerator {
     }
 
     static TypeParameterMatcher generate(Class<?> type, ClassLoader classLoader) {
-        final String className = "io.netty.util.internal.__matchers__." + type.getName() + "Matcher";
+        final String typeName = typeName(type);
+        final String className = "io.netty.util.internal.__matchers__." + typeName + "Matcher";
         try {
             try {
                 return (TypeParameterMatcher) Class.forName(className, true, classLoader).newInstance();
@@ -50,7 +51,7 @@ final class JavassistTypeParameterMatcherGenerator {
 
             CtClass c = classPool.getAndRename(NoOpTypeParameterMatcher.class.getName(), className);
             c.setModifiers(c.getModifiers() | Modifier.FINAL);
-            c.getDeclaredMethod("match").setBody("{ return $1 instanceof " + type.getName() + "; }");
+            c.getDeclaredMethod("match").setBody("{ return $1 instanceof " + typeName + "; }");
             byte[] byteCode = c.toBytecode();
             c.detach();
             Method method = ClassLoader.class.getDeclaredMethod(
@@ -65,6 +66,14 @@ final class JavassistTypeParameterMatcherGenerator {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static String typeName(Class<?> type) {
+        if (type.isArray()) {
+            return typeName(type.getComponentType()) + "[]";
+        }
+
+        return type.getName();
     }
 
     private JavassistTypeParameterMatcherGenerator() { }
