@@ -28,6 +28,7 @@ import io.netty.channel.ChannelOutboundByteHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
+import io.netty.channel.FileRegion;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -36,11 +37,13 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLEngineResult.Status;
 import javax.net.ssl.SSLException;
+import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SocketChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.Executor;
@@ -159,6 +162,7 @@ public class SslHandler
 
     private final boolean startTls;
     private boolean sentFirstMessage;
+    private WritableByteChannel bufferChannel;
 
     private final Queue<ChannelPromise> handshakePromises = new ArrayDeque<ChannelPromise>();
     private final SSLEngineInboundCloseFuture sslCloseFuture = new SSLEngineInboundCloseFuture();
@@ -419,6 +423,65 @@ public class SslHandler
     @Override
     public void read(ChannelHandlerContext ctx) {
         ctx.read();
+    }
+
+    @Override
+    public final void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise promise) throws Exception {
+        if (bufferChannel == null) {
+            bufferChannel = new BufferChannel(ctx.outboundByteBuffer());
+        }
+        long written = 0;
+        try {
+            for (;;) {
+                long localWritten = region.transferTo(bufferChannel, written);
+                if (localWritten == -1) {
+                    checkEOF(region, written);
+                    flush(ctx, promise);
+                    break;
+                }
+                written += localWritten;
+                if (written >= region.count()) {
+                    flush(ctx, promise);
+                    break;
+                }
+            }
+        } catch (IOException e) {
+            promise.setFailure(e);
+        } finally {
+            region.release();
+        }
+    }
+
+    private static void checkEOF(FileRegion region, long writtenBytes) throws IOException {
+        if (writtenBytes < region.count()) {
+            throw new EOFException("Expected to be able to write "
+                    + region.count() + " bytes, but only wrote "
+                    + writtenBytes);
+        }
+    }
+
+    private static final class BufferChannel implements WritableByteChannel {
+        private final ByteBuf buffer;
+
+        BufferChannel(ByteBuf buffer) {
+            this.buffer = buffer;
+        }
+        @Override
+        public int write(ByteBuffer src) {
+            int bytes = src.remaining();
+            buffer.writeBytes(src);
+            return bytes;
+        }
+
+        @Override
+        public boolean isOpen() {
+            return buffer.refCnt() > 0;
+        }
+
+        @Override
+        public void close() {
+            // NOOP
+        }
     }
 
     @Override
