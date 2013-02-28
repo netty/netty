@@ -196,8 +196,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
             valid = true;
         }
 
-        if (!valid)
-        {
+        if (!valid) {
             throw new UnsupportedMessageTypeException(msg);
         }
 
