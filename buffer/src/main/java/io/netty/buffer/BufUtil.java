@@ -43,6 +43,23 @@ public final class BufUtil {
     }
 
     /**
+     * A 3-element array of the minimum value that each size of UTF-8 codepoint
+     * larger than the ASCII plane (ie. code points of size 2, 3 and 4 bytes)
+     * may represent:
+     *
+     * <ul>
+     *   <li><strong>2</strong> byte codepoints - 0x80
+     *   <li><strong>3</strong> byte codepoints - 0x800
+     *   <li><strong>4</strong> byte codepoints - 0x10000
+     * </ul>
+     *
+     * These values can therefore be used to detect illegal overlong encodings.
+     */
+    private static final int[] MIN_CODEPOINT_VALUES_UTF_8 = {
+        0x00000080, 0x00000800, 0x00010000
+    };
+
+    /**
      * Try to call {@link ReferenceCounted#retain()} if the specified message implements {@link ReferenceCounted}.
      * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.
      */
@@ -358,7 +375,7 @@ public final class BufUtil {
                 return false;
             }
 
-            int minValue = CharsetUtil.MIN_CODEPOINT_VALUES_UTF_8[highOrder1s - 2];
+            int minValue = MIN_CODEPOINT_VALUES_UTF_8[highOrder1s - 2];
             while (--highOrder1s > 0) {
                 byte codepoint = buf.getByte(index++);
                 if ((codepoint & 0xc0) != 0x80) {
