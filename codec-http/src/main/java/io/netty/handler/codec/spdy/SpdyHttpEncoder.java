@@ -142,11 +142,16 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
     protected Object encode(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
 
         List<Object> out = new ArrayList<Object>();
+
+        boolean valid = false;
+
         if (msg instanceof HttpRequest) {
 
             HttpRequest httpRequest = (HttpRequest) msg;
             SpdySynStreamFrame spdySynStreamFrame = createSynStreamFrame(httpRequest);
             out.add(spdySynStreamFrame);
+
+            valid = true;
         }
         if (msg instanceof HttpResponse) {
 
@@ -158,6 +163,8 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
                 SpdySynReplyFrame spdySynReplyFrame = createSynReplyFrame(httpResponse);
                 out.add(spdySynReplyFrame);
             }
+
+            valid = true;
         }
         if (msg instanceof HttpContent) {
 
@@ -185,7 +192,11 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
             } else {
                 out.add(spdyDataFrame);
             }
-        } else {
+
+            valid = true;
+        }
+
+        if (!valid) {
             throw new UnsupportedMessageTypeException(msg);
         }
 
@@ -255,8 +266,6 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
 
     private SpdySynReplyFrame createSynReplyFrame(HttpResponse httpResponse)
             throws Exception {
-        boolean chunked = HttpHeaders.isTransferEncodingChunked(httpResponse);
-
         // Get the Stream-ID from the headers
         int streamID = SpdyHttpHeaders.getStreamId(httpResponse);
         SpdyHttpHeaders.removeStreamId(httpResponse);
@@ -279,10 +288,8 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
             spdySynReplyFrame.headers().add(entry.getKey(), entry.getValue());
         }
 
-        if (chunked) {
-            currentStreamId = streamID;
-            spdySynReplyFrame.setLast(false);
-        }
+        currentStreamId = streamID;
+        spdySynReplyFrame.setLast(false);
 
         return spdySynReplyFrame;
     }

@@ -92,7 +92,9 @@ public class SpdySessionHandler
 
     @Override
     public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        ctx.inboundByteBuffer().release();
+        if (ctx.hasInboundByteBuffer()) {
+            ctx.inboundByteBuffer().release();
+        }
     }
 
     @Override
