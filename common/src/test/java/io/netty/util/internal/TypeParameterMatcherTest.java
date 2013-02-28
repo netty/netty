@@ -105,4 +105,11 @@ public class TypeParameterMatcherTest {
     @SuppressWarnings("ClassMayBeInterface")
     private static class T { }
     private static class U<E> { E a; }
+
+    @Test
+    public void testArrayAsTypeParam() throws Exception {
+        TypeParameterMatcher m = TypeParameterMatcher.find(new U<byte[]>() { }, U.class, "E");
+        assertFalse(m.match(new Object()));
+        assertTrue(m.match(new byte[1]));
+    }
 }
