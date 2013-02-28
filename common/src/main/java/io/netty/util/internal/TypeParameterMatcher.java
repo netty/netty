@@ -16,6 +16,8 @@
 
 package io.netty.util.internal;
 
+import java.lang.reflect.Array;
+import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.GenericDeclaration;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -102,11 +104,20 @@ public abstract class TypeParameterMatcher {
                         ((ParameterizedType) currentClass.getGenericSuperclass()).getActualTypeArguments();
 
                 Type actualTypeParam = actualTypeParams[typeParamIndex];
+                if (actualTypeParam instanceof ParameterizedType) {
+                    actualTypeParam = ((ParameterizedType) actualTypeParam).getRawType();
+                }
                 if (actualTypeParam instanceof Class) {
                     return (Class<?>) actualTypeParam;
                 }
-                if (actualTypeParam instanceof ParameterizedType) {
-                    return (Class<?>) ((ParameterizedType) actualTypeParam).getRawType();
+                if (actualTypeParam instanceof GenericArrayType) {
+                    Type componentType = ((GenericArrayType) actualTypeParam).getGenericComponentType();
+                    if (componentType instanceof ParameterizedType) {
+                        componentType = ((ParameterizedType) componentType).getRawType();
+                    }
+                    if (componentType instanceof Class) {
+                        return Array.newInstance((Class<?>) componentType, 0).getClass();
+                    }
                 }
                 if (actualTypeParam instanceof TypeVariable) {
                     // Resolved type parameter points to another type parameter.
