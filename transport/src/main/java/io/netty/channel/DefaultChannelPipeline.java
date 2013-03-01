@@ -1267,16 +1267,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public final void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            ctx.fireExceptionCaught(cause);
-        }
-
-        @Override
-        public final void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-            ctx.fireUserEventTriggered(evt);
-        }
-
-        @Override
         public final void sendFile(
                 ChannelHandlerContext ctx, FileRegion region, ChannelPromise promise) throws Exception {
             unsafe.sendFile(region, promise);

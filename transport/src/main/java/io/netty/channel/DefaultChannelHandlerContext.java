@@ -812,7 +812,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             throw new NullPointerException("cause");
         }
 
-        final DefaultChannelHandlerContext next = this.next;
+        final DefaultChannelHandlerContext next = findContextInbound();
         EventExecutor executor = next.executor();
         if (prev != null && executor.inEventLoop()) {
             next.invokeExceptionCaught(cause);
@@ -835,8 +835,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     private void invokeExceptionCaught(Throwable cause) {
+        ChannelStateHandler handler = (ChannelStateHandler) handler();
         try {
-            handler().exceptionCaught(this, cause);
+            handler.exceptionCaught(this, cause);
         } catch (Throwable t) {
             if (logger.isWarnEnabled()) {
                 logger.warn(
@@ -854,7 +855,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             throw new NullPointerException("event");
         }
 
-        final DefaultChannelHandlerContext next = this.next;
+        final DefaultChannelHandlerContext next = findContextInbound();
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             next.invokeUserEventTriggered(event);
@@ -870,8 +871,10 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     private void invokeUserEventTriggered(Object event) {
+        ChannelStateHandler handler = (ChannelStateHandler) handler();
+
         try {
-            handler().userEventTriggered(this, event);
+            handler.userEventTriggered(this, event);
         } catch (Throwable t) {
             pipeline.notifyHandlerException(t);
         } finally {
