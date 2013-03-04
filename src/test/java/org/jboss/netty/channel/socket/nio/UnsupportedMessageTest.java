@@ -37,7 +37,7 @@ public class UnsupportedMessageTest {
 
 
     // Test for https://github.com/netty/netty/issues/734
-    @Test
+    @Test(timeout = 10000)
     public void testUnsupported() throws Throwable {
         ServerBootstrap sb = new ServerBootstrap(new NioServerSocketChannelFactory());
         ClientBootstrap cb = new ClientBootstrap(new NioClientSocketChannelFactory());
@@ -57,6 +57,10 @@ public class UnsupportedMessageTest {
             sc.close().awaitUninterruptibly();
         }
         assertTrue(ccf.isSuccess());
+
+        while (sh.channel == null) {
+            Thread.sleep(10);
+        }
 
         sh.channel.close().awaitUninterruptibly();
         ch.channel.close().awaitUninterruptibly();
