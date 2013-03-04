@@ -1424,7 +1424,7 @@ public class SslHandler extends FrameDecoder
                 }
             }
 
-            if (!engine.isInboundDone()) {
+            if (!engine.isOutboundDone()) {
                 if (sentCloseNotify.compareAndSet(false, true)) {
                     engine.closeOutbound();
                     try {
