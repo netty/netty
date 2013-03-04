@@ -1317,7 +1317,7 @@ public class SslHandler extends FrameDecoder
             return;
         }
 
-        boolean success = false;
+        boolean passthrough = true;
         try {
             try {
                 unwrap(context, e.getChannel(), ChannelBuffers.EMPTY_BUFFER, 0, 0);
@@ -1334,18 +1334,16 @@ public class SslHandler extends FrameDecoder
                         ChannelFuture closeNotifyFuture = wrapNonAppData(context, e.getChannel());
                         closeNotifyFuture.addListener(
                                 new ClosingChannelFutureListener(context, e));
-                        success = true;
+                        passthrough = false;
                     } catch (SSLException ex) {
                         if (logger.isDebugEnabled()) {
                             logger.debug("Failed to encode a close_notify message", ex);
                         }
                     }
                 }
-            } else {
-                success = true;
             }
         } finally {
-            if (!success) {
+            if (passthrough) {
                 context.sendDownstream(e);
             }
         }
