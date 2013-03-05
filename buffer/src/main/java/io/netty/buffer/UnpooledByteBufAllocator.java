@@ -41,10 +41,9 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator {
 
     @Override
     public ByteBuf ioBuffer() {
-        if (PlatformDependent.canFreeDirectBuffer()) {
+        if (PlatformDependent.hasUnsafe()) {
             return directBuffer(0);
         }
-
         return heapBuffer(0);
     }
 }
