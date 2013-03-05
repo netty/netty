@@ -75,7 +75,7 @@ import java.util.Queue;
  */
 public final class Unpooled {
 
-    private static final ByteBufAllocator ALLOC = UnpooledByteBufAllocator.HEAP_BY_DEFAULT;
+    private static final ByteBufAllocator ALLOC = UnpooledByteBufAllocator.DEFAULT;
 
     /**
      * Big endian byte order.

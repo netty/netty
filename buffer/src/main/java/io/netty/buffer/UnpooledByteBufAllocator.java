@@ -22,11 +22,11 @@ import io.netty.util.internal.PlatformDependent;
  */
 public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator {
 
-    public static final UnpooledByteBufAllocator HEAP_BY_DEFAULT = new UnpooledByteBufAllocator(false);
-    public static final UnpooledByteBufAllocator DIRECT_BY_DEFAULT = new UnpooledByteBufAllocator(true);
+    public static final UnpooledByteBufAllocator DEFAULT =
+            new UnpooledByteBufAllocator(PlatformDependent.directBufferPreferred());
 
-    private UnpooledByteBufAllocator(boolean directByDefault) {
-        super(directByDefault);
+    public UnpooledByteBufAllocator(boolean preferDirect) {
+        super(preferDirect);
     }
 
     @Override
@@ -37,13 +37,5 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator {
     @Override
     protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
         return new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);
-    }
-
-    @Override
-    public ByteBuf ioBuffer() {
-        if (PlatformDependent.hasUnsafe()) {
-            return directBuffer(0);
-        }
-        return heapBuffer(0);
     }
 }

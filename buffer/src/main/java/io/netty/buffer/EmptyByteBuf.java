@@ -55,7 +55,7 @@ public final class EmptyByteBuf implements ByteBuf {
 
     @Override
     public ByteBufAllocator alloc() {
-        return UnpooledByteBufAllocator.HEAP_BY_DEFAULT;
+        return UnpooledByteBufAllocator.DEFAULT;
     }
 
     @Override

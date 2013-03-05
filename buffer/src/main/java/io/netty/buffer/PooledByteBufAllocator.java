@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.nio.ByteBuffer;
@@ -31,7 +32,8 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     private static final int MIN_PAGE_SIZE = 4096;
     private static final int MAX_CHUNK_SIZE = (int) (((long) Integer.MAX_VALUE + 1) / 2);
 
-    public static final PooledByteBufAllocator DEFAULT = new PooledByteBufAllocator();
+    public static final PooledByteBufAllocator DEFAULT =
+            new PooledByteBufAllocator(PlatformDependent.directBufferPreferred());
 
     private final PoolArena<byte[]>[] heapArenas;
     private final PoolArena<ByteBuffer>[] directArenas;
@@ -49,8 +51,8 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         this(false);
     }
 
-    public PooledByteBufAllocator(boolean directByDefault) {
-        this(directByDefault, DEFAULT_NUM_HEAP_ARENA, DEFAULT_NUM_DIRECT_ARENA, DEFAULT_PAGE_SIZE, DEFAULT_MAX_ORDER);
+    public PooledByteBufAllocator(boolean preferDirect) {
+        this(preferDirect, DEFAULT_NUM_HEAP_ARENA, DEFAULT_NUM_DIRECT_ARENA, DEFAULT_PAGE_SIZE, DEFAULT_MAX_ORDER);
     }
 
     public PooledByteBufAllocator(int nHeapArena, int nDirectArena, int pageSize, int maxOrder) {
@@ -139,11 +141,6 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
         PoolThreadCache cache = threadCache.get();
         return cache.directArena.allocate(cache, initialCapacity, maxCapacity);
-    }
-
-    @Override
-    public ByteBuf ioBuffer() {
-        return directBuffer(0);
     }
 
     public String toString() {

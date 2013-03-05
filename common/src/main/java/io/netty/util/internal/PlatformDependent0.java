@@ -119,14 +119,6 @@ final class PlatformDependent0 {
         return UNSAFE != null;
     }
 
-    static ByteBuffer newDirectBuffer(int capacity) {
-        if (hasUnsafe()) {
-            return ByteBuffer.allocateDirect(capacity);
-        } else {
-            throw new Error("refusing to create a direct buffer without proper access to the low-level API");
-        }
-    }
-
     static void freeDirectBuffer(ByteBuffer buffer) {
         Cleaner cleaner;
         try {
