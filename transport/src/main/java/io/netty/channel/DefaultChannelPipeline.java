@@ -1246,6 +1246,11 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             msgSink.release();
             byteSink.release();
         }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            ctx.fireExceptionCaught(cause);
+        }
     }
 
     private static final class ByteHeadHandler extends HeadHandler {

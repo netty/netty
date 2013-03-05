@@ -812,7 +812,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             throw new NullPointerException("cause");
         }
 
-        findContextInbound().invokeExceptionCaught(cause);
+        next.invokeExceptionCaught(cause);
         return this;
     }
 
