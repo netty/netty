@@ -53,7 +53,6 @@ public final class PlatformDependent {
     private static final boolean CAN_USE_CHM_V8 = HAS_UNSAFE && JAVA_VERSION < 8;
     private static final boolean CAN_FREE_DIRECT_BUFFER = canFreeDirectBuffer0();
     private static final boolean UNSAFE_HASE_COPY_METHODS = unsafeHasCopyMethods0();
-    private static final boolean IS_UNALIGNED = isUnaligned0();
     private static final long ARRAY_BASE_OFFSET = arrayBaseOffset0();
 
     private static final boolean HAS_JAVASSIST = hasJavassist0();
@@ -107,13 +106,6 @@ public final class PlatformDependent {
      */
     public static boolean canFreeDirectBuffer() {
         return CAN_FREE_DIRECT_BUFFER;
-    }
-
-    /**
-     * Returns {@code true} if and only if {@code java.nio.Bits.unaligned()} is true.
-     */
-    public static boolean isUnaligned() {
-        return IS_UNALIGNED;
     }
 
     /**
@@ -358,14 +350,6 @@ public final class PlatformDependent {
         }
 
         return PlatformDependent0.canFreeDirectBuffer();
-    }
-
-    private static boolean isUnaligned0() {
-        if (!hasUnsafe()) {
-            return false;
-        }
-
-        return PlatformDependent0.isUnaligned();
     }
 
     private static boolean unsafeHasCopyMethods0() {
