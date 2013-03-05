@@ -92,13 +92,12 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
                 I imsg = (I) msg;
                 try {
                     messageReceived(ctx, imsg);
-                } catch (Signal abort) {
-                    abort.expect(ABORT);
-                    break;
                 } finally {
                     BufUtil.release(imsg);
                 }
             }
+        } catch (Signal abort) {
+            abort.expect(ABORT);
         } finally {
             if (oldOutSize != out.size()) {
                 ctx.fireInboundBufferUpdated();
