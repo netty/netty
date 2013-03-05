@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
+package io.netty.util.concurrent;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -31,7 +31,7 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
     public static final int DEFAULT_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 2;
     private static final AtomicInteger poolId = new AtomicInteger();
 
-    final ChannelTaskScheduler scheduler;
+    final TaskScheduler scheduler;
     private final EventExecutor[] children;
     private final AtomicInteger childIndex = new AtomicInteger();
 
@@ -42,7 +42,7 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
      *                          of {@link #DEFAULT_POOL_SIZE}
      * @param threadFactory     the ThreadFactory to use, or {@code null} if the default should be used.
      * @param args              arguments which will passed to each
-     *                          {@link #newChild(ThreadFactory, ChannelTaskScheduler, Object...)}
+     *                          {@link #newChild(ThreadFactory, TaskScheduler, Object...)}
      *                          call.
      */
     protected MultithreadEventExecutorGroup(int nThreads, ThreadFactory threadFactory, Object... args) {
@@ -58,7 +58,7 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
             threadFactory = new DefaultThreadFactory();
         }
 
-        scheduler = new ChannelTaskScheduler(threadFactory);
+        scheduler = new TaskScheduler(threadFactory);
 
         children = new SingleThreadEventExecutor[nThreads];
         for (int i = 0; i < nThreads; i ++) {
@@ -67,7 +67,8 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
                 children[i] = newChild(threadFactory, scheduler, args);
                 success = true;
             } catch (Exception e) {
-                throw new EventLoopException("failed to create a child event loop", e);
+                // TODO: Think about if this is a good exception type
+                throw new IllegalStateException("failed to create a child event loop", e);
             } finally {
                 if (!success) {
                     for (int j = 0; j < i; j ++) {
@@ -98,7 +99,7 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
      *
      */
     protected abstract EventExecutor newChild(
-            ThreadFactory threadFactory, ChannelTaskScheduler scheduler, Object... args) throws Exception;
+            ThreadFactory threadFactory, TaskScheduler scheduler, Object... args) throws Exception;
 
     @Override
     public void shutdown() {

@@ -21,6 +21,7 @@ import io.netty.buffer.MessageBuf;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.AttributeMap;
+import io.netty.util.concurrent.EventExecutor;
 
 import java.nio.channels.Channels;
 import java.util.Set;

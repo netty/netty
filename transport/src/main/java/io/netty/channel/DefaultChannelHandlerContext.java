@@ -21,6 +21,9 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.DefaultAttributeMap;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.EventExecutorGroup;
+import io.netty.util.internal.PlatformDependent;
 
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
@@ -52,6 +55,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     // Will be set to null if no child executor should be used, otherwise it will be set to the
     // child executor.
     final EventExecutor executor;
+    private ChannelFuture succeededFuture;
 
     private final MessageBuf<Object> inMsgBuf;
     private final ByteBuf inByteBuf;
@@ -541,17 +545,14 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         } catch (ExecutionException ex) {
             // In the arbitrary case, we can throw Error, RuntimeException, and Exception
 
-            Throwable t = ex.getCause();
-            if (t instanceof Error) { throw (Error) t; }
-            if (t instanceof RuntimeException) { throw (RuntimeException) t; }
-            if (t instanceof Exception) { throw (Exception) t; }
-            throw new ChannelPipelineException(t);
+            PlatformDependent.throwException(ex.getCause());
         } catch (InterruptedException ex) {
             // Interrupt the calling thread (note that this method is not called from the event loop)
 
             Thread.currentThread().interrupt();
-            return null;
         }
+
+        return null;
     }
 
     /**
@@ -574,11 +575,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             future.get();
         } catch (ExecutionException ex) {
             // In the arbitrary case, we can throw Error, RuntimeException, and Exception
-
-            Throwable t = ex.getCause();
-            if (t instanceof Error) { throw (Error) t; }
-            if (t instanceof RuntimeException) { throw (RuntimeException) t; }
-            throw new ChannelPipelineException(t);
+            PlatformDependent.throwException(ex.getCause());
         } catch (InterruptedException ex) {
             // Interrupt the calling thread (note that this method is not called from the event loop)
 
@@ -1580,17 +1577,21 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelPromise newPromise() {
-        return new DefaultChannelPromise(channel());
+        return new DefaultChannelPromise(channel(), executor());
     }
 
     @Override
     public ChannelFuture newSucceededFuture() {
-        return channel().newSucceededFuture();
+        ChannelFuture succeededFuture = this.succeededFuture;
+        if (succeededFuture == null) {
+            this.succeededFuture = succeededFuture = new SucceededChannelFuture(channel(), executor());
+        }
+        return succeededFuture;
     }
 
     @Override
     public ChannelFuture newFailedFuture(Throwable cause) {
-        return channel().newFailedFuture(cause);
+        return new FailedChannelFuture(channel(), executor(), cause);
     }
 
     private void validateFuture(ChannelFuture future) {

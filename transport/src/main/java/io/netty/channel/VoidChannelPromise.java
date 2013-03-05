@@ -15,6 +15,9 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
+
 import java.util.concurrent.TimeUnit;
 
 final class VoidChannelPromise implements ChannelFuture.Unsafe, ChannelPromise {
@@ -34,25 +37,25 @@ final class VoidChannelPromise implements ChannelFuture.Unsafe, ChannelPromise {
     }
 
     @Override
-    public ChannelPromise addListener(final ChannelFutureListener listener) {
+    public ChannelPromise addListener(GenericFutureListener<? extends Future> listener) {
         fail();
         return this;
     }
 
     @Override
-    public ChannelPromise addListeners(final ChannelFutureListener... listeners) {
+    public ChannelPromise addListeners(GenericFutureListener<? extends Future>... listeners) {
         fail();
         return this;
     }
 
     @Override
-    public ChannelPromise removeListener(ChannelFutureListener listener) {
+    public ChannelPromise removeListener(GenericFutureListener<? extends Future> listener) {
         // NOOP
         return this;
     }
 
     @Override
-    public ChannelPromise removeListeners(ChannelFutureListener... listeners) {
+    public ChannelPromise removeListeners(GenericFutureListener<? extends Future>... listeners) {
         // NOOP
         return this;
     }

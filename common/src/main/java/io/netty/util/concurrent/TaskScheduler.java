@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
+package io.netty.util.concurrent;
 
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -31,10 +31,10 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-public final class ChannelTaskScheduler {
+public final class TaskScheduler {
 
     private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(ChannelTaskScheduler.class);
+            InternalLoggerFactory.getInstance(TaskScheduler.class);
 
     private static final long SCHEDULE_PURGE_INTERVAL = TimeUnit.SECONDS.toNanos(1);
     private static final long START_TIME = System.nanoTime();
@@ -55,7 +55,7 @@ public final class ChannelTaskScheduler {
     /** 0 - not started, 1 - started, 2 - shut down, 3 - terminated */
     private volatile int state;
 
-    public ChannelTaskScheduler(ThreadFactory threadFactory) {
+    public TaskScheduler(ThreadFactory threadFactory) {
         if (threadFactory == null) {
             throw new NullPointerException("threadFactory");
         }

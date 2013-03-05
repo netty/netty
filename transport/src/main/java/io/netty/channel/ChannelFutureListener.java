@@ -15,22 +15,24 @@
  */
 package io.netty.channel;
 
-import java.util.EventListener;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
+
 
 /**
  * Listens to the result of a {@link ChannelFuture}.  The result of the
  * asynchronous {@link Channel} I/O operation is notified once this listener
- * is added by calling {@link ChannelFuture#addListener(ChannelFutureListener)}.
+ * is added by calling {@link ChannelFuture#addListener(GenericFutureListener)}.
  *
  * <h3>Return the control to the caller quickly</h3>
  *
- * {@link #operationComplete(ChannelFuture)} is directly called by an I/O
+ * {@link #operationComplete(Future)} is directly called by an I/O
  * thread.  Therefore, performing a time consuming task or a blocking operation
  * in the handler method can cause an unexpected pause during I/O.  If you need
  * to perform a blocking operation on I/O completion, try to execute the
  * operation in a different thread using a thread pool.
  */
-public interface ChannelFutureListener extends EventListener {
+public interface ChannelFutureListener extends GenericFutureListener<ChannelFuture> {
 
     /**
      * A {@link ChannelFutureListener} that closes the {@link Channel} which is
@@ -68,13 +70,4 @@ public interface ChannelFutureListener extends EventListener {
             }
         }
     };
-
-    /**
-     * Invoked when the I/O operation associated with the {@link ChannelFuture}
-     * has been completed.
-     *
-     * @param future  the source {@link ChannelFuture} which called this
-     *                callback
-     */
-    void operationComplete(ChannelFuture future) throws Exception;
 }

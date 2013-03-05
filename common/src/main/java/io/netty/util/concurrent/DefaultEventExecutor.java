@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
+package io.netty.util.concurrent;
 
 import java.util.concurrent.ThreadFactory;
 
@@ -25,10 +25,10 @@ import java.util.concurrent.ThreadFactory;
 final class DefaultEventExecutor extends SingleThreadEventExecutor {
 
     /**
-     * @see SingleThreadEventExecutor#SingleThreadEventExecutor(EventExecutorGroup, ThreadFactory, ChannelTaskScheduler)
+     * @see SingleThreadEventExecutor#SingleThreadEventExecutor(EventExecutorGroup, ThreadFactory, TaskScheduler)
      */
     DefaultEventExecutor(
-            DefaultEventExecutorGroup parent, ThreadFactory threadFactory, ChannelTaskScheduler scheduler) {
+            DefaultEventExecutorGroup parent, ThreadFactory threadFactory, TaskScheduler scheduler) {
         super(parent, threadFactory, scheduler);
     }
 

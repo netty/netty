@@ -210,13 +210,13 @@ public final class ChannelFlushPromiseNotifier {
         }
     }
 
-    abstract static class FlushCheckpoint {
-        abstract long flushCheckpoint();
-        abstract void flushCheckpoint(long checkpoint);
-        abstract ChannelPromise future();
+    interface FlushCheckpoint {
+        long flushCheckpoint();
+        void flushCheckpoint(long checkpoint);
+        ChannelPromise future();
     }
 
-    private static class DefaultFlushCheckpoint extends FlushCheckpoint {
+    private static class DefaultFlushCheckpoint implements FlushCheckpoint {
         private long checkpoint;
         private final ChannelPromise future;
 
@@ -226,17 +226,17 @@ public final class ChannelFlushPromiseNotifier {
         }
 
         @Override
-        long flushCheckpoint() {
+        public long flushCheckpoint() {
             return checkpoint;
         }
 
         @Override
-        void flushCheckpoint(long checkpoint) {
+        public void flushCheckpoint(long checkpoint) {
             this.checkpoint = checkpoint;
         }
 
         @Override
-        ChannelPromise future() {
+        public ChannelPromise future() {
             return future;
         }
     }

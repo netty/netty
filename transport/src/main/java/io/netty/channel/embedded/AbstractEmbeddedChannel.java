@@ -22,7 +22,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -33,6 +32,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelStateHandlerAdapter;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -178,14 +178,7 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
 
         lastException = null;
 
-        if (t instanceof RuntimeException) {
-            throw (RuntimeException) t;
-        }
-        if (t instanceof Error) {
-            throw (Error) t;
-        }
-
-        throw new ChannelException(t);
+        PlatformDependent.throwException(t);
     }
 
     protected final void ensureOpen() {

@@ -15,58 +15,32 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.concurrent.Promise;
+
 /**
  * Special {@link ChannelFuture} which is writable.
  */
-public interface ChannelPromise extends ChannelFuture {
+public interface ChannelPromise extends ChannelFuture, Promise {
 
-    /**
-     * Marks this future as a success and notifies all
-     * listeners.
-     *
-     * If it is success or failed already it will throw an {@link IllegalStateException}.
-     */
+    @Override
     ChannelPromise setSuccess();
 
-    /**
-     * Marks this future as a success and notifies all
-     * listeners.
-     *
-     * @return {@code true} if and only if successfully marked this future as
-     *         a success. Otherwise {@code false} because this future is
-     *         already marked as either a success or a failure.
-     */
-    boolean trySuccess();
-
-    /**
-     * Marks this future as a failure and notifies all
-     * listeners.
-     *
-     * If it is success or failed already it will throw an {@link IllegalStateException}.
-     */
+    @Override
     ChannelPromise setFailure(Throwable cause);
 
-    /**
-     * Marks this future as a failure and notifies all
-     * listeners.
-     *
-     * @return {@code true} if and only if successfully marked this future as
-     *         a failure. Otherwise {@code false} because this future is
-     *         already marked as either a success or a failure.
-     */
-    boolean tryFailure(Throwable cause);
+    @Override
+    ChannelPromise addListener(GenericFutureListener<? extends Future> listener);
 
     @Override
-    ChannelPromise addListener(ChannelFutureListener listener);
+    ChannelPromise addListeners(GenericFutureListener<? extends Future>... listeners);
 
     @Override
-    ChannelPromise addListeners(ChannelFutureListener... listeners);
+    ChannelPromise removeListener(GenericFutureListener<? extends Future> listener);
 
     @Override
-    ChannelPromise removeListener(ChannelFutureListener listener);
-
-    @Override
-    ChannelPromise removeListeners(ChannelFutureListener... listeners);
+    ChannelPromise removeListeners(GenericFutureListener<? extends Future>... listeners);
 
     @Override
     ChannelPromise sync() throws InterruptedException;

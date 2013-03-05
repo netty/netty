@@ -16,8 +16,8 @@
 package io.netty.channel.aio;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelTaskScheduler;
-import io.netty.channel.EventExecutor;
+import io.netty.util.concurrent.TaskScheduler;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.channel.EventLoopException;
 import io.netty.channel.MultithreadEventLoopGroup;
 
@@ -108,7 +108,7 @@ public class AioEventLoopGroup extends MultithreadEventLoopGroup {
 
     @Override
     protected EventExecutor newChild(
-            ThreadFactory threadFactory, ChannelTaskScheduler scheduler, Object... args) throws Exception {
+            ThreadFactory threadFactory, TaskScheduler scheduler, Object... args) throws Exception {
         return new AioEventLoop(this, threadFactory, scheduler);
     }
 

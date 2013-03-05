@@ -205,16 +205,8 @@ public final class NioDatagramChannel
             free = false;
             return 1;
         } catch (Throwable cause) {
-            if (cause instanceof Error) {
-                throw (Error) cause;
-            }
-            if (cause instanceof RuntimeException) {
-                throw (RuntimeException) cause;
-            }
-            if (cause instanceof Exception) {
-                throw (Exception) cause;
-            }
-            throw new ChannelException(cause);
+            PlatformDependent.throwException(cause);
+            return -1;
         }  finally {
             if (free) {
                 buffer.release();

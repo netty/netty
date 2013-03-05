@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.TaskScheduler;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -249,7 +250,7 @@ public class SingleThreadEventLoopTest {
 
         SingleThreadEventLoopImpl() {
             super(null, Executors.defaultThreadFactory(),
-                  new ChannelTaskScheduler(Executors.defaultThreadFactory()));
+                  new TaskScheduler(Executors.defaultThreadFactory()));
         }
 
         @Override

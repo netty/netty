@@ -128,6 +128,22 @@ public final class PlatformDependent {
     }
 
     /**
+     * Raises an exception bypassing compiler checks for checked exceptions.
+     */
+    public static void throwException(Throwable t) {
+        if (hasUnsafe()) {
+            PlatformDependent0.throwException(t);
+        } else {
+            PlatformDependent.<RuntimeException>throwException0(t);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <E extends Throwable> void throwException0(Throwable t) throws E {
+        throw (E) t;
+    }
+
+    /**
      * Creates a new fastest {@link ConcurrentMap} implementaion for the current platform.
      */
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap() {

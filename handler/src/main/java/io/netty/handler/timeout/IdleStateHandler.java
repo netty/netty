@@ -25,7 +25,7 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOperationHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelStateHandlerAdapter;
-import io.netty.channel.EventExecutor;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.channel.FileRegion;
 
 import java.net.SocketAddress;

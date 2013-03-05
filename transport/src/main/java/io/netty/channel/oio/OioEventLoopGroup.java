@@ -20,7 +20,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.ChannelTaskScheduler;
+import io.netty.util.concurrent.TaskScheduler;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.internal.PlatformDependent;
@@ -41,7 +41,7 @@ public class OioEventLoopGroup implements EventLoopGroup {
 
     private static final StackTraceElement[] STACK_ELEMENTS = new StackTraceElement[0];
     private final int maxChannels;
-    final ChannelTaskScheduler scheduler;
+    final TaskScheduler scheduler;
     final ThreadFactory threadFactory;
     final Set<OioEventLoop> activeChildren = Collections.newSetFromMap(
             PlatformDependent.<OioEventLoop, Boolean>newConcurrentHashMap());
@@ -91,7 +91,7 @@ public class OioEventLoopGroup implements EventLoopGroup {
         this.maxChannels = maxChannels;
         this.threadFactory = threadFactory;
 
-        scheduler = new ChannelTaskScheduler(threadFactory);
+        scheduler = new TaskScheduler(threadFactory);
 
         tooManyChannels = new ChannelException("too many channels (max: " + maxChannels + ')');
         tooManyChannels.setStackTrace(STACK_ELEMENTS);

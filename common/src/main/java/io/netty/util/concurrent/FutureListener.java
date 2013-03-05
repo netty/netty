@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,18 +13,16 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
 
-import io.netty.util.concurrent.EventExecutor;
+package io.netty.util.concurrent;
 
 /**
- * Will handle all the I/O-Operations for a {@link Channel} once it was registered.
- *
- * One {@link EventLoop} instance will usually handle more then one {@link Channel} but this may depend on
- * implementation details and internals.
- *
+ * A subtype of {@link GenericFutureListener} that hides type parameter for convenience.
+ * <pre>
+ * Future f = new DefaultPromise(..);
+ * f.addListener(new FutureListener() {
+ *     public void operationComplete(Future f) { .. }
+ * });
+ * </pre>
  */
-public interface EventLoop extends EventExecutor, EventLoopGroup {
-    @Override
-    EventLoopGroup parent();
-}
+public interface FutureListener extends GenericFutureListener<Future> { }

@@ -15,9 +15,9 @@
  */
 package io.netty.channel.local;
 
-import io.netty.channel.EventExecutor;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.channel.MultithreadEventLoopGroup;
-import io.netty.channel.ChannelTaskScheduler;
+import io.netty.util.concurrent.TaskScheduler;
 
 import java.util.concurrent.ThreadFactory;
 
@@ -54,7 +54,7 @@ public class LocalEventLoopGroup extends MultithreadEventLoopGroup {
 
     @Override
     protected EventExecutor newChild(
-            ThreadFactory threadFactory, ChannelTaskScheduler scheduler, Object... args) throws Exception {
+            ThreadFactory threadFactory, TaskScheduler scheduler, Object... args) throws Exception {
         return new LocalEventLoop(this, threadFactory, scheduler);
     }
 }

@@ -13,18 +13,31 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
-
-import io.netty.util.concurrent.EventExecutor;
+package io.netty.util.concurrent;
 
 /**
- * Will handle all the I/O-Operations for a {@link Channel} once it was registered.
- *
- * One {@link EventLoop} instance will usually handle more then one {@link Channel} but this may depend on
- * implementation details and internals.
- *
+ * The {@link CompleteFuture} which is succeeded already.  It is
+ * recommended to use {@link EventExecutor#newSucceededFuture()} instead of
+ * calling the constructor of this future.
  */
-public interface EventLoop extends EventExecutor, EventLoopGroup {
+public final class SucceededFuture extends CompleteFuture {
+
+    /**
+     * Creates a new instance.
+     *
+     * @param executor the {@link EventExecutor} associated with this future
+     */
+    public SucceededFuture(EventExecutor executor) {
+        super(executor);
+    }
+
     @Override
-    EventLoopGroup parent();
+    public Throwable cause() {
+        return null;
+    }
+
+    @Override
+    public boolean isSuccess() {
+        return true;
+    }
 }

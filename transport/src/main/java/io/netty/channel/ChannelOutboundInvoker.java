@@ -16,7 +16,7 @@
 package io.netty.channel;
 
 import java.net.SocketAddress;
-
+import io.netty.util.concurrent.EventExecutor;
 /**
  * Interface which is shared by others which need to execute outbound logic.
  */

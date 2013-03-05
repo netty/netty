@@ -27,6 +27,7 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.DefaultDatagramChannelConfig;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -218,16 +219,8 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
             }
             return -1;
         } catch (Throwable cause) {
-            if (cause instanceof Error) {
-                throw (Error) cause;
-            }
-            if (cause instanceof RuntimeException) {
-                throw (RuntimeException) cause;
-            }
-            if (cause instanceof Exception) {
-                throw (Exception) cause;
-            }
-            throw new ChannelException(cause);
+            PlatformDependent.throwException(cause);
+            return -1;
         } finally {
             if (free) {
                 buffer.release();

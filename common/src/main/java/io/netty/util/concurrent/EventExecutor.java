@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
+package io.netty.util.concurrent;
 
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -24,7 +24,7 @@ import java.util.concurrent.ScheduledExecutorService;
  * access methods.
  *
  */
-public interface EventExecutor extends EventExecutorGroup, ScheduledExecutorService {
+public interface EventExecutor extends EventExecutorGroup, ScheduledExecutorService, FutureFactory {
 
     /**
      * Returns a reference to itself.
