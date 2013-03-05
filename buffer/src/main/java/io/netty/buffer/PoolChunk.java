@@ -214,7 +214,6 @@ final class PoolChunk<T> {
                 } else {
                     subpage.init(normCapacity);
                 }
-                arena.addSubpage(subpage);
                 return subpage.allocate();
             }
 
