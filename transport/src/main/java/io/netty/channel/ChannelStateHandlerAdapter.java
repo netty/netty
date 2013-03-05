@@ -80,18 +80,6 @@ public abstract class ChannelStateHandlerAdapter extends ChannelHandlerAdapter i
     }
 
     /**
-     * Calls {@link ChannelHandlerContext#fireExceptionCaught(Throwable)} to forward
-     * to the next {@link ChannelHandler} in the {@link ChannelPipeline}.
-     *
-     * Sub-classes may override this method to change behavior.
-     */
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
-            throws Exception {
-        ctx.fireExceptionCaught(cause);
-    }
-
-    /**
      * Calls {@link ChannelHandlerContext#fireUserEventTriggered(Object)} to forward
      * to the next {@link ChannelHandler} in the {@link ChannelPipeline}.
      *

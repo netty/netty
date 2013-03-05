@@ -57,11 +57,6 @@ public interface ChannelStateHandler extends ChannelHandler {
     void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception;
 
     /**
-     * Gets called if a {@link Throwable} was thrown.
-     */
-    void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception;
-
-    /**
      * Gets called if an user event was triggered.
      */
     void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception;
