@@ -16,6 +16,8 @@
 package io.netty.channel;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.util.Future;
+import io.netty.util.FutureListener;
 
 import java.util.concurrent.TimeUnit;
 
@@ -61,13 +63,13 @@ import java.util.concurrent.TimeUnit;
  * operation. It also allows you to add {@link ChannelFutureListener}s so you
  * can get notified when the I/O operation is completed.
  *
- * <h3>Prefer {@link #addListener(ChannelFutureListener)} to {@link #await()}</h3>
+ * <h3>Prefer {@link #addListener(FutureListener)} to {@link #await()}</h3>
  *
- * It is recommended to prefer {@link #addListener(ChannelFutureListener)} to
+ * It is recommended to prefer {@link #addListener(FutureListener)} to
  * {@link #await()} wherever possible to get notified when an I/O operation is
  * done and to do any follow-up tasks.
  * <p>
- * {@link #addListener(ChannelFutureListener)} is non-blocking.  It simply adds
+ * {@link #addListener(FutureListener)} is non-blocking.  It simply adds
  * the specified {@link ChannelFutureListener} to the {@link ChannelFuture}, and
  * I/O thread will notify the listeners when the I/O operation associated with
  * the future is done.  {@link ChannelFutureListener} yields the best
@@ -159,7 +161,7 @@ import java.util.concurrent.TimeUnit;
  * }
  * </pre>
  */
-public interface ChannelFuture {
+public interface ChannelFuture extends Future {
 
     /**
      * Returns a channel where the I/O operation associated with this
@@ -167,27 +169,17 @@ public interface ChannelFuture {
      */
     Channel channel();
 
-    /**
-     * Returns {@code true} if and only if this future is
-     * complete, regardless of whether the operation was successful or failed.
-     */
-    boolean isDone();
+    @Override
+    ChannelFuture addListener(FutureListener listener);
 
-    /**
-     * Returns {@code true} if and only if the I/O operation was completed
-     * successfully.
-     */
-    boolean isSuccess();
+    @Override
+    ChannelFuture addListeners(FutureListener... listeners);
 
-    /**
-     * Returns the cause of the failed I/O operation if the I/O operation has
-     * failed.
-     *
-     * @return the cause of the failure.
-     *         {@code null} if succeeded or this future is not
-     *         completed yet.
-     */
-    Throwable cause();
+    @Override
+    ChannelFuture removeListener(FutureListener listener);
+
+    @Override
+    ChannelFuture removeListeners(FutureListener... listeners);
 
     /**
      * Adds the specified listener to this future.  The
@@ -237,64 +229,11 @@ public interface ChannelFuture {
      */
     ChannelFuture syncUninterruptibly();
 
-    /**
-     * Waits for this future to be completed.
-     *
-     * @throws InterruptedException
-     *         if the current thread was interrupted
-     */
+    @Override
     ChannelFuture await() throws InterruptedException;
 
-    /**
-     * Waits for this future to be completed without
-     * interruption.  This method catches an {@link InterruptedException} and
-     * discards it silently.
-     */
+    @Override
     ChannelFuture awaitUninterruptibly();
-
-    /**
-     * Waits for this future to be completed within the
-     * specified time limit.
-     *
-     * @return {@code true} if and only if the future was completed within
-     *         the specified time limit
-     *
-     * @throws InterruptedException
-     *         if the current thread was interrupted
-     */
-    boolean await(long timeout, TimeUnit unit) throws InterruptedException;
-
-    /**
-     * Waits for this future to be completed within the
-     * specified time limit.
-     *
-     * @return {@code true} if and only if the future was completed within
-     *         the specified time limit
-     *
-     * @throws InterruptedException
-     *         if the current thread was interrupted
-     */
-    boolean await(long timeoutMillis) throws InterruptedException;
-
-    /**
-     * Waits for this future to be completed within the
-     * specified time limit without interruption.  This method catches an
-     * {@link InterruptedException} and discards it silently.
-     *
-     * @return {@code true} if and only if the future was completed within
-     *         the specified time limit
-     */
-    boolean awaitUninterruptibly(long timeout, TimeUnit unit);
-
-    /**
-     * Waits for this future to be completed within the
-     * specified time limit without interruption.  This method catches an
-     * {@link InterruptedException} and discards it silently.
-     *
-     * @return {@code true} if and only if the future was completed within
-     *         the specified time limit
-     */
-    boolean awaitUninterruptibly(long timeoutMillis);
 
     /**
      * A {@link ChannelFuture} which is not allowed to be sent to {@link ChannelPipeline} due to

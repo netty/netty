@@ -16,6 +16,8 @@
 package io.netty.channel;
 
 
+import io.netty.util.FutureListener;
+
 abstract class CompleteChannelPromise extends CompleteChannelFuture implements ChannelPromise {
 
     protected CompleteChannelPromise(Channel channel) {
@@ -70,5 +72,25 @@ abstract class CompleteChannelPromise extends CompleteChannelFuture implements C
     @Override
     public ChannelPromise awaitUninterruptibly() {
         return (ChannelPromise) super.awaitUninterruptibly();
+    }
+
+    @Override
+    public ChannelPromise addListener(FutureListener listener) {
+        return (ChannelPromise) super.addListener(listener);
+    }
+
+    @Override
+    public ChannelPromise addListeners(FutureListener... listeners) {
+        return (ChannelPromise) super.addListeners(listeners);
+    }
+
+    @Override
+    public ChannelPromise removeListener(FutureListener listener) {
+        return (ChannelPromise) super.removeListener(listener);
+    }
+
+    @Override
+    public ChannelPromise removeListeners(FutureListener... listeners) {
+        return (ChannelPromise) super.removeListeners(listeners);
     }
 }

@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import io.netty.util.FutureListener;
+
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -68,6 +70,41 @@ abstract class CompleteChannelFuture implements ChannelFuture {
 
     @Override
     public ChannelFuture removeListeners(ChannelFutureListener... listeners) {
+        // NOOP
+        return this;
+    }
+
+    @Override
+    public ChannelFuture addListener(FutureListener listener) {
+        if (listener == null) {
+            throw new NullPointerException("listener");
+        }
+        DefaultChannelPromise.notifyListener(this, listener);
+        return this;
+    }
+
+    @Override
+    public ChannelFuture addListeners(FutureListener... listeners) {
+        if (listeners == null) {
+            throw new NullPointerException("listeners");
+        }
+        for (FutureListener l: listeners) {
+            if (l == null) {
+                break;
+            }
+            DefaultChannelPromise.notifyListener(this, l);
+        }
+        return this;
+    }
+
+    @Override
+    public ChannelFuture removeListener(FutureListener listener) {
+        // NOOP
+        return this;
+    }
+
+    @Override
+    public ChannelFuture removeListeners(FutureListener... listeners) {
         // NOOP
         return this;
     }

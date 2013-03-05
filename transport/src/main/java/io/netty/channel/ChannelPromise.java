@@ -15,46 +15,37 @@
  */
 package io.netty.channel;
 
+import io.netty.util.FutureListener;
+import io.netty.util.Promise;
+
 /**
  * Special {@link ChannelFuture} which is writable.
  */
-public interface ChannelPromise extends ChannelFuture {
+public interface ChannelPromise extends ChannelFuture, Promise {
 
-    /**
-     * Marks this future as a success and notifies all
-     * listeners.
-     *
-     * If it is success or failed already it will throw an {@link IllegalStateException}.
-     */
+    @Override
     ChannelPromise setSuccess();
 
-    /**
-     * Marks this future as a success and notifies all
-     * listeners.
-     *
-     * @return {@code true} if and only if successfully marked this future as
-     *         a success. Otherwise {@code false} because this future is
-     *         already marked as either a success or a failure.
-     */
+    @Override
     boolean trySuccess();
 
-    /**
-     * Marks this future as a failure and notifies all
-     * listeners.
-     *
-     * If it is success or failed already it will throw an {@link IllegalStateException}.
-     */
+    @Override
     ChannelPromise setFailure(Throwable cause);
 
-    /**
-     * Marks this future as a failure and notifies all
-     * listeners.
-     *
-     * @return {@code true} if and only if successfully marked this future as
-     *         a failure. Otherwise {@code false} because this future is
-     *         already marked as either a success or a failure.
-     */
+    @Override
     boolean tryFailure(Throwable cause);
+
+    @Override
+    ChannelPromise addListener(FutureListener listener);
+
+    @Override
+    ChannelPromise addListeners(FutureListener... listeners);
+
+    @Override
+    ChannelPromise removeListener(FutureListener listener);
+
+    @Override
+    ChannelPromise removeListeners(FutureListener... listeners);
 
     @Override
     ChannelPromise addListener(ChannelFutureListener listener);

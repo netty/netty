@@ -17,10 +17,12 @@ package io.netty.channel;
 
 import io.netty.channel.ChannelFlushPromiseNotifier.FlushCheckpoint;
 import io.netty.util.Signal;
+import io.netty.util.FutureListener;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.Arrays;
+import java.util.EventListener;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.TimeUnit.*;
@@ -88,12 +90,51 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
 
     @Override
     public ChannelPromise addListener(final ChannelFutureListener listener) {
+        return addListener0(listener);
+    }
+
+    @Override
+    public ChannelPromise addListeners(ChannelFutureListener... listeners) {
+        return addListeners0(listeners);
+    }
+
+    @Override
+    public ChannelPromise removeListener(ChannelFutureListener listener) {
+        return removeListener0(listener);
+    }
+
+    @Override
+    public ChannelPromise removeListeners(ChannelFutureListener... listeners) {
+        return removeListeners0(listeners);
+    }
+
+    @Override
+    public ChannelPromise addListener(FutureListener listener) {
+        return addListener0(listener);
+    }
+
+    @Override
+    public ChannelPromise addListeners(FutureListener... listeners) {
+        return addListeners0(listeners);
+    }
+
+    @Override
+    public ChannelPromise removeListener(FutureListener listener) {
+        return removeListener0(listener);
+    }
+
+    @Override
+    public ChannelPromise removeListeners(FutureListener... listeners) {
+        return removeListeners0(listeners);
+    }
+
+    private ChannelPromise addListener0(final EventListener listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
         }
 
         if (isDone()) {
-            notifyListener(this, listener);
+            notifyEventListener0(this, listener);
             return this;
         }
 
@@ -105,34 +146,32 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
                     if (listeners instanceof DefaultChannelPromiseListeners) {
                         ((DefaultChannelPromiseListeners) listeners).add(listener);
                     } else {
-                        listeners = new DefaultChannelPromiseListeners((ChannelFutureListener) listeners, listener);
+                        listeners = new DefaultChannelPromiseListeners((EventListener) listeners, listener);
                     }
                 }
                 return this;
             }
         }
 
-        notifyListener(this, listener);
+        notifyEventListener0(this, listener);
         return this;
     }
 
-    @Override
-    public ChannelPromise addListeners(ChannelFutureListener... listeners) {
+    private ChannelPromise addListeners0(EventListener... listeners) {
         if (listeners == null) {
             throw new NullPointerException("listeners");
         }
 
-        for (ChannelFutureListener l: listeners) {
+        for (EventListener l: listeners) {
             if (l == null) {
                 break;
             }
-            addListener(l);
+            addListener0(l);
         }
         return this;
     }
 
-    @Override
-    public ChannelPromise removeListener(ChannelFutureListener listener) {
+    private ChannelPromise removeListener0(EventListener listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
         }
@@ -154,17 +193,16 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
         return this;
     }
 
-    @Override
-    public ChannelPromise removeListeners(ChannelFutureListener... listeners) {
+    private ChannelPromise removeListeners0(EventListener... listeners) {
         if (listeners == null) {
             throw new NullPointerException("listeners");
         }
 
-        for (ChannelFutureListener l: listeners) {
+        for (EventListener l: listeners) {
             if (l == null) {
                 break;
             }
-            removeListener(l);
+            removeListener0(l);
         }
         return this;
     }
@@ -418,7 +456,7 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
             if (listeners instanceof DefaultChannelPromiseListeners) {
                 notifyListeners0(this, (DefaultChannelPromiseListeners) listeners);
             } else {
-                notifyListener0(this, (ChannelFutureListener) listeners);
+                notifyListener0(this, (EventListener) listeners);
             }
             listeners = null;
         } else {
@@ -430,7 +468,7 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
                     if (listeners instanceof DefaultChannelPromiseListeners) {
                         notifyListeners0(DefaultChannelPromise.this, (DefaultChannelPromiseListeners) listeners);
                     } else {
-                        notifyListener0(DefaultChannelPromise.this, (ChannelFutureListener) listeners);
+                        notifyListener0(DefaultChannelPromise.this, (EventListener) listeners);
                     }
                 }
             });
@@ -438,7 +476,7 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
     }
 
     private static void notifyListeners0(ChannelFuture f, DefaultChannelPromiseListeners listeners) {
-        final ChannelFutureListener[] a = listeners.listeners();
+        final EventListener[] a = listeners.listeners();
         final int size = listeners.size();
         for (int i = 0; i < size; i ++) {
             notifyListener0(f, a[i]);
@@ -446,6 +484,14 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
     }
 
     static void notifyListener(final ChannelFuture f, final ChannelFutureListener l) {
+        notifyEventListener0(f, l);
+    }
+
+    static void notifyListener(final ChannelFuture f, final FutureListener l) {
+        notifyEventListener0(f, l);
+    }
+
+    private static void notifyEventListener0(final ChannelFuture f, final EventListener l) {
         EventLoop loop = f.channel().eventLoop();
         if (loop.inEventLoop()) {
             final Integer stackDepth = LISTENER_STACK_DEPTH.get();
@@ -463,19 +509,31 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
         loop.execute(new Runnable() {
             @Override
             public void run() {
-                notifyListener(f, l);
+                notifyEventListener0(f, l);
             }
         });
     }
 
-    private static void notifyListener0(ChannelFuture f, ChannelFutureListener l) {
-        try {
-            l.operationComplete(f);
-        } catch (Throwable t) {
-            if (logger.isWarnEnabled()) {
-                logger.warn(
-                        "An exception was thrown by " +
-                        ChannelFutureListener.class.getSimpleName() + '.', t);
+    private static void notifyListener0(ChannelFuture f, EventListener l) {
+        if (l instanceof ChannelFutureListener) {
+            try {
+                ((ChannelFutureListener) l).operationComplete(f);
+            } catch (Throwable t) {
+                if (logger.isWarnEnabled()) {
+                    logger.warn(
+                            "An exception was thrown by " +
+                                    ChannelFutureListener.class.getSimpleName() + '.', t);
+                }
+            }
+        } else {
+            try {
+                ((FutureListener) l).operationComplete(f);
+            } catch (Throwable t) {
+                if (logger.isWarnEnabled()) {
+                    logger.warn(
+                            "An exception was thrown by " +
+                                    FutureListener.class.getSimpleName() + '.', t);
+                }
             }
         }
     }
@@ -519,16 +577,16 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
     }
 
     private static final class DefaultChannelPromiseListeners {
-        private ChannelFutureListener[] listeners;
+        private EventListener[] listeners;
         private int size;
 
-        DefaultChannelPromiseListeners(ChannelFutureListener firstListener, ChannelFutureListener secondListener) {
-            listeners = new ChannelFutureListener[] { firstListener, secondListener };
+        DefaultChannelPromiseListeners(EventListener firstListener, EventListener secondListener) {
+            listeners = new EventListener[] { firstListener, secondListener };
             size = 2;
         }
 
-        void add(ChannelFutureListener l) {
-            ChannelFutureListener[] listeners = this.listeners;
+        void add(EventListener l) {
+            EventListener[] listeners = this.listeners;
             final int size = this.size;
             if (size == listeners.length) {
                 this.listeners = listeners = Arrays.copyOf(listeners, size << 1);
@@ -537,8 +595,8 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
             this.size = size + 1;
         }
 
-        void remove(ChannelFutureListener l) {
-            final ChannelFutureListener[] listeners = this.listeners;
+        void remove(EventListener l) {
+            final EventListener[] listeners = this.listeners;
             int size = this.size;
             for (int i = 0; i < size; i ++) {
                 if (listeners[i] == l) {
@@ -553,7 +611,7 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
             }
         }
 
-        ChannelFutureListener[] listeners() {
+        EventListener[] listeners() {
             return listeners;
         }
 
