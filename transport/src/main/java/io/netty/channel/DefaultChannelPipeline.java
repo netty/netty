@@ -1030,42 +1030,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         return tail.write(message, promise);
     }
 
-    void notifyHandlerException(Throwable cause) {
-        if (!(cause instanceof ChannelPipelineException)) {
-            cause = new ChannelPipelineException(cause);
-        }
-
-        if (inExceptionCaught(cause)) {
-            if (logger.isWarnEnabled()) {
-                logger.warn(
-                        "An exception was thrown by a user handler " +
-                        "while handling an exceptionCaught event", cause);
-            }
-            return;
-        }
-
-        fireExceptionCaught(cause);
-    }
-
-    private static boolean inExceptionCaught(Throwable cause) {
-        for (;;) {
-            if (cause == null) {
-                return false;
-            }
-
-            StackTraceElement[] trace = cause.getStackTrace();
-            if (trace != null) {
-                for (StackTraceElement t : trace) {
-                    if ("exceptionCaught".equals(t.getMethodName())) {
-                        return true;
-                    }
-                }
-            }
-
-            cause = cause.getCause();
-        }
-    }
-
     private void checkDuplicateName(String name) {
         if (name2ctx.containsKey(name)) {
             throw new IllegalArgumentException("Duplicate handler name: " + name);
