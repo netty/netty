@@ -190,7 +190,7 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
     }
 
     @Override
-    protected void endMessageReceived(ChannelHandlerContext ctx) throws Exception {
+    public void endMessageReceived(ChannelHandlerContext ctx) throws Exception {
         ctx.flush();
     }
 

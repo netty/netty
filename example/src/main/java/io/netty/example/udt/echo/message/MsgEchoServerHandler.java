@@ -47,7 +47,7 @@ public class MsgEchoServerHandler extends
     }
 
     @Override
-    protected void messageReceived(final ChannelHandlerContext ctx,
+    public void messageReceived(final ChannelHandlerContext ctx,
             final UdtMessage message) throws Exception {
         final MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
         out.add(message);

@@ -36,13 +36,13 @@ public class SctpMessageCompletionHandler extends ChannelInboundMessageHandlerAd
     private boolean assembled;
 
     @Override
-    protected boolean beginMessageReceived(ChannelHandlerContext ctx) throws Exception {
+    public boolean beginMessageReceived(ChannelHandlerContext ctx) throws Exception {
         assembled = false;
         return super.beginMessageReceived(ctx);
     }
 
     @Override
-    protected void endMessageReceived(ChannelHandlerContext ctx) throws Exception {
+    public void endMessageReceived(ChannelHandlerContext ctx) throws Exception {
         if (assembled) {
             assembled = false;
             ctx.fireInboundBufferUpdated();
@@ -51,7 +51,7 @@ public class SctpMessageCompletionHandler extends ChannelInboundMessageHandlerAd
     }
 
     @Override
-    protected void messageReceived(ChannelHandlerContext ctx, SctpMessage msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, SctpMessage msg) throws Exception {
 
         final ByteBuf byteBuf = msg.data();
         final int protocolIdentifier = msg.protocolIdentifier();

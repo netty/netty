@@ -110,7 +110,7 @@ public class AutobahnServerHandler extends ChannelInboundMessageHandlerAdapter<O
     }
 
     @Override
-    protected void endMessageReceived(ChannelHandlerContext ctx) throws Exception {
+    public void endMessageReceived(ChannelHandlerContext ctx) throws Exception {
         if (handshaker != null) {
             ctx.flush().addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
         }

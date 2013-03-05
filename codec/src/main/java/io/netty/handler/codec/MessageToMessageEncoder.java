@@ -43,7 +43,7 @@ import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
 public abstract class MessageToMessageEncoder<I> extends ChannelOutboundMessageHandlerAdapter<I> {
 
     @Override
-    protected final void flush(ChannelHandlerContext ctx, I msg) throws Exception {
+    public final void flush(ChannelHandlerContext ctx, I msg) throws Exception {
         try {
             ctx.nextOutboundMessageBuffer().unfoldAndAdd(encode(ctx, msg));
         } catch (CodecException e) {

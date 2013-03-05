@@ -160,7 +160,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
 
         @Override
-        protected void messageReceived(final ChannelHandlerContext ctx, String msg) throws Exception {
+        public void messageReceived(final ChannelHandlerContext ctx, String msg) throws Exception {
             if ("StartTlsResponse".equals(msg)) {
                 ctx.pipeline().addAfter("logger", "ssl", sslHandler);
                 handshakeFuture = sslHandler.handshake();
@@ -202,7 +202,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
 
         @Override
-        protected void messageReceived(final ChannelHandlerContext ctx, String msg) throws Exception {
+        public void messageReceived(final ChannelHandlerContext ctx, String msg) throws Exception {
             if ("StartTlsRequest".equals(msg)) {
                 ctx.pipeline().addAfter("logger", "ssl", sslHandler);
                 ctx.write("StartTlsResponse\n");

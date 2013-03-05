@@ -76,7 +76,7 @@ public class StringEncoder extends ChannelOutboundMessageHandlerAdapter<CharSequ
     }
 
     @Override
-    protected void flush(ChannelHandlerContext ctx, CharSequence msg) throws Exception {
+    public void flush(ChannelHandlerContext ctx, CharSequence msg) throws Exception {
         ByteBuf encoded = Unpooled.copiedBuffer(msg, charset);
 
         switch (nextBufferType) {
