@@ -20,8 +20,6 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayDeque;
-import java.util.Deque;
 
 abstract class PoolArena<T> {
 
@@ -33,8 +31,8 @@ abstract class PoolArena<T> {
     private final int chunkSize;
     private final int subpageOverflowMask;
 
-    private final Deque<PoolSubpage<T>>[] tinySubpagePools;
-    private final Deque<PoolSubpage<T>>[] smallSubpagePools;
+    private final PoolSubpage<T>[] tinySubpagePools;
+    private final PoolSubpage<T>[] smallSubpagePools;
 
     private final PoolChunkList<T> q050;
     private final PoolChunkList<T> q025;
@@ -56,12 +54,12 @@ abstract class PoolArena<T> {
 
         tinySubpagePools = newSubpagePoolArray(512 >>> 4);
         for (int i = 0; i < tinySubpagePools.length; i ++) {
-            tinySubpagePools[i] = new ArrayDeque<PoolSubpage<T>>();
+            tinySubpagePools[i] = newSubpagePoolHead(pageSize);
         }
 
         smallSubpagePools = newSubpagePoolArray(pageShifts - 9);
         for (int i = 0; i < smallSubpagePools.length; i ++) {
-            smallSubpagePools[i] = new ArrayDeque<PoolSubpage<T>>();
+            smallSubpagePools[i] = newSubpagePoolHead(pageSize);
         }
 
         q100 = new PoolChunkList<T>(this, null, 100, Integer.MAX_VALUE);
@@ -79,9 +77,16 @@ abstract class PoolArena<T> {
         qInit.prevList = qInit;
     }
 
+    private PoolSubpage<T> newSubpagePoolHead(int pageSize) {
+        PoolSubpage<T> head = new PoolSubpage<T>(pageSize);
+        head.prev = head;
+        head.next = head;
+        return head;
+    }
+
     @SuppressWarnings("unchecked")
-    private Deque<PoolSubpage<T>>[] newSubpagePoolArray(int size) {
-        return new Deque[size];
+    private PoolSubpage<T>[] newSubpagePoolArray(int size) {
+        return new PoolSubpage[size];
     }
 
     PooledByteBuf<T> allocate(PoolThreadCache cache, int reqCapacity, int maxCapacity) {
@@ -94,7 +99,7 @@ abstract class PoolArena<T> {
         final int normCapacity = normalizeCapacity(reqCapacity);
         if ((normCapacity & subpageOverflowMask) == 0) { // capacity < pageSize
             int tableIdx;
-            Deque<PoolSubpage<T>>[] table;
+            PoolSubpage<T>[] table;
             if ((normCapacity & 0xFFFFFE00) == 0) { // < 512
                 tableIdx = normCapacity >>> 4;
                 table = tinySubpagePools;
@@ -109,26 +114,14 @@ abstract class PoolArena<T> {
             }
 
             synchronized (this) {
-                Deque<PoolSubpage<T>> subpages = table[tableIdx];
-                for (;;) {
-                    PoolSubpage<T> s = subpages.peekFirst();
-                    if (s == null) {
-                        break;
-                    }
-
-                    if (!s.doNotDestroy || s.elemSize != normCapacity) {
-                        // The subpage has been destroyed or being used for different element size.
-                        subpages.removeFirst();
-                        continue;
-                    }
-
+                final PoolSubpage<T> head = table[tableIdx];
+                final PoolSubpage<T> s = head.next;
+                if (s != head) {
+                    assert s.doNotDestroy && s.elemSize == normCapacity;
                     long handle = s.allocate();
-                    if (handle < 0) {
-                        subpages.removeFirst();
-                    } else {
-                        s.chunk.initBufWithSubpage(buf, handle, reqCapacity);
-                        return;
-                    }
+                    assert handle >= 0;
+                    s.chunk.initBufWithSubpage(buf, handle, reqCapacity);
+                    return;
                 }
             }
         } else if (normCapacity > chunkSize) {
@@ -142,7 +135,7 @@ abstract class PoolArena<T> {
     private synchronized void allocateNormal(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
         if (q050.allocate(buf, reqCapacity, normCapacity) || q025.allocate(buf, reqCapacity, normCapacity) ||
             q000.allocate(buf, reqCapacity, normCapacity) || qInit.allocate(buf, reqCapacity, normCapacity) ||
-            q075.allocate(buf, reqCapacity, normCapacity)) {
+            q075.allocate(buf, reqCapacity, normCapacity) || q100.allocate(buf, reqCapacity, normCapacity)) {
             return;
         }
 
@@ -166,10 +159,9 @@ abstract class PoolArena<T> {
         }
     }
 
-    void addSubpage(PoolSubpage<T> subpage) {
+    PoolSubpage<T> findSubpagePoolHead(int elemSize) {
         int tableIdx;
-        int elemSize = subpage.elemSize;
-        Deque<PoolSubpage<T>>[] table;
+        PoolSubpage<T>[] table;
         if ((elemSize & 0xFFFFFE00) == 0) { // < 512
             tableIdx = elemSize >>> 4;
             table = tinySubpagePools;
@@ -183,7 +175,7 @@ abstract class PoolArena<T> {
             table = smallSubpagePools;
         }
 
-        table[tableIdx].addFirst(subpage);
+        return table[tableIdx];
     }
 
     private int normalizeCapacity(int reqCapacity) {
@@ -288,28 +280,42 @@ abstract class PoolArena<T> {
         buf.append(StringUtil.NEWLINE);
         buf.append("tiny subpages:");
         for (int i = 1; i < tinySubpagePools.length; i ++) {
-            Deque<PoolSubpage<T>> subpages = tinySubpagePools[i];
-            if (subpages.isEmpty()) {
+            PoolSubpage<T> head = tinySubpagePools[i];
+            if (head.next == head) {
                 continue;
             }
 
             buf.append(StringUtil.NEWLINE);
             buf.append(i);
             buf.append(": ");
-            buf.append(subpages);
+            PoolSubpage<T> s = head.next;
+            for (;;) {
+                buf.append(s);
+                s = s.next;
+                if (s == head) {
+                    break;
+                }
+            }
         }
         buf.append(StringUtil.NEWLINE);
         buf.append("small subpages:");
         for (int i = 1; i < smallSubpagePools.length; i ++) {
-            Deque<PoolSubpage<T>> subpages = smallSubpagePools[i];
-            if (subpages.isEmpty()) {
+            PoolSubpage<T> head = smallSubpagePools[i];
+            if (head.next == head) {
                 continue;
             }
 
             buf.append(StringUtil.NEWLINE);
             buf.append(i);
             buf.append(": ");
-            buf.append(subpages);
+            PoolSubpage<T> s = head.next;
+            for (;;) {
+                buf.append(s);
+                s = s.next;
+                if (s == head) {
+                    break;
+                }
+            }
         }
         buf.append(StringUtil.NEWLINE);
 
