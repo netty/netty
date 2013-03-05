@@ -18,6 +18,9 @@ package io.netty.channel;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.EventExecutorGroup;
 import org.junit.Test;
 
 import static org.junit.Assert.*;

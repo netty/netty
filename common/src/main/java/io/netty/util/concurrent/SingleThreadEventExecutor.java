@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
+package io.netty.util.concurrent;
 
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -72,11 +72,12 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
     }
 
     private final EventExecutorGroup parent;
+    private final Future succeededFuture = new SucceededFuture(this);
     private final Queue<Runnable> taskQueue;
     private final Thread thread;
     private final Object stateLock = new Object();
     private final Semaphore threadLock = new Semaphore(0);
-    private final ChannelTaskScheduler scheduler;
+    private final TaskScheduler scheduler;
     private final Set<Runnable> shutdownHooks = new LinkedHashSet<Runnable>();
     private volatile int state = ST_NOT_STARTED;
     private long lastAccessTimeNanos;
@@ -86,11 +87,11 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
      *
      * @param parent            the {@link EventExecutorGroup} which is the parent of this instance and belongs to it
      * @param threadFactory     the {@link ThreadFactory} which will be used for the used {@link Thread}
-     * @param scheduler         the {@link ChannelTaskScheduler} which will be used to schedule Tasks for later
+     * @param scheduler         the {@link TaskScheduler} which will be used to schedule Tasks for later
      *                          execution
      */
     protected SingleThreadEventExecutor(
-            EventExecutorGroup parent, ThreadFactory threadFactory, ChannelTaskScheduler scheduler) {
+            EventExecutorGroup parent, ThreadFactory threadFactory, TaskScheduler scheduler) {
         if (threadFactory == null) {
             throw new NullPointerException("threadFactory");
         }
@@ -497,5 +498,20 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
     @Override
     public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
         return scheduler.scheduleWithFixedDelay(this, command, initialDelay, delay, unit);
+    }
+
+    @Override
+    public Promise newPromise() {
+        return new DefaultPromise(this);
+    }
+
+    @Override
+    public Future newSucceededFuture() {
+        return succeededFuture;
+    }
+
+    @Override
+    public Future newFailedFuture(Throwable cause) {
+        return new FailedFuture(this, cause);
     }
 }

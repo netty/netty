@@ -18,6 +18,7 @@ package io.netty.channel;
 import io.netty.buffer.Buf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
+import io.netty.util.concurrent.EventExecutorGroup;
 
 import java.io.InputStream;
 import java.io.OutputStream;

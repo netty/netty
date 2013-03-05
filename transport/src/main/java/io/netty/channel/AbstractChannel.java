@@ -78,7 +78,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final Integer id;
     private final Unsafe unsafe;
     private final DefaultChannelPipeline pipeline;
-    private final ChannelFuture succeededFuture = new SucceededChannelFuture(this);
+    private final ChannelFuture succeededFuture = new SucceededChannelFuture(this, null);
     private final VoidChannelPromise voidPromise = new VoidChannelPromise(this);
     private final CloseFuture closeFuture = new CloseFuture(this);
 
@@ -313,7 +313,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public ChannelFuture newFailedFuture(Throwable cause) {
-        return new FailedChannelFuture(this, cause);
+        return new FailedChannelFuture(this, null, cause);
     }
 
     @Override

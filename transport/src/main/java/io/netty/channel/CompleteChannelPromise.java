@@ -16,10 +16,14 @@
 package io.netty.channel;
 
 
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
+
 abstract class CompleteChannelPromise extends CompleteChannelFuture implements ChannelPromise {
 
-    protected CompleteChannelPromise(Channel channel) {
-        super(channel);
+    protected CompleteChannelPromise(Channel channel, EventExecutor executor) {
+        super(channel, executor);
     }
 
     @Override
@@ -43,26 +47,6 @@ abstract class CompleteChannelPromise extends CompleteChannelFuture implements C
     }
 
     @Override
-    public ChannelPromise addListener(final ChannelFutureListener listener) {
-        return (ChannelPromise) super.addListener(listener);
-    }
-
-    @Override
-    public ChannelPromise addListeners(ChannelFutureListener... listeners) {
-        return (ChannelPromise) super.addListeners(listeners);
-    }
-
-    @Override
-    public ChannelPromise removeListener(ChannelFutureListener listener) {
-        return (ChannelPromise) super.removeListener(listener);
-    }
-
-    @Override
-    public ChannelPromise removeListeners(ChannelFutureListener... listeners) {
-        return (ChannelPromise) super.removeListeners(listeners);
-    }
-
-    @Override
     public ChannelPromise await() throws InterruptedException {
         return (ChannelPromise) super.await();
     }
@@ -70,5 +54,35 @@ abstract class CompleteChannelPromise extends CompleteChannelFuture implements C
     @Override
     public ChannelPromise awaitUninterruptibly() {
         return (ChannelPromise) super.awaitUninterruptibly();
+    }
+
+    @Override
+    public ChannelPromise addListener(GenericFutureListener<? extends Future> listener) {
+        return (ChannelPromise) super.addListener(listener);
+    }
+
+    @Override
+    public ChannelPromise addListeners(GenericFutureListener<? extends Future>... listeners) {
+        return (ChannelPromise) super.addListeners(listeners);
+    }
+
+    @Override
+    public ChannelPromise removeListener(GenericFutureListener<? extends Future> listener) {
+        return (ChannelPromise) super.removeListener(listener);
+    }
+
+    @Override
+    public ChannelPromise removeListeners(GenericFutureListener<? extends Future>... listeners) {
+        return (ChannelPromise) super.removeListeners(listeners);
+    }
+
+    @Override
+    public ChannelPromise sync() throws InterruptedException {
+        return this;
+    }
+
+    @Override
+    public ChannelPromise syncUninterruptibly() {
+        return this;
     }
 }

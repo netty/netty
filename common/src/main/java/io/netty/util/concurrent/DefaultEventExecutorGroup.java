@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
+package io.netty.util.concurrent;
 
 import java.util.concurrent.ThreadFactory;
 
@@ -39,7 +39,7 @@ public class DefaultEventExecutorGroup extends MultithreadEventExecutorGroup {
 
     @Override
     protected EventExecutor newChild(
-            ThreadFactory threadFactory, ChannelTaskScheduler scheduler, Object... args) throws Exception {
+            ThreadFactory threadFactory, TaskScheduler scheduler, Object... args) throws Exception {
         return new DefaultEventExecutor(this, threadFactory, scheduler);
     }
 }

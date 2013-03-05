@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.EventExecutor;
+
 /**
  * The {@link CompleteChannelFuture} which is succeeded already.  It is
  * recommended to use {@link Channel#newSucceededFuture()} instead of
@@ -27,8 +29,8 @@ final class SucceededChannelFuture extends CompleteChannelFuture {
      *
      * @param channel the {@link Channel} associated with this future
      */
-    public SucceededChannelFuture(Channel channel) {
-        super(channel);
+    public SucceededChannelFuture(Channel channel, EventExecutor executor) {
+        super(channel, executor);
     }
 
     @Override
@@ -39,15 +41,5 @@ final class SucceededChannelFuture extends CompleteChannelFuture {
     @Override
     public boolean isSuccess() {
         return true;
-    }
-
-    @Override
-    public ChannelFuture sync() {
-        return this;
-    }
-
-    @Override
-    public ChannelFuture syncUninterruptibly() {
-        return this;
     }
 }

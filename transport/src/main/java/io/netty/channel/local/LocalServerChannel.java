@@ -22,7 +22,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.ServerChannel;
-import io.netty.channel.SingleThreadEventExecutor;
+import io.netty.util.concurrent.SingleThreadEventExecutor;
 import io.netty.channel.SingleThreadEventLoop;
 
 import java.net.SocketAddress;

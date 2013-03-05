@@ -13,28 +13,27 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
+package io.netty.util.concurrent;
 
-import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.PlatformDependent;
 
 /**
- * The {@link CompleteChannelFuture} which is failed already.  It is
- * recommended to use {@link Channel#newFailedFuture(Throwable)}
+ * The {@link CompleteFuture} which is failed already.  It is
+ * recommended to use {@link EventExecutor#newFailedFuture(Throwable)}
  * instead of calling the constructor of this future.
  */
-final class FailedChannelFuture extends CompleteChannelFuture {
+public final class FailedFuture extends CompleteFuture {
 
     private final Throwable cause;
 
     /**
      * Creates a new instance.
      *
-     * @param channel the {@link Channel} associated with this future
+     * @param executor the {@link EventExecutor} associated with this future
      * @param cause   the cause of failure
      */
-    public FailedChannelFuture(Channel channel, EventExecutor executor, Throwable cause) {
-        super(channel, executor);
+    public FailedFuture(EventExecutor executor, Throwable cause) {
+        super(executor);
         if (cause == null) {
             throw new NullPointerException("cause");
         }
@@ -52,13 +51,13 @@ final class FailedChannelFuture extends CompleteChannelFuture {
     }
 
     @Override
-    public ChannelFuture sync() {
+    public Future sync() {
         PlatformDependent.throwException(cause);
         return this;
     }
 
     @Override
-    public ChannelFuture syncUninterruptibly() {
+    public Future syncUninterruptibly() {
         PlatformDependent.throwException(cause);
         return this;
     }

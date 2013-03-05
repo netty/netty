@@ -15,13 +15,16 @@
  */
 package io.netty.channel;
 
-import java.util.concurrent.TimeUnit;
+import io.netty.util.concurrent.CompleteFuture;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 
 /**
  * A skeletal {@link ChannelFuture} implementation which represents a
  * {@link ChannelFuture} which has been completed already.
  */
-abstract class CompleteChannelFuture implements ChannelFuture {
+abstract class CompleteChannelFuture extends CompleteFuture implements ChannelFuture {
 
     private final Channel channel;
 
@@ -30,7 +33,8 @@ abstract class CompleteChannelFuture implements ChannelFuture {
      *
      * @param channel the {@link Channel} associated with this future
      */
-    protected CompleteChannelFuture(Channel channel) {
+    protected CompleteChannelFuture(Channel channel, EventExecutor executor) {
+        super(executor);
         if (channel == null) {
             throw new NullPointerException("channel");
         }
@@ -38,62 +42,52 @@ abstract class CompleteChannelFuture implements ChannelFuture {
     }
 
     @Override
-    public ChannelFuture addListener(final ChannelFutureListener listener) {
-        if (listener == null) {
-            throw new NullPointerException("listener");
+    protected EventExecutor executor() {
+        EventExecutor e = super.executor();
+        if (e == null) {
+            return channel().eventLoop();
+        } else {
+            return e;
         }
-        DefaultChannelPromise.notifyListener(this, listener);
+    }
+
+    @Override
+    public ChannelFuture addListener(GenericFutureListener<? extends Future> listener) {
+        super.addListener(listener);
         return this;
     }
 
     @Override
-    public ChannelFuture addListeners(ChannelFutureListener... listeners) {
-        if (listeners == null) {
-            throw new NullPointerException("listeners");
-        }
-        for (ChannelFutureListener l: listeners) {
-            if (l == null) {
-                break;
-            }
-            DefaultChannelPromise.notifyListener(this, l);
-        }
+    public ChannelFuture addListeners(GenericFutureListener<? extends Future>... listeners) {
+        super.addListeners(listeners);
         return this;
     }
 
     @Override
-    public ChannelFuture removeListener(ChannelFutureListener listener) {
-        // NOOP
+    public ChannelFuture removeListener(GenericFutureListener<? extends Future> listener) {
+        super.removeListener(listener);
         return this;
     }
 
     @Override
-    public ChannelFuture removeListeners(ChannelFutureListener... listeners) {
-        // NOOP
+    public ChannelFuture removeListeners(GenericFutureListener<? extends Future>... listeners) {
+        super.removeListeners(listeners);
+        return this;
+    }
+
+    @Override
+    public ChannelFuture syncUninterruptibly() {
+        return this;
+    }
+
+    @Override
+    public ChannelFuture sync() throws InterruptedException {
         return this;
     }
 
     @Override
     public ChannelFuture await() throws InterruptedException {
-        if (Thread.interrupted()) {
-            throw new InterruptedException();
-        }
         return this;
-    }
-
-    @Override
-    public boolean await(long timeout, TimeUnit unit) throws InterruptedException {
-        if (Thread.interrupted()) {
-            throw new InterruptedException();
-        }
-        return true;
-    }
-
-    @Override
-    public boolean await(long timeoutMillis) throws InterruptedException {
-        if (Thread.interrupted()) {
-            throw new InterruptedException();
-        }
-        return true;
     }
 
     @Override
@@ -102,22 +96,7 @@ abstract class CompleteChannelFuture implements ChannelFuture {
     }
 
     @Override
-    public boolean awaitUninterruptibly(long timeout, TimeUnit unit) {
-        return true;
-    }
-
-    @Override
-    public boolean awaitUninterruptibly(long timeoutMillis) {
-        return true;
-    }
-
-    @Override
     public Channel channel() {
         return channel;
-    }
-
-    @Override
-    public boolean isDone() {
-        return true;
     }
 }
