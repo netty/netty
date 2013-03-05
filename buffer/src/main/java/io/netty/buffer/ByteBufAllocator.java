@@ -41,6 +41,21 @@ public interface ByteBufAllocator {
     ByteBuf buffer(int initialCapacity, int maxCapacity);
 
     /**
+     * Allocate a {@link ByteBuf} whose initial capacity is 0, preferably a direct buffer which is suitable for I/O.
+     */
+    ByteBuf ioBuffer();
+
+    /**
+     * Allocate a {@link ByteBuf}, preferably a direct buffer which is suitable for I/O.
+     */
+    ByteBuf ioBuffer(int initialCapacity);
+
+    /**
+     * Allocate a {@link ByteBuf}, preferably a direct buffer which is suitable for I/O.
+     */
+    ByteBuf ioBuffer(int initialCapacity, int maxCapacity);
+
+    /**
      * Allocate a heap {@link ByteBuf}.
      */
     ByteBuf heapBuffer();
@@ -71,11 +86,6 @@ public interface ByteBufAllocator {
      * maximal capacity.
      */
     ByteBuf directBuffer(int initialCapacity, int maxCapacity);
-
-    /**
-     * Allocate a {@link ByteBuf} which is used for reading data in from the actual transport.
-     */
-    ByteBuf ioBuffer();
 
     /**
      * Allocate a {@link CompositeByteBuf}.
