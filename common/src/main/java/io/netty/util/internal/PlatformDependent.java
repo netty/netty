@@ -49,6 +49,9 @@ public final class PlatformDependent {
 
     private static final boolean HAS_UNSAFE = hasUnsafe0();
     private static final boolean CAN_USE_CHM_V8 = HAS_UNSAFE && JAVA_VERSION < 8;
+    private static final boolean DIRECT_BUFFER_PREFERRED =
+            HAS_UNSAFE && SystemPropertyUtil.getBoolean("io.netty.preferDirect", false);
+
     private static final long ARRAY_BASE_OFFSET = arrayBaseOffset0();
 
     private static final boolean HAS_JAVASSIST = hasJavassist0();
@@ -95,6 +98,14 @@ public final class PlatformDependent {
      */
     public static boolean hasUnsafe() {
         return HAS_UNSAFE;
+    }
+
+    /**
+     * Returns {@code true} if the platform has reliable low-level direct buffer access API and a user specified
+     * {@code -Dio.netty.preferDirect} option.
+     */
+    public static boolean directBufferPreferred() {
+        return DIRECT_BUFFER_PREFERRED;
     }
 
     /**
@@ -158,13 +169,6 @@ public final class PlatformDependent {
         } else {
             return new ConcurrentHashMap<K, V>(map);
         }
-    }
-
-    /**
-     * Try to allocate a new direct {@link ByteBuffer} using the best available allocator.
-     */
-    public static ByteBuffer newDirectBuffer(int capacity) {
-        return PlatformDependent0.newDirectBuffer(capacity);
     }
 
     /**

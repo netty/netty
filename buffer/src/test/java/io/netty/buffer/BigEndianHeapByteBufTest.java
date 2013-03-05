@@ -45,6 +45,6 @@ public class BigEndianHeapByteBufTest extends AbstractByteBufTest {
 
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullInConstructor2() {
-        new UnpooledHeapByteBuf(UnpooledByteBufAllocator.HEAP_BY_DEFAULT, null, 0);
+        new UnpooledHeapByteBuf(UnpooledByteBufAllocator.DEFAULT, null, 0);
     }
 }
