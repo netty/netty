@@ -16,6 +16,8 @@
 package io.netty.util.internal;
 
 import io.netty.util.internal.chmv8.ConcurrentHashMapV8;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
@@ -55,6 +57,16 @@ public final class PlatformDependent {
     private static final long ARRAY_BASE_OFFSET = arrayBaseOffset0();
 
     private static final boolean HAS_JAVASSIST = hasJavassist0();
+
+    static {
+        InternalLogger logger = InternalLoggerFactory.getInstance(PlatformDependent.class);
+        if (!hasUnsafe()) {
+            logger.warn(
+                    "Your platform does not provide complete low-level API for accessing direct buffers reliably. " +
+                    "Unless explicitly requested, heap buffer will always be preferred " +
+                    "to avoid potential risk of getting OutOfMemoryError.");
+        }
+    }
 
     /**
      * Returns {@code true} if and only if the current platform is Android
