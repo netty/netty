@@ -77,6 +77,22 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
     }
 
     @Override
+    public ByteBuf ioBuffer(int initialCapacity) {
+        if (PlatformDependent.hasUnsafe()) {
+            return directBuffer(initialCapacity);
+        }
+        return heapBuffer(initialCapacity);
+    }
+
+    @Override
+    public ByteBuf ioBuffer(int initialCapacity, int maxCapacity) {
+        if (PlatformDependent.hasUnsafe()) {
+            return directBuffer(initialCapacity, maxCapacity);
+        }
+        return heapBuffer(initialCapacity, maxCapacity);
+    }
+
+    @Override
     public ByteBuf heapBuffer() {
         return heapBuffer(256, Integer.MAX_VALUE);
     }
