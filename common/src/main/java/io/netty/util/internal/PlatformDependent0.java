@@ -31,6 +31,11 @@ final class PlatformDependent0 {
     private static final Unsafe UNSAFE;
     private static final long CLEANER_FIELD_OFFSET;
     private static final long ADDRESS_FIELD_OFFSET;
+    /**
+     * {@code true} if and only if the platform supports unaligned access.
+     *
+     * @see <a href="http://en.wikipedia.org/wiki/Segmentation_fault#Bus_error">Wikipedia on segfault</a>
+     */
     private static final boolean UNALIGNED;
     private static final boolean HAS_COPY_METHODS;
 
@@ -120,10 +125,6 @@ final class PlatformDependent0 {
     }
 
     static long directBufferAddress(ByteBuffer buffer) {
-        if (!isUnaligned()) {
-            throw new Error();
-        }
-
         return getLong(buffer, ADDRESS_FIELD_OFFSET);
     }
 
@@ -135,10 +136,6 @@ final class PlatformDependent0 {
         } catch (Throwable t) {
             // Nothing we can do here.
         }
-    }
-
-    static boolean isUnaligned() {
-        return UNALIGNED;
     }
 
     static boolean hasCopyMethods() {
@@ -166,15 +163,37 @@ final class PlatformDependent0 {
     }
 
     static short getShort(long address) {
-        return UNSAFE.getShort(address);
+        if (UNALIGNED) {
+            return UNSAFE.getShort(address);
+        } else {
+            return (short)(getByte(address) << 8 | getByte(address + 1) & 0xff);
+        }
     }
 
     static int getInt(long address) {
-        return UNSAFE.getInt(address);
+        if (UNALIGNED) {
+            return UNSAFE.getInt(address);
+        } else {
+            return getByte(address) << 24 |
+                  (getByte(address + 1) & 0xff) << 16 |
+                  (getByte(address + 2) & 0xff) <<  8 |
+                   getByte(address + 3) & 0xff;
+        }
     }
 
     static long getLong(long address) {
-        return UNSAFE.getLong(address);
+        if (UNALIGNED) {
+            return UNSAFE.getLong(address);
+        } else {
+            return (long) getByte(address) << 56 |
+                  ((long) getByte(address + 1) & 0xff) << 48 |
+                  ((long) getByte(address + 2) & 0xff) << 40 |
+                  ((long) getByte(address + 3) & 0xff) << 32 |
+                  ((long) getByte(address + 4) & 0xff) << 24 |
+                  ((long) getByte(address + 5) & 0xff) << 16 |
+                  ((long) getByte(address + 6) & 0xff) <<  8 |
+                   (long) getByte(address + 7) & 0xff;
+        }
     }
 
     static void putByte(long address, byte value) {
@@ -182,15 +201,38 @@ final class PlatformDependent0 {
     }
 
     static void putShort(long address, short value) {
-        UNSAFE.putShort(address, value);
+        if (UNALIGNED) {
+            UNSAFE.putShort(address, value);
+        } else {
+            putByte(address, (byte) (value >>> 8));
+            putByte(address + 1, (byte) value);
+        }
     }
 
     static void putInt(long address, int value) {
-        UNSAFE.putInt(address, value);
+        if (UNALIGNED) {
+            UNSAFE.putInt(address, value);
+        } else {
+            putByte(address, (byte) (value >>> 24));
+            putByte(address + 1, (byte) (value >>> 16));
+            putByte(address + 2, (byte) (value >>> 8));
+            putByte(address + 3, (byte) value);
+        }
     }
 
     static void putLong(long address, long value) {
-        UNSAFE.putLong(address, value);
+        if (UNALIGNED) {
+            UNSAFE.putLong(address, value);
+        } else {
+            putByte(address, (byte) (value >>> 56));
+            putByte(address + 1, (byte) (value >>> 48));
+            putByte(address + 2, (byte) (value >>> 40));
+            putByte(address + 3, (byte) (value >>> 32));
+            putByte(address + 4, (byte) (value >>> 24));
+            putByte(address + 5, (byte) (value >>> 16));
+            putByte(address + 6, (byte) (value >>> 8));
+            putByte(address + 7, (byte) value);
+        }
     }
 
     static void copyMemory(long srcAddr, long dstAddr, long length) {
