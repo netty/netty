@@ -39,8 +39,6 @@ import java.util.regex.Pattern;
  */
 public final class PlatformDependent {
 
-    private static final ClassLoader LOADER = ClassLoader.getSystemClassLoader();
-
     private static final boolean IS_ANDROID = isAndroid0();
     private static final boolean IS_WINDOWS = isWindows0();
     private static final boolean IS_ROOT = isRoot0();
@@ -51,8 +49,6 @@ public final class PlatformDependent {
 
     private static final boolean HAS_UNSAFE = hasUnsafe0();
     private static final boolean CAN_USE_CHM_V8 = HAS_UNSAFE && JAVA_VERSION < 8;
-    private static final boolean CAN_FREE_DIRECT_BUFFER = canFreeDirectBuffer0();
-    private static final boolean UNSAFE_HASE_COPY_METHODS = unsafeHasCopyMethods0();
     private static final long ARRAY_BASE_OFFSET = arrayBaseOffset0();
 
     private static final boolean HAS_JAVASSIST = hasJavassist0();
@@ -94,25 +90,11 @@ public final class PlatformDependent {
     }
 
     /**
-     * Return {@code true} if {@code sun.misc.Unsafe} was found on the classpath and can be used.
+     * Return {@code true} if {@code sun.misc.Unsafe} was found on the classpath and can be used for acclerated
+     * direct memory access.
      */
     public static boolean hasUnsafe() {
         return HAS_UNSAFE;
-    }
-
-    /**
-     * Return {@code true} if direct buffers can be freed using an optimized way and so memory footprint will be very
-     * small.
-     */
-    public static boolean canFreeDirectBuffer() {
-        return CAN_FREE_DIRECT_BUFFER;
-    }
-
-    /**
-     * Returns {@code true} if unsafe has all needed copy methods which is not the case on latest openjdk6 atm.
-     */
-    public static boolean unsafeHasCopyMethods() {
-        return UNSAFE_HASE_COPY_METHODS;
     }
 
     /**
@@ -178,8 +160,11 @@ public final class PlatformDependent {
         }
     }
 
-    public static long directBufferAddress(ByteBuffer buffer) {
-        return PlatformDependent0.directBufferAddress(buffer);
+    /**
+     * Try to allocate a new direct {@link ByteBuffer} using the best available allocator.
+     */
+    public static ByteBuffer newDirectBuffer(int capacity) {
+        return PlatformDependent0.newDirectBuffer(capacity);
     }
 
     /**
@@ -187,9 +172,13 @@ public final class PlatformDependent {
      * the current platform does not support this operation or the specified buffer is not a direct buffer.
      */
     public static void freeDirectBuffer(ByteBuffer buffer) {
-        if (canFreeDirectBuffer() && buffer.isDirect()) {
+        if (buffer.isDirect()) {
             PlatformDependent0.freeDirectBuffer(buffer);
         }
+    }
+
+    public static long directBufferAddress(ByteBuffer buffer) {
+        return PlatformDependent0.directBufferAddress(buffer);
     }
 
     public static Object getObject(Object object, long fieldOffset) {
@@ -247,7 +236,7 @@ public final class PlatformDependent {
     private static boolean isAndroid0() {
         boolean android;
         try {
-            Class.forName("android.app.Application", false, LOADER);
+            Class.forName("android.app.Application", false, ClassLoader.getSystemClassLoader());
             android = true;
         } catch (Exception e) {
             android = false;
@@ -341,24 +330,13 @@ public final class PlatformDependent {
             return false;
         }
 
-        return PlatformDependent0.hasUnsafe();
-    }
-
-    private static boolean canFreeDirectBuffer0() {
-        if (isAndroid()) {
+        try {
+            return PlatformDependent0.hasUnsafe();
+        } catch (Throwable t) {
             return false;
         }
-
-        return PlatformDependent0.canFreeDirectBuffer();
     }
 
-    private static boolean unsafeHasCopyMethods0() {
-        if (!hasUnsafe()) {
-            return false;
-        }
-
-        return PlatformDependent0.hasCopyMethods();
-    }
     private static long arrayBaseOffset0() {
         if (!hasUnsafe()) {
             return -1;
