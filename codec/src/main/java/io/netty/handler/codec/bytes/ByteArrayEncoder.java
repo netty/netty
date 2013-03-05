@@ -60,7 +60,7 @@ public class ByteArrayEncoder extends ChannelOutboundMessageHandlerAdapter<byte[
     }
 
     @Override
-    protected void flush(ChannelHandlerContext ctx, byte[] msg) throws Exception {
+    public void flush(ChannelHandlerContext ctx, byte[] msg) throws Exception {
         if (msg.length == 0) {
             return;
         }

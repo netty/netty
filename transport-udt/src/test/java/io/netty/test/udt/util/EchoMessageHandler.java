@@ -75,7 +75,7 @@ public class EchoMessageHandler extends
     }
 
     @Override
-    protected void messageReceived(final ChannelHandlerContext ctx, final UdtMessage message) throws Exception {
+    public void messageReceived(final ChannelHandlerContext ctx, final UdtMessage message) throws Exception {
 
         final ByteBuf byteBuf = message.data();
 

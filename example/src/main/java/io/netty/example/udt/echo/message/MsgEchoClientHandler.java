@@ -68,7 +68,7 @@ public class MsgEchoClientHandler extends
     }
 
     @Override
-    protected void messageReceived(final ChannelHandlerContext ctx,
+    public void messageReceived(final ChannelHandlerContext ctx,
             final UdtMessage message) throws Exception {
         final ByteBuf byteBuf = message.data();
         meter.mark(byteBuf.readableBytes());

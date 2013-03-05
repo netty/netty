@@ -40,7 +40,7 @@ public class SctpInboundByteStreamHandler extends ChannelInboundMessageHandlerAd
     }
 
     @Override
-    protected final boolean acceptInboundMessage(Object msg) throws Exception {
+    public final boolean acceptInboundMessage(Object msg) throws Exception {
         if (super.acceptInboundMessage(msg)) {
             return acceptInboundMessage((SctpMessage) msg);
         }
@@ -52,7 +52,7 @@ public class SctpInboundByteStreamHandler extends ChannelInboundMessageHandlerAd
     }
 
     @Override
-    protected void messageReceived(ChannelHandlerContext ctx, SctpMessage msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, SctpMessage msg) throws Exception {
         if (!msg.isComplete()) {
             throw new CodecException(String.format("Received SctpMessage is not complete, please add %s in the " +
                     "pipeline before this handler", SctpMessageCompletionHandler.class.getSimpleName()));

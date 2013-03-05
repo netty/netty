@@ -39,12 +39,12 @@ public class DefaultChannelPipelineTest {
         final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
         pipeline.addLast(new ChannelInboundMessageHandlerAdapter<Object>() {
             @Override
-            protected void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+            public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
                 forwarded.set(ctx.nextInboundMessageBuffer().add(msg));
             }
 
             @Override
-            protected void endMessageReceived(ChannelHandlerContext ctx) throws Exception {
+            public void endMessageReceived(ChannelHandlerContext ctx) throws Exception {
                 ctx.fireInboundBufferUpdated();
             }
         });
@@ -178,13 +178,13 @@ public class DefaultChannelPipelineTest {
         boolean called;
 
         @Override
-        protected boolean acceptInboundMessage(Object msg) throws Exception {
+        public boolean acceptInboundMessage(Object msg) throws Exception {
             called = true;
             return super.acceptInboundMessage(msg);
         }
 
         @Override
-        protected void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
             fail();
         }
     }
