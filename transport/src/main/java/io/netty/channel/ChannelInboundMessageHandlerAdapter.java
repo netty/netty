@@ -77,7 +77,6 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
         MessageBuf<Object> out = ctx.nextInboundMessageBuffer();
         int oldOutSize = out.size();
         try {
-            boolean unsupportedFound = false;
             for (;;) {
                 Object msg = in.poll();
                 if (msg == null) {
@@ -86,16 +85,7 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
 
                 if (!acceptInboundMessage(msg)) {
                     out.add(msg);
-                    unsupportedFound = true;
                     continue;
-                }
-
-                if (unsupportedFound) {
-                    // the last message were unsupported, but now we received one that is supported.
-                    // So reset the flag and notify the next context
-                    unsupportedFound = false;
-                    ctx.fireInboundBufferUpdated();
-                    oldOutSize = out.size();
                 }
 
                 @SuppressWarnings("unchecked")
@@ -109,8 +99,6 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
                     BufUtil.release(imsg);
                 }
             }
-        } catch (Throwable t) {
-            exceptionCaught(ctx, t);
         } finally {
             if (oldOutSize != out.size()) {
                 ctx.fireInboundBufferUpdated();
