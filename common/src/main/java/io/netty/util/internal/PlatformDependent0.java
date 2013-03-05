@@ -166,7 +166,7 @@ final class PlatformDependent0 {
         if (UNALIGNED) {
             return UNSAFE.getShort(address);
         } else {
-            return (short)(getByte(address) << 8 | getByte(address + 1) & 0xff);
+            return (short) (getByte(address) << 8 | getByte(address + 1) & 0xff);
         }
     }
 
