@@ -27,7 +27,7 @@ import io.netty.util.concurrent.GenericFutureListener;
  */
 public class DefaultChannelPromise extends DefaultPromise implements ChannelPromise, FlushCheckpoint {
     private final Channel channel;
-
+    private final EventExecutor executor;
     /**
      * The first 24 bits of this field represents the number of waiters waiting for this promise with await*().
      * The other 40 bits of this field represents the flushCheckpoint used by ChannelFlushPromiseNotifier and
@@ -42,11 +42,25 @@ public class DefaultChannelPromise extends DefaultPromise implements ChannelProm
      *        the {@link Channel} associated with this future
      */
     public DefaultChannelPromise(Channel channel) {
+        this(channel, null);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param channel
+     *        the {@link Channel} associated with this future
+     */
+    public DefaultChannelPromise(Channel channel, EventExecutor executor) {
         this.channel = channel;
+        this.executor = executor;
     }
 
     @Override
     protected EventExecutor executor() {
+        if (executor != null) {
+            return executor;
+        }
         return channel().eventLoop();
     }
 
