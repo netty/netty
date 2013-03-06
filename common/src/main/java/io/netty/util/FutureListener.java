@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -23,7 +23,7 @@ import java.util.EventListener;
  * is added by calling {@link Future#addListener(FutureListener)}.
  *
  */
-public interface FutureListener extends EventListener {
+public interface FutureListener<F extends Future> extends EventListener {
 
     /**
      * Invoked when the operation associated with the {@link Future}
@@ -32,5 +32,5 @@ public interface FutureListener extends EventListener {
      * @param future  the source {@link Future} which called this
      *                callback
      */
-    void operationComplete(Future future) throws Exception;
+    void operationComplete(F future) throws Exception;
 }

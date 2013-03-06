@@ -167,53 +167,26 @@ public interface ChannelFuture extends Future {
      * Returns a channel where the I/O operation associated with this
      * future takes place.
      */
+    @Override
+    Channel source();
+
+    /**
+     * Returns a channel where the I/O operation associated with this
+     * future takes place.
+     */
     Channel channel();
 
     @Override
-    ChannelFuture addListener(FutureListener listener);
+    ChannelFuture addListener(FutureListener<? extends Future> listener);
 
     @Override
-    ChannelFuture addListeners(FutureListener... listeners);
+    ChannelFuture addListeners(FutureListener<? extends Future>... listeners);
 
     @Override
-    ChannelFuture removeListener(FutureListener listener);
+    ChannelFuture removeListener(FutureListener<? extends Future> listener);
 
     @Override
-    ChannelFuture removeListeners(FutureListener... listeners);
-
-    /**
-     * Adds the specified listener to this future.  The
-     * specified listener is notified when this future is
-     * {@linkplain #isDone() done}.  If this future is already
-     * completed, the specified listener is notified immediately.
-     */
-    ChannelFuture addListener(ChannelFutureListener listener);
-
-    /**
-     * Adds the specified listeners to this future.  The
-     * specified listeners are notified when this future is
-     * {@linkplain #isDone() done}.  If this future is already
-     * completed, the specified listeners are notified immediately.
-     */
-    ChannelFuture addListeners(ChannelFutureListener... listeners);
-
-    /**
-     * Removes the specified listener from this future.
-     * The specified listener is no longer notified when this
-     * future is {@linkplain #isDone() done}.  If the specified
-     * listener is not associated with this future, this method
-     * does nothing and returns silently.
-     */
-    ChannelFuture removeListener(ChannelFutureListener listener);
-
-    /**
-     * Removes the specified listeners from this future.
-     * The specified listeners are no longer notified when this
-     * future is {@linkplain #isDone() done}.  If the specified
-     * listeners are not associated with this future, this method
-     * does nothing and returns silently.
-     */
-    ChannelFuture removeListeners(ChannelFutureListener... listeners);
+    ChannelFuture removeListeners(FutureListener<? extends Future>... listeners);
 
     /**
      * Waits for this future until it is done, and rethrows the cause of the failure if this future

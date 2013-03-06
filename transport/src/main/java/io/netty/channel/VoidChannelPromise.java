@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.util.Future;
 import io.netty.util.FutureListener;
 
 import java.util.concurrent.TimeUnit;
@@ -36,49 +37,25 @@ final class VoidChannelPromise implements ChannelFuture.Unsafe, ChannelPromise {
     }
 
     @Override
-    public ChannelPromise addListener(final ChannelFutureListener listener) {
+    public ChannelPromise addListener(FutureListener<? extends Future> listener) {
         fail();
         return this;
     }
 
     @Override
-    public ChannelPromise addListeners(final ChannelFutureListener... listeners) {
+    public ChannelPromise addListeners(FutureListener<? extends Future>... listeners) {
         fail();
         return this;
     }
 
     @Override
-    public ChannelPromise removeListener(ChannelFutureListener listener) {
+    public ChannelPromise removeListener(FutureListener<? extends Future> listener) {
         // NOOP
         return this;
     }
 
     @Override
-    public ChannelPromise removeListeners(ChannelFutureListener... listeners) {
-        // NOOP
-        return this;
-    }
-
-    @Override
-    public ChannelPromise addListener(FutureListener listener) {
-        fail();
-        return this;
-    }
-
-    @Override
-    public ChannelPromise addListeners(FutureListener... listeners) {
-        fail();
-        return this;
-    }
-
-    @Override
-    public ChannelPromise removeListener(FutureListener listener) {
-        // NOOP
-        return this;
-    }
-
-    @Override
-    public ChannelPromise removeListeners(FutureListener... listeners) {
+    public ChannelPromise removeListeners(FutureListener<? extends Future>... listeners) {
         // NOOP
         return this;
     }
@@ -174,5 +151,10 @@ final class VoidChannelPromise implements ChannelFuture.Unsafe, ChannelPromise {
 
     private static void fail() {
         throw new IllegalStateException("void future");
+    }
+
+    @Override
+    public Channel source() {
+        return channel();
     }
 }

@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 
+import io.netty.util.Future;
 import io.netty.util.FutureListener;
 
 abstract class CompleteChannelPromise extends CompleteChannelFuture implements ChannelPromise {
@@ -45,26 +46,6 @@ abstract class CompleteChannelPromise extends CompleteChannelFuture implements C
     }
 
     @Override
-    public ChannelPromise addListener(final ChannelFutureListener listener) {
-        return (ChannelPromise) super.addListener(listener);
-    }
-
-    @Override
-    public ChannelPromise addListeners(ChannelFutureListener... listeners) {
-        return (ChannelPromise) super.addListeners(listeners);
-    }
-
-    @Override
-    public ChannelPromise removeListener(ChannelFutureListener listener) {
-        return (ChannelPromise) super.removeListener(listener);
-    }
-
-    @Override
-    public ChannelPromise removeListeners(ChannelFutureListener... listeners) {
-        return (ChannelPromise) super.removeListeners(listeners);
-    }
-
-    @Override
     public ChannelPromise await() throws InterruptedException {
         return (ChannelPromise) super.await();
     }
@@ -75,22 +56,22 @@ abstract class CompleteChannelPromise extends CompleteChannelFuture implements C
     }
 
     @Override
-    public ChannelPromise addListener(FutureListener listener) {
+    public ChannelPromise addListener(FutureListener<? extends Future> listener) {
         return (ChannelPromise) super.addListener(listener);
     }
 
     @Override
-    public ChannelPromise addListeners(FutureListener... listeners) {
+    public ChannelPromise addListeners(FutureListener<? extends Future>... listeners) {
         return (ChannelPromise) super.addListeners(listeners);
     }
 
     @Override
-    public ChannelPromise removeListener(FutureListener listener) {
+    public ChannelPromise removeListener(FutureListener<? extends Future> listener) {
         return (ChannelPromise) super.removeListener(listener);
     }
 
     @Override
-    public ChannelPromise removeListeners(FutureListener... listeners) {
+    public ChannelPromise removeListeners(FutureListener<? extends Future>... listeners) {
         return (ChannelPromise) super.removeListeners(listeners);
     }
 }

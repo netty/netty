@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -22,6 +22,11 @@ import java.util.concurrent.TimeUnit;
  * The result of an asynchronous operation.
  */
 public interface Future {
+
+    /**
+     * Returns the source of this future.
+     */
+    Object source();
 
     /**
      * Returns {@code true} if and only if this future is
@@ -51,7 +56,7 @@ public interface Future {
      * {@linkplain #isDone() done}.  If this future is already
      * completed, the specified listener is notified immediately.
      */
-    Future addListener(FutureListener listener);
+    Future addListener(FutureListener<? extends Future> listener);
 
     /**
      * Adds the specified listeners to this future.  The
@@ -59,7 +64,7 @@ public interface Future {
      * {@linkplain #isDone() done}.  If this future is already
      * completed, the specified listeners are notified immediately.
      */
-    Future addListeners(FutureListener... listeners);
+    Future addListeners(FutureListener<? extends Future>... listeners);
 
     /**
      * Removes the specified listener from this future.
@@ -68,7 +73,7 @@ public interface Future {
      * listener is not associated with this future, this method
      * does nothing and returns silently.
      */
-    Future removeListener(FutureListener listener);
+    Future removeListener(FutureListener<? extends Future> listener);
 
     /**
      * Removes the specified listeners from this future.
@@ -77,7 +82,7 @@ public interface Future {
      * listeners are not associated with this future, this method
      * does nothing and returns silently.
      */
-    Future removeListeners(FutureListener... listeners);
+    Future removeListeners(FutureListener<? extends Future>... listeners);
 
     /**
      * Waits for this future to be completed.

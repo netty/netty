@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -57,16 +57,16 @@ public interface Promise extends Future {
     boolean tryFailure(Throwable cause);
 
     @Override
-    Promise addListener(FutureListener listener);
+    Promise addListener(FutureListener<? extends Future> listener);
 
     @Override
-    Promise addListeners(FutureListener... listeners);
+    Promise addListeners(FutureListener<? extends Future>... listeners);
 
     @Override
-    Promise removeListener(FutureListener listener);
+    Promise removeListener(FutureListener<? extends Future> listener);
 
     @Override
-    Promise removeListeners(FutureListener... listeners);
+    Promise removeListeners(FutureListener<? extends Future>... listeners);
 
     @Override
     Promise await() throws InterruptedException;
