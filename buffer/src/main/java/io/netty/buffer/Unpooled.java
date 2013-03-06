@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.internal.PlatformDependent;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.CharBuffer;
@@ -206,6 +208,8 @@ public final class Unpooled {
                     buffer.array(),
                     buffer.arrayOffset() + buffer.position(),
                     buffer.remaining()).order(buffer.order());
+        } else if (PlatformDependent.hasUnsafe()) {
+            return new UnpooledUnsafeDirectByteBuf(ALLOC, buffer, buffer.remaining());
         } else {
             return new UnpooledDirectByteBuf(ALLOC, buffer, buffer.remaining());
         }

@@ -585,10 +585,10 @@ public abstract class AbstractByteBuf implements ByteBuf {
 
     @Override
     public byte readByte() {
-        if (readerIndex == writerIndex) {
-            throw new IndexOutOfBoundsException("readerIndex(" + readerIndex + ") == writerIndex(" + writerIndex + ')');
-        }
-        return _getByte(readerIndex++);
+        int i = readerIndex;
+        byte b = getByte(i);
+        readerIndex = i + 1;
+        return b;
     }
 
     @Override
