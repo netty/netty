@@ -781,7 +781,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
     @Override
     public ByteBuf writeShort(int value) {
         ensureWritable(2);
-        setShort(writerIndex, value);
+        _setShort(writerIndex, value);
         writerIndex += 2;
         return this;
     }
@@ -789,7 +789,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
     @Override
     public ByteBuf writeMedium(int value) {
         ensureWritable(3);
-        setMedium(writerIndex, value);
+        _setMedium(writerIndex, value);
         writerIndex += 3;
         return this;
     }
@@ -797,7 +797,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
     @Override
     public ByteBuf writeInt(int value) {
         ensureWritable(4);
-        setInt(writerIndex, value);
+        _setInt(writerIndex, value);
         writerIndex += 4;
         return this;
     }
@@ -805,7 +805,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
     @Override
     public ByteBuf writeLong(long value) {
         ensureWritable(8);
-        setLong(writerIndex, value);
+        _setLong(writerIndex, value);
         writerIndex += 8;
         return this;
     }
