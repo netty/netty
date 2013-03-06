@@ -198,30 +198,55 @@ final class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public byte getByte(int index) {
         ensureAccessible();
+        return _getByte(index);
+    }
+
+    @Override
+    protected byte _getByte(int index) {
         return buffer.get(index);
     }
 
     @Override
     public short getShort(int index) {
         ensureAccessible();
+        return _getShort(index);
+    }
+
+    @Override
+    protected short _getShort(int index) {
         return buffer.getShort(index);
     }
 
     @Override
     public int getUnsignedMedium(int index) {
         ensureAccessible();
+        return _getUnsignedMedium(index);
+    }
+
+    @Override
+    protected int _getUnsignedMedium(int index) {
         return (getByte(index) & 0xff) << 16 | (getByte(index + 1) & 0xff) << 8 | getByte(index + 2) & 0xff;
     }
 
     @Override
     public int getInt(int index) {
         ensureAccessible();
+        return _getInt(index);
+    }
+
+    @Override
+    protected int _getInt(int index) {
         return buffer.getInt(index);
     }
 
     @Override
     public long getLong(int index) {
         ensureAccessible();
+        return _getLong(index);
+    }
+
+    @Override
+    protected long _getLong(int index) {
         return buffer.getLong(index);
     }
 
@@ -275,38 +300,63 @@ final class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public ByteBuf setByte(int index, int value) {
         ensureAccessible();
-        buffer.put(index, (byte) value);
+        _setByte(index, value);
         return this;
+    }
+
+    @Override
+    protected void _setByte(int index, int value) {
+        buffer.put(index, (byte) value);
     }
 
     @Override
     public ByteBuf setShort(int index, int value) {
         ensureAccessible();
-        buffer.putShort(index, (short) value);
+        _setShort(index, value);
         return this;
+    }
+
+    @Override
+    protected void _setShort(int index, int value) {
+        buffer.putShort(index, (short) value);
     }
 
     @Override
     public ByteBuf setMedium(int index, int value) {
         ensureAccessible();
+        _setMedium(index, value);
+        return this;
+    }
+
+    @Override
+    protected void _setMedium(int index, int value) {
         setByte(index, (byte) (value >>> 16));
         setByte(index + 1, (byte) (value >>> 8));
         setByte(index + 2, (byte) value);
-        return this;
     }
 
     @Override
     public ByteBuf setInt(int index, int value) {
         ensureAccessible();
-        buffer.putInt(index, value);
+        _setInt(index, value);
         return this;
+    }
+
+    @Override
+    protected void _setInt(int index, int value) {
+        buffer.putInt(index, value);
     }
 
     @Override
     public ByteBuf setLong(int index, long value) {
         ensureAccessible();
-        buffer.putLong(index, value);
+        _setLong(index, value);
         return this;
+    }
+
+    @Override
+    protected void _setLong(int index, long value) {
+        buffer.putLong(index, value);
     }
 
     @Override

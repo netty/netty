@@ -85,11 +85,6 @@ public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
-    public ByteBuf setByte(int index, int value) {
-        throw new ReadOnlyBufferException();
-    }
-
-    @Override
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         throw new ReadOnlyBufferException();
     }
@@ -105,7 +100,22 @@ public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
+    public ByteBuf setByte(int index, int value) {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
+    protected void _setByte(int index, int value) {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
     public ByteBuf setShort(int index, int value) {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
+    protected void _setShort(int index, int value) {
         throw new ReadOnlyBufferException();
     }
 
@@ -115,12 +125,27 @@ public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
+    protected void _setMedium(int index, int value) {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
     public ByteBuf setInt(int index, int value) {
         throw new ReadOnlyBufferException();
     }
 
     @Override
+    protected void _setInt(int index, int value) {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
     public ByteBuf setLong(int index, long value) {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
+    protected void _setLong(int index, long value) {
         throw new ReadOnlyBufferException();
     }
 
@@ -182,26 +207,51 @@ public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public byte getByte(int index) {
+        return _getByte(index);
+    }
+
+    @Override
+    protected byte _getByte(int index) {
         return buffer.getByte(index);
     }
 
     @Override
     public short getShort(int index) {
+        return _getShort(index);
+    }
+
+    @Override
+    protected short _getShort(int index) {
         return buffer.getShort(index);
     }
 
     @Override
     public int getUnsignedMedium(int index) {
+        return _getUnsignedMedium(index);
+    }
+
+    @Override
+    protected int _getUnsignedMedium(int index) {
         return buffer.getUnsignedMedium(index);
     }
 
     @Override
     public int getInt(int index) {
+        return _getInt(index);
+    }
+
+    @Override
+    protected int _getInt(int index) {
         return buffer.getInt(index);
     }
 
     @Override
     public long getLong(int index) {
+        return _getLong(index);
+    }
+
+    @Override
+    protected long _getLong(int index) {
         return buffer.getLong(index);
     }
 

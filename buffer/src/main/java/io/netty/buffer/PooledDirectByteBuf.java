@@ -41,33 +41,28 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     }
 
     @Override
-    public byte getByte(int index) {
-        checkIndex(index);
+    protected byte _getByte(int index) {
         return memory.get(idx(index));
     }
 
     @Override
-    public short getShort(int index) {
-        checkIndex(index, 2);
+    protected short _getShort(int index) {
         return memory.getShort(idx(index));
     }
 
     @Override
-    public int getUnsignedMedium(int index) {
-        checkIndex(index, 3);
+    protected int _getUnsignedMedium(int index) {
         index = idx(index);
         return (memory.get(index) & 0xff) << 16 | (memory.get(index + 1) & 0xff) << 8 | memory.get(index + 2) & 0xff;
     }
 
     @Override
-    public int getInt(int index) {
-        checkIndex(index, 4);
+    protected int _getInt(int index) {
         return memory.getInt(idx(index));
     }
 
     @Override
-    public long getLong(int index) {
-        checkIndex(index, 8);
+    protected long _getLong(int index) {
         return memory.getLong(idx(index));
     }
 
@@ -138,41 +133,31 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     }
 
     @Override
-    public ByteBuf setByte(int index, int value) {
-        checkIndex(index);
+    protected void _setByte(int index, int value) {
         memory.put(idx(index), (byte) value);
-        return this;
     }
 
     @Override
-    public ByteBuf setShort(int index, int value) {
-        checkIndex(index, 2);
+    protected void _setShort(int index, int value) {
         memory.putShort(idx(index), (short) value);
-        return this;
     }
 
     @Override
-    public ByteBuf setMedium(int index, int value) {
-        checkIndex(index, 3);
+    protected void _setMedium(int index, int value) {
         index = idx(index);
         memory.put(index, (byte) (value >>> 16));
         memory.put(index + 1, (byte) (value >>> 8));
         memory.put(index + 2, (byte) value);
-        return this;
     }
 
     @Override
-    public ByteBuf setInt(int index, int value) {
-        checkIndex(index, 4);
+    protected void _setInt(int index, int value) {
         memory.putInt(idx(index), value);
-        return this;
     }
 
     @Override
-    public ByteBuf setLong(int index, long value) {
-        checkIndex(index, 8);
+    protected void _setLong(int index, long value) {
         memory.putLong(idx(index), value);
-        return this;
     }
 
     @Override

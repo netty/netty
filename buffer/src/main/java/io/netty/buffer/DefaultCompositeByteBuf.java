@@ -556,55 +556,60 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf
 
     @Override
     public byte getByte(int index) {
+        return _getByte(index);
+    }
+
+    @Override
+    protected byte _getByte(int index) {
         Component c = findComponent(index);
         return c.buf.getByte(index - c.offset);
     }
 
     @Override
-    public short getShort(int index) {
+    protected short _getShort(int index) {
         Component c = findComponent(index);
         if (index + 2 <= c.endOffset) {
             return c.buf.getShort(index - c.offset);
         } else if (order() == ByteOrder.BIG_ENDIAN) {
-            return (short) ((getByte(index) & 0xff) << 8 | getByte(index + 1) & 0xff);
+            return (short) ((_getByte(index) & 0xff) << 8 | _getByte(index + 1) & 0xff);
         } else {
-            return (short) (getByte(index) & 0xff | (getByte(index + 1) & 0xff) << 8);
+            return (short) (_getByte(index) & 0xff | (_getByte(index + 1) & 0xff) << 8);
         }
     }
 
     @Override
-    public int getUnsignedMedium(int index) {
+    protected int _getUnsignedMedium(int index) {
         Component c = findComponent(index);
         if (index + 3 <= c.endOffset) {
             return c.buf.getUnsignedMedium(index - c.offset);
         } else if (order() == ByteOrder.BIG_ENDIAN) {
-            return (getShort(index) & 0xffff) << 8 | getByte(index + 2) & 0xff;
+            return (_getShort(index) & 0xffff) << 8 | _getByte(index + 2) & 0xff;
         } else {
-            return getShort(index) & 0xFFFF | (getByte(index + 2) & 0xFF) << 16;
+            return _getShort(index) & 0xFFFF | (_getByte(index + 2) & 0xFF) << 16;
         }
     }
 
     @Override
-    public int getInt(int index) {
+    protected int _getInt(int index) {
         Component c = findComponent(index);
         if (index + 4 <= c.endOffset) {
             return c.buf.getInt(index - c.offset);
         } else if (order() == ByteOrder.BIG_ENDIAN) {
-            return (getShort(index) & 0xffff) << 16 | getShort(index + 2) & 0xffff;
+            return (_getShort(index) & 0xffff) << 16 | _getShort(index + 2) & 0xffff;
         } else {
-            return getShort(index) & 0xFFFF | (getShort(index + 2) & 0xFFFF) << 16;
+            return _getShort(index) & 0xFFFF | (_getShort(index + 2) & 0xFFFF) << 16;
         }
     }
 
     @Override
-    public long getLong(int index) {
+    protected long _getLong(int index) {
         Component c = findComponent(index);
         if (index + 8 <= c.endOffset) {
             return c.buf.getLong(index - c.offset);
         } else if (order() == ByteOrder.BIG_ENDIAN) {
-            return (getInt(index) & 0xffffffffL) << 32 | getInt(index + 4) & 0xffffffffL;
+            return (_getInt(index) & 0xffffffffL) << 32 | _getInt(index + 4) & 0xffffffffL;
         } else {
-            return getInt(index) & 0xFFFFFFFFL | (getInt(index + 4) & 0xFFFFFFFFL) << 32;
+            return _getInt(index) & 0xFFFFFFFFL | (_getInt(index + 4) & 0xFFFFFFFFL) << 32;
         }
     }
 
@@ -752,63 +757,84 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf
     }
 
     @Override
+    protected void _setByte(int index, int value) {
+        setByte(index, value);
+    }
+
+    @Override
     public CompositeByteBuf setShort(int index, int value) {
+        return (CompositeByteBuf) super.setShort(index, value);
+    }
+
+    @Override
+    protected void _setShort(int index, int value) {
         Component c = findComponent(index);
         if (index + 2 <= c.endOffset) {
             c.buf.setShort(index - c.offset, value);
         } else if (order() == ByteOrder.BIG_ENDIAN) {
-            setByte(index, (byte) (value >>> 8));
-            setByte(index + 1, (byte) value);
+            _setByte(index, (byte) (value >>> 8));
+            _setByte(index + 1, (byte) value);
         } else {
-            setByte(index    , (byte) value);
-            setByte(index + 1, (byte) (value >>> 8));
+            _setByte(index, (byte) value);
+            _setByte(index + 1, (byte) (value >>> 8));
         }
-        return this;
     }
 
     @Override
     public CompositeByteBuf setMedium(int index, int value) {
+        return (CompositeByteBuf) super.setMedium(index, value);
+    }
+
+    @Override
+    protected void _setMedium(int index, int value) {
         Component c = findComponent(index);
         if (index + 3 <= c.endOffset) {
             c.buf.setMedium(index - c.offset, value);
         } else if (order() == ByteOrder.BIG_ENDIAN) {
-            setShort(index, (short) (value >> 8));
-            setByte(index + 2, (byte) value);
+            _setShort(index, (short) (value >> 8));
+            _setByte(index + 2, (byte) value);
         } else {
-            setShort(index    , (short) value);
-            setByte(index + 2, (byte) (value >>> 16));
+            _setShort(index, (short) value);
+            _setByte(index + 2, (byte) (value >>> 16));
         }
-        return this;
     }
 
     @Override
     public CompositeByteBuf setInt(int index, int value) {
+        return (CompositeByteBuf) super.setInt(index, value);
+    }
+
+    @Override
+    protected void _setInt(int index, int value) {
         Component c = findComponent(index);
         if (index + 4 <= c.endOffset) {
             c.buf.setInt(index - c.offset, value);
         } else if (order() == ByteOrder.BIG_ENDIAN) {
-            setShort(index, (short) (value >>> 16));
-            setShort(index + 2, (short) value);
+            _setShort(index, (short) (value >>> 16));
+            _setShort(index + 2, (short) value);
         } else {
-            setShort(index    , (short) value);
-            setShort(index + 2, (short) (value >>> 16));
+            _setShort(index, (short) value);
+            _setShort(index + 2, (short) (value >>> 16));
         }
-        return this;
     }
 
     @Override
     public CompositeByteBuf setLong(int index, long value) {
+        return (CompositeByteBuf) super.setLong(index, value);
+    }
+
+    @Override
+    protected void _setLong(int index, long value) {
         Component c = findComponent(index);
         if (index + 8 <= c.endOffset) {
             c.buf.setLong(index - c.offset, value);
         } else if (order() == ByteOrder.BIG_ENDIAN) {
-            setInt(index, (int) (value >>> 32));
-            setInt(index + 4, (int) value);
+            _setInt(index, (int) (value >>> 32));
+            _setInt(index + 4, (int) value);
         } else {
-            setInt(index    , (int) value);
-            setInt(index + 4, (int) (value >>> 32));
+            _setInt(index, (int) value);
+            _setInt(index + 4, (int) (value >>> 32));
         }
-        return this;
     }
 
     @Override

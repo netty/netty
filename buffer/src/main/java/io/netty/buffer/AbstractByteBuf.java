@@ -343,6 +343,14 @@ public abstract class AbstractByteBuf implements ByteBuf {
     }
 
     @Override
+    public byte getByte(int index) {
+        checkIndex(index);
+        return _getByte(index);
+    }
+
+    protected abstract byte _getByte(int index);
+
+    @Override
     public boolean getBoolean(int index) {
         return getByte(index) != 0;
     }
@@ -353,9 +361,25 @@ public abstract class AbstractByteBuf implements ByteBuf {
     }
 
     @Override
+    public short getShort(int index) {
+        checkIndex(index, 2);
+        return _getShort(index);
+    }
+
+    protected abstract short _getShort(int index);
+
+    @Override
     public int getUnsignedShort(int index) {
         return getShort(index) & 0xFFFF;
     }
+
+    @Override
+    public int getUnsignedMedium(int index) {
+        checkIndex(index, 3);
+        return _getUnsignedMedium(index);
+    }
+
+    protected abstract int _getUnsignedMedium(int index);
 
     @Override
     public int getMedium(int index) {
@@ -367,9 +391,25 @@ public abstract class AbstractByteBuf implements ByteBuf {
     }
 
     @Override
+    public int getInt(int index) {
+        checkIndex(index, 4);
+        return _getInt(index);
+    }
+
+    protected abstract int _getInt(int index);
+
+    @Override
     public long getUnsignedInt(int index) {
         return getInt(index) & 0xFFFFFFFFL;
     }
+
+    @Override
+    public long getLong(int index) {
+        checkIndex(index, 8);
+        return _getLong(index);
+    }
+
+    protected abstract long _getLong(int index);
 
     @Override
     public char getChar(int index) {
@@ -415,10 +455,28 @@ public abstract class AbstractByteBuf implements ByteBuf {
     }
 
     @Override
+    public ByteBuf setByte(int index, int value) {
+        checkIndex(index);
+        _setByte(index, value);
+        return this;
+    }
+
+    protected abstract void _setByte(int index, int value);
+
+    @Override
     public ByteBuf setBoolean(int index, boolean value) {
         setByte(index, value ? 1 : 0);
         return this;
     }
+
+    @Override
+    public ByteBuf setShort(int index, int value) {
+        checkIndex(index, 2);
+        _setShort(index, value);
+        return this;
+    }
+
+    protected abstract void _setShort(int index, int value);
 
     @Override
     public ByteBuf setChar(int index, int value) {
@@ -427,10 +485,37 @@ public abstract class AbstractByteBuf implements ByteBuf {
     }
 
     @Override
+    public ByteBuf setMedium(int index, int value) {
+        checkIndex(index, 3);
+        _setMedium(index, value);
+        return this;
+    }
+
+    protected abstract void _setMedium(int index, int value);
+
+    @Override
+    public ByteBuf setInt(int index, int value) {
+        checkIndex(index, 4);
+        _setInt(index, value);
+        return this;
+    }
+
+    protected abstract void _setInt(int index, int value);
+
+    @Override
     public ByteBuf setFloat(int index, float value) {
         setInt(index, Float.floatToRawIntBits(value));
         return this;
     }
+
+    @Override
+    public ByteBuf setLong(int index, long value) {
+        checkIndex(index, 8);
+        _setLong(index, value);
+        return this;
+    }
+
+    protected abstract void _setLong(int index, long value);
 
     @Override
     public ByteBuf setDouble(int index, double value) {
@@ -503,7 +588,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
         if (readerIndex == writerIndex) {
             throw new IndexOutOfBoundsException("readerIndex(" + readerIndex + ") == writerIndex(" + writerIndex + ')');
         }
-        return getByte(readerIndex ++);
+        return _getByte(readerIndex++);
     }
 
     @Override
@@ -519,7 +604,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
     @Override
     public short readShort() {
         checkReadableBytes(2);
-        short v = getShort(readerIndex);
+        short v = _getShort(readerIndex);
         readerIndex += 2;
         return v;
     }
@@ -541,7 +626,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
     @Override
     public int readUnsignedMedium() {
         checkReadableBytes(3);
-        int v = getUnsignedMedium(readerIndex);
+        int v = _getUnsignedMedium(readerIndex);
         readerIndex += 3;
         return v;
     }
@@ -549,7 +634,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
     @Override
     public int readInt() {
         checkReadableBytes(4);
-        int v = getInt(readerIndex);
+        int v = _getInt(readerIndex);
         readerIndex += 4;
         return v;
     }
@@ -562,7 +647,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
     @Override
     public long readLong() {
         checkReadableBytes(8);
-        long v = getLong(readerIndex);
+        long v = _getLong(readerIndex);
         readerIndex += 8;
         return v;
     }

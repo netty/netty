@@ -34,21 +34,18 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
     }
 
     @Override
-    public byte getByte(int index) {
-        checkIndex(index);
+    protected byte _getByte(int index) {
         return memory[idx(index)];
     }
 
     @Override
-    public short getShort(int index) {
-        checkIndex(index, 2);
+    protected short _getShort(int index) {
         index = idx(index);
         return (short) (memory[index] << 8 | memory[index + 1] & 0xFF);
     }
 
     @Override
-    public int getUnsignedMedium(int index) {
-        checkIndex(index, 3);
+    protected int _getUnsignedMedium(int index) {
         index = idx(index);
         return (memory[index]     & 0xff) << 16 |
                (memory[index + 1] & 0xff) <<  8 |
@@ -56,8 +53,7 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
     }
 
     @Override
-    public int getInt(int index) {
-        checkIndex(index, 4);
+    protected int _getInt(int index) {
         index = idx(index);
         return (memory[index]     & 0xff) << 24 |
                (memory[index + 1] & 0xff) << 16 |
@@ -66,8 +62,7 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
     }
 
     @Override
-    public long getLong(int index) {
-        checkIndex(index, 8);
+    protected long _getLong(int index) {
         index = idx(index);
         return ((long) memory[index]     & 0xff) << 56 |
                ((long) memory[index + 1] & 0xff) << 48 |
@@ -81,10 +76,10 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
 
     @Override
     public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
-        checkIndex(index, length);
         if (dst.hasArray()) {
             getBytes(index, dst.array(), dst.arrayOffset() + dstIndex, length);
         } else {
+            checkIndex(index, length);
             dst.setBytes(dstIndex, memory, idx(index), length);
         }
         return this;
@@ -119,45 +114,36 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
     }
 
     @Override
-    public ByteBuf setByte(int index, int value) {
-        checkIndex(index);
+    protected void _setByte(int index, int value) {
         memory[idx(index)] = (byte) value;
-        return this;
     }
 
     @Override
-    public ByteBuf setShort(int index, int value) {
-        checkIndex(index, 2);
+    protected void _setShort(int index, int value) {
         index = idx(index);
         memory[index]     = (byte) (value >>> 8);
         memory[index + 1] = (byte) value;
-        return this;
     }
 
     @Override
-    public ByteBuf setMedium(int index, int   value) {
-        checkIndex(index, 3);
+    protected void _setMedium(int index, int   value) {
         index = idx(index);
         memory[index]     = (byte) (value >>> 16);
         memory[index + 1] = (byte) (value >>> 8);
         memory[index + 2] = (byte) value;
-        return this;
     }
 
     @Override
-    public ByteBuf setInt(int index, int   value) {
-        checkIndex(index, 4);
+    protected void _setInt(int index, int   value) {
         index = idx(index);
         memory[index]     = (byte) (value >>> 24);
         memory[index + 1] = (byte) (value >>> 16);
         memory[index + 2] = (byte) (value >>> 8);
         memory[index + 3] = (byte) value;
-        return this;
     }
 
     @Override
-    public ByteBuf setLong(int index, long  value) {
-        checkIndex(index, 8);
+    protected void _setLong(int index, long  value) {
         index = idx(index);
         memory[index]     = (byte) (value >>> 56);
         memory[index + 1] = (byte) (value >>> 48);
@@ -167,7 +153,6 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
         memory[index + 5] = (byte) (value >>> 16);
         memory[index + 6] = (byte) (value >>> 8);
         memory[index + 7] = (byte) value;
-        return this;
     }
 
     @Override

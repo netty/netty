@@ -63,21 +63,18 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     }
 
     @Override
-    public byte getByte(int index) {
-        checkIndex(index);
+    protected byte _getByte(int index) {
         return PlatformDependent.getByte(addr(index));
     }
 
     @Override
-    public short getShort(int index) {
-        checkIndex(index, 2);
+    protected short _getShort(int index) {
         short v = PlatformDependent.getShort(addr(index));
         return NATIVE_ORDER? v : Short.reverseBytes(v);
     }
 
     @Override
-    public int getUnsignedMedium(int index) {
-        checkIndex(index, 3);
+    protected int _getUnsignedMedium(int index) {
         long addr = addr(index);
         return (PlatformDependent.getByte(addr) & 0xff) << 16 |
                 (PlatformDependent.getByte(addr + 1) & 0xff) << 8 |
@@ -85,15 +82,13 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     }
 
     @Override
-    public int getInt(int index) {
-        checkIndex(index, 4);
+    protected int _getInt(int index) {
         int v = PlatformDependent.getInt(addr(index));
         return NATIVE_ORDER? v : Integer.reverseBytes(v);
     }
 
     @Override
-    public long getLong(int index) {
-        checkIndex(index, 8);
+    protected long _getLong(int index) {
         long v = PlatformDependent.getLong(addr(index));
         return NATIVE_ORDER? v : Long.reverseBytes(v);
     }
@@ -159,41 +154,38 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     }
 
     @Override
-    public ByteBuf setByte(int index, int value) {
-        checkIndex(index);
+    protected void _setByte(int index, int value) {
         PlatformDependent.putByte(addr(index), (byte) value);
-        return this;
     }
 
     @Override
-    public ByteBuf setShort(int index, int value) {
-        checkIndex(index, 2);
-        PlatformDependent.putShort(addr(index), NATIVE_ORDER? (short) value : Short.reverseBytes((short) value));
-        return this;
+    protected void _setShort(int index, int value) {
+        PlatformDependent.putShort(addr(index), NATIVE_ORDER ? (short) value : Short.reverseBytes((short) value));
     }
 
     @Override
     public ByteBuf setMedium(int index, int value) {
         checkIndex(index, 3);
+        _setMedium(index, value);
+        return this;
+    }
+
+    @Override
+    protected void _setMedium(int index, int value) {
         long addr = addr(index);
         PlatformDependent.putByte(addr, (byte) (value >>> 16));
         PlatformDependent.putByte(addr + 1, (byte) (value >>> 8));
         PlatformDependent.putByte(addr + 2, (byte) value);
-        return this;
     }
 
     @Override
-    public ByteBuf setInt(int index, int value) {
-        checkIndex(index, 4);
-        PlatformDependent.putInt(addr(index), NATIVE_ORDER? value : Integer.reverseBytes(value));
-        return this;
+    protected void _setInt(int index, int value) {
+        PlatformDependent.putInt(addr(index), NATIVE_ORDER ? value : Integer.reverseBytes(value));
     }
 
     @Override
-    public ByteBuf setLong(int index, long value) {
-        checkIndex(index, 8);
-        PlatformDependent.putLong(addr(index), NATIVE_ORDER? value : Long.reverseBytes(value));
-        return this;
+    protected void _setLong(int index, long value) {
+        PlatformDependent.putLong(addr(index), NATIVE_ORDER ? value : Long.reverseBytes(value));
     }
 
     @Override
