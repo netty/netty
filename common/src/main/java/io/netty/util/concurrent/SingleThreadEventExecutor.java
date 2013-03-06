@@ -76,7 +76,7 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
     private final Thread thread;
     private final Object stateLock = new Object();
     private final Semaphore threadLock = new Semaphore(0);
-    private final ChannelTaskScheduler scheduler;
+    private final TaskScheduler scheduler;
     private final Set<Runnable> shutdownHooks = new LinkedHashSet<Runnable>();
     private volatile int state = ST_NOT_STARTED;
     private long lastAccessTimeNanos;
@@ -86,11 +86,11 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
      *
      * @param parent            the {@link EventExecutorGroup} which is the parent of this instance and belongs to it
      * @param threadFactory     the {@link ThreadFactory} which will be used for the used {@link Thread}
-     * @param scheduler         the {@link ChannelTaskScheduler} which will be used to schedule Tasks for later
+     * @param scheduler         the {@link TaskScheduler} which will be used to schedule Tasks for later
      *                          execution
      */
     protected SingleThreadEventExecutor(
-            EventExecutorGroup parent, ThreadFactory threadFactory, ChannelTaskScheduler scheduler) {
+            EventExecutorGroup parent, ThreadFactory threadFactory, TaskScheduler scheduler) {
         if (threadFactory == null) {
             throw new NullPointerException("threadFactory");
         }

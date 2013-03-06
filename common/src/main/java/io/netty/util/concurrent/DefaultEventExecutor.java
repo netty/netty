@@ -25,10 +25,10 @@ import java.util.concurrent.ThreadFactory;
 final class DefaultEventExecutor extends SingleThreadEventExecutor {
 
     /**
-     * @see SingleThreadEventExecutor#SingleThreadEventExecutor(EventExecutorGroup, ThreadFactory, io.netty.util.concurrent.ChannelTaskScheduler)
+     * @see SingleThreadEventExecutor#SingleThreadEventExecutor(EventExecutorGroup, ThreadFactory, TaskScheduler)
      */
     DefaultEventExecutor(
-            DefaultEventExecutorGroup parent, ThreadFactory threadFactory, ChannelTaskScheduler scheduler) {
+            DefaultEventExecutorGroup parent, ThreadFactory threadFactory, TaskScheduler scheduler) {
         super(parent, threadFactory, scheduler);
     }
 
