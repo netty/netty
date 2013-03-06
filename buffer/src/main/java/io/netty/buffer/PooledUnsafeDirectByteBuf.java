@@ -164,13 +164,6 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     }
 
     @Override
-    public ByteBuf setMedium(int index, int value) {
-        checkIndex(index, 3);
-        _setMedium(index, value);
-        return this;
-    }
-
-    @Override
     protected void _setMedium(int index, int value) {
         long addr = addr(index);
         PlatformDependent.putByte(addr, (byte) (value >>> 16));

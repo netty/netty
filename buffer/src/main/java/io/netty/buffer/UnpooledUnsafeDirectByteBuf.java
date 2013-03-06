@@ -34,11 +34,14 @@ import java.util.Queue;
  * and {@link Unpooled#wrappedBuffer(ByteBuffer)} instead of calling the
  * constructor explicitly.
  */
-final class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
+final class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf {
+
+    private static final boolean NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
 
     private final ResourceLeak leak = leakDetector.open(this);
     private final ByteBufAllocator alloc;
 
+    private long memoryAddress;
     private ByteBuffer buffer;
     private ByteBuffer tmpNioBuf;
     private int capacity;
@@ -51,7 +54,7 @@ final class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
      * @param initialCapacity the initial capacity of the underlying direct buffer
      * @param maxCapacity     the maximum capacity of the underlying direct buffer
      */
-    UnpooledDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
+    UnpooledUnsafeDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
         super(maxCapacity);
         if (alloc == null) {
             throw new NullPointerException("alloc");
@@ -76,7 +79,7 @@ final class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
      *
      * @param maxCapacity the maximum capacity of the underlying direct buffer
      */
-    UnpooledDirectByteBuf(ByteBufAllocator alloc, ByteBuffer initialBuffer, int maxCapacity) {
+    UnpooledUnsafeDirectByteBuf(ByteBufAllocator alloc, ByteBuffer initialBuffer, int maxCapacity) {
         super(maxCapacity);
         if (alloc == null) {
             throw new NullPointerException("alloc");
@@ -118,6 +121,7 @@ final class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
         }
 
         this.buffer = buffer;
+        memoryAddress = PlatformDependent.directBufferAddress(buffer);
         tmpNioBuf = null;
         capacity = buffer.remaining();
     }
@@ -196,70 +200,44 @@ final class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
-    public byte getByte(int index) {
-        ensureAccessible();
-        return _getByte(index);
-    }
-
-    @Override
     protected byte _getByte(int index) {
-        return buffer.get(index);
-    }
-
-    @Override
-    public short getShort(int index) {
-        ensureAccessible();
-        return _getShort(index);
+        return PlatformDependent.getByte(addr(index));
     }
 
     @Override
     protected short _getShort(int index) {
-        return buffer.getShort(index);
-    }
-
-    @Override
-    public int getUnsignedMedium(int index) {
-        ensureAccessible();
-        return _getUnsignedMedium(index);
+        short v = PlatformDependent.getShort(addr(index));
+        return NATIVE_ORDER? v : Short.reverseBytes(v);
     }
 
     @Override
     protected int _getUnsignedMedium(int index) {
-        return (getByte(index) & 0xff) << 16 | (getByte(index + 1) & 0xff) << 8 | getByte(index + 2) & 0xff;
-    }
-
-    @Override
-    public int getInt(int index) {
-        ensureAccessible();
-        return _getInt(index);
+        long addr = addr(index);
+        return (PlatformDependent.getByte(addr) & 0xff) << 16 |
+                (PlatformDependent.getByte(addr + 1) & 0xff) << 8 |
+                PlatformDependent.getByte(addr + 2) & 0xff;
     }
 
     @Override
     protected int _getInt(int index) {
-        return buffer.getInt(index);
-    }
-
-    @Override
-    public long getLong(int index) {
-        ensureAccessible();
-        return _getLong(index);
+        int v = PlatformDependent.getInt(addr(index));
+        return NATIVE_ORDER? v : Integer.reverseBytes(v);
     }
 
     @Override
     protected long _getLong(int index) {
-        return buffer.getLong(index);
+        long v = PlatformDependent.getLong(addr(index));
+        return NATIVE_ORDER? v : Long.reverseBytes(v);
     }
 
     @Override
     public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
         ensureAccessible();
-        if (dst instanceof UnpooledDirectByteBuf) {
-            UnpooledDirectByteBuf bbdst = (UnpooledDirectByteBuf) dst;
-            ByteBuffer data = bbdst.internalNioBuffer();
-            data.clear().position(dstIndex).limit(dstIndex + length);
-            getBytes(index, data);
+        if (dst instanceof UnpooledUnsafeDirectByteBuf) {
+            UnpooledUnsafeDirectByteBuf bbdst = (UnpooledUnsafeDirectByteBuf) dst;
+            PlatformDependent.copyMemory(addr(index), bbdst.addr(dstIndex), length);
         } else if (dst.hasArray()) {
-            getBytes(index, dst.array(), dst.arrayOffset() + dstIndex, length);
+            PlatformDependent.copyMemory(addr(index), dst.array(), dst.arrayOffset() + dstIndex, length);
         } else {
             dst.setBytes(dstIndex, this, index, length);
         }
@@ -277,9 +255,9 @@ final class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
                     "dstIndex: %d, length: %d (expected: range(0, %d))", dstIndex, length, dst.length));
         }
 
-        ByteBuffer tmpBuf = internalNioBuffer();
-        tmpBuf.clear().position(index).limit(index + length);
-        tmpBuf.get(dst, dstIndex, length);
+        if (length != 0) {
+            PlatformDependent.copyMemory(addr(index), dst, dstIndex, length);
+        }
         return this;
     }
 
@@ -298,78 +276,41 @@ final class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
-    public ByteBuf setByte(int index, int value) {
-        ensureAccessible();
-        _setByte(index, value);
-        return this;
-    }
-
-    @Override
     protected void _setByte(int index, int value) {
-        buffer.put(index, (byte) value);
-    }
-
-    @Override
-    public ByteBuf setShort(int index, int value) {
-        ensureAccessible();
-        _setShort(index, value);
-        return this;
+        PlatformDependent.putByte(addr(index), (byte) value);
     }
 
     @Override
     protected void _setShort(int index, int value) {
-        buffer.putShort(index, (short) value);
-    }
-
-    @Override
-    public ByteBuf setMedium(int index, int value) {
-        ensureAccessible();
-        _setMedium(index, value);
-        return this;
+        PlatformDependent.putShort(addr(index), NATIVE_ORDER ? (short) value : Short.reverseBytes((short) value));
     }
 
     @Override
     protected void _setMedium(int index, int value) {
-        setByte(index, (byte) (value >>> 16));
-        setByte(index + 1, (byte) (value >>> 8));
-        setByte(index + 2, (byte) value);
-    }
-
-    @Override
-    public ByteBuf setInt(int index, int value) {
-        ensureAccessible();
-        _setInt(index, value);
-        return this;
+        long addr = addr(index);
+        PlatformDependent.putByte(addr, (byte) (value >>> 16));
+        PlatformDependent.putByte(addr + 1, (byte) (value >>> 8));
+        PlatformDependent.putByte(addr + 2, (byte) value);
     }
 
     @Override
     protected void _setInt(int index, int value) {
-        buffer.putInt(index, value);
-    }
-
-    @Override
-    public ByteBuf setLong(int index, long value) {
-        ensureAccessible();
-        _setLong(index, value);
-        return this;
+        PlatformDependent.putInt(addr(index), NATIVE_ORDER ? value : Integer.reverseBytes(value));
     }
 
     @Override
     protected void _setLong(int index, long value) {
-        buffer.putLong(index, value);
+        PlatformDependent.putLong(addr(index), NATIVE_ORDER ? value : Long.reverseBytes(value));
     }
 
     @Override
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         ensureAccessible();
-        if (src instanceof UnpooledDirectByteBuf) {
-            UnpooledDirectByteBuf bbsrc = (UnpooledDirectByteBuf) src;
-            ByteBuffer data = bbsrc.internalNioBuffer();
-
-            data.clear().position(srcIndex).limit(srcIndex + length);
-            setBytes(index, data);
+        if (src instanceof UnpooledUnsafeDirectByteBuf) {
+            UnpooledUnsafeDirectByteBuf bbsrc = (UnpooledUnsafeDirectByteBuf) src;
+            PlatformDependent.copyMemory(bbsrc.addr(srcIndex), addr(index), length);
         } else if (buffer.hasArray()) {
-            src.getBytes(srcIndex, buffer.array(), index + buffer.arrayOffset(), length);
+            PlatformDependent.copyMemory(src.array(), src.arrayOffset() + srcIndex, addr(index), length);
         } else {
             src.getBytes(srcIndex, this, index, length);
         }
@@ -378,10 +319,10 @@ final class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
-        ensureAccessible();
-        ByteBuffer tmpBuf = internalNioBuffer();
-        tmpBuf.clear().position(index).limit(index + length);
-        tmpBuf.put(src, srcIndex, length);
+        checkIndex(index, length);
+        if (length != 0) {
+            PlatformDependent.copyMemory(src, srcIndex, addr(index), length);
+        }
         return this;
     }
 
@@ -401,17 +342,9 @@ final class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
         ensureAccessible();
-        if (length == 0) {
-            return this;
-        }
-
-        if (buffer.hasArray()) {
-            out.write(buffer.array(), index + buffer.arrayOffset(), length);
-        } else {
+        if (length != 0) {
             byte[] tmp = new byte[length];
-            ByteBuffer tmpBuf = internalNioBuffer();
-            tmpBuf.clear().position(index);
-            tmpBuf.get(tmp);
+            PlatformDependent.copyMemory(addr(index), tmp, 0, length);
             out.write(tmp);
         }
         return this;
@@ -431,20 +364,13 @@ final class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public int setBytes(int index, InputStream in, int length) throws IOException {
-        ensureAccessible();
-        if (buffer.hasArray()) {
-            return in.read(buffer.array(), buffer.arrayOffset() + index, length);
-        } else {
-            byte[] tmp = new byte[length];
-            int readBytes = in.read(tmp);
-            if (readBytes <= 0) {
-                return readBytes;
-            }
-            ByteBuffer tmpNioBuf = internalNioBuffer();
-            tmpNioBuf.clear().position(index);
-            tmpNioBuf.put(tmp, 0, readBytes);
-            return readBytes;
+        checkIndex(index, length);
+        byte[] tmp = new byte[length];
+        int readBytes = in.read(tmp);
+        if (readBytes > 0) {
+            PlatformDependent.copyMemory(tmp, 0, addr(index), readBytes);
         }
+        return readBytes;
     }
 
     @Override
@@ -481,20 +407,13 @@ final class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf copy(int index, int length) {
-        ensureAccessible();
-        ByteBuffer src;
-        try {
-            src = (ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length);
-        } catch (IllegalArgumentException e) {
-            throw new IndexOutOfBoundsException("Too many bytes to read - Need " + (index + length));
+        checkIndex(index, length);
+        UnpooledUnsafeDirectByteBuf copy = (UnpooledUnsafeDirectByteBuf) alloc().directBuffer(capacity(), maxCapacity());
+        if (length != 0) {
+            PlatformDependent.copyMemory(addr(index), copy.addr(index), length);
+            copy.setIndex(index, index + length);
         }
-
-        ByteBuffer dst =
-                src.isDirect()? ByteBuffer.allocateDirect(length) : ByteBuffer.allocate(length);
-        dst.put(src);
-        dst.order(order());
-        dst.clear();
-        return new UnpooledDirectByteBuf(alloc(), dst, maxCapacity());
+        return copy;
     }
 
     private ByteBuffer internalNioBuffer() {
@@ -548,5 +467,9 @@ final class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public ByteBuf unwrap() {
         return null;
+    }
+
+    private long addr(int index) {
+        return memoryAddress + index;
     }
 }
