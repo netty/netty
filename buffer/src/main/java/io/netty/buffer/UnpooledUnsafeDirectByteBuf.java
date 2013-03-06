@@ -408,7 +408,8 @@ final class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf 
     @Override
     public ByteBuf copy(int index, int length) {
         checkIndex(index, length);
-        UnpooledUnsafeDirectByteBuf copy = (UnpooledUnsafeDirectByteBuf) alloc().directBuffer(capacity(), maxCapacity());
+        UnpooledUnsafeDirectByteBuf copy =
+                (UnpooledUnsafeDirectByteBuf) alloc().directBuffer(capacity(), maxCapacity());
         if (length != 0) {
             PlatformDependent.copyMemory(addr(index), copy.addr(index), length);
             copy.setIndex(index, index + length);
