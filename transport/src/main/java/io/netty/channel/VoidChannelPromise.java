@@ -152,9 +152,4 @@ final class VoidChannelPromise implements ChannelFuture.Unsafe, ChannelPromise {
     private static void fail() {
         throw new IllegalStateException("void future");
     }
-
-    @Override
-    public Channel source() {
-        return channel();
-    }
 }

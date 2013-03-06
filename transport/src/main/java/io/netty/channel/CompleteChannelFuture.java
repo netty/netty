@@ -123,9 +123,4 @@ abstract class CompleteChannelFuture implements ChannelFuture {
     public boolean isDone() {
         return true;
     }
-
-    @Override
-    public Channel source() {
-        return channel();
-    }
 }
