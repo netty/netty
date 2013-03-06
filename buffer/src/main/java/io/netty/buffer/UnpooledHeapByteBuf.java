@@ -146,12 +146,6 @@ final class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
-    public byte getByte(int index) {
-        ensureAccessible();
-        return array[index];
-    }
-
-    @Override
     public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
         ensureAccessible();
         if (dst.hasArray()) {
@@ -187,13 +181,6 @@ final class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     public int getBytes(int index, GatheringByteChannel out, int length) throws IOException {
         ensureAccessible();
         return out.write((ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length));
-    }
-
-    @Override
-    public ByteBuf setByte(int index, int value) {
-        ensureAccessible();
-        array[index] = (byte) value;
-        return this;
     }
 
     @Override
@@ -254,14 +241,35 @@ final class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public byte getByte(int index) {
+        ensureAccessible();
+        return _getByte(index);
+    }
+
+    @Override
+    protected byte _getByte(int index) {
+        return array[index];
+    }
+
+    @Override
     public short getShort(int index) {
         ensureAccessible();
+        return _getShort(index);
+    }
+
+    @Override
+    protected short _getShort(int index) {
         return (short) (array[index] << 8 | array[index + 1] & 0xFF);
     }
 
     @Override
     public int getUnsignedMedium(int index) {
         ensureAccessible();
+        return _getUnsignedMedium(index);
+    }
+
+    @Override
+    protected int _getUnsignedMedium(int index) {
         return  (array[index]     & 0xff) << 16 |
                 (array[index + 1] & 0xff) <<  8 |
                  array[index + 2] & 0xff;
@@ -270,6 +278,11 @@ final class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public int getInt(int index) {
         ensureAccessible();
+        return _getInt(index);
+    }
+
+    @Override
+    protected int _getInt(int index) {
         return  (array[index]     & 0xff) << 24 |
                 (array[index + 1] & 0xff) << 16 |
                 (array[index + 2] & 0xff) <<  8 |
@@ -279,6 +292,11 @@ final class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public long getLong(int index) {
         ensureAccessible();
+        return _getLong(index);
+    }
+
+    @Override
+    protected long _getLong(int index) {
         return  ((long) array[index]     & 0xff) << 56 |
                 ((long) array[index + 1] & 0xff) << 48 |
                 ((long) array[index + 2] & 0xff) << 40 |
@@ -290,35 +308,68 @@ final class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public ByteBuf setByte(int index, int value) {
+        ensureAccessible();
+        _setByte(index, value);
+        return this;
+    }
+
+    @Override
+    protected void _setByte(int index, int value) {
+        array[index] = (byte) value;
+    }
+
+    @Override
     public ByteBuf setShort(int index, int value) {
         ensureAccessible();
+        _setShort(index, value);
+        return this;
+    }
+
+    @Override
+    protected void _setShort(int index, int value) {
         array[index]     = (byte) (value >>> 8);
         array[index + 1] = (byte) value;
-        return this;
     }
 
     @Override
     public ByteBuf setMedium(int index, int   value) {
         ensureAccessible();
+        _setMedium(index, value);
+        return this;
+    }
+
+    @Override
+    protected void _setMedium(int index, int value) {
         array[index]     = (byte) (value >>> 16);
         array[index + 1] = (byte) (value >>> 8);
         array[index + 2] = (byte) value;
-        return this;
     }
 
     @Override
     public ByteBuf setInt(int index, int   value) {
         ensureAccessible();
+        _setInt(index, value);
+        return this;
+    }
+
+    @Override
+    protected void _setInt(int index, int value) {
         array[index]     = (byte) (value >>> 24);
         array[index + 1] = (byte) (value >>> 16);
         array[index + 2] = (byte) (value >>> 8);
         array[index + 3] = (byte) value;
-        return this;
     }
 
     @Override
     public ByteBuf setLong(int index, long  value) {
         ensureAccessible();
+        _setLong(index, value);
+        return this;
+    }
+
+    @Override
+    protected void _setLong(int index, long value) {
         array[index]     = (byte) (value >>> 56);
         array[index + 1] = (byte) (value >>> 48);
         array[index + 2] = (byte) (value >>> 40);
@@ -327,7 +378,6 @@ final class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
         array[index + 5] = (byte) (value >>> 16);
         array[index + 6] = (byte) (value >>> 8);
         array[index + 7] = (byte) value;
-        return this;
     }
 
     @Override

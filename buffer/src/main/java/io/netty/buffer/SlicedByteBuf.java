@@ -103,32 +103,27 @@ public class SlicedByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
-    public byte getByte(int index) {
-        checkIndex(index);
+    protected byte _getByte(int index) {
         return buffer.getByte(index + adjustment);
     }
 
     @Override
-    public short getShort(int index) {
-        checkIndex(index, 2);
+    protected short _getShort(int index) {
         return buffer.getShort(index + adjustment);
     }
 
     @Override
-    public int getUnsignedMedium(int index) {
-        checkIndex(index, 3);
+    protected int _getUnsignedMedium(int index) {
         return buffer.getUnsignedMedium(index + adjustment);
     }
 
     @Override
-    public int getInt(int index) {
-        checkIndex(index, 4);
+    protected int _getInt(int index) {
         return buffer.getInt(index + adjustment);
     }
 
     @Override
-    public long getLong(int index) {
-        checkIndex(index, 8);
+    protected long _getLong(int index) {
         return buffer.getLong(index + adjustment);
     }
 
@@ -176,38 +171,28 @@ public class SlicedByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
-    public ByteBuf setByte(int index, int value) {
-        checkIndex(index);
+    protected void _setByte(int index, int value) {
         buffer.setByte(index + adjustment, value);
-        return this;
     }
 
     @Override
-    public ByteBuf setShort(int index, int value) {
-        checkIndex(index, 2);
+    protected void _setShort(int index, int value) {
         buffer.setShort(index + adjustment, value);
-        return this;
     }
 
     @Override
-    public ByteBuf setMedium(int index, int value) {
-        checkIndex(index, 3);
+    protected void _setMedium(int index, int value) {
         buffer.setMedium(index + adjustment, value);
-        return this;
     }
 
     @Override
-    public ByteBuf setInt(int index, int value) {
-        checkIndex(index, 4);
+    protected void _setInt(int index, int value) {
         buffer.setInt(index + adjustment, value);
-        return this;
     }
 
     @Override
-    public ByteBuf setLong(int index, long value) {
-        checkIndex(index, 8);
+    protected void _setLong(int index, long value) {
         buffer.setLong(index + adjustment, value);
-        return this;
     }
 
     @Override
