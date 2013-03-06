@@ -39,9 +39,10 @@ public class DefaultPromise implements Promise {
 
     private static final Signal SUCCESS = new Signal(DefaultPromise.class.getName() + ".SUCCESS");
 
+    private final EventExecutor executor;
+
     private volatile Throwable cause;
     private Object listeners; // Can be ChannelFutureListener or DefaultChannelPromiseListeners
-    private final EventExecutor executor;
 
     /**
      * The the most significant 24 bits of this field represents the number of waiter threads waiting for this promise
