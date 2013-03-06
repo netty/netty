@@ -23,7 +23,7 @@ import java.util.Arrays;
 import java.util.EventListener;
 import java.util.concurrent.TimeUnit;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.*;
 
 
 public class DefaultPromise implements Promise {
@@ -67,9 +67,6 @@ public class DefaultPromise implements Promise {
     }
 
     protected EventExecutor executor() {
-        if (executor == null) {
-            throw new IllegalStateException();
-        }
         return executor;
     }
 
