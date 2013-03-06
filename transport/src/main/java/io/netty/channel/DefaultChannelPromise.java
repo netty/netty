@@ -142,4 +142,11 @@ public class DefaultChannelPromise extends DefaultPromise implements ChannelProm
     public ChannelPromise future() {
         return this;
     }
+
+    @Override
+    protected void checkDeadLock() {
+        if (channel().isRegistered()) {
+            super.checkDeadLock();
+        }
+    }
 }

@@ -345,7 +345,10 @@ public class DefaultPromise implements Promise {
      * Do deadlock checks
      */
     protected void checkDeadLock() {
-        // NOOP
+        EventExecutor e = executor();
+        if (e != null && e.inEventLoop()) {
+            throw new BlockingOperationException();
+        }
     }
 
     @Override
