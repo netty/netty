@@ -69,11 +69,6 @@ public class DefaultChannelPromise extends FlushCheckpoint implements ChannelPro
     }
 
     @Override
-    public Channel source() {
-        return channel();
-    }
-
-    @Override
     public Channel channel() {
         return channel;
     }
