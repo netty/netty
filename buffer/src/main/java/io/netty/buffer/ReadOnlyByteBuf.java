@@ -80,6 +80,16 @@ public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
+    public boolean hasMemoryAddress() {
+        return false;
+    }
+
+    @Override
+    public long memoryAddress() {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
     public ByteBuf discardReadBytes() {
         throw new ReadOnlyBufferException();
     }

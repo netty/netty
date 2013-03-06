@@ -440,15 +440,6 @@ public abstract class AbstractByteBuf implements ByteBuf {
 
     @Override
     public ByteBuf getBytes(int index, ByteBuf dst, int length) {
-        checkIndex(index,  length);
-        if (dst == null) {
-            throw new NullPointerException("dst");
-        }
-
-        if (length > dst.writableBytes()) {
-            throw new IndexOutOfBoundsException(String.format(
-                    "length(%d) exceeds dst.writableBytes(%d) where dst is: %s", length, dst.writableBytes(), dst));
-        }
         getBytes(index, dst, dst.writerIndex(), length);
         dst.writerIndex(dst.writerIndex() + length);
         return this;
@@ -1099,6 +1090,22 @@ public abstract class AbstractByteBuf implements ByteBuf {
         if (index < 0 || index > capacity() - fieldLength) {
             throw new IndexOutOfBoundsException(String.format(
                     "index: %d, length: %d (expected: range(0, %d))", index, fieldLength, capacity()));
+        }
+    }
+
+    protected final void checkSrcIndex(int index, int length, int srcIndex, int srcCapacity) {
+        checkIndex(index, length);
+        if (srcIndex < 0 || srcIndex > srcCapacity - length) {
+            throw new IndexOutOfBoundsException(String.format(
+                    "srcIndex: %d, length: %d (expected: range(0, %d))", srcIndex, length, srcCapacity));
+        }
+    }
+
+    protected final void checkDstIndex(int index, int length, int dstIndex, int dstCapacity) {
+        checkIndex(index, length);
+        if (dstIndex < 0 || dstIndex > dstCapacity - length) {
+            throw new IndexOutOfBoundsException(String.format(
+                    "dstIndex: %d, length: %d (expected: range(0, %d))", dstIndex, length, dstCapacity));
         }
     }
 

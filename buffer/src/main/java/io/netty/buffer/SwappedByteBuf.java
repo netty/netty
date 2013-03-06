@@ -794,6 +794,16 @@ public final class SwappedByteBuf implements ByteBuf {
     }
 
     @Override
+    public boolean hasMemoryAddress() {
+        return buf.hasMemoryAddress();
+    }
+
+    @Override
+    public long memoryAddress() {
+        return buf.memoryAddress();
+    }
+
+    @Override
     public String toString(Charset charset) {
         return buf.toString(charset);
     }

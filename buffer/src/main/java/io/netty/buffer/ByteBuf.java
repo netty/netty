@@ -1836,6 +1836,20 @@ public interface ByteBuf extends Buf, Comparable<ByteBuf> {
     int arrayOffset();
 
     /**
+     * Returns {@code true} if and only if this buffer has a reference to the low-level memory address that points
+     * to the backing data.
+     */
+    boolean hasMemoryAddress();
+
+    /**
+     * Returns the low-level memory address that point to the first byte of ths backing data.
+     *
+     * @throws UnsupportedOperationException
+     *         if this buffer does not support accessing the low-level memory address
+     */
+    long memoryAddress();
+
+    /**
      * Decodes this buffer's readable bytes into a string with the specified
      * character set name.  This method is identical to
      * {@code buf.toString(buf.readerIndex(), buf.readableBytes(), charsetName)}.

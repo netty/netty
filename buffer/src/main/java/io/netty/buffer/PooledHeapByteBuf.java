@@ -14,6 +14,8 @@
 
 package io.netty.buffer;
 
+import io.netty.util.internal.PlatformDependent;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -76,10 +78,12 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
 
     @Override
     public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
-        if (dst.hasArray()) {
+        checkDstIndex(index, length, dstIndex, dst.capacity());
+        if (dst.hasMemoryAddress()) {
+            PlatformDependent.copyMemory(memory, idx(index), dst.memoryAddress() + dstIndex, length);
+        } if (dst.hasArray()) {
             getBytes(index, dst.array(), dst.arrayOffset() + dstIndex, length);
         } else {
-            checkIndex(index, length);
             dst.setBytes(dstIndex, memory, idx(index), length);
         }
         return this;
@@ -87,7 +91,7 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
 
     @Override
     public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
-        checkIndex(index, length);
+        checkDstIndex(index, length, dstIndex, dst.length);
         System.arraycopy(memory, idx(index), dst, dstIndex, length);
         return this;
     }
@@ -157,8 +161,10 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
 
     @Override
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
-        checkIndex(index, length);
-        if (src.hasArray()) {
+        checkSrcIndex(index, length, srcIndex, src.capacity());
+        if (src.hasMemoryAddress()) {
+            PlatformDependent.copyMemory(src.memoryAddress() + srcIndex, memory, idx(index), length);
+        } else if (src.hasArray()) {
             setBytes(index, src.array(), src.arrayOffset() + srcIndex, length);
         } else {
             src.getBytes(srcIndex, memory, idx(index), length);
@@ -168,7 +174,7 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
 
     @Override
     public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
-        checkIndex(index, length);
+        checkSrcIndex(index, length, srcIndex, src.length);
         System.arraycopy(src, srcIndex, memory, idx(index), length);
         return this;
     }
@@ -236,6 +242,16 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
     @Override
     public int arrayOffset() {
         return offset;
+    }
+
+    @Override
+    public boolean hasMemoryAddress() {
+        return false;
+    }
+
+    @Override
+    public long memoryAddress() {
+        throw new UnsupportedOperationException();
     }
 
     @Override

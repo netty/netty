@@ -68,15 +68,15 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     @Override
     public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
-        checkIndex(index, length);
-        if (dst instanceof PooledDirectByteBuf) {
-            PooledDirectByteBuf bbdst = (PooledDirectByteBuf) dst;
-            ByteBuffer data = bbdst.internalNioBuffer();
-            dstIndex = bbdst.idx(dstIndex);
-            data.clear().position(dstIndex).limit(dstIndex + length);
-            getBytes(index, data);
-        } else if (dst.hasArray()) {
+        checkDstIndex(index, length, dstIndex, dst.capacity());
+        if (dst.hasArray()) {
             getBytes(index, dst.array(), dst.arrayOffset() + dstIndex, length);
+        } else if (dst.nioBufferCount() > 0) {
+            for (ByteBuffer bb: dst.nioBuffers(dstIndex, length)) {
+                int bbLen = bb.remaining();
+                getBytes(index, bb);
+                index += bbLen;
+            }
         } else {
             dst.setBytes(dstIndex, this, index, length);
         }
@@ -85,7 +85,7 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     @Override
     public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
-        checkIndex(index, length);
+        checkDstIndex(index, length, dstIndex, dst.length);
         ByteBuffer tmpBuf = internalNioBuffer();
         index = idx(index);
         tmpBuf.clear().position(index).limit(index + length);
@@ -162,15 +162,15 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     @Override
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
-        checkIndex(index, length);
-        if (src instanceof PooledDirectByteBuf) {
-            PooledDirectByteBuf bbsrc = (PooledDirectByteBuf) src;
-            ByteBuffer data = bbsrc.internalNioBuffer();
-            srcIndex = bbsrc.idx(srcIndex);
-            data.clear().position(srcIndex).limit(srcIndex + length);
-            setBytes(index, data);
-        } else if (src.hasArray()) {
+        checkSrcIndex(index, length, srcIndex, src.capacity());
+        if (src.hasArray()) {
             setBytes(index, src.array(), src.arrayOffset() + srcIndex, length);
+        } else if (src.nioBufferCount() > 0) {
+            for (ByteBuffer bb: src.nioBuffers(srcIndex, length)) {
+                int bbLen = bb.remaining();
+                setBytes(index, bb);
+                index += bbLen;
+            }
         } else {
             src.getBytes(srcIndex, this, index, length);
         }
@@ -179,7 +179,7 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     @Override
     public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
-        checkIndex(index, length);
+        checkSrcIndex(index, length, srcIndex, src.length);
         ByteBuffer tmpBuf = internalNioBuffer();
         index = idx(index);
         tmpBuf.clear().position(index).limit(index + length);
@@ -231,7 +231,7 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     @Override
     public ByteBuf copy(int index, int length) {
         checkIndex(index, length);
-        ByteBuf copy = alloc().directBuffer(capacity(), maxCapacity());
+        ByteBuf copy = alloc().directBuffer(length, maxCapacity());
         copy.writeBytes(this, index, length);
         return copy;
     }
@@ -266,5 +266,15 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     @Override
     public int arrayOffset() {
         throw new UnsupportedOperationException("direct buffer");
+    }
+
+    @Override
+    public boolean hasMemoryAddress() {
+        return false;
+    }
+
+    @Override
+    public long memoryAddress() {
+        throw new UnsupportedOperationException();
     }
 }

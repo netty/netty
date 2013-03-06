@@ -103,6 +103,16 @@ public class SlicedByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
+    public boolean hasMemoryAddress() {
+        return buffer.hasMemoryAddress();
+    }
+
+    @Override
+    public long memoryAddress() {
+        return buffer.memoryAddress() + adjustment;
+    }
+
+    @Override
     protected byte _getByte(int index) {
         return buffer.getByte(index + adjustment);
     }
@@ -217,30 +227,26 @@ public class SlicedByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
-    public ByteBuf getBytes(int index, OutputStream out, int length)
-            throws IOException {
+    public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
         checkIndex(index, length);
         buffer.getBytes(index + adjustment, out, length);
         return this;
     }
 
     @Override
-    public int getBytes(int index, GatheringByteChannel out, int length)
-            throws IOException {
+    public int getBytes(int index, GatheringByteChannel out, int length) throws IOException {
         checkIndex(index, length);
         return buffer.getBytes(index + adjustment, out, length);
     }
 
     @Override
-    public int setBytes(int index, InputStream in, int length)
-            throws IOException {
+    public int setBytes(int index, InputStream in, int length) throws IOException {
         checkIndex(index, length);
         return buffer.setBytes(index + adjustment, in, length);
     }
 
     @Override
-    public int setBytes(int index, ScatteringByteChannel in, int length)
-            throws IOException {
+    public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
         checkIndex(index, length);
         return buffer.setBytes(index + adjustment, in, length);
     }

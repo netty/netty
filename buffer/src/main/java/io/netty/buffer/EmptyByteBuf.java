@@ -16,6 +16,8 @@
 
 package io.netty.buffer;
 
+import io.netty.util.internal.PlatformDependent;
+
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
@@ -34,6 +36,7 @@ public final class EmptyByteBuf implements ByteBuf {
 
     private final ByteOrder order;
     private final ByteBuffer nioBuf = ByteBuffer.allocateDirect(0);
+    private final long memoryAddress;
     private final byte[] array = EMPTY_ARRAY;
     private final String str;
 
@@ -41,6 +44,12 @@ public final class EmptyByteBuf implements ByteBuf {
         this.order = order;
         nioBuf.order(order);
         str = getClass().getSimpleName() + (order == ByteOrder.BIG_ENDIAN? "BE" : "LE");
+
+        if (PlatformDependent.hasUnsafe()) {
+            memoryAddress = PlatformDependent.directBufferAddress(nioBuf);
+        } else {
+            memoryAddress = -1;
+        }
     }
 
     @Override
@@ -743,6 +752,20 @@ public final class EmptyByteBuf implements ByteBuf {
     @Override
     public int arrayOffset() {
         return 0;
+    }
+
+    @Override
+    public boolean hasMemoryAddress() {
+        return memoryAddress != -1;
+    }
+
+    @Override
+    public long memoryAddress() {
+        if (hasMemoryAddress()) {
+            return memoryAddress;
+        } else {
+            throw new UnsupportedOperationException();
+        }
     }
 
     @Override
