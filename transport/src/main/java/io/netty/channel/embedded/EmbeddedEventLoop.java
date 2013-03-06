@@ -20,6 +20,8 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.util.concurrent.DefaultPromise;
+import io.netty.util.concurrent.Promise;
 
 import java.util.ArrayDeque;
 import java.util.Collections;
@@ -133,5 +135,10 @@ final class EmbeddedEventLoop extends AbstractExecutorService implements EventLo
     @Override
     public EventLoopGroup parent() {
         return this;
+    }
+
+    @Override
+    public Promise newPromise() {
+        return new DefaultPromise(this);
     }
 }

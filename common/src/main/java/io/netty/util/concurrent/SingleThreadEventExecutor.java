@@ -498,4 +498,9 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
     public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
         return scheduler.scheduleWithFixedDelay(this, command, initialDelay, delay, unit);
     }
+
+    @Override
+    public Promise newPromise() {
+        return new DefaultPromise(this);
+    }
 }

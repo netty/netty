@@ -47,4 +47,9 @@ public interface EventExecutor extends EventExecutorGroup, ScheduledExecutorServ
      * {@code false} otherwise.
      */
     boolean inEventLoop(Thread thread);
+
+    /**
+     * Return a new {@link Promise} which use this {@link EventExecutor} to notify once it is complete.
+     */
+    Promise newPromise();
 }

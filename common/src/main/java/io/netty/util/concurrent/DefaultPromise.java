@@ -49,6 +49,8 @@ public class DefaultPromise implements Promise {
     /**
      * Creates a new instance.
      *
+     * It is preferable to use {@link EventExecutor#newPromise()} to create a new promise
+     *
      * @param executor
      *        the {@link EventExecutor} which is used to notify the promise once it is complete
      */
