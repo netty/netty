@@ -24,11 +24,6 @@ import java.util.concurrent.TimeUnit;
 public interface Future {
 
     /**
-     * Returns the source of this future.
-     */
-    Object source();
-
-    /**
      * Returns {@code true} if and only if this future is
      * complete, regardless of whether the operation was successful or failed.
      */

@@ -167,13 +167,6 @@ public interface ChannelFuture extends Future {
      * Returns a channel where the I/O operation associated with this
      * future takes place.
      */
-    @Override
-    Channel source();
-
-    /**
-     * Returns a channel where the I/O operation associated with this
-     * future takes place.
-     */
     Channel channel();
 
     @Override
