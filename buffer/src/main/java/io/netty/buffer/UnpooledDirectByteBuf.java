@@ -196,6 +196,16 @@ final class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public boolean hasMemoryAddress() {
+        return false;
+    }
+
+    @Override
+    public long memoryAddress() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public byte getByte(int index) {
         ensureAccessible();
         return _getByte(index);
@@ -252,14 +262,15 @@ final class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
-        ensureAccessible();
-        if (dst instanceof UnpooledDirectByteBuf) {
-            UnpooledDirectByteBuf bbdst = (UnpooledDirectByteBuf) dst;
-            ByteBuffer data = bbdst.internalNioBuffer();
-            data.clear().position(dstIndex).limit(dstIndex + length);
-            getBytes(index, data);
-        } else if (dst.hasArray()) {
+        checkDstIndex(index, length, dstIndex, dst.capacity());
+        if (dst.hasArray()) {
             getBytes(index, dst.array(), dst.arrayOffset() + dstIndex, length);
+        } else if (dst.nioBufferCount() > 0) {
+            for (ByteBuffer bb: dst.nioBuffers(dstIndex, length)) {
+                int bbLen = bb.remaining();
+                getBytes(index, bb);
+                index += bbLen;
+            }
         } else {
             dst.setBytes(dstIndex, this, index, length);
         }
@@ -268,7 +279,7 @@ final class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
-        checkIndex(index, length);
+        checkDstIndex(index, length, dstIndex, dst.length);
         if (dst == null) {
             throw new NullPointerException("dst");
         }
@@ -361,15 +372,15 @@ final class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
-        ensureAccessible();
-        if (src instanceof UnpooledDirectByteBuf) {
-            UnpooledDirectByteBuf bbsrc = (UnpooledDirectByteBuf) src;
-            ByteBuffer data = bbsrc.internalNioBuffer();
-
-            data.clear().position(srcIndex).limit(srcIndex + length);
-            setBytes(index, data);
-        } else if (buffer.hasArray()) {
+        checkSrcIndex(index, length, srcIndex, src.capacity());
+        if (buffer.hasArray()) {
             src.getBytes(srcIndex, buffer.array(), index + buffer.arrayOffset(), length);
+        } else if (src.nioBufferCount() > 0) {
+            for (ByteBuffer bb: src.nioBuffers(srcIndex, length)) {
+                int bbLen = bb.remaining();
+                setBytes(index, bb);
+                index += bbLen;
+            }
         } else {
             src.getBytes(srcIndex, this, index, length);
         }
@@ -378,7 +389,7 @@ final class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
-        ensureAccessible();
+        checkSrcIndex(index, length, srcIndex, src.length);
         ByteBuffer tmpBuf = internalNioBuffer();
         tmpBuf.clear().position(index).limit(index + length);
         tmpBuf.put(src, srcIndex, length);

@@ -200,6 +200,16 @@ final class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf 
     }
 
     @Override
+    public boolean hasMemoryAddress() {
+        return true;
+    }
+
+    @Override
+    public long memoryAddress() {
+        return memoryAddress;
+    }
+
+    @Override
     protected byte _getByte(int index) {
         return PlatformDependent.getByte(addr(index));
     }
@@ -232,10 +242,16 @@ final class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf 
 
     @Override
     public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
-        ensureAccessible();
-        if (dst instanceof UnpooledUnsafeDirectByteBuf) {
-            UnpooledUnsafeDirectByteBuf bbdst = (UnpooledUnsafeDirectByteBuf) dst;
-            PlatformDependent.copyMemory(addr(index), bbdst.addr(dstIndex), length);
+        checkIndex(index, length);
+        if (dst == null) {
+            throw new NullPointerException("dst");
+        }
+        if (dstIndex < 0 || dstIndex > dst.capacity() - length) {
+            throw new IndexOutOfBoundsException("dstIndex: " + dstIndex);
+        }
+
+        if (dst.hasMemoryAddress()) {
+            PlatformDependent.copyMemory(addr(index), dst.memoryAddress() + dstIndex, length);
         } else if (dst.hasArray()) {
             PlatformDependent.copyMemory(addr(index), dst.array(), dst.arrayOffset() + dstIndex, length);
         } else {
@@ -305,14 +321,22 @@ final class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf 
 
     @Override
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
-        ensureAccessible();
-        if (src instanceof UnpooledUnsafeDirectByteBuf) {
-            UnpooledUnsafeDirectByteBuf bbsrc = (UnpooledUnsafeDirectByteBuf) src;
-            PlatformDependent.copyMemory(bbsrc.addr(srcIndex), addr(index), length);
-        } else if (buffer.hasArray()) {
-            PlatformDependent.copyMemory(src.array(), src.arrayOffset() + srcIndex, addr(index), length);
-        } else {
-            src.getBytes(srcIndex, this, index, length);
+        checkIndex(index, length);
+        if (src == null) {
+            throw new NullPointerException("src");
+        }
+        if (srcIndex < 0 || srcIndex > src.capacity() - length) {
+            throw new IndexOutOfBoundsException("srcIndex: " + srcIndex);
+        }
+
+        if (length != 0) {
+            if (src.hasMemoryAddress()) {
+                PlatformDependent.copyMemory(src.memoryAddress() + srcIndex, addr(index), length);
+            } else if (buffer.hasArray()) {
+                PlatformDependent.copyMemory(src.array(), src.arrayOffset() + srcIndex, addr(index), length);
+            } else {
+                src.getBytes(srcIndex, this, index, length);
+            }
         }
         return this;
     }
@@ -408,11 +432,10 @@ final class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf 
     @Override
     public ByteBuf copy(int index, int length) {
         checkIndex(index, length);
-        UnpooledUnsafeDirectByteBuf copy =
-                (UnpooledUnsafeDirectByteBuf) alloc().directBuffer(capacity(), maxCapacity());
+        UnpooledUnsafeDirectByteBuf copy = (UnpooledUnsafeDirectByteBuf) alloc().directBuffer(length, maxCapacity());
         if (length != 0) {
-            PlatformDependent.copyMemory(addr(index), copy.addr(index), length);
-            copy.setIndex(index, index + length);
+            PlatformDependent.copyMemory(addr(index), copy.addr(0), length);
+            copy.setIndex(0, length);
         }
         return copy;
     }

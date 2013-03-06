@@ -96,10 +96,16 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     @Override
     public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
         checkIndex(index, length);
+        if (dst == null) {
+            throw new NullPointerException("dst");
+        }
+        if (dstIndex < 0 || dstIndex > dst.capacity() - length) {
+            throw new IndexOutOfBoundsException("dstIndex: " + dstIndex);
+        }
+
         if (length != 0) {
-            if (dst instanceof PooledUnsafeDirectByteBuf) {
-                PooledUnsafeDirectByteBuf bbdst = (PooledUnsafeDirectByteBuf) dst;
-                PlatformDependent.copyMemory(addr(index), bbdst.addr(dstIndex), length);
+            if (dst.hasMemoryAddress()) {
+                PlatformDependent.copyMemory(addr(index), dst.memoryAddress() + dstIndex, length);
             } else if (dst.hasArray()) {
                 PlatformDependent.copyMemory(addr(index), dst.array(), dst.arrayOffset() + dstIndex, length);
             } else {
@@ -112,6 +118,12 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     @Override
     public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
         checkIndex(index, length);
+        if (dst == null) {
+            throw new NullPointerException("dst");
+        }
+        if (dstIndex < 0 || dstIndex > dst.length - length) {
+            throw new IndexOutOfBoundsException("dstIndex: " + dstIndex);
+        }
         if (length != 0) {
             PlatformDependent.copyMemory(addr(index), dst, dstIndex, length);
         }
@@ -184,10 +196,16 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     @Override
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         checkIndex(index, length);
+        if (src == null) {
+            throw new NullPointerException("src");
+        }
+        if (srcIndex < 0 || srcIndex > src.capacity() - length) {
+            throw new IndexOutOfBoundsException("srcIndex: " + srcIndex);
+        }
+
         if (length != 0) {
-            if (src instanceof PooledUnsafeDirectByteBuf) {
-                PooledUnsafeDirectByteBuf bbsrc = (PooledUnsafeDirectByteBuf) src;
-                PlatformDependent.copyMemory(bbsrc.addr(srcIndex), addr(index), length);
+            if (src.hasMemoryAddress()) {
+                PlatformDependent.copyMemory(src.memoryAddress() + srcIndex, addr(index), length);
             } else if (src.hasArray()) {
                 PlatformDependent.copyMemory(src.array(), src.arrayOffset() + srcIndex, addr(index), length);
             } else {
@@ -247,10 +265,10 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     @Override
     public ByteBuf copy(int index, int length) {
         checkIndex(index, length);
-        PooledUnsafeDirectByteBuf copy = (PooledUnsafeDirectByteBuf) alloc().directBuffer(capacity(), maxCapacity());
+        PooledUnsafeDirectByteBuf copy = (PooledUnsafeDirectByteBuf) alloc().directBuffer(length, maxCapacity());
         if (length != 0) {
-            PlatformDependent.copyMemory(addr(index), copy.addr(index), length);
-            copy.setIndex(index, index + length);
+            PlatformDependent.copyMemory(addr(index), copy.addr(0), length);
+            copy.setIndex(0, length);
         }
         return copy;
     }
@@ -285,6 +303,16 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     @Override
     public int arrayOffset() {
         throw new UnsupportedOperationException("direct buffer");
+    }
+
+    @Override
+    public boolean hasMemoryAddress() {
+        return true;
+    }
+
+    @Override
+    public long memoryAddress() {
+        return memoryAddress;
     }
 
     private long addr(int index) {

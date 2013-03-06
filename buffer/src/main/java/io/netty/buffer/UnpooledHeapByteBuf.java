@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.internal.PlatformDependent;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -146,9 +148,21 @@ final class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public boolean hasMemoryAddress() {
+        return false;
+    }
+
+    @Override
+    public long memoryAddress() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
-        ensureAccessible();
-        if (dst.hasArray()) {
+        checkDstIndex(index, length, dstIndex, dst.capacity());
+        if (dst.hasMemoryAddress()) {
+            PlatformDependent.copyMemory(array, index, dst.memoryAddress() + dstIndex, length);
+        } else if (dst.hasArray()) {
             getBytes(index, dst.array(), dst.arrayOffset() + dstIndex, length);
         } else {
             dst.setBytes(dstIndex, array, index, length);
@@ -158,7 +172,7 @@ final class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
-        ensureAccessible();
+        checkDstIndex(index, length, dstIndex, dst.length);
         System.arraycopy(array, index, dst, dstIndex, length);
         return this;
     }
@@ -185,8 +199,10 @@ final class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
-        ensureAccessible();
-        if (src.hasArray()) {
+        checkSrcIndex(index, length, srcIndex, src.capacity());
+        if (src.hasMemoryAddress()) {
+            PlatformDependent.copyMemory(src.memoryAddress() + srcIndex, array, index, length);
+        } else  if (src.hasArray()) {
             setBytes(index, src.array(), src.arrayOffset() + srcIndex, length);
         } else {
             src.getBytes(srcIndex, array, index, length);
@@ -196,7 +212,7 @@ final class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
-        ensureAccessible();
+        checkSrcIndex(index, length, srcIndex, src.length);
         System.arraycopy(src, srcIndex, array, index, length);
         return this;
     }

@@ -92,6 +92,16 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
+    public boolean hasMemoryAddress() {
+        return buffer.hasMemoryAddress();
+    }
+
+    @Override
+    public long memoryAddress() {
+        return buffer.memoryAddress();
+    }
+
+    @Override
     public byte getByte(int index) {
         return _getByte(index);
     }

@@ -107,6 +107,16 @@ final class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
+    public boolean hasMemoryAddress() {
+        return false;
+    }
+
+    @Override
+    public long memoryAddress() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public ByteBuf clear() {
         throw new UnreplayableOperationException();
     }
