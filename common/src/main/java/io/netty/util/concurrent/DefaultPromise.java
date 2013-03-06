@@ -16,6 +16,7 @@
 package io.netty.util.concurrent;
 
 import io.netty.util.Signal;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -173,6 +174,29 @@ public class DefaultPromise implements Promise {
             removeListener(l);
         }
         return this;
+    }
+
+    @Override
+    public Promise sync() throws InterruptedException {
+        await();
+        rethrowIfFailed();
+        return this;
+    }
+
+    @Override
+    public Promise syncUninterruptibly() {
+        awaitUninterruptibly();
+        rethrowIfFailed();
+        return this;
+    }
+
+    private void rethrowIfFailed() {
+        Throwable cause = cause();
+        if (cause == null) {
+            return;
+        }
+
+        PlatformDependent.throwException(cause);
     }
 
     @Override

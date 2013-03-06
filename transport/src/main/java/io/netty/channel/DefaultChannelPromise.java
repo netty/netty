@@ -103,33 +103,14 @@ public class DefaultChannelPromise extends DefaultPromise implements ChannelProm
 
     @Override
     public ChannelPromise sync() throws InterruptedException {
-        await();
-        rethrowIfFailed(this);
+        super.sync();
         return this;
     }
 
     @Override
     public ChannelPromise syncUninterruptibly() {
-        awaitUninterruptibly();
-        rethrowIfFailed(this);
+        super.syncUninterruptibly();
         return this;
-    }
-
-    static void rethrowIfFailed(ChannelFuture future) {
-        Throwable cause = future.cause();
-        if (cause == null) {
-            return;
-        }
-
-        if (cause instanceof RuntimeException) {
-            throw (RuntimeException) cause;
-        }
-
-        if (cause instanceof Error) {
-            throw (Error) cause;
-        }
-
-        throw new ChannelException(cause);
     }
 
     @Override

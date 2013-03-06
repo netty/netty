@@ -13,24 +13,22 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
-
-import io.netty.util.concurrent.EventExecutor;
+package io.netty.util.concurrent;
 
 /**
- * The {@link CompleteChannelFuture} which is succeeded already.  It is
- * recommended to use {@link Channel#newSucceededFuture()} instead of
+ * The {@link CompleteFuture} which is succeeded already.  It is
+ * recommended to use {@link EventExecutor#newSucceededFuture()} instead of
  * calling the constructor of this future.
  */
-final class SucceededChannelFuture extends CompleteChannelFuture {
+public final class SucceededFuture extends CompleteFuture {
 
     /**
      * Creates a new instance.
      *
-     * @param channel the {@link Channel} associated with this future
+     * @param executor the {@link EventExecutor} associated with this future
      */
-    public SucceededChannelFuture(Channel channel, EventExecutor executor) {
-        super(channel, executor);
+    public SucceededFuture(EventExecutor executor) {
+        super(executor);
     }
 
     @Override

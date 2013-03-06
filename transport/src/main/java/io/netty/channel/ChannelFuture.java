@@ -181,18 +181,10 @@ public interface ChannelFuture extends Future {
     @Override
     ChannelFuture removeListeners(GenericFutureListener<? extends Future>... listeners);
 
-    /**
-     * Waits for this future until it is done, and rethrows the cause of the failure if this future
-     * failed.  If the cause of the failure is a checked exception, it is wrapped with a new
-     * {@link ChannelException} before being thrown.
-     */
+    @Override
     ChannelFuture sync() throws InterruptedException;
 
-    /**
-     * Waits for this future until it is done, and rethrows the cause of the failure if this future
-     * failed.  If the cause of the failure is a checked exception, it is wrapped with a new
-     * {@link ChannelException} before being thrown.
-     */
+    @Override
     ChannelFuture syncUninterruptibly();
 
     @Override

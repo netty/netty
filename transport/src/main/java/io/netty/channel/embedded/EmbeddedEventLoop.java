@@ -21,7 +21,10 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.DefaultPromise;
+import io.netty.util.concurrent.FailedFuture;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.SucceededFuture;
 
 import java.util.ArrayDeque;
 import java.util.Collections;
@@ -34,6 +37,7 @@ import java.util.concurrent.TimeUnit;
 
 final class EmbeddedEventLoop extends AbstractExecutorService implements EventLoop {
 
+    private final SucceededFuture succeededFuture = new SucceededFuture(this);
     private final Queue<Runnable> tasks = new ArrayDeque<Runnable>(2);
 
     @Override
@@ -140,5 +144,15 @@ final class EmbeddedEventLoop extends AbstractExecutorService implements EventLo
     @Override
     public Promise newPromise() {
         return new DefaultPromise(this);
+    }
+
+    @Override
+    public Future newSucceededFuture() {
+        return succeededFuture;
+    }
+
+    @Override
+    public Future newFailedFuture(Throwable cause) {
+        return new FailedFuture(this, cause);
     }
 }

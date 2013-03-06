@@ -119,6 +119,10 @@ final class PlatformDependent0 {
         return UNSAFE != null;
     }
 
+    static void throwException(Throwable t) {
+        UNSAFE.throwException(t);
+    }
+
     static void freeDirectBuffer(ByteBuffer buffer) {
         Cleaner cleaner;
         try {

@@ -16,13 +16,14 @@
 package io.netty.channel;
 
 
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 
 abstract class CompleteChannelPromise extends CompleteChannelFuture implements ChannelPromise {
 
-    protected CompleteChannelPromise(Channel channel) {
-        super(channel);
+    protected CompleteChannelPromise(Channel channel, EventExecutor executor) {
+        super(channel, executor);
     }
 
     @Override
@@ -73,5 +74,15 @@ abstract class CompleteChannelPromise extends CompleteChannelFuture implements C
     @Override
     public ChannelPromise removeListeners(GenericFutureListener<? extends Future>... listeners) {
         return (ChannelPromise) super.removeListeners(listeners);
+    }
+
+    @Override
+    public ChannelPromise sync() throws InterruptedException {
+        return this;
+    }
+
+    @Override
+    public ChannelPromise syncUninterruptibly() {
+        return this;
     }
 }

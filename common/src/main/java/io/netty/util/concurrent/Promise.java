@@ -73,4 +73,10 @@ public interface Promise extends Future {
 
     @Override
     Promise awaitUninterruptibly();
+
+    @Override
+    Promise sync() throws InterruptedException;
+
+    @Override
+    Promise syncUninterruptibly();
 }

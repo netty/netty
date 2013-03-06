@@ -80,6 +80,18 @@ public interface Future {
     Future removeListeners(GenericFutureListener<? extends Future>... listeners);
 
     /**
+     * Waits for this future until it is done, and rethrows the cause of the failure if this future
+     * failed.
+     */
+    Future sync() throws InterruptedException;
+
+    /**
+     * Waits for this future until it is done, and rethrows the cause of the failure if this future
+     * failed.
+     */
+    Future syncUninterruptibly();
+
+    /**
      * Waits for this future to be completed.
      *
      * @throws InterruptedException

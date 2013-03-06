@@ -72,6 +72,7 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
     }
 
     private final EventExecutorGroup parent;
+    private final Future succeededFuture = new SucceededFuture(this);
     private final Queue<Runnable> taskQueue;
     private final Thread thread;
     private final Object stateLock = new Object();
@@ -502,5 +503,15 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
     @Override
     public Promise newPromise() {
         return new DefaultPromise(this);
+    }
+
+    @Override
+    public Future newSucceededFuture() {
+        return succeededFuture;
+    }
+
+    @Override
+    public Future newFailedFuture(Throwable cause) {
+        return new FailedFuture(this, cause);
     }
 }

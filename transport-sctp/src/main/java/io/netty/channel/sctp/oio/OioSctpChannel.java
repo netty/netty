@@ -33,6 +33,7 @@ import io.netty.channel.sctp.SctpChannelConfig;
 import io.netty.channel.sctp.SctpMessage;
 import io.netty.channel.sctp.SctpNotificationHandler;
 import io.netty.channel.sctp.SctpServerChannel;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -197,16 +198,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                     free = false;
                     readMessages ++;
                 } catch (Throwable cause) {
-                    if (cause instanceof Error) {
-                        throw (Error) cause;
-                    }
-                    if (cause instanceof RuntimeException) {
-                        throw (RuntimeException) cause;
-                    }
-                    if (cause instanceof Exception) {
-                        throw (Exception) cause;
-                    }
-                    throw new ChannelException(cause);
+                    PlatformDependent.throwException(cause);
                 }  finally {
                     if (free) {
                         buffer.release();
