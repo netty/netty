@@ -56,7 +56,7 @@ public interface Future {
      * {@linkplain #isDone() done}.  If this future is already
      * completed, the specified listener is notified immediately.
      */
-    Future addListener(FutureListener<? extends Future> listener);
+    Future addListener(GenericFutureListener<? extends Future> listener);
 
     /**
      * Adds the specified listeners to this future.  The
@@ -64,7 +64,7 @@ public interface Future {
      * {@linkplain #isDone() done}.  If this future is already
      * completed, the specified listeners are notified immediately.
      */
-    Future addListeners(FutureListener<? extends Future>... listeners);
+    Future addListeners(GenericFutureListener<? extends Future>... listeners);
 
     /**
      * Removes the specified listener from this future.
@@ -73,7 +73,7 @@ public interface Future {
      * listener is not associated with this future, this method
      * does nothing and returns silently.
      */
-    Future removeListener(FutureListener<? extends Future> listener);
+    Future removeListener(GenericFutureListener<? extends Future> listener);
 
     /**
      * Removes the specified listeners from this future.
@@ -82,7 +82,7 @@ public interface Future {
      * listeners are not associated with this future, this method
      * does nothing and returns silently.
      */
-    Future removeListeners(FutureListener<? extends Future>... listeners);
+    Future removeListeners(GenericFutureListener<? extends Future>... listeners);
 
     /**
      * Waits for this future to be completed.
@@ -142,5 +142,4 @@ public interface Future {
      *         the specified time limit
      */
     boolean awaitUninterruptibly(long timeoutMillis);
-
 }

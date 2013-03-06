@@ -13,16 +13,20 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.util;
 
+import java.util.EventListener;
+
 /**
- * A subtype of {@link GenericFutureListener} that hides type parameter for convenience.
- * <pre>
- * Future f = new DefaultPromise(..);
- * f.addListener(new FutureListener() {
- *     public void operationComplete(Future f) { .. }
- * });
- * </pre>
+ * Listens to the result of a {@link Future}.  The result of the asynchronous operation is notified once this listener
+ * is added by calling {@link Future#addListener(GenericFutureListener)}.
  */
-public interface FutureListener extends GenericFutureListener<Future> { }
+public interface GenericFutureListener<F extends Future> extends EventListener {
+
+    /**
+     * Invoked when the operation associated with the {@link Future} has been completed.
+     *
+     * @param future  the source {@link Future} which called this callback
+     */
+    void operationComplete(F future) throws Exception;
+}

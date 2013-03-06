@@ -17,7 +17,7 @@ package io.netty.channel;
 
 
 import io.netty.util.Future;
-import io.netty.util.FutureListener;
+import io.netty.util.GenericFutureListener;
 
 abstract class CompleteChannelPromise extends CompleteChannelFuture implements ChannelPromise {
 
@@ -56,22 +56,22 @@ abstract class CompleteChannelPromise extends CompleteChannelFuture implements C
     }
 
     @Override
-    public ChannelPromise addListener(FutureListener<? extends Future> listener) {
+    public ChannelPromise addListener(GenericFutureListener<? extends Future> listener) {
         return (ChannelPromise) super.addListener(listener);
     }
 
     @Override
-    public ChannelPromise addListeners(FutureListener<? extends Future>... listeners) {
+    public ChannelPromise addListeners(GenericFutureListener<? extends Future>... listeners) {
         return (ChannelPromise) super.addListeners(listeners);
     }
 
     @Override
-    public ChannelPromise removeListener(FutureListener<? extends Future> listener) {
+    public ChannelPromise removeListener(GenericFutureListener<? extends Future> listener) {
         return (ChannelPromise) super.removeListener(listener);
     }
 
     @Override
-    public ChannelPromise removeListeners(FutureListener<? extends Future>... listeners) {
+    public ChannelPromise removeListeners(GenericFutureListener<? extends Future>... listeners) {
         return (ChannelPromise) super.removeListeners(listeners);
     }
 }

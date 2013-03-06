@@ -17,7 +17,7 @@ package io.netty.channel;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.util.Future;
-import io.netty.util.FutureListener;
+import io.netty.util.GenericFutureListener;
 
 import java.util.concurrent.TimeUnit;
 
@@ -63,13 +63,13 @@ import java.util.concurrent.TimeUnit;
  * operation. It also allows you to add {@link ChannelFutureListener}s so you
  * can get notified when the I/O operation is completed.
  *
- * <h3>Prefer {@link #addListener(FutureListener)} to {@link #await()}</h3>
+ * <h3>Prefer {@link #addListener(GenericFutureListener)} to {@link #await()}</h3>
  *
- * It is recommended to prefer {@link #addListener(FutureListener)} to
+ * It is recommended to prefer {@link #addListener(GenericFutureListener)} to
  * {@link #await()} wherever possible to get notified when an I/O operation is
  * done and to do any follow-up tasks.
  * <p>
- * {@link #addListener(FutureListener)} is non-blocking.  It simply adds
+ * {@link #addListener(GenericFutureListener)} is non-blocking.  It simply adds
  * the specified {@link ChannelFutureListener} to the {@link ChannelFuture}, and
  * I/O thread will notify the listeners when the I/O operation associated with
  * the future is done.  {@link ChannelFutureListener} yields the best
@@ -177,16 +177,16 @@ public interface ChannelFuture extends Future {
     Channel channel();
 
     @Override
-    ChannelFuture addListener(FutureListener<? extends Future> listener);
+    ChannelFuture addListener(GenericFutureListener<? extends Future> listener);
 
     @Override
-    ChannelFuture addListeners(FutureListener<? extends Future>... listeners);
+    ChannelFuture addListeners(GenericFutureListener<? extends Future>... listeners);
 
     @Override
-    ChannelFuture removeListener(FutureListener<? extends Future> listener);
+    ChannelFuture removeListener(GenericFutureListener<? extends Future> listener);
 
     @Override
-    ChannelFuture removeListeners(FutureListener<? extends Future>... listeners);
+    ChannelFuture removeListeners(GenericFutureListener<? extends Future>... listeners);
 
     /**
      * Waits for this future until it is done, and rethrows the cause of the failure if this future

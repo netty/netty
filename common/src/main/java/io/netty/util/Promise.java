@@ -57,16 +57,16 @@ public interface Promise extends Future {
     boolean tryFailure(Throwable cause);
 
     @Override
-    Promise addListener(FutureListener<? extends Future> listener);
+    Promise addListener(GenericFutureListener<? extends Future> listener);
 
     @Override
-    Promise addListeners(FutureListener<? extends Future>... listeners);
+    Promise addListeners(GenericFutureListener<? extends Future>... listeners);
 
     @Override
-    Promise removeListener(FutureListener<? extends Future> listener);
+    Promise removeListener(GenericFutureListener<? extends Future> listener);
 
     @Override
-    Promise removeListeners(FutureListener<? extends Future>... listeners);
+    Promise removeListeners(GenericFutureListener<? extends Future>... listeners);
 
     @Override
     Promise await() throws InterruptedException;

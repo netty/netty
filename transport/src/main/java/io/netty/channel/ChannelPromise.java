@@ -16,7 +16,7 @@
 package io.netty.channel;
 
 import io.netty.util.Future;
-import io.netty.util.FutureListener;
+import io.netty.util.GenericFutureListener;
 import io.netty.util.Promise;
 
 /**
@@ -28,25 +28,19 @@ public interface ChannelPromise extends ChannelFuture, Promise {
     ChannelPromise setSuccess();
 
     @Override
-    boolean trySuccess();
-
-    @Override
     ChannelPromise setFailure(Throwable cause);
 
     @Override
-    boolean tryFailure(Throwable cause);
+    ChannelPromise addListener(GenericFutureListener<? extends Future> listener);
 
     @Override
-    ChannelPromise addListener(FutureListener<? extends Future> listener);
+    ChannelPromise addListeners(GenericFutureListener<? extends Future>... listeners);
 
     @Override
-    ChannelPromise addListeners(FutureListener<? extends Future>... listeners);
+    ChannelPromise removeListener(GenericFutureListener<? extends Future> listener);
 
     @Override
-    ChannelPromise removeListener(FutureListener<? extends Future> listener);
-
-    @Override
-    ChannelPromise removeListeners(FutureListener<? extends Future>... listeners);
+    ChannelPromise removeListeners(GenericFutureListener<? extends Future>... listeners);
 
     @Override
     ChannelPromise sync() throws InterruptedException;
