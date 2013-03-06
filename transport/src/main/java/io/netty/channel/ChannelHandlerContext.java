@@ -135,9 +135,9 @@ public interface ChannelHandlerContext
     Channel channel();
 
     /**
-     * The {@link io.netty.util.concurrent.EventExecutor} that is used to dispatch the events. This can also be used to directly
+     * The {@link EventExecutor} that is used to dispatch the events. This can also be used to directly
      * submit tasks that get executed in the event loop. For more informations please refer to the
-     * {@link io.netty.util.concurrent.EventExecutor} javadocs.
+     * {@link EventExecutor} javadocs.
      */
     EventExecutor executor();
 

@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 
@@ -45,7 +46,7 @@ abstract class CompleteChannelFuture implements ChannelFuture {
         if (listener == null) {
             throw new NullPointerException("listener");
         }
-        DefaultChannelPromise.notifyListener(this, listener);
+        DefaultPromise.notifyListener(channel().eventLoop(), this, listener);
         return this;
     }
 
@@ -58,7 +59,7 @@ abstract class CompleteChannelFuture implements ChannelFuture {
             if (l == null) {
                 break;
             }
-            DefaultChannelPromise.notifyListener(this, l);
+            DefaultPromise.notifyListener(channel().eventLoop(), this, l);
         }
         return this;
     }

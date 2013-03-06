@@ -234,7 +234,7 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
     /**
      * Inserts a {@link ChannelHandler} at the first position of this pipeline.
      *
-     * @param group    the {@link io.netty.util.concurrent.EventExecutorGroup} which will be used to execute the {@link ChannelHandler}
+     * @param group    the {@link EventExecutorGroup} which will be used to execute the {@link ChannelHandler}
      *                 methods
      * @param name     the name of the handler to insert first
      * @param handler  the handler to insert first
