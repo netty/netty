@@ -21,6 +21,8 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.DefaultAttributeMap;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.EventExecutorGroup;
 
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;

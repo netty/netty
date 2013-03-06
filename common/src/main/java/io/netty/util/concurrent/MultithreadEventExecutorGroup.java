@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
+package io.netty.util.concurrent;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -67,7 +67,8 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
                 children[i] = newChild(threadFactory, scheduler, args);
                 success = true;
             } catch (Exception e) {
-                throw new EventLoopException("failed to create a child event loop", e);
+                // TODO: Think about if this is a good exception type
+                throw new IllegalStateException("failed to create a child event loop", e);
             } finally {
                 if (!success) {
                     for (int j = 0; j < i; j ++) {

@@ -21,6 +21,7 @@ import io.netty.buffer.MessageBuf;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.AttributeMap;
+import io.netty.util.concurrent.EventExecutor;
 
 import java.nio.channels.Channels;
 import java.util.Set;
@@ -134,9 +135,9 @@ public interface ChannelHandlerContext
     Channel channel();
 
     /**
-     * The {@link EventExecutor} that is used to dispatch the events. This can also be used to directly
+     * The {@link io.netty.util.concurrent.EventExecutor} that is used to dispatch the events. This can also be used to directly
      * submit tasks that get executed in the event loop. For more informations please refer to the
-     * {@link EventExecutor} javadocs.
+     * {@link io.netty.util.concurrent.EventExecutor} javadocs.
      */
     EventExecutor executor();
 

@@ -16,7 +16,7 @@
 package io.netty.handler.traffic;
 
 import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.channel.EventExecutor;
+import io.netty.util.concurrent.EventExecutor;
 
 import java.util.concurrent.ScheduledExecutorService;
 

@@ -16,8 +16,8 @@
 package io.netty.channel;
 
 import io.netty.channel.ChannelFlushPromiseNotifier.FlushCheckpoint;
-import io.netty.util.Future;
-import io.netty.util.GenericFutureListener;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.Signal;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;

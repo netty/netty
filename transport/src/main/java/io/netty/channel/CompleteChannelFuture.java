@@ -15,8 +15,8 @@
  */
 package io.netty.channel;
 
-import io.netty.util.Future;
-import io.netty.util.GenericFutureListener;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 
 import java.util.concurrent.TimeUnit;
 

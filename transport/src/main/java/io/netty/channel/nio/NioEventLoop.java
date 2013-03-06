@@ -18,7 +18,7 @@ package io.netty.channel.nio;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelTaskScheduler;
+import io.netty.util.concurrent.ChannelTaskScheduler;
 import io.netty.channel.EventLoopException;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.nio.AbstractNioChannel.NioUnsafe;

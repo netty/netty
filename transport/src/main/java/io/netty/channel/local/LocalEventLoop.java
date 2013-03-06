@@ -16,7 +16,7 @@
 package io.netty.channel.local;
 
 import io.netty.channel.SingleThreadEventLoop;
-import io.netty.channel.ChannelTaskScheduler;
+import io.netty.util.concurrent.ChannelTaskScheduler;
 
 import java.util.concurrent.ThreadFactory;
 

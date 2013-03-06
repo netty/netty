@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
+package io.netty.util.concurrent;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;

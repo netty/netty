@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.ChannelTaskScheduler;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

@@ -82,7 +82,7 @@ interface ChannelOutboundInvoker {
     ChannelFuture close();
 
     /**
-     * Request to deregister this ChannelOutboundInvoker from the previous assigned {@link EventExecutor} and notify the
+     * Request to deregister this ChannelOutboundInvoker from the previous assigned {@link io.netty.util.concurrent.EventExecutor} and notify the
      * {@link ChannelFuture} once the operation completes, either because the operation was successful or because of
      * an error.
      * <p>
@@ -211,7 +211,7 @@ interface ChannelOutboundInvoker {
     ChannelFuture close(ChannelPromise promise);
 
     /**
-     * Request to deregister this ChannelOutboundInvoker from the previous assigned {@link EventExecutor} and notify the
+     * Request to deregister this ChannelOutboundInvoker from the previous assigned {@link io.netty.util.concurrent.EventExecutor} and notify the
      * {@link ChannelFuture} once the operation completes, either because the operation was successful or because of
      * an error.
      *

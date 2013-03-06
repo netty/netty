@@ -21,6 +21,8 @@ import io.netty.buffer.MessageBuf;
 import io.netty.buffer.ReferenceCounted;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel.Unsafe;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 

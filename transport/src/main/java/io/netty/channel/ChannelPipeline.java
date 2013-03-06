@@ -18,6 +18,7 @@ package io.netty.channel;
 import io.netty.buffer.Buf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
+import io.netty.util.concurrent.EventExecutorGroup;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -233,7 +234,7 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
     /**
      * Inserts a {@link ChannelHandler} at the first position of this pipeline.
      *
-     * @param group    the {@link EventExecutorGroup} which will be used to execute the {@link ChannelHandler}
+     * @param group    the {@link io.netty.util.concurrent.EventExecutorGroup} which will be used to execute the {@link ChannelHandler}
      *                 methods
      * @param name     the name of the handler to insert first
      * @param handler  the handler to insert first

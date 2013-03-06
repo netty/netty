@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.EventExecutor;
+
 /**
  * Will handle all the I/O-Operations for a {@link Channel} once it was registered.
  *
