@@ -19,8 +19,6 @@ import io.netty.util.Signal;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.util.Arrays;
-import java.util.EventListener;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.TimeUnit.*;
@@ -44,7 +42,13 @@ public class DefaultPromise implements Promise {
     private volatile Throwable cause;
     private Object listeners; // Can be ChannelFutureListener or DefaultChannelPromiseListeners
     private final EventExecutor executor;
-    private int waiters;
+
+    /**
+     * The the most significant 24 bits of this field represents the number of waiter threads waiting for this promise
+     * with await*() and sync*().  Subclasses can use the other 40 bits of this field to represents its own state, and
+     * are responsible for retaining the most significant 24 bits as is when modifying this field.
+     */
+    protected long state;
 
     /**
      * Creates a new instance.
@@ -102,10 +106,10 @@ public class DefaultPromise implements Promise {
                 if (listeners == null) {
                     listeners = listener;
                 } else {
-                    if (listeners instanceof DefaultChannelPromiseListeners) {
-                        ((DefaultChannelPromiseListeners) listeners).add(listener);
+                    if (listeners instanceof DefaultPromiseListeners) {
+                        ((DefaultPromiseListeners) listeners).add(listener);
                     } else {
-                        listeners = new DefaultChannelPromiseListeners(
+                        listeners = new DefaultPromiseListeners(
                                 (GenericFutureListener<? extends Future>) listeners, listener);
                     }
                 }
@@ -144,8 +148,8 @@ public class DefaultPromise implements Promise {
 
         synchronized (this) {
             if (!isDone()) {
-                if (listeners instanceof DefaultChannelPromiseListeners) {
-                    ((DefaultChannelPromiseListeners) listeners).remove(listener);
+                if (listeners instanceof DefaultPromiseListeners) {
+                    ((DefaultPromiseListeners) listeners).remove(listener);
                 } else if (listeners == listener) {
                     listeners = null;
                 }
@@ -374,6 +378,22 @@ public class DefaultPromise implements Promise {
         return true;
     }
 
+    private boolean hasWaiters() {
+        return (state & 0xFFFFFF0000000000L) != 0;
+    }
+
+    private void incWaiters() {
+        long newState = state + 0x10000000000L;
+        if ((newState & 0xFFFFFF0000000000L) == 0) {
+            throw new IllegalStateException("too many waiters");
+        }
+        state = newState;
+    }
+
+    private void decWaiters() {
+        state -= 0x10000000000L;
+    }
+
     private void notifyListeners() {
         // This method doesn't need synchronization because:
         // 1) This method is always called after synchronized (this) block.
@@ -387,8 +407,8 @@ public class DefaultPromise implements Promise {
 
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            if (listeners instanceof DefaultChannelPromiseListeners) {
-                notifyListeners0(this, (DefaultChannelPromiseListeners) listeners);
+            if (listeners instanceof DefaultPromiseListeners) {
+                notifyListeners0(this, (DefaultPromiseListeners) listeners);
             } else {
                 notifyListener0(this, (GenericFutureListener<? extends Future>) listeners);
             }
@@ -399,8 +419,8 @@ public class DefaultPromise implements Promise {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    if (listeners instanceof DefaultChannelPromiseListeners) {
-                        notifyListeners0(DefaultPromise.this, (DefaultChannelPromiseListeners) listeners);
+                    if (listeners instanceof DefaultPromiseListeners) {
+                        notifyListeners0(DefaultPromise.this, (DefaultPromiseListeners) listeners);
                     } else {
                         notifyListener0(DefaultPromise.this, (GenericFutureListener<? extends Future>) listeners);
                     }
@@ -410,7 +430,7 @@ public class DefaultPromise implements Promise {
     }
 
     private static void notifyListeners0(final Future future,
-                                         DefaultChannelPromiseListeners listeners) {
+                                         DefaultPromiseListeners listeners) {
         final GenericFutureListener<? extends Future>[] a = listeners.listeners();
         final int size = listeners.size();
         for (int i = 0; i < size; i ++) {
@@ -451,65 +471,6 @@ public class DefaultPromise implements Promise {
                         "An exception was thrown by " +
                                 GenericFutureListener.class.getSimpleName() + '.', t);
             }
-        }
-    }
-
-    protected boolean hasWaiters() {
-        return waiters > 0;
-    }
-
-    protected void incWaiters() {
-        waiters++;
-    }
-
-    protected void decWaiters() {
-        waiters--;
-    }
-
-    private static final class DefaultChannelPromiseListeners {
-        private GenericFutureListener<? extends Future>[] listeners;
-        private int size;
-
-        @SuppressWarnings("unchecked")
-        DefaultChannelPromiseListeners(GenericFutureListener<? extends Future> firstListener,
-                                       GenericFutureListener<? extends Future> secondListener) {
-
-            listeners = new GenericFutureListener[] { firstListener, secondListener };
-            size = 2;
-        }
-
-        void add(GenericFutureListener<? extends Future> l) {
-            GenericFutureListener<? extends Future>[] listeners = this.listeners;
-            final int size = this.size;
-            if (size == listeners.length) {
-                this.listeners = listeners = Arrays.copyOf(listeners, size << 1);
-            }
-            listeners[size] = l;
-            this.size = size + 1;
-        }
-
-        void remove(EventListener l) {
-            final EventListener[] listeners = this.listeners;
-            int size = this.size;
-            for (int i = 0; i < size; i ++) {
-                if (listeners[i] == l) {
-                    int listenersToMove = size - i - 1;
-                    if (listenersToMove > 0) {
-                        System.arraycopy(listeners, i + 1, listeners, i, listenersToMove);
-                    }
-                    listeners[-- size] = null;
-                    this.size = size;
-                    return;
-                }
-            }
-        }
-
-        GenericFutureListener<? extends Future>[] listeners() {
-            return listeners;
-        }
-
-        int size() {
-            return size;
         }
     }
 }
