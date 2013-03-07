@@ -87,7 +87,6 @@ public class HashedWheelTimer implements Timer {
     final Thread workerThread;
     final AtomicInteger workerState = new AtomicInteger(); // 0 - init, 1 - started, 2 - shut down
 
-    private final long roundDuration;
     final long tickDuration;
     final Set<HashedWheelTimeout>[] wheel;
     final int mask;
@@ -200,8 +199,6 @@ public class HashedWheelTimer implements Timer {
         if (tickDuration == Long.MAX_VALUE || tickDuration >= Long.MAX_VALUE / wheel.length) {
             throw new IllegalArgumentException("tickDuration is too long: " + tickDuration + ' ' + unit);
         }
-
-        roundDuration = tickDuration * wheel.length;
 
         workerThread = threadFactory.newThread(worker);
     }
@@ -332,7 +329,7 @@ public class HashedWheelTimer implements Timer {
         // Add the timeout to the wheel.
         lock.readLock().lock();
         try {
-            int stopIndex = (int) ((wheelCursor + relativeIndex) & mask);
+            int stopIndex = (int) (wheelCursor + relativeIndex & mask);
             timeout.stopIndex = stopIndex;
             timeout.remainingRounds = remainingRounds;
             wheel[stopIndex].add(timeout);
@@ -391,7 +388,7 @@ public class HashedWheelTimer implements Timer {
                 HashedWheelTimeout timeout = i.next();
                 if (timeout.remainingRounds <= 0) {
                     i.remove();
-                    if ((timeout.deadline - deadline) <= 0) {
+                    if (timeout.deadline - deadline <= 0) {
                         expiredTimeouts.add(timeout);
                     } else {
                         // Handle the case where the timeout is put into a wrong
@@ -454,7 +451,7 @@ public class HashedWheelTimer implements Timer {
                 //
                 // See https://github.com/netty/netty/issues/356
                 if (PlatformDependent.isWindows()) {
-                    sleepTimeMs = (sleepTimeMs / 10) * 10;
+                    sleepTimeMs = sleepTimeMs / 10 * 10;
                 }
 
                 try {
