@@ -33,6 +33,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.WeakHashMap;
 import java.util.concurrent.Future;
 
 import static io.netty.channel.DefaultChannelHandlerContext.*;
@@ -44,6 +45,17 @@ import static io.netty.channel.DefaultChannelHandlerContext.*;
 final class DefaultChannelPipeline implements ChannelPipeline {
 
     static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultChannelPipeline.class);
+
+    @SuppressWarnings("unchecked")
+    private static final WeakHashMap<Class<?>, String>[] nameCaches =
+            new WeakHashMap[Runtime.getRuntime().availableProcessors()];
+
+    static {
+        for (int i = 0; i < nameCaches.length; i ++) {
+            nameCaches[i] = new WeakHashMap<Class<?>, String>();
+        }
+    }
+
 
     final Channel channel;
 
@@ -350,14 +362,40 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         return this;
     }
 
-    private static String generateName(ChannelHandler handler) {
-        String type = handler.getClass().getSimpleName();
-        StringBuilder buf = new StringBuilder(type.length() + 10);
-        buf.append(type);
-        buf.append("-0");
-        buf.append(Long.toHexString(System.identityHashCode(handler) & 0xFFFFFFFFL | 0x100000000L));
-        buf.setCharAt(buf.length() - 9, 'x');
-        return buf.toString();
+    private String generateName(ChannelHandler handler) {
+        WeakHashMap<Class<?>, String> cache = nameCaches[(int) (Thread.currentThread().getId() % nameCaches.length)];
+        Class<?> handlerType = handler.getClass();
+        String name;
+        synchronized (cache) {
+            name = cache.get(handlerType);
+            if (name == null) {
+                Package pkg = handlerType.getPackage();
+                if (pkg != null) {
+                    name = handlerType.getName().substring(pkg.getName().length() + 1);
+                } else {
+                    name = handlerType.getName();
+                }
+                name += "#0";
+                cache.put(handlerType, name);
+            }
+        }
+
+        synchronized (this) {
+            // It's not very likely for a user to put more than one handler of the same type, but make sure to avoid
+            // any name conflicts.  Note that we don't cache the names generated here.
+            if (name2ctx.containsKey(name)) {
+                String baseName = name.substring(0, name.length() - 1); // Strip the trailing '0'.
+                for (int i = 1;; i ++) {
+                    String newName = baseName + i;
+                    if (!name2ctx.containsKey(newName)) {
+                        name = newName;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return name;
     }
 
     @Override
@@ -790,6 +828,11 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             map.put(ctx.name(), ctx.handler());
             ctx = ctx.next;
         }
+    }
+
+    @Override
+    public Iterator<Map.Entry<String, ChannelHandler>> iterator() {
+        return toMap().entrySet().iterator();
     }
 
     /**
@@ -1311,10 +1354,5 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             }
             unsafe.flush(promise);
         }
-    }
-
-    @Override
-    public Iterator<Map.Entry<String, ChannelHandler>> iterator() {
-        return toMap().entrySet().iterator();
     }
 }
