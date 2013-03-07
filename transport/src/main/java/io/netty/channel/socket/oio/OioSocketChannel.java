@@ -201,7 +201,9 @@ public class OioSocketChannel extends OioByteStreamChannel
             activate(socket.getInputStream(), socket.getOutputStream());
             success = true;
         } catch (SocketTimeoutException e) {
-            throw new ConnectTimeoutException("connection timed out: " + remoteAddress);
+            ConnectTimeoutException cause = new ConnectTimeoutException("connection timed out: " + remoteAddress);
+            cause.setStackTrace(e.getStackTrace());
+            throw cause;
         } finally {
             if (!success) {
                 doClose();
