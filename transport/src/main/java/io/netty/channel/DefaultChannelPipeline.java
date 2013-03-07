@@ -58,7 +58,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-
     final Channel channel;
 
     final DefaultChannelHandlerContext head;
