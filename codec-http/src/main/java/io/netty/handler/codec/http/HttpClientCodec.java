@@ -64,6 +64,14 @@ public final class HttpClientCodec
         this(4096, 8192, 8192, false);
     }
 
+    public void setSingleDecode(boolean singleDecode) {
+        decoder().setSingleDecode(singleDecode);
+    }
+
+    public boolean isSingleDecode() {
+        return decoder().isSingleDecode();
+    }
+
     /**
      * Creates a new instance with the specified decoder options.
      */

@@ -45,10 +45,9 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpRequestEncoder;
-import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
@@ -90,8 +89,7 @@ public class WebSocketClient {
                  @Override
                  public void initChannel(SocketChannel ch) throws Exception {
                      ChannelPipeline pipeline = ch.pipeline();
-                     pipeline.addLast("decoder", new HttpResponseDecoder());
-                     pipeline.addLast("encoder", new HttpRequestEncoder());
+                     pipeline.addLast("http-codec", new HttpClientCodec());
                      pipeline.addLast("aggregator", new HttpObjectAggregator(8192));
                      pipeline.addLast("ws-handler", handler);
                  }
