@@ -17,9 +17,18 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundByteHandler;
+import io.netty.channel.ChannelOutboundMessageHandler;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpRequestEncoder;
+import io.netty.handler.codec.http.HttpResponseDecoder;
 
 import java.net.URI;
 
@@ -94,7 +103,7 @@ public abstract class WebSocketClientHandshaker {
         return handshakeComplete;
     }
 
-    protected void setHandshakeComplete() {
+    private void setHandshakeComplete() {
         handshakeComplete = true;
     }
 
@@ -113,7 +122,7 @@ public abstract class WebSocketClientHandshaker {
         return actualSubprotocol;
     }
 
-    protected void setActualSubprotocol(String actualSubprotocol) {
+    private void setActualSubprotocol(String actualSubprotocol) {
         this.actualSubprotocol = actualSubprotocol;
     }
 
@@ -138,7 +147,49 @@ public abstract class WebSocketClientHandshaker {
      * @param promise
      *            the {@link ChannelPromise} to be notified when the opening handshake is sent
      */
-    public abstract ChannelFuture handshake(Channel channel, ChannelPromise promise);
+    public final ChannelFuture handshake(Channel channel, final ChannelPromise promise) {
+        FullHttpRequest request =  newHandshakeRequest();
+        HttpResponseDecoder decoder = channel.pipeline().get(HttpResponseDecoder.class);
+        if (decoder == null) {
+            HttpClientCodec codec = channel.pipeline().get(HttpClientCodec.class);
+            if (codec == null) {
+               promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
+                       "a HttpResponseDecoder or HttpClientCodec"));
+               return promise;
+            }
+            codec.setSingleDecode(true);
+        } else {
+            decoder.setSingleDecode(true);
+        }
+        channel.write(request).addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) {
+                if (future.isSuccess()) {
+                    ChannelPipeline p = future.channel().pipeline();
+                    ChannelHandlerContext ctx = p.context(HttpRequestEncoder.class);
+                    if (ctx == null) {
+                        ctx = p.context(HttpClientCodec.class);
+                    }
+                    if (ctx == null) {
+                        promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
+                                "a HttpRequestEncoder or HttpClientCodec"));
+                        return;
+                    }
+                    p.addAfter(ctx.name(), "ws-encoder", newWebSocketEncoder());
+
+                    promise.setSuccess();
+                } else {
+                    promise.setFailure(future.cause());
+                }
+            }
+        });
+        return promise;
+    }
+
+    /**
+     * Returns a new {@link FullHttpRequest) which will be used for the handshake.
+     */
+    protected abstract FullHttpRequest newHandshakeRequest();
 
     /**
      * Validates and finishes the opening handshake initiated by {@link #handshake}}.
@@ -148,5 +199,40 @@ public abstract class WebSocketClientHandshaker {
      * @param response
      *            HTTP response containing the closing handshake details
      */
-    public abstract void finishHandshake(Channel channel, FullHttpResponse response);
+    public final void finishHandshake(Channel channel, FullHttpResponse response) {
+        verify(response);
+        setActualSubprotocol(response.headers().get(HttpHeaders.Names.SEC_WEBSOCKET_PROTOCOL));
+        setHandshakeComplete();
+
+        ChannelPipeline p = channel.pipeline();
+        ChannelHandlerContext ctx = p.context(HttpRequestEncoder.class);
+        if (ctx == null) {
+            ctx = p.context(HttpClientCodec.class);
+            if (ctx == null) {
+                throw new IllegalStateException("ChannelPipeline does not contain " +
+                        "a HttpRequestEncoder or HttpClientCodec");
+            }
+            p.replaceAndForward(ctx.name(), "ws-decoder", newWebsocketDecoder());
+        } else {
+            p.remove(HttpRequestEncoder.class);
+            p.replaceAndForward(ctx.name(),
+                    "ws-decoder", newWebsocketDecoder());
+        }
+    }
+
+    /**
+     * Verfiy the {@link FullHttpResponse} and throws a {@link WebSocketHandshakeException} if something is wrong.
+     */
+    protected abstract void verify(FullHttpResponse response);
+
+    /**
+     * Returns the decoder to use after handshake is complete.
+     */
+    protected abstract ChannelInboundByteHandler newWebsocketDecoder();
+
+    /**
+     * Returns the encoder to use after the handshake is complete.
+     */
+    protected abstract ChannelOutboundMessageHandler<WebSocketFrame> newWebSocketEncoder();
+
 }

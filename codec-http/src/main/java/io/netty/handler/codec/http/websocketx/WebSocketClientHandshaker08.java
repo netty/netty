@@ -15,11 +15,8 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelInboundByteHandler;
+import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -27,8 +24,6 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpHeaders.Values;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpRequestEncoder;
-import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.CharsetUtil;
@@ -94,11 +89,9 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
      * Sec-WebSocket-Version: 8
      * </pre>
      *
-     * @param channel
-     *            Channel into which we can write our request
      */
     @Override
-    public ChannelFuture handshake(Channel channel, final ChannelPromise promise) {
+    protected FullHttpRequest newHandshakeRequest() {
         // Get path
         URI wsURL = uri();
         String path = wsURL.getPath();
@@ -151,27 +144,7 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
         if (customHeaders != null) {
             headers.add(customHeaders);
         }
-
-        channel.pipeline().get(HttpResponseDecoder.class).setSingleDecode(true);
-
-        ChannelFuture future = channel.write(request);
-        future.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                ChannelPipeline p = future.channel().pipeline();
-                p.addAfter(
-                        p.context(HttpRequestEncoder.class).name(),
-                        "ws-encoder", new WebSocket08FrameEncoder(true));
-
-                if (future.isSuccess()) {
-                    promise.setSuccess();
-                } else {
-                    promise.setFailure(future.cause());
-                }
-            }
-        });
-
-        return promise;
+        return request;
     }
 
     /**
@@ -187,14 +160,12 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
      * Sec-WebSocket-Protocol: chat
      * </pre>
      *
-     * @param channel
-     *            Channel
      * @param response
      *            HTTP response returned from the server for the request sent by beginOpeningHandshake00().
      * @throws WebSocketHandshakeException
      */
     @Override
-    public void finishHandshake(Channel channel, FullHttpResponse response) {
+    protected void verify(FullHttpResponse response) {
         final HttpResponseStatus status = HttpResponseStatus.SWITCHING_PROTOCOLS;
         final HttpHeaders headers = response.headers();
 
@@ -217,16 +188,15 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
             throw new WebSocketHandshakeException(String.format(
                     "Invalid challenge. Actual: %s. Expected: %s", accept, expectedChallengeResponseString));
         }
+    }
 
-        String subprotocol = headers.get(Names.SEC_WEBSOCKET_PROTOCOL);
-        setActualSubprotocol(subprotocol);
+    @Override
+    protected ChannelInboundByteHandler newWebsocketDecoder() {
+        return new WebSocket08FrameDecoder(false, allowExtensions, maxFramePayloadLength());
+    }
 
-        setHandshakeComplete();
-
-        ChannelPipeline p = channel.pipeline();
-        p.remove(HttpRequestEncoder.class);
-        p.replaceAndForward(HttpResponseDecoder.class,
-                "ws-decoder",
-                new WebSocket08FrameDecoder(false, allowExtensions, maxFramePayloadLength()));
+    @Override
+    protected ChannelOutboundMessageHandler<WebSocketFrame> newWebSocketEncoder() {
+        return new WebSocket08FrameEncoder(true);
     }
 }
