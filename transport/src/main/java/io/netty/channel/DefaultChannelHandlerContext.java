@@ -835,7 +835,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     private void invokeExceptionCaught0(Throwable cause) {
-        ChannelStateHandler handler = (ChannelStateHandler) handler();
+        ChannelHandler handler = handler();
         try {
             handler.exceptionCaught(this, cause);
         } catch (Throwable t) {
