@@ -545,6 +545,11 @@ public class SslHandler
                         setHandshakeSuccess();
                         continue;
                     case NOT_HANDSHAKING:
+                        // Workaround for TLS False Start problem reported at:
+                        // https://github.com/netty/netty/issues/1108#issuecomment-14266970
+                        if (ctx.inboundByteBuffer().isReadable()) {
+                            unwrapLater = true;
+                        }
                         break;
                     default:
                         throw new IllegalStateException("Unknown handshake status: " + result.getHandshakeStatus());
