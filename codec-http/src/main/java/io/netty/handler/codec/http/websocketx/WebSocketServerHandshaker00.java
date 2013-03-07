@@ -19,8 +19,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelInboundByteHandler;
+import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -28,12 +28,7 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpHeaders.Values;
-import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpRequestDecoder;
-import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.regex.Pattern;
 
@@ -52,8 +47,6 @@ import static io.netty.handler.codec.http.HttpVersion.*;
  * </p>
  */
 public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
-
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketServerHandshaker00.class);
 
     private static final Pattern BEGINNING_DIGIT = Pattern.compile("[^0-9]");
     private static final Pattern BEGINNING_SPACE = Pattern.compile("[^ ]");
@@ -115,11 +108,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      * </pre>
      */
     @Override
-    public ChannelFuture handshake(Channel channel, FullHttpRequest req, HttpHeaders headers, ChannelPromise promise) {
-
-        if (logger.isDebugEnabled()) {
-            logger.debug(String.format("Channel %s WS Version 00 server handshake", channel.id()));
-        }
+    protected FullHttpResponse newHandshakeResponse(FullHttpRequest req, HttpHeaders headers) {
 
         // Serve the WebSocket handshake request.
         if (!Values.UPGRADE.equalsIgnoreCase(req.headers().get(CONNECTION))
@@ -178,24 +167,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
                 res.headers().add(WEBSOCKET_PROTOCOL, selectSubprotocol(protocol));
             }
         }
-
-        // Upgrade the connection and send the handshake response.
-        channel.write(res, promise);
-        promise.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                ChannelPipeline p = future.channel().pipeline();
-                if (p.get(HttpObjectAggregator.class) != null) {
-                    p.remove(HttpObjectAggregator.class);
-                }
-                p.replaceAndForward(HttpRequestDecoder.class, "wsdecoder",
-                        new WebSocket00FrameDecoder(maxFramePayloadLength()));
-
-                p.replace(HttpResponseEncoder.class, "wsencoder", new WebSocket00FrameEncoder());
-            }
-        });
-
-        return promise;
+        return res;
     }
 
     /**
@@ -209,5 +181,15 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
     @Override
     public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise promise) {
         return channel.write(frame, promise);
+    }
+
+    @Override
+    protected ChannelInboundByteHandler newWebsocketDecoder() {
+        return new WebSocket00FrameDecoder(maxFramePayloadLength());
+    }
+
+    @Override
+    protected ChannelOutboundMessageHandler<WebSocketFrame> newWebSocketEncoder() {
+        return new WebSocket00FrameEncoder();
     }
 }

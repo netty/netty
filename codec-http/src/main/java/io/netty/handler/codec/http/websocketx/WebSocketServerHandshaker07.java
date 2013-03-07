@@ -15,23 +15,15 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelInboundByteHandler;
+import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpHeaders.Names;
-import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpRequestDecoder;
-import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import static io.netty.handler.codec.http.HttpHeaders.Values.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
@@ -44,8 +36,6 @@ import static io.netty.handler.codec.http.HttpVersion.*;
  * </p>
  */
 public class WebSocketServerHandshaker07 extends WebSocketServerHandshaker {
-
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketServerHandshaker07.class);
 
     public static final String WEBSOCKET_07_ACCEPT_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
@@ -105,11 +95,7 @@ public class WebSocketServerHandshaker07 extends WebSocketServerHandshaker {
      * </pre>
      */
     @Override
-    public ChannelFuture handshake(Channel channel, FullHttpRequest req, HttpHeaders headers, ChannelPromise promise) {
-
-        if (logger.isDebugEnabled()) {
-            logger.debug(String.format("Channel %s WS Version 7 server handshake", channel.id()));
-        }
+    protected FullHttpResponse newHandshakeResponse(FullHttpRequest req, HttpHeaders headers) {
 
         FullHttpResponse res =
                 new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
@@ -143,38 +129,16 @@ public class WebSocketServerHandshaker07 extends WebSocketServerHandshaker {
                 setSelectedSubprotocol(selectedSubprotocol);
             }
         }
-
-        channel.write(res, promise);
-
-        // Upgrade the connection and send the handshake response.
-        promise.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                ChannelPipeline p = future.channel().pipeline();
-                if (p.get(HttpObjectAggregator.class) != null) {
-                    p.remove(HttpObjectAggregator.class);
-                }
-
-                p.replaceAndForward(HttpRequestDecoder.class, "wsdecoder",
-                        new WebSocket07FrameDecoder(true, allowExtensions, maxFramePayloadLength()));
-                p.replace(HttpResponseEncoder.class, "wsencoder", new WebSocket07FrameEncoder(false));
-            }
-        });
-
-        return promise;
+        return res;
     }
 
-    /**
-     * Echo back the closing frame and close the connection
-     *
-     * @param channel
-     *            Channel
-     * @param frame
-     *            Web Socket frame that was received
-     */
     @Override
-    public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise future) {
-        future.addListener(ChannelFutureListener.CLOSE);
-        return channel.write(frame, future);
+    protected ChannelInboundByteHandler newWebsocketDecoder() {
+        return new WebSocket07FrameDecoder(true, allowExtensions, maxFramePayloadLength());
+    }
+
+    @Override
+    protected ChannelOutboundMessageHandler<WebSocketFrame> newWebSocketEncoder() {
+        return new WebSocket07FrameEncoder(false);
     }
 }
