@@ -24,7 +24,7 @@ import java.util.concurrent.ScheduledExecutorService;
  * access methods.
  *
  */
-public interface EventExecutor extends EventExecutorGroup, ScheduledExecutorService {
+public interface EventExecutor extends EventExecutorGroup, ScheduledExecutorService, FutureFactory {
 
     /**
      * Returns a reference to itself.
@@ -47,23 +47,4 @@ public interface EventExecutor extends EventExecutorGroup, ScheduledExecutorServ
      * {@code false} otherwise.
      */
     boolean inEventLoop(Thread thread);
-
-    /**
-     * Return a new {@link Promise} which use this {@link EventExecutor} to notify once it is complete.
-     */
-    Promise newPromise();
-
-    /**
-     * Create a new {@link Future} which is marked as successes already. So {@link Future#isSuccess()}
-     * will return {@code true}. All {@link FutureListener} added to it will be notified directly. Also
-     * every call of blocking methods will just return without blocking.
-     */
-    Future newSucceededFuture();
-
-    /**
-     * Create a new {@link Future} which is marked as fakued already. So {@link Future#isSuccess()}
-     * will return {@code false}. All {@link FutureListener} added to it will be notified directly. Also
-     * every call of blocking methods will just return without blocking.
-     */
-    Future newFailedFuture(Throwable cause);
 }
