@@ -20,6 +20,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
 import io.netty.channel.oio.OioByteStreamChannel;
 import io.netty.channel.socket.ServerSocketChannel;
@@ -199,6 +200,8 @@ public class OioSocketChannel extends OioByteStreamChannel
             socket.connect(remoteAddress, config().getConnectTimeoutMillis());
             activate(socket.getInputStream(), socket.getOutputStream());
             success = true;
+        } catch (SocketTimeoutException e) {
+            throw new ConnectTimeoutException("connection timed out: " + remoteAddress);
         } finally {
             if (!success) {
                 doClose();

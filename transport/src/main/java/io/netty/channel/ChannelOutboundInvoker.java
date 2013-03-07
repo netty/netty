@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import java.net.ConnectException;
 import java.net.SocketAddress;
 import io.netty.util.concurrent.EventExecutor;
 /**
@@ -36,6 +37,10 @@ interface ChannelOutboundInvoker {
     /**
      * Request to connect to the given {@link SocketAddress} and notify the {@link ChannelFuture} once the operation
      * completes, either because the operation was successful or because of an error.
+     * <p>
+     * If the connection fails because of a connection timeout, the {@link ChannelFuture} will get failed with
+     * a {@link ConnectTimeoutException}. If it fails because of connection refused a {@link ConnectException}
+     * will be used.
      * <p>
      * This will result in having the
      * {@link ChannelOperationHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
@@ -160,6 +165,11 @@ interface ChannelOutboundInvoker {
      * completes, either because the operation was successful or because of an error.
      *
      * The given {@link ChannelFuture} will be notified.
+     *
+     * <p>
+     * If the connection fails because of a connection timeout, the {@link ChannelFuture} will get failed with
+     * a {@link ConnectTimeoutException}. If it fails because of connection refused a {@link ConnectException}
+     * will be used.
      * <p>
      * This will result in having the
      * {@link ChannelOperationHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
