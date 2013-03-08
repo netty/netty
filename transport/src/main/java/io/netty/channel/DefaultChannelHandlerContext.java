@@ -99,6 +99,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private Runnable fireInboundBufferUpdated0Task;
     private Runnable invokeChannelReadSuspendedTask;
     private Runnable invokeRead0Task;
+    private boolean freed;
     boolean removed;
 
     @SuppressWarnings("unchecked")
@@ -350,9 +351,10 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     void freeHandlerBuffersAfterRemoval() {
-        if (!removed) {
+        if (!removed || freed) {
             return;
         }
+        freed = true;
         final ChannelHandler handler = handler();
 
         if (handler instanceof ChannelInboundHandler) {
