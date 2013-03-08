@@ -949,14 +949,16 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 } catch (Throwable t) {
                     notifyHandlerException(t);
                 } finally {
-                    if (handler instanceof ChannelInboundByteHandler && !pipeline.isInboundShutdown()) {
-                        try {
-                            ((ChannelInboundByteHandler) handler).discardInboundReadBytes(this);
-                        } catch (Throwable t) {
-                            notifyHandlerException(t);
+                    if (!freed) {
+                        if (handler instanceof ChannelInboundByteHandler && !pipeline.isInboundShutdown()) {
+                            try {
+                                ((ChannelInboundByteHandler) handler).discardInboundReadBytes(this);
+                            } catch (Throwable t) {
+                                notifyHandlerException(t);
+                            }
                         }
+                        freeHandlerBuffersAfterRemoval();
                     }
-                    freeHandlerBuffersAfterRemoval();
                 }
             }
         } else {
