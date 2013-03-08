@@ -38,9 +38,12 @@ public abstract class AbstractMessageBuf<T> extends AbstractQueue<T> implements 
         long refCntFieldOffset = -1;
         try {
             if (PlatformDependent.hasUnsafe()) {
-                refCntFieldOffset = PlatformDependent.objectFieldOffset(AbstractMessageBuf.class.getDeclaredField("refCnt"));
+                refCntFieldOffset = PlatformDependent.objectFieldOffset(
+                        AbstractMessageBuf.class.getDeclaredField("refCnt"));
             }
-        } catch (Throwable ignored) { }
+        } catch (Throwable t) {
+            // Ignored
+        }
 
         REFCNT_FIELD_OFFSET = refCntFieldOffset;
     }
