@@ -76,7 +76,7 @@ public class ByteEchoClientHandler extends ChannelInboundByteHandlerAdapter {
     @Override
     public ByteBuf newInboundBuffer(final ChannelHandlerContext ctx)
             throws Exception {
-        return ctx.alloc().directBuffer(
+        return ctx.alloc().ioBuffer(
                 ctx.channel().config().getOption(ChannelOption.SO_RCVBUF));
     }
 

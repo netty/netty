@@ -108,7 +108,7 @@ public class ByteLoggingHandler
 
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ctx.alloc().buffer();
+        return ctx.alloc().ioBuffer();
     }
 
     @Override
@@ -123,7 +123,7 @@ public class ByteLoggingHandler
 
     @Override
     public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ctx.alloc().buffer();
+        return ctx.alloc().ioBuffer();
     }
 
     @Override

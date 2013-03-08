@@ -33,13 +33,6 @@ public class EchoServerHandler extends ChannelInboundByteHandlerAdapter {
             EchoServerHandler.class.getName());
 
     @Override
-    public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        // Use direct buffer if possible.
-        // If you are going to use a heap buffer, you don't need to override this method.
-        return ctx.alloc().ioBuffer();
-    }
-
-    @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) {
         ByteBuf out = ctx.nextOutboundByteBuffer();
         out.writeBytes(in);

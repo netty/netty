@@ -49,13 +49,6 @@ public class EchoClientHandler extends ChannelInboundByteHandlerAdapter {
     }
 
     @Override
-    public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        // Use direct buffer if possible.
-        // If you are going to use a heap buffer, you don't need to override this method.
-        return ctx.alloc().ioBuffer();
-    }
-
-    @Override
     public void channelActive(ChannelHandlerContext ctx) {
         ctx.write(firstMessage);
     }

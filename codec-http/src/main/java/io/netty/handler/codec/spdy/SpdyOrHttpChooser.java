@@ -63,7 +63,7 @@ public abstract class SpdyOrHttpChooser extends ChannelDuplexHandler implements 
 
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ctx.alloc().buffer();
+        return ctx.alloc().ioBuffer();
     }
 
     @Override

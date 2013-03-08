@@ -35,7 +35,7 @@ import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 public class SctpEchoTest extends AbstractSctpTest {
 
@@ -160,7 +160,7 @@ public class SctpEchoTest extends AbstractSctpTest {
 
         @Override
         public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return Unpooled.buffer(0, maxInboundBufferSize);
+            return ctx.alloc().ioBuffer(0, maxInboundBufferSize);
         }
 
         @Override

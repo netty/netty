@@ -29,9 +29,9 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundByteHandler;
 import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
-import io.netty.channel.EventLoopGroup;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -413,7 +413,7 @@ public class LocalTransportThreadModelTest {
 
         @Override
         public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return ctx.alloc().buffer();
+            return ctx.alloc().ioBuffer();
         }
 
         @Override
