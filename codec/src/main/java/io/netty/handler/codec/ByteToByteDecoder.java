@@ -68,17 +68,17 @@ public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter
 
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-        callDecode(ctx, in, ctx.nextInboundByteBuffer());
+        callDecode(ctx, in);
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         ByteBuf in = ctx.inboundByteBuffer();
-        ByteBuf out = ctx.nextInboundByteBuffer();
         if (!in.isReadable()) {
-            callDecode(ctx, in, out);
+            callDecode(ctx, in);
         }
 
+        ByteBuf out = ctx.nextInboundByteBuffer();
         int oldOutSize = out.readableBytes();
         try {
             decodeLast(ctx, in, out);
@@ -100,7 +100,8 @@ public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter
     /**
      * Call the {@link #decode(ChannelHandlerContext, ByteBuf, ByteBuf)} method until it is done.
      */
-    private void callDecode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) {
+    private void callDecode(ChannelHandlerContext ctx, ByteBuf in) {
+        ByteBuf out = ctx.nextInboundByteBuffer();
         int oldOutSize = out.readableBytes();
         while (in.isReadable()) {
             int oldInSize = in.readableBytes();
@@ -115,6 +116,16 @@ public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter
             }
             if (oldInSize == in.readableBytes() || isSingleDecode()) {
                 break;
+            }
+
+            ByteBuf buf = ctx.nextInboundByteBuffer();
+            if (out != buf) {
+                // user changed handlers in the pipeline need to trigger fireInboundBufferUpdated maybe ?
+                if (out.readableBytes() > oldOutSize) {
+                    ctx.fireInboundBufferUpdated();
+                }
+                out = ctx.nextInboundByteBuffer();
+                oldOutSize = out.readableBytes();
             }
         }
 

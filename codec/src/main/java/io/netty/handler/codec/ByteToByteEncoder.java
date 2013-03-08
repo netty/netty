@@ -54,13 +54,12 @@ public abstract class ByteToByteEncoder extends ChannelOutboundByteHandlerAdapte
 
     @Override
     protected void flush(ChannelHandlerContext ctx, ByteBuf in, ChannelPromise promise) throws Exception {
-        ByteBuf out = ctx.nextOutboundByteBuffer();
         boolean encoded = false;
 
         while (in.isReadable()) {
             int oldInSize = in.readableBytes();
             try {
-                encode(ctx, in, out);
+                encode(ctx, in, ctx.nextOutboundByteBuffer());
                 encoded = true;
             } catch (Throwable t) {
                 Throwable cause;
