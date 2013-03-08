@@ -21,8 +21,7 @@ import io.netty.handler.codec.TooLongFrameException;
 
 
 /**
- * Decodes {@link ByteBuf}s into {@link HttpResponse}s and
- * {@link HttpContent}s.
+ * Decodes {@link ByteBuf}s into {@link HttpHeaders} and {@link HttpContent}s.
  *
  * <h3>Parameters that prevents excessive memory consumption</h3>
  * <table border="1">
@@ -59,7 +58,7 @@ import io.netty.handler.codec.TooLongFrameException;
  * request does not have any content even if there is <tt>Content-Length</tt>
  * header.  Because {@link HttpResponseDecoder} is not able to determine if the
  * response currently being decoded is associated with a <tt>HEAD</tt> request,
- * you must override {@link #isContentAlwaysEmpty(HttpMessage)} to return
+ * you must override {@link #isContentAlwaysEmpty(HttpHeaders)} to return
  * <tt>true</tt> for the response of the <tt>HEAD</tt> request.
  * </p><p>
  * If you are writing an HTTP client that issues a <tt>HEAD</tt> request,
@@ -102,15 +101,19 @@ public class HttpResponseDecoder extends HttpObjectDecoder {
     }
 
     @Override
-    protected HttpMessage createMessage(String[] initialLine) {
-        return new DefaultHttpResponse(
-                HttpVersion.valueOf(initialLine[0]),
-                new HttpResponseStatus(Integer.valueOf(initialLine[1]), initialLine[2]));
+    protected HttpHeaders createMessage(String[] initialLine) {
+        HttpHeaders h = new DefaultHttpHeaders(HttpMessageType.RESPONSE);
+        h.setVersion(HttpVersion.valueOf(initialLine[0]));
+        h.setStatus(new HttpResponseStatus(Integer.valueOf(initialLine[1]), initialLine[2]));
+        return h;
     }
 
     @Override
-    protected HttpMessage createInvalidMessage() {
-        return new DefaultHttpResponse(HttpVersion.HTTP_1_0, UNKNOWN_STATUS);
+    protected HttpHeaders createInvalidMessage() {
+        HttpHeaders h = new DefaultHttpHeaders(HttpMessageType.RESPONSE);
+        h.setVersion(HttpVersion.HTTP_1_0);
+        h.setStatus(UNKNOWN_STATUS);
+        return h;
     }
 
     @Override

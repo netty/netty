@@ -21,7 +21,7 @@ import io.netty.channel.ChannelPipeline;
 /**
  * An HTTP chunk which is used for HTTP chunked transfer-encoding.
  * {@link HttpObjectDecoder} generates {@link HttpContent} after
- * {@link HttpMessage} when the content is large or the encoding of the content
+ * {@link HttpHeaders} when the content is large or the encoding of the content
  * is 'chunked.  If you prefer not to receive {@link HttpContent} in your handler,
  * place {@link HttpObjectAggregator} after {@link HttpObjectDecoder} in the
  * {@link ChannelPipeline}.

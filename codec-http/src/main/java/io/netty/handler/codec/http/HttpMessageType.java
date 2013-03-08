@@ -13,19 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package io.netty.handler.codec.http;
 
-/**
- * Combines {@link FullHttpMessage} and {@link LastHttpContent} into one
- * message. So it represent a <i>complete</i> http message.
- */
-public interface FullHttpMessage extends HttpMessage, LastHttpContent {
-    @Override
-    FullHttpMessage copy();
-
-    @Override
-    FullHttpMessage retain(int increment);
-
-    @Override
-    FullHttpMessage retain();
+public enum HttpMessageType {
+    REQUEST,
+    RESPONSE,
+    TRAILER,
+    ;
 }

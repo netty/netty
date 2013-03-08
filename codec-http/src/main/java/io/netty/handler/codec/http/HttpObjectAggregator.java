@@ -27,10 +27,8 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
 
-import static io.netty.handler.codec.http.HttpHeaders.*;
-
 /**
- * A {@link ChannelHandler} that aggregates an {@link HttpMessage}
+ * A {@link ChannelHandler} that aggregates an {@link HttpHeaders}
  * and its following {@link HttpContent}s into a single {@link HttpMessage} with
  * no following {@link HttpContent}s.  It is useful when you don't want to take
  * care of HTTP messages whose transfer encoding is 'chunked'.  Insert this
@@ -51,7 +49,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             "HTTP/1.1 100 Continue\r\n\r\n", CharsetUtil.US_ASCII);
 
     private final int maxContentLength;
-    private FullHttpMessage currentMessage;
+    private HttpMessage currentMessage;
 
     private int maxCumulationBufferComponents = DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS;
     private ChannelHandlerContext ctx;
@@ -107,45 +105,36 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
 
     @Override
     protected Object decode(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
-        FullHttpMessage currentMessage = this.currentMessage;
+        HttpMessage currentMessage = this.currentMessage;
 
-        if (msg instanceof HttpMessage) {
+        if (msg instanceof HttpHeaders) {
             assert currentMessage == null;
 
-            HttpMessage m = (HttpMessage) msg;
+            HttpHeaders m = (HttpHeaders) msg;
 
             // Handle the 'Expect: 100-continue' header if necessary.
             // TODO: Respond with 413 Request Entity Too Large
             //   and discard the traffic or close the connection.
             //       No need to notify the upstream handlers - just log.
             //       If decoding a response, just throw an exception.
-            if (is100ContinueExpected(m)) {
+            if (m.is100ContinueExpected()) {
                 ctx.write(CONTINUE.duplicate());
             }
 
             if (!m.getDecoderResult().isSuccess()) {
-                removeTransferEncodingChunked(m);
+                m.setTransferEncodingChunked(false);
                 this.currentMessage = null;
                 BufUtil.retain(m);
                 return m;
             }
-            if (msg instanceof HttpRequest) {
-                HttpRequest header = (HttpRequest) msg;
-                this.currentMessage = currentMessage = new DefaultFullHttpRequest(header.getProtocolVersion(),
-                        header.getMethod(), header.getUri(), Unpooled.compositeBuffer(maxCumulationBufferComponents));
-            } else if (msg instanceof HttpResponse) {
-                HttpResponse header = (HttpResponse) msg;
-                this.currentMessage = currentMessage = new DefaultFullHttpResponse(
-                        header.getProtocolVersion(), header.getStatus(),
-                        Unpooled.compositeBuffer(maxCumulationBufferComponents));
-            } else {
-                throw new Error();
-            }
 
-            currentMessage.headers().set(m.headers());
+            this.currentMessage = currentMessage = new DefaultHttpMessage(
+                    m.getType(), ctx.alloc().compositeBuffer(maxCumulationBufferComponents));
+
+            currentMessage.headers().set(m);
 
             // A streamed message - initialize the cumulative buffer, and wait for incoming chunks.
-            removeTransferEncodingChunked(currentMessage);
+            currentMessage.headers().setTransferEncodingChunked(false);
             return null;
 
         } else if (msg instanceof HttpContent) {
@@ -161,8 +150,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
                 //       No need to notify the upstream handlers - just log.
                 //       If decoding a response, just throw an exception.
                 throw new TooLongFrameException(
-                        "HTTP content length exceeded " + maxContentLength +
-                        " bytes.");
+                        "HTTP content length exceeded " + maxContentLength + " bytes.");
             }
 
             // Append the content of the chunk
@@ -191,9 +179,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
                 }
 
                 // Set the 'Content-Length' header.
-                currentMessage.headers().set(
-                        HttpHeaders.Names.CONTENT_LENGTH,
-                        String.valueOf(content.readableBytes()));
+                currentMessage.headers().set(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(content.readableBytes()));
 
                 // All done
                 return currentMessage;

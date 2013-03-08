@@ -23,9 +23,8 @@ import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
@@ -126,7 +125,7 @@ public abstract class WebSocketServerHandshaker {
      * @param req
      *            HTTP Request
      */
-    public ChannelFuture handshake(Channel channel, FullHttpRequest req) {
+    public ChannelFuture handshake(Channel channel, HttpMessage req) {
         return handshake(channel, req, null, channel.newPromise());
     }
 
@@ -142,13 +141,13 @@ public abstract class WebSocketServerHandshaker {
      * @param promise
      *            the {@link ChannelPromise} to be notified when the opening handshake is done
      */
-    public final ChannelFuture handshake(Channel channel, FullHttpRequest req,
+    public final ChannelFuture handshake(Channel channel, HttpMessage req,
                                             HttpHeaders responseHeaders, final ChannelPromise promise) {
 
         if (logger.isDebugEnabled()) {
             logger.debug(String.format("Channel %s WS Version %s server handshake", version(), channel.id()));
         }
-        FullHttpResponse response = newHandshakeResponse(req, responseHeaders);
+        HttpMessage response = newHandshakeResponse(req, responseHeaders);
         channel.write(response).addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
@@ -183,9 +182,9 @@ public abstract class WebSocketServerHandshaker {
     }
 
     /**
-     * Returns a new {@link FullHttpResponse) which will be used for as response to the handshake request.
+     * Returns a new {@link HttpMessage) which will be used for as response to the handshake request.
      */
-    protected abstract FullHttpResponse newHandshakeResponse(FullHttpRequest req,
+    protected abstract HttpMessage newHandshakeResponse(HttpMessage req,
                                          HttpHeaders responseHeaders);
     /**
      * Performs the closing handshake

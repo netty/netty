@@ -23,10 +23,9 @@ import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 
@@ -148,7 +147,7 @@ public abstract class WebSocketClientHandshaker {
      *            the {@link ChannelPromise} to be notified when the opening handshake is sent
      */
     public final ChannelFuture handshake(Channel channel, final ChannelPromise promise) {
-        FullHttpRequest request =  newHandshakeRequest();
+        HttpMessage request =  newHandshakeRequest();
         HttpResponseDecoder decoder = channel.pipeline().get(HttpResponseDecoder.class);
         if (decoder == null) {
             HttpClientCodec codec = channel.pipeline().get(HttpClientCodec.class);
@@ -187,9 +186,9 @@ public abstract class WebSocketClientHandshaker {
     }
 
     /**
-     * Returns a new {@link FullHttpRequest) which will be used for the handshake.
+     * Returns a new {@link HttpMessage) which will be used for the handshake.
      */
-    protected abstract FullHttpRequest newHandshakeRequest();
+    protected abstract HttpMessage newHandshakeRequest();
 
     /**
      * Validates and finishes the opening handshake initiated by {@link #handshake}}.
@@ -199,7 +198,7 @@ public abstract class WebSocketClientHandshaker {
      * @param response
      *            HTTP response containing the closing handshake details
      */
-    public final void finishHandshake(Channel channel, FullHttpResponse response) {
+    public final void finishHandshake(Channel channel, HttpMessage response) {
         verify(response);
         setActualSubprotocol(response.headers().get(HttpHeaders.Names.SEC_WEBSOCKET_PROTOCOL));
         setHandshakeComplete();
@@ -221,9 +220,9 @@ public abstract class WebSocketClientHandshaker {
     }
 
     /**
-     * Verfiy the {@link FullHttpResponse} and throws a {@link WebSocketHandshakeException} if something is wrong.
+     * Verfiy the {@link HttpMessage} and throws a {@link WebSocketHandshakeException} if something is wrong.
      */
-    protected abstract void verify(FullHttpResponse response);
+    protected abstract void verify(HttpMessage response);
 
     /**
      * Returns the decoder to use after handshake is complete.

@@ -122,8 +122,11 @@ public final class HttpClientCodec
         @Override
         protected void encode(
                 ChannelHandlerContext ctx, HttpObject msg, ByteBuf out) throws Exception {
-            if (msg instanceof HttpRequest && !done) {
-                queue.offer(((HttpRequest) msg).getMethod());
+            if (msg instanceof HttpHeaders && !done) {
+                HttpHeaders h = (HttpHeaders) msg;
+                if (h.getType() == HttpMessageType.REQUEST) {
+                    queue.offer(h.getMethod());
+                }
             }
 
             super.encode(ctx, msg, out);
@@ -175,8 +178,8 @@ public final class HttpClientCodec
         }
 
         @Override
-        protected boolean isContentAlwaysEmpty(HttpMessage msg) {
-            final int statusCode = ((HttpResponse) msg).getStatus().code();
+        protected boolean isContentAlwaysEmpty(HttpHeaders headers) {
+            final int statusCode = headers.getStatus().code();
             if (statusCode == 100) {
                 // 100-continue response should be excluded from paired comparison.
                 return true;
@@ -223,7 +226,7 @@ public final class HttpClientCodec
                 break;
             }
 
-            return super.isContentAlwaysEmpty(msg);
+            return super.isContentAlwaysEmpty(headers);
         }
 
         @Override

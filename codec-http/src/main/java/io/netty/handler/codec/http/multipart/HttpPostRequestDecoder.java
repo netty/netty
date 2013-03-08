@@ -20,7 +20,6 @@ import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadNoBackArrayException;
 import io.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadOptimize;
@@ -50,7 +49,7 @@ public class HttpPostRequestDecoder {
     /**
      * Request to decode
      */
-    private final HttpRequest request;
+    private final HttpHeaders request;
 
     /**
      * Default charset to use
@@ -136,7 +135,7 @@ public class HttpPostRequestDecoder {
      *             if the default charset was wrong when decoding or other
      *             errors
      */
-    public HttpPostRequestDecoder(HttpRequest request) throws ErrorDataDecoderException,
+    public HttpPostRequestDecoder(HttpHeaders request) throws ErrorDataDecoderException,
             IncompatibleDataDecoderException {
         this(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE), request, HttpConstants.DEFAULT_CHARSET);
     }
@@ -155,7 +154,7 @@ public class HttpPostRequestDecoder {
      *             if the default charset was wrong when decoding or other
      *             errors
      */
-    public HttpPostRequestDecoder(HttpDataFactory factory, HttpRequest request) throws ErrorDataDecoderException,
+    public HttpPostRequestDecoder(HttpDataFactory factory, HttpHeaders request) throws ErrorDataDecoderException,
             IncompatibleDataDecoderException {
         this(factory, request, HttpConstants.DEFAULT_CHARSET);
     }
@@ -176,7 +175,7 @@ public class HttpPostRequestDecoder {
      *             if the default charset was wrong when decoding or other
      *             errors
      */
-    public HttpPostRequestDecoder(HttpDataFactory factory, HttpRequest request, Charset charset)
+    public HttpPostRequestDecoder(HttpDataFactory factory, HttpHeaders request, Charset charset)
             throws ErrorDataDecoderException, IncompatibleDataDecoderException {
         if (factory == null) {
             throw new NullPointerException("factory");
@@ -196,7 +195,7 @@ public class HttpPostRequestDecoder {
         this.factory = factory;
         // Fill default values
 
-        String contentType = this.request.headers().get(HttpHeaders.Names.CONTENT_TYPE);
+        String contentType = this.request.get(HttpHeaders.Names.CONTENT_TYPE);
         if (contentType != null) {
             checkMultipart(contentType);
         } else {

@@ -41,7 +41,7 @@ public interface LastHttpContent extends HttpContent {
 
         @Override
         public HttpHeaders trailingHeaders() {
-            return HttpHeaders.EMPTY_HEADERS;
+            return EmptyTrailingHeaders.INSTANCE;
         }
 
         @Override
@@ -51,7 +51,7 @@ public interface LastHttpContent extends HttpContent {
 
         @Override
         public void setDecoderResult(DecoderResult result) {
-            throw new UnsupportedOperationException("read only");
+            throw new UnsupportedOperationException("read-only");
         }
 
         @Override

@@ -21,19 +21,27 @@ import io.netty.util.CharsetUtil;
 import static io.netty.handler.codec.http.HttpConstants.*;
 
 /**
- * Encodes an {@link HttpResponse} or an {@link HttpContent} into
+ * Encodes an {@link HttpHeaders} or an {@link HttpContent} into
  * a {@link ByteBuf}.
  */
-public class HttpResponseEncoder extends HttpObjectEncoder<HttpResponse> {
+public class HttpResponseEncoder extends HttpObjectEncoder {
 
     @Override
     public boolean acceptOutboundMessage(Object msg) throws Exception {
-        return super.acceptOutboundMessage(msg) && !(msg instanceof HttpRequest);
+        if (!super.acceptOutboundMessage(msg)) {
+            return false;
+        }
+
+        if (!(msg instanceof HttpHeaders)) {
+            return true;
+        }
+
+        return ((HttpHeaders) msg).isResponse();
     }
 
     @Override
-    protected void encodeInitialLine(ByteBuf buf, HttpResponse response) throws Exception {
-        buf.writeBytes(response.getProtocolVersion().toString().getBytes(CharsetUtil.US_ASCII));
+    protected void encodeInitialLine(ByteBuf buf, HttpHeaders response) throws Exception {
+        buf.writeBytes(response.getVersion().toString().getBytes(CharsetUtil.US_ASCII));
         buf.writeByte(SP);
         buf.writeBytes(String.valueOf(response.getStatus().code()).getBytes(CharsetUtil.US_ASCII));
         buf.writeByte(SP);
