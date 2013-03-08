@@ -44,7 +44,8 @@ public class ChannelOption<T> extends UniqueName {
             new ChannelOption<Boolean>("ALLOW_HALF_CLOSURE");
     public static final ChannelOption<Boolean> AUTO_READ =
             new ChannelOption<Boolean>("AUTO_READ");
-
+    public static final ChannelOption<ChannelConfig.ChannelHandlerByteBufType> DEFAULT_HANDLER_BYTEBUF_TYPE =
+            new ChannelOption<ChannelConfig.ChannelHandlerByteBufType>("DEFAULT_HANDLER_BYTEBUF_TYPE");
     public static final ChannelOption<Boolean> SO_BROADCAST =
             new ChannelOption<Boolean>("SO_BROADCAST");
     public static final ChannelOption<Boolean> SO_KEEPALIVE =

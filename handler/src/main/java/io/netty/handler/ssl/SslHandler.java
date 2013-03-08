@@ -23,6 +23,7 @@ import io.netty.channel.ChannelFlushPromiseNotifier;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelOutboundByteHandler;
 import io.netty.channel.ChannelPipeline;
@@ -380,7 +381,7 @@ public class SslHandler
 
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ctx.alloc().ioBuffer();
+        return ChannelHandlerUtil.allocate(ctx);
     }
 
     @Override
@@ -395,7 +396,7 @@ public class SslHandler
 
     @Override
     public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ctx.alloc().ioBuffer();
+        return ChannelHandlerUtil.allocate(ctx);
     }
 
     @Override

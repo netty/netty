@@ -35,6 +35,7 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     protected final Channel channel;
 
+    private volatile ChannelHandlerByteBufType handlerByteBufType = ChannelHandlerByteBufType.PREFER_DIRECT;
     private volatile ByteBufAllocator allocator = DEFAULT_ALLOCATOR;
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
     private volatile int writeSpinCount = 16;
@@ -49,7 +50,8 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(null, CONNECT_TIMEOUT_MILLIS, WRITE_SPIN_COUNT, ALLOCATOR, AUTO_READ);
+        return getOptions(null, CONNECT_TIMEOUT_MILLIS, WRITE_SPIN_COUNT, ALLOCATOR, AUTO_READ,
+                DEFAULT_HANDLER_BYTEBUF_TYPE);
     }
 
     protected Map<ChannelOption<?>, Object> getOptions(
@@ -99,6 +101,9 @@ public class DefaultChannelConfig implements ChannelConfig {
         if (option == AUTO_READ) {
             return (T) Boolean.valueOf(isAutoRead());
         }
+        if (option == DEFAULT_ALLOCATOR) {
+            return (T) getDefaultHandlerByteBufType();
+        }
 
         return null;
     }
@@ -115,6 +120,8 @@ public class DefaultChannelConfig implements ChannelConfig {
             setAllocator((ByteBufAllocator) value);
         } else if (option == AUTO_READ) {
             setAutoRead((Boolean) value);
+        } else if (option == DEFAULT_HANDLER_BYTEBUF_TYPE) {
+            setDefaultHandlerByteBufType((ChannelHandlerByteBufType) value);
         } else {
             return false;
         }
@@ -185,6 +192,17 @@ public class DefaultChannelConfig implements ChannelConfig {
         if (autoRead && !oldAutoRead) {
             channel.read();
         }
+        return this;
+    }
+
+    @Override
+    public ChannelHandlerByteBufType getDefaultHandlerByteBufType() {
+        return handlerByteBufType;
+    }
+
+    @Override
+    public ChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType handlerByteBufType) {
+        this.handlerByteBufType = handlerByteBufType;
         return this;
     }
 }

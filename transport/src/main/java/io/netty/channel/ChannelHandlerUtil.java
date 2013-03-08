@@ -17,6 +17,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.BufUtil;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.util.Signal;
 import io.netty.util.internal.logging.InternalLogger;
@@ -151,6 +152,56 @@ public final class ChannelHandlerUtil {
         }
     }
 
+    /**
+     * Allocate a {@link ByteBuf} taking the {@link ChannelConfig#getDefaultHandlerByteBufType()}
+     * setting into account.
+     */
+    public static ByteBuf allocate(ChannelHandlerContext ctx) {
+        switch(ctx.channel().config().getDefaultHandlerByteBufType()) {
+            case DIRECT:
+                return ctx.alloc().directBuffer();
+            case PREFER_DIRECT:
+                return ctx.alloc().ioBuffer();
+            case HEAP:
+                return ctx.alloc().heapBuffer();
+            default:
+                throw new IllegalStateException();
+        }
+    }
+
+    /**
+     * Allocate a {@link ByteBuf} taking the {@link ChannelConfig#getDefaultHandlerByteBufType()}
+     * setting into account.
+     */
+    public static ByteBuf allocate(ChannelHandlerContext ctx, int initialCapacity) {
+        switch(ctx.channel().config().getDefaultHandlerByteBufType()) {
+            case DIRECT:
+                return ctx.alloc().directBuffer(initialCapacity);
+            case PREFER_DIRECT:
+                return ctx.alloc().ioBuffer(initialCapacity);
+            case HEAP:
+                return ctx.alloc().heapBuffer(initialCapacity);
+            default:
+                throw new IllegalStateException();
+        }
+    }
+
+    /**
+     * Allocate a {@link ByteBuf} taking the {@link ChannelConfig#getDefaultHandlerByteBufType()}
+     * setting into account.
+     */
+    public static ByteBuf allocate(ChannelHandlerContext ctx, int initialCapacity, int maxCapacity) {
+        switch(ctx.channel().config().getDefaultHandlerByteBufType()) {
+            case DIRECT:
+                return ctx.alloc().directBuffer(initialCapacity, maxCapacity);
+            case PREFER_DIRECT:
+                return ctx.alloc().ioBuffer(initialCapacity, maxCapacity);
+            case HEAP:
+                return ctx.alloc().heapBuffer(initialCapacity, maxCapacity);
+            default:
+                throw new IllegalStateException();
+        }
+    }
     private ChannelHandlerUtil() { }
 
     public interface SingleInboundMessageHandler<T> {
@@ -162,10 +213,10 @@ public final class ChannelHandlerUtil {
         boolean acceptInboundMessage(Object msg) throws Exception;
 
         /**
-         * Will get notified once {@link #inboundBufferUpdated(ChannelHandlerContext)} was called.
+         * Will get notified once {@link ChannelStateHandler#inboundBufferUpdated(ChannelHandlerContext)} was called.
          *
          * If this method returns {@code false} no further processing of the {@link MessageBuf}
-         * will be done until the next call of {@link #inboundBufferUpdated(ChannelHandlerContext)}.
+         * will be done until the next call of {@link ChannelStateHandler#inboundBufferUpdated(ChannelHandlerContext)}.
          *
          * This will return {@code true} by default, and may get overriden by sub-classes for
          * special handling.
@@ -201,7 +252,8 @@ public final class ChannelHandlerUtil {
         boolean acceptOutboundMessage(Object msg) throws Exception;
 
         /**
-         * Will get notified once {@link #flush(ChannelHandlerContext, ChannelPromise)} was called.
+         * Will get notified once {@link ChannelOperationHandler#flush(ChannelHandlerContext, ChannelPromise)}
+         * was called.
          *
          * @param ctx           the {@link ChannelHandlerContext} which this {@link ChannelHandler} belongs to
          */
@@ -216,7 +268,7 @@ public final class ChannelHandlerUtil {
         void flush(ChannelHandlerContext ctx, T msg) throws Exception;
 
         /**
-         * Is called when {@link #flush(ChannelHandlerContext, ChannelPromise)} returns.
+         * Is called when {@link ChannelOperationHandler#flush(ChannelHandlerContext, ChannelPromise)} returns.
          *
          * Super-classes may-override this for special handling.
          *

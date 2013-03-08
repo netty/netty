@@ -24,7 +24,7 @@ public abstract class ChannelOutboundByteHandlerAdapter
         extends ChannelOperationHandlerAdapter implements ChannelOutboundByteHandler {
     @Override
     public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ctx.alloc().ioBuffer();
+        return ChannelHandlerUtil.allocate(ctx);
     }
 
     @Override
