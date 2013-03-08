@@ -16,6 +16,7 @@
 
 package io.netty.channel;
 
+import io.netty.buffer.BufType;
 import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
@@ -84,8 +85,6 @@ public final class ChannelHandlerUtil {
             SingleOutboundMessageHandler<T> handler) throws Exception {
 
         MessageBuf<Object> in = ctx.outboundMessageBuffer();
-        MessageBuf<Object> out = null;
-
         final int inSize = in.size();
         if (inSize == 0) {
             ctx.flush(promise);
@@ -102,10 +101,7 @@ public final class ChannelHandlerUtil {
                 }
 
                 if (!handler.acceptOutboundMessage(msg)) {
-                    if (out == null) {
-                        out = ctx.nextOutboundMessageBuffer();
-                    }
-                    out.add(msg);
+                    addToNextOutboundBuffer(ctx, msg);
                     processed ++;
                     continue;
                 }
@@ -205,6 +201,35 @@ public final class ChannelHandlerUtil {
                 throw new IllegalStateException();
         }
     }
+
+    /**
+     * Add the msg to the next outbound buffer in the {@link ChannelPipeline}. This takes special care of
+     * msgs that are of type {@link ByteBuf}.
+     */
+    public static boolean addToNextOutboundBuffer(ChannelHandlerContext ctx, Object msg) {
+        if (msg instanceof ByteBuf) {
+            if (ctx.nextOutboundBufferType() == BufType.BYTE) {
+                ctx.nextOutboundByteBuffer().writeBytes((ByteBuf) msg);
+                return true;
+            }
+        }
+        return ctx.nextOutboundMessageBuffer().add(msg);
+    }
+
+    /**
+     * Add the msg to the next inbound buffer in the {@link ChannelPipeline}. This takes special care of
+     * msgs that are of type {@link ByteBuf}.
+     */
+    public static boolean addToNextInboundBuffer(ChannelHandlerContext ctx, Object msg) {
+        if (msg instanceof ByteBuf) {
+            if (ctx.nextInboundBufferType() == BufType.BYTE) {
+                ctx.nextInboundByteBuffer().writeBytes((ByteBuf) msg);
+                return true;
+            }
+        }
+        return ctx.nextInboundMessageBuffer().add(msg);
+    }
+
     private ChannelHandlerUtil() { }
 
     public interface SingleInboundMessageHandler<T> {

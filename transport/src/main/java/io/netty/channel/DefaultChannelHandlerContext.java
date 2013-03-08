@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.Buf;
+import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.MessageBuf;
@@ -1620,6 +1621,34 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             ctx = ctx.next;
         } while (!(ctx.handler() instanceof ChannelStateHandler));
         return ctx;
+    }
+
+    @Override
+    public BufType nextInboundBufferType() {
+        DefaultChannelHandlerContext ctx = this;
+        do {
+            ctx = ctx.next;
+        } while (!(ctx.handler() instanceof ChannelInboundHandler));
+
+        if (ctx.handler() instanceof ChannelInboundByteHandler) {
+            return BufType.BYTE;
+        }  else {
+            return BufType.MESSAGE;
+        }
+    }
+
+    @Override
+    public BufType nextOutboundBufferType() {
+        DefaultChannelHandlerContext ctx = this;
+        do {
+            ctx = ctx.prev;
+        } while (!(ctx.handler() instanceof ChannelOutboundHandler));
+
+        if (ctx.handler() instanceof ChannelOutboundByteHandler) {
+            return BufType.BYTE;
+        }  else {
+            return BufType.MESSAGE;
+        }
     }
 
     private DefaultChannelHandlerContext findContextOutbound() {
