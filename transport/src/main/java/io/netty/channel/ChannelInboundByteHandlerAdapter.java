@@ -33,7 +33,7 @@ public abstract class ChannelInboundByteHandlerAdapter
      */
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ctx.alloc().buffer();
+        return ctx.alloc().ioBuffer();
     }
 
     @Override

@@ -23,9 +23,9 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
-import io.netty.channel.socket.SocketChannel;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -186,7 +186,7 @@ public class SocketEchoTest extends AbstractSocketTest {
 
         @Override
         public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return Unpooled.buffer(0, maxInboundBufferSize);
+            return ctx.alloc().ioBuffer(0, maxInboundBufferSize);
         }
 
         @Override
