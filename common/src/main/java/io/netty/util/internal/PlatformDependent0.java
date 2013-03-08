@@ -149,6 +149,10 @@ final class PlatformDependent0 {
         return UNSAFE.getObject(object, fieldOffset);
     }
 
+    static int getInt(Object object, long fieldOffset) {
+        return UNSAFE.getInt(object, fieldOffset);
+    }
+
     private static long getLong(Object object, long fieldOffset) {
         return UNSAFE.getLong(object, fieldOffset);
     }

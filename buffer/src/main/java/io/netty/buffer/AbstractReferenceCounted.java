@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.internal.PlatformDependent;
+
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 public abstract class AbstractReferenceCounted implements ReferenceCounted {
@@ -22,12 +24,30 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
     private static final AtomicIntegerFieldUpdater<AbstractReferenceCounted> refCntUpdater =
             AtomicIntegerFieldUpdater.newUpdater(AbstractReferenceCounted.class, "refCnt");
 
+    private static final long REFCNT_FIELD_OFFSET;
+
+    static {
+        long refCntFieldOffset = -1;
+        try {
+            if (PlatformDependent.hasUnsafe()) {
+                refCntFieldOffset = PlatformDependent.objectFieldOffset(AbstractReferenceCounted.class.getDeclaredField("refCnt"));
+            }
+        } catch (Throwable ignored) { }
+
+        REFCNT_FIELD_OFFSET = refCntFieldOffset;
+    }
+
     @SuppressWarnings("FieldMayBeFinal")
     private volatile int refCnt = 1;
 
     @Override
-    public int refCnt() {
-        return refCnt;
+    public final int refCnt() {
+        if (REFCNT_FIELD_OFFSET >= 0) {
+            // Try to do non-volatile read for performance.
+            return PlatformDependent.getInt(this, REFCNT_FIELD_OFFSET);
+        } else {
+            return refCnt;
+        }
     }
 
     @Override

@@ -16,8 +16,11 @@
 
 package io.netty.buffer;
 
+import io.netty.util.internal.PlatformDependent;
+
 import java.util.AbstractQueue;
 import java.util.Collection;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
  * Abstract base class for {@link MessageBuf} implementations.
@@ -25,8 +28,27 @@ import java.util.Collection;
  */
 public abstract class AbstractMessageBuf<T> extends AbstractQueue<T> implements MessageBuf<T> {
 
+    @SuppressWarnings("rawtypes")
+    private static final AtomicIntegerFieldUpdater<AbstractMessageBuf> refCntUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(AbstractMessageBuf.class, "refCnt");
+
+    private static final long REFCNT_FIELD_OFFSET;
+
+    static {
+        long refCntFieldOffset = -1;
+        try {
+            if (PlatformDependent.hasUnsafe()) {
+                refCntFieldOffset = PlatformDependent.objectFieldOffset(AbstractMessageBuf.class.getDeclaredField("refCnt"));
+            }
+        } catch (Throwable ignored) { }
+
+        REFCNT_FIELD_OFFSET = refCntFieldOffset;
+    }
+
     private final int maxCapacity;
-    private int refCnt = 1;
+
+    @SuppressWarnings("FieldMayBeFinal")
+    private volatile int refCnt = 1;
 
     protected AbstractMessageBuf(int maxCapacity) {
         if (maxCapacity < 0) {
@@ -42,57 +64,68 @@ public abstract class AbstractMessageBuf<T> extends AbstractQueue<T> implements 
 
     @Override
     public final int refCnt() {
-        return refCnt;
+        if (REFCNT_FIELD_OFFSET >= 0) {
+            // Try to do non-volatile read for performance.
+            return PlatformDependent.getInt(this, REFCNT_FIELD_OFFSET);
+        } else {
+            return refCnt;
+        }
     }
 
     @Override
-    public final MessageBuf<T> retain() {
-        int refCnt = this.refCnt;
-        if (refCnt <= 0) {
-            throw new IllegalBufferAccessException();
+    public MessageBuf<T> retain() {
+        for (;;) {
+            int refCnt = this.refCnt;
+            if (refCnt == 0) {
+                throw new IllegalBufferAccessException();
+            }
+            if (refCnt == Integer.MAX_VALUE) {
+                throw new IllegalBufferAccessException("refCnt overflow");
+            }
+            if (refCntUpdater.compareAndSet(this, refCnt, refCnt + 1)) {
+                break;
+            }
         }
-
-        if (refCnt == Integer.MAX_VALUE) {
-            throw new IllegalBufferAccessException("refCnt overflow");
-        }
-
-        this.refCnt = refCnt + 1;
         return this;
     }
 
     @Override
-    public final MessageBuf<T> retain(int increment) {
+    public MessageBuf<T> retain(int increment) {
         if (increment <= 0) {
             throw new IllegalArgumentException("increment: " + increment + " (expected: > 0)");
         }
 
-        int refCnt = this.refCnt;
-        if (refCnt <= 0) {
-            throw new IllegalBufferAccessException();
+        for (;;) {
+            int refCnt = this.refCnt;
+            if (refCnt == 0) {
+                throw new IllegalBufferAccessException();
+            }
+            if (refCnt > Integer.MAX_VALUE - increment) {
+                throw new IllegalBufferAccessException("refCnt overflow");
+            }
+            if (refCntUpdater.compareAndSet(this, refCnt, refCnt + increment)) {
+                break;
+            }
         }
-
-        if (refCnt > Integer.MAX_VALUE - increment) {
-            throw new IllegalBufferAccessException("refCnt overflow");
-        }
-
-        this.refCnt = refCnt + increment;
         return this;
     }
 
     @Override
     public final boolean release() {
-        int refCnt = this.refCnt;
-        if (refCnt <= 0) {
-            throw new IllegalBufferAccessException();
-        }
+        for (;;) {
+            int refCnt = this.refCnt;
+            if (refCnt == 0) {
+                throw new IllegalBufferAccessException();
+            }
 
-        this.refCnt = refCnt --;
-        if (refCnt == 0) {
-            deallocate();
-            return true;
+            if (refCntUpdater.compareAndSet(this, refCnt, refCnt - 1)) {
+                if (refCnt == 1) {
+                    deallocate();
+                    return true;
+                }
+                return false;
+            }
         }
-
-        return false;
     }
 
     @Override
@@ -101,18 +134,20 @@ public abstract class AbstractMessageBuf<T> extends AbstractQueue<T> implements 
             throw new IllegalArgumentException("decrement: " + decrement + " (expected: > 0)");
         }
 
-        int refCnt = this.refCnt;
-        if (refCnt < decrement) {
-            throw new IllegalBufferAccessException();
-        }
+        for (;;) {
+            int refCnt = this.refCnt;
+            if (refCnt < decrement) {
+                throw new IllegalBufferAccessException();
+            }
 
-        this.refCnt = refCnt -= decrement;
-        if (refCnt == 0) {
-            deallocate();
-            return true;
+            if (refCntUpdater.compareAndSet(this, refCnt, refCnt - decrement)) {
+                if (refCnt == decrement) {
+                    deallocate();
+                    return true;
+                }
+                return false;
+            }
         }
-
-        return false;
     }
 
     protected abstract void deallocate();

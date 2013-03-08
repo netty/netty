@@ -217,6 +217,10 @@ public final class PlatformDependent {
         return PlatformDependent0.getObject(object, fieldOffset);
     }
 
+    public static int getInt(Object object, long fieldOffset) {
+        return PlatformDependent0.getInt(object, fieldOffset);
+    }
+
     public static long objectFieldOffset(Field field) {
         return PlatformDependent0.objectFieldOffset(field);
     }
