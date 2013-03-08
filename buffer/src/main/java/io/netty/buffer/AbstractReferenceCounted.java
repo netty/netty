@@ -30,9 +30,12 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
         long refCntFieldOffset = -1;
         try {
             if (PlatformDependent.hasUnsafe()) {
-                refCntFieldOffset = PlatformDependent.objectFieldOffset(AbstractReferenceCounted.class.getDeclaredField("refCnt"));
+                refCntFieldOffset = PlatformDependent.objectFieldOffset(
+                        AbstractReferenceCounted.class.getDeclaredField("refCnt"));
             }
-        } catch (Throwable ignored) { }
+        } catch (Throwable t) {
+            // Ignored
+        }
 
         REFCNT_FIELD_OFFSET = refCntFieldOffset;
     }
