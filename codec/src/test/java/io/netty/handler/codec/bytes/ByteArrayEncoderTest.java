@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.bytes;
 
-import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedMessageChannel;
 import org.junit.Before;
@@ -35,7 +34,7 @@ public class ByteArrayEncoderTest {
 
     @Before
     public void setUp() {
-        ch = new EmbeddedMessageChannel(new ByteArrayEncoder(BufType.MESSAGE));
+        ch = new EmbeddedMessageChannel(new ByteArrayEncoder());
     }
 
     @Test

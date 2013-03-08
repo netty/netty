@@ -24,6 +24,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -308,7 +309,7 @@ public class ChunkedWriteHandler
                     });
                 }
             } else {
-                ctx.nextOutboundMessageBuffer().add(currentEvent);
+                ChannelHandlerUtil.addToNextOutboundBuffer(ctx, currentEvent);
                 this.currentEvent = null;
             }
 

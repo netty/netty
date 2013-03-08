@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 
+import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.util.Attribute;
@@ -225,24 +226,34 @@ public interface ChannelHandlerContext
     <T> MessageBuf<T> outboundMessageBuffer();
 
     /**
-     * Return the {@link ByteBuf} of the next {@link ChannelHandlerContext}.
+     * Return the {@link ByteBuf} of the next {@link ChannelInboundByteHandler} in the pipeline.
      */
     ByteBuf nextInboundByteBuffer();
 
     /**
-     * Return the {@link MessageBuf} of the next {@link ChannelHandlerContext}.
+     * Return the {@link MessageBuf} of the next {@link ChannelInboundMessageHandler} in the pipeline.
      */
     MessageBuf<Object> nextInboundMessageBuffer();
 
     /**
-     * Return the {@link ByteBuf} of the next {@link ChannelHandlerContext}.
+     * Return the {@link ByteBuf} of the next {@link ChannelOutboundByteHandler} in the pipeline.
      */
     ByteBuf nextOutboundByteBuffer();
 
     /**
-     * Return the {@link MessageBuf} of the next {@link ChannelHandlerContext}.
+     * Return the {@link MessageBuf} of the next {@link ChannelOutboundMessageHandler} in the pipeline.
      */
     MessageBuf<Object> nextOutboundMessageBuffer();
+
+    /**
+     * Return the {@link BufType} of the next {@link ChannelInboundHandler} in the pipeline.
+     */
+    BufType nextInboundBufferType();
+
+    /**
+     * Return the {@link BufType} of the next {@link ChannelOutboundHandler} in the pipeline.
+     */
+    BufType nextOutboundBufferType();
 
     @Override
     ChannelHandlerContext fireChannelRegistered();
