@@ -130,4 +130,10 @@ public class DefaultOioServerSocketChannelConfig extends DefaultServerSocketChan
         super.setAutoRead(autoRead);
         return this;
     }
+
+    @Override
+    public OioServerSocketChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type) {
+        super.setDefaultHandlerByteBufType(type);
+        return this;
+    }
 }

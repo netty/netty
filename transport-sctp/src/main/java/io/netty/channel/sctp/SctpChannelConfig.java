@@ -107,4 +107,7 @@ public interface SctpChannelConfig extends ChannelConfig {
 
     @Override
     SctpChannelConfig setAutoRead(boolean autoRead);
+
+    @Override
+    SctpChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type);
 }

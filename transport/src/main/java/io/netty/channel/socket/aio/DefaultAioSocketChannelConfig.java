@@ -356,4 +356,9 @@ final class DefaultAioSocketChannelConfig extends DefaultChannelConfig
     public AioSocketChannelConfig setAutoRead(boolean autoRead) {
         return (AioSocketChannelConfig) super.setAutoRead(autoRead);
     }
+
+    @Override
+    public AioSocketChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type) {
+        return (AioSocketChannelConfig) super.setDefaultHandlerByteBufType(type);
+    }
 }

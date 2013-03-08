@@ -162,4 +162,6 @@ public interface UdtChannelConfig extends ChannelConfig {
      */
     UdtChannelConfig setSystemSendBufferSize(int size);
 
+    @Override
+    UdtChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type);
 }

@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelPipeline;
@@ -63,7 +64,7 @@ public abstract class SpdyOrHttpChooser extends ChannelDuplexHandler implements 
 
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ctx.alloc().ioBuffer();
+        return ChannelHandlerUtil.allocate(ctx);
     }
 
     @Override

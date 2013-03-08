@@ -18,6 +18,7 @@ package io.netty.example.udt.echo.bytes;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.udt.nio.NioUdtProvider;
@@ -57,7 +58,7 @@ public class ByteEchoServerHandler extends ChannelInboundByteHandlerAdapter {
     @Override
     public ByteBuf newInboundBuffer(final ChannelHandlerContext ctx)
             throws Exception {
-        return ctx.alloc().ioBuffer(
+        return ChannelHandlerUtil.allocate(ctx,
                 ctx.channel().config().getOption(ChannelOption.SO_RCVBUF));
     }
 

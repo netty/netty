@@ -157,4 +157,10 @@ public class DefaultUdtServerChannelConfig extends DefaultUdtChannelConfig
         super.setAutoRead(autoRead);
         return this;
     }
+
+    @Override
+    public UdtServerChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type) {
+        super.setDefaultHandlerByteBufType(type);
+        return this;
+    }
 }

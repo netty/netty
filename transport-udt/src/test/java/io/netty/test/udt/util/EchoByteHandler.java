@@ -20,6 +20,7 @@ import com.yammer.metrics.core.Meter;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.udt.nio.NioUdtProvider;
@@ -97,7 +98,7 @@ public class EchoByteHandler extends ChannelInboundByteHandlerAdapter {
 
     @Override
     public ByteBuf newInboundBuffer(final ChannelHandlerContext ctx) throws Exception {
-        return ctx.alloc().ioBuffer(
+        return ChannelHandlerUtil.allocate(ctx,
                 ctx.channel().config().getOption(ChannelOption.SO_RCVBUF));
     }
 }

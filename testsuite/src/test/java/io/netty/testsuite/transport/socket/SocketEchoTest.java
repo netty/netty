@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
@@ -186,7 +187,7 @@ public class SocketEchoTest extends AbstractSocketTest {
 
         @Override
         public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return ctx.alloc().ioBuffer(0, maxInboundBufferSize);
+            return ChannelHandlerUtil.allocate(ctx, 0, maxInboundBufferSize);
         }
 
         @Override

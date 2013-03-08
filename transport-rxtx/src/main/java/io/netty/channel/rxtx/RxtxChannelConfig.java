@@ -269,4 +269,7 @@ public interface RxtxChannelConfig extends ChannelConfig {
 
     @Override
     RxtxChannelConfig setAutoRead(boolean autoRead);
+
+    @Override
+    RxtxChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type);
 }
