@@ -357,7 +357,7 @@ public class DefaultPromise implements Promise {
             notifyListeners();
             return this;
         }
-        throw new IllegalStateException("Promise was completed before");
+        throw new IllegalStateException("complete already");
     }
 
     @Override
@@ -375,7 +375,7 @@ public class DefaultPromise implements Promise {
             notifyListeners();
             return this;
         }
-        throw new IllegalStateException("Promise was completed before", cause);
+        throw new IllegalStateException("complete already", cause);
     }
 
     @Override
