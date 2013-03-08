@@ -41,7 +41,7 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
      */
     protected AbstractByteBufAllocator(boolean preferDirect) {
         directByDefault = preferDirect && PlatformDependent.hasUnsafe();
-        emptyBuf = new UnpooledHeapByteBuf(this, 0, 0);
+        emptyBuf = new EmptyByteBuf(this);
     }
 
     @Override

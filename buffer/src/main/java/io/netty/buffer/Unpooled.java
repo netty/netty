@@ -92,7 +92,7 @@ public final class Unpooled {
     /**
      * A buffer whose capacity is {@code 0}.
      */
-    public static final ByteBuf EMPTY_BUFFER = EmptyByteBuf.INSTANCE_BE;
+    public static final ByteBuf EMPTY_BUFFER = ALLOC.buffer(0, 0);
 
     public static <T> MessageBuf<T> messageBuffer() {
         return new DefaultMessageBuf<T>();

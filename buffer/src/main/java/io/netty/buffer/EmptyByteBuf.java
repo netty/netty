@@ -27,29 +27,44 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 
+/**
+ * An empty {@link ByteBuf} whose capacity and maximum capacity are all {@code 0}.
+ */
 public final class EmptyByteBuf implements ByteBuf {
 
     private static final byte[] EMPTY_ARRAY = new byte[0];
+    private static final ByteBuffer EMPTY_BYTE_BUFFER = ByteBuffer.allocateDirect(0);
+    private static final long EMPTY_BYTE_BUFFER_ADDRESS;
 
-    public static final EmptyByteBuf INSTANCE_BE = new EmptyByteBuf(ByteOrder.BIG_ENDIAN);
-    public static final EmptyByteBuf INSTANCE_LE = new EmptyByteBuf(ByteOrder.LITTLE_ENDIAN);
-
-    private final ByteOrder order;
-    private final ByteBuffer nioBuf = ByteBuffer.allocateDirect(0);
-    private final long memoryAddress;
-    private final byte[] array = EMPTY_ARRAY;
-    private final String str;
-
-    private EmptyByteBuf(ByteOrder order) {
-        this.order = order;
-        nioBuf.order(order);
-        str = getClass().getSimpleName() + (order == ByteOrder.BIG_ENDIAN? "BE" : "LE");
-
-        if (PlatformDependent.hasUnsafe()) {
-            memoryAddress = PlatformDependent.directBufferAddress(nioBuf);
-        } else {
-            memoryAddress = -1;
+    static {
+        long emptyByteBufferAddress = 0;
+        try {
+            if (PlatformDependent.hasUnsafe()) {
+                emptyByteBufferAddress = PlatformDependent.directBufferAddress(EMPTY_BYTE_BUFFER);
+            }
+        } catch (Throwable t) {
+            // Ignore
         }
+        EMPTY_BYTE_BUFFER_ADDRESS = emptyByteBufferAddress;
+    }
+
+    private final ByteBufAllocator alloc;
+    private final ByteOrder order;
+    private final String str;
+    private EmptyByteBuf swapped;
+
+    public EmptyByteBuf(ByteBufAllocator alloc) {
+        this(alloc, ByteOrder.BIG_ENDIAN);
+    }
+
+    private EmptyByteBuf(ByteBufAllocator alloc, ByteOrder order) {
+        if (alloc == null) {
+            throw new NullPointerException("alloc");
+        }
+
+        this.alloc = alloc;
+        this.order = order;
+        str = getClass().getSimpleName() + (order == ByteOrder.BIG_ENDIAN? "BE" : "LE");
     }
 
     @Override
@@ -64,7 +79,7 @@ public final class EmptyByteBuf implements ByteBuf {
 
     @Override
     public ByteBufAllocator alloc() {
-        return UnpooledByteBufAllocator.DEFAULT;
+        return alloc;
     }
 
     @Override
@@ -79,7 +94,7 @@ public final class EmptyByteBuf implements ByteBuf {
 
     @Override
     public boolean isDirect() {
-        return false;
+        return true;
     }
 
     @Override
@@ -92,11 +107,17 @@ public final class EmptyByteBuf implements ByteBuf {
         if (endianness == null) {
             throw new NullPointerException("endianness");
         }
-        if (endianness == ByteOrder.BIG_ENDIAN) {
-            return INSTANCE_BE;
+        if (endianness == order()) {
+            return this;
         }
 
-        return INSTANCE_LE;
+        EmptyByteBuf swapped = this.swapped;
+        if (swapped != null) {
+            return swapped;
+        }
+
+        this.swapped = swapped = new EmptyByteBuf(alloc(), endianness);
+        return swapped;
     }
 
     @Override
@@ -719,24 +740,24 @@ public final class EmptyByteBuf implements ByteBuf {
 
     @Override
     public ByteBuffer nioBuffer() {
-        return nioBuf;
+        return EMPTY_BYTE_BUFFER;
     }
 
     @Override
     public ByteBuffer nioBuffer(int index, int length) {
         checkIndex(index, length);
-        return nioBuf;
+        return nioBuffer();
     }
 
     @Override
     public ByteBuffer[] nioBuffers() {
-        return new ByteBuffer[] { nioBuf };
+        return new ByteBuffer[] { EMPTY_BYTE_BUFFER };
     }
 
     @Override
     public ByteBuffer[] nioBuffers(int index, int length) {
         checkIndex(index, length);
-        return new ByteBuffer[] { nioBuf };
+        return nioBuffers();
     }
 
     @Override
@@ -746,7 +767,7 @@ public final class EmptyByteBuf implements ByteBuf {
 
     @Override
     public byte[] array() {
-        return array;
+        return EMPTY_ARRAY;
     }
 
     @Override
@@ -756,13 +777,13 @@ public final class EmptyByteBuf implements ByteBuf {
 
     @Override
     public boolean hasMemoryAddress() {
-        return memoryAddress != -1;
+        return EMPTY_BYTE_BUFFER_ADDRESS != 0;
     }
 
     @Override
     public long memoryAddress() {
         if (hasMemoryAddress()) {
-            return memoryAddress;
+            return EMPTY_BYTE_BUFFER_ADDRESS;
         } else {
             throw new UnsupportedOperationException();
         }
@@ -776,7 +797,7 @@ public final class EmptyByteBuf implements ByteBuf {
     @Override
     public String toString(int index, int length, Charset charset) {
         checkIndex(index, length);
-        return "";
+        return toString(charset);
     }
 
     @Override
