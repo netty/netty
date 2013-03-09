@@ -112,4 +112,10 @@ public class TypeParameterMatcherTest {
         assertFalse(m.match(new Object()));
         assertTrue(m.match(new byte[1]));
     }
+
+    @Test
+    public void testRawType() throws Exception {
+        TypeParameterMatcher m = TypeParameterMatcher.find(new U() { }, U.class, "E");
+        assertTrue(m.match(new Object()));
+    }
 }
