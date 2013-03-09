@@ -100,8 +100,12 @@ public abstract class TypeParameterMatcher {
                             "unknown type parameter '" + typeParamName + "': " + parameterizedSuperclass);
                 }
 
-                Type[] actualTypeParams =
-                        ((ParameterizedType) currentClass.getGenericSuperclass()).getActualTypeArguments();
+                Type genericSuperType = currentClass.getGenericSuperclass();
+                if (!(genericSuperType instanceof ParameterizedType)) {
+                    return Object.class;
+                }
+
+                Type[] actualTypeParams = ((ParameterizedType) genericSuperType).getActualTypeArguments();
 
                 Type actualTypeParam = actualTypeParams[typeParamIndex];
                 if (actualTypeParam instanceof ParameterizedType) {
