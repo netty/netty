@@ -84,19 +84,19 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
         if (msg.hasArray()) {
             final int offset = msg.readerIndex();
             if (extensionRegistry == null) {
-                return prototype.newBuilderForType().mergeFrom(
-                        msg.array(), msg.arrayOffset() + offset, msg.readableBytes()).build();
+                return prototype.getParserForType().parseFrom(
+                        msg.array(), msg.arrayOffset() + offset, msg.readableBytes());
             } else {
-                return prototype.newBuilderForType().mergeFrom(
-                        msg.array(), msg.arrayOffset() + offset, msg.readableBytes(), extensionRegistry).build();
+                return prototype.getParserForType().parseFrom(
+                        msg.array(), msg.arrayOffset() + offset, msg.readableBytes(), extensionRegistry);
             }
         } else {
             if (extensionRegistry == null) {
-                return prototype.newBuilderForType().mergeFrom(
-                        new ByteBufInputStream(msg)).build();
+                return prototype.getParserForType().parseFrom(
+                        new ByteBufInputStream(msg));
             } else {
-                return prototype.newBuilderForType().mergeFrom(
-                        new ByteBufInputStream(msg), extensionRegistry).build();
+                return prototype.getParserForType().parseFrom(
+                        new ByteBufInputStream(msg), extensionRegistry);
             }
         }
     }
