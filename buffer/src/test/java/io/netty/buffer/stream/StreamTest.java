@@ -14,14 +14,10 @@
  * under the License.
  */
 
-package io.netty.buffer;
+package io.netty.buffer.stream;
 
-import io.netty.buffer.stream.AbstractStream;
-import io.netty.buffer.stream.Stream;
-import io.netty.buffer.stream.StreamConsumer;
-import io.netty.buffer.stream.StreamConsumerContext;
-import io.netty.buffer.stream.StreamProducer;
-import io.netty.buffer.stream.StreamProducerContext;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
@@ -167,7 +163,6 @@ public class StreamTest {
 
         @Override
         public void streamAborted(StreamConsumerContext<ByteBuf> ctx, Throwable cause) throws Exception {
-            cause.printStackTrace();
             future.setFailure(cause);
         }
 
