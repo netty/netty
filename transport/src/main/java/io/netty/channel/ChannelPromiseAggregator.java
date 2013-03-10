@@ -32,16 +32,31 @@ public final class ChannelPromiseAggregator implements ChannelFutureListener {
     private Set<ChannelPromise> pendingPromises;
 
     public ChannelPromiseAggregator(ChannelPromise aggregatePromise) {
+        if (aggregatePromise == null) {
+            throw new NullPointerException("aggregatePromise");
+        }
         this.aggregatePromise = aggregatePromise;
     }
 
+    /**
+     * Add the given {@link ChannelPromise}s to the aggregator.
+     */
     public ChannelPromiseAggregator add(ChannelPromise... promises) {
         if (promises == null) {
             throw new NullPointerException("promises");
         }
+        if (promises.length == 0) {
+            return this;
+        }
         synchronized (this) {
             if (pendingPromises == null) {
-                pendingPromises = new HashSet<ChannelPromise>();
+                int size;
+                if (promises.length > 1) {
+                    size = promises.length;
+                } else {
+                    size = 2;
+                }
+                pendingPromises = new HashSet<ChannelPromise>(size);
             }
             for (ChannelPromise p: promises) {
                 if (p == null) {
