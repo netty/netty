@@ -22,9 +22,13 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.Random;
+
 public abstract class AbstractStream<T extends Buf> implements Stream<T> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractStream.class);
+
+    private static final Random random = new Random();
 
     private static final ThreadLocal<Boolean> IN_CONSUMER = new ThreadLocal<Boolean>() {
         @Override
@@ -32,6 +36,13 @@ public abstract class AbstractStream<T extends Buf> implements Stream<T> {
             return Boolean.FALSE;
         }
     };
+
+    /**
+     * Generate a random string that can be used for correlating a group of log messages.
+     */
+    private static String nextLogKey() {
+        return Long.toHexString(random.nextInt() & 0xFFFFFFFFL);
+    }
 
     private final StreamProducerContextImpl producerCtx;
     private StreamConsumerContextImpl consumerCtx;
@@ -115,8 +126,11 @@ public abstract class AbstractStream<T extends Buf> implements Stream<T> {
         try {
             producerCtx.abort(cause);
         } catch (Throwable t) {
-            logger.warn("Failed to auto-abort a stream.", t);
-            logger.warn(".. when invoked with the following cause:", cause);
+            if (logger.isWarnEnabled()) {
+                String key = nextLogKey();
+                logger.warn("[{}] Failed to auto-abort a stream.", key, t);
+                logger.warn("[{}] .. when invoked with the following cause:", key, cause);
+            }
         }
     }
 
@@ -306,8 +320,11 @@ public abstract class AbstractStream<T extends Buf> implements Stream<T> {
             try {
                 consumerCtx.consumer.streamAborted(consumerCtx, cause);
             } catch (Throwable t) {
-                logger.warn("StreamConsumer.streamAborted() raised an exception.", cause);
-                logger.warn(".. when invoked with the following cause:", cause);
+                if (logger.isWarnEnabled()) {
+                    String key = nextLogKey();
+                    logger.warn("[{}] StreamConsumer.streamAborted() raised an exception.", key, t);
+                    logger.warn("[{}] .. when invoked with the following cause:", key, cause);
+                }
             } finally {
                 invokeStreamClosed();
             }
@@ -426,8 +443,11 @@ public abstract class AbstractStream<T extends Buf> implements Stream<T> {
             try {
                 producerCtx.producer.streamRejected(producerCtx, cause);
             } catch (Throwable t) {
-                logger.warn("StreamProducer.streamRejected() raised an exception.", t);
-                logger.warn(".. when invoked with the following cause:", cause);
+                if (logger.isWarnEnabled()) {
+                    String key = nextLogKey();
+                    logger.warn("[{}] StreamProducer.streamRejected() raised an exception.", key, t);
+                    logger.warn("[{}] .. when invoked with the following cause:", key, cause);
+                }
             }
         }
 
