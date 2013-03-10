@@ -46,20 +46,24 @@ public final class BufUtil {
      * Try to call {@link ReferenceCounted#retain()} if the specified message implements {@link ReferenceCounted}.
      * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.
      */
-    public static void retain(Object msg) {
+    @SuppressWarnings("unchecked")
+    public static <T> T retain(T msg) {
         if (msg instanceof ReferenceCounted) {
-            ((ReferenceCounted) msg).retain();
+            return (T) ((ReferenceCounted) msg).retain();
         }
+        return msg;
     }
 
     /**
      * Try to call {@link ReferenceCounted#retain()} if the specified message implements {@link ReferenceCounted}.
      * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.
      */
-    public static void retain(Object msg, int increment) {
+    @SuppressWarnings("unchecked")
+    public static <T> T retain(T msg, int increment) {
         if (msg instanceof ReferenceCounted) {
-            ((ReferenceCounted) msg).retain(increment);
+            return (T) ((ReferenceCounted) msg).retain(increment);
         }
+        return msg;
     }
 
     /**
