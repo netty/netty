@@ -24,7 +24,7 @@ import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.MessageToMessageDecoder;
 
 /**
- * Decodes the content of the received {@link HttpRequest} and {@link HttpContent}.
+ * Decodes the content of the received {@link HttpHeaders} and {@link HttpContent}.
  * The original content is replaced with the new content decoded by the
  * {@link EmbeddedByteChannel}, which is created by {@link #newContentDecoder(String)}.
  * Once decoding is finished, the value of the <tt>'Content-Encoding'</tt>
@@ -45,19 +45,22 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObject> {
 
     private EmbeddedByteChannel decoder;
-    private HttpMessage message;
+    private HttpHeaders headers;
     private boolean decodeStarted;
     private boolean continueResponse;
 
     @Override
     protected Object decode(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
-        if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().code() == 100) {
-            // 100-continue response must be passed through.
-            BufUtil.retain(msg);
-            if (!(msg instanceof LastHttpContent)) {
-                continueResponse = true;
+        if (msg instanceof HttpHeaders) {
+            HttpHeaders h = (HttpHeaders) msg;
+            if (h.getType() == HttpMessageType.RESPONSE && h.getStatus().code() == 100) {
+                // 100-continue response must be passed through.
+                BufUtil.retain(msg);
+                if (!(msg instanceof LastHttpContent)) {
+                    continueResponse = true;
+                }
+                return msg;
             }
-            return msg;
         }
 
         if (continueResponse) {
@@ -69,9 +72,9 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
             return msg;
         }
 
-        if (msg instanceof HttpMessage) {
-            assert message == null;
-            message = (HttpMessage) msg;
+        if (msg instanceof HttpHeaders) {
+            assert headers == null;
+            headers = (HttpHeaders) msg;
             decodeStarted = false;
             cleanup();
         }
@@ -81,9 +84,8 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
 
             if (!decodeStarted) {
                 decodeStarted = true;
-                HttpMessage message = this.message;
-                HttpHeaders headers = message.headers();
-                this.message = null;
+                HttpHeaders headers = this.headers;
+                this.headers = null;
 
                 // Determine the content encoding.
                 String contentEncoding = headers.get(HttpHeaders.Names.CONTENT_ENCODING);
@@ -104,7 +106,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                     } else {
                         headers.set(HttpHeaders.Names.CONTENT_ENCODING, targetContentEncoding);
                     }
-                    Object[] decoded = decodeContent(message, c);
+                    Object[] decoded = decodeContent(headers, c);
 
                     // Replace the content.
                     if (headers.contains(HttpHeaders.Names.CONTENT_LENGTH)) {
@@ -115,7 +117,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                     return decoded;
                 }
 
-                return new Object[] { message, c.retain() };
+                return new Object[] { headers, c.retain() };
             }
 
             if (decoder != null) {
@@ -128,7 +130,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
         return null;
     }
 
-    private Object[] decodeContent(HttpMessage header, HttpContent c) {
+    private Object[] decodeContent(HttpHeaders headers, HttpContent c) {
         ByteBuf newContent = Unpooled.buffer();
         ByteBuf content = c.data();
         decode(content, newContent);
@@ -140,24 +142,24 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
             // Generate an additional chunk if the decoder produced
             // the last product on closure,
             if (lastProduct.isReadable()) {
-                if (header == null) {
+                if (headers == null) {
                     return new Object[] { new DefaultHttpContent(newContent), new DefaultLastHttpContent(lastProduct)};
                 } else {
-                    return new Object[] { header,  new DefaultHttpContent(newContent),
+                    return new Object[] { headers,  new DefaultHttpContent(newContent),
                             new DefaultLastHttpContent(lastProduct)};
                 }
             } else {
-                if (header == null) {
+                if (headers == null) {
                     return new Object[] { new DefaultLastHttpContent(newContent) };
                 } else {
-                    return new Object[] { header, new DefaultLastHttpContent(newContent) };
+                    return new Object[] { headers, new DefaultLastHttpContent(newContent) };
                 }
             }
         }
-        if (header == null) {
+        if (headers == null) {
             return new Object[] { new DefaultHttpContent(newContent) };
         } else {
-            return new Object[] { header, new DefaultHttpContent(newContent) };
+            return new Object[] { headers, new DefaultHttpContent(newContent) };
         }
     }
 

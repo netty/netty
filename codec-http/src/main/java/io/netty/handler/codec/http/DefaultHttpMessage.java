@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,26 +15,53 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.util.internal.StringUtil;
-
-import java.util.Map;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
 /**
- * The default {@link HttpMessage} implementation.
+ * Default implementation of {@link HttpMessage}.
  */
-public abstract class DefaultHttpMessage extends DefaultHttpObject implements HttpMessage {
+public class DefaultHttpMessage extends DefaultLastHttpContent implements HttpMessage {
 
-    private HttpVersion version;
-    private final HttpHeaders headers = new DefaultHttpHeaders();
+    private final HttpHeaders headers;
+    private final ByteBuf content;
+    private final HttpHeaders trailingHeader = new DefaultHttpHeaders(HttpMessageType.TRAILER);
 
-    /**
-     * Creates a new instance.
-     */
-    protected DefaultHttpMessage(final HttpVersion version) {
-        if (version == null) {
-            throw new NullPointerException("version");
+    public DefaultHttpMessage(HttpVersion httpVersion, HttpMethod method, String path) {
+        this(httpVersion, method, path, Unpooled.buffer(0));
+    }
+
+    public DefaultHttpMessage(HttpVersion httpVersion, HttpMethod method, String path, ByteBuf content) {
+        if (content == null) {
+            throw new NullPointerException("content");
         }
-        this.version = version;
+        headers = new DefaultHttpHeaders(HttpMessageType.REQUEST);
+        headers.setVersion(httpVersion);
+        headers.setMethod(method);
+        headers.setPath(path);
+        this.content = content;
+    }
+
+    public DefaultHttpMessage(HttpVersion httpVersion, HttpResponseStatus status) {
+        this(httpVersion, status, Unpooled.buffer(0));
+    }
+
+    public DefaultHttpMessage(HttpVersion httpVersion, HttpResponseStatus status, ByteBuf content) {
+        if (content == null) {
+            throw new NullPointerException("content");
+        }
+        headers = new DefaultHttpHeaders(HttpMessageType.RESPONSE);
+        headers.setVersion(httpVersion);
+        headers.setStatus(status);
+        this.content = content;
+    }
+
+    public DefaultHttpMessage(HttpMessageType type, ByteBuf content) {
+        if (content == null) {
+            throw new NullPointerException("content");
+        }
+        headers = new DefaultHttpHeaders(type);
+        this.content = content;
     }
 
     @Override
@@ -43,39 +70,46 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
     }
 
     @Override
-    public HttpVersion getProtocolVersion() {
-        return version;
+    public HttpHeaders trailingHeaders() {
+        return trailingHeader;
     }
 
     @Override
-    public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append(getClass().getSimpleName());
-        buf.append("(version: ");
-        buf.append(getProtocolVersion().text());
-        buf.append(", keepAlive: ");
-        buf.append(HttpHeaders.isKeepAlive(this));
-        buf.append(')');
-        buf.append(StringUtil.NEWLINE);
-        appendHeaders(buf);
-
-        // Remove the last newline.
-        buf.setLength(buf.length() - StringUtil.NEWLINE.length());
-        return buf.toString();
+    public ByteBuf data() {
+        return content;
     }
 
     @Override
-    public HttpMessage setProtocolVersion(HttpVersion version) {
-        this.version = version;
+    public int refCnt() {
+        return content.refCnt();
+    }
+
+    @Override
+    public HttpMessage retain() {
+        content.retain();
         return this;
     }
 
-    void appendHeaders(StringBuilder buf) {
-        for (Map.Entry<String, String> e: headers()) {
-            buf.append(e.getKey());
-            buf.append(": ");
-            buf.append(e.getValue());
-            buf.append(StringUtil.NEWLINE);
-        }
+    @Override
+    public HttpMessage retain(int increment) {
+        content.retain(increment);
+        return this;
+    }
+
+    @Override
+    public boolean release() {
+        return content.release();
+    }
+
+    @Override
+    public boolean release(int decrement) {
+        return content.release(decrement);
+    }
+
+    @Override
+    public HttpMessage copy() {
+        DefaultHttpMessage copy = new DefaultHttpMessage(headers().getType(), data().copy());
+        copy.headers().set(headers());
+        return copy;
     }
 }

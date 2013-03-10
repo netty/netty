@@ -20,14 +20,11 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.DefaultHttpMessage;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.ssl.SslHandler;
 
-import static io.netty.handler.codec.http.HttpHeaders.*;
 import static io.netty.handler.codec.http.HttpMethod.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
@@ -36,7 +33,7 @@ import static io.netty.handler.codec.http.HttpVersion.*;
  * Handles the HTTP handshake (the HTTP Upgrade request) for {@link WebSocketServerProtocolHandler}.
  */
 public class WebSocketServerProtocolHandshakeHandler
-        extends ChannelInboundMessageHandlerAdapter<FullHttpRequest> {
+        extends ChannelInboundMessageHandlerAdapter<HttpMessage> {
 
     private final String websocketPath;
     private final String subprotocols;
@@ -50,9 +47,9 @@ public class WebSocketServerProtocolHandshakeHandler
     }
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
-        if (req.getMethod() != GET) {
-            sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN));
+    public void messageReceived(final ChannelHandlerContext ctx, HttpMessage req) throws Exception {
+        if (req.headers().getMethod() != GET) {
+            sendHttpResponse(ctx, req, new DefaultHttpMessage(HTTP_1_1, FORBIDDEN));
             return;
         }
 
@@ -77,14 +74,14 @@ public class WebSocketServerProtocolHandshakeHandler
         }
     }
 
-    private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
+    private static void sendHttpResponse(ChannelHandlerContext ctx, HttpMessage req, HttpMessage res) {
         ChannelFuture f = ctx.channel().write(res);
-        if (!isKeepAlive(req) || res.getStatus().code() != 200) {
+        if (!req.headers().isKeepAlive() || res.headers().getStatus().code() != 200) {
             f.addListener(ChannelFutureListener.CLOSE);
         }
     }
 
-    private static String getWebSocketLocation(ChannelPipeline cp, HttpRequest req, String path) {
+    private static String getWebSocketLocation(ChannelPipeline cp, HttpMessage req, String path) {
         String protocol = "ws";
         if (cp.get(SslHandler.class) != null) {
             // SSL in use so use Secure WebSockets

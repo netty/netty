@@ -26,16 +26,17 @@ import java.util.Map;
  */
 public class DefaultLastHttpContent extends DefaultHttpContent implements LastHttpContent {
 
-    private final HttpHeaders trailingHeaders = new DefaultHttpHeaders() {
+    private final HttpHeaders trailingHeaders = new DefaultHttpHeaders(HttpMessageType.TRAILER) {
         @Override
-        void validateHeaderName0(String name) {
-            super.validateHeaderName0(name);
+        public HttpHeaders validateName(String name) {
+            super.validateName(name);
             if (name.equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH) ||
                 name.equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING) ||
                 name.equalsIgnoreCase(HttpHeaders.Names.TRAILER)) {
                 throw new IllegalArgumentException(
                         "prohibited trailing header: " + name);
             }
+            return this;
         }
     };
 

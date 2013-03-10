@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -47,7 +47,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     /**
      * Keep all HttpDatas until cleanAllHttpDatas() is called.
      */
-    private final ConcurrentMap<HttpRequest, List<HttpData>> requestFileDeleteMap =
+    private final ConcurrentMap<HttpHeaders, List<HttpData>> requestFileDeleteMap =
             PlatformDependent.newConcurrentHashMap();
 
     /**
@@ -81,7 +81,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     /**
      * @return the associated list of Files for the request
      */
-    private List<HttpData> getList(HttpRequest request) {
+    private List<HttpData> getList(HttpHeaders request) {
         List<HttpData> list = requestFileDeleteMap.get(request);
         if (list == null) {
             list = new ArrayList<HttpData>();
@@ -91,7 +91,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     }
 
     @Override
-    public Attribute createAttribute(HttpRequest request, String name) {
+    public Attribute createAttribute(HttpHeaders request, String name) {
         if (useDisk) {
             Attribute attribute = new DiskAttribute(name);
             List<HttpData> fileToDelete = getList(request);
@@ -108,7 +108,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     }
 
     @Override
-    public Attribute createAttribute(HttpRequest request, String name, String value) {
+    public Attribute createAttribute(HttpHeaders request, String name, String value) {
         if (useDisk) {
             Attribute attribute;
             try {
@@ -135,7 +135,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     }
 
     @Override
-    public FileUpload createFileUpload(HttpRequest request, String name, String filename,
+    public FileUpload createFileUpload(HttpHeaders request, String name, String filename,
             String contentType, String contentTransferEncoding, Charset charset,
             long size) {
         if (useDisk) {
@@ -157,7 +157,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     }
 
     @Override
-    public void removeHttpDataFromClean(HttpRequest request, InterfaceHttpData data) {
+    public void removeHttpDataFromClean(HttpHeaders request, InterfaceHttpData data) {
         if (data instanceof HttpData) {
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.remove(data);
@@ -165,7 +165,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     }
 
     @Override
-    public void cleanRequestHttpDatas(HttpRequest request) {
+    public void cleanRequestHttpDatas(HttpHeaders request) {
         List<HttpData> fileToDelete = requestFileDeleteMap.remove(request);
         if (fileToDelete != null) {
             for (HttpData data: fileToDelete) {
@@ -177,7 +177,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
 
     @Override
     public void cleanAllHttpDatas() {
-        for (HttpRequest request : requestFileDeleteMap.keySet()) {
+        for (HttpHeaders request : requestFileDeleteMap.keySet()) {
             List<HttpData> fileToDelete = requestFileDeleteMap.get(request);
             if (fileToDelete != null) {
                 for (HttpData data: fileToDelete) {

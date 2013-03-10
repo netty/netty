@@ -26,7 +26,7 @@ import static io.netty.buffer.Unpooled.*;
 import static io.netty.handler.codec.http.HttpConstants.*;
 
 /**
- * Encodes an {@link HttpMessage} or an {@link HttpContent} into
+ * Encodes an {@link HttpHeaders} or an {@link HttpContent} into
  * a {@link ByteBuf}.
  *
  * <h3>Extensibility</h3>
@@ -38,7 +38,7 @@ import static io.netty.handler.codec.http.HttpConstants.*;
  * To implement the encoder of such a derived protocol, extend this class and
  * implement all abstract methods properly.
  */
-public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageToByteEncoder<HttpObject> {
+public abstract class HttpObjectEncoder extends MessageToByteEncoder<HttpObject> {
 
     private static final int ST_INIT = 0;
     private static final int ST_CONTENT_NON_CHUNK = 1;
@@ -49,13 +49,12 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
 
     @Override
     protected void encode(ChannelHandlerContext ctx, HttpObject msg, ByteBuf out) throws Exception {
-        if (msg instanceof HttpMessage) {
+        if (msg instanceof HttpHeaders) {
             if (state != ST_INIT) {
                 throw new IllegalStateException("unexpected message type: " + msg.getClass().getSimpleName());
             }
 
-            @SuppressWarnings({ "unchecked", "CastConflictsWithInstanceof" })
-            H m = (H) msg;
+            HttpHeaders m = (HttpHeaders) msg;
 
             // Encode the message.
             encodeInitialLine(out, m);
@@ -63,7 +62,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             out.writeByte(CR);
             out.writeByte(LF);
 
-            state = HttpHeaders.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
+            state = m.isTransferEncodingChunked() ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
         }
 
         if (msg instanceof HttpContent) {
@@ -108,8 +107,8 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         }
     }
 
-    private static void encodeHeaders(ByteBuf buf, HttpMessage message) {
-        for (Map.Entry<String, String> h: message.headers()) {
+    private static void encodeHeaders(ByteBuf buf, HttpHeaders headers) {
+        for (Map.Entry<String, String> h: headers) {
             encodeHeader(buf, h.getKey(), h.getValue());
         }
     }
@@ -129,5 +128,5 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         buf.writeByte(LF);
     }
 
-    protected abstract void encodeInitialLine(ByteBuf buf, H message) throws Exception;
+    protected abstract void encodeInitialLine(ByteBuf buf, HttpHeaders headers) throws Exception;
 }

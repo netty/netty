@@ -16,10 +16,9 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.channel.Channel;
-import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.DefaultHttpMessage;
 import io.netty.handler.codec.http.HttpHeaders.Names;
-import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 
@@ -82,7 +81,7 @@ public class WebSocketServerHandshakerFactory {
      * @return A new WebSocketServerHandshaker for the requested web socket version. Null if web
      *         socket version is not supported.
      */
-    public WebSocketServerHandshaker newHandshaker(HttpRequest req) {
+    public WebSocketServerHandshaker newHandshaker(HttpMessage req) {
 
         String version = req.headers().get(Names.SEC_WEBSOCKET_VERSION);
         if (version != null) {
@@ -114,7 +113,7 @@ public class WebSocketServerHandshakerFactory {
      *            Channel
      */
     public static void sendUnsupportedWebSocketVersionResponse(Channel channel) {
-        HttpResponse res = new DefaultHttpResponse(
+        HttpMessage res = new DefaultHttpMessage(
                 HttpVersion.HTTP_1_1,
                 HttpResponseStatus.UPGRADE_REQUIRED);
         res.headers().set(Names.SEC_WEBSOCKET_VERSION, WebSocketVersion.V13.toHttpHeaderValue());

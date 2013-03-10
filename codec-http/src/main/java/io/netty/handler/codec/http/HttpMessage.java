@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,31 +15,20 @@
  */
 package io.netty.handler.codec.http;
 
-
 /**
- * An interface that defines a HTTP message, providing common properties for
- * {@link HttpRequest} and {@link HttpResponse}.
- *
- * @see HttpResponse
- * @see HttpRequest
- * @see HttpHeaders
+ * Combines {@link HttpMessage} and {@link LastHttpContent} into one
+ * message. So it represent a <i>complete</i> http message.
  */
-public interface HttpMessage extends HttpObject {
+public interface HttpMessage extends LastHttpContent {
 
-    /**
-     * Returns the protocol version of this {@link HttpMessage}
-     *
-     * @return The protocol version
-     */
-    HttpVersion getProtocolVersion();
-
-    /**
-     * Set the protocol version of this {@link HttpMessage}
-     */
-    HttpMessage setProtocolVersion(HttpVersion version);
-
-    /**
-     * Returns the headers of this message.
-     */
     HttpHeaders headers();
+
+    @Override
+    HttpMessage copy();
+
+    @Override
+    HttpMessage retain(int increment);
+
+    @Override
+    HttpMessage retain();
 }

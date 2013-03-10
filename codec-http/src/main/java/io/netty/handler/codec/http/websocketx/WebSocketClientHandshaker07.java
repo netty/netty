@@ -17,12 +17,11 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelOutboundMessageHandler;
-import io.netty.handler.codec.http.DefaultFullHttpRequest;
-import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.DefaultHttpMessage;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpHeaders.Values;
+import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
@@ -91,7 +90,7 @@ public class WebSocketClientHandshaker07 extends WebSocketClientHandshaker {
      *
      */
     @Override
-    protected FullHttpRequest newHandshakeRequest() {
+    protected HttpMessage newHandshakeRequest() {
         // Get path
         URI wsURL = uri();
         String path = wsURL.getPath();
@@ -117,7 +116,7 @@ public class WebSocketClientHandshaker07 extends WebSocketClientHandshaker {
         }
 
         // Format request
-        FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, path);
+        HttpMessage request = new DefaultHttpMessage(HttpVersion.HTTP_1_1, HttpMethod.GET, path);
         HttpHeaders headers = request.headers();
 
         headers.add(Names.UPGRADE, Values.WEBSOCKET.toLowerCase())
@@ -165,12 +164,12 @@ public class WebSocketClientHandshaker07 extends WebSocketClientHandshaker {
      * @throws WebSocketHandshakeException
      */
     @Override
-    protected void verify(FullHttpResponse response) {
+    protected void verify(HttpMessage response) {
         final HttpResponseStatus status = HttpResponseStatus.SWITCHING_PROTOCOLS;
         final HttpHeaders headers = response.headers();
 
-        if (!response.getStatus().equals(status)) {
-            throw new WebSocketHandshakeException("Invalid handshake response getStatus: " + response.getStatus());
+        if (!headers.getStatus().equals(status)) {
+            throw new WebSocketHandshakeException("Invalid handshake response getStatus: " + headers.getStatus());
         }
 
         String upgrade = headers.get(Names.UPGRADE);
