@@ -23,6 +23,9 @@ import io.netty.util.Signal;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+/**
+ * Utility methods for use within your {@link ChannelHandler} implementation.
+ */
 public final class ChannelHandlerUtil {
 
     public static final Signal ABORT = new Signal(ChannelHandlerUtil.class.getName() + ".ABORT");

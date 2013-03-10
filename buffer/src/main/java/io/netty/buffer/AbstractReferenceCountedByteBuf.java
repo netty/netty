@@ -139,5 +139,8 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
         }
     }
 
+    /**
+     * Called once {@link #refCnt()} is equals 0.
+     */
     protected abstract void deallocate();
 }

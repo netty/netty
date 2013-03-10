@@ -17,6 +17,10 @@ package io.netty.channel;
 
 import java.net.SocketAddress;
 
+/**
+ * Skelton implementation of a {@link ChannelOperationHandler}. This implementation just forwards each method call via
+ * the {@link ChannelHandlerContext}.
+ */
 public abstract class ChannelOperationHandlerAdapter extends ChannelHandlerAdapter implements ChannelOperationHandler {
 
     /**
@@ -79,6 +83,12 @@ public abstract class ChannelOperationHandlerAdapter extends ChannelHandlerAdapt
         ctx.deregister(promise);
     }
 
+    /**
+     * Calls {@link ChannelHandlerContext#read()} to forward
+     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
+     *
+     * Sub-classes may override this method to change behavior.
+     */
     @Override
     public void read(ChannelHandlerContext ctx) {
         ctx.read();

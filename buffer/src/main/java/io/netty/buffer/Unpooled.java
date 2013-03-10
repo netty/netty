@@ -94,18 +94,32 @@ public final class Unpooled {
      */
     public static final ByteBuf EMPTY_BUFFER = ALLOC.buffer(0, 0);
 
+    /**
+     * Creates a new {@link MessageBuf} with reasonably small initial capacity, which
+     * expands its capacity boundlessly on demand.
+     */
     public static <T> MessageBuf<T> messageBuffer() {
         return new DefaultMessageBuf<T>();
     }
 
+    /**
+     * Creates a new {@link MessageBuf} with the specified {@code initialCapacity}.
+     */
     public static <T> MessageBuf<T> messageBuffer(int initialCapacity) {
         return new DefaultMessageBuf<T>(initialCapacity);
     }
 
+    /**
+     * Creates a new {@link MessageBuf} with the specified {@code initialCapacity} and
+     * {@code maxCapacity}.
+     */
     public static <T> MessageBuf<T> messageBuffer(int initialCapacity, int maxCapacity) {
         return new DefaultMessageBuf<T>(initialCapacity, maxCapacity);
     }
 
+    /**
+     * Creates a new {@link MessageBuf} which wraps the given {@code queue}.
+     */
     public static <T> MessageBuf<T> wrappedBuffer(Queue<T> queue) {
         if (queue instanceof MessageBuf) {
             return (MessageBuf<T>) queue;
