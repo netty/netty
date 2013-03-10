@@ -19,6 +19,9 @@ import io.netty.util.internal.PlatformDependent;
 
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
+/**
+ * Abstract base class for classes wants to implement {@link ReferenceCounted}.
+ */
 public abstract class AbstractReferenceCounted implements ReferenceCounted {
 
     private static final AtomicIntegerFieldUpdater<AbstractReferenceCounted> refCntUpdater =
@@ -131,5 +134,8 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
         }
     }
 
+    /**
+     * Called once {@link #refCnt()} is equals 0.
+     */
     protected abstract void deallocate();
 }

@@ -22,9 +22,18 @@ import io.netty.util.internal.PlatformDependent;
  */
 public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator {
 
+    /**
+     * Default instance
+     */
     public static final UnpooledByteBufAllocator DEFAULT =
             new UnpooledByteBufAllocator(PlatformDependent.directBufferPreferred());
 
+    /**
+     * Create a new instance
+     *
+     * @param preferDirect {@code true} if {@link #buffer(int)} should try to allocate a direct buffer rather than
+     *                     a heap buffer
+     */
     public UnpooledByteBufAllocator(boolean preferDirect) {
         super(preferDirect);
     }
