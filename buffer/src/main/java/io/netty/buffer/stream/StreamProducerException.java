@@ -16,8 +16,9 @@
 
 package io.netty.buffer.stream;
 
-public class StreamProducerException extends RuntimeException {
-    private static final long serialVersionUID = -7688455132621735741L;
+public class StreamProducerException extends StreamException {
+
+    private static final long serialVersionUID = 8830744325775707415L;
 
     public StreamProducerException() { }
 

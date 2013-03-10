@@ -120,7 +120,6 @@ public abstract class AbstractStream<T extends Buf> implements Stream<T> {
         }
     }
 
-
     @Override
     public void discard() {
         StreamConsumerContextImpl consumerCtx = this.consumerCtx;
@@ -187,12 +186,13 @@ public abstract class AbstractStream<T extends Buf> implements Stream<T> {
         }
 
         @Override
-        public void update() {
+        public StreamProducerContext<T> update() {
             if (state != 1) {
                 fail();
             }
 
             fireStreamUpdated();
+            return this;
         }
 
         private void fireStreamUpdated() {
@@ -443,7 +443,6 @@ public abstract class AbstractStream<T extends Buf> implements Stream<T> {
                 fireStreamConsumed();
             }
         }
-
 
         private void fireStreamConsumed() {
             EventExecutor e = producerCtx.executor;

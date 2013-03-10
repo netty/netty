@@ -16,13 +16,21 @@
 
 package io.netty.buffer.stream;
 
-import io.netty.buffer.Buf;
-import io.netty.util.concurrent.EventExecutor;
+public class StreamException extends RuntimeException {
 
-public interface StreamProducerContext<T extends Buf> {
-    EventExecutor executor();
-    T buffer();
-    StreamProducerContext<T> update();
-    void close();
-    void abort(Throwable cause);
+    private static final long serialVersionUID = -8529582560484984135L;
+
+    public StreamException() { }
+
+    public StreamException(String message) {
+        super(message);
+    }
+
+    public StreamException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
+    public StreamException(Throwable cause) {
+        super(cause);
+    }
 }
