@@ -19,9 +19,10 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 
 import java.util.Iterator;
-import java.util.concurrent.TimeUnit;
 
 /**
  * The result of an asynchronous {@link ChannelGroup} operation.
@@ -42,13 +43,13 @@ import java.util.concurrent.TimeUnit;
  * {@link ChannelGroupFutureListener} so you can get notified when the I/O
  * operation have been completed.
  *
- * <h3>Prefer {@link #addListener(ChannelGroupFutureListener)} to {@link #await()}</h3>
+ * <h3>Prefer {@link #addListener(GenericFutureListener)} to {@link #await()}</h3>
  *
- * It is recommended to prefer {@link #addListener(ChannelGroupFutureListener)} to
+ * It is recommended to prefer {@link #addListener(GenericFutureListener)} to
  * {@link #await()} wherever possible to get notified when I/O operations are
  * done and to do any follow-up tasks.
  * <p>
- * {@link #addListener(ChannelGroupFutureListener)} is non-blocking.  It simply
+ * {@link #addListener(GenericFutureListener)} is non-blocking.  It simply
  * adds the specified {@link ChannelGroupFutureListener} to the
  * {@link ChannelGroupFuture}, and I/O thread will notify the listeners when
  * the I/O operations associated with the future is done.
@@ -101,7 +102,7 @@ import java.util.concurrent.TimeUnit;
  * make sure you do not call {@link #await()} in an I/O thread.  Otherwise,
  * {@link IllegalStateException} will be raised to prevent a dead lock.
  */
-public interface ChannelGroupFuture extends Iterable<ChannelFuture> {
+public interface ChannelGroupFuture extends Future, Iterable<ChannelFuture> {
 
     /**
      * Returns the {@link ChannelGroup} which is associated with this future.
@@ -128,17 +129,14 @@ public interface ChannelGroupFuture extends Iterable<ChannelFuture> {
     ChannelFuture find(Channel channel);
 
     /**
-     * Returns {@code true} if and only if this future is
-     * complete, regardless of whether the operation was successful, failed,
-     * or canceled.
-     */
-    boolean isDone();
-
-    /**
      * Returns {@code true} if and only if all I/O operations associated with
      * this future were successful without any failure.
      */
-    boolean isCompleteSuccess();
+    @Override
+    boolean isSuccess();
+
+    @Override
+    ChannelGroupException cause();
 
     /**
      * Returns {@code true} if and only if the I/O operations associated with
@@ -147,92 +145,34 @@ public interface ChannelGroupFuture extends Iterable<ChannelFuture> {
     boolean isPartialSuccess();
 
     /**
-     * Returns {@code true} if and only if all I/O operations associated with
-     * this future have failed without any success.
-     */
-    boolean isCompleteFailure();
-
-    /**
      * Returns {@code true} if and only if the I/O operations associated with
      * this future have failed partially with some success.
      */
     boolean isPartialFailure();
 
-    /**
-     * Adds the specified listener to this future.  The
-     * specified listener is notified when this future is
-     * {@linkplain #isDone() done}.  If this future is already
-     * completed, the specified listener is notified immediately.
-     */
-    ChannelGroupFuture addListener(ChannelGroupFutureListener listener);
+    @Override
+    ChannelGroupFuture addListener(GenericFutureListener<? extends Future> listener);
 
-    /**
-     * Removes the specified listener from this future.
-     * The specified listener is no longer notified when this
-     * future is {@linkplain #isDone() done}.  If this
-     * future is already completed, this method has no effect
-     * and returns silently.
-     */
-    ChannelGroupFuture removeListener(ChannelGroupFutureListener listener);
+    @Override
+    ChannelGroupFuture addListeners(GenericFutureListener<? extends Future>... listeners);
 
-    /**
-     * Waits for this future to be completed.
-     *
-     * @throws InterruptedException
-     *         if the current thread was interrupted
-     */
+    @Override
+    ChannelGroupFuture removeListener(GenericFutureListener<? extends Future> listener);
+
+    @Override
+    ChannelGroupFuture removeListeners(GenericFutureListener<? extends Future>... listeners);
+
+    @Override
     ChannelGroupFuture await() throws InterruptedException;
 
-    /**
-     * Waits for this future to be completed without
-     * interruption.  This method catches an {@link InterruptedException} and
-     * discards it silently.
-     */
+    @Override
     ChannelGroupFuture awaitUninterruptibly();
 
-    /**
-     * Waits for this future to be completed within the
-     * specified time limit.
-     *
-     * @return {@code true} if and only if the future was completed within
-     *         the specified time limit
-     *
-     * @throws InterruptedException
-     *         if the current thread was interrupted
-     */
-    boolean await(long timeout, TimeUnit unit) throws InterruptedException;
+    @Override
+    ChannelGroupFuture syncUninterruptibly();
 
-    /**
-     * Waits for this future to be completed within the
-     * specified time limit.
-     *
-     * @return {@code true} if and only if the future was completed within
-     *         the specified time limit
-     *
-     * @throws InterruptedException
-     *         if the current thread was interrupted
-     */
-    boolean await(long timeoutMillis) throws InterruptedException;
-
-    /**
-     * Waits for this future to be completed within the
-     * specified time limit without interruption.  This method catches an
-     * {@link InterruptedException} and discards it silently.
-     *
-     * @return {@code true} if and only if the future was completed within
-     *         the specified time limit
-     */
-    boolean awaitUninterruptibly(long timeout, TimeUnit unit);
-
-    /**
-     * Waits for this future to be completed within the
-     * specified time limit without interruption.  This method catches an
-     * {@link InterruptedException} and discards it silently.
-     *
-     * @return {@code true} if and only if the future was completed within
-     *         the specified time limit
-     */
-    boolean awaitUninterruptibly(long timeoutMillis);
+    @Override
+    ChannelGroupFuture sync() throws InterruptedException;
 
     /**
      * Returns the {@link Iterator} that enumerates all {@link ChannelFuture}s

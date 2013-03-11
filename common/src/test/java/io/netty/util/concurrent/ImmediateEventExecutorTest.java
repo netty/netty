@@ -13,17 +13,21 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.ssl;
+package io.netty.util.concurrent;
 
 import static org.junit.Assert.*;
 
+import org.easymock.EasyMock;
 import org.junit.Test;
 
-public class ImmediateExecutorTest {
+import java.util.concurrent.Executors;
+
+public class ImmediateEventExecutorTest {
 
     @Test
     public void shouldExecuteImmediately() {
-        ImmediateExecutor e = ImmediateExecutor.INSTANCE;
+        TaskScheduler scheduler = new TaskScheduler(Executors.defaultThreadFactory());
+        ImmediateEventExecutor e = new ImmediateEventExecutor(scheduler);
         long startTime = System.nanoTime();
         e.execute(new Runnable() {
             @Override
@@ -42,5 +46,6 @@ public class ImmediateExecutorTest {
             }
         });
         assertTrue(System.nanoTime() - startTime >= 1000000000L);
+        scheduler.shutdown();
     }
 }

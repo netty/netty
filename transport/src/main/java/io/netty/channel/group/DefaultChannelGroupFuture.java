@@ -18,8 +18,11 @@ package io.netty.channel.group;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
+import io.netty.util.concurrent.DefaultPromise;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.concurrent.Promise;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -28,26 +31,17 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
-import static java.util.concurrent.TimeUnit.*;
 
 /**
  * The default {@link ChannelGroupFuture} implementation.
  */
-public class DefaultChannelGroupFuture implements ChannelGroupFuture {
-
-    private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(DefaultChannelGroupFuture.class);
+final class DefaultChannelGroupFuture extends DefaultPromise implements ChannelGroupFuture {
 
     private final ChannelGroup group;
-    final Map<Integer, ChannelFuture> futures;
-    private ChannelGroupFutureListener firstListener;
-    private List<ChannelGroupFutureListener> otherListeners;
-    private boolean done;
-    int successCount;
-    int failureCount;
-    private int waiters;
+    private final Map<Integer, ChannelFuture> futures;
+    private int successCount;
+    private int failureCount;
 
     private final ChannelFutureListener childListener = new ChannelFutureListener() {
         @Override
@@ -66,7 +60,18 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
             }
 
             if (callSetDone) {
-                setDone();
+                if (failureCount > 0) {
+                    List<Map.Entry<Integer, Throwable>> failed =
+                            new ArrayList<Map.Entry<Integer, Throwable>>(failureCount);
+                    for (ChannelFuture f: futures.values()) {
+                        if (!f.isSuccess()) {
+                            failed.add(new DefaultEntry<Integer, Throwable>(f.channel().id(), f.cause()));
+                        }
+                    }
+                    setFailure0(new ChannelGroupException(failed));
+                } else {
+                    setSuccess0();
+                }
             }
         }
     };
@@ -74,7 +79,8 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
     /**
      * Creates a new instance.
      */
-    public DefaultChannelGroupFuture(ChannelGroup group, Collection<ChannelFuture> futures) {
+    public DefaultChannelGroupFuture(ChannelGroup group, Collection<ChannelFuture> futures,  EventExecutor executor) {
+        super(executor);
         if (group == null) {
             throw new NullPointerException("group");
         }
@@ -97,11 +103,12 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
 
         // Done on arrival?
         if (this.futures.isEmpty()) {
-            setDone();
+            setSuccess0();
         }
     }
 
-    DefaultChannelGroupFuture(ChannelGroup group, Map<Integer, ChannelFuture> futures) {
+    DefaultChannelGroupFuture(ChannelGroup group, Map<Integer, ChannelFuture> futures, EventExecutor executor) {
+        super(executor);
         this.group = group;
         this.futures = Collections.unmodifiableMap(futures);
         for (ChannelFuture f: this.futures.values()) {
@@ -110,7 +117,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
 
         // Done on arrival?
         if (this.futures.isEmpty()) {
-            setDone();
+            setSuccess0();
         }
     }
 
@@ -135,16 +142,6 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
     }
 
     @Override
-    public synchronized boolean isDone() {
-        return done;
-    }
-
-    @Override
-    public synchronized boolean isCompleteSuccess() {
-        return successCount == futures.size();
-    }
-
-    @Override
     public synchronized boolean isPartialSuccess() {
         return successCount != 0 && successCount != futures.size();
     }
@@ -155,224 +152,108 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
     }
 
     @Override
-    public synchronized boolean isCompleteFailure() {
-        int futureCnt = futures.size();
-        return futureCnt != 0 && failureCount == futureCnt;
-    }
-
-    @Override
-    public ChannelGroupFuture addListener(ChannelGroupFutureListener listener) {
-        if (listener == null) {
-            throw new NullPointerException("listener");
-        }
-
-        boolean notifyNow = false;
-        synchronized (this) {
-            if (done) {
-                notifyNow = true;
-            } else {
-                if (firstListener == null) {
-                    firstListener = listener;
-                } else {
-                    if (otherListeners == null) {
-                        otherListeners = new ArrayList<ChannelGroupFutureListener>(1);
-                    }
-                    otherListeners.add(listener);
-                }
-            }
-        }
-
-        if (notifyNow) {
-            notifyListener(listener);
-        }
+    public DefaultChannelGroupFuture addListener(GenericFutureListener<? extends Future> listener) {
+        super.addListener(listener);
         return this;
     }
 
     @Override
-    public ChannelGroupFuture removeListener(ChannelGroupFutureListener listener) {
-        if (listener == null) {
-            throw new NullPointerException("listener");
-        }
-
-        synchronized (this) {
-            if (!done) {
-                if (listener == firstListener) {
-                    if (otherListeners != null && !otherListeners.isEmpty()) {
-                        firstListener = otherListeners.remove(0);
-                    } else {
-                        firstListener = null;
-                    }
-                } else if (otherListeners != null) {
-                    otherListeners.remove(listener);
-                }
-            }
-        }
+    public DefaultChannelGroupFuture addListeners(GenericFutureListener<? extends Future>... listeners) {
+        super.addListeners(listeners);
         return this;
     }
 
     @Override
-    public ChannelGroupFuture await() throws InterruptedException {
-        if (Thread.interrupted()) {
-            throw new InterruptedException();
-        }
-
-        synchronized (this) {
-            while (!done) {
-                waiters++;
-                try {
-                    wait();
-                } finally {
-                    waiters--;
-                }
-            }
-        }
+    public DefaultChannelGroupFuture removeListener(GenericFutureListener<? extends Future> listener) {
+        super.removeListener(listener);
         return this;
     }
 
     @Override
-    public boolean await(long timeout, TimeUnit unit)
-            throws InterruptedException {
-        return await0(unit.toNanos(timeout), true);
-    }
-
-    @Override
-    public boolean await(long timeoutMillis) throws InterruptedException {
-        return await0(MILLISECONDS.toNanos(timeoutMillis), true);
-    }
-
-    @Override
-    public ChannelGroupFuture awaitUninterruptibly() {
-        boolean interrupted = false;
-        synchronized (this) {
-            while (!done) {
-                waiters++;
-                try {
-                    wait();
-                } catch (InterruptedException e) {
-                    interrupted = true;
-                } finally {
-                    waiters--;
-                }
-            }
-        }
-
-        if (interrupted) {
-            Thread.currentThread().interrupt();
-        }
-
+    public DefaultChannelGroupFuture removeListeners(GenericFutureListener<? extends Future>... listeners) {
+        super.removeListeners(listeners);
         return this;
     }
 
     @Override
-    public boolean awaitUninterruptibly(long timeout, TimeUnit unit) {
-        try {
-            return await0(unit.toNanos(timeout), false);
-        } catch (InterruptedException e) {
-            throw new InternalError();
-        }
+    public DefaultChannelGroupFuture await() throws InterruptedException {
+        super.await();
+        return this;
     }
 
     @Override
-    public boolean awaitUninterruptibly(long timeoutMillis) {
-        try {
-            return await0(MILLISECONDS.toNanos(timeoutMillis), false);
-        } catch (InterruptedException e) {
-            throw new InternalError();
-        }
+    public DefaultChannelGroupFuture awaitUninterruptibly() {
+        super.awaitUninterruptibly();
+        return this;
     }
 
-    private boolean await0(long timeoutNanos, boolean interruptable) throws InterruptedException {
-        if (interruptable && Thread.interrupted()) {
-            throw new InterruptedException();
-        }
-
-        long startTime = timeoutNanos <= 0 ? 0 : System.nanoTime();
-        long waitTime = timeoutNanos;
-        boolean interrupted = false;
-
-        try {
-            synchronized (this) {
-                if (done || waitTime <= 0) {
-                    return done;
-                }
-
-                waiters++;
-                try {
-                    for (;;) {
-                        try {
-                            wait(waitTime / 1000000, (int) (waitTime % 1000000));
-                        } catch (InterruptedException e) {
-                            if (interruptable) {
-                                throw e;
-                            } else {
-                                interrupted = true;
-                            }
-                        }
-
-                        if (done) {
-                            return true;
-                        } else {
-                            waitTime = timeoutNanos - (System.nanoTime() - startTime);
-                            if (waitTime <= 0) {
-                                return done;
-                            }
-                        }
-                    }
-                } finally {
-                    waiters--;
-                }
-            }
-        } finally {
-            if (interrupted) {
-                Thread.currentThread().interrupt();
-            }
-        }
+    @Override
+    public DefaultChannelGroupFuture syncUninterruptibly() {
+        super.syncUninterruptibly();
+        return this;
     }
 
-    void setDone() {
-        synchronized (this) {
-            // Allow only once.
-            if (done) {
-                return;
-            }
-
-            done = true;
-            if (waiters > 0) {
-                notifyAll();
-            }
-        }
-
-        notifyListeners();
+    @Override
+    public DefaultChannelGroupFuture sync() throws InterruptedException {
+        super.sync();
+        return this;
     }
 
-    private void notifyListeners() {
-        // This method doesn't need synchronization because:
-        // 1) This method is always called after synchronized (this) block.
-        //    Hence any listener list modification happens-before this method.
-        // 2) This method is called only when 'done' is true.  Once 'done'
-        //    becomes true, the listener list is never modified - see add/removeListener()
-        if (firstListener != null) {
-            notifyListener(firstListener);
-            firstListener = null;
-
-            if (otherListeners != null) {
-                for (ChannelGroupFutureListener l: otherListeners) {
-                    notifyListener(l);
-                }
-                otherListeners = null;
-            }
-        }
+    @Override
+    public ChannelGroupException cause() {
+        return (ChannelGroupException) super.cause();
     }
 
-    private void notifyListener(ChannelGroupFutureListener l) {
-        try {
-            l.operationComplete(this);
-        } catch (Throwable t) {
-            if (logger.isWarnEnabled()) {
-                logger.warn(
-                        "An exception was thrown by " +
-                        ChannelFutureListener.class.getSimpleName() + '.', t);
-            }
+    private void setSuccess0() {
+        super.setSuccess();
+    }
+
+    private void setFailure0(ChannelGroupException cause) {
+        super.setFailure(cause);
+    }
+
+    @Override
+    public Promise setSuccess() {
+        throw new IllegalStateException();
+    }
+
+    @Override
+    public boolean trySuccess() {
+        throw new IllegalStateException();
+    }
+
+    @Override
+    public Promise setFailure(Throwable cause) {
+        throw new IllegalStateException();
+    }
+
+    @Override
+    public boolean tryFailure(Throwable cause) {
+        throw new IllegalStateException();
+    }
+
+    private static final class DefaultEntry<K, V> implements Map.Entry<K, V> {
+        private final K key;
+        private final V value;
+
+        public DefaultEntry(K key, V value) {
+            this.key = key;
+            this.value = value;
+        }
+
+        @Override
+        public K getKey() {
+            return key;
+        }
+
+        @Override
+        public V getValue() {
+            return value;
+        }
+
+        @Override
+        public V setValue(V value) {
+            throw new UnsupportedOperationException("read-only");
         }
     }
 }
