@@ -51,7 +51,7 @@ public class StreamTest {
 
     @Test(timeout = 10000)
     public void testSimpleWithDifferentExecutors() throws Exception {
-        final long size = 1048576L * 1024L * 32L; // Transfer 32 GiB of garbage
+        final long size = 1048576L * 1024L * 16L; // Transfer 16 GiB of garbage
         testSimple0(executorA, executorB, size);
     }
 
