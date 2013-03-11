@@ -21,15 +21,31 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.FileRegion;
 import io.netty.channel.ServerChannel;
+import io.netty.util.concurrent.DefaultPromise;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.EventExecutorGroup;
+import io.netty.util.concurrent.FailedFuture;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.SucceededFuture;
 import io.netty.util.internal.PlatformDependent;
 
 import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -38,8 +54,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class DefaultChannelGroup extends AbstractSet<Channel> implements ChannelGroup {
 
     private static final AtomicInteger nextId = new AtomicInteger();
-
+    private static final ImmediateEventExecutor DEFAULT_EXECUTOR = new ImmediateEventExecutor();
     private final String name;
+    private final EventExecutor executor;
     private final ConcurrentMap<Integer, Channel> serverChannels = PlatformDependent.newConcurrentHashMap();
     private final ConcurrentMap<Integer, Channel> nonServerChannels = PlatformDependent.newConcurrentHashMap();
     private final ChannelFutureListener remover = new ChannelFutureListener() {
@@ -57,15 +74,33 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     }
 
     /**
+     * Creates a new group with a generated name amd the provided {@link EventExecutor} to notify the
+     * {@link ChannelGroupFuture}s.
+     */
+    public DefaultChannelGroup(EventExecutor executor) {
+        this("group-0x" + Integer.toHexString(nextId.incrementAndGet()), executor);
+    }
+
+    /**
      * Creates a new group with the specified {@code name}.  Please note that
      * different groups can have the same name, which means no duplicate check
      * is done against group names.
      */
     public DefaultChannelGroup(String name) {
+        this(name, DEFAULT_EXECUTOR);
+    }
+
+    /**
+     * Creates a new group with the specified {@code name} and {@link EventExecutor} to notify the
+     * {@link ChannelGroupFuture}s.  Please note that different groups can have the same name, which means no
+     * duplicate check is done against group names.
+     */
+    public DefaultChannelGroup(String name, EventExecutor executor) {
         if (name == null) {
             throw new NullPointerException("name");
         }
         this.name = name;
+        this.executor = executor;
     }
 
     @Override
@@ -187,7 +222,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             futures.put(c.id(), c.close());
         }
 
-        return new DefaultChannelGroupFuture(this, futures);
+        return new DefaultChannelGroupFuture(this, futures, executor);
     }
 
     @Override
@@ -202,7 +237,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             futures.put(c.id(), c.disconnect());
         }
 
-        return new DefaultChannelGroupFuture(this, futures);
+        return new DefaultChannelGroupFuture(this, futures, executor);
     }
 
     @Override
@@ -218,7 +253,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
         }
 
         BufUtil.release(message);
-        return new DefaultChannelGroupFuture(this, futures);
+        return new DefaultChannelGroupFuture(this, futures, executor);
     }
 
     @Override
@@ -234,7 +269,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
         }
 
         BufUtil.release(region);
-        return new DefaultChannelGroupFuture(this, futures);
+        return new DefaultChannelGroupFuture(this, futures, executor);
     }
 
     @Override
@@ -244,7 +279,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             futures.put(c.id(), c.flush());
         }
 
-        return new DefaultChannelGroupFuture(this, futures);
+        return new DefaultChannelGroupFuture(this, futures, executor);
     }
 
     @Override
@@ -259,7 +294,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             futures.put(c.id(), c.deregister());
         }
 
-        return new DefaultChannelGroupFuture(this, futures);
+        return new DefaultChannelGroupFuture(this, futures, executor);
     }
 
     @Override
@@ -286,5 +321,178 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     public String toString() {
         return getClass().getSimpleName() +
                "(name: " + name() + ", size: " + size() + ')';
+    }
+
+    private static final class ImmediateEventExecutor implements EventExecutor {
+        private final Future successedFuture = new SucceededFuture(this);
+        @Override
+        public EventExecutor next() {
+            return this;
+        }
+
+        @Override
+        public EventExecutorGroup parent() {
+            return null;
+        }
+
+        @Override
+        public boolean inEventLoop() {
+            return true;
+        }
+
+        @Override
+        public boolean inEventLoop(Thread thread) {
+            return true;
+        }
+
+        @Override
+        public void shutdown() {
+        }
+
+        @Override
+        public boolean isShutdown() {
+            return false;
+        }
+
+        @Override
+        public boolean isTerminated() {
+            return false;
+        }
+
+        @Override
+        public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+            return false;
+        }
+
+        @Override
+        public Promise newPromise() {
+            return new DefaultPromise(this);
+        }
+
+        @Override
+        public Future newSucceededFuture() {
+            return successedFuture;
+        }
+
+        @Override
+        public Future newFailedFuture(Throwable cause) {
+            return new FailedFuture(this, cause);
+        }
+
+        @Override
+        public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay,
+                                                      long period, TimeUnit unit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay,
+                                                         long delay, TimeUnit unit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public List<Runnable> shutdownNow() {
+            return Collections.emptyList();
+        }
+
+        @Override
+        public <T> java.util.concurrent.Future<T> submit(Callable<T> task) {
+            if (task == null) {
+                throw new NullPointerException("task");
+            }
+            FutureTask<T> future = new FutureTask<T>(task);
+            future.run();
+            return future;
+        }
+
+        @Override
+        public <T> java.util.concurrent.Future<T> submit(Runnable task, T result) {
+            if (task == null) {
+                throw new NullPointerException("task");
+            }
+            FutureTask<T> future = new FutureTask<T>(task, result);
+            future.run();
+            return future;
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public java.util.concurrent.Future<?> submit(Runnable task) {
+            if (task == null) {
+                throw new NullPointerException("task");
+            }
+            FutureTask<?> future = new FutureTask(task, null);
+            future.run();
+            return future;
+        }
+
+        @Override
+        public <T> List<java.util.concurrent.Future<T>> invokeAll(Collection<? extends Callable<T>> tasks) {
+            if (tasks == null) {
+                throw new NullPointerException("tasks");
+            }
+            List<java.util.concurrent.Future<T>> futures = new ArrayList<java.util.concurrent.Future<T>>();
+            for (Callable<T> task: tasks) {
+                futures.add(submit(task));
+            }
+            return futures;
+        }
+
+        @Override
+        public <T> List<java.util.concurrent.Future<T>> invokeAll(Collection<? extends Callable<T>> tasks,
+                                                                  long timeout, TimeUnit unit) {
+            if (tasks == null) {
+                throw new NullPointerException("tasks");
+            }
+
+            List<java.util.concurrent.Future<T>> futures = new ArrayList<java.util.concurrent.Future<T>>();
+            for (Callable<T> task: tasks) {
+                futures.add(submit(task));
+            }
+            return futures;
+        }
+
+        @Override
+        public <T> T invokeAny(Collection<? extends Callable<T>> tasks)
+                throws InterruptedException, ExecutionException {
+            if (tasks == null) {
+                throw new NullPointerException("tasks");
+            }
+            if (tasks.isEmpty()) {
+                throw new IllegalArgumentException("tasks must be non empty");
+            }
+            return invokeAll(tasks).get(0).get();
+        }
+
+        @Override
+        public <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
+                throws InterruptedException, ExecutionException {
+            if (tasks == null) {
+                throw new NullPointerException("tasks");
+            }
+            if (tasks.isEmpty()) {
+                throw new IllegalArgumentException("tasks must be non empty");
+            }
+            return invokeAll(tasks).get(0).get();
+        }
+
+        @Override
+        public void execute(Runnable command) {
+            if (command == null) {
+                throw new NullPointerException("command");
+            }
+            command.run();
+        }
     }
 }

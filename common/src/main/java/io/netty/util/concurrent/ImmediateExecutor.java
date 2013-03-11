@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,25 +13,22 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.ssl;
+package io.netty.util.concurrent;
 
 import java.util.concurrent.Executor;
 
 /**
- * {@link Executor} which executes the command in the caller thread.
+ * {@link Executor} which execute tasks in the callers thread.
  */
 public final class ImmediateExecutor implements Executor {
+    public static final ImmediateExecutor INSTANCE = new ImmediateExecutor();
 
-    /**
-     * The default instance.
-     */
-    static final ImmediateExecutor INSTANCE = new ImmediateExecutor();
+    private  ImmediateExecutor() {
+        // use static instance
+    }
 
     @Override
     public void execute(Runnable command) {
         command.run();
-    }
-
-    private ImmediateExecutor() {
     }
 }

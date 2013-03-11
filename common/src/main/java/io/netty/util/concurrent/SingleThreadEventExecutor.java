@@ -24,12 +24,9 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -38,7 +35,7 @@ import java.util.concurrent.TimeUnit;
  * Abstract base class for {@link EventExecutor}'s that execute all its submitted tasks in a single thread.
  *
  */
-public abstract class SingleThreadEventExecutor extends AbstractExecutorService implements EventExecutor {
+public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(SingleThreadEventExecutor.class);
@@ -72,12 +69,10 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
     }
 
     private final EventExecutorGroup parent;
-    private final Future succeededFuture = new SucceededFuture(this);
     private final Queue<Runnable> taskQueue;
     private final Thread thread;
     private final Object stateLock = new Object();
     private final Semaphore threadLock = new Semaphore(0);
-    private final TaskScheduler scheduler;
     private final Set<Runnable> shutdownHooks = new LinkedHashSet<Runnable>();
     private volatile int state = ST_NOT_STARTED;
     private long lastAccessTimeNanos;
@@ -92,15 +87,12 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
      */
     protected SingleThreadEventExecutor(
             EventExecutorGroup parent, ThreadFactory threadFactory, TaskScheduler scheduler) {
+        super(scheduler);
         if (threadFactory == null) {
             throw new NullPointerException("threadFactory");
         }
-        if (scheduler == null) {
-            throw new NullPointerException("scheduler");
-        }
 
         this.parent = parent;
-        this.scheduler = scheduler;
 
         thread = threadFactory.newThread(new Runnable() {
             @Override
@@ -164,11 +156,6 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
     @Override
     public EventExecutorGroup parent() {
         return parent;
-    }
-
-    @Override
-    public EventExecutor next() {
-        return this;
     }
 
     /**
@@ -478,40 +465,5 @@ public abstract class SingleThreadEventExecutor extends AbstractExecutorService 
 
     protected static void reject() {
         throw new RejectedExecutionException("event executor terminated");
-    }
-
-    @Override
-    public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-        return scheduler.schedule(this, command, delay, unit);
-    }
-
-    @Override
-    public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-        return scheduler.schedule(this, callable, delay, unit);
-    }
-
-    @Override
-    public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
-        return scheduler.scheduleAtFixedRate(this, command, initialDelay, period, unit);
-    }
-
-    @Override
-    public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
-        return scheduler.scheduleWithFixedDelay(this, command, initialDelay, delay, unit);
-    }
-
-    @Override
-    public Promise newPromise() {
-        return new DefaultPromise(this);
-    }
-
-    @Override
-    public Future newSucceededFuture() {
-        return succeededFuture;
-    }
-
-    @Override
-    public Future newFailedFuture(Throwable cause) {
-        return new FailedFuture(this, cause);
     }
 }
