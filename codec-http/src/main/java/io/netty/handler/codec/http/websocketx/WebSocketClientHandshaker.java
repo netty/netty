@@ -212,12 +212,8 @@ public abstract class WebSocketClientHandshaker {
                 throw new IllegalStateException("ChannelPipeline does not contain " +
                         "a HttpRequestEncoder or HttpClientCodec");
             }
-            p.replaceAndForward(ctx.name(), "ws-decoder", newWebsocketDecoder());
-        } else {
-            p.remove(HttpRequestEncoder.class);
-            p.replaceAndForward(ctx.name(),
-                    "ws-decoder", newWebsocketDecoder());
         }
+        p.replaceAndForward(ctx.name(), "ws-decoder", newWebsocketDecoder());
     }
 
     /**
