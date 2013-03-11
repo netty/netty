@@ -3,4 +3,5 @@ jdk:
   - oraclejdk7
   - openjdk7
 before_install: 'mvn -version'
+install: 'mvn install -Pfull -DskipTests'
 
