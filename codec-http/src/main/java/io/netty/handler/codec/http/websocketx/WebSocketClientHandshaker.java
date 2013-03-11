@@ -205,15 +205,21 @@ public abstract class WebSocketClientHandshaker {
         setHandshakeComplete();
 
         ChannelPipeline p = channel.pipeline();
-        ChannelHandlerContext ctx = p.context(HttpRequestEncoder.class);
+        ChannelHandlerContext ctx = p.context(HttpResponseDecoder.class);
         if (ctx == null) {
             ctx = p.context(HttpClientCodec.class);
             if (ctx == null) {
                 throw new IllegalStateException("ChannelPipeline does not contain " +
                         "a HttpRequestEncoder or HttpClientCodec");
             }
+            p.replaceAndForward(ctx.name(), "ws-decoder", newWebsocketDecoder());
+        } else {
+            if (p.get(HttpRequestEncoder.class) != null) {
+                p.remove(HttpRequestEncoder.class);
+            }
+            p.replaceAndForward(ctx.name(),
+                    "ws-decoder", newWebsocketDecoder());
         }
-        p.replaceAndForward(ctx.name(), "ws-decoder", newWebsocketDecoder());
     }
 
     /**
