@@ -16,7 +16,7 @@
 
 package io.netty.channel;
 
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 
@@ -56,7 +56,7 @@ public final class ChannelPromiseAggregator implements ChannelFutureListener {
                 } else {
                     size = 2;
                 }
-                pendingPromises = new HashSet<ChannelPromise>(size);
+                pendingPromises = new LinkedHashSet<ChannelPromise>(size);
             }
             for (ChannelPromise p: promises) {
                 if (p == null) {
