@@ -18,35 +18,19 @@ package io.netty.channel.oio;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
-import io.netty.util.concurrent.TaskScheduler;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.util.internal.PlatformDependent;
+import io.netty.channel.ThreadPerChannelEventLoopGroup;
 
-import java.util.Collections;
-import java.util.Queue;
-import java.util.Set;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
 
 /**
  * {@link EventLoopGroup} which is used to handle OIO {@link Channel}'s. Each {@link Channel} will be handled by its
  * own {@link EventLoop} to not block others.
  */
-public class OioEventLoopGroup implements EventLoopGroup {
-
-    private static final StackTraceElement[] STACK_ELEMENTS = new StackTraceElement[0];
-    private final int maxChannels;
-    final TaskScheduler scheduler;
-    final ThreadFactory threadFactory;
-    final Set<OioEventLoop> activeChildren = Collections.newSetFromMap(
-            PlatformDependent.<OioEventLoop, Boolean>newConcurrentHashMap());
-    final Queue<OioEventLoop> idleChildren = new ConcurrentLinkedQueue<OioEventLoop>();
-    private final ChannelException tooManyChannels;
+public class OioEventLoopGroup extends ThreadPerChannelEventLoopGroup {
 
     /**
      * Create a new {@link OioEventLoopGroup} with no limit in place.
@@ -80,148 +64,6 @@ public class OioEventLoopGroup implements EventLoopGroup {
      *                          registered {@link Channel}s
      */
     public OioEventLoopGroup(int maxChannels, ThreadFactory threadFactory) {
-        if (maxChannels < 0) {
-            throw new IllegalArgumentException(String.format(
-                    "maxChannels: %d (expected: >= 0)", maxChannels));
-        }
-        if (threadFactory == null) {
-            throw new NullPointerException("threadFactory");
-        }
-
-        this.maxChannels = maxChannels;
-        this.threadFactory = threadFactory;
-
-        scheduler = new TaskScheduler(threadFactory);
-
-        tooManyChannels = new ChannelException("too many channels (max: " + maxChannels + ')');
-        tooManyChannels.setStackTrace(STACK_ELEMENTS);
-    }
-
-    @Override
-    public EventLoop next() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void shutdown() {
-        scheduler.shutdown();
-        for (EventLoop l: activeChildren) {
-            l.shutdown();
-        }
-        for (EventLoop l: idleChildren) {
-            l.shutdown();
-        }
-    }
-
-    @Override
-    public boolean isShutdown() {
-        if (!scheduler.isShutdown()) {
-            return false;
-        }
-        for (EventLoop l: activeChildren) {
-            if (!l.isShutdown()) {
-                return false;
-            }
-        }
-        for (EventLoop l: idleChildren) {
-            if (!l.isShutdown()) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    @Override
-    public boolean isTerminated() {
-        if (!scheduler.isTerminated()) {
-            return false;
-        }
-        for (EventLoop l: activeChildren) {
-            if (!l.isTerminated()) {
-                return false;
-            }
-        }
-        for (EventLoop l: idleChildren) {
-            if (!l.isTerminated()) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    @Override
-    public boolean awaitTermination(long timeout, TimeUnit unit)
-            throws InterruptedException {
-        long deadline = System.nanoTime() + unit.toNanos(timeout);
-        for (;;) {
-            long timeLeft = deadline - System.nanoTime();
-            if (timeLeft <= 0) {
-                return isTerminated();
-            }
-            if (scheduler.awaitTermination(timeLeft, TimeUnit.NANOSECONDS)) {
-                break;
-            }
-        }
-        for (EventLoop l: activeChildren) {
-            for (;;) {
-                long timeLeft = deadline - System.nanoTime();
-                if (timeLeft <= 0) {
-                    return isTerminated();
-                }
-                if (l.awaitTermination(timeLeft, TimeUnit.NANOSECONDS)) {
-                    break;
-                }
-            }
-        }
-        for (EventLoop l: idleChildren) {
-            for (;;) {
-                long timeLeft = deadline - System.nanoTime();
-                if (timeLeft <= 0) {
-                    return isTerminated();
-                }
-                if (l.awaitTermination(timeLeft, TimeUnit.NANOSECONDS)) {
-                    break;
-                }
-            }
-        }
-        return isTerminated();
-    }
-
-    @Override
-    public ChannelFuture register(Channel channel) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
-        }
-        try {
-            return nextChild().register(channel);
-        } catch (Throwable t) {
-            return channel.newFailedFuture(t);
-        }
-    }
-
-    @Override
-    public ChannelFuture register(Channel channel, ChannelPromise promise) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
-        }
-        try {
-            return nextChild().register(channel, promise);
-        } catch (Throwable t) {
-            promise.setFailure(t);
-
-            return promise;
-        }
-    }
-
-    private EventLoop nextChild() {
-        OioEventLoop loop = idleChildren.poll();
-        if (loop == null) {
-            if (maxChannels > 0 && activeChildren.size() >= maxChannels) {
-                throw tooManyChannels;
-            }
-            loop = new OioEventLoop(this);
-        }
-        activeChildren.add(loop);
-        return loop;
+        super(maxChannels, threadFactory);
     }
 }
