@@ -271,12 +271,13 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             EventExecutor executor = executor();
             Thread currentThread = Thread.currentThread();
             if (executor.inEventLoop(currentThread)) {
-                invokePrevFlush(newPromise(), currentThread, findOutbound(forwardPrev));
+                invokePrevFlush(newPromise(), currentThread, findContextOutboundInclusive(forwardPrev));
             } else {
                 executor.execute(new Runnable() {
                     @Override
                     public void run() {
-                        invokePrevFlush(newPromise(), Thread.currentThread(), findOutbound(forwardPrev));
+                        invokePrevFlush(newPromise(), Thread.currentThread(),
+                                findContextOutboundInclusive(forwardPrev));
                     }
                 });
             }
@@ -284,26 +285,26 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (inboundBufferUpdated) {
             EventExecutor executor = executor();
             if (executor.inEventLoop()) {
-                fireInboundBufferUpdated0(findInbound(forwardNext));
+                fireInboundBufferUpdated0(findContextInboundInclusive(forwardNext));
             } else {
                 executor.execute(new Runnable() {
                     @Override
                     public void run() {
-                        fireInboundBufferUpdated0(findInbound(forwardNext));
+                        fireInboundBufferUpdated0(findContextInboundInclusive(forwardNext));
                     }
                 });
             }
         }
     }
 
-    private static DefaultChannelHandlerContext findOutbound(DefaultChannelHandlerContext ctx) {
+    private static DefaultChannelHandlerContext findContextOutboundInclusive(DefaultChannelHandlerContext ctx) {
         if (ctx.handler() instanceof ChannelOperationHandler) {
             return ctx;
         }
         return ctx.findContextOutbound();
     }
 
-    private static DefaultChannelHandlerContext findInbound(DefaultChannelHandlerContext ctx) {
+    private static DefaultChannelHandlerContext findContextInboundInclusive(DefaultChannelHandlerContext ctx) {
         if (ctx.handler() instanceof ChannelStateHandler) {
             return ctx;
         }

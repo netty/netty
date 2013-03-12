@@ -335,7 +335,7 @@ public class DefaultChannelPipelineTest {
         });
 
         assertTrue(latch.await(10, TimeUnit.SECONDS));
-
+        assertTrue(handler2.updated);
     }
 
     @Test
@@ -362,6 +362,8 @@ public class DefaultChannelPipelineTest {
         });
 
         assertTrue(latch.await(10, TimeUnit.SECONDS));
+        assertTrue(handler2.updated);
+
     }
 
     @Test
@@ -390,6 +392,7 @@ public class DefaultChannelPipelineTest {
         });
 
         assertTrue(latch.await(10, TimeUnit.SECONDS));
+        assertTrue(handler1.flushed);
 
     }
 
@@ -417,6 +420,7 @@ public class DefaultChannelPipelineTest {
         });
 
         assertTrue(latch.await(10, TimeUnit.SECONDS));
+        assertTrue(handler2.flushed);
     }
 
     @Test
@@ -449,6 +453,8 @@ public class DefaultChannelPipelineTest {
         });
 
         assertTrue(latch.await(10, TimeUnit.SECONDS));
+        assertTrue(((ChannelInboundByteHandlerImpl)handler2.stateHandler()).updated);
+        assertTrue(((ChannelOutboundByteHandlerImpl)handler2.operationHandler()).flushed);
     }
 
     @Test
@@ -487,6 +493,8 @@ public class DefaultChannelPipelineTest {
         });
 
         assertTrue(latch.await(10, TimeUnit.SECONDS));
+        assertTrue(handler1.flushed);
+        assertTrue(handler3.updated);
 
     }
 
@@ -516,7 +524,7 @@ public class DefaultChannelPipelineTest {
         });
 
         assertTrue(latch.await(10, TimeUnit.SECONDS));
-
+        assertTrue(handler2.updated);
     }
 
     @Test
@@ -543,6 +551,7 @@ public class DefaultChannelPipelineTest {
         });
 
         assertTrue(latch.await(10, TimeUnit.SECONDS));
+        assertTrue(handler2.updated);
     }
 
     @Test
@@ -571,7 +580,7 @@ public class DefaultChannelPipelineTest {
         });
 
         assertTrue(latch.await(10, TimeUnit.SECONDS));
-
+        assertTrue(handler1.flushed);
     }
 
     @Test
@@ -598,6 +607,7 @@ public class DefaultChannelPipelineTest {
         });
 
         assertTrue(latch.await(10, TimeUnit.SECONDS));
+        assertTrue(handler2.flushed);
     }
 
     @Test
@@ -630,6 +640,9 @@ public class DefaultChannelPipelineTest {
         });
 
         assertTrue(latch.await(10, TimeUnit.SECONDS));
+        assertTrue(((ChannelInboundMessageHandlerImpl)handler2.stateHandler()).updated);
+        assertTrue(((ChannelOutboundMessageHandlerImpl)handler2.operationHandler()).flushed);
+
     }
 
     @Test
@@ -668,6 +681,8 @@ public class DefaultChannelPipelineTest {
         });
 
         assertTrue(latch.await(10, TimeUnit.SECONDS));
+        assertTrue(handler1.flushed);
+        assertTrue(handler3.updated);
 
     }
     private static int next(DefaultChannelHandlerContext ctx) {
@@ -726,20 +741,26 @@ public class DefaultChannelPipelineTest {
     }
 
     private static final class ChannelInboundByteHandlerImpl extends ChannelInboundByteHandlerAdapter {
+        boolean updated;
+
         @Override
         protected void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-
+            updated = true;
         }
     }
 
     private static final class ChannelOutboundByteHandlerImpl extends ChannelOutboundByteHandlerAdapter {
+        boolean flushed;
+
         @Override
         protected void flush(ChannelHandlerContext ctx, ByteBuf in, ChannelPromise promise) throws Exception {
             promise.setSuccess();
+            flushed = true;
         }
     }
 
     private static final class ChannelInboundMessageHandlerImpl extends ChannelStateHandlerAdapter implements ChannelInboundMessageHandler<Object> {
+        boolean updated;
         @Override
         public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return Unpooled.messageBuffer();
@@ -752,11 +773,12 @@ public class DefaultChannelPipelineTest {
 
         @Override
         public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+            updated = true;
         }
     }
 
     private static final class ChannelOutboundMessageHandlerImpl extends ChannelOperationHandlerAdapter implements ChannelOutboundMessageHandler<Object> {
-
+        boolean flushed;
         @Override
         public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return Unpooled.messageBuffer();
@@ -769,6 +791,8 @@ public class DefaultChannelPipelineTest {
 
         @Override
         public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            promise.setSuccess();
+            flushed = true;
         }
     }
 
