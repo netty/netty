@@ -76,7 +76,9 @@ public abstract class ChannelOutboundMessageHandlerAdapter<I>
     }
 
     @Override
-    public void beginFlush(ChannelHandlerContext ctx) throws Exception { }
+    public boolean beginFlush(ChannelHandlerContext ctx) throws Exception {
+        return true;
+    }
 
     @Override
     public void endFlush(ChannelHandlerContext ctx) throws Exception { }
