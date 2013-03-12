@@ -66,7 +66,20 @@ import com.google.protobuf.MessageLite;
  */
 @Sharable
 public class ProtobufDecoder extends OneToOneDecoder {
+    private static final boolean HAS_PARSER;
 
+    static {
+        boolean hasParser = false;
+        try {
+            // MessageLite.getParsetForType() is not available until protobuf 2.5.0.
+            MessageLite.class.getDeclaredMethod("getParserForType");
+            hasParser = true;
+        } catch (Throwable t) {
+            // Ignore
+        }
+
+        HAS_PARSER = hasParser;
+    }
     private final MessageLite prototype;
     private final ExtensionRegistry extensionRegistry;
 
@@ -93,22 +106,30 @@ public class ProtobufDecoder extends OneToOneDecoder {
         }
 
         ChannelBuffer buf = (ChannelBuffer) msg;
-        if (buf.hasArray()) {
-            final int offset = buf.readerIndex();
-            if (extensionRegistry == null) {
-                return prototype.newBuilderForType().mergeFrom(
-                        buf.array(), buf.arrayOffset() + offset, buf.readableBytes()).build();
-            } else {
-                return prototype.newBuilderForType().mergeFrom(
-                        buf.array(), buf.arrayOffset() + offset, buf.readableBytes(), extensionRegistry).build();
+        final byte[] array;
+        final int offset;
+        final int length = buf.readableBytes();
+
+        if (buf.hasArray()){
+            array = buf.array();
+            offset = buf.arrayOffset() + buf.readerIndex();
+        }else {
+            array = new byte[length];
+            buf.getBytes(buf.readerIndex(),array,0,length);
+            offset = 0;
+        }
+
+        if (extensionRegistry == null){
+            if(HAS_PARSER){
+                return prototype.getParserForType().parseFrom(array,offset,length);
+            }else{
+                return prototype.newBuilderForType().mergeFrom(array,offset,length).build();
             }
-        } else {
-            if (extensionRegistry == null) {
-                return prototype.newBuilderForType().mergeFrom(
-                        new ChannelBufferInputStream((ChannelBuffer) msg)).build();
-            } else {
-                return prototype.newBuilderForType().mergeFrom(
-                        new ChannelBufferInputStream((ChannelBuffer) msg), extensionRegistry).build();
+        }else {
+            if(HAS_PARSER){
+                return prototype.getParserForType().parseFrom(array,offset,length,extensionRegistry);
+            }else{
+                return prototype.newBuilderForType().mergeFrom(array,offset,length,extensionRegistry).build();
             }
         }
     }
