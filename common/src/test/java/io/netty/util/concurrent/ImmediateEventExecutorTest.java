@@ -13,17 +13,17 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.ssl;
+package io.netty.util.concurrent;
 
 import static org.junit.Assert.*;
 
 import org.junit.Test;
 
-public class ImmediateExecutorTest {
+public class ImmediateEventExecutorTest {
 
     @Test
     public void shouldExecuteImmediately() {
-        ImmediateExecutor e = ImmediateExecutor.INSTANCE;
+        ImmediateEventExecutor e = ImmediateEventExecutor.INSTANCE;
         long startTime = System.nanoTime();
         e.execute(new Runnable() {
             @Override

@@ -30,6 +30,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.FileRegion;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -178,7 +179,7 @@ public class SslHandler
      * @param engine  the {@link SSLEngine} this handler will use
      */
     public SslHandler(SSLEngine engine) {
-        this(engine, ImmediateExecutor.INSTANCE);
+        this(engine, ImmediateEventExecutor.INSTANCE);
     }
 
     /**
@@ -189,7 +190,7 @@ public class SslHandler
      *                  encrypted by the {@link SSLEngine}
      */
     public SslHandler(SSLEngine engine, boolean startTls) {
-        this(engine, startTls, ImmediateExecutor.INSTANCE);
+        this(engine, startTls, ImmediateEventExecutor.INSTANCE);
     }
 
     /**
