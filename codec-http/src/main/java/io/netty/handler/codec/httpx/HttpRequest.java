@@ -1,0 +1,79 @@
+/*
+ * Copyright 2012 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+package io.netty.handler.codec.httpx;
+
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.stream.Stream;
+import io.netty.handler.codec.http.ClientCookieEncoder;
+import io.netty.handler.codec.http.Cookie;
+import io.netty.handler.codec.http.CookieDecoder;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.QueryStringDecoder;
+import io.netty.handler.codec.http.QueryStringEncoder;
+import io.netty.handler.codec.http.ServerCookieEncoder;
+
+/**
+ * An HTTP request.
+ *
+ * <h3>Accessing Query Parameters and Cookie</h3>
+ * <p>
+ * Unlike the Servlet API, a query string is constructed and decomposed by
+ * {@link QueryStringEncoder} and {@link QueryStringDecoder}.  {@link Cookie}
+ * support is also provided separately via {@link CookieDecoder}, {@link ClientCookieEncoder},
+ * and {@link @ServerCookieEncoder}.
+ *
+ * @see HttpResponse
+ * @see ClientCookieEncoder
+ * @see ServerCookieEncoder
+ * @see CookieDecoder
+ */
+public interface HttpRequest extends HttpMessage {
+
+    /**
+     * Returns the {@link HttpMethod} of this {@link HttpRequest}.
+     *
+     * @return The {@link HttpMethod} of this {@link HttpRequest}
+     */
+    HttpMethod getMethod();
+
+    /**
+     * Set the {@link HttpMethod} of this {@link HttpRequest}.
+     */
+    HttpRequest setMethod(HttpMethod method);
+
+    /**
+     * Returns the requested URI (or alternatively, path)
+     *
+     * @return The URI being requested
+     */
+    String getUri();
+
+    /**
+     *  Set the requested URI (or alternatively, path)
+     */
+    HttpRequest setUri(String uri);
+
+    @Override
+    HttpRequest setVersion(HttpVersion version);
+
+    @Override
+    HttpRequest setContent(ByteBuf content);
+
+    @Override
+    HttpRequest setContent(Stream<ByteBuf> content);
+}
