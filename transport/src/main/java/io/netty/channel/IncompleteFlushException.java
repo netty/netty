@@ -16,22 +16,25 @@
 package io.netty.channel;
 
 /**
- * Special {@link RuntimeException} which will be used by {@link ChannelOutboundInvoker#flush(ChannelPromise)},
+ * Special {@link ChannelException} which will be used by {@link ChannelOutboundInvoker#flush(ChannelPromise)},
  * {@link ChannelOutboundInvoker#flush()}, {@link ChannelOutboundInvoker#write(Object)} and
  * {@link ChannelOutboundInvoker#write(Object, ChannelPromise)} if the operation was only partial successful.
  */
-public class PartialFlushException extends RuntimeException {
-    private static final long serialVersionUID = 990261865971015004L;
+public class IncompleteFlushException extends ChannelException {
 
-    public PartialFlushException(String message) {
+    private static final long serialVersionUID = -9049491093800487565L;
+
+    public IncompleteFlushException() { }
+
+    public IncompleteFlushException(String message) {
         super(message);
     }
 
-    public PartialFlushException(String message, Throwable cause) {
+    public IncompleteFlushException(String message, Throwable cause) {
         super(message, cause);
     }
 
-    public PartialFlushException(Throwable cause) {
+    public IncompleteFlushException(Throwable cause) {
         super(cause);
     }
 }

@@ -93,7 +93,11 @@ public final class ChannelHandlerUtil {
 
         int processed = 0;
         try {
-            handler.beginFlush(ctx);
+            if (!handler.beginFlush(ctx)) {
+                throw new IncompleteFlushException(
+                        "beginFlush(..) rejected the flush request by returning false. " +
+                        "none of " + inSize + " message(s) fulshed.");
+            }
             for (;;) {
                 Object msg = in.poll();
                 if (msg == null) {
@@ -116,14 +120,18 @@ public final class ChannelHandlerUtil {
                 }
             }
         } catch (Throwable t) {
-            PartialFlushException pfe;
-            String msg = processed + " out of " + inSize + " message(s) flushed";
-            if (t instanceof Signal) {
-                Signal abort = (Signal) t;
-                abort.expect(ABORT);
-                pfe = new PartialFlushException("aborted: " + msg);
+            IncompleteFlushException pfe;
+            if (t instanceof IncompleteFlushException) {
+                pfe = (IncompleteFlushException) t;
             } else {
-                pfe = new PartialFlushException(msg, t);
+                String msg = processed + " out of " + inSize + " message(s) flushed";
+                if (t instanceof Signal) {
+                    Signal abort = (Signal) t;
+                    abort.expect(ABORT);
+                    pfe = new IncompleteFlushException("aborted: " + msg);
+                } else {
+                    pfe = new IncompleteFlushException(msg, t);
+                }
             }
             fail(ctx, promise, closeOnFailedFlush, pfe);
         }
@@ -284,8 +292,11 @@ public final class ChannelHandlerUtil {
          * was called.
          *
          * @param ctx           the {@link ChannelHandlerContext} which this {@link ChannelHandler} belongs to
+         *
+         * @return {@code true} to accept the flush request.  {@code false} to reject the flush request and
+         *         to fail the promise associated with the flush request with {@link IncompleteFlushException}.
          */
-        void beginFlush(ChannelHandlerContext ctx) throws Exception;
+        boolean beginFlush(ChannelHandlerContext ctx) throws Exception;
 
         /**
          * Is called once a message is being flushed.

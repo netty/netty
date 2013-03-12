@@ -20,7 +20,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundByteHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.FileRegion;
-import io.netty.channel.PartialFlushException;
+import io.netty.channel.IncompleteFlushException;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -69,7 +69,7 @@ public abstract class ByteToByteEncoder extends ChannelOutboundByteHandlerAdapte
                     cause = new EncoderException(t);
                 }
                 if (encoded) {
-                    cause = new PartialFlushException("Unable to encoded all bytes", cause);
+                    cause = new IncompleteFlushException("Unable to encoded all bytes", cause);
                 }
                 in.discardSomeReadBytes();
                 promise.setFailure(cause);
