@@ -69,7 +69,7 @@ public abstract class ByteToByteEncoder extends ChannelOutboundByteHandlerAdapte
                     cause = new EncoderException(t);
                 }
                 if (encoded) {
-                    cause = new IncompleteFlushException("Unable to encoded all bytes", cause);
+                    cause = new IncompleteFlushException("unable to encode all bytes", cause);
                 }
                 in.discardSomeReadBytes();
                 promise.setFailure(cause);
