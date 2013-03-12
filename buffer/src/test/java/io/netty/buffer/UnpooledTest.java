@@ -207,7 +207,11 @@ public class UnpooledTest {
                 EMPTY_BUFFER,
                 wrappedBuffer(new byte[16]).order(LITTLE_ENDIAN),
                 EMPTY_BUFFER);
-        assertEquals(16, buf.capacity());
+        try {
+            assertEquals(16, buf.capacity());
+        } finally {
+            buf.release();
+        }
     }
 
     @Test
