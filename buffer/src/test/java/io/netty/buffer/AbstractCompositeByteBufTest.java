@@ -423,11 +423,14 @@ public abstract class AbstractCompositeByteBufTest extends
     @Test
     public void testReadWithEmptyCompositeBuffer() {
         ByteBuf buf = compositeBuffer();
-        int n = 65;
-        for (int i=0; i<n; ++i) {
-            buf.writeByte(1);
-            assertEquals(1, buf.readByte());
+        try {
+            int n = 65;
+            for (int i=0; i<n; ++i) {
+                buf.writeByte(1);
+                assertEquals(1, buf.readByte());
+            }
+        } finally {
+            buf.release();
         }
     }
-
 }
