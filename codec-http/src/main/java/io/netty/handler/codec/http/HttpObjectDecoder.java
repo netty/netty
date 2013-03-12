@@ -447,7 +447,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
     private HttpMessage invalidMessage(Exception cause) {
         checkpoint(State.BAD_MESSAGE);
         if (message != null) {
-            message.setDecoderResult(DecoderResult.partialFailure(cause));
+            message.setDecoderResult(DecoderResult.failure(cause));
         } else {
             message = createInvalidMessage();
             message.setDecoderResult(DecoderResult.failure(cause));

@@ -175,7 +175,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             final boolean last;
             if (!chunk.getDecoderResult().isSuccess()) {
                 currentMessage.setDecoderResult(
-                        DecoderResult.partialFailure(chunk.getDecoderResult().cause()));
+                        DecoderResult.failure(chunk.getDecoderResult().cause()));
                 last = true;
             } else {
                 last = chunk instanceof LastHttpContent;
