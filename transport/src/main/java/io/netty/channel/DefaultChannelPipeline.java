@@ -473,7 +473,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         next.prev = prev;
         name2ctx.remove(ctx.name());
 
-        callAfterRemove(ctx, forward);
+        callAfterRemove(ctx, prev, next, forward);
     }
 
     @Override
@@ -592,7 +592,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         ChannelPipelineException addException = null;
         boolean removed = false;
         try {
-            callAfterRemove(ctx, forward);
+            callAfterRemove(ctx, newCtx, newCtx, forward);
             removed = true;
         } catch (ChannelPipelineException e) {
             removeException = e;
@@ -676,7 +676,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private void callAfterRemove(final DefaultChannelHandlerContext ctx, boolean forward) {
+    private void callAfterRemove(final DefaultChannelHandlerContext ctx, DefaultChannelHandlerContext ctxPrev,
+                                 DefaultChannelHandlerContext ctxNext, boolean forward) {
         final ChannelHandler handler = ctx.handler();
 
         // Notify the complete removal.
@@ -689,7 +690,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         if (forward) {
-            ctx.forwardBufferContent();
+            ctx.forwardBufferContent(ctxPrev, ctxNext);
         } else {
             ctx.clearBuffer();
         }
