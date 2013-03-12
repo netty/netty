@@ -25,36 +25,105 @@ public final class WorldClockProtocol {
   public static void registerAllExtensions(
       com.google.protobuf.ExtensionRegistry registry) {
   }
+  /**
+   * Protobuf enum {@code io.netty.example.worldclock.Continent}
+   */
   public enum Continent
       implements com.google.protobuf.ProtocolMessageEnum {
+    /**
+     * <code>AFRICA = 0;</code>
+     */
     AFRICA(0, 0),
+    /**
+     * <code>AMERICA = 1;</code>
+     */
     AMERICA(1, 1),
+    /**
+     * <code>ANTARCTICA = 2;</code>
+     */
     ANTARCTICA(2, 2),
+    /**
+     * <code>ARCTIC = 3;</code>
+     */
     ARCTIC(3, 3),
+    /**
+     * <code>ASIA = 4;</code>
+     */
     ASIA(4, 4),
+    /**
+     * <code>ATLANTIC = 5;</code>
+     */
     ATLANTIC(5, 5),
+    /**
+     * <code>AUSTRALIA = 6;</code>
+     */
     AUSTRALIA(6, 6),
+    /**
+     * <code>EUROPE = 7;</code>
+     */
     EUROPE(7, 7),
+    /**
+     * <code>INDIAN = 8;</code>
+     */
     INDIAN(8, 8),
+    /**
+     * <code>MIDEAST = 9;</code>
+     */
     MIDEAST(9, 9),
+    /**
+     * <code>PACIFIC = 10;</code>
+     */
     PACIFIC(10, 10),
     ;
-    
+
+    /**
+     * <code>AFRICA = 0;</code>
+     */
     public static final int AFRICA_VALUE = 0;
+    /**
+     * <code>AMERICA = 1;</code>
+     */
     public static final int AMERICA_VALUE = 1;
+    /**
+     * <code>ANTARCTICA = 2;</code>
+     */
     public static final int ANTARCTICA_VALUE = 2;
+    /**
+     * <code>ARCTIC = 3;</code>
+     */
     public static final int ARCTIC_VALUE = 3;
+    /**
+     * <code>ASIA = 4;</code>
+     */
     public static final int ASIA_VALUE = 4;
+    /**
+     * <code>ATLANTIC = 5;</code>
+     */
     public static final int ATLANTIC_VALUE = 5;
+    /**
+     * <code>AUSTRALIA = 6;</code>
+     */
     public static final int AUSTRALIA_VALUE = 6;
+    /**
+     * <code>EUROPE = 7;</code>
+     */
     public static final int EUROPE_VALUE = 7;
+    /**
+     * <code>INDIAN = 8;</code>
+     */
     public static final int INDIAN_VALUE = 8;
+    /**
+     * <code>MIDEAST = 9;</code>
+     */
     public static final int MIDEAST_VALUE = 9;
+    /**
+     * <code>PACIFIC = 10;</code>
+     */
     public static final int PACIFIC_VALUE = 10;
-    
-    
+
+
     public final int getNumber() { return value; }
-    
+
     public static Continent valueOf(int value) {
       switch (value) {
         case 0: return AFRICA;
@@ -71,7 +140,7 @@ public final class WorldClockProtocol {
         default: return null;
       }
     }
-    
+
     public static com.google.protobuf.Internal.EnumLiteMap<Continent>
         internalGetValueMap() {
       return internalValueMap;
@@ -83,7 +152,7 @@ public final class WorldClockProtocol {
               return Continent.valueOf(number);
             }
           };
-    
+
     public final com.google.protobuf.Descriptors.EnumValueDescriptor
         getValueDescriptor() {
       return getDescriptor().getValues().get(index);
@@ -96,11 +165,9 @@ public final class WorldClockProtocol {
         getDescriptor() {
       return io.netty.example.worldclock.WorldClockProtocol.getDescriptor().getEnumTypes().get(0);
     }
-    
-    private static final Continent[] VALUES = {
-      AFRICA, AMERICA, ANTARCTICA, ARCTIC, ASIA, ATLANTIC, AUSTRALIA, EUROPE, INDIAN, MIDEAST, PACIFIC, 
-    };
-    
+
+    private static final Continent[] VALUES = values();
+
     public static Continent valueOf(
         com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
       if (desc.getType() != getDescriptor()) {
@@ -109,40 +176,85 @@ public final class WorldClockProtocol {
       }
       return VALUES[desc.getIndex()];
     }
-    
+
     private final int index;
     private final int value;
-    
+
     private Continent(int index, int value) {
       this.index = index;
       this.value = value;
     }
-    
+
     // @@protoc_insertion_point(enum_scope:io.netty.example.worldclock.Continent)
   }
-  
+
+  /**
+   * Protobuf enum {@code io.netty.example.worldclock.DayOfWeek}
+   */
   public enum DayOfWeek
       implements com.google.protobuf.ProtocolMessageEnum {
+    /**
+     * <code>SUNDAY = 1;</code>
+     */
     SUNDAY(0, 1),
+    /**
+     * <code>MONDAY = 2;</code>
+     */
     MONDAY(1, 2),
+    /**
+     * <code>TUESDAY = 3;</code>
+     */
     TUESDAY(2, 3),
+    /**
+     * <code>WEDNESDAY = 4;</code>
+     */
     WEDNESDAY(3, 4),
+    /**
+     * <code>THURSDAY = 5;</code>
+     */
     THURSDAY(4, 5),
+    /**
+     * <code>FRIDAY = 6;</code>
+     */
     FRIDAY(5, 6),
+    /**
+     * <code>SATURDAY = 7;</code>
+     */
     SATURDAY(6, 7),
     ;
-    
+
+    /**
+     * <code>SUNDAY = 1;</code>
+     */
     public static final int SUNDAY_VALUE = 1;
+    /**
+     * <code>MONDAY = 2;</code>
+     */
     public static final int MONDAY_VALUE = 2;
+    /**
+     * <code>TUESDAY = 3;</code>
+     */
     public static final int TUESDAY_VALUE = 3;
+    /**
+     * <code>WEDNESDAY = 4;</code>
+     */
     public static final int WEDNESDAY_VALUE = 4;
+    /**
+     * <code>THURSDAY = 5;</code>
+     */
     public static final int THURSDAY_VALUE = 5;
+    /**
+     * <code>FRIDAY = 6;</code>
+     */
     public static final int FRIDAY_VALUE = 6;
+    /**
+     * <code>SATURDAY = 7;</code>
+     */
     public static final int SATURDAY_VALUE = 7;
-    
-    
+
+
     public final int getNumber() { return value; }
-    
+
     public static DayOfWeek valueOf(int value) {
       switch (value) {
         case 1: return SUNDAY;
@@ -155,7 +267,7 @@ public final class WorldClockProtocol {
         default: return null;
       }
     }
-    
+
     public static com.google.protobuf.Internal.EnumLiteMap<DayOfWeek>
         internalGetValueMap() {
       return internalValueMap;
@@ -167,7 +279,7 @@ public final class WorldClockProtocol {
               return DayOfWeek.valueOf(number);
             }
           };
-    
+
     public final com.google.protobuf.Descriptors.EnumValueDescriptor
         getValueDescriptor() {
       return getDescriptor().getValues().get(index);
@@ -180,11 +292,9 @@ public final class WorldClockProtocol {
         getDescriptor() {
       return io.netty.example.worldclock.WorldClockProtocol.getDescriptor().getEnumTypes().get(1);
     }
-    
-    private static final DayOfWeek[] VALUES = {
-      SUNDAY, MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, 
-    };
-    
+
+    private static final DayOfWeek[] VALUES = values();
+
     public static DayOfWeek valueOf(
         com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
       if (desc.getType() != getDescriptor()) {
@@ -193,379 +303,94 @@ public final class WorldClockProtocol {
       }
       return VALUES[desc.getIndex()];
     }
-    
+
     private final int index;
     private final int value;
-    
+
     private DayOfWeek(int index, int value) {
       this.index = index;
       this.value = value;
     }
-    
+
     // @@protoc_insertion_point(enum_scope:io.netty.example.worldclock.DayOfWeek)
   }
-  
+
   public interface LocationOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // required .io.netty.example.worldclock.Continent continent = 1;
+    /**
+     * <code>required .io.netty.example.worldclock.Continent continent = 1;</code>
+     */
     boolean hasContinent();
+    /**
+     * <code>required .io.netty.example.worldclock.Continent continent = 1;</code>
+     */
     io.netty.example.worldclock.WorldClockProtocol.Continent getContinent();
-    
+
     // required string city = 2;
+    /**
+     * <code>required string city = 2;</code>
+     */
     boolean hasCity();
-    String getCity();
+    /**
+     * <code>required string city = 2;</code>
+     */
+    java.lang.String getCity();
+    /**
+     * <code>required string city = 2;</code>
+     */
+    com.google.protobuf.ByteString
+        getCityBytes();
   }
+  /**
+   * Protobuf type {@code io.netty.example.worldclock.Location}
+   */
   public static final class Location extends
       com.google.protobuf.GeneratedMessage
       implements LocationOrBuilder {
     // Use Location.newBuilder() to construct.
-    private Location(Builder builder) {
+    private Location(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private Location(boolean noInit) {}
-    
+    private Location(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final Location defaultInstance;
     public static Location getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public Location getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
-    public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
-      return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_Location_descriptor;
-    }
-    
-    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-        internalGetFieldAccessorTable() {
-      return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_Location_fieldAccessorTable;
-    }
-    
-    private int bitField0_;
-    // required .io.netty.example.worldclock.Continent continent = 1;
-    public static final int CONTINENT_FIELD_NUMBER = 1;
-    private io.netty.example.worldclock.WorldClockProtocol.Continent continent_;
-    public boolean hasContinent() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
-    }
-    public io.netty.example.worldclock.WorldClockProtocol.Continent getContinent() {
-      return continent_;
-    }
-    
-    // required string city = 2;
-    public static final int CITY_FIELD_NUMBER = 2;
-    private java.lang.Object city_;
-    public boolean hasCity() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
-    }
-    public String getCity() {
-      java.lang.Object ref = city_;
-      if (ref instanceof String) {
-        return (String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        String s = bs.toStringUtf8();
-        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
-          city_ = s;
-        }
-        return s;
-      }
-    }
-    private com.google.protobuf.ByteString getCityBytes() {
-      java.lang.Object ref = city_;
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
-        city_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-    
-    private void initFields() {
-      continent_ = io.netty.example.worldclock.WorldClockProtocol.Continent.AFRICA;
-      city_ = "";
-    }
-    private byte memoizedIsInitialized = -1;
-    public final boolean isInitialized() {
-      byte isInitialized = memoizedIsInitialized;
-      if (isInitialized != -1) return isInitialized == 1;
-      
-      if (!hasContinent()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasCity()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      memoizedIsInitialized = 1;
-      return true;
-    }
-    
-    public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      getSerializedSize();
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeEnum(1, continent_.getNumber());
-      }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeBytes(2, getCityBytes());
-      }
-      getUnknownFields().writeTo(output);
-    }
-    
-    private int memoizedSerializedSize = -1;
-    public int getSerializedSize() {
-      int size = memoizedSerializedSize;
-      if (size != -1) return size;
-    
-      size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeEnumSize(1, continent_.getNumber());
-      }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(2, getCityBytes());
-      }
-      size += getUnknownFields().getSerializedSize();
-      memoizedSerializedSize = size;
-      return size;
-    }
-    
-    private static final long serialVersionUID = 0L;
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
-      return super.writeReplace();
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
     }
-    
-    public static io.netty.example.worldclock.WorldClockProtocol.Location parseFrom(
-        com.google.protobuf.ByteString data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
-    }
-    public static io.netty.example.worldclock.WorldClockProtocol.Location parseFrom(
-        com.google.protobuf.ByteString data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
-    }
-    public static io.netty.example.worldclock.WorldClockProtocol.Location parseFrom(byte[] data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
-    }
-    public static io.netty.example.worldclock.WorldClockProtocol.Location parseFrom(
-        byte[] data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
-    }
-    public static io.netty.example.worldclock.WorldClockProtocol.Location parseFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
-    }
-    public static io.netty.example.worldclock.WorldClockProtocol.Location parseFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
-    }
-    public static io.netty.example.worldclock.WorldClockProtocol.Location parseDelimitedFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
-    }
-    public static io.netty.example.worldclock.WorldClockProtocol.Location parseDelimitedFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
-    }
-    public static io.netty.example.worldclock.WorldClockProtocol.Location parseFrom(
-        com.google.protobuf.CodedInputStream input)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
-    }
-    public static io.netty.example.worldclock.WorldClockProtocol.Location parseFrom(
+    private Location(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
-    }
-    
-    public static Builder newBuilder() { return Builder.create(); }
-    public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(io.netty.example.worldclock.WorldClockProtocol.Location prototype) {
-      return newBuilder().mergeFrom(prototype);
-    }
-    public Builder toBuilder() { return newBuilder(this); }
-    
-    @java.lang.Override
-    protected Builder newBuilderForType(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-      Builder builder = new Builder(parent);
-      return builder;
-    }
-    public static final class Builder extends
-        com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements io.netty.example.worldclock.WorldClockProtocol.LocationOrBuilder {
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_Location_descriptor;
-      }
-      
-      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_Location_fieldAccessorTable;
-      }
-      
-      // Construct using io.netty.example.worldclock.WorldClockProtocol.Location.newBuilder()
-      private Builder() {
-        maybeForceBuilderInitialization();
-      }
-      
-      private Builder(BuilderParent parent) {
-        super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-        }
-      }
-      private static Builder create() {
-        return new Builder();
-      }
-      
-      public Builder clear() {
-        super.clear();
-        continent_ = io.netty.example.worldclock.WorldClockProtocol.Continent.AFRICA;
-        bitField0_ = (bitField0_ & ~0x00000001);
-        city_ = "";
-        bitField0_ = (bitField0_ & ~0x00000002);
-        return this;
-      }
-      
-      public Builder clone() {
-        return create().mergeFrom(buildPartial());
-      }
-      
-      public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
-        return io.netty.example.worldclock.WorldClockProtocol.Location.getDescriptor();
-      }
-      
-      public io.netty.example.worldclock.WorldClockProtocol.Location getDefaultInstanceForType() {
-        return io.netty.example.worldclock.WorldClockProtocol.Location.getDefaultInstance();
-      }
-      
-      public io.netty.example.worldclock.WorldClockProtocol.Location build() {
-        io.netty.example.worldclock.WorldClockProtocol.Location result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(result);
-        }
-        return result;
-      }
-      
-      private io.netty.example.worldclock.WorldClockProtocol.Location buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        io.netty.example.worldclock.WorldClockProtocol.Location result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
-      public io.netty.example.worldclock.WorldClockProtocol.Location buildPartial() {
-        io.netty.example.worldclock.WorldClockProtocol.Location result = new io.netty.example.worldclock.WorldClockProtocol.Location(this);
-        int from_bitField0_ = bitField0_;
-        int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
-          to_bitField0_ |= 0x00000001;
-        }
-        result.continent_ = continent_;
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
-          to_bitField0_ |= 0x00000002;
-        }
-        result.city_ = city_;
-        result.bitField0_ = to_bitField0_;
-        onBuilt();
-        return result;
-      }
-      
-      public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof io.netty.example.worldclock.WorldClockProtocol.Location) {
-          return mergeFrom((io.netty.example.worldclock.WorldClockProtocol.Location)other);
-        } else {
-          super.mergeFrom(other);
-          return this;
-        }
-      }
-      
-      public Builder mergeFrom(io.netty.example.worldclock.WorldClockProtocol.Location other) {
-        if (other == io.netty.example.worldclock.WorldClockProtocol.Location.getDefaultInstance()) return this;
-        if (other.hasContinent()) {
-          setContinent(other.getContinent());
-        }
-        if (other.hasCity()) {
-          setCity(other.getCity());
-        }
-        this.mergeUnknownFields(other.getUnknownFields());
-        return this;
-      }
-      
-      public final boolean isInitialized() {
-        if (!hasContinent()) {
-          
-          return false;
-        }
-        if (!hasCity()) {
-          
-          return false;
-        }
-        return true;
-      }
-      
-      public Builder mergeFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
           int tag = input.readTag();
           switch (tag) {
             case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
+              done = true;
+              break;
             default: {
               if (!parseUnknownField(input, unknownFields,
                                      extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
+                done = true;
               }
               break;
             }
@@ -587,18 +412,382 @@ public final class WorldClockProtocol {
             }
           }
         }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
       }
-      
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_Location_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_Location_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              io.netty.example.worldclock.WorldClockProtocol.Location.class, io.netty.example.worldclock.WorldClockProtocol.Location.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<Location> PARSER =
+        new com.google.protobuf.AbstractParser<Location>() {
+      public Location parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new Location(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<Location> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required .io.netty.example.worldclock.Continent continent = 1;
+    public static final int CONTINENT_FIELD_NUMBER = 1;
+    private io.netty.example.worldclock.WorldClockProtocol.Continent continent_;
+    /**
+     * <code>required .io.netty.example.worldclock.Continent continent = 1;</code>
+     */
+    public boolean hasContinent() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required .io.netty.example.worldclock.Continent continent = 1;</code>
+     */
+    public io.netty.example.worldclock.WorldClockProtocol.Continent getContinent() {
+      return continent_;
+    }
+
+    // required string city = 2;
+    public static final int CITY_FIELD_NUMBER = 2;
+    private java.lang.Object city_;
+    /**
+     * <code>required string city = 2;</code>
+     */
+    public boolean hasCity() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>required string city = 2;</code>
+     */
+    public java.lang.String getCity() {
+      java.lang.Object ref = city_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          city_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string city = 2;</code>
+     */
+    public com.google.protobuf.ByteString
+        getCityBytes() {
+      java.lang.Object ref = city_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        city_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    private void initFields() {
+      continent_ = io.netty.example.worldclock.WorldClockProtocol.Continent.AFRICA;
+      city_ = "";
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasContinent()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasCity()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeEnum(1, continent_.getNumber());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBytes(2, getCityBytes());
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(1, continent_.getNumber());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, getCityBytes());
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    public static io.netty.example.worldclock.WorldClockProtocol.Location parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static io.netty.example.worldclock.WorldClockProtocol.Location parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static io.netty.example.worldclock.WorldClockProtocol.Location parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static io.netty.example.worldclock.WorldClockProtocol.Location parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static io.netty.example.worldclock.WorldClockProtocol.Location parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static io.netty.example.worldclock.WorldClockProtocol.Location parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static io.netty.example.worldclock.WorldClockProtocol.Location parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static io.netty.example.worldclock.WorldClockProtocol.Location parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static io.netty.example.worldclock.WorldClockProtocol.Location parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static io.netty.example.worldclock.WorldClockProtocol.Location parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(io.netty.example.worldclock.WorldClockProtocol.Location prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code io.netty.example.worldclock.Location}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements io.netty.example.worldclock.WorldClockProtocol.LocationOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_Location_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_Location_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                io.netty.example.worldclock.WorldClockProtocol.Location.class, io.netty.example.worldclock.WorldClockProtocol.Location.Builder.class);
+      }
+
+      // Construct using io.netty.example.worldclock.WorldClockProtocol.Location.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        continent_ = io.netty.example.worldclock.WorldClockProtocol.Continent.AFRICA;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        city_ = "";
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_Location_descriptor;
+      }
+
+      public io.netty.example.worldclock.WorldClockProtocol.Location getDefaultInstanceForType() {
+        return io.netty.example.worldclock.WorldClockProtocol.Location.getDefaultInstance();
+      }
+
+      public io.netty.example.worldclock.WorldClockProtocol.Location build() {
+        io.netty.example.worldclock.WorldClockProtocol.Location result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public io.netty.example.worldclock.WorldClockProtocol.Location buildPartial() {
+        io.netty.example.worldclock.WorldClockProtocol.Location result = new io.netty.example.worldclock.WorldClockProtocol.Location(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.continent_ = continent_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.city_ = city_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof io.netty.example.worldclock.WorldClockProtocol.Location) {
+          return mergeFrom((io.netty.example.worldclock.WorldClockProtocol.Location)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(io.netty.example.worldclock.WorldClockProtocol.Location other) {
+        if (other == io.netty.example.worldclock.WorldClockProtocol.Location.getDefaultInstance()) return this;
+        if (other.hasContinent()) {
+          setContinent(other.getContinent());
+        }
+        if (other.hasCity()) {
+          bitField0_ |= 0x00000002;
+          city_ = other.city_;
+          onChanged();
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasContinent()) {
+          
+          return false;
+        }
+        if (!hasCity()) {
+          
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        io.netty.example.worldclock.WorldClockProtocol.Location parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (io.netty.example.worldclock.WorldClockProtocol.Location) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
       private int bitField0_;
-      
+
       // required .io.netty.example.worldclock.Continent continent = 1;
       private io.netty.example.worldclock.WorldClockProtocol.Continent continent_ = io.netty.example.worldclock.WorldClockProtocol.Continent.AFRICA;
+      /**
+       * <code>required .io.netty.example.worldclock.Continent continent = 1;</code>
+       */
       public boolean hasContinent() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
+      /**
+       * <code>required .io.netty.example.worldclock.Continent continent = 1;</code>
+       */
       public io.netty.example.worldclock.WorldClockProtocol.Continent getContinent() {
         return continent_;
       }
+      /**
+       * <code>required .io.netty.example.worldclock.Continent continent = 1;</code>
+       */
       public Builder setContinent(io.netty.example.worldclock.WorldClockProtocol.Continent value) {
         if (value == null) {
           throw new NullPointerException();
@@ -608,29 +797,59 @@ public final class WorldClockProtocol {
         onChanged();
         return this;
       }
+      /**
+       * <code>required .io.netty.example.worldclock.Continent continent = 1;</code>
+       */
       public Builder clearContinent() {
         bitField0_ = (bitField0_ & ~0x00000001);
         continent_ = io.netty.example.worldclock.WorldClockProtocol.Continent.AFRICA;
         onChanged();
         return this;
       }
-      
+
       // required string city = 2;
       private java.lang.Object city_ = "";
+      /**
+       * <code>required string city = 2;</code>
+       */
       public boolean hasCity() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
-      public String getCity() {
+      /**
+       * <code>required string city = 2;</code>
+       */
+      public java.lang.String getCity() {
         java.lang.Object ref = city_;
-        if (!(ref instanceof String)) {
-          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
           city_ = s;
           return s;
         } else {
-          return (String) ref;
+          return (java.lang.String) ref;
         }
       }
-      public Builder setCity(String value) {
+      /**
+       * <code>required string city = 2;</code>
+       */
+      public com.google.protobuf.ByteString
+          getCityBytes() {
+        java.lang.Object ref = city_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          city_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string city = 2;</code>
+       */
+      public Builder setCity(
+          java.lang.String value) {
         if (value == null) {
     throw new NullPointerException();
   }
@@ -639,91 +858,205 @@ public final class WorldClockProtocol {
         onChanged();
         return this;
       }
+      /**
+       * <code>required string city = 2;</code>
+       */
       public Builder clearCity() {
         bitField0_ = (bitField0_ & ~0x00000002);
         city_ = getDefaultInstance().getCity();
         onChanged();
         return this;
       }
-      void setCity(com.google.protobuf.ByteString value) {
-        bitField0_ |= 0x00000002;
+      /**
+       * <code>required string city = 2;</code>
+       */
+      public Builder setCityBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
         city_ = value;
         onChanged();
+        return this;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:io.netty.example.worldclock.Location)
     }
-    
+
     static {
       defaultInstance = new Location(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:io.netty.example.worldclock.Location)
   }
-  
+
   public interface LocationsOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // repeated .io.netty.example.worldclock.Location location = 1;
+    /**
+     * <code>repeated .io.netty.example.worldclock.Location location = 1;</code>
+     */
     java.util.List<io.netty.example.worldclock.WorldClockProtocol.Location> 
         getLocationList();
+    /**
+     * <code>repeated .io.netty.example.worldclock.Location location = 1;</code>
+     */
     io.netty.example.worldclock.WorldClockProtocol.Location getLocation(int index);
+    /**
+     * <code>repeated .io.netty.example.worldclock.Location location = 1;</code>
+     */
     int getLocationCount();
+    /**
+     * <code>repeated .io.netty.example.worldclock.Location location = 1;</code>
+     */
     java.util.List<? extends io.netty.example.worldclock.WorldClockProtocol.LocationOrBuilder> 
         getLocationOrBuilderList();
+    /**
+     * <code>repeated .io.netty.example.worldclock.Location location = 1;</code>
+     */
     io.netty.example.worldclock.WorldClockProtocol.LocationOrBuilder getLocationOrBuilder(
         int index);
   }
+  /**
+   * Protobuf type {@code io.netty.example.worldclock.Locations}
+   */
   public static final class Locations extends
       com.google.protobuf.GeneratedMessage
       implements LocationsOrBuilder {
     // Use Locations.newBuilder() to construct.
-    private Locations(Builder builder) {
+    private Locations(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private Locations(boolean noInit) {}
-    
+    private Locations(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final Locations defaultInstance;
     public static Locations getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public Locations getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private Locations(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+                location_ = new java.util.ArrayList<io.netty.example.worldclock.WorldClockProtocol.Location>();
+                mutable_bitField0_ |= 0x00000001;
+              }
+              location_.add(input.readMessage(io.netty.example.worldclock.WorldClockProtocol.Location.PARSER, extensionRegistry));
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+          location_ = java.util.Collections.unmodifiableList(location_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_Locations_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_Locations_fieldAccessorTable;
+      return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_Locations_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              io.netty.example.worldclock.WorldClockProtocol.Locations.class, io.netty.example.worldclock.WorldClockProtocol.Locations.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<Locations> PARSER =
+        new com.google.protobuf.AbstractParser<Locations>() {
+      public Locations parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new Locations(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<Locations> getParserForType() {
+      return PARSER;
+    }
+
     // repeated .io.netty.example.worldclock.Location location = 1;
     public static final int LOCATION_FIELD_NUMBER = 1;
     private java.util.List<io.netty.example.worldclock.WorldClockProtocol.Location> location_;
+    /**
+     * <code>repeated .io.netty.example.worldclock.Location location = 1;</code>
+     */
     public java.util.List<io.netty.example.worldclock.WorldClockProtocol.Location> getLocationList() {
       return location_;
     }
+    /**
+     * <code>repeated .io.netty.example.worldclock.Location location = 1;</code>
+     */
     public java.util.List<? extends io.netty.example.worldclock.WorldClockProtocol.LocationOrBuilder> 
         getLocationOrBuilderList() {
       return location_;
     }
+    /**
+     * <code>repeated .io.netty.example.worldclock.Location location = 1;</code>
+     */
     public int getLocationCount() {
       return location_.size();
     }
+    /**
+     * <code>repeated .io.netty.example.worldclock.Location location = 1;</code>
+     */
     public io.netty.example.worldclock.WorldClockProtocol.Location getLocation(int index) {
       return location_.get(index);
     }
+    /**
+     * <code>repeated .io.netty.example.worldclock.Location location = 1;</code>
+     */
     public io.netty.example.worldclock.WorldClockProtocol.LocationOrBuilder getLocationOrBuilder(
         int index) {
       return location_.get(index);
     }
-    
+
     private void initFields() {
       location_ = java.util.Collections.emptyList();
     }
@@ -731,7 +1064,7 @@ public final class WorldClockProtocol {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       for (int i = 0; i < getLocationCount(); i++) {
         if (!getLocation(i).isInitialized()) {
           memoizedIsInitialized = 0;
@@ -741,7 +1074,7 @@ public final class WorldClockProtocol {
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -750,12 +1083,12 @@ public final class WorldClockProtocol {
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       for (int i = 0; i < location_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
@@ -765,94 +1098,83 @@ public final class WorldClockProtocol {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     public static io.netty.example.worldclock.WorldClockProtocol.Locations parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static io.netty.example.worldclock.WorldClockProtocol.Locations parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static io.netty.example.worldclock.WorldClockProtocol.Locations parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static io.netty.example.worldclock.WorldClockProtocol.Locations parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static io.netty.example.worldclock.WorldClockProtocol.Locations parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static io.netty.example.worldclock.WorldClockProtocol.Locations parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static io.netty.example.worldclock.WorldClockProtocol.Locations parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static io.netty.example.worldclock.WorldClockProtocol.Locations parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static io.netty.example.worldclock.WorldClockProtocol.Locations parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static io.netty.example.worldclock.WorldClockProtocol.Locations parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(io.netty.example.worldclock.WorldClockProtocol.Locations prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code io.netty.example.worldclock.Locations}
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements io.netty.example.worldclock.WorldClockProtocol.LocationsOrBuilder {
@@ -860,18 +1182,21 @@ public final class WorldClockProtocol {
           getDescriptor() {
         return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_Locations_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_Locations_fieldAccessorTable;
+        return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_Locations_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                io.netty.example.worldclock.WorldClockProtocol.Locations.class, io.netty.example.worldclock.WorldClockProtocol.Locations.Builder.class);
       }
-      
+
       // Construct using io.netty.example.worldclock.WorldClockProtocol.Locations.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -883,7 +1208,7 @@ public final class WorldClockProtocol {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         if (locationBuilder_ == null) {
@@ -894,20 +1219,20 @@ public final class WorldClockProtocol {
         }
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return io.netty.example.worldclock.WorldClockProtocol.Locations.getDescriptor();
+        return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_Locations_descriptor;
       }
-      
+
       public io.netty.example.worldclock.WorldClockProtocol.Locations getDefaultInstanceForType() {
         return io.netty.example.worldclock.WorldClockProtocol.Locations.getDefaultInstance();
       }
-      
+
       public io.netty.example.worldclock.WorldClockProtocol.Locations build() {
         io.netty.example.worldclock.WorldClockProtocol.Locations result = buildPartial();
         if (!result.isInitialized()) {
@@ -915,17 +1240,7 @@ public final class WorldClockProtocol {
         }
         return result;
       }
-      
-      private io.netty.example.worldclock.WorldClockProtocol.Locations buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        io.netty.example.worldclock.WorldClockProtocol.Locations result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public io.netty.example.worldclock.WorldClockProtocol.Locations buildPartial() {
         io.netty.example.worldclock.WorldClockProtocol.Locations result = new io.netty.example.worldclock.WorldClockProtocol.Locations(this);
         int from_bitField0_ = bitField0_;
@@ -941,7 +1256,7 @@ public final class WorldClockProtocol {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof io.netty.example.worldclock.WorldClockProtocol.Locations) {
           return mergeFrom((io.netty.example.worldclock.WorldClockProtocol.Locations)other);
@@ -950,7 +1265,7 @@ public final class WorldClockProtocol {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(io.netty.example.worldclock.WorldClockProtocol.Locations other) {
         if (other == io.netty.example.worldclock.WorldClockProtocol.Locations.getDefaultInstance()) return this;
         if (locationBuilder_ == null) {
@@ -982,7 +1297,7 @@ public final class WorldClockProtocol {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         for (int i = 0; i < getLocationCount(); i++) {
           if (!getLocation(i).isInitialized()) {
@@ -992,42 +1307,26 @@ public final class WorldClockProtocol {
         }
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
-            case 10: {
-              io.netty.example.worldclock.WorldClockProtocol.Location.Builder subBuilder = io.netty.example.worldclock.WorldClockProtocol.Location.newBuilder();
-              input.readMessage(subBuilder, extensionRegistry);
-              addLocation(subBuilder.buildPartial());
-              break;
-            }
+        io.netty.example.worldclock.WorldClockProtocol.Locations parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (io.netty.example.worldclock.WorldClockProtocol.Locations) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
           }
         }
+        return this;
       }
-      
       private int bitField0_;
-      
+
       // repeated .io.netty.example.worldclock.Location location = 1;
       private java.util.List<io.netty.example.worldclock.WorldClockProtocol.Location> location_ =
         java.util.Collections.emptyList();
@@ -1037,10 +1336,13 @@ public final class WorldClockProtocol {
           bitField0_ |= 0x00000001;
          }
       }
-      
+
       private com.google.protobuf.RepeatedFieldBuilder<
           io.netty.example.worldclock.WorldClockProtocol.Location, io.netty.example.worldclock.WorldClockProtocol.Location.Builder, io.netty.example.worldclock.WorldClockProtocol.LocationOrBuilder> locationBuilder_;
-      
+
+      /**
+       * <code>repeated .io.netty.example.worldclock.Location location = 1;</code>
+       */
       public java.util.List<io.netty.example.worldclock.WorldClockProtocol.Location> getLocationList() {
         if (locationBuilder_ == null) {
           return java.util.Collections.unmodifiableList(location_);
@@ -1048,6 +1350,9 @@ public final class WorldClockProtocol {
           return locationBuilder_.getMessageList();
         }
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.Location location = 1;</code>
+       */
       public int getLocationCount() {
         if (locationBuilder_ == null) {
           return location_.size();
@@ -1055,6 +1360,9 @@ public final class WorldClockProtocol {
           return locationBuilder_.getCount();
         }
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.Location location = 1;</code>
+       */
       public io.netty.example.worldclock.WorldClockProtocol.Location getLocation(int index) {
         if (locationBuilder_ == null) {
           return location_.get(index);
@@ -1062,6 +1370,9 @@ public final class WorldClockProtocol {
           return locationBuilder_.getMessage(index);
         }
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.Location location = 1;</code>
+       */
       public Builder setLocation(
           int index, io.netty.example.worldclock.WorldClockProtocol.Location value) {
         if (locationBuilder_ == null) {
@@ -1076,6 +1387,9 @@ public final class WorldClockProtocol {
         }
         return this;
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.Location location = 1;</code>
+       */
       public Builder setLocation(
           int index, io.netty.example.worldclock.WorldClockProtocol.Location.Builder builderForValue) {
         if (locationBuilder_ == null) {
@@ -1087,6 +1401,9 @@ public final class WorldClockProtocol {
         }
         return this;
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.Location location = 1;</code>
+       */
       public Builder addLocation(io.netty.example.worldclock.WorldClockProtocol.Location value) {
         if (locationBuilder_ == null) {
           if (value == null) {
@@ -1100,6 +1417,9 @@ public final class WorldClockProtocol {
         }
         return this;
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.Location location = 1;</code>
+       */
       public Builder addLocation(
           int index, io.netty.example.worldclock.WorldClockProtocol.Location value) {
         if (locationBuilder_ == null) {
@@ -1114,6 +1434,9 @@ public final class WorldClockProtocol {
         }
         return this;
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.Location location = 1;</code>
+       */
       public Builder addLocation(
           io.netty.example.worldclock.WorldClockProtocol.Location.Builder builderForValue) {
         if (locationBuilder_ == null) {
@@ -1125,6 +1448,9 @@ public final class WorldClockProtocol {
         }
         return this;
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.Location location = 1;</code>
+       */
       public Builder addLocation(
           int index, io.netty.example.worldclock.WorldClockProtocol.Location.Builder builderForValue) {
         if (locationBuilder_ == null) {
@@ -1136,6 +1462,9 @@ public final class WorldClockProtocol {
         }
         return this;
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.Location location = 1;</code>
+       */
       public Builder addAllLocation(
           java.lang.Iterable<? extends io.netty.example.worldclock.WorldClockProtocol.Location> values) {
         if (locationBuilder_ == null) {
@@ -1147,6 +1476,9 @@ public final class WorldClockProtocol {
         }
         return this;
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.Location location = 1;</code>
+       */
       public Builder clearLocation() {
         if (locationBuilder_ == null) {
           location_ = java.util.Collections.emptyList();
@@ -1157,6 +1489,9 @@ public final class WorldClockProtocol {
         }
         return this;
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.Location location = 1;</code>
+       */
       public Builder removeLocation(int index) {
         if (locationBuilder_ == null) {
           ensureLocationIsMutable();
@@ -1167,10 +1502,16 @@ public final class WorldClockProtocol {
         }
         return this;
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.Location location = 1;</code>
+       */
       public io.netty.example.worldclock.WorldClockProtocol.Location.Builder getLocationBuilder(
           int index) {
         return getLocationFieldBuilder().getBuilder(index);
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.Location location = 1;</code>
+       */
       public io.netty.example.worldclock.WorldClockProtocol.LocationOrBuilder getLocationOrBuilder(
           int index) {
         if (locationBuilder_ == null) {
@@ -1178,6 +1519,9 @@ public final class WorldClockProtocol {
           return locationBuilder_.getMessageOrBuilder(index);
         }
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.Location location = 1;</code>
+       */
       public java.util.List<? extends io.netty.example.worldclock.WorldClockProtocol.LocationOrBuilder> 
            getLocationOrBuilderList() {
         if (locationBuilder_ != null) {
@@ -1186,15 +1530,24 @@ public final class WorldClockProtocol {
           return java.util.Collections.unmodifiableList(location_);
         }
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.Location location = 1;</code>
+       */
       public io.netty.example.worldclock.WorldClockProtocol.Location.Builder addLocationBuilder() {
         return getLocationFieldBuilder().addBuilder(
             io.netty.example.worldclock.WorldClockProtocol.Location.getDefaultInstance());
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.Location location = 1;</code>
+       */
       public io.netty.example.worldclock.WorldClockProtocol.Location.Builder addLocationBuilder(
           int index) {
         return getLocationFieldBuilder().addBuilder(
             index, io.netty.example.worldclock.WorldClockProtocol.Location.getDefaultInstance());
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.Location location = 1;</code>
+       */
       public java.util.List<io.netty.example.worldclock.WorldClockProtocol.Location.Builder> 
            getLocationBuilderList() {
         return getLocationFieldBuilder().getBuilderList();
@@ -1213,552 +1566,139 @@ public final class WorldClockProtocol {
         }
         return locationBuilder_;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:io.netty.example.worldclock.Locations)
     }
-    
+
     static {
       defaultInstance = new Locations(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:io.netty.example.worldclock.Locations)
   }
-  
+
   public interface LocalTimeOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // required uint32 year = 1;
+    /**
+     * <code>required uint32 year = 1;</code>
+     */
     boolean hasYear();
+    /**
+     * <code>required uint32 year = 1;</code>
+     */
     int getYear();
-    
+
     // required uint32 month = 2;
+    /**
+     * <code>required uint32 month = 2;</code>
+     */
     boolean hasMonth();
+    /**
+     * <code>required uint32 month = 2;</code>
+     */
     int getMonth();
-    
+
     // required uint32 dayOfMonth = 4;
+    /**
+     * <code>required uint32 dayOfMonth = 4;</code>
+     */
     boolean hasDayOfMonth();
+    /**
+     * <code>required uint32 dayOfMonth = 4;</code>
+     */
     int getDayOfMonth();
-    
+
     // required .io.netty.example.worldclock.DayOfWeek dayOfWeek = 5;
+    /**
+     * <code>required .io.netty.example.worldclock.DayOfWeek dayOfWeek = 5;</code>
+     */
     boolean hasDayOfWeek();
+    /**
+     * <code>required .io.netty.example.worldclock.DayOfWeek dayOfWeek = 5;</code>
+     */
     io.netty.example.worldclock.WorldClockProtocol.DayOfWeek getDayOfWeek();
-    
+
     // required uint32 hour = 6;
+    /**
+     * <code>required uint32 hour = 6;</code>
+     */
     boolean hasHour();
+    /**
+     * <code>required uint32 hour = 6;</code>
+     */
     int getHour();
-    
+
     // required uint32 minute = 7;
+    /**
+     * <code>required uint32 minute = 7;</code>
+     */
     boolean hasMinute();
+    /**
+     * <code>required uint32 minute = 7;</code>
+     */
     int getMinute();
-    
+
     // required uint32 second = 8;
+    /**
+     * <code>required uint32 second = 8;</code>
+     */
     boolean hasSecond();
+    /**
+     * <code>required uint32 second = 8;</code>
+     */
     int getSecond();
   }
+  /**
+   * Protobuf type {@code io.netty.example.worldclock.LocalTime}
+   */
   public static final class LocalTime extends
       com.google.protobuf.GeneratedMessage
       implements LocalTimeOrBuilder {
     // Use LocalTime.newBuilder() to construct.
-    private LocalTime(Builder builder) {
+    private LocalTime(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private LocalTime(boolean noInit) {}
-    
+    private LocalTime(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final LocalTime defaultInstance;
     public static LocalTime getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public LocalTime getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
-    public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
-      return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_LocalTime_descriptor;
-    }
-    
-    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-        internalGetFieldAccessorTable() {
-      return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_LocalTime_fieldAccessorTable;
-    }
-    
-    private int bitField0_;
-    // required uint32 year = 1;
-    public static final int YEAR_FIELD_NUMBER = 1;
-    private int year_;
-    public boolean hasYear() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
-    }
-    public int getYear() {
-      return year_;
-    }
-    
-    // required uint32 month = 2;
-    public static final int MONTH_FIELD_NUMBER = 2;
-    private int month_;
-    public boolean hasMonth() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
-    }
-    public int getMonth() {
-      return month_;
-    }
-    
-    // required uint32 dayOfMonth = 4;
-    public static final int DAYOFMONTH_FIELD_NUMBER = 4;
-    private int dayOfMonth_;
-    public boolean hasDayOfMonth() {
-      return ((bitField0_ & 0x00000004) == 0x00000004);
-    }
-    public int getDayOfMonth() {
-      return dayOfMonth_;
-    }
-    
-    // required .io.netty.example.worldclock.DayOfWeek dayOfWeek = 5;
-    public static final int DAYOFWEEK_FIELD_NUMBER = 5;
-    private io.netty.example.worldclock.WorldClockProtocol.DayOfWeek dayOfWeek_;
-    public boolean hasDayOfWeek() {
-      return ((bitField0_ & 0x00000008) == 0x00000008);
-    }
-    public io.netty.example.worldclock.WorldClockProtocol.DayOfWeek getDayOfWeek() {
-      return dayOfWeek_;
-    }
-    
-    // required uint32 hour = 6;
-    public static final int HOUR_FIELD_NUMBER = 6;
-    private int hour_;
-    public boolean hasHour() {
-      return ((bitField0_ & 0x00000010) == 0x00000010);
-    }
-    public int getHour() {
-      return hour_;
-    }
-    
-    // required uint32 minute = 7;
-    public static final int MINUTE_FIELD_NUMBER = 7;
-    private int minute_;
-    public boolean hasMinute() {
-      return ((bitField0_ & 0x00000020) == 0x00000020);
-    }
-    public int getMinute() {
-      return minute_;
-    }
-    
-    // required uint32 second = 8;
-    public static final int SECOND_FIELD_NUMBER = 8;
-    private int second_;
-    public boolean hasSecond() {
-      return ((bitField0_ & 0x00000040) == 0x00000040);
-    }
-    public int getSecond() {
-      return second_;
-    }
-    
-    private void initFields() {
-      year_ = 0;
-      month_ = 0;
-      dayOfMonth_ = 0;
-      dayOfWeek_ = io.netty.example.worldclock.WorldClockProtocol.DayOfWeek.SUNDAY;
-      hour_ = 0;
-      minute_ = 0;
-      second_ = 0;
-    }
-    private byte memoizedIsInitialized = -1;
-    public final boolean isInitialized() {
-      byte isInitialized = memoizedIsInitialized;
-      if (isInitialized != -1) return isInitialized == 1;
-      
-      if (!hasYear()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasMonth()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasDayOfMonth()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasDayOfWeek()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasHour()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasMinute()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasSecond()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      memoizedIsInitialized = 1;
-      return true;
-    }
-    
-    public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      getSerializedSize();
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeUInt32(1, year_);
-      }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeUInt32(2, month_);
-      }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        output.writeUInt32(4, dayOfMonth_);
-      }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        output.writeEnum(5, dayOfWeek_.getNumber());
-      }
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
-        output.writeUInt32(6, hour_);
-      }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
-        output.writeUInt32(7, minute_);
-      }
-      if (((bitField0_ & 0x00000040) == 0x00000040)) {
-        output.writeUInt32(8, second_);
-      }
-      getUnknownFields().writeTo(output);
-    }
-    
-    private int memoizedSerializedSize = -1;
-    public int getSerializedSize() {
-      int size = memoizedSerializedSize;
-      if (size != -1) return size;
-    
-      size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(1, year_);
-      }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(2, month_);
-      }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(4, dayOfMonth_);
-      }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeEnumSize(5, dayOfWeek_.getNumber());
-      }
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(6, hour_);
-      }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(7, minute_);
-      }
-      if (((bitField0_ & 0x00000040) == 0x00000040)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(8, second_);
-      }
-      size += getUnknownFields().getSerializedSize();
-      memoizedSerializedSize = size;
-      return size;
-    }
-    
-    private static final long serialVersionUID = 0L;
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
-      return super.writeReplace();
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
     }
-    
-    public static io.netty.example.worldclock.WorldClockProtocol.LocalTime parseFrom(
-        com.google.protobuf.ByteString data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
-    }
-    public static io.netty.example.worldclock.WorldClockProtocol.LocalTime parseFrom(
-        com.google.protobuf.ByteString data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
-    }
-    public static io.netty.example.worldclock.WorldClockProtocol.LocalTime parseFrom(byte[] data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
-    }
-    public static io.netty.example.worldclock.WorldClockProtocol.LocalTime parseFrom(
-        byte[] data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
-    }
-    public static io.netty.example.worldclock.WorldClockProtocol.LocalTime parseFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
-    }
-    public static io.netty.example.worldclock.WorldClockProtocol.LocalTime parseFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
-    }
-    public static io.netty.example.worldclock.WorldClockProtocol.LocalTime parseDelimitedFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
-    }
-    public static io.netty.example.worldclock.WorldClockProtocol.LocalTime parseDelimitedFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
-    }
-    public static io.netty.example.worldclock.WorldClockProtocol.LocalTime parseFrom(
-        com.google.protobuf.CodedInputStream input)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
-    }
-    public static io.netty.example.worldclock.WorldClockProtocol.LocalTime parseFrom(
+    private LocalTime(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
-    }
-    
-    public static Builder newBuilder() { return Builder.create(); }
-    public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(io.netty.example.worldclock.WorldClockProtocol.LocalTime prototype) {
-      return newBuilder().mergeFrom(prototype);
-    }
-    public Builder toBuilder() { return newBuilder(this); }
-    
-    @java.lang.Override
-    protected Builder newBuilderForType(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-      Builder builder = new Builder(parent);
-      return builder;
-    }
-    public static final class Builder extends
-        com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements io.netty.example.worldclock.WorldClockProtocol.LocalTimeOrBuilder {
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_LocalTime_descriptor;
-      }
-      
-      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_LocalTime_fieldAccessorTable;
-      }
-      
-      // Construct using io.netty.example.worldclock.WorldClockProtocol.LocalTime.newBuilder()
-      private Builder() {
-        maybeForceBuilderInitialization();
-      }
-      
-      private Builder(BuilderParent parent) {
-        super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-        }
-      }
-      private static Builder create() {
-        return new Builder();
-      }
-      
-      public Builder clear() {
-        super.clear();
-        year_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000001);
-        month_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000002);
-        dayOfMonth_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000004);
-        dayOfWeek_ = io.netty.example.worldclock.WorldClockProtocol.DayOfWeek.SUNDAY;
-        bitField0_ = (bitField0_ & ~0x00000008);
-        hour_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000010);
-        minute_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000020);
-        second_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000040);
-        return this;
-      }
-      
-      public Builder clone() {
-        return create().mergeFrom(buildPartial());
-      }
-      
-      public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
-        return io.netty.example.worldclock.WorldClockProtocol.LocalTime.getDescriptor();
-      }
-      
-      public io.netty.example.worldclock.WorldClockProtocol.LocalTime getDefaultInstanceForType() {
-        return io.netty.example.worldclock.WorldClockProtocol.LocalTime.getDefaultInstance();
-      }
-      
-      public io.netty.example.worldclock.WorldClockProtocol.LocalTime build() {
-        io.netty.example.worldclock.WorldClockProtocol.LocalTime result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(result);
-        }
-        return result;
-      }
-      
-      private io.netty.example.worldclock.WorldClockProtocol.LocalTime buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        io.netty.example.worldclock.WorldClockProtocol.LocalTime result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
-      public io.netty.example.worldclock.WorldClockProtocol.LocalTime buildPartial() {
-        io.netty.example.worldclock.WorldClockProtocol.LocalTime result = new io.netty.example.worldclock.WorldClockProtocol.LocalTime(this);
-        int from_bitField0_ = bitField0_;
-        int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
-          to_bitField0_ |= 0x00000001;
-        }
-        result.year_ = year_;
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
-          to_bitField0_ |= 0x00000002;
-        }
-        result.month_ = month_;
-        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
-          to_bitField0_ |= 0x00000004;
-        }
-        result.dayOfMonth_ = dayOfMonth_;
-        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
-          to_bitField0_ |= 0x00000008;
-        }
-        result.dayOfWeek_ = dayOfWeek_;
-        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
-          to_bitField0_ |= 0x00000010;
-        }
-        result.hour_ = hour_;
-        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
-          to_bitField0_ |= 0x00000020;
-        }
-        result.minute_ = minute_;
-        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
-          to_bitField0_ |= 0x00000040;
-        }
-        result.second_ = second_;
-        result.bitField0_ = to_bitField0_;
-        onBuilt();
-        return result;
-      }
-      
-      public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof io.netty.example.worldclock.WorldClockProtocol.LocalTime) {
-          return mergeFrom((io.netty.example.worldclock.WorldClockProtocol.LocalTime)other);
-        } else {
-          super.mergeFrom(other);
-          return this;
-        }
-      }
-      
-      public Builder mergeFrom(io.netty.example.worldclock.WorldClockProtocol.LocalTime other) {
-        if (other == io.netty.example.worldclock.WorldClockProtocol.LocalTime.getDefaultInstance()) return this;
-        if (other.hasYear()) {
-          setYear(other.getYear());
-        }
-        if (other.hasMonth()) {
-          setMonth(other.getMonth());
-        }
-        if (other.hasDayOfMonth()) {
-          setDayOfMonth(other.getDayOfMonth());
-        }
-        if (other.hasDayOfWeek()) {
-          setDayOfWeek(other.getDayOfWeek());
-        }
-        if (other.hasHour()) {
-          setHour(other.getHour());
-        }
-        if (other.hasMinute()) {
-          setMinute(other.getMinute());
-        }
-        if (other.hasSecond()) {
-          setSecond(other.getSecond());
-        }
-        this.mergeUnknownFields(other.getUnknownFields());
-        return this;
-      }
-      
-      public final boolean isInitialized() {
-        if (!hasYear()) {
-          
-          return false;
-        }
-        if (!hasMonth()) {
-          
-          return false;
-        }
-        if (!hasDayOfMonth()) {
-          
-          return false;
-        }
-        if (!hasDayOfWeek()) {
-          
-          return false;
-        }
-        if (!hasHour()) {
-          
-          return false;
-        }
-        if (!hasMinute()) {
-          
-          return false;
-        }
-        if (!hasSecond()) {
-          
-          return false;
-        }
-        return true;
-      }
-      
-      public Builder mergeFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
           int tag = input.readTag();
           switch (tag) {
             case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
+              done = true;
+              break;
             default: {
               if (!parseUnknownField(input, unknownFields,
                                      extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
+                done = true;
               }
               break;
             }
@@ -1805,81 +1745,657 @@ public final class WorldClockProtocol {
             }
           }
         }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
       }
-      
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_LocalTime_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_LocalTime_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              io.netty.example.worldclock.WorldClockProtocol.LocalTime.class, io.netty.example.worldclock.WorldClockProtocol.LocalTime.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<LocalTime> PARSER =
+        new com.google.protobuf.AbstractParser<LocalTime>() {
+      public LocalTime parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new LocalTime(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<LocalTime> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required uint32 year = 1;
+    public static final int YEAR_FIELD_NUMBER = 1;
+    private int year_;
+    /**
+     * <code>required uint32 year = 1;</code>
+     */
+    public boolean hasYear() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required uint32 year = 1;</code>
+     */
+    public int getYear() {
+      return year_;
+    }
+
+    // required uint32 month = 2;
+    public static final int MONTH_FIELD_NUMBER = 2;
+    private int month_;
+    /**
+     * <code>required uint32 month = 2;</code>
+     */
+    public boolean hasMonth() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>required uint32 month = 2;</code>
+     */
+    public int getMonth() {
+      return month_;
+    }
+
+    // required uint32 dayOfMonth = 4;
+    public static final int DAYOFMONTH_FIELD_NUMBER = 4;
+    private int dayOfMonth_;
+    /**
+     * <code>required uint32 dayOfMonth = 4;</code>
+     */
+    public boolean hasDayOfMonth() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>required uint32 dayOfMonth = 4;</code>
+     */
+    public int getDayOfMonth() {
+      return dayOfMonth_;
+    }
+
+    // required .io.netty.example.worldclock.DayOfWeek dayOfWeek = 5;
+    public static final int DAYOFWEEK_FIELD_NUMBER = 5;
+    private io.netty.example.worldclock.WorldClockProtocol.DayOfWeek dayOfWeek_;
+    /**
+     * <code>required .io.netty.example.worldclock.DayOfWeek dayOfWeek = 5;</code>
+     */
+    public boolean hasDayOfWeek() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    /**
+     * <code>required .io.netty.example.worldclock.DayOfWeek dayOfWeek = 5;</code>
+     */
+    public io.netty.example.worldclock.WorldClockProtocol.DayOfWeek getDayOfWeek() {
+      return dayOfWeek_;
+    }
+
+    // required uint32 hour = 6;
+    public static final int HOUR_FIELD_NUMBER = 6;
+    private int hour_;
+    /**
+     * <code>required uint32 hour = 6;</code>
+     */
+    public boolean hasHour() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    /**
+     * <code>required uint32 hour = 6;</code>
+     */
+    public int getHour() {
+      return hour_;
+    }
+
+    // required uint32 minute = 7;
+    public static final int MINUTE_FIELD_NUMBER = 7;
+    private int minute_;
+    /**
+     * <code>required uint32 minute = 7;</code>
+     */
+    public boolean hasMinute() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    /**
+     * <code>required uint32 minute = 7;</code>
+     */
+    public int getMinute() {
+      return minute_;
+    }
+
+    // required uint32 second = 8;
+    public static final int SECOND_FIELD_NUMBER = 8;
+    private int second_;
+    /**
+     * <code>required uint32 second = 8;</code>
+     */
+    public boolean hasSecond() {
+      return ((bitField0_ & 0x00000040) == 0x00000040);
+    }
+    /**
+     * <code>required uint32 second = 8;</code>
+     */
+    public int getSecond() {
+      return second_;
+    }
+
+    private void initFields() {
+      year_ = 0;
+      month_ = 0;
+      dayOfMonth_ = 0;
+      dayOfWeek_ = io.netty.example.worldclock.WorldClockProtocol.DayOfWeek.SUNDAY;
+      hour_ = 0;
+      minute_ = 0;
+      second_ = 0;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasYear()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasMonth()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasDayOfMonth()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasDayOfWeek()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasHour()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasMinute()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasSecond()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeUInt32(1, year_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeUInt32(2, month_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeUInt32(4, dayOfMonth_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeEnum(5, dayOfWeek_.getNumber());
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeUInt32(6, hour_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        output.writeUInt32(7, minute_);
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        output.writeUInt32(8, second_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(1, year_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(2, month_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(4, dayOfMonth_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(5, dayOfWeek_.getNumber());
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(6, hour_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(7, minute_);
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(8, second_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    public static io.netty.example.worldclock.WorldClockProtocol.LocalTime parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static io.netty.example.worldclock.WorldClockProtocol.LocalTime parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static io.netty.example.worldclock.WorldClockProtocol.LocalTime parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static io.netty.example.worldclock.WorldClockProtocol.LocalTime parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static io.netty.example.worldclock.WorldClockProtocol.LocalTime parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static io.netty.example.worldclock.WorldClockProtocol.LocalTime parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static io.netty.example.worldclock.WorldClockProtocol.LocalTime parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static io.netty.example.worldclock.WorldClockProtocol.LocalTime parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static io.netty.example.worldclock.WorldClockProtocol.LocalTime parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static io.netty.example.worldclock.WorldClockProtocol.LocalTime parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(io.netty.example.worldclock.WorldClockProtocol.LocalTime prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code io.netty.example.worldclock.LocalTime}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements io.netty.example.worldclock.WorldClockProtocol.LocalTimeOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_LocalTime_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_LocalTime_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                io.netty.example.worldclock.WorldClockProtocol.LocalTime.class, io.netty.example.worldclock.WorldClockProtocol.LocalTime.Builder.class);
+      }
+
+      // Construct using io.netty.example.worldclock.WorldClockProtocol.LocalTime.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        year_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        month_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        dayOfMonth_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        dayOfWeek_ = io.netty.example.worldclock.WorldClockProtocol.DayOfWeek.SUNDAY;
+        bitField0_ = (bitField0_ & ~0x00000008);
+        hour_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000010);
+        minute_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000020);
+        second_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000040);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_LocalTime_descriptor;
+      }
+
+      public io.netty.example.worldclock.WorldClockProtocol.LocalTime getDefaultInstanceForType() {
+        return io.netty.example.worldclock.WorldClockProtocol.LocalTime.getDefaultInstance();
+      }
+
+      public io.netty.example.worldclock.WorldClockProtocol.LocalTime build() {
+        io.netty.example.worldclock.WorldClockProtocol.LocalTime result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public io.netty.example.worldclock.WorldClockProtocol.LocalTime buildPartial() {
+        io.netty.example.worldclock.WorldClockProtocol.LocalTime result = new io.netty.example.worldclock.WorldClockProtocol.LocalTime(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.year_ = year_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.month_ = month_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.dayOfMonth_ = dayOfMonth_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.dayOfWeek_ = dayOfWeek_;
+        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.hour_ = hour_;
+        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
+          to_bitField0_ |= 0x00000020;
+        }
+        result.minute_ = minute_;
+        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+          to_bitField0_ |= 0x00000040;
+        }
+        result.second_ = second_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof io.netty.example.worldclock.WorldClockProtocol.LocalTime) {
+          return mergeFrom((io.netty.example.worldclock.WorldClockProtocol.LocalTime)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(io.netty.example.worldclock.WorldClockProtocol.LocalTime other) {
+        if (other == io.netty.example.worldclock.WorldClockProtocol.LocalTime.getDefaultInstance()) return this;
+        if (other.hasYear()) {
+          setYear(other.getYear());
+        }
+        if (other.hasMonth()) {
+          setMonth(other.getMonth());
+        }
+        if (other.hasDayOfMonth()) {
+          setDayOfMonth(other.getDayOfMonth());
+        }
+        if (other.hasDayOfWeek()) {
+          setDayOfWeek(other.getDayOfWeek());
+        }
+        if (other.hasHour()) {
+          setHour(other.getHour());
+        }
+        if (other.hasMinute()) {
+          setMinute(other.getMinute());
+        }
+        if (other.hasSecond()) {
+          setSecond(other.getSecond());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasYear()) {
+          
+          return false;
+        }
+        if (!hasMonth()) {
+          
+          return false;
+        }
+        if (!hasDayOfMonth()) {
+          
+          return false;
+        }
+        if (!hasDayOfWeek()) {
+          
+          return false;
+        }
+        if (!hasHour()) {
+          
+          return false;
+        }
+        if (!hasMinute()) {
+          
+          return false;
+        }
+        if (!hasSecond()) {
+          
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        io.netty.example.worldclock.WorldClockProtocol.LocalTime parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (io.netty.example.worldclock.WorldClockProtocol.LocalTime) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
       private int bitField0_;
-      
+
       // required uint32 year = 1;
       private int year_ ;
+      /**
+       * <code>required uint32 year = 1;</code>
+       */
       public boolean hasYear() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
+      /**
+       * <code>required uint32 year = 1;</code>
+       */
       public int getYear() {
         return year_;
       }
+      /**
+       * <code>required uint32 year = 1;</code>
+       */
       public Builder setYear(int value) {
         bitField0_ |= 0x00000001;
         year_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>required uint32 year = 1;</code>
+       */
       public Builder clearYear() {
         bitField0_ = (bitField0_ & ~0x00000001);
         year_ = 0;
         onChanged();
         return this;
       }
-      
+
       // required uint32 month = 2;
       private int month_ ;
+      /**
+       * <code>required uint32 month = 2;</code>
+       */
       public boolean hasMonth() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
+      /**
+       * <code>required uint32 month = 2;</code>
+       */
       public int getMonth() {
         return month_;
       }
+      /**
+       * <code>required uint32 month = 2;</code>
+       */
       public Builder setMonth(int value) {
         bitField0_ |= 0x00000002;
         month_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>required uint32 month = 2;</code>
+       */
       public Builder clearMonth() {
         bitField0_ = (bitField0_ & ~0x00000002);
         month_ = 0;
         onChanged();
         return this;
       }
-      
+
       // required uint32 dayOfMonth = 4;
       private int dayOfMonth_ ;
+      /**
+       * <code>required uint32 dayOfMonth = 4;</code>
+       */
       public boolean hasDayOfMonth() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
+      /**
+       * <code>required uint32 dayOfMonth = 4;</code>
+       */
       public int getDayOfMonth() {
         return dayOfMonth_;
       }
+      /**
+       * <code>required uint32 dayOfMonth = 4;</code>
+       */
       public Builder setDayOfMonth(int value) {
         bitField0_ |= 0x00000004;
         dayOfMonth_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>required uint32 dayOfMonth = 4;</code>
+       */
       public Builder clearDayOfMonth() {
         bitField0_ = (bitField0_ & ~0x00000004);
         dayOfMonth_ = 0;
         onChanged();
         return this;
       }
-      
+
       // required .io.netty.example.worldclock.DayOfWeek dayOfWeek = 5;
       private io.netty.example.worldclock.WorldClockProtocol.DayOfWeek dayOfWeek_ = io.netty.example.worldclock.WorldClockProtocol.DayOfWeek.SUNDAY;
+      /**
+       * <code>required .io.netty.example.worldclock.DayOfWeek dayOfWeek = 5;</code>
+       */
       public boolean hasDayOfWeek() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
+      /**
+       * <code>required .io.netty.example.worldclock.DayOfWeek dayOfWeek = 5;</code>
+       */
       public io.netty.example.worldclock.WorldClockProtocol.DayOfWeek getDayOfWeek() {
         return dayOfWeek_;
       }
+      /**
+       * <code>required .io.netty.example.worldclock.DayOfWeek dayOfWeek = 5;</code>
+       */
       public Builder setDayOfWeek(io.netty.example.worldclock.WorldClockProtocol.DayOfWeek value) {
         if (value == null) {
           throw new NullPointerException();
@@ -1889,149 +2405,291 @@ public final class WorldClockProtocol {
         onChanged();
         return this;
       }
+      /**
+       * <code>required .io.netty.example.worldclock.DayOfWeek dayOfWeek = 5;</code>
+       */
       public Builder clearDayOfWeek() {
         bitField0_ = (bitField0_ & ~0x00000008);
         dayOfWeek_ = io.netty.example.worldclock.WorldClockProtocol.DayOfWeek.SUNDAY;
         onChanged();
         return this;
       }
-      
+
       // required uint32 hour = 6;
       private int hour_ ;
+      /**
+       * <code>required uint32 hour = 6;</code>
+       */
       public boolean hasHour() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
       }
+      /**
+       * <code>required uint32 hour = 6;</code>
+       */
       public int getHour() {
         return hour_;
       }
+      /**
+       * <code>required uint32 hour = 6;</code>
+       */
       public Builder setHour(int value) {
         bitField0_ |= 0x00000010;
         hour_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>required uint32 hour = 6;</code>
+       */
       public Builder clearHour() {
         bitField0_ = (bitField0_ & ~0x00000010);
         hour_ = 0;
         onChanged();
         return this;
       }
-      
+
       // required uint32 minute = 7;
       private int minute_ ;
+      /**
+       * <code>required uint32 minute = 7;</code>
+       */
       public boolean hasMinute() {
         return ((bitField0_ & 0x00000020) == 0x00000020);
       }
+      /**
+       * <code>required uint32 minute = 7;</code>
+       */
       public int getMinute() {
         return minute_;
       }
+      /**
+       * <code>required uint32 minute = 7;</code>
+       */
       public Builder setMinute(int value) {
         bitField0_ |= 0x00000020;
         minute_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>required uint32 minute = 7;</code>
+       */
       public Builder clearMinute() {
         bitField0_ = (bitField0_ & ~0x00000020);
         minute_ = 0;
         onChanged();
         return this;
       }
-      
+
       // required uint32 second = 8;
       private int second_ ;
+      /**
+       * <code>required uint32 second = 8;</code>
+       */
       public boolean hasSecond() {
         return ((bitField0_ & 0x00000040) == 0x00000040);
       }
+      /**
+       * <code>required uint32 second = 8;</code>
+       */
       public int getSecond() {
         return second_;
       }
+      /**
+       * <code>required uint32 second = 8;</code>
+       */
       public Builder setSecond(int value) {
         bitField0_ |= 0x00000040;
         second_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>required uint32 second = 8;</code>
+       */
       public Builder clearSecond() {
         bitField0_ = (bitField0_ & ~0x00000040);
         second_ = 0;
         onChanged();
         return this;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:io.netty.example.worldclock.LocalTime)
     }
-    
+
     static {
       defaultInstance = new LocalTime(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:io.netty.example.worldclock.LocalTime)
   }
-  
+
   public interface LocalTimesOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // repeated .io.netty.example.worldclock.LocalTime localTime = 1;
+    /**
+     * <code>repeated .io.netty.example.worldclock.LocalTime localTime = 1;</code>
+     */
     java.util.List<io.netty.example.worldclock.WorldClockProtocol.LocalTime> 
         getLocalTimeList();
+    /**
+     * <code>repeated .io.netty.example.worldclock.LocalTime localTime = 1;</code>
+     */
     io.netty.example.worldclock.WorldClockProtocol.LocalTime getLocalTime(int index);
+    /**
+     * <code>repeated .io.netty.example.worldclock.LocalTime localTime = 1;</code>
+     */
     int getLocalTimeCount();
+    /**
+     * <code>repeated .io.netty.example.worldclock.LocalTime localTime = 1;</code>
+     */
     java.util.List<? extends io.netty.example.worldclock.WorldClockProtocol.LocalTimeOrBuilder> 
         getLocalTimeOrBuilderList();
+    /**
+     * <code>repeated .io.netty.example.worldclock.LocalTime localTime = 1;</code>
+     */
     io.netty.example.worldclock.WorldClockProtocol.LocalTimeOrBuilder getLocalTimeOrBuilder(
         int index);
   }
+  /**
+   * Protobuf type {@code io.netty.example.worldclock.LocalTimes}
+   */
   public static final class LocalTimes extends
       com.google.protobuf.GeneratedMessage
       implements LocalTimesOrBuilder {
     // Use LocalTimes.newBuilder() to construct.
-    private LocalTimes(Builder builder) {
+    private LocalTimes(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private LocalTimes(boolean noInit) {}
-    
+    private LocalTimes(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final LocalTimes defaultInstance;
     public static LocalTimes getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public LocalTimes getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private LocalTimes(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+                localTime_ = new java.util.ArrayList<io.netty.example.worldclock.WorldClockProtocol.LocalTime>();
+                mutable_bitField0_ |= 0x00000001;
+              }
+              localTime_.add(input.readMessage(io.netty.example.worldclock.WorldClockProtocol.LocalTime.PARSER, extensionRegistry));
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+          localTime_ = java.util.Collections.unmodifiableList(localTime_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_LocalTimes_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_LocalTimes_fieldAccessorTable;
+      return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_LocalTimes_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              io.netty.example.worldclock.WorldClockProtocol.LocalTimes.class, io.netty.example.worldclock.WorldClockProtocol.LocalTimes.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<LocalTimes> PARSER =
+        new com.google.protobuf.AbstractParser<LocalTimes>() {
+      public LocalTimes parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new LocalTimes(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<LocalTimes> getParserForType() {
+      return PARSER;
+    }
+
     // repeated .io.netty.example.worldclock.LocalTime localTime = 1;
     public static final int LOCALTIME_FIELD_NUMBER = 1;
     private java.util.List<io.netty.example.worldclock.WorldClockProtocol.LocalTime> localTime_;
+    /**
+     * <code>repeated .io.netty.example.worldclock.LocalTime localTime = 1;</code>
+     */
     public java.util.List<io.netty.example.worldclock.WorldClockProtocol.LocalTime> getLocalTimeList() {
       return localTime_;
     }
+    /**
+     * <code>repeated .io.netty.example.worldclock.LocalTime localTime = 1;</code>
+     */
     public java.util.List<? extends io.netty.example.worldclock.WorldClockProtocol.LocalTimeOrBuilder> 
         getLocalTimeOrBuilderList() {
       return localTime_;
     }
+    /**
+     * <code>repeated .io.netty.example.worldclock.LocalTime localTime = 1;</code>
+     */
     public int getLocalTimeCount() {
       return localTime_.size();
     }
+    /**
+     * <code>repeated .io.netty.example.worldclock.LocalTime localTime = 1;</code>
+     */
     public io.netty.example.worldclock.WorldClockProtocol.LocalTime getLocalTime(int index) {
       return localTime_.get(index);
     }
+    /**
+     * <code>repeated .io.netty.example.worldclock.LocalTime localTime = 1;</code>
+     */
     public io.netty.example.worldclock.WorldClockProtocol.LocalTimeOrBuilder getLocalTimeOrBuilder(
         int index) {
       return localTime_.get(index);
     }
-    
+
     private void initFields() {
       localTime_ = java.util.Collections.emptyList();
     }
@@ -2039,7 +2697,7 @@ public final class WorldClockProtocol {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       for (int i = 0; i < getLocalTimeCount(); i++) {
         if (!getLocalTime(i).isInitialized()) {
           memoizedIsInitialized = 0;
@@ -2049,7 +2707,7 @@ public final class WorldClockProtocol {
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -2058,12 +2716,12 @@ public final class WorldClockProtocol {
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       for (int i = 0; i < localTime_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
@@ -2073,94 +2731,83 @@ public final class WorldClockProtocol {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     public static io.netty.example.worldclock.WorldClockProtocol.LocalTimes parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static io.netty.example.worldclock.WorldClockProtocol.LocalTimes parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static io.netty.example.worldclock.WorldClockProtocol.LocalTimes parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static io.netty.example.worldclock.WorldClockProtocol.LocalTimes parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static io.netty.example.worldclock.WorldClockProtocol.LocalTimes parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static io.netty.example.worldclock.WorldClockProtocol.LocalTimes parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static io.netty.example.worldclock.WorldClockProtocol.LocalTimes parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static io.netty.example.worldclock.WorldClockProtocol.LocalTimes parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static io.netty.example.worldclock.WorldClockProtocol.LocalTimes parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static io.netty.example.worldclock.WorldClockProtocol.LocalTimes parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(io.netty.example.worldclock.WorldClockProtocol.LocalTimes prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code io.netty.example.worldclock.LocalTimes}
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements io.netty.example.worldclock.WorldClockProtocol.LocalTimesOrBuilder {
@@ -2168,18 +2815,21 @@ public final class WorldClockProtocol {
           getDescriptor() {
         return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_LocalTimes_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_LocalTimes_fieldAccessorTable;
+        return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_LocalTimes_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                io.netty.example.worldclock.WorldClockProtocol.LocalTimes.class, io.netty.example.worldclock.WorldClockProtocol.LocalTimes.Builder.class);
       }
-      
+
       // Construct using io.netty.example.worldclock.WorldClockProtocol.LocalTimes.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -2191,7 +2841,7 @@ public final class WorldClockProtocol {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         if (localTimeBuilder_ == null) {
@@ -2202,20 +2852,20 @@ public final class WorldClockProtocol {
         }
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return io.netty.example.worldclock.WorldClockProtocol.LocalTimes.getDescriptor();
+        return io.netty.example.worldclock.WorldClockProtocol.internal_static_io_netty_example_worldclock_LocalTimes_descriptor;
       }
-      
+
       public io.netty.example.worldclock.WorldClockProtocol.LocalTimes getDefaultInstanceForType() {
         return io.netty.example.worldclock.WorldClockProtocol.LocalTimes.getDefaultInstance();
       }
-      
+
       public io.netty.example.worldclock.WorldClockProtocol.LocalTimes build() {
         io.netty.example.worldclock.WorldClockProtocol.LocalTimes result = buildPartial();
         if (!result.isInitialized()) {
@@ -2223,17 +2873,7 @@ public final class WorldClockProtocol {
         }
         return result;
       }
-      
-      private io.netty.example.worldclock.WorldClockProtocol.LocalTimes buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        io.netty.example.worldclock.WorldClockProtocol.LocalTimes result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public io.netty.example.worldclock.WorldClockProtocol.LocalTimes buildPartial() {
         io.netty.example.worldclock.WorldClockProtocol.LocalTimes result = new io.netty.example.worldclock.WorldClockProtocol.LocalTimes(this);
         int from_bitField0_ = bitField0_;
@@ -2249,7 +2889,7 @@ public final class WorldClockProtocol {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof io.netty.example.worldclock.WorldClockProtocol.LocalTimes) {
           return mergeFrom((io.netty.example.worldclock.WorldClockProtocol.LocalTimes)other);
@@ -2258,7 +2898,7 @@ public final class WorldClockProtocol {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(io.netty.example.worldclock.WorldClockProtocol.LocalTimes other) {
         if (other == io.netty.example.worldclock.WorldClockProtocol.LocalTimes.getDefaultInstance()) return this;
         if (localTimeBuilder_ == null) {
@@ -2290,7 +2930,7 @@ public final class WorldClockProtocol {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         for (int i = 0; i < getLocalTimeCount(); i++) {
           if (!getLocalTime(i).isInitialized()) {
@@ -2300,42 +2940,26 @@ public final class WorldClockProtocol {
         }
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
-            case 10: {
-              io.netty.example.worldclock.WorldClockProtocol.LocalTime.Builder subBuilder = io.netty.example.worldclock.WorldClockProtocol.LocalTime.newBuilder();
-              input.readMessage(subBuilder, extensionRegistry);
-              addLocalTime(subBuilder.buildPartial());
-              break;
-            }
+        io.netty.example.worldclock.WorldClockProtocol.LocalTimes parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (io.netty.example.worldclock.WorldClockProtocol.LocalTimes) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
           }
         }
+        return this;
       }
-      
       private int bitField0_;
-      
+
       // repeated .io.netty.example.worldclock.LocalTime localTime = 1;
       private java.util.List<io.netty.example.worldclock.WorldClockProtocol.LocalTime> localTime_ =
         java.util.Collections.emptyList();
@@ -2345,10 +2969,13 @@ public final class WorldClockProtocol {
           bitField0_ |= 0x00000001;
          }
       }
-      
+
       private com.google.protobuf.RepeatedFieldBuilder<
           io.netty.example.worldclock.WorldClockProtocol.LocalTime, io.netty.example.worldclock.WorldClockProtocol.LocalTime.Builder, io.netty.example.worldclock.WorldClockProtocol.LocalTimeOrBuilder> localTimeBuilder_;
-      
+
+      /**
+       * <code>repeated .io.netty.example.worldclock.LocalTime localTime = 1;</code>
+       */
       public java.util.List<io.netty.example.worldclock.WorldClockProtocol.LocalTime> getLocalTimeList() {
         if (localTimeBuilder_ == null) {
           return java.util.Collections.unmodifiableList(localTime_);
@@ -2356,6 +2983,9 @@ public final class WorldClockProtocol {
           return localTimeBuilder_.getMessageList();
         }
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.LocalTime localTime = 1;</code>
+       */
       public int getLocalTimeCount() {
         if (localTimeBuilder_ == null) {
           return localTime_.size();
@@ -2363,6 +2993,9 @@ public final class WorldClockProtocol {
           return localTimeBuilder_.getCount();
         }
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.LocalTime localTime = 1;</code>
+       */
       public io.netty.example.worldclock.WorldClockProtocol.LocalTime getLocalTime(int index) {
         if (localTimeBuilder_ == null) {
           return localTime_.get(index);
@@ -2370,6 +3003,9 @@ public final class WorldClockProtocol {
           return localTimeBuilder_.getMessage(index);
         }
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.LocalTime localTime = 1;</code>
+       */
       public Builder setLocalTime(
           int index, io.netty.example.worldclock.WorldClockProtocol.LocalTime value) {
         if (localTimeBuilder_ == null) {
@@ -2384,6 +3020,9 @@ public final class WorldClockProtocol {
         }
         return this;
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.LocalTime localTime = 1;</code>
+       */
       public Builder setLocalTime(
           int index, io.netty.example.worldclock.WorldClockProtocol.LocalTime.Builder builderForValue) {
         if (localTimeBuilder_ == null) {
@@ -2395,6 +3034,9 @@ public final class WorldClockProtocol {
         }
         return this;
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.LocalTime localTime = 1;</code>
+       */
       public Builder addLocalTime(io.netty.example.worldclock.WorldClockProtocol.LocalTime value) {
         if (localTimeBuilder_ == null) {
           if (value == null) {
@@ -2408,6 +3050,9 @@ public final class WorldClockProtocol {
         }
         return this;
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.LocalTime localTime = 1;</code>
+       */
       public Builder addLocalTime(
           int index, io.netty.example.worldclock.WorldClockProtocol.LocalTime value) {
         if (localTimeBuilder_ == null) {
@@ -2422,6 +3067,9 @@ public final class WorldClockProtocol {
         }
         return this;
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.LocalTime localTime = 1;</code>
+       */
       public Builder addLocalTime(
           io.netty.example.worldclock.WorldClockProtocol.LocalTime.Builder builderForValue) {
         if (localTimeBuilder_ == null) {
@@ -2433,6 +3081,9 @@ public final class WorldClockProtocol {
         }
         return this;
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.LocalTime localTime = 1;</code>
+       */
       public Builder addLocalTime(
           int index, io.netty.example.worldclock.WorldClockProtocol.LocalTime.Builder builderForValue) {
         if (localTimeBuilder_ == null) {
@@ -2444,6 +3095,9 @@ public final class WorldClockProtocol {
         }
         return this;
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.LocalTime localTime = 1;</code>
+       */
       public Builder addAllLocalTime(
           java.lang.Iterable<? extends io.netty.example.worldclock.WorldClockProtocol.LocalTime> values) {
         if (localTimeBuilder_ == null) {
@@ -2455,6 +3109,9 @@ public final class WorldClockProtocol {
         }
         return this;
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.LocalTime localTime = 1;</code>
+       */
       public Builder clearLocalTime() {
         if (localTimeBuilder_ == null) {
           localTime_ = java.util.Collections.emptyList();
@@ -2465,6 +3122,9 @@ public final class WorldClockProtocol {
         }
         return this;
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.LocalTime localTime = 1;</code>
+       */
       public Builder removeLocalTime(int index) {
         if (localTimeBuilder_ == null) {
           ensureLocalTimeIsMutable();
@@ -2475,10 +3135,16 @@ public final class WorldClockProtocol {
         }
         return this;
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.LocalTime localTime = 1;</code>
+       */
       public io.netty.example.worldclock.WorldClockProtocol.LocalTime.Builder getLocalTimeBuilder(
           int index) {
         return getLocalTimeFieldBuilder().getBuilder(index);
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.LocalTime localTime = 1;</code>
+       */
       public io.netty.example.worldclock.WorldClockProtocol.LocalTimeOrBuilder getLocalTimeOrBuilder(
           int index) {
         if (localTimeBuilder_ == null) {
@@ -2486,6 +3152,9 @@ public final class WorldClockProtocol {
           return localTimeBuilder_.getMessageOrBuilder(index);
         }
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.LocalTime localTime = 1;</code>
+       */
       public java.util.List<? extends io.netty.example.worldclock.WorldClockProtocol.LocalTimeOrBuilder> 
            getLocalTimeOrBuilderList() {
         if (localTimeBuilder_ != null) {
@@ -2494,15 +3163,24 @@ public final class WorldClockProtocol {
           return java.util.Collections.unmodifiableList(localTime_);
         }
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.LocalTime localTime = 1;</code>
+       */
       public io.netty.example.worldclock.WorldClockProtocol.LocalTime.Builder addLocalTimeBuilder() {
         return getLocalTimeFieldBuilder().addBuilder(
             io.netty.example.worldclock.WorldClockProtocol.LocalTime.getDefaultInstance());
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.LocalTime localTime = 1;</code>
+       */
       public io.netty.example.worldclock.WorldClockProtocol.LocalTime.Builder addLocalTimeBuilder(
           int index) {
         return getLocalTimeFieldBuilder().addBuilder(
             index, io.netty.example.worldclock.WorldClockProtocol.LocalTime.getDefaultInstance());
       }
+      /**
+       * <code>repeated .io.netty.example.worldclock.LocalTime localTime = 1;</code>
+       */
       public java.util.List<io.netty.example.worldclock.WorldClockProtocol.LocalTime.Builder> 
            getLocalTimeBuilderList() {
         return getLocalTimeFieldBuilder().getBuilderList();
@@ -2521,18 +3199,18 @@ public final class WorldClockProtocol {
         }
         return localTimeBuilder_;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:io.netty.example.worldclock.LocalTimes)
     }
-    
+
     static {
       defaultInstance = new LocalTimes(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:io.netty.example.worldclock.LocalTimes)
   }
-  
+
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_io_netty_example_worldclock_Location_descriptor;
   private static
@@ -2553,7 +3231,7 @@ public final class WorldClockProtocol {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_io_netty_example_worldclock_LocalTimes_fieldAccessorTable;
-  
+
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
     return descriptor;
@@ -2592,33 +3270,25 @@ public final class WorldClockProtocol {
           internal_static_io_netty_example_worldclock_Location_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_io_netty_example_worldclock_Location_descriptor,
-              new java.lang.String[] { "Continent", "City", },
-              io.netty.example.worldclock.WorldClockProtocol.Location.class,
-              io.netty.example.worldclock.WorldClockProtocol.Location.Builder.class);
+              new java.lang.String[] { "Continent", "City", });
           internal_static_io_netty_example_worldclock_Locations_descriptor =
             getDescriptor().getMessageTypes().get(1);
           internal_static_io_netty_example_worldclock_Locations_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_io_netty_example_worldclock_Locations_descriptor,
-              new java.lang.String[] { "Location", },
-              io.netty.example.worldclock.WorldClockProtocol.Locations.class,
-              io.netty.example.worldclock.WorldClockProtocol.Locations.Builder.class);
+              new java.lang.String[] { "Location", });
           internal_static_io_netty_example_worldclock_LocalTime_descriptor =
             getDescriptor().getMessageTypes().get(2);
           internal_static_io_netty_example_worldclock_LocalTime_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_io_netty_example_worldclock_LocalTime_descriptor,
-              new java.lang.String[] { "Year", "Month", "DayOfMonth", "DayOfWeek", "Hour", "Minute", "Second", },
-              io.netty.example.worldclock.WorldClockProtocol.LocalTime.class,
-              io.netty.example.worldclock.WorldClockProtocol.LocalTime.Builder.class);
+              new java.lang.String[] { "Year", "Month", "DayOfMonth", "DayOfWeek", "Hour", "Minute", "Second", });
           internal_static_io_netty_example_worldclock_LocalTimes_descriptor =
             getDescriptor().getMessageTypes().get(3);
           internal_static_io_netty_example_worldclock_LocalTimes_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_io_netty_example_worldclock_LocalTimes_descriptor,
-              new java.lang.String[] { "LocalTime", },
-              io.netty.example.worldclock.WorldClockProtocol.LocalTimes.class,
-              io.netty.example.worldclock.WorldClockProtocol.LocalTimes.Builder.class);
+              new java.lang.String[] { "LocalTime", });
           return null;
         }
       };
@@ -2627,6 +3297,6 @@ public final class WorldClockProtocol {
         new com.google.protobuf.Descriptors.FileDescriptor[] {
         }, assigner);
   }
-  
+
   // @@protoc_insertion_point(outer_class_scope)
 }
