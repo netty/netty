@@ -105,8 +105,8 @@ interface ChannelOutboundInvoker {
      * an error.
      * <p>
      * Be aware that the flush could be only partially successful. In such cases the {@link ChannelFuture} will be
-     * failed with an {@link IncompleteFlushException}. So if you are interested to know if it was partial successful you
-     * need to check if the returned {@link ChannelFuture#cause()} returns an instance of
+     * failed with an {@link IncompleteFlushException}. So if you are interested to know if it was partial successful
+     * you need to check if the returned {@link ChannelFuture#cause()} returns an instance of
      * {@link IncompleteFlushException}. In such cases you may want to call {@link #flush(ChannelPromise)} or
      * {@link #flush()} to flush the rest of the data or just close the connection via {@link #close(ChannelPromise)} or
      * {@link #close()}  if it is not possible to recover.
@@ -125,10 +125,10 @@ interface ChannelOutboundInvoker {
      * If you want to write a {@link FileRegion} use {@link #sendFile(FileRegion)}.
      * <p>
      * Be aware that the write could be only partially successful as the message may need to get encoded before write it
-     * to the remote peer. In such cases the {@link ChannelFuture} will be failed with a {@link IncompleteFlushException}.
-     * In such cases you may want to call {@link #flush(ChannelPromise)} or  {@link #flush()} to flush the rest of the
-     * data or just close the connection via {@link #close(ChannelPromise)} or {@link #close()} if it is not possible
-     * to recover.
+     * to the remote peer. In such cases the {@link ChannelFuture} will be failed with a
+     * {@link IncompleteFlushException}. In such cases you may want to call {@link #flush(ChannelPromise)} or
+     * {@link #flush()} to flush the rest of the data or just close the connection via {@link #close(ChannelPromise)}
+     * or {@link #close()} if it is not possible to recover.
      * <p>
      * This will result in having the message added to the outbound buffer of the next {@link ChannelOutboundHandler}
      * and the {@link ChannelOperationHandler#flush(ChannelHandlerContext, ChannelPromise)}
@@ -255,8 +255,8 @@ interface ChannelOutboundInvoker {
      * an error.
      * <p>
      * Be aware that the flush could be only partially successful. In such cases the {@link ChannelFuture} will be
-     * failed with an {@link IncompleteFlushException}. So if you are interested to know if it was partial successful you
-     * need to check if the returned {@link ChannelFuture#cause()} returns an instance of
+     * failed with an {@link IncompleteFlushException}. So if you are interested to know if it was partial successful
+     * you need to check if the returned {@link ChannelFuture#cause()} returns an instance of
      * {@link IncompleteFlushException}. In such cases you may want to call {@link #flush(ChannelPromise)} or
      * {@link #flush()} to flush the rest of the data or just close the connection via {@link #close(ChannelPromise)} or
      * {@link #close()}  if it is not possible to recover.
@@ -278,10 +278,10 @@ interface ChannelOutboundInvoker {
      * If you want to write a {@link FileRegion} use {@link #sendFile(FileRegion)}.
      * <p>
      * Be aware that the write could be only partially successful as the message may need to get encoded before write it
-     * to the remote peer. In such cases the {@link ChannelFuture} will be failed with a {@link IncompleteFlushException}.
-     * In such cases you may want to call {@link #flush(ChannelPromise)} or  {@link #flush()} to flush the rest of the
-     * data or just close the connection via {@link #close(ChannelPromise)} or {@link #close()} if it is not possible
-     * to recover.
+     * to the remote peer. In such cases the {@link ChannelFuture} will be failed with a
+     * {@link IncompleteFlushException}. In such cases you may want to call {@link #flush(ChannelPromise)} or
+     * {@link #flush()} to flush the rest of the data or just close the connection via {@link #close(ChannelPromise)}
+     * or {@link #close()} if it is not possible to recover.
      *
      * The given {@link ChannelPromise} will be notified.
      * <p>
