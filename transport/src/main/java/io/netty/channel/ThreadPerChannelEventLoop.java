@@ -13,26 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.oio;
-
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.SingleThreadEventLoop;
-
+package io.netty.channel;
 
 /**
  * {@link SingleThreadEventLoop} which is used to handle OIO {@link Channel}'s. So in general there will be
- * one {@link OioEventLoop} per {@link Channel}.
+ * one {@link ThreadPerChannelEventLoop} per {@link Channel}.
  *
  */
-class OioEventLoop extends SingleThreadEventLoop {
+public class ThreadPerChannelEventLoop extends SingleThreadEventLoop {
 
-    private final OioEventLoopGroup parent;
-    private AbstractOioChannel ch;
+    private final ThreadPerChannelEventLoopGroup parent;
+    private Channel ch;
 
-    OioEventLoop(OioEventLoopGroup parent) {
+    public ThreadPerChannelEventLoop(ThreadPerChannelEventLoopGroup parent) {
         super(parent, parent.threadFactory, parent.scheduler);
         this.parent = parent;
     }
@@ -41,9 +34,10 @@ class OioEventLoop extends SingleThreadEventLoop {
     public ChannelFuture register(Channel channel, ChannelPromise promise) {
         return super.register(channel, promise).addListener(new ChannelFutureListener() {
             @Override
+            @SuppressWarnings("unchecked")
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.isSuccess()) {
-                    ch = (AbstractOioChannel) future.channel();
+                    ch = future.channel();
                 } else {
                     deregister();
                 }
@@ -54,44 +48,29 @@ class OioEventLoop extends SingleThreadEventLoop {
     @Override
     protected void run() {
         for (;;) {
-            AbstractOioChannel ch = this.ch;
-            if (ch == null || !ch.isActive()) {
-                Runnable task;
-                try {
-                    task = takeTask();
-                    task.run();
-                } catch (InterruptedException e) {
-                    // Waken up by interruptThread()
-                }
-            } else {
-                long startTime = System.nanoTime();
-                for (;;) {
-                    final Runnable task = pollTask();
-                    if (task == null) {
-                        break;
-                    }
-
-                    task.run();
-
-                    // Ensure running tasks doesn't take too much time.
-                    if (System.nanoTime() - startTime > AbstractOioChannel.SO_TIMEOUT * 1000000L) {
-                        break;
-                    }
-                }
-
-                // Handle deregistration
-                if (!ch.isRegistered()) {
-                    runAllTasks();
-                    deregister();
-                }
+            Runnable task;
+            try {
+                task = takeTask();
+                task.run();
+            } catch (InterruptedException e) {
+                // Waken up by interruptThread()
             }
 
+            Channel ch = this.ch;
             if (isShutdown()) {
                 if (ch != null) {
                     ch.unsafe().close(ch.unsafe().voidFuture());
                 }
                 if (confirmShutdown()) {
                     break;
+                }
+            } else {
+                if (ch != null) {
+                    // Handle deregistration
+                    if (!ch.isRegistered()) {
+                        runAllTasks();
+                        deregister();
+                    }
                 }
             }
         }

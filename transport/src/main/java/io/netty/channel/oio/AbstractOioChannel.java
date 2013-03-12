@@ -19,6 +19,7 @@ import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
+import io.netty.channel.ThreadPerChannelEventLoop;
 
 import java.net.ConnectException;
 import java.net.SocketAddress;
@@ -91,7 +92,7 @@ public abstract class AbstractOioChannel extends AbstractChannel {
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof OioEventLoop;
+        return loop instanceof ThreadPerChannelEventLoop;
     }
 
     @Override
