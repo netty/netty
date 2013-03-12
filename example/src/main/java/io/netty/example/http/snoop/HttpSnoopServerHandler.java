@@ -132,11 +132,7 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
             return;
         }
 
-        buf.append(".. WITH A ");
-        if (result.isPartialFailure()) {
-            buf.append("PARTIAL ");
-        }
-        buf.append("DECODER FAILURE: ");
+        buf.append(".. WITH DECODER FAILURE: ");
         buf.append(result.cause());
         buf.append("\r\n");
     }

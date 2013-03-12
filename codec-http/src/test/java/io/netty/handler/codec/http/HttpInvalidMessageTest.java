@@ -37,7 +37,7 @@ public class HttpInvalidMessageTest {
         HttpRequest req = (HttpRequest) ch.readInbound();
         DecoderResult dr = req.getDecoderResult();
         assertFalse(dr.isSuccess());
-        assertFalse(dr.isPartialFailure());
+        assertFalse(dr.isFailure());
         ensureInboundTrafficDiscarded(ch);
     }
 
@@ -51,7 +51,7 @@ public class HttpInvalidMessageTest {
         HttpRequest req = (HttpRequest) ch.readInbound();
         DecoderResult dr = req.getDecoderResult();
         assertFalse(dr.isSuccess());
-        assertTrue(dr.isPartialFailure());
+        assertTrue(dr.isFailure());
         assertEquals("Good Value", req.headers().get("Good_Name"));
         assertEquals("/maybe-something", req.getUri());
         ensureInboundTrafficDiscarded(ch);
@@ -64,7 +64,7 @@ public class HttpInvalidMessageTest {
         HttpResponse res = (HttpResponse) ch.readInbound();
         DecoderResult dr = res.getDecoderResult();
         assertFalse(dr.isSuccess());
-        assertFalse(dr.isPartialFailure());
+        assertFalse(dr.isFailure());
         ensureInboundTrafficDiscarded(ch);
     }
 
@@ -78,7 +78,7 @@ public class HttpInvalidMessageTest {
         HttpResponse res = (HttpResponse) ch.readInbound();
         DecoderResult dr = res.getDecoderResult();
         assertFalse(dr.isSuccess());
-        assertTrue(dr.isPartialFailure());
+        assertTrue(dr.isFailure());
         assertEquals("Maybe OK", res.getStatus().reasonPhrase());
         assertEquals("Good Value", res.headers().get("Good_Name"));
         ensureInboundTrafficDiscarded(ch);
@@ -97,7 +97,7 @@ public class HttpInvalidMessageTest {
         HttpContent chunk = (HttpContent) ch.readInbound();
         DecoderResult dr = chunk.getDecoderResult();
         assertFalse(dr.isSuccess());
-        assertFalse(dr.isPartialFailure());
+        assertFalse(dr.isFailure());
         ensureInboundTrafficDiscarded(ch);
     }
 
