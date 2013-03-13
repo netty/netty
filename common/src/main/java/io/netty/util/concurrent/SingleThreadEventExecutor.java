@@ -76,24 +76,41 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
     private final Set<Runnable> shutdownHooks = new LinkedHashSet<Runnable>();
     private volatile int state = ST_NOT_STARTED;
     private long lastAccessTimeNanos;
-
+    private final long maxTasksRunTime;
+    private final int checkAfterNumTasks;
+    protected enum TaskRunState {
+        TASK_EXECUTED,
+        TOO_LONG_EXECUTED,
+        NO_TASK_RUN
+    }
     /**
      * Create a new instance
      *
-     * @param parent            the {@link EventExecutorGroup} which is the parent of this instance and belongs to it
-     * @param threadFactory     the {@link ThreadFactory} which will be used for the used {@link Thread}
-     * @param scheduler         the {@link TaskScheduler} which will be used to schedule Tasks for later
-     *                          execution
+     * @param parent                the {@link EventExecutorGroup} which is the parent of this instance and belongs to
+     *                              it
+     * @param threadFactory         the {@link ThreadFactory} which will be used for the used {@link Thread}
+     * @param scheduler             the {@link TaskScheduler} which will be used to schedule Tasks for later
+     *                              execution
+     * @param checkAfterNumTasks    the number of tasks to run before the {@code maxTasksRunTime} will be considered,
+     *                              or 0 if no check at all should be used.
+     * @param maxTasksRunTime       the max. time that {@link #runAllTasks()} is allowed to take (in nanoseconds).
      */
     protected SingleThreadEventExecutor(
-            EventExecutorGroup parent, ThreadFactory threadFactory, TaskScheduler scheduler) {
+            EventExecutorGroup parent, ThreadFactory threadFactory, TaskScheduler scheduler,
+            int checkAfterNumTasks, long maxTasksRunTime) {
         super(scheduler);
         if (threadFactory == null) {
             throw new NullPointerException("threadFactory");
         }
-
+        if (maxTasksRunTime < 0) {
+            throw new IllegalArgumentException("maxTasksRunTime must be >= 0");
+        }
+        if (checkAfterNumTasks < 0) {
+            throw new IllegalArgumentException("checkAfterNumTasks must be >= 0");
+        }
         this.parent = parent;
-
+        this.maxTasksRunTime = maxTasksRunTime;
+        this.checkAfterNumTasks = checkAfterNumTasks;
         thread = threadFactory.newThread(new Runnable() {
             @Override
             public void run() {
@@ -229,11 +246,21 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
     }
 
     /**
-     * Poll all tasks from the task queue and run them via {@link Runnable#run()} method.
+     * Poll all tasks from the task queue and run them via {@link Runnable#run()} method and returns a
+     * {@link TaskRunState} which tells the caller why the methods returns.
      */
-    protected boolean runAllTasks() {
-        boolean ran = false;
+    protected TaskRunState runAllTasks() {
+        TaskRunState state = TaskRunState.NO_TASK_RUN;
+        long end = 0;
+        if (maxTasksRunTime > 0) {
+            end = System.nanoTime() + maxTasksRunTime;
+        }
+
+        int ran = 0;
         for (;;) {
+            if (state == TaskRunState.TOO_LONG_EXECUTED) {
+                break;
+            }
             final Runnable task = pollTask();
             if (task == null) {
                 break;
@@ -243,14 +270,23 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
                 continue;
             }
 
+            if (end != 0 && ran == checkAfterNumTasks - 1) {
+                if (System.nanoTime() > end) {
+                    state = TaskRunState.TOO_LONG_EXECUTED;
+                }
+                ran = 0;
+            } else {
+                state = TaskRunState.TASK_EXECUTED;
+            }
             try {
                 task.run();
-                ran = true;
             } catch (Throwable t) {
                 logger.warn("A task raised an exception.", t);
+            } finally {
+                ran++;
             }
         }
-        return ran;
+        return state;
     }
 
     /**
@@ -393,7 +429,8 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
             throw new IllegalStateException("must be invoked from an event loop");
         }
 
-        if (runAllTasks() || runShutdownHooks()) {
+        TaskRunState state = runAllTasks();
+        if (state == TaskRunState.TASK_EXECUTED || state == TaskRunState.TOO_LONG_EXECUTED || runShutdownHooks()) {
             // There were tasks in the queue. Wait a little bit more until no tasks are queued for SHUTDOWN_DELAY_NANOS.
             lastAccessTimeNanos = 0;
             wakeup(true);

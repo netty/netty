@@ -23,11 +23,15 @@ import io.netty.channel.MultithreadEventLoopGroup;
 import java.nio.channels.Selector;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 
 /**
  * {@link MultithreadEventLoopGroup} implementations which is used for NIO {@link Selector} based {@link Channel}s.
  */
 public class NioEventLoopGroup extends MultithreadEventLoopGroup {
+
+    public static final int DEFAULT_CHECK_AFTER_NUM_TASKS = 100;
+    public static final long DEFAULT_MAX_TASKS_RUN_TIME_NANOS = TimeUnit.MILLISECONDS.toNanos(500);
 
     /**
      * Create a new instance using {@link #DEFAULT_POOL_SIZE} number of threads, the default {@link ThreadFactory} and
@@ -59,7 +63,18 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
      */
     public NioEventLoopGroup(
             int nThreads, ThreadFactory threadFactory, final SelectorProvider selectorProvider) {
-        super(nThreads, threadFactory, selectorProvider);
+        this(nThreads, threadFactory, selectorProvider,
+                DEFAULT_CHECK_AFTER_NUM_TASKS, DEFAULT_MAX_TASKS_RUN_TIME_NANOS);
+    }
+
+    /**
+     * Create a new instance using nThreads number of threads, the given {@link ThreadFactory} and the given
+     * {@link SelectorProvider}.
+     */
+    public NioEventLoopGroup(
+            int nThreads, ThreadFactory threadFactory, final SelectorProvider selectorProvider,
+            int checkAfterNumTasks, long maxTasksRunTime) {
+        super(nThreads, threadFactory, selectorProvider, checkAfterNumTasks, maxTasksRunTime);
     }
 
     /**
@@ -75,6 +90,7 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
     @Override
     protected EventExecutor newChild(
             ThreadFactory threadFactory, TaskScheduler scheduler, Object... args) throws Exception {
-        return new NioEventLoop(this, threadFactory, scheduler, (SelectorProvider) args[0]);
+        return new NioEventLoop(this, threadFactory, scheduler,
+                (SelectorProvider) args[0], (Integer) args[1], (Long) args[2]);
     }
 }

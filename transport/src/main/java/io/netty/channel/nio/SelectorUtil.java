@@ -60,8 +60,11 @@ final class SelectorUtil {
         }
     }
 
-    static int select(Selector selector) throws IOException {
+    static int select(Selector selector, boolean selectNow) throws IOException {
         try {
+            if (selectNow) {
+                return selector.selectNow();
+            }
             return selector.select(SELECT_TIMEOUT);
         } catch (CancelledKeyException e) {
             if (logger.isDebugEnabled()) {

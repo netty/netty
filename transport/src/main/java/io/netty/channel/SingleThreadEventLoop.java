@@ -29,11 +29,13 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
 
     /**
      *
-     * @see SingleThreadEventExecutor#SingleThreadEventExecutor(EventExecutorGroup, ThreadFactory, TaskScheduler)
+     * @see SingleThreadEventExecutor#SingleThreadEventExecutor(
+     * EventExecutorGroup, ThreadFactory, TaskScheduler, int, long)
      */
     protected SingleThreadEventLoop(
-            EventLoopGroup parent, ThreadFactory threadFactory, TaskScheduler scheduler) {
-        super(parent, threadFactory, scheduler);
+            EventLoopGroup parent, ThreadFactory threadFactory,
+            TaskScheduler scheduler, int checkAfterNumTasks, long maxTasksRunTime) {
+        super(parent, threadFactory, scheduler, checkAfterNumTasks, maxTasksRunTime);
     }
 
     @Override
