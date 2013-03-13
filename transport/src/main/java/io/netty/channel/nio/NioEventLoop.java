@@ -86,6 +86,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             logger.debug("Epoll-bug workaround enabled = " + EPOLL_BUG_WORKAROUND);
         }
     }
+
     /**
      * The NIO {@link Selector}.
      */
