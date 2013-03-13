@@ -18,7 +18,6 @@ package io.netty.util.internal;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.GenericArrayType;
-import java.lang.reflect.GenericDeclaration;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
@@ -40,7 +39,7 @@ public abstract class TypeParameterMatcher {
             };
 
     public static TypeParameterMatcher find(
-            final Object object, final GenericDeclaration parameterizedSuperclass, final String typeParamName) {
+            final Object object, final Class<?> parameterizedSuperclass, final String typeParamName) {
 
         final Map<Class<?>, Map<String, TypeParameterMatcher>> typeMap = TypeParameterMatcher.typeMap.get();
         final Class<?> thisClass = object.getClass();
@@ -80,7 +79,7 @@ public abstract class TypeParameterMatcher {
     }
 
     private static Class<?> find0(
-            final Object object, GenericDeclaration parameterizedSuperclass, String typeParamName) {
+            final Object object, Class<?> parameterizedSuperclass, String typeParamName) {
 
         final Class<?> thisClass = object.getClass();
         Class<?> currentClass = thisClass;
@@ -127,9 +126,17 @@ public abstract class TypeParameterMatcher {
                     // Resolved type parameter points to another type parameter.
                     TypeVariable<?> v = (TypeVariable<?>) actualTypeParam;
                     currentClass = thisClass;
-                    parameterizedSuperclass = v.getGenericDeclaration();
+                    if (!(v.getGenericDeclaration() instanceof Class)) {
+                        return Object.class;
+                    }
+
+                    parameterizedSuperclass = (Class<?>) v.getGenericDeclaration();
                     typeParamName = v.getName();
-                    continue;
+                    if (parameterizedSuperclass.isAssignableFrom(thisClass)) {
+                        continue;
+                    } else {
+                        return Object.class;
+                    }
                 }
 
                 return fail(thisClass, typeParamName);

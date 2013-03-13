@@ -118,4 +118,14 @@ public class TypeParameterMatcherTest {
         TypeParameterMatcher m = TypeParameterMatcher.find(new U() { }, U.class, "E");
         assertTrue(m.match(new Object()));
     }
+
+    private static class V<E> {
+        U<E> u = new U<E>() { };
+    }
+
+    @Test
+    public void testInnerClass() throws Exception {
+        TypeParameterMatcher m = TypeParameterMatcher.find(new V<String>().u, U.class, "E");
+        assertTrue(m.match(new Object()));
+    }
 }
