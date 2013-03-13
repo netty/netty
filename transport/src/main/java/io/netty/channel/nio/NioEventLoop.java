@@ -76,8 +76,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     NioEventLoop(
             NioEventLoopGroup parent, ThreadFactory threadFactory,
-            TaskScheduler scheduler, SelectorProvider selectorProvider) {
-        super(parent, threadFactory, scheduler);
+            TaskScheduler scheduler, SelectorProvider selectorProvider, int checkAfterNumTasks, long maxTasksRunTime) {
+        super(parent, threadFactory, scheduler, checkAfterNumTasks, maxTasksRunTime);
         if (selectorProvider == null) {
             throw new NullPointerException("selectorProvider");
         }
@@ -230,14 +230,15 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         // use 80% of the timeout for measure
         long minSelectTimeout = SelectorUtil.SELECT_TIMEOUT_NANOS / 100 * 80;
 
+        boolean selectNow = false;
         for (;;) {
             wakenUp.set(false);
 
             try {
                 long beforeSelect = System.nanoTime();
-                int selected = SelectorUtil.select(selector);
+                int selected = SelectorUtil.select(selector, selectNow);
 
-                if (SelectorUtil.EPOLL_BUG_WORKAROUND) {
+                if (!selectNow && SelectorUtil.EPOLL_BUG_WORKAROUND) {
                     if (selected == 0) {
                         long timeBlocked = System.nanoTime()  - beforeSelect;
                         if (timeBlocked < minSelectTimeout) {
@@ -302,7 +303,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 processSelectedKeys();
                 selector = this.selector;
 
-                runAllTasks();
+                if (runAllTasks() == TaskRunState.TOO_LONG_EXECUTED) {
+                    selectNow = true;
+                } else {
+                    selectNow = false;
+                }
                 selector = this.selector;
 
                 if (isShutdown()) {
@@ -511,9 +516,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
-    void selectNow() throws IOException {
+    int selectNow() throws IOException {
         try {
-            selector.selectNow();
+            return selector.selectNow();
         } finally {
             // restore wakup state if needed
             if (wakenUp.get()) {

@@ -250,7 +250,7 @@ public class SingleThreadEventLoopTest {
 
         SingleThreadEventLoopImpl() {
             super(null, Executors.defaultThreadFactory(),
-                  new TaskScheduler(Executors.defaultThreadFactory()));
+                  new TaskScheduler(Executors.defaultThreadFactory()), 0, 0);
         }
 
         @Override

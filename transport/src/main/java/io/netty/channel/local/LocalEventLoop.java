@@ -24,7 +24,7 @@ final class LocalEventLoop extends SingleThreadEventLoop {
 
     LocalEventLoop(
             LocalEventLoopGroup parent, ThreadFactory threadFactory, TaskScheduler scheduler) {
-        super(parent, threadFactory, scheduler);
+        super(parent, threadFactory, scheduler, 0, 0);
     }
 
     @Override
