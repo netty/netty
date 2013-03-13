@@ -19,6 +19,7 @@ import java.nio.channels.Selector;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelPipeline;
@@ -101,9 +102,8 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
 
     /**
      * Creates a new instance.  Calling this constructor is same with calling
-     * {@link #NioServerSocketChannelFactory(Executor, Executor, int)} with 2 *
-     * the number of available processors in the machine.  The number of
-     * available processors is obtained by {@link Runtime#availableProcessors()}.
+     * {@link #NioServerSocketChannelFactory(Executor, Executor, int)} with
+     * the worker executor passed into {@link #getMaxThreads(Executor)}.
      *
      * @param bossExecutor
      *        the {@link Executor} which will execute the boss threads
@@ -112,7 +112,7 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
      */
     public NioServerSocketChannelFactory(
             Executor bossExecutor, Executor workerExecutor) {
-        this(bossExecutor, workerExecutor, SelectorUtil.DEFAULT_IO_THREADS);
+        this(bossExecutor, workerExecutor, getMaxThreads(workerExecutor));
     }
 
     /**
@@ -225,5 +225,27 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
         if (workerPool instanceof ExternalResourceReleasable) {
             ((ExternalResourceReleasable) workerPool).releaseExternalResources();
         }
+    }
+
+    /**
+     * Returns number of max threads for the {@link NioWorkerPool} to use. If
+     * the * {@link Executor} is a {@link ThreadPoolExecutor}, check its
+     * maximum * pool size and return either it's maximum or
+     * {@link SelectorUtil#DEFAULT_IO_THREADS}, whichever is lower. Note that
+     * {@link SelectorUtil#DEFAULT_IO_THREADS} is 2 * the number of available
+     * processors in the machine.  The number of available processors is
+     * obtained by {@link Runtime#availableProcessors()}.
+     *
+     * @param executor
+     *        the {@link Executor} which will execute the I/O worker threads
+     * @return
+     *        number of maximum threads the NioWorkerPool should use
+     */
+    private static int getMaxThreads(Executor executor) {
+        if (executor instanceof ThreadPoolExecutor) {
+            final int maxThreads = ((ThreadPoolExecutor) executor).getMaximumPoolSize();
+            return Math.min(maxThreads, SelectorUtil.DEFAULT_IO_THREADS);
+        }
+        return SelectorUtil.DEFAULT_IO_THREADS;
     }
 }
