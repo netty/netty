@@ -16,6 +16,7 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
@@ -87,8 +88,7 @@ public abstract class ByteToMessageDecoder
         }
 
         try {
-            Object msg = decodeLast(ctx, in);
-            if (ctx.nextInboundMessageBuffer().unfoldAndAdd(msg)) {
+            if (ctx.nextInboundMessageBuffer().unfoldAndAdd(decodeLast(ctx, in))) {
                 ctx.fireInboundBufferUpdated();
             }
         } catch (Throwable t) {
@@ -106,6 +106,7 @@ public abstract class ByteToMessageDecoder
         boolean wasNull = false;
 
         boolean decoded = false;
+        MessageBuf<Object> out = ctx.nextInboundMessageBuffer();
         while (in.isReadable()) {
             try {
                 int oldInputLength = in.readableBytes();
@@ -124,7 +125,7 @@ public abstract class ByteToMessageDecoder
                             "decode() did not read anything but decoded a message.");
                 }
 
-                if (ctx.nextInboundMessageBuffer().unfoldAndAdd(o)) {
+                if (out.unfoldAndAdd(o)) {
                     decoded = true;
                     if (isSingleDecode()) {
                         break;
