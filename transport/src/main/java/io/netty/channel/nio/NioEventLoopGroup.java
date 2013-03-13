@@ -16,9 +16,9 @@
 package io.netty.channel.nio;
 
 import io.netty.channel.Channel;
-import io.netty.util.concurrent.TaskScheduler;
-import io.netty.util.concurrent.EventExecutor;
 import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.TaskScheduler;
 
 import java.nio.channels.Selector;
 import java.nio.channels.spi.SelectorProvider;
@@ -60,6 +60,16 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
     public NioEventLoopGroup(
             int nThreads, ThreadFactory threadFactory, final SelectorProvider selectorProvider) {
         super(nThreads, threadFactory, selectorProvider);
+    }
+
+    /**
+     * Sets the percentage of the desired amount of time spent for I/O in the child event loops.  The default value is
+     * {@code 50}, which means the event loop will try to spend the same amount of time for I/O as for non-I/O tasks.
+     */
+    public void setIoRatio(int ioRatio) {
+        for (EventExecutor e: children()) {
+            ((NioEventLoop) e).setIoRatio(ioRatio);
+        }
     }
 
     /**

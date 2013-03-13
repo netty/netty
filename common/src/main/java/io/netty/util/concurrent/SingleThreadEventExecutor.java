@@ -170,7 +170,13 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
      */
     protected Runnable pollTask() {
         assert inEventLoop();
-        return taskQueue.poll();
+        for (;;) {
+            Runnable task = taskQueue.poll();
+            if (task == WAKEUP_TASK) {
+                continue;
+            }
+            return task;
+        }
     }
 
     /**
@@ -230,27 +236,65 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
 
     /**
      * Poll all tasks from the task queue and run them via {@link Runnable#run()} method.
+     *
+     * @return {@code true} if and only if at least one task was run
      */
     protected boolean runAllTasks() {
-        boolean ran = false;
+        Runnable task = pollTask();
+        if (task == null) {
+            return false;
+        }
+
         for (;;) {
-            final Runnable task = pollTask();
-            if (task == null) {
-                break;
-            }
-
-            if (task == WAKEUP_TASK) {
-                continue;
-            }
-
             try {
                 task.run();
-                ran = true;
             } catch (Throwable t) {
                 logger.warn("A task raised an exception.", t);
             }
+
+            task = pollTask();
+            if (task == null) {
+                return true;
+            }
         }
-        return ran;
+    }
+
+    /**
+     * Poll all tasks from the task queue and run them via {@link Runnable#run()} method.  This method stops running
+     * the tasks in the task queue and returns if it ran longer than {@code timeoutNanos}.
+     */
+    protected boolean runAllTasks(long timeoutNanos) {
+        Runnable task = pollTask();
+        if (task == null) {
+            return false;
+        }
+
+        final long deadline = System.nanoTime() + timeoutNanos;
+        long runTasks = 0;
+        for (;;) {
+            try {
+                task.run();
+            } catch (Throwable t) {
+                logger.warn("A task raised an exception.", t);
+            }
+
+            runTasks ++;
+
+            // Check timeout every 64 tasks because System.nanoTime() is relatively expensive.
+            // XXX: Hard-coded value - will make it configurable if it is really a problem.
+            if ((runTasks & 0x40) == 0) {
+                if (System.nanoTime() >= deadline) {
+                    break;
+                }
+            }
+
+            task = pollTask();
+            if (task == null) {
+                break;
+            }
+        }
+
+        return true;
     }
 
     /**
