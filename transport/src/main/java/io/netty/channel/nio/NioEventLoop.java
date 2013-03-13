@@ -18,10 +18,11 @@ package io.netty.channel.nio;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
-import io.netty.util.concurrent.TaskScheduler;
 import io.netty.channel.EventLoopException;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.nio.AbstractNioChannel.NioUnsafe;
+import io.netty.util.concurrent.TaskScheduler;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -39,6 +40,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -54,8 +56,36 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(NioEventLoop.class);
 
-    static final int CLEANUP_INTERVAL = 256; // XXX Hard-coded value, but won't need customization.
+    private static final int CLEANUP_INTERVAL = 256; // XXX Hard-coded value, but won't need customization.
 
+    private static final boolean EPOLL_BUG_WORKAROUND =
+            SystemPropertyUtil.getBoolean("io.netty.epollBugWorkaround", false);
+
+    private static final long SELECT_TIMEOUT = SystemPropertyUtil.getLong("io.netty.selectTimeout", 500);
+    private static final long SELECT_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(SELECT_TIMEOUT);
+
+    // Workaround for JDK NIO bug.
+    //
+    // See:
+    // - http://bugs.sun.com/view_bug.do?bug_id=6427854
+    // - https://github.com/netty/netty/issues/203
+    static {
+        String key = "sun.nio.ch.bugLevel";
+        try {
+            String buglevel = System.getProperty(key);
+            if (buglevel == null) {
+                System.setProperty(key, "");
+            }
+        } catch (SecurityException e) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Unable to get/set System Property '" + key + '\'', e);
+            }
+        }
+        if (logger.isDebugEnabled()) {
+            logger.debug("Using select timeout of " + SELECT_TIMEOUT);
+            logger.debug("Epoll-bug workaround enabled = " + EPOLL_BUG_WORKAROUND);
+        }
+    }
     /**
      * The NIO {@link Selector}.
      */
@@ -71,6 +101,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
      */
     private final AtomicBoolean wakenUp = new AtomicBoolean();
 
+    private volatile int ioRatio = 50;
     private int cancelledKeys;
     private boolean cleanedCancelledKeys;
 
@@ -148,6 +179,28 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
+    /**
+     * Returns the percentage of the desired amount of time spent for I/O in the event loop.
+     */
+    public int getIoRatio() {
+        return ioRatio;
+    }
+
+    /**
+     * Sets the percentage of the desired amount of time spent for I/O in the event loop.  The default value is
+     * {@code 50}, which means the event loop will try to spend the same amount of time for I/O as for non-I/O tasks.
+     */
+    public void setIoRatio(int ioRatio) {
+        if (ioRatio <= 0 || ioRatio >= 100) {
+            throw new IllegalArgumentException("ioRatio: " + ioRatio + " (expected: 0 < ioRatio < 100)");
+        }
+        this.ioRatio = ioRatio;
+    }
+
+    /**
+     * Replaces the current {@link Selector} of this event loop with newly created {@link Selector}s to work
+     * around the infamous epoll 100% CPU bug.
+     */
     public void rebuildSelector() {
         if (!inEventLoop()) {
             execute(new Runnable() {
@@ -224,85 +277,91 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     @Override
     protected void run() {
+        // use 80% of the timeout for measure
+        final long minSelectTimeout = SELECT_TIMEOUT_NANOS / 100 * 80;
+
         Selector selector = this.selector;
         int selectReturnsImmediately = 0;
-
-        // use 80% of the timeout for measure
-        long minSelectTimeout = SelectorUtil.SELECT_TIMEOUT_NANOS / 100 * 80;
 
         for (;;) {
             wakenUp.set(false);
 
             try {
-                long beforeSelect = System.nanoTime();
-                int selected = SelectorUtil.select(selector);
+                if (hasTasks()) {
+                    selectNow();
+                } else {
+                    long beforeSelect = System.nanoTime();
+                    int selected = select();
+                    if (EPOLL_BUG_WORKAROUND) {
+                        if (selected == 0) {
+                            long timeBlocked = System.nanoTime()  - beforeSelect;
+                            if (timeBlocked < minSelectTimeout) {
+                                // returned before the minSelectTimeout elapsed with nothing select.
+                                // this may be the cause of the jdk epoll(..) bug, so increment the counter
+                                // which we use later to see if its really the jdk bug.
+                                selectReturnsImmediately ++;
+                            } else {
+                                selectReturnsImmediately = 0;
+                            }
+                            if (selectReturnsImmediately == 10) {
+                                // The selector returned immediately for 10 times in a row,
+                                // so recreate one selector as it seems like we hit the
+                                // famous epoll(..) jdk bug.
+                                rebuildSelector();
+                                selector = this.selector;
+                                selectReturnsImmediately = 0;
 
-                if (SelectorUtil.EPOLL_BUG_WORKAROUND) {
-                    if (selected == 0) {
-                        long timeBlocked = System.nanoTime()  - beforeSelect;
-                        if (timeBlocked < minSelectTimeout) {
-                            // returned before the minSelectTimeout elapsed with nothing select.
-                            // this may be the cause of the jdk epoll(..) bug, so increment the counter
-                            // which we use later to see if its really the jdk bug.
-                            selectReturnsImmediately ++;
+                                // try to select again
+                                continue;
+                            }
                         } else {
+                            // reset counter
                             selectReturnsImmediately = 0;
                         }
-                        if (selectReturnsImmediately == 10) {
-                            // The selector returned immediately for 10 times in a row,
-                            // so recreate one selector as it seems like we hit the
-                            // famous epoll(..) jdk bug.
-                            rebuildSelector();
-                            selector = this.selector;
-                            selectReturnsImmediately = 0;
-
-                            // try to select again
-                            continue;
-                        }
-                    } else {
-                        // reset counter
-                        selectReturnsImmediately = 0;
                     }
-                }
 
-                // 'wakenUp.compareAndSet(false, true)' is always evaluated
-                // before calling 'selector.wakeup()' to reduce the wake-up
-                // overhead. (Selector.wakeup() is an expensive operation.)
-                //
-                // However, there is a race condition in this approach.
-                // The race condition is triggered when 'wakenUp' is set to
-                // true too early.
-                //
-                // 'wakenUp' is set to true too early if:
-                // 1) Selector is waken up between 'wakenUp.set(false)' and
-                //    'selector.select(...)'. (BAD)
-                // 2) Selector is waken up between 'selector.select(...)' and
-                //    'if (wakenUp.get()) { ... }'. (OK)
-                //
-                // In the first case, 'wakenUp' is set to true and the
-                // following 'selector.select(...)' will wake up immediately.
-                // Until 'wakenUp' is set to false again in the next round,
-                // 'wakenUp.compareAndSet(false, true)' will fail, and therefore
-                // any attempt to wake up the Selector will fail, too, causing
-                // the following 'selector.select(...)' call to block
-                // unnecessarily.
-                //
-                // To fix this problem, we wake up the selector again if wakenUp
-                // is true immediately after selector.select(...).
-                // It is inefficient in that it wakes up the selector for both
-                // the first case (BAD - wake-up required) and the second case
-                // (OK - no wake-up required).
+                    // 'wakenUp.compareAndSet(false, true)' is always evaluated
+                    // before calling 'selector.wakeup()' to reduce the wake-up
+                    // overhead. (Selector.wakeup() is an expensive operation.)
+                    //
+                    // However, there is a race condition in this approach.
+                    // The race condition is triggered when 'wakenUp' is set to
+                    // true too early.
+                    //
+                    // 'wakenUp' is set to true too early if:
+                    // 1) Selector is waken up between 'wakenUp.set(false)' and
+                    //    'selector.select(...)'. (BAD)
+                    // 2) Selector is waken up between 'selector.select(...)' and
+                    //    'if (wakenUp.get()) { ... }'. (OK)
+                    //
+                    // In the first case, 'wakenUp' is set to true and the
+                    // following 'selector.select(...)' will wake up immediately.
+                    // Until 'wakenUp' is set to false again in the next round,
+                    // 'wakenUp.compareAndSet(false, true)' will fail, and therefore
+                    // any attempt to wake up the Selector will fail, too, causing
+                    // the following 'selector.select(...)' call to block
+                    // unnecessarily.
+                    //
+                    // To fix this problem, we wake up the selector again if wakenUp
+                    // is true immediately after selector.select(...).
+                    // It is inefficient in that it wakes up the selector for both
+                    // the first case (BAD - wake-up required) and the second case
+                    // (OK - no wake-up required).
 
-                if (wakenUp.get()) {
-                    selector.wakeup();
+                    if (wakenUp.get()) {
+                        selector.wakeup();
+                    }
                 }
 
                 cancelledKeys = 0;
 
+                final long ioStartTime = System.nanoTime();
                 processSelectedKeys();
                 selector = this.selector;
+                final long ioTime = System.nanoTime() - ioStartTime;
 
-                runAllTasks();
+                final int ioRatio = this.ioRatio;
+                runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
                 selector = this.selector;
 
                 if (isShutdown()) {
@@ -312,8 +371,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     }
                 }
             } catch (Throwable t) {
-                logger.warn(
-                        "Unexpected exception in the selector loop.", t);
+                logger.warn("Unexpected exception in the selector loop.", t);
 
                 // Prevent possible consecutive immediate failures that lead to
                 // excessive CPU consumption.
@@ -341,7 +399,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         if (cancelledKeys >= CLEANUP_INTERVAL) {
             cancelledKeys = 0;
             cleanedCancelledKeys = true;
-            SelectorUtil.cleanupKeys(selector);
+            cleanupKeys();
         }
     }
 
@@ -475,7 +533,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     }
 
     private void closeAll() {
-        SelectorUtil.cleanupKeys(selector);
+        cleanupKeys();
         Set<SelectionKey> keys = selector.keys();
         Collection<AbstractNioChannel> channels = new ArrayList<AbstractNioChannel>(keys.size());
         for (SelectionKey k: keys) {
@@ -519,6 +577,29 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             if (wakenUp.get()) {
                 selector.wakeup();
             }
+        }
+    }
+
+    private int select() throws IOException {
+        try {
+            return selector.select();
+        } catch (CancelledKeyException e) {
+            if (logger.isDebugEnabled()) {
+                logger.debug(
+                        CancelledKeyException.class.getSimpleName() +
+                                " raised by a Selector - JDK bug?", e);
+            }
+            // Harmless exception - log anyway
+        }
+
+        return -1;
+    }
+
+    void cleanupKeys() {
+        try {
+            selector.selectNow();
+        } catch (Throwable t) {
+            logger.warn("Failed to update SelectionKeys.", t);
         }
     }
 }
