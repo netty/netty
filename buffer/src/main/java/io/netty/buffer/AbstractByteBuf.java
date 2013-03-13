@@ -331,7 +331,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
         if (endianness == null) {
             throw new NullPointerException("endianness");
         }
-        if (endianness == order() || capacity() == 0) {
+        if (endianness == order()) {
             return this;
         }
 
