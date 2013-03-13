@@ -15,8 +15,10 @@
  */
 package org.jboss.netty.handler.codec.protobuf;
 
+import com.google.protobuf.ExtensionRegistry;
+import com.google.protobuf.Message;
+import com.google.protobuf.MessageLite;
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferInputStream;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandler.Sharable;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -26,10 +28,6 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
 import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
 import org.jboss.netty.handler.codec.frame.LengthFieldPrepender;
 import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
-
-import com.google.protobuf.ExtensionRegistry;
-import com.google.protobuf.Message;
-import com.google.protobuf.MessageLite;
 
 /**
  * Decodes a received {@link ChannelBuffer} into a
@@ -110,26 +108,26 @@ public class ProtobufDecoder extends OneToOneDecoder {
         final int offset;
         final int length = buf.readableBytes();
 
-        if (buf.hasArray()){
+        if (buf.hasArray()) {
             array = buf.array();
             offset = buf.arrayOffset() + buf.readerIndex();
-        }else {
+        } else {
             array = new byte[length];
-            buf.getBytes(buf.readerIndex(),array,0,length);
+            buf.getBytes(buf.readerIndex(), array, 0, length);
             offset = 0;
         }
 
-        if (extensionRegistry == null){
-            if(HAS_PARSER){
-                return prototype.getParserForType().parseFrom(array,offset,length);
-            }else{
-                return prototype.newBuilderForType().mergeFrom(array,offset,length).build();
+        if (extensionRegistry == null) {
+            if (HAS_PARSER) {
+                return prototype.getParserForType().parseFrom(array, offset, length);
+            } else {
+                return prototype.newBuilderForType().mergeFrom(array, offset, length).build();
             }
-        }else {
-            if(HAS_PARSER){
-                return prototype.getParserForType().parseFrom(array,offset,length,extensionRegistry);
-            }else{
-                return prototype.newBuilderForType().mergeFrom(array,offset,length,extensionRegistry).build();
+        } else {
+            if (HAS_PARSER) {
+                return prototype.getParserForType().parseFrom(array, offset, length, extensionRegistry);
+            } else {
+                return prototype.newBuilderForType().mergeFrom(array, offset, length, extensionRegistry).build();
             }
         }
     }
