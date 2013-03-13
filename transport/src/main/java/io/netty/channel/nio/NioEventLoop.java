@@ -583,7 +583,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     private int select() throws IOException {
         try {
-            return selector.select();
+            return selector.select(SELECT_TIMEOUT);
         } catch (CancelledKeyException e) {
             if (logger.isDebugEnabled()) {
                 logger.debug(
