@@ -72,13 +72,8 @@ public abstract class AbstractByteBufTest {
     @After
     public void dispose() {
         if (buffer != null) {
-            if (buffer.unwrap() == null) {
-                assertThat(buffer.release(), is(true));
-                assertThat(buffer.refCnt(), is(0));
-            } else {
-                assertThat(buffer.release(), is(false));
-                assertThat(buffer.refCnt(), is(1));
-            }
+            assertThat(buffer.release(), is(true));
+            assertThat(buffer.refCnt(), is(0));
 
             try {
                 buffer.release();

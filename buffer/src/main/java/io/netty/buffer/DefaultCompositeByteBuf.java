@@ -228,13 +228,18 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf
             List<Component> list = compositeBuf.components;
             ByteBuf[] array = new ByteBuf[list.size()];
             for (int i = 0; i < array.length; i ++) {
-                ByteBuf slice = list.get(i).buf;
-                ByteBuf buf;
-                for (buf = slice; buf.unwrap() != null; buf = buf.unwrap()) {
-                    continue;
-                }
-                buf.retain();
-                array[i] = slice;
+                array[i] = list.get(i).buf.retain();
+            }
+            compositeBuf.release();
+            return addComponents0(cIndex, array);
+        }
+
+        if (buffers instanceof CompositeByteBuf) {
+            CompositeByteBuf compositeBuf = (CompositeByteBuf) buffers;
+            final int nComponents = compositeBuf.numComponents();
+            ByteBuf[] array = new ByteBuf[nComponents];
+            for (int i = 0; i < nComponents; i ++) {
+                array[i] = compositeBuf.component(i).retain();
             }
             compositeBuf.release();
             return addComponents0(cIndex, array);
@@ -1258,11 +1263,6 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf
 
         void freeIfNecessary() {
             // Unwrap so that we can free slices, too.
-            ByteBuf buf;
-            for (buf = this.buf; buf.unwrap() != null; buf = buf.unwrap()) {
-                continue;
-            }
-
             if (suspendedDeallocations == null) {
                 buf.release(); // We should not get a NPE here. If so, it must be a bug.
             } else {

@@ -33,22 +33,24 @@ public abstract class AbstractDerivedByteBuf extends AbstractByteBuf {
 
     @Override
     public final ByteBuf retain() {
+        unwrap().retain();
         return this;
     }
 
     @Override
     public final ByteBuf retain(int increment) {
+        unwrap().retain(increment);
         return this;
     }
 
     @Override
     public final boolean release() {
-        return false;
+        return unwrap().release();
     }
 
     @Override
     public final boolean release(int decrement) {
-        return false;
+        return unwrap().release(decrement);
     }
 
     @Override
