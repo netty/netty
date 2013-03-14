@@ -160,8 +160,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     private DefaultChannelHandlerContext remove(DefaultChannelHandlerContext ctx) {
         if (head == tail) {
+            callBeforeRemove(ctx);
+
             head = tail = null;
             name2ctx.clear();
+
+            callAfterRemove(ctx);
         } else if (ctx == head) {
             removeFirst();
         } else if (ctx == tail) {
@@ -227,7 +231,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             name2ctx.remove(oldTail.getName());
         }
 
-        callBeforeRemove(oldTail);
+        callAfterRemove(oldTail);
 
         return oldTail.getHandler();
     }
