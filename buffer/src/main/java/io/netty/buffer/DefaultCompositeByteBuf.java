@@ -204,6 +204,8 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf
                 if (cIndex > size) {
                     cIndex = size;
                 }
+            } else {
+                b.release();
             }
         }
         return cIndex;
@@ -222,11 +224,19 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf
         }
 
         if (buffers instanceof DefaultCompositeByteBuf) {
-            List<Component> list = ((DefaultCompositeByteBuf) buffers).components;
+            DefaultCompositeByteBuf compositeBuf = (DefaultCompositeByteBuf) buffers;
+            List<Component> list = compositeBuf.components;
             ByteBuf[] array = new ByteBuf[list.size()];
             for (int i = 0; i < array.length; i ++) {
-                array[i] = list.get(i).buf;
+                ByteBuf slice = list.get(i).buf;
+                ByteBuf buf;
+                for (buf = slice; buf.unwrap() != null; buf = buf.unwrap()) {
+                    continue;
+                }
+                buf.retain();
+                array[i] = slice;
             }
+            compositeBuf.release();
             return addComponents0(cIndex, array);
         }
 
