@@ -28,10 +28,7 @@ import io.netty.util.internal.PlatformDependent;
 
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
-import java.util.Collections;
-import java.util.EnumSet;
 import java.util.Queue;
-import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -41,15 +38,12 @@ import static io.netty.channel.DefaultChannelPipeline.*;
 
 final class DefaultChannelHandlerContext extends DefaultAttributeMap implements ChannelHandlerContext {
 
-    private static final EnumSet<ChannelHandlerType> EMPTY_TYPE = EnumSet.noneOf(ChannelHandlerType.class);
-
     volatile DefaultChannelHandlerContext next;
     volatile DefaultChannelHandlerContext prev;
 
     private final Channel channel;
     private final DefaultChannelPipeline pipeline;
     private final String name;
-    private final Set<ChannelHandlerType> type;
     private final ChannelHandler handler;
     private boolean needsLazyBufInit;
 
@@ -113,22 +107,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (handler == null) {
             throw new NullPointerException("handler");
         }
-
-        // Determine the type of the specified handler.
-        EnumSet<ChannelHandlerType> type = EMPTY_TYPE.clone();
-        if (handler instanceof ChannelStateHandler) {
-            type.add(ChannelHandlerType.STATE);
-            if (handler instanceof ChannelInboundHandler) {
-                type.add(ChannelHandlerType.INBOUND);
-            }
-        }
-        if (handler instanceof ChannelOperationHandler) {
-            type.add(ChannelHandlerType.OPERATION);
-            if (handler instanceof ChannelOutboundHandler) {
-                type.add(ChannelHandlerType.OUTBOUND);
-            }
-        }
-        this.type = Collections.unmodifiableSet(type);
 
         channel = pipeline.channel;
         this.pipeline = pipeline;
@@ -197,7 +175,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     DefaultChannelHandlerContext(DefaultChannelPipeline pipeline, String name, HeadHandler handler) {
-        type = null;
         channel = pipeline.channel;
         this.pipeline = pipeline;
         this.name = name;
@@ -209,7 +186,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     DefaultChannelHandlerContext(DefaultChannelPipeline pipeline, String name, TailHandler handler) {
-        type = null;
         channel = pipeline.channel;
         this.pipeline = pipeline;
         this.name = name;
@@ -503,11 +479,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public String name() {
         return name;
-    }
-
-    @Override
-    public Set<ChannelHandlerType> types() {
-        return type;
     }
 
     @Override
