@@ -46,7 +46,7 @@ public abstract class AbstractByteBufTest {
 
     private static final Queue<ByteBuf> freeLaterQueue = new ArrayDeque<ByteBuf>();
 
-    protected ByteBuf freeLater(ByteBuf buf) {
+    protected static <T extends ByteBuf> T freeLater(T buf) {
         freeLaterQueue.add(buf);
         return buf;
     }
