@@ -225,8 +225,13 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
     }
 
     @Override
-    protected void doDeregister() throws Exception {
-        // NOOP
+    protected Runnable doDeregister() throws Exception {
+        return new Runnable() {
+            @Override
+            public void run() {
+                runPendingTasks();
+            }
+        };
     }
 
     @Override
