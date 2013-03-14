@@ -134,7 +134,11 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
         protected Object decode(ChannelHandlerContext ctx, Channel channel,
                 ChannelBuffer buffer, State state) throws Exception {
             if (done) {
-                return buffer.readBytes(actualReadableBytes());
+                int readable = actualReadableBytes();
+                if (readable == 0) {
+                    return null;
+                }
+                return buffer.readBytes(readable);
             } else {
                 Object msg = super.decode(ctx, channel, buffer, state);
                 if (failOnMissingResponse) {
