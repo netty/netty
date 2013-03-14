@@ -25,7 +25,9 @@ import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalEventLoopGroup;
 import org.junit.Test;
 
-import java.net.SocketAddress;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -646,6 +648,39 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test
+    public void testLifeCycleAware() {
+        LocalChannel channel = new LocalChannel();
+        LocalEventLoopGroup group = new LocalEventLoopGroup();
+        group.register(channel).awaitUninterruptibly();
+        final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
+
+        List<LifeCycleAwareTestHandler> handlers = new ArrayList<LifeCycleAwareTestHandler>();
+
+        for (int i = 0; i < 20; i++) {
+            LifeCycleAwareTestHandler handler = new LifeCycleAwareTestHandler("handler-" + i);
+
+            // Add handler.
+            pipeline.addFirst(handler.name, handler);
+
+            // Validate handler life-cycle methods called.
+            handler.validate(true, true, false, false);
+
+            // Store handler into the list.
+            handlers.add(handler);
+        }
+
+        // Change the order of remove operations over all handlers in the pipeline.
+        Collections.shuffle(handlers);
+
+        for (LifeCycleAwareTestHandler handler : handlers) {
+            assertSame(handler, pipeline.remove(handler.name));
+
+            // Validate handler life-cycle methods called.
+            handler.validate(true, true, true, true);
+        }
+    }
+
+    @Test
     public void testRemoveAndForwardDuplexMessage() throws Exception {
         LocalChannel channel = new LocalChannel();
         LocalEventLoopGroup group = new LocalEventLoopGroup();
@@ -861,6 +896,60 @@ public class DefaultChannelPipelineTest {
         @Override
         public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
             ((ChannelOutboundHandler) operationHandler()).freeOutboundBuffer(ctx);
+        }
+    }
+
+    /** Test handler to validate life-cycle aware behavior. */
+    private static final class LifeCycleAwareTestHandler extends ChannelHandlerAdapter {
+        private final String name;
+
+        private boolean beforeAdd;
+        private boolean afterAdd;
+        private boolean beforeRemove;
+        private boolean afterRemove;
+
+        /**
+         * Constructs life-cycle aware test handler.
+         *
+         * @param name Handler name to display in assertion messages.
+         */
+        private LifeCycleAwareTestHandler(String name) {
+            this.name = name;
+        }
+
+        public void validate(boolean beforeAdd, boolean afterAdd, boolean beforeRemove, boolean afterRemove) {
+            assertEquals(name, beforeAdd, this.beforeAdd);
+            assertEquals(name, afterAdd, this.afterAdd);
+            assertEquals(name, beforeRemove, this.beforeRemove);
+            assertEquals(name, afterRemove, this.afterRemove);
+        }
+
+        @Override
+        public void beforeAdd(ChannelHandlerContext ctx) {
+            validate(false, false, false, false);
+
+            beforeAdd = true;
+        }
+
+        @Override
+        public void afterAdd(ChannelHandlerContext ctx) {
+            validate(true, false, false, false);
+
+            afterAdd = true;
+        }
+
+        @Override
+        public void beforeRemove(ChannelHandlerContext ctx) {
+            validate(true, true, false, false);
+
+            beforeRemove = true;
+        }
+
+        @Override
+        public void afterRemove(ChannelHandlerContext ctx) {
+            validate(true, true, true, false);
+
+            afterRemove = true;
         }
     }
 }
