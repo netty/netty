@@ -225,78 +225,69 @@ public abstract class AbstractCompositeByteBufTest extends
         ByteBuf a, b;
         // XXX Same tests with several buffers in wrappedCheckedBuffer
         // Different length.
-        a = wrappedBuffer(new byte[] { 1 }).order(order);
-        b = wrappedBuffer(
+        a = freeLater(wrappedBuffer(new byte[] { 1 }).order(order));
+        b = freeLater(wrappedBuffer(
                 wrappedBuffer(new byte[] { 1 }).order(order),
-                wrappedBuffer(new byte[] { 2 }).order(order));
+                wrappedBuffer(new byte[] { 2 }).order(order)));
         assertFalse(BufUtil.equals(a, b));
-        b.release();
 
         // Same content, same firstIndex, short length.
-        a = wrappedBuffer(new byte[] { 1, 2, 3 }).order(order);
-        b = wrappedBuffer(
+        a = freeLater(wrappedBuffer(new byte[] { 1, 2, 3 }).order(order));
+        b = freeLater(wrappedBuffer(
                 wrappedBuffer(new byte[]{1}).order(order),
                 wrappedBuffer(new byte[]{2}).order(order),
-                wrappedBuffer(new byte[]{3}).order(order));
+                wrappedBuffer(new byte[]{3}).order(order)));
         assertTrue(BufUtil.equals(a, b));
-        b.release();
 
         // Same content, different firstIndex, short length.
-        a = wrappedBuffer(new byte[] { 1, 2, 3 }).order(order);
-        b = wrappedBuffer(
+        a = freeLater(wrappedBuffer(new byte[] { 1, 2, 3 }).order(order));
+        b = freeLater(wrappedBuffer(
                 wrappedBuffer(new byte[] { 0, 1, 2, 3, 4 }, 1, 2).order(order),
-                wrappedBuffer(new byte[] { 0, 1, 2, 3, 4 }, 3, 1).order(order));
+                wrappedBuffer(new byte[] { 0, 1, 2, 3, 4 }, 3, 1).order(order)));
         assertTrue(BufUtil.equals(a, b));
-        b.release();
 
         // Different content, same firstIndex, short length.
-        a = wrappedBuffer(new byte[] { 1, 2, 3 }).order(order);
-        b = wrappedBuffer(
+        a = freeLater(wrappedBuffer(new byte[] { 1, 2, 3 }).order(order));
+        b = freeLater(wrappedBuffer(
                 wrappedBuffer(new byte[] { 1, 2 }).order(order),
-                wrappedBuffer(new byte[] { 4 }).order(order));
+                wrappedBuffer(new byte[] { 4 }).order(order)));
         assertFalse(BufUtil.equals(a, b));
-        b.release();
 
         // Different content, different firstIndex, short length.
-        a = wrappedBuffer(new byte[] { 1, 2, 3 }).order(order);
-        b = wrappedBuffer(
+        a = freeLater(wrappedBuffer(new byte[] { 1, 2, 3 }).order(order));
+        b = freeLater(wrappedBuffer(
                 wrappedBuffer(new byte[] { 0, 1, 2, 4, 5 }, 1, 2).order(order),
-                wrappedBuffer(new byte[] { 0, 1, 2, 4, 5 }, 3, 1).order(order));
+                wrappedBuffer(new byte[] { 0, 1, 2, 4, 5 }, 3, 1).order(order)));
         assertFalse(BufUtil.equals(a, b));
-        b.release();
 
         // Same content, same firstIndex, long length.
-        a = wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }).order(order);
-        b = wrappedBuffer(
+        a = freeLater(wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }).order(order));
+        b = freeLater(wrappedBuffer(
                 wrappedBuffer(new byte[] { 1, 2, 3 }).order(order),
                 wrappedBuffer(new byte[] { 4, 5, 6 }).order(order),
-                wrappedBuffer(new byte[] { 7, 8, 9, 10 }).order(order));
+                wrappedBuffer(new byte[] { 7, 8, 9, 10 }).order(order)));
         assertTrue(BufUtil.equals(a, b));
-        b.release();
 
         // Same content, different firstIndex, long length.
-        a = wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }).order(order);
-        b = wrappedBuffer(
+        a = freeLater(wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }).order(order));
+        b = freeLater(wrappedBuffer(
                 wrappedBuffer(new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}, 1, 5).order(order),
-                wrappedBuffer(new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}, 6, 5).order(order));
+                wrappedBuffer(new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}, 6, 5).order(order)));
         assertTrue(BufUtil.equals(a, b));
-        b.release();
 
         // Different content, same firstIndex, long length.
-        a = wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }).order(order);
-        b = wrappedBuffer(
+        a = freeLater(wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }).order(order));
+        b = freeLater(wrappedBuffer(
                 wrappedBuffer(new byte[] { 1, 2, 3, 4, 6 }).order(order),
-                wrappedBuffer(new byte[] { 7, 8, 5, 9, 10 }).order(order));
+                wrappedBuffer(new byte[] { 7, 8, 5, 9, 10 }).order(order)));
         assertFalse(BufUtil.equals(a, b));
-        b.release();
 
         // Different content, different firstIndex, long length.
-        a = wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }).order(order);
-        b = wrappedBuffer(
+        a = freeLater(wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }).order(order));
+        b = freeLater(wrappedBuffer(
                 wrappedBuffer(new byte[] { 0, 1, 2, 3, 4, 6, 7, 8, 5, 9, 10, 11 }, 1, 5).order(order),
-                wrappedBuffer(new byte[] { 0, 1, 2, 3, 4, 6, 7, 8, 5, 9, 10, 11 }, 6, 5).order(order));
+                wrappedBuffer(new byte[] { 0, 1, 2, 3, 4, 6, 7, 8, 5, 9, 10, 11 }, 6, 5).order(order)));
         assertFalse(BufUtil.equals(a, b));
-        b.release();
     }
 
     @Test
@@ -441,15 +432,11 @@ public abstract class AbstractCompositeByteBufTest extends
     // Test for https://github.com/netty/netty/issues/1060
     @Test
     public void testReadWithEmptyCompositeBuffer() {
-        ByteBuf buf = compositeBuffer();
-        try {
-            int n = 65;
-            for (int i = 0; i < n; i ++) {
-                buf.writeByte(1);
-                assertEquals(1, buf.readByte());
-            }
-        } finally {
-            buf.release();
+        ByteBuf buf = freeLater(compositeBuffer());
+        int n = 65;
+        for (int i = 0; i < n; i ++) {
+            buf.writeByte(1);
+            assertEquals(1, buf.readByte());
         }
     }
 }
