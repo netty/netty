@@ -23,6 +23,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel.Unsafe;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -36,9 +37,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.WeakHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-
-import static io.netty.channel.DefaultChannelHandlerContext.*;
 
 /**
  * The default {@link ChannelPipeline} implementation.  It is usually created
@@ -128,7 +128,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         // Run the following 'waiting' code outside of the above synchronized block
         // in order to avoid deadlock
 
-        newCtx.executeOnEventLoop(new Runnable() {
+        executeOnEventLoop(newCtx, new Runnable() {
             @Override
             public void run() {
                 synchronized (DefaultChannelPipeline.this) {
@@ -178,7 +178,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         // Run the following 'waiting' code outside of the above synchronized block
         // in order to avoid deadlock
 
-        newCtx.executeOnEventLoop(new Runnable() {
+        executeOnEventLoop(newCtx, new Runnable() {
             @Override
             public void run() {
                 synchronized (DefaultChannelPipeline.this) {
@@ -232,7 +232,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         // Run the following 'waiting' code outside of the above synchronized block
         // in order to avoid deadlock
 
-        newCtx.executeOnEventLoop(new Runnable() {
+        executeOnEventLoop(newCtx, new Runnable() {
             @Override
             public void run() {
                 synchronized (DefaultChannelPipeline.this) {
@@ -284,7 +284,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         // Run the following 'waiting' code outside of the above synchronized block
         // in order to avoid deadlock
 
-        newCtx.executeOnEventLoop(new Runnable() {
+        executeOnEventLoop(newCtx, new Runnable() {
             @Override
             public void run() {
                 synchronized (DefaultChannelPipeline.this) {
@@ -676,8 +676,10 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private void callAfterRemove(final DefaultChannelHandlerContext ctx, DefaultChannelHandlerContext ctxPrev,
-                                 DefaultChannelHandlerContext ctxNext, boolean forward) {
+    private static void callAfterRemove(
+            final DefaultChannelHandlerContext ctx, DefaultChannelHandlerContext ctxPrev,
+            DefaultChannelHandlerContext ctxNext, boolean forward) {
+
         final ChannelHandler handler = ctx.handler();
 
         // Notify the complete removal.
@@ -695,11 +697,54 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             ctx.clearBuffer();
         }
 
-        ctx.removed = true;
+        ctx.setRemoved();
+    }
 
-        // Free all buffers before completing removal.
-        if (!channel.isRegistered()) {
-            ctx.freeHandlerBuffersAfterRemoval();
+    /**
+     * Executes a task on the event loop and waits for it to finish.  If the task is interrupted, then the
+     * current thread will be interrupted.  It is expected that the task performs any appropriate locking.
+     * <p>
+     * If the {@link Runnable#run()} call throws a {@link Throwable}, but it is not an instance of
+     * {@link Error} or {@link RuntimeException}, then it is wrapped inside a
+     * {@link ChannelPipelineException} and that is thrown instead.</p>
+     *
+     * @param r execute this runnable
+     * @see Runnable#run()
+     * @see Future#get()
+     * @throws Error if the task threw this.
+     * @throws RuntimeException if the task threw this.
+     * @throws ChannelPipelineException with a {@link Throwable} as a cause, if the task threw another type of
+     *         {@link Throwable}.
+     */
+    private static void executeOnEventLoop(DefaultChannelHandlerContext ctx, Runnable r) {
+        waitForFuture(ctx.executor().submit(r));
+    }
+
+    /**
+     * Waits for a future to finish.  If the task is interrupted, then the current thread will be interrupted.
+     * It is expected that the task performs any appropriate locking.
+     * <p>
+     * If the internal call throws a {@link Throwable}, but it is not an instance of {@link Error} or
+     * {@link RuntimeException}, then it is wrapped inside a {@link ChannelPipelineException} and that is
+     * thrown instead.</p>
+     *
+     * @param future wait for this future
+     * @see Future#get()
+     * @throws Error if the task threw this.
+     * @throws RuntimeException if the task threw this.
+     * @throws ChannelPipelineException with a {@link Throwable} as a cause, if the task threw another type of
+     *         {@link Throwable}.
+     */
+    private static void waitForFuture(Future<?> future) {
+        try {
+            future.get();
+        } catch (ExecutionException ex) {
+            // In the arbitrary case, we can throw Error, RuntimeException, and Exception
+            PlatformDependent.throwException(ex.getCause());
+        } catch (InterruptedException ex) {
+            // Interrupt the calling thread (note that this method is not called from the event loop)
+
+            Thread.currentThread().interrupt();
         }
     }
 

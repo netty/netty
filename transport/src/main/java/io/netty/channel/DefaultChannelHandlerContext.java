@@ -24,19 +24,19 @@ import io.netty.buffer.Unpooled;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
-import io.netty.util.internal.PlatformDependent;
 
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import static io.netty.channel.DefaultChannelPipeline.*;
 
 final class DefaultChannelHandlerContext extends DefaultAttributeMap implements ChannelHandlerContext {
+
+    private static final int FLAG_REMOVED = 1;
+    private static final int FLAG_FREED = 2;
 
     volatile DefaultChannelHandlerContext next;
     volatile DefaultChannelHandlerContext prev;
@@ -55,6 +55,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private final ByteBuf inByteBuf;
     private MessageBuf<Object> outMsgBuf;
     private ByteBuf outByteBuf;
+
+    private int flags;
 
     // When the two handlers run in a different thread and they are next to each other,
     // each other's buffers can be accessed at the same time resulting in a race condition.
@@ -93,8 +95,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private Runnable fireInboundBufferUpdated0Task;
     private Runnable invokeChannelReadSuspendedTask;
     private Runnable invokeRead0Task;
-    private boolean freed;
-    boolean removed;
 
     @SuppressWarnings("unchecked")
     DefaultChannelHandlerContext(
@@ -383,29 +383,38 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         return true;
     }
 
-    void freeHandlerBuffersAfterRemoval() {
-        if (!removed || freed) {
-            return;
-        }
-        freed = true;
-        final ChannelHandler handler = handler();
+    void setRemoved() {
+        flags |= FLAG_REMOVED;
 
-        if (handler instanceof ChannelInboundHandler) {
-            try {
-                ((ChannelInboundHandler) handler).freeInboundBuffer(this);
-            } catch (Exception e) {
-                notifyHandlerException(e);
-            } finally {
-                freeInboundBridge();
-            }
+        // Free all buffers before completing removal.
+        if (!channel.isRegistered()) {
+            freeHandlerBuffersAfterRemoval();
         }
-        if (handler instanceof ChannelOutboundHandler) {
-            try {
-                ((ChannelOutboundHandler) handler).freeOutboundBuffer(this);
-            } catch (Exception e) {
-                notifyHandlerException(e);
-            } finally {
-                freeOutboundBridge();
+    }
+
+    private void freeHandlerBuffersAfterRemoval() {
+        if (flags == FLAG_REMOVED) { // Removed, but not freed yet
+            flags |= FLAG_FREED;
+
+            final ChannelHandler handler = handler();
+
+            if (handler instanceof ChannelInboundHandler) {
+                try {
+                    ((ChannelInboundHandler) handler).freeInboundBuffer(this);
+                } catch (Exception e) {
+                    notifyHandlerException(e);
+                } finally {
+                    freeInboundBridge();
+                }
+            }
+            if (handler instanceof ChannelOutboundHandler) {
+                try {
+                    ((ChannelOutboundHandler) handler).freeOutboundBuffer(this);
+                } catch (Exception e) {
+                    notifyHandlerException(e);
+                } finally {
+                    freeOutboundBridge();
+                }
             }
         }
     }
@@ -528,54 +537,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     name, ChannelOutboundMessageHandler.class.getSimpleName()));
         }
         return (MessageBuf<T>) outMsgBuf;
-    }
-
-    /**
-     * Executes a task on the event loop and waits for it to finish.  If the task is interrupted, then the
-     * current thread will be interrupted.  It is expected that the task performs any appropriate locking.
-     * <p>
-     * If the {@link Runnable#run()} call throws a {@link Throwable}, but it is not an instance of
-     * {@link Error} or {@link RuntimeException}, then it is wrapped inside a
-     * {@link ChannelPipelineException} and that is thrown instead.</p>
-     *
-     * @param r execute this runnable
-     * @see Runnable#run()
-     * @see Future#get()
-     * @throws Error if the task threw this.
-     * @throws RuntimeException if the task threw this.
-     * @throws ChannelPipelineException with a {@link Throwable} as a cause, if the task threw another type of
-     *         {@link Throwable}.
-     */
-    void executeOnEventLoop(Runnable r) {
-        waitForFuture(executor().submit(r));
-    }
-
-    /**
-     * Waits for a future to finish.  If the task is interrupted, then the current thread will be interrupted.
-     * It is expected that the task performs any appropriate locking.
-     * <p>
-     * If the internal call throws a {@link Throwable}, but it is not an instance of {@link Error} or
-     * {@link RuntimeException}, then it is wrapped inside a {@link ChannelPipelineException} and that is
-     * thrown instead.</p>
-     *
-     * @param future wait for this future
-     * @see Future#get()
-     * @throws Error if the task threw this.
-     * @throws RuntimeException if the task threw this.
-     * @throws ChannelPipelineException with a {@link Throwable} as a cause, if the task threw another type of
-     *         {@link Throwable}.
-     */
-    static void waitForFuture(Future<?> future) {
-        try {
-            future.get();
-        } catch (ExecutionException ex) {
-            // In the arbitrary case, we can throw Error, RuntimeException, and Exception
-            PlatformDependent.throwException(ex.getCause());
-        } catch (InterruptedException ex) {
-            // Interrupt the calling thread (note that this method is not called from the event loop)
-
-            Thread.currentThread().interrupt();
-        }
     }
 
     @Override
@@ -939,7 +900,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 } catch (Throwable t) {
                     notifyHandlerException(t);
                 } finally {
-                    if (!freed) {
+                    if ((flags & FLAG_FREED) == 0) {
                         if (handler instanceof ChannelInboundByteHandler && !pipeline.isInboundShutdown()) {
                             try {
                                 ((ChannelInboundByteHandler) handler).discardInboundReadBytes(this);
