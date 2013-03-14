@@ -15,23 +15,26 @@
  */
 package io.netty.buffer;
 
-import static io.netty.buffer.Unpooled.wrappedBuffer;
-
 import org.junit.Test;
+
+import static io.netty.buffer.Unpooled.*;
 import static org.junit.Assert.*;
 
 /**
  * Tests buffer consolidation
  */
 public class ConsolidationTest {
-
     @Test
     public void shouldWrapInSequence() {
         ByteBuf currentBuffer = wrappedBuffer(wrappedBuffer("a".getBytes()), wrappedBuffer("=".getBytes()));
         currentBuffer = wrappedBuffer(currentBuffer, wrappedBuffer("1".getBytes()), wrappedBuffer("&".getBytes()));
-        
-        String s = new String(currentBuffer.copy().array());
+
+        ByteBuf copy = currentBuffer.copy();
+        String s = new String(copy.array());
         assertEquals("a=1&", s);
+
+        currentBuffer.release();
+        copy.release();
     }
 
     @Test
@@ -51,7 +54,11 @@ public class ConsolidationTest {
         currentBuffer = wrappedBuffer(currentBuffer, wrappedBuffer("e".getBytes()), wrappedBuffer("=".getBytes()));
         currentBuffer = wrappedBuffer(currentBuffer, wrappedBuffer("5".getBytes()), wrappedBuffer("&".getBytes()));
 
-        String s = new String(currentBuffer.copy().array());
+        ByteBuf copy = currentBuffer.copy();
+        String s = new String(copy.array());
         assertEquals("a=1&b=2&c=3&d=4&e=5&", s);
+
+        currentBuffer.release();
+        copy.release();
     }    
 }
