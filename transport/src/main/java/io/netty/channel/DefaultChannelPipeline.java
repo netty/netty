@@ -908,6 +908,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelPipeline fireChannelRegistered() {
+        head.initHeadHandler();
         head.fireChannelRegistered();
         return this;
     }
@@ -926,6 +927,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     public ChannelPipeline fireChannelActive() {
         firedChannelActive = true;
+        head.initHeadHandler();
         head.fireChannelActive();
 
         if (channel.config().isAutoRead()) {
@@ -1200,12 +1202,14 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         protected final Unsafe unsafe;
         ByteBuf byteSink;
         MessageBuf<Object> msgSink;
+        boolean initialized;
 
         protected HeadHandler(Unsafe unsafe) {
             this.unsafe = unsafe;
         }
 
         void init(ChannelHandlerContext ctx) {
+            assert !initialized;
             switch (ctx.channel().metadata().bufferType()) {
             case BYTE:
                 byteSink = ctx.alloc().ioBuffer();
