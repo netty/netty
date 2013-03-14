@@ -197,17 +197,6 @@
 
   </dependencies>
 
-  <!-- This test is guaranteed to fail during the release phase; skip'em all -->
-  <profiles>
-    <profile>
-      <id>release</id>
-      <properties>
-        <skipITs>true</skipITs>
-        <skipTests>true</skipTests>
-      </properties>
-    </profile>
-  </profiles>
-
   <build>
     <plugins>
 
