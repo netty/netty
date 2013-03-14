@@ -282,7 +282,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
 
             // Check timeout every 64 tasks because System.nanoTime() is relatively expensive.
             // XXX: Hard-coded value - will make it configurable if it is really a problem.
-            if ((runTasks & 0x40) == 0) {
+            if ((runTasks & 0x3F) == 0) {
                 if (System.nanoTime() >= deadline) {
                     break;
                 }
