@@ -1215,12 +1215,13 @@ public class SslHandler extends FrameDecoder
                 synchronized (handshakeLock) {
                     result = engine.unwrap(inNetBuf, outAppBuf);
 
-                    // notify about the CLOSED state of the SSLEngine. See #137
-                    if (result.getStatus() == Status.CLOSED) {
-                        sslEngineCloseFuture.setClosed();
-                    }
-                    if (result.getStatus() == Status.BUFFER_OVERFLOW) {
-                        throw new SSLException("SSLEngine.unwrap() reported an impossible buffer overflow.");
+                    switch (result.getStatus()) {
+                        case CLOSED:
+                            // notify about the CLOSED state of the SSLEngine. See #137
+                            sslEngineCloseFuture.setClosed();
+                            break;
+                        case BUFFER_OVERFLOW:
+                            throw new SSLException("SSLEngine.unwrap() reported an impossible buffer overflow.");
                     }
 
                     final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
