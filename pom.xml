@@ -440,7 +440,7 @@
         <version>2.3.2</version>
         <configuration>
           <useReleaseProfile>false</useReleaseProfile>
-          <arguments>-P release,sonatype-oss-release,full</arguments>
+          <arguments>-P release,sonatype-oss-release,full,no-osgi</arguments>
           <autoVersionSubmodules>true</autoVersionSubmodules>
           <allowTimestampedSnapshots>true</allowTimestampedSnapshots>
           <tagNameFormat>netty-@{project.version}</tagNameFormat>

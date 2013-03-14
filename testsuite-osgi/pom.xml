@@ -30,6 +30,17 @@
   <name>Netty/Testsuite/OSGi</name>
   <description>parent for build constrains modules</description>
 
+  <!-- This test is guaranteed to fail during the release phase; skip'em all -->
+  <profiles>
+    <profile>
+      <id>no-osgi</id>
+      <properties>
+        <skipITs>true</skipITs>
+        <skipTests>true</skipTests>
+      </properties>
+    </profile>
+  </profiles>
+
   <modules>
     <module>testsuite-osgi-split</module>
     <module>testsuite-osgi-deps</module>
