@@ -22,8 +22,8 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.ServerChannel;
-import io.netty.util.concurrent.SingleThreadEventExecutor;
 import io.netty.channel.SingleThreadEventLoop;
+import io.netty.util.concurrent.SingleThreadEventExecutor;
 
 import java.net.SocketAddress;
 
@@ -126,8 +126,9 @@ public class LocalServerChannel extends AbstractServerChannel {
     }
 
     @Override
-    protected void doDeregister() throws Exception {
+    protected Runnable doDeregister() throws Exception {
         ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
+        return null;
     }
 
     @Override
