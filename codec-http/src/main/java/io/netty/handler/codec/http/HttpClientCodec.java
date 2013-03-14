@@ -148,7 +148,13 @@ public final class HttpClientCodec
         protected Object decode(
                 ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
             if (done) {
-                return buffer.readBytes(actualReadableBytes());
+                int readable = actualReadableBytes();
+                if (readable == 0) {
+                    // if non is readable just return null
+                    // https://github.com/netty/netty/issues/1159
+                    return null;
+                }
+                return buffer.readBytes(readable);
             } else {
                 Object msg = super.decode(ctx, buffer);
                 if (failOnMissingResponse) {
