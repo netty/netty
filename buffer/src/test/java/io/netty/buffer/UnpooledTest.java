@@ -16,16 +16,19 @@
 package io.netty.buffer;
 
 import org.easymock.EasyMock;
+import org.junit.After;
 import org.junit.Test;
 
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.ScatteringByteChannel;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Queue;
 
 import static io.netty.buffer.Unpooled.*;
 import static org.junit.Assert.*;
@@ -35,6 +38,27 @@ import static org.junit.Assert.*;
  */
 @SuppressWarnings("ZeroLengthArrayAllocation")
 public class UnpooledTest {
+
+    private static final Queue<ByteBuf> freeLaterQueue = new ArrayDeque<ByteBuf>();
+
+    protected ByteBuf freeLater(ByteBuf buf) {
+        freeLaterQueue.add(buf);
+        return buf;
+    }
+
+    @After
+    public void tearDown() {
+        for (;;) {
+            ByteBuf buf = freeLaterQueue.poll();
+            if (buf == null) {
+                break;
+            }
+
+            if (buf.refCnt() > 0) {
+                buf.release(buf.refCnt());
+            }
+        }
+    }
 
     @Test
     public void testCompositeWrappedBuffer() {
@@ -127,22 +151,22 @@ public class UnpooledTest {
     @Test
     public void testCompare() {
         List<ByteBuf> expected = new ArrayList<ByteBuf>();
-        expected.add(wrappedBuffer(new byte[] { 1 }));
-        expected.add(wrappedBuffer(new byte[] { 1, 2 }));
-        expected.add(wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8,  9, 10 }));
-        expected.add(wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8,  9, 10, 11, 12 }));
-        expected.add(wrappedBuffer(new byte[] { 2 }));
-        expected.add(wrappedBuffer(new byte[] { 2, 3 }));
-        expected.add(wrappedBuffer(new byte[] { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 }));
-        expected.add(wrappedBuffer(new byte[] { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 }));
-        expected.add(wrappedBuffer(new byte[] { 2, 3, 4 }, 1, 1));
-        expected.add(wrappedBuffer(new byte[] { 1, 2, 3, 4 }, 2, 2));
-        expected.add(wrappedBuffer(new byte[] { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 }, 1, 10));
-        expected.add(wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 }, 2, 12));
-        expected.add(wrappedBuffer(new byte[] { 2, 3, 4, 5 }, 2, 1));
-        expected.add(wrappedBuffer(new byte[] { 1, 2, 3, 4, 5 }, 3, 2));
-        expected.add(wrappedBuffer(new byte[] { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 }, 2, 10));
-        expected.add(wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 }, 3, 12));
+        expected.add(wrappedBuffer(new byte[]{1}));
+        expected.add(wrappedBuffer(new byte[]{1, 2}));
+        expected.add(wrappedBuffer(new byte[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}));
+        expected.add(wrappedBuffer(new byte[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}));
+        expected.add(wrappedBuffer(new byte[]{2}));
+        expected.add(wrappedBuffer(new byte[]{2, 3}));
+        expected.add(wrappedBuffer(new byte[]{2, 3, 4, 5, 6, 7, 8, 9, 10, 11}));
+        expected.add(wrappedBuffer(new byte[]{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13}));
+        expected.add(wrappedBuffer(new byte[]{2, 3, 4}, 1, 1));
+        expected.add(wrappedBuffer(new byte[]{1, 2, 3, 4}, 2, 2));
+        expected.add(wrappedBuffer(new byte[]{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}, 1, 10));
+        expected.add(wrappedBuffer(new byte[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}, 2, 12));
+        expected.add(wrappedBuffer(new byte[]{2, 3, 4, 5}, 2, 1));
+        expected.add(wrappedBuffer(new byte[]{1, 2, 3, 4, 5}, 3, 2));
+        expected.add(wrappedBuffer(new byte[]{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}, 2, 10));
+        expected.add(wrappedBuffer(new byte[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, 3, 12));
 
         for (int i = 0; i < expected.size(); i ++) {
             for (int j = 0; j < expected.size(); j ++) {
@@ -216,7 +240,7 @@ public class UnpooledTest {
 
     @Test
     public void testWrappedBuffer() {
-        assertEquals(16, wrappedBuffer(ByteBuffer.allocateDirect(16)).capacity());
+        assertEquals(16, freeLater(wrappedBuffer(ByteBuffer.allocateDirect(16))).capacity());
 
         assertEquals(
                 wrappedBuffer(new byte[] { 1, 2, 3 }),
@@ -224,10 +248,10 @@ public class UnpooledTest {
 
         assertEquals(
                 wrappedBuffer(new byte[] { 1, 2, 3 }),
-                wrappedBuffer(
+                freeLater(wrappedBuffer(
                         new byte[] { 1 },
                         new byte[] { 2 },
-                        new byte[] { 3 }));
+                        new byte[] { 3 })));
 
         assertEquals(
                 wrappedBuffer(new byte[] { 1, 2, 3 }),
@@ -237,10 +261,10 @@ public class UnpooledTest {
 
         assertEquals(
                 wrappedBuffer(new byte[] { 1, 2, 3 }),
-                wrappedBuffer(
+                freeLater(wrappedBuffer(
                         wrappedBuffer(new byte[] { 1 }),
                         wrappedBuffer(new byte[] { 2 }),
-                        wrappedBuffer(new byte[] { 3 })));
+                        wrappedBuffer(new byte[] { 3 }))));
 
         assertEquals(
                 wrappedBuffer(new byte[] { 1, 2, 3 }),
@@ -250,10 +274,10 @@ public class UnpooledTest {
 
         assertEquals(
                 wrappedBuffer(new byte[] { 1, 2, 3 }),
-                wrappedBuffer(
+                freeLater(wrappedBuffer(
                         ByteBuffer.wrap(new byte[] { 1 }),
                         ByteBuffer.wrap(new byte[] { 2 }),
-                        ByteBuffer.wrap(new byte[] { 3 })));
+                        ByteBuffer.wrap(new byte[] { 3 }))));
     }
 
     @Test
