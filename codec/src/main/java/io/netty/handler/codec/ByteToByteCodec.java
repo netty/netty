@@ -25,7 +25,7 @@ import io.netty.channel.ChannelPromise;
 /**
  * A Codec for on-the-fly encoding/decoding of bytes.
  *
- * This can be though of an combination of {@link ByteToByteDecoder} and {@link ByteToByteEncoder}.
+ * This can be thought of as a combination of {@link ByteToByteDecoder} and {@link ByteToByteEncoder}.
  *
  * Here is an example of a {@link ByteToByteCodec} which just square {@link Integer} read from a {@link ByteBuf}.
  * <pre>

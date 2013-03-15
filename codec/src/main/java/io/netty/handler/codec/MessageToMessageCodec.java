@@ -26,7 +26,7 @@ import io.netty.util.internal.TypeParameterMatcher;
 /**
  * A Codec for on-the-fly encoding/decoding of message.
  *
- * This can be though of an combination of {@link MessageToMessageDecoder} and {@link MessageToMessageEncoder}.
+ * This can be thought of as a combination of {@link MessageToMessageDecoder} and {@link MessageToMessageEncoder}.
  *
  * Here is an example of a {@link MessageToMessageCodec} which just decode from {@link Integer} to {@link Long}
  * and encode from {@link Long} to {@link Integer}.
