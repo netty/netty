@@ -199,11 +199,11 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler implements
 
     protected void appendToCumulation(ChannelBuffer input) {
         ChannelBuffer cumulation = this.currentMessage.getContent();
-        if(cumulation == null) {
-            cumulation = ChannelBuffers.dynamicBuffer(input.factory());            
-        }         
+        if (cumulation == null) {
+            cumulation = ChannelBuffers.dynamicBuffer(input.factory());
+        }
         cumulation.writeBytes(input);
-        currentMessage.setContent(cumulation);        
+        currentMessage.setContent(cumulation);
     }
 
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
