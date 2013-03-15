@@ -17,12 +17,8 @@ package org.jboss.netty.handler.codec.http;
 
 import static org.junit.Assert.*;
 
-import java.util.List;
-
 import org.easymock.EasyMock;
-import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.buffer.CompositeChannelBuffer;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.embedder.CodecEmbedderException;
 import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
@@ -54,20 +50,8 @@ public class HttpChunkAggregatorTest {
         
         assertEquals(chunk1.getContent().readableBytes() + chunk2.getContent().readableBytes(), HttpHeaders.getContentLength(aggratedMessage));
         assertEquals(aggratedMessage.getHeader("X-Test"), Boolean.TRUE.toString());
-        checkContentBuffer(aggratedMessage);
         assertNull(embedder.poll());
 
-    }
-
-    private void checkContentBuffer(HttpMessage aggregatedMessage) {
-        CompositeChannelBuffer buffer = (CompositeChannelBuffer) aggregatedMessage.getContent();
-        assertEquals(2, buffer.numComponents());
-        List<ChannelBuffer> buffers = buffer.decompose(0, buffer.capacity());
-        assertEquals(2, buffers.size());
-        for (ChannelBuffer buf: buffers) {
-            // This should be false as we decompose the buffer before to not have deep hierarchy
-            assertFalse(buf instanceof CompositeChannelBuffer);
-        }
     }
 
     @Test
@@ -91,12 +75,10 @@ public class HttpChunkAggregatorTest {
         assertTrue(embedder.finish());
         HttpMessage aggratedMessage = embedder.poll();
         assertNotNull(aggratedMessage);
-        
+
         assertEquals(chunk1.getContent().readableBytes() + chunk2.getContent().readableBytes(), HttpHeaders.getContentLength(aggratedMessage));
         assertEquals(aggratedMessage.getHeader("X-Test"), Boolean.TRUE.toString());
         assertEquals(aggratedMessage.getHeader("X-Trailer"), Boolean.TRUE.toString());
-        checkContentBuffer(aggratedMessage);
-
         assertNull(embedder.poll());
 
     }

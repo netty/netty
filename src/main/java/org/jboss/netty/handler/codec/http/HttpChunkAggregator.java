@@ -23,6 +23,7 @@ import java.util.Map.Entry;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.buffer.DynamicChannelBuffer;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
@@ -199,11 +200,14 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler implements
 
     protected void appendToCumulation(ChannelBuffer input) {
         ChannelBuffer cumulation = this.currentMessage.getContent();
-        if (cumulation == null) {
-            cumulation = ChannelBuffers.dynamicBuffer(input.factory());
+        // Convert cumulation to a channel buffer - first time it is directly assigned
+        if (!(cumulation instanceof DynamicChannelBuffer)) {
+            ChannelBuffer buffer = ChannelBuffers.dynamicBuffer(input.factory());
+            buffer.writeBytes(cumulation);
+            this.currentMessage.setContent(buffer);
         }
-        cumulation.writeBytes(input);
-        currentMessage.setContent(cumulation);
+        ChannelBuffer content = this.currentMessage.getContent();
+        content.writeBytes(input.array());
     }
 
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
