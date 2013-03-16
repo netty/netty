@@ -15,15 +15,26 @@
  */
 package org.jboss.netty.util;
 
-import static org.easymock.EasyMock.*;
-import static org.junit.Assert.*;
+import org.junit.After;
+import org.junit.Test;
 
 import java.security.Permission;
 import java.util.concurrent.Executor;
 
-import org.junit.Test;
+import static org.easymock.EasyMock.*;
+import static org.junit.Assert.*;
 
 public class ThreadRenamingRunnableTest {
+
+    @After
+    public void setUp() {
+        ThreadRenamingRunnable.setThreadNameDeterminer(ThreadNameDeterminer.PROPOSED);
+    }
+
+    @Test
+    public void defaultIsProposed() {
+        assertSame(ThreadNameDeterminer.PROPOSED, ThreadRenamingRunnable.getThreadNameDeterminer());
+    }
 
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullName() throws Exception {
