@@ -60,6 +60,8 @@ public final class CharsetUtil {
      */
     public static final Charset US_ASCII = Charset.forName("US-ASCII");
 
+    BUILD FAILS HERE;
+
     private static final ThreadLocal<Map<Charset, CharsetEncoder>> encoders =
         new ThreadLocal<Map<Charset, CharsetEncoder>>() {
             @Override
