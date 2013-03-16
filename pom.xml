@@ -71,6 +71,18 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <jboss.marshalling.version>1.3.14.GA</jboss.marshalling.version>
+    <test.jvm.argLine>
+      -server 
+      -Dio.netty.resourceLeakDetection
+      -dsa -da -ea:io.netty...
+      -XX:+AggressiveOpts
+      -XX:+TieredCompilation
+      -XX:+UseBiasedLocking
+      -XX:+UseFastAccessorMethods
+      -XX:+UseStringCache
+      -XX:+OptimizeStringConcat
+      -XX:+HeapDumpOnOutOfMemoryError
+    </test.jvm.argLine>
   </properties>
  
   <modules>
@@ -384,18 +396,7 @@
             <exclude>**/TestUtil*</exclude>
           </excludes>
           <runOrder>random</runOrder>
-          <argLine>
-            -server 
-            -Dio.netty.resourceLeakDetection
-            -dsa -da -ea:io.netty...
-            -XX:+AggressiveOpts
-            -XX:+TieredCompilation
-            -XX:+UseBiasedLocking
-            -XX:+UseFastAccessorMethods
-            -XX:+UseStringCache
-            -XX:+OptimizeStringConcat
-            -XX:+HeapDumpOnOutOfMemoryError
-          </argLine>
+          <argLine>${test.jvm.argLine}</argLine>
         </configuration>
       </plugin>
       <!-- always produce osgi bundles -->
