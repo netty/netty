@@ -364,13 +364,13 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        replayable.terminate();
-        ByteBuf in = cumulation;
-        if (in.isReadable()) {
-            callDecode(ctx, in);
-        }
-
         try {
+            replayable.terminate();
+            ByteBuf in = cumulation;
+            if (in.isReadable()) {
+                callDecode(ctx, in);
+            }
+
             if (ctx.nextInboundMessageBuffer().unfoldAndAdd(decodeLast(ctx, replayable))) {
                 ctx.fireInboundBufferUpdated();
             }
@@ -383,9 +383,9 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
             } else {
                 ctx.fireExceptionCaught(new DecoderException(t));
             }
+        } finally {
+            ctx.fireChannelInactive();
         }
-
-        ctx.fireChannelInactive();
     }
 
     @Override
@@ -458,6 +458,8 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                 } else {
                     ctx.fireExceptionCaught(new DecoderException(t));
                 }
+
+                break;
             }
         }
 

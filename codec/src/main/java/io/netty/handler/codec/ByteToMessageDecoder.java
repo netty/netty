@@ -82,12 +82,12 @@ public abstract class ByteToMessageDecoder
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        ByteBuf in = ctx.inboundByteBuffer();
-        if (in.isReadable()) {
-            callDecode(ctx, in);
-        }
-
         try {
+            ByteBuf in = ctx.inboundByteBuffer();
+            if (in.isReadable()) {
+                callDecode(ctx, in);
+            }
+
             if (ctx.nextInboundMessageBuffer().unfoldAndAdd(decodeLast(ctx, in))) {
                 ctx.fireInboundBufferUpdated();
             }
@@ -97,9 +97,9 @@ public abstract class ByteToMessageDecoder
             } else {
                 ctx.fireExceptionCaught(new DecoderException(t));
             }
+        } finally {
+            ctx.fireChannelInactive();
         }
-
-        ctx.fireChannelInactive();
     }
 
     protected void callDecode(ChannelHandlerContext ctx, ByteBuf in) {
@@ -144,6 +144,8 @@ public abstract class ByteToMessageDecoder
                 } else {
                     ctx.fireExceptionCaught(new DecoderException(t));
                 }
+
+                break;
             }
         }
 
