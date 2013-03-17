@@ -76,7 +76,7 @@ public class ThreadPerChannelEventLoop extends SingleThreadEventLoop {
         }
     }
 
-    private void deregister() {
+    protected void deregister() {
         ch = null;
         parent.activeChildren.remove(this);
         parent.idleChildren.add(this);
