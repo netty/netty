@@ -73,6 +73,7 @@ public class AbstractMemoryHttpDataTest {
             super(name, charset, size);
         }
 
+        @Override
         public InterfaceHttpData.HttpDataType getHttpDataType() {
             throw new UnsupportedOperationException("Should never be called.");
         }
@@ -82,6 +83,7 @@ public class AbstractMemoryHttpDataTest {
             throw new UnsupportedOperationException("Should never be called.");
         }
 
+        @Override
         public int compareTo(InterfaceHttpData o) {
             throw new UnsupportedOperationException("Should never be called.");
         }
