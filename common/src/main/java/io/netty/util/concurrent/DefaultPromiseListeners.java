@@ -20,19 +20,19 @@ import java.util.Arrays;
 import java.util.EventListener;
 
 final class DefaultPromiseListeners {
-    private GenericFutureListener<? extends Future>[] listeners;
+    private GenericFutureListener<? extends Future<?>>[] listeners;
     private int size;
 
     @SuppressWarnings("unchecked")
-    DefaultPromiseListeners(GenericFutureListener<? extends Future> firstListener,
-                            GenericFutureListener<? extends Future> secondListener) {
+    DefaultPromiseListeners(GenericFutureListener<? extends Future<?>> firstListener,
+                            GenericFutureListener<? extends Future<?>> secondListener) {
 
         listeners = new GenericFutureListener[] { firstListener, secondListener };
         size = 2;
     }
 
-    void add(GenericFutureListener<? extends Future> l) {
-        GenericFutureListener<? extends Future>[] listeners = this.listeners;
+    void add(GenericFutureListener<? extends Future<?>> l) {
+        GenericFutureListener<? extends Future<?>>[] listeners = this.listeners;
         final int size = this.size;
         if (size == listeners.length) {
             this.listeners = listeners = Arrays.copyOf(listeners, size << 1);
@@ -57,7 +57,7 @@ final class DefaultPromiseListeners {
         }
     }
 
-    GenericFutureListener<? extends Future>[] listeners() {
+    GenericFutureListener<? extends Future<?>>[] listeners() {
         return listeners;
     }
 

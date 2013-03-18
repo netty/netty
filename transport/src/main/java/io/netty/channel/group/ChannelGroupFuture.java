@@ -102,7 +102,7 @@ import java.util.Iterator;
  * make sure you do not call {@link #await()} in an I/O thread.  Otherwise,
  * {@link IllegalStateException} will be raised to prevent a dead lock.
  */
-public interface ChannelGroupFuture extends Future, Iterable<ChannelFuture> {
+public interface ChannelGroupFuture extends Future<Void>, Iterable<ChannelFuture> {
 
     /**
      * Returns the {@link ChannelGroup} which is associated with this future.
@@ -151,16 +151,16 @@ public interface ChannelGroupFuture extends Future, Iterable<ChannelFuture> {
     boolean isPartialFailure();
 
     @Override
-    ChannelGroupFuture addListener(GenericFutureListener<? extends Future> listener);
+    ChannelGroupFuture addListener(GenericFutureListener<? extends Future<Void>> listener);
 
     @Override
-    ChannelGroupFuture addListeners(GenericFutureListener<? extends Future>... listeners);
+    ChannelGroupFuture addListeners(GenericFutureListener<? extends Future<Void>>... listeners);
 
     @Override
-    ChannelGroupFuture removeListener(GenericFutureListener<? extends Future> listener);
+    ChannelGroupFuture removeListener(GenericFutureListener<? extends Future<Void>> listener);
 
     @Override
-    ChannelGroupFuture removeListeners(GenericFutureListener<? extends Future>... listeners);
+    ChannelGroupFuture removeListeners(GenericFutureListener<? extends Future<Void>>... listeners);
 
     @Override
     ChannelGroupFuture await() throws InterruptedException;

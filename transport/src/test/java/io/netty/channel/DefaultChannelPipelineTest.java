@@ -39,6 +39,7 @@ public class DefaultChannelPipelineTest {
     public void testMessageCatchAllInboundSink() throws Exception {
         LocalChannel channel = new LocalChannel();
         LocalEventLoopGroup group = new LocalEventLoopGroup();
+
         group.register(channel).awaitUninterruptibly();
         final AtomicBoolean forwarded = new AtomicBoolean();
         final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);

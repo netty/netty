@@ -15,19 +15,14 @@
  */
 package io.netty.util.concurrent;
 
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
 
 
 /**
  * The result of an asynchronous operation.
  */
-public interface Future {
-
-    /**
-     * Returns {@code true} if and only if this future is
-     * complete, regardless of whether the operation was successful or failed.
-     */
-    boolean isDone();
+public interface Future<V> extends java.util.concurrent.Future<V> {
 
     /**
      * Returns {@code true} if and only if the I/O operation was completed
@@ -51,7 +46,7 @@ public interface Future {
      * {@linkplain #isDone() done}.  If this future is already
      * completed, the specified listener is notified immediately.
      */
-    Future addListener(GenericFutureListener<? extends Future> listener);
+    Future<V> addListener(GenericFutureListener<? extends Future<V>> listener);
 
     /**
      * Adds the specified listeners to this future.  The
@@ -59,7 +54,7 @@ public interface Future {
      * {@linkplain #isDone() done}.  If this future is already
      * completed, the specified listeners are notified immediately.
      */
-    Future addListeners(GenericFutureListener<? extends Future>... listeners);
+    Future<V> addListeners(GenericFutureListener<? extends Future<V>>... listeners);
 
     /**
      * Removes the specified listener from this future.
@@ -68,7 +63,7 @@ public interface Future {
      * listener is not associated with this future, this method
      * does nothing and returns silently.
      */
-    Future removeListener(GenericFutureListener<? extends Future> listener);
+    Future<V> removeListener(GenericFutureListener<? extends Future<V>> listener);
 
     /**
      * Removes the specified listeners from this future.
@@ -77,19 +72,19 @@ public interface Future {
      * listeners are not associated with this future, this method
      * does nothing and returns silently.
      */
-    Future removeListeners(GenericFutureListener<? extends Future>... listeners);
+    Future<V> removeListeners(GenericFutureListener<? extends Future<V>>... listeners);
 
     /**
      * Waits for this future until it is done, and rethrows the cause of the failure if this future
      * failed.
      */
-    Future sync() throws InterruptedException;
+    Future<V> sync() throws InterruptedException;
 
     /**
      * Waits for this future until it is done, and rethrows the cause of the failure if this future
      * failed.
      */
-    Future syncUninterruptibly();
+    Future<V> syncUninterruptibly();
 
     /**
      * Waits for this future to be completed.
@@ -97,14 +92,14 @@ public interface Future {
      * @throws InterruptedException
      *         if the current thread was interrupted
      */
-    Future await() throws InterruptedException;
+    Future<V> await() throws InterruptedException;
 
     /**
      * Waits for this future to be completed without
      * interruption.  This method catches an {@link InterruptedException} and
      * discards it silently.
      */
-    Future awaitUninterruptibly();
+    Future<V> awaitUninterruptibly();
 
     /**
      * Waits for this future to be completed within the
@@ -149,4 +144,20 @@ public interface Future {
      *         the specified time limit
      */
     boolean awaitUninterruptibly(long timeoutMillis);
+
+    /**
+     * Return the result without blocking. If the future is not done yet this will return {@code null}.
+     *
+     * As it is possible that a {@code null} value is used to mark the future as successful you also need to check
+     * if the future is really done with {@link #isDone()} and not relay on the returned {@code null} value.
+     */
+    V getNow();
+
+    /**
+     * {@inheritDoc}
+     *
+     * If the cancelation was successful it will fail the future with an {@link CancellationException}.
+     */
+    @Override
+    boolean cancel(boolean mayInterruptIfRunning);
 }

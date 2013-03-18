@@ -21,14 +21,9 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.FileRegion;
 import io.netty.channel.ServerChannel;
-import io.netty.util.concurrent.DefaultPromise;
+import io.netty.util.concurrent.AbstractEventExecutorWithoutScheduler;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
-import io.netty.util.concurrent.FailedFuture;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.ImmediateEventExecutor;
-import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.SucceededFuture;
 import io.netty.util.internal.PlatformDependent;
 
 import java.util.AbstractSet;
@@ -39,13 +34,8 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.FutureTask;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -323,12 +313,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
                "(name: " + name() + ", size: " + size() + ')';
     }
 
-    private static final class ImmediateEventExecutor implements EventExecutor {
-        private final Future successedFuture = new SucceededFuture(this);
-        @Override
-        public EventExecutor next() {
-            return this;
-        }
+    private static final class ImmediateEventExecutor extends AbstractEventExecutorWithoutScheduler {
 
         @Override
         public EventExecutorGroup parent() {
@@ -360,131 +345,13 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
         }
 
         @Override
-        public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+        public boolean awaitTermination(long timeout, TimeUnit unit) {
             return false;
-        }
-
-        @Override
-        public Promise newPromise() {
-            return new DefaultPromise(this);
-        }
-
-        @Override
-        public Future newSucceededFuture() {
-            return successedFuture;
-        }
-
-        @Override
-        public Future newFailedFuture(Throwable cause) {
-            return new FailedFuture(this, cause);
-        }
-
-        @Override
-        public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay,
-                                                      long period, TimeUnit unit) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay,
-                                                         long delay, TimeUnit unit) {
-            throw new UnsupportedOperationException();
         }
 
         @Override
         public List<Runnable> shutdownNow() {
             return Collections.emptyList();
-        }
-
-        @Override
-        public <T> java.util.concurrent.Future<T> submit(Callable<T> task) {
-            if (task == null) {
-                throw new NullPointerException("task");
-            }
-            FutureTask<T> future = new FutureTask<T>(task);
-            future.run();
-            return future;
-        }
-
-        @Override
-        public <T> java.util.concurrent.Future<T> submit(Runnable task, T result) {
-            if (task == null) {
-                throw new NullPointerException("task");
-            }
-            FutureTask<T> future = new FutureTask<T>(task, result);
-            future.run();
-            return future;
-        }
-
-        @SuppressWarnings("unchecked")
-        @Override
-        public java.util.concurrent.Future<?> submit(Runnable task) {
-            if (task == null) {
-                throw new NullPointerException("task");
-            }
-            FutureTask<?> future = new FutureTask(task, null);
-            future.run();
-            return future;
-        }
-
-        @Override
-        public <T> List<java.util.concurrent.Future<T>> invokeAll(Collection<? extends Callable<T>> tasks) {
-            if (tasks == null) {
-                throw new NullPointerException("tasks");
-            }
-            List<java.util.concurrent.Future<T>> futures = new ArrayList<java.util.concurrent.Future<T>>();
-            for (Callable<T> task: tasks) {
-                futures.add(submit(task));
-            }
-            return futures;
-        }
-
-        @Override
-        public <T> List<java.util.concurrent.Future<T>> invokeAll(Collection<? extends Callable<T>> tasks,
-                                                                  long timeout, TimeUnit unit) {
-            if (tasks == null) {
-                throw new NullPointerException("tasks");
-            }
-
-            List<java.util.concurrent.Future<T>> futures = new ArrayList<java.util.concurrent.Future<T>>();
-            for (Callable<T> task: tasks) {
-                futures.add(submit(task));
-            }
-            return futures;
-        }
-
-        @Override
-        public <T> T invokeAny(Collection<? extends Callable<T>> tasks)
-                throws InterruptedException, ExecutionException {
-            if (tasks == null) {
-                throw new NullPointerException("tasks");
-            }
-            if (tasks.isEmpty()) {
-                throw new IllegalArgumentException("tasks must be non empty");
-            }
-            return invokeAll(tasks).get(0).get();
-        }
-
-        @Override
-        public <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
-                throws InterruptedException, ExecutionException {
-            if (tasks == null) {
-                throw new NullPointerException("tasks");
-            }
-            if (tasks.isEmpty()) {
-                throw new IllegalArgumentException("tasks must be non empty");
-            }
-            return invokeAll(tasks).get(0).get();
         }
 
         @Override
