@@ -24,7 +24,7 @@ import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Random;
 
-import static io.netty.util.CharsetUtil.UTF_8;
+import static io.netty.util.CharsetUtil.*;
 import static org.junit.Assert.*;
 
 /** {@link AbstractMemoryHttpData} test cases. */
@@ -59,7 +59,6 @@ public class AbstractMemoryHttpDataTest {
         }
     }
 
-
     /** Memory-based HTTP data implementation for test purposes. */
     private static final class TestHttpData extends AbstractMemoryHttpData {
         /**
@@ -86,6 +85,16 @@ public class AbstractMemoryHttpDataTest {
         @Override
         public int compareTo(InterfaceHttpData o) {
             throw new UnsupportedOperationException("Should never be called.");
+        }
+
+        @Override
+        public int hashCode() {
+            return super.hashCode();
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return super.equals(obj);
         }
     }
 }
