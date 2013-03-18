@@ -21,14 +21,15 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.util.Iterator;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
-import java.util.concurrent.FutureTask;
+import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 public final class TaskScheduler {
@@ -39,7 +40,6 @@ public final class TaskScheduler {
     private static final long SCHEDULE_PURGE_INTERVAL = TimeUnit.SECONDS.toNanos(1);
     private static final long START_TIME = System.nanoTime();
     private static final AtomicLong nextTaskId = new AtomicLong();
-
     private static long nanoTime() {
         return System.nanoTime() - START_TIME;
     }
@@ -96,7 +96,7 @@ public final class TaskScheduler {
             }
 
             private void runTask(ScheduledFutureTask<?> task) {
-                EventExecutor executor = task.executor;
+                EventExecutor executor = task.executor();
                 if (executor == null) {
                     task.run();
                 } else {
@@ -104,7 +104,7 @@ public final class TaskScheduler {
                         task.cancel(false);
                     } else {
                         try {
-                            task.executor.execute(task);
+                            executor.execute(task);
                         } catch (RejectedExecutionException e) {
                             task.cancel(false);
                         }
@@ -210,7 +210,8 @@ public final class TaskScheduler {
             throw new IllegalArgumentException(
                     String.format("delay: %d (expected: >= 0)", delay));
         }
-        return schedule(new ScheduledFutureTask<Void>(executor, command, null, deadlineNanos(unit.toNanos(delay))));
+        return schedule(new ScheduledFutureTask<Void>(this, executor,
+                command, null, deadlineNanos(unit.toNanos(delay))));
     }
 
     public <V> ScheduledFuture<V> schedule(
@@ -228,7 +229,7 @@ public final class TaskScheduler {
             throw new IllegalArgumentException(
                     String.format("delay: %d (expected: >= 0)", delay));
         }
-        return schedule(new ScheduledFutureTask<V>(executor, callable, deadlineNanos(unit.toNanos(delay))));
+        return schedule(new ScheduledFutureTask<V>(this, executor, callable, deadlineNanos(unit.toNanos(delay))));
     }
 
     public ScheduledFuture<?> scheduleAtFixedRate(
@@ -252,7 +253,8 @@ public final class TaskScheduler {
         }
 
         return schedule(new ScheduledFutureTask<Void>(
-                executor, command, null, deadlineNanos(unit.toNanos(initialDelay)), unit.toNanos(period)));
+                this, executor, Executors.<Void>callable(command, null),
+                deadlineNanos(unit.toNanos(initialDelay)), unit.toNanos(period)));
     }
 
     public ScheduledFuture<?> scheduleWithFixedDelay(
@@ -276,7 +278,8 @@ public final class TaskScheduler {
         }
 
         return schedule(new ScheduledFutureTask<Void>(
-                executor, command, null, deadlineNanos(unit.toNanos(initialDelay)), -unit.toNanos(delay)));
+                this, executor, Executors.<Void>callable(command, null),
+                deadlineNanos(unit.toNanos(initialDelay)), -unit.toNanos(delay)));
     }
 
     private <V> ScheduledFuture<V> schedule(ScheduledFutureTask<V> task) {
@@ -300,8 +303,8 @@ public final class TaskScheduler {
         }
 
         if (started) {
-            schedule(new ScheduledFutureTask<Void>(
-                    null, new PurgeTask(), null,
+            schedule(new ScheduledFutureTask<V>(this, new ImmediateEventExecutor(this)
+                    , Executors.<V>callable(new PurgeTask(), null),
                     deadlineNanos(SCHEDULE_PURGE_INTERVAL), -SCHEDULE_PURGE_INTERVAL));
         }
 
@@ -324,36 +327,37 @@ public final class TaskScheduler {
         taskQueue.clear();
     }
 
-    private class ScheduledFutureTask<V> extends FutureTask<V> implements ScheduledFuture<V> {
+    private static class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFuture<V> {
 
-        private final EventExecutor executor;
         private final long id = nextTaskId.getAndIncrement();
         private long deadlineNanos;
         /* 0 - no repeat, >0 - repeat at fixed rate, <0 - repeat with fixed delay */
         private final long periodNanos;
+        private final TaskScheduler scheduler;
 
-        ScheduledFutureTask(EventExecutor executor, Runnable runnable, V result, long nanoTime) {
-            super(runnable, result);
-            this.executor = executor;
-            deadlineNanos = nanoTime;
-            periodNanos = 0;
+        private final AtomicBoolean cancellable = new AtomicBoolean(true);
+
+        ScheduledFutureTask(TaskScheduler scheduler, EventExecutor executor,
+                            Runnable runnable, V result, long nanoTime) {
+            this(scheduler, executor, Executors.callable(runnable, result), nanoTime);
         }
 
-        ScheduledFutureTask(EventExecutor executor, Runnable runnable, V result, long nanoTime, long period) {
-            super(runnable, result);
+        ScheduledFutureTask(TaskScheduler scheduler, EventExecutor executor,
+                            Callable<V> callable, long nanoTime, long period) {
+            super(executor, callable);
             if (period == 0) {
                 throw new IllegalArgumentException("period: 0 (expected: != 0)");
             }
-            this.executor = executor;
             deadlineNanos = nanoTime;
             periodNanos = period;
+            this.scheduler = scheduler;
         }
 
-        ScheduledFutureTask(EventExecutor executor, Callable<V> callable, long nanoTime) {
-            super(callable);
-            this.executor = executor;
+        ScheduledFutureTask(TaskScheduler scheduler, EventExecutor executor, Callable<V> callable, long nanoTime) {
+            super(executor, callable);
             deadlineNanos = nanoTime;
             periodNanos = 0;
+            this.scheduler = scheduler;
         }
 
         public long deadlineNanos() {
@@ -367,16 +371,6 @@ public final class TaskScheduler {
         @Override
         public long getDelay(TimeUnit unit) {
             return unit.convert(delayNanos(), TimeUnit.NANOSECONDS);
-        }
-
-        @Override
-        public int hashCode() {
-            return System.identityHashCode(this);
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            return this == obj;
         }
 
         @Override
@@ -402,21 +396,47 @@ public final class TaskScheduler {
 
         @Override
         public void run() {
-            if (periodNanos == 0) {
-                super.run();
-            } else {
-                boolean reset = runAndReset();
-                if (reset && !isShutdown()) {
-                    long p = periodNanos;
-                    if (p > 0) {
-                        deadlineNanos += p;
-                    } else {
-                        deadlineNanos = nanoTime() - p;
+            try {
+                if (periodNanos == 0) {
+                    if (cancellable.compareAndSet(true, false)) {
+                        V result = task.call();
+                        setSuccessInternal(result);
                     }
+                } else {
+                    task.call();
+                    if (!scheduler.isShutdown()) {
+                        long p = periodNanos;
+                        if (p > 0) {
+                            deadlineNanos += p;
+                        } else {
+                            deadlineNanos = nanoTime() - p;
+                        }
+                        if (!isDone()) {
+                            scheduler.schedule(this);
+                        }
+                    }
+                }
+            } catch (Throwable cause) {
+                setFailureInternal(cause);
+            }
+        }
 
-                    schedule(this);
+        @Override
+        public boolean isCancelled() {
+            if (cause() instanceof CancellationException) {
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public  boolean cancel(boolean mayInterruptIfRunning) {
+            if (!isDone()) {
+                if (cancellable.compareAndSet(true, false)) {
+                    return tryFailureInternal(new CancellationException());
                 }
             }
+            return false;
         }
     }
 

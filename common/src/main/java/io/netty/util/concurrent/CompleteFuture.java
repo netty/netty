@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * A skeletal {@link Future} implementation which represents a {@link Future} which has been completed already.
  */
-public abstract class CompleteFuture implements Future {
+public abstract class CompleteFuture<V> extends AbstractFuture<V> {
 
     private final EventExecutor executor;
 
@@ -39,7 +39,7 @@ public abstract class CompleteFuture implements Future {
     }
 
     @Override
-    public Future addListener(GenericFutureListener<? extends Future> listener) {
+    public Future<V> addListener(GenericFutureListener<? extends Future<V>> listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
         }
@@ -48,11 +48,11 @@ public abstract class CompleteFuture implements Future {
     }
 
     @Override
-    public Future addListeners(GenericFutureListener<? extends Future>... listeners) {
+    public Future<V> addListeners(GenericFutureListener<? extends Future<V>>... listeners) {
         if (listeners == null) {
             throw new NullPointerException("listeners");
         }
-        for (GenericFutureListener<? extends Future> l: listeners) {
+        for (GenericFutureListener<? extends Future<V>> l: listeners) {
             if (l == null) {
                 break;
             }
@@ -62,19 +62,19 @@ public abstract class CompleteFuture implements Future {
     }
 
     @Override
-    public Future removeListener(GenericFutureListener<? extends Future> listener) {
+    public Future<V> removeListener(GenericFutureListener<? extends Future<V>> listener) {
         // NOOP
         return this;
     }
 
     @Override
-    public Future removeListeners(GenericFutureListener<? extends Future>... listeners) {
+    public Future<V> removeListeners(GenericFutureListener<? extends Future<V>>... listeners) {
         // NOOP
         return this;
     }
 
     @Override
-    public Future await() throws InterruptedException {
+    public Future<V> await() throws InterruptedException {
         if (Thread.interrupted()) {
             throw new InterruptedException();
         }
@@ -90,12 +90,12 @@ public abstract class CompleteFuture implements Future {
     }
 
     @Override
-    public Future sync() throws InterruptedException {
+    public Future<V> sync() throws InterruptedException {
         return this;
     }
 
     @Override
-    public Future syncUninterruptibly() {
+    public Future<V> syncUninterruptibly() {
         return this;
     }
 
@@ -108,7 +108,7 @@ public abstract class CompleteFuture implements Future {
     }
 
     @Override
-    public Future awaitUninterruptibly() {
+    public Future<V> awaitUninterruptibly() {
         return this;
     }
 

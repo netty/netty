@@ -18,7 +18,7 @@ package io.netty.util.concurrent;
 /**
  * Special {@link Future} which is writable.
  */
-public interface Promise extends Future {
+public interface Promise<V> extends Future<V> {
 
     /**
      * Marks this future as a success and notifies all
@@ -26,7 +26,7 @@ public interface Promise extends Future {
      *
      * If it is success or failed already it will throw an {@link IllegalStateException}.
      */
-    Promise setSuccess();
+    Promise<V> setSuccess(V result);
 
     /**
      * Marks this future as a success and notifies all
@@ -36,7 +36,7 @@ public interface Promise extends Future {
      *         a success. Otherwise {@code false} because this future is
      *         already marked as either a success or a failure.
      */
-    boolean trySuccess();
+    boolean trySuccess(V result);
 
     /**
      * Marks this future as a failure and notifies all
@@ -44,7 +44,7 @@ public interface Promise extends Future {
      *
      * If it is success or failed already it will throw an {@link IllegalStateException}.
      */
-    Promise setFailure(Throwable cause);
+    Promise<V> setFailure(Throwable cause);
 
     /**
      * Marks this future as a failure and notifies all
@@ -57,26 +57,26 @@ public interface Promise extends Future {
     boolean tryFailure(Throwable cause);
 
     @Override
-    Promise addListener(GenericFutureListener<? extends Future> listener);
+    Promise<V> addListener(GenericFutureListener<? extends Future<V>> listener);
 
     @Override
-    Promise addListeners(GenericFutureListener<? extends Future>... listeners);
+    Promise<V> addListeners(GenericFutureListener<? extends Future<V>>... listeners);
 
     @Override
-    Promise removeListener(GenericFutureListener<? extends Future> listener);
+    Promise<V> removeListener(GenericFutureListener<? extends Future<V>> listener);
 
     @Override
-    Promise removeListeners(GenericFutureListener<? extends Future>... listeners);
+    Promise<V> removeListeners(GenericFutureListener<? extends Future<V>>... listeners);
 
     @Override
-    Promise await() throws InterruptedException;
+    Promise<V> await() throws InterruptedException;
 
     @Override
-    Promise awaitUninterruptibly();
+    Promise<V> awaitUninterruptibly();
 
     @Override
-    Promise sync() throws InterruptedException;
+    Promise<V> sync() throws InterruptedException;
 
     @Override
-    Promise syncUninterruptibly();
+    Promise<V> syncUninterruptibly();
 }
