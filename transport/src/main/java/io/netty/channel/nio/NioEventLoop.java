@@ -104,7 +104,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     private volatile int ioRatio = 50;
     private int cancelledKeys;
-    private boolean cleanedCancelledKeys;
+    private boolean needsToSelectAgain;
 
     NioEventLoop(
             NioEventLoopGroup parent, ThreadFactory threadFactory,
@@ -399,12 +399,21 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         cancelledKeys ++;
         if (cancelledKeys >= CLEANUP_INTERVAL) {
             cancelledKeys = 0;
-            cleanedCancelledKeys = true;
-            cleanupKeys();
+            needsToSelectAgain = true;
         }
     }
 
+    @Override
+    protected Runnable pollTask() {
+        Runnable task = super.pollTask();
+        if (needsToSelectAgain) {
+            selectAgain();
+        }
+        return task;
+    }
+
     private void processSelectedKeys() {
+        needsToSelectAgain = false;
         Set<SelectionKey> selectedKeys = selector.selectedKeys();
         // check if the set is empty and if so just return to not create garbage by
         // creating a new Iterator every time even if there is nothing to process.
@@ -413,34 +422,34 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             return;
         }
 
-        Iterator<SelectionKey> i;
-        cleanedCancelledKeys = false;
-        boolean clearSelectedKeys = true;
-        try {
-            for (i = selectedKeys.iterator(); i.hasNext();) {
-                final SelectionKey k = i.next();
-                final Object a = k.attachment();
-                if (a instanceof AbstractNioChannel) {
-                    processSelectedKey(k, (AbstractNioChannel) a);
-                } else {
-                    @SuppressWarnings("unchecked")
-                    NioTask<SelectableChannel> task = (NioTask<SelectableChannel>) a;
-                    processSelectedKey(k, task);
-                }
+        Iterator<SelectionKey> i = selectedKeys.iterator();
+        for (;;) {
+            final SelectionKey k = i.next();
+            final Object a = k.attachment();
+            i.remove();
 
-                if (cleanedCancelledKeys) {
-                    // Create the iterator again to avoid ConcurrentModificationException
-                    if (selectedKeys.isEmpty()) {
-                        clearSelectedKeys = false;
-                        break;
-                    } else {
-                        i = selectedKeys.iterator();
-                    }
-                }
+            if (a instanceof AbstractNioChannel) {
+                processSelectedKey(k, (AbstractNioChannel) a);
+            } else {
+                @SuppressWarnings("unchecked")
+                NioTask<SelectableChannel> task = (NioTask<SelectableChannel>) a;
+                processSelectedKey(k, task);
             }
-        } finally {
-            if (clearSelectedKeys) {
-                selectedKeys.clear();
+
+            if (!i.hasNext()) {
+                break;
+            }
+
+            if (needsToSelectAgain) {
+                selectAgain();
+                selectedKeys = selector.selectedKeys();
+
+                // Create the iterator again to avoid ConcurrentModificationException
+                if (selectedKeys.isEmpty()) {
+                    break;
+                } else {
+                    i = selectedKeys.iterator();
+                }
             }
         }
     }
@@ -534,7 +543,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     }
 
     private void closeAll() {
-        cleanupKeys();
+        selectAgain();
         Set<SelectionKey> keys = selector.keys();
         Collection<AbstractNioChannel> channels = new ArrayList<AbstractNioChannel>(keys.size());
         for (SelectionKey k: keys) {
@@ -596,7 +605,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         return -1;
     }
 
-    void cleanupKeys() {
+    private void selectAgain() {
+        needsToSelectAgain = false;
         try {
             selector.selectNow();
         } catch (Throwable t) {
