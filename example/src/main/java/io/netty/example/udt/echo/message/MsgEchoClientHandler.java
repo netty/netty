@@ -73,7 +73,7 @@ public class MsgEchoClientHandler extends
         final ByteBuf byteBuf = message.data();
         meter.mark(byteBuf.readableBytes());
         final MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
-        out.add(message);
+        out.add(message.retain());
         ctx.flush();
     }
 
