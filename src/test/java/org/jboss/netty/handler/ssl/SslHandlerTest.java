@@ -13,16 +13,16 @@
  */
 package org.jboss.netty.handler.ssl;
 
- import org.jboss.netty.buffer.ChannelBuffer;
- import org.jboss.netty.buffer.ChannelBuffers;
- import org.jboss.netty.example.securechat.SecureChatSslContextFactory;
- import org.jboss.netty.handler.codec.embedder.CodecEmbedderException;
- import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
- import org.junit.Assert;
- import org.junit.Ignore;
- import org.junit.Test;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.example.securechat.SecureChatSslContextFactory;
+import org.jboss.netty.handler.codec.embedder.CodecEmbedderException;
+import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
+import org.junit.Assert;
+import org.junit.Ignore;
+import org.junit.Test;
 
- import java.util.Random;
+import java.util.Random;
 
 public class SslHandlerTest {
 
