@@ -50,7 +50,7 @@ public class MsgEchoServerHandler extends
     public void messageReceived(final ChannelHandlerContext ctx,
             final UdtMessage message) throws Exception {
         final MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
-        out.add(message);
+        out.add(message.retain());
         ctx.flush();
     }
 }
