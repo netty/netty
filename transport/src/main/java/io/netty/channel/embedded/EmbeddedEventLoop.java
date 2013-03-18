@@ -20,24 +20,16 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.util.concurrent.DefaultPromise;
-import io.netty.util.concurrent.FailedFuture;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.SucceededFuture;
+import io.netty.util.concurrent.AbstractEventExecutorWithoutScheduler;
 
 import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.List;
 import java.util.Queue;
-import java.util.concurrent.AbstractExecutorService;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-final class EmbeddedEventLoop extends AbstractExecutorService implements EventLoop {
+final class EmbeddedEventLoop extends AbstractEventExecutorWithoutScheduler implements EventLoop {
 
-    private final SucceededFuture succeededFuture = new SucceededFuture(this);
     private final Queue<Runnable> tasks = new ArrayDeque<Runnable>(2);
 
     @Override
@@ -57,30 +49,6 @@ final class EmbeddedEventLoop extends AbstractExecutorService implements EventLo
 
             task.run();
         }
-    }
-
-    @Override
-    public ScheduledFuture<?> schedule(Runnable command, long delay,
-            TimeUnit unit) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay,
-            TimeUnit unit) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ScheduledFuture<?> scheduleAtFixedRate(Runnable command,
-            long initialDelay, long period, TimeUnit unit) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command,
-            long initialDelay, long delay, TimeUnit unit) {
-        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -139,20 +107,5 @@ final class EmbeddedEventLoop extends AbstractExecutorService implements EventLo
     @Override
     public EventLoopGroup parent() {
         return this;
-    }
-
-    @Override
-    public Promise newPromise() {
-        return new DefaultPromise(this);
-    }
-
-    @Override
-    public Future newSucceededFuture() {
-        return succeededFuture;
-    }
-
-    @Override
-    public Future newFailedFuture(Throwable cause) {
-        return new FailedFuture(this, cause);
     }
 }

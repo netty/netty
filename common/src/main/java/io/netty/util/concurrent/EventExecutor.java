@@ -15,7 +15,9 @@
  */
 package io.netty.util.concurrent;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The {@link EventExecutor} is a special {@link ScheduledExecutorService} which comes
@@ -24,7 +26,7 @@ import java.util.concurrent.ScheduledExecutorService;
  * access methods.
  *
  */
-public interface EventExecutor extends EventExecutorGroup, ScheduledExecutorService, FutureFactory {
+public interface EventExecutor extends EventExecutorGroup, ScheduledExecutorService {
 
     /**
      * Returns a reference to itself.
@@ -47,4 +49,44 @@ public interface EventExecutor extends EventExecutorGroup, ScheduledExecutorServ
      * {@code false} otherwise.
      */
     boolean inEventLoop(Thread thread);
+
+    /**
+     * Return a new {@link Promise}.
+     */
+    <V> Promise<V> newPromise();
+
+    /**
+     * Create a new {@link Future} which is marked as successes already. So {@link Future#isSuccess()}
+     * will return {@code true}. All {@link FutureListener} added to it will be notified directly. Also
+     * every call of blocking methods will just return without blocking.
+     */
+    <V> Future<V> newSucceededFuture(V result);
+
+    /**
+     * Create a new {@link Future} which is marked as fakued already. So {@link Future#isSuccess()}
+     * will return {@code false}. All {@link FutureListener} added to it will be notified directly. Also
+     * every call of blocking methods will just return without blocking.
+     */
+    <V> Future<V> newFailedFuture(Throwable cause);
+
+    @Override
+    Future<?> submit(Runnable task);
+
+    @Override
+    <T> Future<T> submit(Runnable task, T result);
+
+    @Override
+    <T> Future<T> submit(Callable<T> task);
+
+    @Override
+    ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit);
+
+    @Override
+    <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit);
+
+    @Override
+    ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit);
+
+    @Override
+    ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit);
 }

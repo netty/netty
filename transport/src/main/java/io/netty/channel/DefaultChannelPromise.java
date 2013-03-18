@@ -25,7 +25,7 @@ import io.netty.util.concurrent.GenericFutureListener;
  * The default {@link ChannelPromise} implementation.  It is recommended to use {@link Channel#newPromise()} to create
  * a new {@link ChannelPromise} rather than calling the constructor explicitly.
  */
-public class DefaultChannelPromise extends DefaultPromise implements ChannelPromise, FlushCheckpoint {
+public class DefaultChannelPromise extends DefaultPromise<Void> implements ChannelPromise, FlushCheckpoint {
 
     private final Channel channel;
 
@@ -67,8 +67,23 @@ public class DefaultChannelPromise extends DefaultPromise implements ChannelProm
 
     @Override
     public ChannelPromise setSuccess() {
-        super.setSuccess();
+        return setSuccess(null);
+    }
+
+    @Override
+    public ChannelPromise setSuccess(Void result) {
+        super.setSuccess(result);
         return this;
+    }
+
+    @Override
+    public boolean trySuccess() {
+        return trySuccess(null);
+    }
+
+    @Override
+    public boolean trySuccess(Void result) {
+        return super.trySuccess(result);
     }
 
     @Override
@@ -78,25 +93,25 @@ public class DefaultChannelPromise extends DefaultPromise implements ChannelProm
     }
 
     @Override
-    public ChannelPromise addListener(GenericFutureListener<? extends Future> listener) {
+    public ChannelPromise addListener(GenericFutureListener<? extends Future<Void>> listener) {
         super.addListener(listener);
         return this;
     }
 
     @Override
-    public ChannelPromise addListeners(GenericFutureListener<? extends Future>... listeners) {
+    public ChannelPromise addListeners(GenericFutureListener<? extends Future<Void>>... listeners) {
         super.addListeners(listeners);
         return this;
     }
 
     @Override
-    public ChannelPromise removeListener(GenericFutureListener<? extends Future> listener) {
+    public ChannelPromise removeListener(GenericFutureListener<? extends Future<Void>> listener) {
         super.removeListener(listener);
         return this;
     }
 
     @Override
-    public ChannelPromise removeListeners(GenericFutureListener<? extends Future>... listeners) {
+    public ChannelPromise removeListeners(GenericFutureListener<? extends Future<Void>>... listeners) {
         super.removeListeners(listeners);
         return this;
     }
