@@ -15,12 +15,7 @@
  */
 package org.jboss.netty.handler.ipfilter;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-
 import junit.framework.TestCase;
-
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelEvent;
@@ -32,9 +27,35 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.UpstreamMessageEvent;
 import org.junit.Test;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+
 public class IpFilterRuleTest extends TestCase {
     public static boolean accept(IpFilterRuleHandler h, InetSocketAddress addr) throws Exception {
-        return h.accept(new ChannelHandlerContext() {
+        System.err.print("accept(rules(");
+        for (int i = 0; i < h.size(); i ++) {
+            final IpFilterRule rule = h.get(i);
+            if (rule.isAllowRule()) {
+                System.err.print("allow(");
+            } else {
+                System.err.print("deny(");
+            }
+
+            if (rule instanceof PatternRule) {
+                System.err.print(((PatternRule) rule).getPattern());
+            } else {
+                System.err.print(rule);
+            }
+            System.err.print(')');
+            if (i != h.size() - 1) {
+                System.err.print(", ");
+            }
+        }
+        System.err.print("), ");
+        System.err.print(addr);
+        System.err.print(") = ");
+        boolean result = h.accept(new ChannelHandlerContext() {
 
             public boolean canHandleDownstream() {
                 return false;
@@ -183,6 +204,9 @@ public class IpFilterRuleTest extends TestCase {
             }
 
         }, h, addr), addr);
+
+        System.err.println(result);
+        return result;
     }
 
     @Test
