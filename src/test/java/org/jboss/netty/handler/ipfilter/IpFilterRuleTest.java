@@ -34,7 +34,29 @@ import static org.junit.Assert.*;
 
 public class IpFilterRuleTest {
     public static boolean accept(IpFilterRuleHandler h, InetSocketAddress addr) throws Exception {
-        return h.accept(new ChannelHandlerContext() {
+        System.err.print("accept(rules(");
+        for (int i = 0; i < h.size(); i ++) {
+            final IpFilterRule rule = h.get(i);
+            if (rule.isAllowRule()) {
+                System.err.print("allow(");
+            } else {
+                System.err.print("deny(");
+            }
+
+            if (rule instanceof PatternRule) {
+                System.err.print(((PatternRule) rule).getPattern());
+            } else {
+                System.err.print(rule);
+            }
+            System.err.print(')');
+            if (i != h.size() - 1) {
+                System.err.print(", ");
+            }
+        }
+        System.err.print("), ");
+        System.err.print(addr);
+        System.err.print(") = ");
+        boolean result = h.accept(new ChannelHandlerContext() {
 
             public boolean canHandleDownstream() {
                 return false;
@@ -191,6 +213,8 @@ public class IpFilterRuleTest {
             }
 
         }, h, addr), addr);
+        System.err.println(result);
+        return result;
     }
 
     @Test
