@@ -30,20 +30,6 @@
   <name>Netty/Testsuite/OSGi/Deps</name>
   <description>verify osgi compliance: all transitive dependencies must be osgi bundles</description>
 
-  <pluginRepositories>
-    <pluginRepository>
-      <id>asf</id>
-      <url>http://repository.apache.org/snapshots</url>
-      <releases>
-        <enabled>false</enabled>
-      </releases>
-      <snapshots>
-        <enabled>true</enabled>
-        <updatePolicy>interval:43200</updatePolicy> <!-- Update every 30 days -->
-      </snapshots>
-    </pluginRepository>
-  </pluginRepositories>
-
   <dependencies>
     <!-- MAIN -->
     <!-- include all osgi bundle release modules -->
@@ -126,7 +112,7 @@
       <plugin>
         <groupId>org.apache.karaf.tooling</groupId>
         <artifactId>karaf-maven-plugin</artifactId>
-        <version>3.0.0-SNAPSHOT</version>
+        <version>3.0.0.RC1</version>
         <extensions>true</extensions>
       </plugin>
 
