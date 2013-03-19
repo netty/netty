@@ -101,6 +101,10 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         tail.prev = head;
     }
 
+    boolean firedChannelActive() {
+        return firedChannelActive;
+    }
+
     @Override
     public Channel channel() {
         return channel;

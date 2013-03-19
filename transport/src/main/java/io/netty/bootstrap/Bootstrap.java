@@ -18,8 +18,10 @@ package io.netty.bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -76,16 +78,31 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     }
 
     @Override
-    ChannelFuture doBind(SocketAddress localAddress) {
+    ChannelFuture doBind(final SocketAddress localAddress) {
         Channel channel = channelFactory().newChannel();
-        try {
-            init(channel);
-        } catch (Throwable t) {
-            channel.close();
-            return channel.newFailedFuture(t);
-        }
+        final ChannelPromise promise = channel.newPromise().addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
 
-        return channel.bind(localAddress).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+        try {
+            ChannelFuture future = init(channel, new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) throws Exception {
+                    // execute the bind here as at this point we are sure the fireChannelRegistered() was called and so
+                    // the registration did not fail
+                    ch.bind(localAddress, promise);
+                }
+            });
+            future.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    if (!future.isSuccess()) {
+                        promise.setFailure(future.cause());
+                    }
+                }
+            });
+        } catch (Throwable t) {
+            promise.setFailure(t);
+        }
+        return promise;
     }
 
     /**
@@ -141,30 +158,41 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     /**
      * @see {@link #connect()}
      */
-    private ChannelFuture doConnect(SocketAddress remoteAddress, SocketAddress localAddress) {
+    private ChannelFuture doConnect(final SocketAddress remoteAddress, final SocketAddress localAddress) {
         final Channel channel = channelFactory().newChannel();
-
+        final ChannelPromise promise = channel.newPromise().addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
         try {
-            init(channel);
+            ChannelFuture future = init(channel, new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) throws Exception {
+                    // execute the connect here as at this point we are sure the fireChannelRegistered() was called
+                    // and so the registration did not fail
+                    if (localAddress == null) {
+                        channel.connect(remoteAddress, promise);
+                    } else {
+                        channel.connect(remoteAddress, localAddress, promise);
+                    }
+                }
+            });
+            future.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    if (!future.isSuccess()) {
+                        promise.setFailure(future.cause());
+                    }
+                }
+            });
         } catch (Throwable t) {
-            channel.close();
-            return channel.newFailedFuture(t);
+            promise.setFailure(t);
         }
-
-        final ChannelFuture future;
-        if (localAddress == null) {
-            future = channel.connect(remoteAddress);
-        } else {
-            future = channel.connect(remoteAddress, localAddress);
-        }
-
-        return future.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+        return promise;
     }
 
     @SuppressWarnings("unchecked")
-    private void init(Channel channel) throws Exception {
+    private ChannelFuture init(Channel channel, ChannelInitializer<Channel> operationHandler) throws Exception {
         ChannelPipeline p = channel.pipeline();
         p.addLast(handler());
+        p.addLast(operationHandler);
 
         final Map<ChannelOption<?>, Object> options = options();
         synchronized (options) {
@@ -186,7 +214,7 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
             }
         }
 
-        group().register(channel).syncUninterruptibly();
+        return group().register(channel);
     }
 
     @Override

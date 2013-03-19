@@ -150,7 +150,9 @@ public class LocalChannel extends AbstractChannel {
                         @Override
                         public void run() {
                             peer.connectPromise.setSuccess();
-                            peer.pipeline().fireChannelActive();
+                            if (peer.isActive() && !peer.firedChannelActive()) {
+                                peer.pipeline().fireChannelActive();
+                            }
                         }
                     });
                 }

@@ -64,10 +64,9 @@ public abstract class AbstractOioChannel extends AbstractChannel {
                 }
 
                 try {
-                    boolean wasActive = isActive();
                     doConnect(remoteAddress, localAddress);
                     promise.setSuccess();
-                    if (!wasActive && isActive()) {
+                    if (isActive() && !firedChannelActive()) {
                         pipeline().fireChannelActive();
                     }
                 } catch (Throwable t) {

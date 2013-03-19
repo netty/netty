@@ -167,10 +167,9 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                         throw new IllegalStateException("connection attempt already made");
                     }
 
-                    boolean wasActive = isActive();
                     if (doConnect(remoteAddress, localAddress)) {
                         promise.setSuccess();
-                        if (!wasActive && isActive()) {
+                        if (isActive() && !firedChannelActive()) {
                             pipeline().fireChannelActive();
                         }
                     } else {
@@ -217,10 +216,9 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             assert eventLoop().inEventLoop();
             assert connectPromise != null;
             try {
-                boolean wasActive = isActive();
                 doFinishConnect();
                 connectPromise.setSuccess();
-                if (!wasActive && isActive()) {
+                if (isActive() && !firedChannelActive()) {
                     pipeline().fireChannelActive();
                 }
             } catch (Throwable t) {

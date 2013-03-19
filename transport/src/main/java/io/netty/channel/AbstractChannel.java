@@ -431,6 +431,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return strVal;
     }
 
+    protected boolean firedChannelActive() {
+        return pipeline.firedChannelActive();
+    }
+
     /**
      * {@link Unsafe} implementation which sub-classes must extend and use.
      */
@@ -605,7 +609,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 if (postRegisterTask != null) {
                     postRegisterTask.run();
                 }
-                if (isActive()) {
+                if (isActive() && !firedChannelActive()) {
                     pipeline.fireChannelActive();
                 }
             } catch (Throwable t) {
@@ -629,8 +633,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 }
 
                 try {
-                    boolean wasActive = isActive();
-
                     // See: https://github.com/netty/netty/issues/576
                     if (!PlatformDependent.isWindows() && !PlatformDependent.isRoot() &&
                         Boolean.TRUE.equals(config().getOption(ChannelOption.SO_BROADCAST)) &&
@@ -646,7 +648,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
                     doBind(localAddress);
                     promise.setSuccess();
-                    if (!wasActive && isActive()) {
+                    if (isActive() && !firedChannelActive()) {
                         pipeline.fireChannelActive();
                     }
                 } catch (Throwable t) {
