@@ -246,6 +246,14 @@
       <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>generate-test-sources</phase>
+            <goals>
+              <goal>manifest</goal>
+            </goals>
+          </execution>
+        </executions>
         <configuration>
           <instructions>
             <Service-Component>OSGI-INF/service-component/*.xml</Service-Component>
@@ -258,6 +266,7 @@
         <artifactId>maven-failsafe-plugin</artifactId>
         <executions>
           <execution>
+            <phase>test</phase>
             <goals>
               <goal>integration-test</goal>
               <goal>verify</goal>
