@@ -24,6 +24,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.socket.DatagramChannel;
 import org.jboss.netty.channel.socket.DatagramChannelFactory;
+import org.jboss.netty.util.ThreadNameDeterminer;
 import org.jboss.netty.util.internal.ExecutorUtil;
 
 /**
@@ -94,11 +95,24 @@ public class OioDatagramChannelFactory implements DatagramChannelFactory {
      *        the {@link Executor} which will execute the I/O worker threads
      */
     public OioDatagramChannelFactory(Executor workerExecutor) {
+        this(workerExecutor, null);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param workerExecutor
+     *        the {@link Executor} which will execute the I/O worker threads
+     * @param determiner
+     *        the {@link ThreadNameDeterminer} to set the thread names.
+     */
+    public OioDatagramChannelFactory(Executor workerExecutor,
+                                     ThreadNameDeterminer determiner) {
         if (workerExecutor == null) {
             throw new NullPointerException("workerExecutor");
         }
         this.workerExecutor = workerExecutor;
-        sink = new OioDatagramPipelineSink(workerExecutor);
+        sink = new OioDatagramPipelineSink(workerExecutor, determiner);
     }
 
     public DatagramChannel newChannel(ChannelPipeline pipeline) {

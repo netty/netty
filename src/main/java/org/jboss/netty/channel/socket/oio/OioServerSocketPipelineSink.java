@@ -32,6 +32,7 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.ThreadNameDeterminer;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
 
@@ -41,9 +42,11 @@ class OioServerSocketPipelineSink extends AbstractOioChannelSink {
         InternalLoggerFactory.getInstance(OioServerSocketPipelineSink.class);
 
     final Executor workerExecutor;
+    private final ThreadNameDeterminer determiner;
 
-    OioServerSocketPipelineSink(Executor workerExecutor) {
+    OioServerSocketPipelineSink(Executor workerExecutor, ThreadNameDeterminer determiner) {
         this.workerExecutor = workerExecutor;
+        this.determiner = determiner;
     }
 
     public void eventSunk(
@@ -138,7 +141,8 @@ class OioServerSocketPipelineSink extends AbstractOioChannelSink {
                     bossExecutor,
                     new ThreadRenamingRunnable(
                             new Boss(channel),
-                            "Old I/O server boss (" + channel + ')'));
+                            "Old I/O server boss (" + channel + ')',
+                            determiner));
             bossStarted = true;
         } catch (Throwable t) {
             future.setFailure(t);
@@ -206,7 +210,8 @@ class OioServerSocketPipelineSink extends AbstractOioChannelSink {
                                     new ThreadRenamingRunnable(
                                             new OioWorker(acceptedChannel),
                                             "Old I/O server worker (parentId: " +
-                                            channel.getId() + ", " + channel + ')'));
+                                            channel.getId() + ", " + channel + ')',
+                                            determiner));
                         } catch (Exception e) {
                             if (logger.isWarnEnabled()) {
                                 logger.warn(

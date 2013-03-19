@@ -24,6 +24,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.SocketChannel;
+import org.jboss.netty.util.ThreadNameDeterminer;
 import org.jboss.netty.util.internal.ExecutorUtil;
 
 /**
@@ -95,11 +96,24 @@ public class OioClientSocketChannelFactory implements ClientSocketChannelFactory
      *        the {@link Executor} which will execute the I/O worker threads
      */
     public OioClientSocketChannelFactory(Executor workerExecutor) {
+        this(workerExecutor, null);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param workerExecutor
+     *        the {@link Executor} which will execute the I/O worker threads
+     * @param determiner
+     *        the {@link ThreadNameDeterminer} to set the thread names.
+     */
+    public OioClientSocketChannelFactory(Executor workerExecutor,
+                                         ThreadNameDeterminer determiner) {
         if (workerExecutor == null) {
             throw new NullPointerException("workerExecutor");
         }
         this.workerExecutor = workerExecutor;
-        sink = new OioClientSocketPipelineSink(workerExecutor);
+        sink = new OioClientSocketPipelineSink(workerExecutor, determiner);
     }
 
     public SocketChannel newChannel(ChannelPipeline pipeline) {

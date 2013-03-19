@@ -22,6 +22,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.util.ThreadNameDeterminer;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
 
@@ -35,9 +36,11 @@ import static org.jboss.netty.channel.Channels.*;
 class OioClientSocketPipelineSink extends AbstractOioChannelSink {
 
     private final Executor workerExecutor;
+    private final ThreadNameDeterminer determiner;
 
-    OioClientSocketPipelineSink(Executor workerExecutor) {
+    OioClientSocketPipelineSink(Executor workerExecutor, ThreadNameDeterminer determiner) {
         this.workerExecutor = workerExecutor;
+        this.determiner = determiner;
     }
 
     public void eventSunk(
@@ -123,7 +126,8 @@ class OioClientSocketPipelineSink extends AbstractOioChannelSink {
                     workerExecutor,
                     new ThreadRenamingRunnable(
                             new OioWorker(channel),
-                            "Old I/O client worker (" + channel + ')'));
+                            "Old I/O client worker (" + channel + ')',
+                            determiner));
             workerStarted = true;
         } catch (Throwable t) {
             if (t instanceof ConnectException) {
