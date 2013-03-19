@@ -171,6 +171,24 @@ public class HashedWheelTimer implements Timer {
     public HashedWheelTimer(
             ThreadFactory threadFactory,
             long tickDuration, TimeUnit unit, int ticksPerWheel) {
+        this(threadFactory, null, tickDuration, unit, ticksPerWheel);
+    }
+
+    /**
+     * Creates a new timer.
+     *
+     * @param threadFactory  a {@link ThreadFactory} that creates a
+     *                       background {@link Thread} which is dedicated to
+     *                       {@link TimerTask} execution.
+     * @param determiner     thread name determiner to control thread name.
+     * @param tickDuration   the duration between tick
+     * @param unit           the time unit of the {@code tickDuration}
+     * @param ticksPerWheel  the size of the wheel
+     */
+    public HashedWheelTimer(
+            ThreadFactory threadFactory,
+            ThreadNameDeterminer determiner,
+            long tickDuration, TimeUnit unit, int ticksPerWheel) {
 
         if (threadFactory == null) {
             throw new NullPointerException("threadFactory");
@@ -206,7 +224,8 @@ public class HashedWheelTimer implements Timer {
         roundDuration = tickDuration * wheel.length;
 
         workerThread = threadFactory.newThread(new ThreadRenamingRunnable(
-                        worker, "Hashed wheel timer #" + id.incrementAndGet()));
+                        worker, "Hashed wheel timer #" + id.incrementAndGet(),
+                        determiner));
 
         // Misuse check
         misuseDetector.increase();

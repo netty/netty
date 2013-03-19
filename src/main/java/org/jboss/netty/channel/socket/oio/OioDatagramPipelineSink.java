@@ -27,15 +27,18 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.util.ThreadNameDeterminer;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
 
 class OioDatagramPipelineSink extends AbstractOioChannelSink {
 
     private final Executor workerExecutor;
+    private final ThreadNameDeterminer determiner;
 
-    OioDatagramPipelineSink(Executor workerExecutor) {
+    OioDatagramPipelineSink(Executor workerExecutor, ThreadNameDeterminer determiner) {
         this.workerExecutor = workerExecutor;
+        this.determiner = determiner;
     }
 
     public void eventSunk(
@@ -95,7 +98,8 @@ class OioDatagramPipelineSink extends AbstractOioChannelSink {
                     workerExecutor,
                     new ThreadRenamingRunnable(
                             new OioDatagramWorker(channel),
-                            "Old I/O datagram worker (" + channel + ')'));
+                            "Old I/O datagram worker (" + channel + ')',
+                            determiner));
             workerStarted = true;
         } catch (Throwable t) {
             future.setFailure(t);
@@ -138,7 +142,7 @@ class OioDatagramPipelineSink extends AbstractOioChannelSink {
                 DeadLockProofWorker.start(
                         workerExecutor,
                         new ThreadRenamingRunnable(
-                                new OioDatagramWorker(channel), threadName));
+                                new OioDatagramWorker(channel), threadName, determiner));
             } else {
                 // Worker started by bind() - just rename.
                 Thread workerThread = channel.workerThread;
