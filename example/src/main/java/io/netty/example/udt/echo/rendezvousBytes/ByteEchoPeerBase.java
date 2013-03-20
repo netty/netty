@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.udt.echo.rendevous;
+package io.netty.example.udt.echo.rendezvousBytes;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
@@ -25,53 +25,49 @@ import io.netty.example.udt.util.UtilThreadFactory;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 
-import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.concurrent.ThreadFactory;
 
 /**
- * UDT Message Flow Peer
- * <p>
+ * UDT Byte Stream Peer
+ * <p/>
  * Sends one message when a connection is open and echoes back any received data
- * to the other peer.
+ * to the server. Simply put, the echo client initiates the ping-pong traffic
+ * between the echo client and server by sending the first message to the
+ * server.
+ * <p/>
  */
-public abstract class MsgEchoPeerBase {
-
+public class ByteEchoPeerBase {
     protected final int messageSize;
-    protected final InetSocketAddress self;
-    protected final InetSocketAddress peer;
+    protected SocketAddress myAddress;
+    protected SocketAddress peerAddress;
 
-    protected MsgEchoPeerBase(final InetSocketAddress self, final InetSocketAddress peer, final int messageSize) {
+    public ByteEchoPeerBase(int messageSize, SocketAddress myAddress, SocketAddress peerAddress) {
         this.messageSize = messageSize;
-        this.self = self;
-        this.peer = peer;
+        this.myAddress = myAddress;
+        this.peerAddress = peerAddress;
     }
 
     public void run() throws Exception {
-        // Configure the peer.
-        final Bootstrap boot = new Bootstrap();
+        final Bootstrap bootstrap = new Bootstrap();
         final ThreadFactory connectFactory = new UtilThreadFactory("rendezvous");
         final NioEventLoopGroup connectGroup = new NioEventLoopGroup(1,
-                connectFactory, NioUdtProvider.MESSAGE_PROVIDER);
+                connectFactory, NioUdtProvider.BYTE_PROVIDER);
         try {
-            boot.group(connectGroup)
-                    .channelFactory(NioUdtProvider.MESSAGE_RENDEZVOUS)
+            bootstrap.group(connectGroup)
+                    .channelFactory(NioUdtProvider.BYTE_RENDEZVOUS)
                     .handler(new ChannelInitializer<UdtChannel>() {
                         @Override
-                        public void initChannel(final UdtChannel ch)
-                                throws Exception {
+                        protected void initChannel(UdtChannel ch) throws Exception {
                             ch.pipeline().addLast(
                                     new LoggingHandler(LogLevel.INFO),
-                                    new MsgEchoPeerHandler(messageSize));
+                                    new ByteEchoPeerHandler(messageSize));
                         }
                     });
-            // Start the peer.
-            final ChannelFuture f = boot.connect(peer, self).sync();
-            // Wait until the connection is closed.
-            f.channel().closeFuture().sync();
+            final ChannelFuture future = bootstrap.connect(peerAddress, myAddress).sync();
+            future.channel().closeFuture().sync();
         } finally {
-            // Shut down the event loop to terminate all threads.
-            boot.shutdown();
+            bootstrap.shutdown();
         }
     }
-
 }
