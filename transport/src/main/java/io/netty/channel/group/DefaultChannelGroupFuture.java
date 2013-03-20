@@ -18,6 +18,7 @@ package io.netty.channel.group;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.util.concurrent.BlockingOperationException;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
@@ -229,6 +230,14 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
     @Override
     public boolean tryFailure(Throwable cause) {
         throw new IllegalStateException();
+    }
+
+    @Override
+    protected void checkDeadLock() {
+        EventExecutor e = executor();
+        if (e != null && !(e instanceof DefaultChannelGroup.ImmediateEventExecutor) && e.inEventLoop()) {
+            throw new BlockingOperationException();
+        }
     }
 
     private static final class DefaultEntry<K, V> implements Map.Entry<K, V> {

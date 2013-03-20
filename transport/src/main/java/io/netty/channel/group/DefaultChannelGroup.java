@@ -313,7 +313,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
                "(name: " + name() + ", size: " + size() + ')';
     }
 
-    private static final class ImmediateEventExecutor extends AbstractEventExecutorWithoutScheduler {
+    static final class ImmediateEventExecutor extends AbstractEventExecutorWithoutScheduler {
 
         @Override
         public EventExecutorGroup parent() {
