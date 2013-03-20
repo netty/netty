@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.udt.echo.rendevous;
+package io.netty.example.udt.echo.rendezvous;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;

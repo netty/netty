@@ -13,9 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.udt.echo.rendevous;
+package io.netty.example.udt.echo.rendezvous;
+
+import io.netty.example.udt.util.UtilConsoleReporter;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 /**
@@ -24,11 +27,11 @@ import java.util.logging.Logger;
  * Sends one message when a connection is open and echoes back any received data
  * to the other peer.
  */
-public class MsgEchoPeerOne extends MsgEchoPeerBase {
+public class MsgEchoPeerTwo extends MsgEchoPeerBase {
 
-    private static final Logger log = Logger.getLogger(MsgEchoPeerOne.class.getName());
+    private static final Logger log = Logger.getLogger(MsgEchoPeerTwo.class.getName());
 
-    public MsgEchoPeerOne(final InetSocketAddress self,
+    public MsgEchoPeerTwo(final InetSocketAddress self,
             final InetSocketAddress peer, final int messageSize) {
         super(self, peer, messageSize);
     }
@@ -36,18 +39,18 @@ public class MsgEchoPeerOne extends MsgEchoPeerBase {
     public static void main(final String[] args) throws Exception {
         log.info("init");
 
-        // peer one is not reporting metrics
-        // ConsoleReporterUDT.enable(3, TimeUnit.SECONDS);
+        // peer two is reporting metrics
+        UtilConsoleReporter.enable(3, TimeUnit.SECONDS);
 
         final int messageSize = 64 * 1024;
 
-        final InetSocketAddress self = new InetSocketAddress(Config.hostOne,
-                Config.portOne);
-
-        final InetSocketAddress peer = new InetSocketAddress(Config.hostTwo,
+        final InetSocketAddress self = new InetSocketAddress(Config.hostTwo,
                 Config.portTwo);
 
-        new MsgEchoPeerOne(self, peer, messageSize).run();
+        final InetSocketAddress peer = new InetSocketAddress(Config.hostOne,
+                Config.portOne);
+
+        new MsgEchoPeerTwo(self, peer, messageSize).run();
 
         log.info("done");
     }
