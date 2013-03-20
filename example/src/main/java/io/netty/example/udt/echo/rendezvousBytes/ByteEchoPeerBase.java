@@ -64,15 +64,10 @@ public class ByteEchoPeerBase {
                                     new ByteEchoPeerHandler(messageSize));
                         }
                     });
-
             final ChannelFuture future = bootstrap.connect(peerAddress, myAddress).sync();
             future.channel().closeFuture().sync();
         } finally {
             bootstrap.shutdown();
         }
-
-
     }
-
-
 }

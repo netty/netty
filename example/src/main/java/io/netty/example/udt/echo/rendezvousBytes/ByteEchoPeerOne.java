@@ -44,9 +44,6 @@ public class ByteEchoPeerOne extends ByteEchoPeerBase {
                 Config.hostOne, Config.portOne);
         final InetSocketAddress peerAddress = new InetSocketAddress(
                 Config.hostTwo, Config.portTwo);
-
         new ByteEchoPeerOne(messageSize, myAddress, peerAddress).run();
     }
-
-
 }
