@@ -41,7 +41,7 @@ import static io.netty.handler.codec.http.HttpVersion.*;
  * HTTP requests (like GET and POST). If you wish to support both HTTP requests and websockets in the one server, refer
  * to the <tt>io.netty.example.http.websocketx.server.WebSocketServer</tt> example.
  */
-public class WebSocketServerProtocolHandler extends ChannelInboundMessageHandlerAdapter<WebSocketFrame> {
+public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
 
     private static final AttributeKey<WebSocketServerHandshaker> HANDSHAKER_ATTR_KEY =
             new AttributeKey<WebSocketServerHandshaker>(WebSocketServerHandshaker.class.getName());
@@ -82,15 +82,7 @@ public class WebSocketServerProtocolHandler extends ChannelInboundMessageHandler
             handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
             return;
         }
-
-        if (frame instanceof PingWebSocketFrame) {
-            frame.data().retain();
-            ctx.channel().write(new PongWebSocketFrame(frame.data()));
-            return;
-        }
-
-        frame.retain();
-        ctx.nextInboundMessageBuffer().add(frame);
+        super.messageReceived(ctx, frame);
     }
 
     @Override
