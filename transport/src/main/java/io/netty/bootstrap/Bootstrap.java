@@ -81,7 +81,11 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
         try {
             init(channel);
         } catch (Throwable t) {
-            channel.close();
+            if (channel.isRegistered()) {
+                channel.close();
+            } else {
+                channel.unsafe().closeForcibly();
+            }
             return channel.newFailedFuture(t);
         }
 
