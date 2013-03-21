@@ -570,4 +570,17 @@ public class UnpooledTest {
         assertEquals(0, Unpooled.copyBoolean(new boolean[0]).capacity());
 
     }
+
+    @Test
+    public void wrappedReadOnlyDirectBuffer() {
+        ByteBuffer buffer = ByteBuffer.allocateDirect(12);
+        for (int i = 0; i < 12; i++) {
+            buffer.put((byte) i);
+        }
+        buffer.flip();
+        ByteBuf wrapped = wrappedBuffer(buffer.asReadOnlyBuffer());
+        for (int i = 0; i < 12; i++) {
+            assertEquals((byte) i, wrapped.readByte());
+        }
+    }
 }
