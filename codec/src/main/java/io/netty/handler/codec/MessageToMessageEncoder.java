@@ -42,6 +42,12 @@ import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
  */
 public abstract class MessageToMessageEncoder<I> extends ChannelOutboundMessageHandlerAdapter<I> {
 
+    protected MessageToMessageEncoder() { }
+
+    protected MessageToMessageEncoder(Class<? extends I> outboundMessageType) {
+        super(outboundMessageType);
+    }
+
     @Override
     public final void flush(ChannelHandlerContext ctx, I msg) throws Exception {
         try {

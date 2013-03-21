@@ -47,6 +47,10 @@ public abstract class ChannelOutboundMessageHandlerAdapter<I>
         msgMatcher = TypeParameterMatcher.find(this, ChannelOutboundMessageHandlerAdapter.class, "I");
     }
 
+    protected ChannelOutboundMessageHandlerAdapter(Class<? extends I> outboundMessageType) {
+        msgMatcher = TypeParameterMatcher.get(outboundMessageType);
+    }
+
     protected final boolean isCloseOnFailedFlush() {
         return closeOnFailedFlush;
     }

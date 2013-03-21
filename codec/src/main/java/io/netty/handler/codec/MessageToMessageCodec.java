@@ -90,6 +90,12 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
         outboundMsgMatcher = TypeParameterMatcher.find(this, MessageToMessageCodec.class, "OUTBOUND_IN");
     }
 
+    protected MessageToMessageCodec(
+            Class<? extends INBOUND_IN> inboundMessageType, Class<? extends OUTBOUND_IN> outboundMessageType) {
+        inboundMsgMatcher = TypeParameterMatcher.get(inboundMessageType);
+        outboundMsgMatcher = TypeParameterMatcher.get(outboundMessageType);
+    }
+
     @Override
     @SuppressWarnings("unchecked")
     public MessageBuf<INBOUND_IN> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
