@@ -194,9 +194,10 @@ public class LocalChannel extends AbstractChannel {
 
     @Override
     protected void doClose() throws Exception {
-        if (peer.isActive()) {
+        LocalChannel peer = this.peer;
+        if (peer != null && peer.isActive()) {
             peer.unsafe().close(peer.unsafe().voidFuture());
-            peer = null;
+            this.peer = null;
         }
     }
 
