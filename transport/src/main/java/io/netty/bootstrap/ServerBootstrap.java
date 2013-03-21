@@ -26,6 +26,7 @@ import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelStateHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
@@ -140,7 +141,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
     }
 
     @Override
-    ChannelFuture doBind(SocketAddress localAddress) {
+    ChannelFuture doBind(final SocketAddress localAddress) {
         Channel channel = channelFactory().newChannel();
 
         try {
@@ -178,20 +179,29 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
             currentChildAttrs = childAttrs.entrySet().toArray(newAttrArray(childAttrs.size()));
         }
 
+        final ChannelPromise promise = channel.newPromise().addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
             public void initChannel(Channel ch) throws Exception {
                 ch.pipeline().addLast(new ServerBootstrapAcceptor(
                         currentChildGroup, currentChildHandler, currentChildOptions, currentChildAttrs));
+
+                // execute the bind here as at this point we are sure the fireChannelRegistered() was called and so
+                // the registration did not fail
+                ch.bind(localAddress, promise);
             }
         });
 
-        ChannelFuture f = group().register(channel).awaitUninterruptibly();
-        if (!f.isSuccess()) {
-            return f;
-        }
-
-        return channel.bind(localAddress).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+        ChannelFuture f = group().register(channel);
+        f.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                if (!future.isSuccess()) {
+                    promise.setFailure(future.cause());
+                }
+            }
+        });
+        return promise;
     }
 
     @Override
