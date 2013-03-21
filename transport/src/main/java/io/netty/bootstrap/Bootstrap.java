@@ -77,14 +77,34 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     }
 
     @Override
-    ChannelFuture doBind(SocketAddress localAddress) {
-        Channel channel = channelFactory().newChannel();
+    ChannelFuture doBind(final SocketAddress localAddress) {
+        final Channel channel = channelFactory().newChannel();
         ChannelPromise initPromise = init(channel);
         if (initPromise.cause() != null) {
             return initPromise;
         }
 
-        return channel.bind(localAddress).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+        final ChannelPromise promise = channel.newPromise();
+        if (initPromise.isDone()) {
+            doBind0(initPromise, channel, localAddress, promise);
+        } else {
+            initPromise.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    doBind0(future, channel, localAddress, promise);
+                }
+            });
+        }
+
+        return promise;
+    }
+
+    private static void doBind0(ChannelFuture initFuture, Channel channel, SocketAddress localAddress, ChannelPromise promise) {
+        if (initFuture.isSuccess()) {
+            channel.bind(localAddress, promise).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+        } else {
+            promise.setFailure(initFuture.cause());
+        }
     }
 
     /**
@@ -140,21 +160,42 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     /**
      * @see {@link #connect()}
      */
-    private ChannelFuture doConnect(SocketAddress remoteAddress, SocketAddress localAddress) {
+    private ChannelFuture doConnect(final SocketAddress remoteAddress, final SocketAddress localAddress) {
         final Channel channel = channelFactory().newChannel();
         ChannelPromise initPromise = init(channel);
         if (initPromise.cause() != null) {
             return initPromise;
         }
 
-        final ChannelFuture future;
-        if (localAddress == null) {
-            future = channel.connect(remoteAddress);
+        final ChannelPromise promise = channel.newPromise();
+        if (initPromise.isDone()) {
+            doConnect0(initPromise, channel, remoteAddress, localAddress, promise);
         } else {
-            future = channel.connect(remoteAddress, localAddress);
+            initPromise.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    doConnect0(future, channel, remoteAddress, localAddress, promise);
+                }
+            });
         }
 
-        return future.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+        return promise;
+    }
+
+    private static void doConnect0(
+            ChannelFuture initFuture, Channel channel,
+            SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+
+        if (initFuture.isSuccess()) {
+            if (localAddress == null) {
+                channel.connect(remoteAddress, promise);
+            } else {
+                channel.connect(remoteAddress, localAddress, promise);
+            }
+            promise.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+        } else {
+            promise.setFailure(initFuture.cause());
+        }
     }
 
     @SuppressWarnings("unchecked")
