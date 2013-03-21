@@ -510,7 +510,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         @Override
         protected void completed0(Void result, AioSocketChannel channel) {
             ((DefaultAioUnsafe) channel.unsafe()).connectSuccess();
-            channel.pipeline().fireChannelActive();
         }
 
         @Override
