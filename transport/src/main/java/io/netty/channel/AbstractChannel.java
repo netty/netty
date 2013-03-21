@@ -564,30 +564,32 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 throw new NullPointerException("eventLoop");
             }
             if (isRegistered()) {
-                throw new IllegalStateException("registered to an event loop already");
+                promise.setFailure(new IllegalStateException("registered to an event loop already"));
+                return;
             }
             if (!isCompatible(eventLoop)) {
-                throw new IllegalStateException("incompatible event loop type: " + eventLoop.getClass().getName());
+                promise.setFailure(new IllegalStateException("incompatible event loop type: " + eventLoop.getClass().getName()));
             }
 
             AbstractChannel.this.eventLoop = eventLoop;
 
-            assert eventLoop().inEventLoop();
-
-            // check if the eventLoop which was given is currently in the eventloop.
-            // if that is the case we are safe to call register, if not we need to
-            // schedule the execution as otherwise we may say some race-conditions.
-            //
-            // See https://github.com/netty/netty/issues/654
             if (eventLoop.inEventLoop()) {
                 register0(promise);
             } else {
-                eventLoop.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        register0(promise);
-                    }
-                });
+                try {
+                    eventLoop.execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            register0(promise);
+                        }
+                    });
+                } catch (Throwable t) {
+                    logger.warn(
+                            "Force-closing a channel whose registration task was unaccepted by an event loop: {}",
+                            AbstractChannel.this, t);
+                    closeForcibly();
+                    promise.setFailure(t);
+                }
             }
         }
 

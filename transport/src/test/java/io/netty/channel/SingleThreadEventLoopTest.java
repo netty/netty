@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.channel.local.LocalChannel;
 import io.netty.util.concurrent.TaskScheduler;
 import org.junit.After;
 import org.junit.Before;
@@ -24,11 +25,13 @@ import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
 public class SingleThreadEventLoopTest {
@@ -244,6 +247,45 @@ public class SingleThreadEventLoopTest {
         assertEquals(NUM_TASKS, ranTasks.get());
     }
 
+    @Test(timeout = 10000)
+    public void testRegistrationAfterTermination() throws Exception {
+        loop.shutdown();
+        while (!loop.isTerminated()) {
+            loop.awaitTermination(1, TimeUnit.DAYS);
+        }
+
+        ChannelFuture f = loop.register(new LocalChannel());
+        f.awaitUninterruptibly();
+        assertFalse(f.isSuccess());
+        assertThat(f.cause(), is(instanceOf(RejectedExecutionException.class)));
+    }
+
+    @Test(timeout = 10000)
+    public void testRegistrationAfterTermination2() throws Exception {
+        loop.shutdown();
+        while (!loop.isTerminated()) {
+            loop.awaitTermination(1, TimeUnit.DAYS);
+        }
+
+        final CountDownLatch latch = new CountDownLatch(1);
+        Channel ch = new LocalChannel();
+        ChannelPromise promise = ch.newPromise();
+        promise.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                latch.countDown();
+            }
+        });
+
+        ChannelFuture f = loop.register(ch, promise);
+        f.awaitUninterruptibly();
+        assertFalse(f.isSuccess());
+        assertThat(f.cause(), is(instanceOf(RejectedExecutionException.class)));
+
+        // Ensure the listener was notified.
+        assertFalse(latch.await(1, TimeUnit.SECONDS));
+    }
+
     private static class SingleThreadEventLoopImpl extends SingleThreadEventLoop {
 
         final AtomicInteger cleanedUp = new AtomicInteger();
@@ -273,12 +315,6 @@ public class SingleThreadEventLoopTest {
         @Override
         protected void cleanup() {
             cleanedUp.incrementAndGet();
-        }
-
-        @Override
-        public ChannelFuture register(Channel channel, ChannelPromise future) {
-            // Untested
-            return future;
         }
     }
 }

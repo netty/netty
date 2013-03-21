@@ -481,16 +481,20 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         } else {
             final Object listeners = this.listeners;
             this.listeners = null;
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    if (listeners instanceof DefaultPromiseListeners) {
-                        notifyListeners0(DefaultPromise.this, (DefaultPromiseListeners) listeners);
-                    } else {
-                        notifyListener0(DefaultPromise.this, (GenericFutureListener<? extends Future<V>>) listeners);
+            try {
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (listeners instanceof DefaultPromiseListeners) {
+                            notifyListeners0(DefaultPromise.this, (DefaultPromiseListeners) listeners);
+                        } else {
+                            notifyListener0(DefaultPromise.this, (GenericFutureListener<? extends Future<V>>) listeners);
+                        }
                     }
-                }
-            });
+                });
+            } catch (Throwable t) {
+                logger.error("Failed to notify listener(s). Event loop terminated?", t);
+            }
         }
     }
 
@@ -505,8 +509,10 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     @SuppressWarnings("unchecked")
-    public static void notifyListener(final EventExecutor eventExecutor, final Future<?> future,
-                               final GenericFutureListener<? extends Future<?>> l) {
+    protected static void notifyListener(
+            final EventExecutor eventExecutor, final Future<?> future,
+            final GenericFutureListener<? extends Future<?>> l) {
+
         if (eventExecutor.inEventLoop()) {
             final Integer stackDepth = LISTENER_STACK_DEPTH.get();
             if (stackDepth < MAX_LISTENER_STACK_DEPTH) {
@@ -520,12 +526,16 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             }
         }
 
-        eventExecutor.execute(new Runnable() {
+        try {
+            eventExecutor.execute(new Runnable() {
             @Override
             public void run() {
                 notifyListener(eventExecutor, future, l);
             }
         });
+        } catch (Throwable t) {
+            logger.error("Failed to notify a listener. Event loop terminated?", t);
+        }
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
