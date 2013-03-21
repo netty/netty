@@ -614,12 +614,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 }
             } catch (Throwable t) {
                 // Close the channel directly to avoid FD leak.
-                try {
-                    doClose();
-                } catch (Throwable t2) {
-                    logger.warn("Failed to close a channel", t2);
-                }
-
+                closeForcibly();
                 promise.setFailure(t);
                 closeFuture.setClosed();
             }
