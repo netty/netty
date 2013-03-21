@@ -30,7 +30,45 @@ public abstract class TypeParameterMatcher {
     private static final TypeParameterMatcher NOOP = new NoOpTypeParameterMatcher();
     private static final Object TEST_OBJECT = new Object();
 
-    private static final ThreadLocal<Map<Class<?>, Map<String, TypeParameterMatcher>>> typeMap =
+    private static final ThreadLocal<Map<Class<?>, TypeParameterMatcher>> getCache =
+            new ThreadLocal<Map<Class<?>, TypeParameterMatcher>>() {
+                @Override
+                protected Map<Class<?>, TypeParameterMatcher> initialValue() {
+                    return new IdentityHashMap<Class<?>, TypeParameterMatcher>();
+                }
+            };
+
+    public static TypeParameterMatcher get(final Class<?> parameterType) {
+        final Map<Class<?>, TypeParameterMatcher> getCache = TypeParameterMatcher.getCache.get();
+
+        TypeParameterMatcher matcher = getCache.get(parameterType);
+        if (matcher == null) {
+            if (parameterType == Object.class) {
+                matcher = NOOP;
+            } else if (PlatformDependent.hasJavassist()) {
+                try {
+                    matcher = JavassistTypeParameterMatcherGenerator.generate(parameterType);
+                    matcher.match(TEST_OBJECT);
+                } catch (IllegalAccessError e) {
+                    // Happens if parameterType is not public.
+                    matcher = null;
+                } catch (Exception e) {
+                    // Will not usually happen, but just in case.
+                    matcher = null;
+                }
+            }
+
+            if (matcher == null) {
+                matcher = new ReflectiveMatcher(parameterType);
+            }
+
+            getCache.put(parameterType, matcher);
+        }
+
+        return matcher;
+    }
+
+    private static final ThreadLocal<Map<Class<?>, Map<String, TypeParameterMatcher>>> findCache =
             new ThreadLocal<Map<Class<?>, Map<String, TypeParameterMatcher>>>() {
                 @Override
                 protected Map<Class<?>, Map<String, TypeParameterMatcher>> initialValue() {
@@ -41,37 +79,18 @@ public abstract class TypeParameterMatcher {
     public static TypeParameterMatcher find(
             final Object object, final Class<?> parameterizedSuperclass, final String typeParamName) {
 
-        final Map<Class<?>, Map<String, TypeParameterMatcher>> typeMap = TypeParameterMatcher.typeMap.get();
+        final Map<Class<?>, Map<String, TypeParameterMatcher>> findCache = TypeParameterMatcher.findCache.get();
         final Class<?> thisClass = object.getClass();
 
-        Map<String, TypeParameterMatcher> map = typeMap.get(thisClass);
+        Map<String, TypeParameterMatcher> map = findCache.get(thisClass);
         if (map == null) {
             map = new HashMap<String, TypeParameterMatcher>();
-            typeMap.put(thisClass, map);
+            findCache.put(thisClass, map);
         }
 
         TypeParameterMatcher matcher = map.get(typeParamName);
         if (matcher == null) {
-            Class<?> messageType = find0(object, parameterizedSuperclass, typeParamName);
-            if (messageType == Object.class) {
-                matcher = NOOP;
-            } else if (PlatformDependent.hasJavassist()) {
-                try {
-                    matcher = JavassistTypeParameterMatcherGenerator.generate(messageType);
-                    matcher.match(TEST_OBJECT);
-                } catch (IllegalAccessError e) {
-                    // Happens if messageType is not public.
-                    matcher = null;
-                } catch (Exception e) {
-                    // Will not usually happen, but just in case.
-                    matcher = null;
-                }
-            }
-
-            if (matcher == null) {
-                matcher = new ReflectiveMatcher(messageType);
-            }
-
+            matcher = get(find0(object, parameterizedSuperclass, typeParamName));
             map.put(typeParamName, matcher);
         }
 

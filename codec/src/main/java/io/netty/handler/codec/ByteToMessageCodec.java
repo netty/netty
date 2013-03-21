@@ -56,6 +56,10 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler
         outboundMsgMatcher = TypeParameterMatcher.find(this, ByteToMessageCodec.class, "I");
     }
 
+    protected ByteToMessageCodec(Class<? extends I> outboundMessageType) {
+        outboundMsgMatcher = TypeParameterMatcher.get(outboundMessageType);
+    }
+
     @Override
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
         decoder.beforeAdd(ctx);

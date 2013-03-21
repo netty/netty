@@ -63,6 +63,10 @@ public abstract class ChannelInboundMessageHandlerAdapter<I>
         msgMatcher = TypeParameterMatcher.find(this, ChannelInboundMessageHandlerAdapter.class, "I");
     }
 
+    protected ChannelInboundMessageHandlerAdapter(Class<? extends I> inboundMessageType) {
+        msgMatcher = TypeParameterMatcher.get(inboundMessageType);
+    }
+
     @Override
     public MessageBuf<I> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return Unpooled.messageBuffer();
