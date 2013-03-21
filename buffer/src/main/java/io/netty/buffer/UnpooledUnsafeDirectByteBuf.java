@@ -493,7 +493,7 @@ final class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf 
         return null;
     }
 
-    private long addr(int index) {
+    long addr(int index) {
         return memoryAddress + index;
     }
 }
