@@ -313,10 +313,8 @@ public class LocalChannel extends AbstractChannel {
 
                 Channel boundChannel = LocalChannelRegistry.get(remoteAddress);
                 if (!(boundChannel instanceof LocalServerChannel)) {
-                    Exception cause =
-                            new ChannelException("connection refused");
+                    Exception cause = new ChannelException("connection refused");
                     promise.setFailure(cause);
-                    pipeline().fireExceptionCaught(cause);
                     close(voidFuture());
                     return;
                 }

@@ -25,7 +25,6 @@ import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.util.concurrent.Future;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -34,8 +33,7 @@ import java.util.List;
 public class BootstrapTest {
 
     @Test(timeout = 10000)
-    @Ignore
-    public void testInitializationDeadLock() throws Exception {
+    public void testBindDeadLock() throws Exception {
         EventLoopGroup groupA = new LocalEventLoopGroup(1);
         EventLoopGroup groupB = new LocalEventLoopGroup(1);
 
@@ -67,6 +65,52 @@ public class BootstrapTest {
                     @Override
                     public void run() {
                         bootstrapA.bind(LocalAddress.ANY);
+                    }
+                }));
+            }
+
+            for (Future<?> f: bindFutures) {
+                f.sync();
+            }
+        } finally {
+            groupA.shutdown();
+            groupB.shutdown();
+        }
+    }
+
+    @Test(timeout = 10000)
+    public void testConnectDeadLock() throws Exception {
+        EventLoopGroup groupA = new LocalEventLoopGroup(1);
+        EventLoopGroup groupB = new LocalEventLoopGroup(1);
+
+        try {
+            ChannelInboundMessageHandler<Object> dummyHandler = new DummyHandler();
+
+            final Bootstrap bootstrapA = new Bootstrap();
+            bootstrapA.group(groupA);
+            bootstrapA.channel(LocalChannel.class);
+            bootstrapA.handler(dummyHandler);
+
+            final Bootstrap bootstrapB = new Bootstrap();
+            bootstrapB.group(groupB);
+            bootstrapB.channel(LocalChannel.class);
+            bootstrapB.handler(dummyHandler);
+
+            List<Future<?>> bindFutures = new ArrayList<Future<?>>();
+
+            // Try to connect from each other.
+            for (int i = 0; i < 1024; i ++) {
+                bindFutures.add(groupA.next().submit(new Runnable() {
+                    @Override
+                    public void run() {
+                        bootstrapB.connect(LocalAddress.ANY);
+                    }
+                }));
+
+                bindFutures.add(groupB.next().submit(new Runnable() {
+                    @Override
+                    public void run() {
+                        bootstrapA.connect(LocalAddress.ANY);
                     }
                 }));
             }

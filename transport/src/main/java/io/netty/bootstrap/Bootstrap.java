@@ -20,6 +20,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -78,15 +79,9 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     @Override
     ChannelFuture doBind(SocketAddress localAddress) {
         Channel channel = channelFactory().newChannel();
-        try {
-            init(channel);
-        } catch (Throwable t) {
-            if (channel.isRegistered()) {
-                channel.close();
-            } else {
-                channel.unsafe().closeForcibly();
-            }
-            return channel.newFailedFuture(t);
+        ChannelPromise initPromise = init(channel);
+        if (initPromise.cause() != null) {
+            return initPromise;
         }
 
         return channel.bind(localAddress).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
@@ -147,12 +142,9 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
      */
     private ChannelFuture doConnect(SocketAddress remoteAddress, SocketAddress localAddress) {
         final Channel channel = channelFactory().newChannel();
-
-        try {
-            init(channel);
-        } catch (Throwable t) {
-            channel.close();
-            return channel.newFailedFuture(t);
+        ChannelPromise initPromise = init(channel);
+        if (initPromise.cause() != null) {
+            return initPromise;
         }
 
         final ChannelFuture future;
@@ -166,31 +158,55 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     }
 
     @SuppressWarnings("unchecked")
-    private void init(Channel channel) throws Exception {
-        ChannelPipeline p = channel.pipeline();
-        p.addLast(handler());
+    private ChannelPromise init(Channel channel) {
+        ChannelPromise promise = channel.newPromise();
+        try {
+            ChannelPipeline p = channel.pipeline();
+            p.addLast(handler());
 
-        final Map<ChannelOption<?>, Object> options = options();
-        synchronized (options) {
-            for (Entry<ChannelOption<?>, Object> e: options.entrySet()) {
-                try {
-                    if (!channel.config().setOption((ChannelOption<Object>) e.getKey(), e.getValue())) {
-                        logger.warn("Unknown channel option: " + e);
+            final Map<ChannelOption<?>, Object> options = options();
+            synchronized (options) {
+                for (Entry<ChannelOption<?>, Object> e: options.entrySet()) {
+                    try {
+                        if (!channel.config().setOption((ChannelOption<Object>) e.getKey(), e.getValue())) {
+                            logger.warn("Unknown channel option: " + e);
+                        }
+                    } catch (Throwable t) {
+                        logger.warn("Failed to set a channel option: " + channel, t);
                     }
-                } catch (Throwable t) {
-                    logger.warn("Failed to set a channel option: " + channel, t);
                 }
             }
+
+            final Map<AttributeKey<?>, Object> attrs = attrs();
+            synchronized (attrs) {
+                for (Entry<AttributeKey<?>, Object> e: attrs.entrySet()) {
+                    channel.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
+                }
+            }
+
+            group().register(channel, promise);
+        } catch (Throwable t) {
+            promise.setFailure(t);
         }
 
-        final Map<AttributeKey<?>, Object> attrs = attrs();
-        synchronized (attrs) {
-            for (Entry<AttributeKey<?>, Object> e: attrs.entrySet()) {
-                channel.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
+        if (promise.cause() != null) {
+            if (channel.isRegistered()) {
+                channel.close();
+            } else {
+                channel.unsafe().closeForcibly();
             }
         }
 
-        group().register(channel).syncUninterruptibly();
+        // If we are here and the promise is not failed, it's one of the following cases:
+        // 1) If we attempted registration from the event loop, the registration has been completed at this point.
+        //    i.e. It's safe to attempt bind() or connect() now beause the channel has been registered.
+        // 2) If we attempted registration from the other thread, the registration request has been successfully
+        //    added to the event loop's task queue for later execution.
+        //    i.e. It's safe to attempt bind() or connect() now:
+        //         because bind() or connect() will be executed *after* the scheduled registration task is executed
+        //         because register(), bind(), and connect() are all bound to the same thread.
+
+        return promise;
     }
 
     @Override
