@@ -99,7 +99,9 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
         return promise;
     }
 
-    private static void doBind0(ChannelFuture initFuture, Channel channel, SocketAddress localAddress, ChannelPromise promise) {
+    private static void doBind0(
+            ChannelFuture initFuture, Channel channel, SocketAddress localAddress, ChannelPromise promise) {
+
         if (initFuture.isSuccess()) {
             channel.bind(localAddress, promise).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
         } else {
