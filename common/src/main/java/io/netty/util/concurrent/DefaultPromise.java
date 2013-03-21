@@ -488,7 +488,8 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                         if (listeners instanceof DefaultPromiseListeners) {
                             notifyListeners0(DefaultPromise.this, (DefaultPromiseListeners) listeners);
                         } else {
-                            notifyListener0(DefaultPromise.this, (GenericFutureListener<? extends Future<V>>) listeners);
+                            notifyListener0(
+                                    DefaultPromise.this, (GenericFutureListener<? extends Future<V>>) listeners);
                         }
                     }
                 });
