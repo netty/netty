@@ -18,8 +18,6 @@ package io.netty.bootstrap;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandler;
@@ -34,7 +32,6 @@ import io.netty.util.AttributeKey;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.net.SocketAddress;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -140,17 +137,10 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
     }
 
     @Override
-    ChannelFuture doBind(SocketAddress localAddress) {
-        Channel channel = channelFactory().newChannel();
-
-        try {
-            final Map<ChannelOption<?>, Object> options = options();
-            synchronized (options) {
-                channel.config().setOptions(options);
-            }
-        } catch (Exception e) {
-            channel.close();
-            return channel.newFailedFuture(e);
+    void init(Channel channel) throws Exception {
+        final Map<ChannelOption<?>, Object> options = options();
+        synchronized (options) {
+            channel.config().setOptions(options);
         }
 
         final Map<AttributeKey<?>, Object> attrs = attrs();
@@ -185,13 +175,6 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
                         currentChildGroup, currentChildHandler, currentChildOptions, currentChildAttrs));
             }
         });
-
-        ChannelFuture f = group().register(channel).awaitUninterruptibly();
-        if (!f.isSuccess()) {
-            return f;
-        }
-
-        return channel.bind(localAddress).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
     }
 
     @Override

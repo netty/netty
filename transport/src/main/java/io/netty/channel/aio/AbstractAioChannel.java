@@ -156,11 +156,8 @@ public abstract class AbstractAioChannel extends AbstractChannel {
             assert eventLoop().inEventLoop();
             assert connectPromise != null;
             try {
-                boolean wasActive = isActive();
                 connectPromise.setSuccess();
-                if (!wasActive && isActive()) {
-                    pipeline().fireChannelActive();
-                }
+                pipeline().fireChannelActive();
             } catch (Throwable t) {
                 connectPromise.setFailure(t);
                 closeIfClosed();
