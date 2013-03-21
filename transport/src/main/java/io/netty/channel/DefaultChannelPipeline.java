@@ -1194,7 +1194,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             logger.warn(
-                    "An exceptionCaught() event was fired, and it reached at the end of the pipeline. " +
+                    "An exceptionCaught() event was fired, and it reached at the tail of the pipeline. " +
                             "It usually means the last handler in the pipeline did not handle the exception.", cause);
         }
 
@@ -1215,7 +1215,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             if (byteSinkSize != 0) {
                 byteSink.clear();
                 logger.warn(
-                        "Discarded {} inbound byte(s) that reached at the end of the pipeline. " +
+                        "Discarded {} inbound byte(s) that reached at the tail of the pipeline. " +
                         "Please check your pipeline configuration.", byteSinkSize);
             }
 
@@ -1232,11 +1232,11 @@ final class DefaultChannelPipeline implements ChannelPipeline {
                         ((ReferenceCounted) m).release();
                     }
                     logger.debug(
-                            "Discarded inbound message {} that reached at the end of the pipeline. " +
+                            "Discarded inbound message {} that reached at the tail of the pipeline. " +
                                     "Please check your pipeline configuration.", m);
                 }
                 logger.warn(
-                        "Discarded {} inbound message(s) that reached at the end of the pipeline. " +
+                        "Discarded {} inbound message(s) that reached at the tail of the pipeline. " +
                         "Please check your pipeline configuration.", msgSinkSize);
             }
         }
@@ -1368,7 +1368,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
                     byteSink.writeBytes(src, src.readerIndex(), src.readableBytes());
                 } else {
                     logger.debug(
-                            "Discarded outbound message {} that reached at the end of the pipeline. " +
+                            "Discarded outbound message {} that reached at the head of the pipeline. " +
                                     "Please check your pipeline configuration.", m);
                     discardedMessages ++;
                 }
@@ -1380,7 +1380,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
             if (discardedMessages != 0) {
                 logger.warn(
-                        "Discarded {} outbound message(s) that reached at the end of the pipeline. " +
+                        "Discarded {} outbound message(s) that reached at the head of the pipeline. " +
                         "Please check your pipeline configuration.", discardedMessages);
             }
 
@@ -1400,7 +1400,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             if (byteSinkSize != 0) {
                 byteSink.clear();
                 logger.warn(
-                        "Discarded {} outbound byte(s) that reached at the end of the pipeline. " +
+                        "Discarded {} outbound byte(s) that reached at the head of the pipeline. " +
                                 "Please check your pipeline configuration.", byteSinkSize);
             }
             unsafe.flush(promise);
