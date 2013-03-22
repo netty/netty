@@ -377,7 +377,7 @@ public class SingleThreadEventLoopTest {
         protected void run() {
             for (;;) {
                 try {
-                    Thread.sleep(TimeUnit.NANOSECONDS.toMillis(delayNanos()));
+                    Thread.sleep(TimeUnit.NANOSECONDS.toMillis(delayNanos(System.nanoTime())));
                 } catch (InterruptedException e) {
                     // Waken up by interruptThread()
                 }
