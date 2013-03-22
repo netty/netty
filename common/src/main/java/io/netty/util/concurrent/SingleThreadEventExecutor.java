@@ -800,16 +800,19 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
                         setSuccessInternal(result);
                     }
                 } else {
-                    task.call();
-                    if (!executor().isShutdown()) {
-                        long p = periodNanos;
-                        if (p > 0) {
-                            deadlineNanos += p;
-                        } else {
-                            deadlineNanos = nanoTime() - p;
-                        }
-                        if (!isDone()) {
-                            executor().delayedTaskQueue.add(this);
+                    // check if is done as it may was cancelled
+                    if (!isDone()) {
+                        task.call();
+                        if (!executor().isShutdown()) {
+                            long p = periodNanos;
+                            if (p > 0) {
+                                deadlineNanos += p;
+                            } else {
+                                deadlineNanos = nanoTime() - p;
+                            }
+                            if (!isDone()) {
+                                executor().delayedTaskQueue.add(this);
+                            }
                         }
                     }
                 }
