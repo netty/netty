@@ -121,9 +121,9 @@ public abstract class AbstractCompositeByteBufTest extends
     public void testDiscardReadBytes3() {
         ByteBuf a, b;
         a = wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }).order(order);
-        b = wrappedBuffer(
+        b = freeLater(wrappedBuffer(
                 wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, 0, 5).order(order),
-                wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, 5, 5).order(order));
+                wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, 5, 5).order(order)));
         a.skipBytes(6);
         a.markReaderIndex();
         b.skipBytes(6);
