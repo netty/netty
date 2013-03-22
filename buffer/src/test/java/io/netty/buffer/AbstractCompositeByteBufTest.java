@@ -176,7 +176,7 @@ public abstract class AbstractCompositeByteBufTest extends
 
     @Test
     public void testFullConsolidation() {
-        CompositeByteBuf buf = compositeBuffer(Integer.MAX_VALUE);
+        CompositeByteBuf buf = freeLater(compositeBuffer(Integer.MAX_VALUE));
         buf.addComponent(wrappedBuffer(new byte[] { 1 }));
         buf.addComponent(wrappedBuffer(new byte[] { 2, 3 }));
         buf.addComponent(wrappedBuffer(new byte[] { 4, 5, 6 }));
