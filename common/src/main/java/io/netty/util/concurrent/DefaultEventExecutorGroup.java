@@ -23,23 +23,17 @@ import java.util.concurrent.ThreadFactory;
  */
 public class DefaultEventExecutorGroup extends MultithreadEventExecutorGroup {
 
-    /**
-     * @see MultithreadEventExecutorGroup#MultithreadEventExecutorGroup(int, ThreadFactory, Object...)
-     */
     public DefaultEventExecutorGroup(int nThreads) {
         this(nThreads, null);
     }
 
-    /**
-     * @see MultithreadEventExecutorGroup#MultithreadEventExecutorGroup(int, ThreadFactory, Object...)
-     */
     public DefaultEventExecutorGroup(int nThreads, ThreadFactory threadFactory) {
         super(nThreads, threadFactory);
     }
 
     @Override
     protected EventExecutor newChild(
-            ThreadFactory threadFactory, TaskScheduler scheduler, Object... args) throws Exception {
-        return new DefaultEventExecutor(this, threadFactory, scheduler);
+            ThreadFactory threadFactory, Object... args) throws Exception {
+        return new DefaultEventExecutor(this, threadFactory);
     }
 }

@@ -21,7 +21,6 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.EventLoopException;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.nio.AbstractNioChannel.NioUnsafe;
-import io.netty.util.concurrent.TaskScheduler;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -107,9 +106,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     private boolean needsToSelectAgain;
 
     NioEventLoop(
-            NioEventLoopGroup parent, ThreadFactory threadFactory,
-            TaskScheduler scheduler, SelectorProvider selectorProvider) {
-        super(parent, threadFactory, scheduler);
+            NioEventLoopGroup parent, ThreadFactory threadFactory, SelectorProvider selectorProvider) {
+        super(parent, threadFactory);
         if (selectorProvider == null) {
             throw new NullPointerException("selectorProvider");
         }
@@ -591,8 +589,13 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     }
 
     private int select() throws IOException {
+        long delayMillis = delayMillis();
         try {
-            return selector.select(SELECT_TIMEOUT);
+            if (delayMillis > 0) {
+                return selector.select(delayMillis);
+            } else {
+                return selector.selectNow();
+            }
         } catch (CancelledKeyException e) {
             if (logger.isDebugEnabled()) {
                 logger.debug(

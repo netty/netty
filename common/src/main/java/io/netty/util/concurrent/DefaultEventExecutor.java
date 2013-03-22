@@ -24,12 +24,8 @@ import java.util.concurrent.ThreadFactory;
  */
 final class DefaultEventExecutor extends SingleThreadEventExecutor {
 
-    /**
-     * @see SingleThreadEventExecutor#SingleThreadEventExecutor(EventExecutorGroup, ThreadFactory, TaskScheduler)
-     */
-    DefaultEventExecutor(
-            DefaultEventExecutorGroup parent, ThreadFactory threadFactory, TaskScheduler scheduler) {
-        super(parent, threadFactory, scheduler);
+    DefaultEventExecutor(DefaultEventExecutorGroup parent, ThreadFactory threadFactory) {
+        super(parent, threadFactory);
     }
 
     @Override

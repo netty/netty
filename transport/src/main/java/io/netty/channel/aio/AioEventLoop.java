@@ -19,7 +19,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
-import io.netty.util.concurrent.TaskScheduler;
 import io.netty.channel.SingleThreadEventLoop;
 
 import java.util.ArrayList;
@@ -59,8 +58,8 @@ final class AioEventLoop extends SingleThreadEventLoop {
         }
     };
 
-    AioEventLoop(AioEventLoopGroup parent, ThreadFactory threadFactory, TaskScheduler scheduler) {
-        super(parent, threadFactory, scheduler);
+    AioEventLoop(AioEventLoopGroup parent, ThreadFactory threadFactory) {
+        super(parent, threadFactory);
     }
 
     @Override

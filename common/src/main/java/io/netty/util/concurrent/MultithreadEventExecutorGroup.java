@@ -31,7 +31,6 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
     public static final int DEFAULT_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 2;
     private static final AtomicInteger poolId = new AtomicInteger();
 
-    final TaskScheduler scheduler;
     private final EventExecutor[] children;
     private final AtomicInteger childIndex = new AtomicInteger();
 
@@ -41,9 +40,7 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
      * @param nThreads          the number of threads that will be used by this instance. Use 0 for the default number
      *                          of {@link #DEFAULT_POOL_SIZE}
      * @param threadFactory     the ThreadFactory to use, or {@code null} if the default should be used.
-     * @param args              arguments which will passed to each
-     *                          {@link #newChild(ThreadFactory, TaskScheduler, Object...)}
-     *                          call.
+     * @param args              arguments which will passed to each {@link #newChild(ThreadFactory, Object...)} call
      */
     protected MultithreadEventExecutorGroup(int nThreads, ThreadFactory threadFactory, Object... args) {
         if (nThreads < 0) {
@@ -58,13 +55,11 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
             threadFactory = new DefaultThreadFactory();
         }
 
-        scheduler = new TaskScheduler(threadFactory);
-
         children = new SingleThreadEventExecutor[nThreads];
         for (int i = 0; i < nThreads; i ++) {
             boolean success = false;
             try {
-                children[i] = newChild(threadFactory, scheduler, args);
+                children[i] = newChild(threadFactory, args);
                 success = true;
             } catch (Exception e) {
                 // TODO: Think about if this is a good exception type
@@ -99,7 +94,7 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
      *
      */
     protected abstract EventExecutor newChild(
-            ThreadFactory threadFactory, TaskScheduler scheduler, Object... args) throws Exception;
+            ThreadFactory threadFactory, Object... args) throws Exception;
 
     @Override
     public void shutdown() {
@@ -107,7 +102,6 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
             return;
         }
 
-        scheduler.shutdown();
         for (EventExecutor l: children) {
             l.shutdown();
         }
@@ -115,9 +109,6 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
 
     @Override
     public boolean isShutdown() {
-        if (!scheduler.isShutdown()) {
-            return false;
-        }
         for (EventExecutor l: children) {
             if (!l.isShutdown()) {
                 return false;
@@ -128,9 +119,6 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
 
     @Override
     public boolean isTerminated() {
-        if (!scheduler.isTerminated()) {
-            return false;
-        }
         for (EventExecutor l: children) {
             if (!l.isTerminated()) {
                 return false;
@@ -143,15 +131,6 @@ public abstract class MultithreadEventExecutorGroup implements EventExecutorGrou
     public boolean awaitTermination(long timeout, TimeUnit unit)
             throws InterruptedException {
         long deadline = System.nanoTime() + unit.toNanos(timeout);
-        for (;;) {
-            long timeLeft = deadline - System.nanoTime();
-            if (timeLeft <= 0) {
-                return isTerminated();
-            }
-            if (scheduler.awaitTermination(timeLeft, TimeUnit.NANOSECONDS)) {
-                break;
-            }
-        }
         loop: for (EventExecutor l: children) {
             for (;;) {
                 long timeLeft = deadline - System.nanoTime();

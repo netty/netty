@@ -29,7 +29,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
 
 public final class TaskScheduler {
@@ -329,13 +329,18 @@ public final class TaskScheduler {
 
     private static class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFuture<V> {
 
+        @SuppressWarnings("rawtypes")
+        private static final AtomicIntegerFieldUpdater<ScheduledFutureTask> uncancellableUpdater =
+                AtomicIntegerFieldUpdater.newUpdater(ScheduledFutureTask.class, "uncancellable");
+
         private final long id = nextTaskId.getAndIncrement();
         private long deadlineNanos;
         /* 0 - no repeat, >0 - repeat at fixed rate, <0 - repeat with fixed delay */
         private final long periodNanos;
         private final TaskScheduler scheduler;
 
-        private final AtomicBoolean cancellable = new AtomicBoolean(true);
+        @SuppressWarnings("UnusedDeclaration")
+        private volatile int uncancellable;
 
         ScheduledFutureTask(TaskScheduler scheduler, EventExecutor executor,
                             Runnable runnable, V result, long nanoTime) {
@@ -395,10 +400,20 @@ public final class TaskScheduler {
         }
 
         @Override
+        public int hashCode() {
+            return super.hashCode();
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return super.equals(obj);
+        }
+
+        @Override
         public void run() {
             try {
                 if (periodNanos == 0) {
-                    if (cancellable.compareAndSet(true, false)) {
+                    if (setUncancellable()) {
                         V result = task.call();
                         setSuccessInternal(result);
                     }
@@ -432,11 +447,15 @@ public final class TaskScheduler {
         @Override
         public  boolean cancel(boolean mayInterruptIfRunning) {
             if (!isDone()) {
-                if (cancellable.compareAndSet(true, false)) {
+                if (setUncancellable()) {
                     return tryFailureInternal(new CancellationException());
                 }
             }
             return false;
+        }
+
+        private boolean setUncancellable() {
+            return uncancellableUpdater.compareAndSet(this, 0, 1);
         }
     }
 

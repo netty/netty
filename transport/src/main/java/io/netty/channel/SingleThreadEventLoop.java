@@ -15,9 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
-import io.netty.util.concurrent.TaskScheduler;
 
 import java.util.concurrent.ThreadFactory;
 
@@ -27,13 +25,9 @@ import java.util.concurrent.ThreadFactory;
  */
 public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor implements EventLoop {
 
-    /**
-     *
-     * @see SingleThreadEventExecutor#SingleThreadEventExecutor(EventExecutorGroup, ThreadFactory, TaskScheduler)
-     */
     protected SingleThreadEventLoop(
-            EventLoopGroup parent, ThreadFactory threadFactory, TaskScheduler scheduler) {
-        super(parent, threadFactory, scheduler);
+            EventLoopGroup parent, ThreadFactory threadFactory) {
+        super(parent, threadFactory);
     }
 
     @Override

@@ -26,7 +26,7 @@ public class ThreadPerChannelEventLoop extends SingleThreadEventLoop {
     private Channel ch;
 
     public ThreadPerChannelEventLoop(ThreadPerChannelEventLoopGroup parent) {
-        super(parent, parent.threadFactory, parent.scheduler);
+        super(parent, parent.threadFactory);
         this.parent = parent;
     }
 
