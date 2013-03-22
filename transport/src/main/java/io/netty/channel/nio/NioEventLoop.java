@@ -134,12 +134,6 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         return new ConcurrentLinkedQueue<Runnable>();
     }
 
-    @Override
-    protected boolean hasTasks() {
-        // ConcurrentLinkedQueue.isEmpty() is not accurate enough when tasks are added from different threads.
-        return peekTask() != null;
-    }
-
     /**
      * Registers an arbitrary {@link SelectableChannel}, not necessarily created by Netty, to the {@link Selector}
      * of this event loop.  Once the specified {@link SelectableChannel} is registered, the specified {@code task} will
