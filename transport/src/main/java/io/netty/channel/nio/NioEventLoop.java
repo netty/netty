@@ -77,7 +77,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             }
         }
 
-        int selectorAutoRebuildThreshold = SystemPropertyUtil.getInt("io.netty.selectorAutoRebuildThreshold", 16);
+        int selectorAutoRebuildThreshold = SystemPropertyUtil.getInt("io.netty.selectorAutoRebuildThreshold", 512);
         if (selectorAutoRebuildThreshold < MIN_PREMATURE_SELECTOR_RETURNS) {
             selectorAutoRebuildThreshold = 0;
         }
@@ -108,7 +108,6 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     private volatile int ioRatio = 50;
     private int cancelledKeys;
     private boolean needsToSelectAgain;
-    private int prematureSelectorReturns;
 
     NioEventLoop(
             NioEventLoopGroup parent, ThreadFactory threadFactory, SelectorProvider selectorProvider) {
@@ -121,7 +120,6 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     }
 
     private Selector openSelector() {
-        resetPrematureSelectorReturns();
         try {
             return provider.openSelector();
         } catch (IOException e) {
@@ -548,9 +546,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     void selectNow() throws IOException {
         try {
-            if (selector.selectNow() != 0) {
-                resetPrematureSelectorReturns();
-            }
+            selector.selectNow();
         } finally {
             // restore wakup state if needed
             if (wakenUp.get()) {
@@ -561,48 +557,52 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     private void select() throws IOException {
         Selector selector = this.selector;
-        long delayMillis = delayMillis();
         try {
-            if (delayMillis > 0) {
-                long startTimeNanos = System.nanoTime();
-                if (selector.select(delayMillis) == 0) {
-                    if (oldWakenUp || wakenUp.get() || hasTasks()) {
-                        // Waken up by user or the task queue has a pending task.
-                        return;
+            int selectCnt = 0;
+            long currentTimeNanos = System.nanoTime();
+            long selectDeadLineNanos = currentTimeNanos + delayNanos(currentTimeNanos);
+            for (;;) {
+                long timeoutMillis = (selectDeadLineNanos - currentTimeNanos + 500000L) / 1000000L;
+                if (timeoutMillis <= 0) {
+                    if (selectCnt == 0) {
+                        selector.selectNow();
+                        selectCnt = 1;
                     }
-
-                    long delayNanos = delayNanos();
-                    if (delayNanos <= 0) {
-                        // Waken up to handle a delayed task.
-                        return;
-                    }
-
-                    if (System.nanoTime() - startTimeNanos < delayNanos >>> 1) {
-                        // Returned way before the specified timeout with no selected keys.
-                        // This may be because of the JDK /dev/epoll bug - increment the counter.
-                        prematureSelectorReturns ++;
-                        if (SELECTOR_AUTO_REBUILD_THRESHOLD > 0 &&
-                            prematureSelectorReturns >= SELECTOR_AUTO_REBUILD_THRESHOLD) {
-                            // The selector returned prematurely many times in a row.
-                            // Rebuild the selector to work around the problem.
-                            logger.warn(
-                                    "Selector.select() returned prematurely {} times in a row; rebuilding selector.",
-                                    prematureSelectorReturns);
-
-                            rebuildSelector();
-
-                            // Select again to populate selectedKeys.
-                            selector.selectNow();
-                        }
-                    } else {
-                        resetPrematureSelectorReturns();
-                    }
-                } else {
-                    resetPrematureSelectorReturns();
+                    break;
                 }
-            } else {
-                if (selector.selectNow() != 0) {
-                    resetPrematureSelectorReturns();
+
+                int selectedKeys = selector.select(timeoutMillis);
+                selectCnt ++;
+
+                if (selectedKeys != 0 || oldWakenUp || wakenUp.get() || hasTasks()) {
+                    // Selected something,
+                    // waken up by user, or
+                    // the task queue has a pending task.
+                    break;
+                }
+
+                if (SELECTOR_AUTO_REBUILD_THRESHOLD > 0 &&
+                        selectCnt >= SELECTOR_AUTO_REBUILD_THRESHOLD) {
+                    // The selector returned prematurely many times in a row.
+                    // Rebuild the selector to work around the problem.
+                    logger.warn(
+                            "Selector.select() returned prematurely {} times in a row; rebuilding selector.",
+                            selectCnt);
+
+                    rebuildSelector();
+
+                    // Select again to populate selectedKeys.
+                    selector.selectNow();
+                    selectCnt = 1;
+                    break;
+                }
+
+                currentTimeNanos = System.nanoTime();
+            }
+
+            if (selectCnt > MIN_PREMATURE_SELECTOR_RETURNS) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Selector.select() returned prematurely {} times in a row.", selectCnt - 1);
                 }
             }
         } catch (CancelledKeyException e) {
@@ -616,21 +616,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     private void selectAgain() {
         needsToSelectAgain = false;
         try {
-            if (selector.selectNow() != 0) {
-                resetPrematureSelectorReturns();
-            }
+            selector.selectNow();
         } catch (Throwable t) {
             logger.warn("Failed to update SelectionKeys.", t);
-        }
-    }
-
-    private void resetPrematureSelectorReturns() {
-        int prematureSelectorReturns = this.prematureSelectorReturns;
-        if (prematureSelectorReturns >= MIN_PREMATURE_SELECTOR_RETURNS) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("Selector.select() returned prematurely {} times in a row.", prematureSelectorReturns);
-            }
-            this.prematureSelectorReturns = 0;
         }
     }
 }

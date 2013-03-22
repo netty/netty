@@ -352,26 +352,13 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
     /**
      * Returns the ammount of time left until the scheduled task with the closest dead line is executed.
      */
-    protected long delayNanos() {
+    protected long delayNanos(long currentTimeNanos) {
         ScheduledFutureTask<?> delayedTask = delayedTaskQueue.peek();
         if (delayedTask == null) {
             return SCHEDULE_PURGE_INTERVAL;
         }
 
-        return delayedTask.delayNanos();
-    }
-
-    /**
-     * Returns the ammount of time left until the scheduled task with the closest dead line is executed.
-     */
-    protected long delayMillis() {
-        long delayNanos = delayNanos();
-        long delayMillis = delayNanos / 1000000L;
-        if (delayNanos % 1000000L < 500000L) {
-            return delayMillis;
-        } else {
-            return delayMillis + 1;
-        }
+        return delayedTask.delayNanos(currentTimeNanos);
     }
 
     /**
@@ -761,6 +748,10 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
 
         public long delayNanos() {
             return Math.max(0, deadlineNanos() - nanoTime());
+        }
+
+        public long delayNanos(long currentTimeNanos) {
+            return Math.max(0, deadlineNanos() - (currentTimeNanos - START_TIME));
         }
 
         @Override
