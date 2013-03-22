@@ -56,8 +56,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     private static final int CLEANUP_INTERVAL = 256; // XXX Hard-coded value, but won't need customization.
 
-    private static final int SELECTOR_AUTO_REBUILD_THRESHOLD =
-            SystemPropertyUtil.getInt("io.netty.selectorAutoRebuildThreshold", 16);
+    private static final int SELECTOR_AUTO_REBUILD_THRESHOLD;
 
     // Workaround for JDK NIO bug.
     //
@@ -76,6 +75,13 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 logger.debug("Unable to get/set System Property '" + key + '\'', e);
             }
         }
+
+        int selectorAutoRebuildThreshold = SystemPropertyUtil.getInt("io.netty.selectorAutoRebuildThreshold", 16);
+        if (selectorAutoRebuildThreshold < 2) {
+            selectorAutoRebuildThreshold = 0;
+        }
+
+        SELECTOR_AUTO_REBUILD_THRESHOLD = selectorAutoRebuildThreshold;
 
         if (logger.isDebugEnabled()) {
             logger.debug("Selector auto-rebuild threshold: {}", SELECTOR_AUTO_REBUILD_THRESHOLD);
@@ -96,6 +102,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
      * waken up.
      */
     private final AtomicBoolean wakenUp = new AtomicBoolean();
+    private boolean oldWakenUp;
 
     private volatile int ioRatio = 50;
     private int cancelledKeys;
@@ -125,6 +132,12 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     protected Queue<Runnable> newTaskQueue() {
         // This event loop never calls takeTask()
         return new ConcurrentLinkedQueue<Runnable>();
+    }
+
+    @Override
+    protected boolean hasTasks() {
+        // ConcurrentLinkedQueue.isEmpty() is not accurate enough when tasks are added from different threads.
+        return peekTask() != null;
     }
 
     /**
@@ -275,8 +288,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     @Override
     protected void run() {
         for (;;) {
-            wakenUp.set(false);
-
+            oldWakenUp = wakenUp.getAndSet(false);
             try {
                 if (hasTasks()) {
                     selectNow();
@@ -559,7 +571,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             if (delayMillis > 0) {
                 long startTimeNanos = System.nanoTime();
                 if (selector.select(delayMillis) == 0) {
-                    if (wakenUp.get() || hasTasks()) {
+                    if (oldWakenUp || wakenUp.get() || hasTasks()) {
                         // Waken up by user or the task queue has a pending task.
                         return;
                     }
@@ -581,8 +593,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                             logger.warn(
                                     "Selector.select() returned prematurely {} times in a row; rebuilding selector.",
                                     prematureSelectorReturns);
+
                             rebuildSelector();
-                            selector = this.selector;
 
                             // Select again to populate selectedKeys.
                             selector.selectNow();
@@ -591,7 +603,6 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                         resetPrematureSelectorReturns();
                     }
                 } else {
-                    // reset counter
                     resetPrematureSelectorReturns();
                 }
             } else {
@@ -601,9 +612,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             }
         } catch (CancelledKeyException e) {
             if (logger.isDebugEnabled()) {
-                logger.debug(
-                        CancelledKeyException.class.getSimpleName() +
-                                " raised by a Selector - JDK bug?", e);
+                logger.debug(CancelledKeyException.class.getSimpleName() + " raised by a Selector - JDK bug?", e);
             }
             // Harmless exception - log anyway
         }
@@ -622,7 +631,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     private void resetPrematureSelectorReturns() {
         int prematureSelectorReturns = this.prematureSelectorReturns;
-        if (prematureSelectorReturns != 0) {
+        if (prematureSelectorReturns > 1) {
             if (logger.isWarnEnabled()) {
                 logger.warn("Selector.select() returned prematurely {} times in a row.", prematureSelectorReturns);
             }
