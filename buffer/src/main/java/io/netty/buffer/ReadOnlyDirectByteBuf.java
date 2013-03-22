@@ -40,8 +40,9 @@ class ReadOnlyDirectByteBuf extends AbstractReferenceCountedByteBuf {
     public ReadOnlyDirectByteBuf(ByteBufAllocator allocator, ByteBuffer buffer) {
         super(buffer.remaining());
         if (!buffer.isDirect()) {
-            throw new IllegalArgumentException("buffer must be readOnly");
+            throw new IllegalArgumentException("must be a direct buffer: " + buffer.getClass().getSimpleName());
         }
+
         this.allocator = allocator;
         this.buffer = buffer.slice().order(ByteOrder.BIG_ENDIAN);
         writerIndex(buffer.limit());
