@@ -20,7 +20,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.util.concurrent.AbstractEventExecutorWithoutScheduler;
+import io.netty.util.concurrent.AbstractEventExecutor;
 
 import java.util.ArrayDeque;
 import java.util.Collections;
@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 
-final class EmbeddedEventLoop extends AbstractEventExecutorWithoutScheduler implements EventLoop {
+final class EmbeddedEventLoop extends AbstractEventExecutor implements EventLoop {
 
     private final Queue<Runnable> tasks = new ArrayDeque<Runnable>(2);
 

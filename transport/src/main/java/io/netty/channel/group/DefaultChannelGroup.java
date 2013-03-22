@@ -21,7 +21,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.FileRegion;
 import io.netty.channel.ServerChannel;
-import io.netty.util.concurrent.AbstractEventExecutorWithoutScheduler;
+import io.netty.util.concurrent.AbstractEventExecutor;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.internal.PlatformDependent;
@@ -313,7 +313,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
                "(name: " + name() + ", size: " + size() + ')';
     }
 
-    static final class ImmediateEventExecutor extends AbstractEventExecutorWithoutScheduler {
+    static final class ImmediateEventExecutor extends AbstractEventExecutor {
 
         @Override
         public EventExecutorGroup parent() {

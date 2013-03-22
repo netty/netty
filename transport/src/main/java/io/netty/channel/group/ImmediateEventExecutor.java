@@ -15,7 +15,7 @@
  */
 package io.netty.channel.group;
 
-import io.netty.util.concurrent.AbstractEventExecutorWithoutScheduler;
+import io.netty.util.concurrent.AbstractEventExecutor;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
@@ -25,7 +25,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-final class ImmediateEventExecutor extends AbstractEventExecutorWithoutScheduler {
+final class ImmediateEventExecutor extends AbstractEventExecutor {
 
     @Override
     public EventExecutorGroup parent() {
