@@ -56,6 +56,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     private static final int CLEANUP_INTERVAL = 256; // XXX Hard-coded value, but won't need customization.
 
+    private static final int MIN_PREMATURE_SELECTOR_RETURNS = 3;
     private static final int SELECTOR_AUTO_REBUILD_THRESHOLD;
 
     // Workaround for JDK NIO bug.
@@ -77,7 +78,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
 
         int selectorAutoRebuildThreshold = SystemPropertyUtil.getInt("io.netty.selectorAutoRebuildThreshold", 16);
-        if (selectorAutoRebuildThreshold < 2) {
+        if (selectorAutoRebuildThreshold < MIN_PREMATURE_SELECTOR_RETURNS) {
             selectorAutoRebuildThreshold = 0;
         }
 
@@ -625,9 +626,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     private void resetPrematureSelectorReturns() {
         int prematureSelectorReturns = this.prematureSelectorReturns;
-        if (prematureSelectorReturns > 1) {
-            if (logger.isWarnEnabled()) {
-                logger.warn("Selector.select() returned prematurely {} times in a row.", prematureSelectorReturns);
+        if (prematureSelectorReturns >= MIN_PREMATURE_SELECTOR_RETURNS) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Selector.select() returned prematurely {} times in a row.", prematureSelectorReturns);
             }
             this.prematureSelectorReturns = 0;
         }
