@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * Abstract base class for {@link EventExecutor}'s that execute all its submitted tasks in a single thread.
  *
  */
-public abstract class SingleThreadEventExecutor extends AbstractEventExecutorWithoutScheduler {
+public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(SingleThreadEventExecutor.class);

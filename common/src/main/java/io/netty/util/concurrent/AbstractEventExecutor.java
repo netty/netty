@@ -15,41 +15,80 @@
  */
 package io.netty.util.concurrent;
 
+import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.Callable;
+import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.TimeUnit;
 
-
 /**
- * Abstract base class for {@link EventExecutor} implementations that use a {@link TaskScheduler} to support
- * scheduling tasks.
+ * Abstract base class for {@link EventExecutor} implementations.
  */
-public abstract class AbstractEventExecutor extends AbstractEventExecutorWithoutScheduler {
-    private final TaskScheduler scheduler;
+public abstract class AbstractEventExecutor extends AbstractExecutorService implements EventExecutor {
 
-    protected AbstractEventExecutor(TaskScheduler scheduler) {
-        if (scheduler == null) {
-            throw new NullPointerException("scheduler");
-        }
-        this.scheduler = scheduler;
+    @Override
+    public EventExecutor next() {
+        return this;
     }
 
     @Override
-    public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-        return scheduler.schedule(this, command, delay, unit);
+    public <V> Promise<V> newPromise() {
+        return new DefaultPromise<V>(this);
+    }
+
+    @Override
+    public <V> Future<V> newSucceededFuture(V result) {
+        return new SucceededFuture<V>(this, result);
+    }
+
+    @Override
+    public <V> Future<V> newFailedFuture(Throwable cause) {
+        return new FailedFuture<V>(this, cause);
+    }
+
+    @Override
+    public Future<?> submit(Runnable task) {
+        return (Future<?>) super.submit(task);
+    }
+
+    @Override
+    public <T> Future<T> submit(Runnable task, T result) {
+        return (Future<T>) super.submit(task, result);
+    }
+
+    @Override
+    public <T> Future<T> submit(Callable<T> task) {
+        return (Future<T>) super.submit(task);
+    }
+
+    @Override
+    protected final <T> RunnableFuture<T> newTaskFor(Runnable runnable, T value) {
+        return new PromiseTask<T>(this, runnable, value);
+    }
+
+    @Override
+    protected final <T> RunnableFuture<T> newTaskFor(Callable<T> callable) {
+        return new PromiseTask<T>(this, callable);
+    }
+
+    @Override
+    public ScheduledFuture<?> schedule(Runnable command, long delay,
+                                       TimeUnit unit) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-        return scheduler.schedule(this, callable, delay, unit);
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
-        return scheduler.scheduleAtFixedRate(this, command, initialDelay, period, unit);
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
-        return scheduler.scheduleWithFixedDelay(this, command, initialDelay, delay, unit);
+        throw new UnsupportedOperationException();
     }
+
 }
