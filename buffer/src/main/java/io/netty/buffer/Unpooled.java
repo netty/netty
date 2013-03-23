@@ -877,6 +877,13 @@ public final class Unpooled {
         return buffer;
     }
 
+    /**
+     * Return a unreleasable view on the given {@link ByteBuf} which will just ignore release and retain calls.
+     */
+    public static ByteBuf unreleasableBuffer(ByteBuf buf) {
+        return new UnreleasableByteBuf(buf);
+    }
+
     private Unpooled() {
         // Unused
     }
