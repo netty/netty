@@ -421,6 +421,7 @@ public class HttpPostRequestDecoder {
         }
         datas.add(data);
         bodyListHttpData.add(data);
+        this.httpDataAdded(data);
     }
 
     /**
@@ -1149,6 +1150,7 @@ public class HttpPostRequestDecoder {
                         nameAttribute.getValue(), filenameAttribute.getValue(),
                         contentTypeAttribute.getValue(), mechanism.value(),
                         localCharset, size);
+                this.fileUploadStarted(currentFileUpload);
             } catch (NullPointerException e) {
                 throw new ErrorDataDecoderException(e);
             } catch (IllegalArgumentException e) {
@@ -1563,6 +1565,7 @@ public class HttpPostRequestDecoder {
         }
         ChannelBuffer buffer = undecodedChunk.slice(readerIndex, lastPosition -
                 readerIndex);
+        httpChunkReceived(buffer);
         if (found) {
             // found so lastPosition is correct and final
             try {
@@ -1677,6 +1680,7 @@ public class HttpPostRequestDecoder {
         }
         lastPosition = sao.getReadPosition(lastrealpos);
         ChannelBuffer buffer = undecodedChunk.slice(readerIndex, lastPosition - readerIndex);
+        httpChunkReceived(buffer);
         if (found) {
             // found so lastPosition is correct and final
             try {
@@ -1951,6 +1955,33 @@ public class HttpPostRequestDecoder {
         undecodedChunk.readerIndex(undecodedChunk.readerIndex() - 1);
         return false;
     }
+
+    /**
+     *
+     * Callback to be used by subclasses when they want to receive http processing events.
+     *
+     * @param data
+     */
+
+    protected void httpDataAdded( InterfaceHttpData data ) {}
+
+    /**
+     *
+     * Callback for subclasses to know that a file upload action has started.
+     *
+     * @param fileUpload
+     */
+
+    protected void fileUploadStarted( FileUpload fileUpload ) {}
+
+    /**
+     *
+     * Callback for subclasses when file upload data is read.
+     *
+     * @param buffer
+     */
+
+    protected void httpChunkReceived( ChannelBuffer buffer ) {}
 
     /**
      * Split the very first line (Content-Type value) in 2 Strings
