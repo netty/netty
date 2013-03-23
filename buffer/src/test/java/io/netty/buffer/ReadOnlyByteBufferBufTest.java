@@ -15,25 +15,11 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.internal.PlatformDependent;
-import org.junit.BeforeClass;
-
 import java.nio.ByteBuffer;
 
-import static org.junit.Assume.assumeTrue;
-
-public class ReadOnlyUnsafeDirectByteBufTest extends ReadOnlyDirectByteBufTest {
-
-    /**
-     * Needs unsafe to run
-     */
-    @BeforeClass
-    public static void assumeConditions(){
-        assumeTrue(PlatformDependent.hasUnsafe());
-    }
-
+public class ReadOnlyByteBufferBufTest extends ReadOnlyDirectByteBufferBufTest {
     @Override
-    protected ByteBuf buffer(ByteBuffer buffer) {
-        return new ReadOnlyUnsafeDirectByteBuf(UnpooledByteBufAllocator.DEFAULT, buffer);
+    protected ByteBuffer allocate(int size) {
+        return ByteBuffer.allocate(size);
     }
 }

@@ -28,19 +28,19 @@ import java.nio.channels.ScatteringByteChannel;
 
 
 /**
- * Read-only ByteBuf which wraps a read-only direct ByteBuffer.
+ * Read-only ByteBuf which wraps a read-only ByteBuffer.
  */
-class ReadOnlyDirectByteBuf extends AbstractReferenceCountedByteBuf {
+class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
     private final ResourceLeak leak = leakDetector.open(this);
 
     protected final ByteBuffer buffer;
     private final ByteBufAllocator allocator;
     private ByteBuffer tmpNioBuf;
 
-    public ReadOnlyDirectByteBuf(ByteBufAllocator allocator, ByteBuffer buffer) {
+    public ReadOnlyByteBufferBuf(ByteBufAllocator allocator, ByteBuffer buffer) {
         super(buffer.remaining());
-        if (!buffer.isDirect()) {
-            throw new IllegalArgumentException("must be a direct buffer: " + buffer.getClass().getSimpleName());
+        if (!buffer.isReadOnly()) {
+            throw new IllegalArgumentException("must be a readonly buffer: " + buffer.getClass().getSimpleName());
         }
 
         this.allocator = allocator;
@@ -208,7 +208,7 @@ class ReadOnlyDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public boolean isDirect() {
-        return true;
+        return buffer.isDirect();
     }
 
     @Override
@@ -293,17 +293,17 @@ class ReadOnlyDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public boolean hasArray() {
-        return false;
+        return buffer.hasArray();
     }
 
     @Override
     public byte[] array() {
-        throw new UnsupportedOperationException("direct buffer");
+        return buffer.array();
     }
 
     @Override
     public int arrayOffset() {
-        throw new UnsupportedOperationException("direct buffer");
+        return buffer.arrayOffset();
     }
 
     @Override

@@ -26,7 +26,7 @@ import java.nio.ByteOrder;
 /**
  * Read-only ByteBuf which wraps a read-only direct ByteBuffer and use unsafe for best performance.
  */
-final class ReadOnlyUnsafeDirectByteBuf extends ReadOnlyDirectByteBuf {
+final class ReadOnlyUnsafeDirectByteBuf extends ReadOnlyByteBufferBuf {
     private static final boolean NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
     private final long memoryAddress;
 

@@ -224,13 +224,17 @@ public final class Unpooled {
                     buffer.remaining()).order(buffer.order());
         } else if (PlatformDependent.hasUnsafe()) {
             if (buffer.isReadOnly()) {
-                return new ReadOnlyUnsafeDirectByteBuf(ALLOC, buffer);
+                if (buffer.isDirect()) {
+                    return new ReadOnlyUnsafeDirectByteBuf(ALLOC, buffer);
+                } else {
+                    return new ReadOnlyByteBufferBuf(ALLOC, buffer);
+                }
             } else {
                 return new UnpooledUnsafeDirectByteBuf(ALLOC, buffer, buffer.remaining());
             }
         } else {
             if (buffer.isReadOnly()) {
-                return new ReadOnlyDirectByteBuf(ALLOC, buffer);
+                return new ReadOnlyByteBufferBuf(ALLOC, buffer);
             }  else {
                 return new UnpooledDirectByteBuf(ALLOC, buffer, buffer.remaining());
             }
