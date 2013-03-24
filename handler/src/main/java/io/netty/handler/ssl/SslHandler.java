@@ -314,13 +314,19 @@ public class SslHandler
             timeoutFuture = null;
         }
 
+        promise.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture f) throws Exception {
+                if (timeoutFuture != null) {
+                    timeoutFuture.cancel(false);
+                }
+            }
+        });
+
         ctx.executor().execute(new Runnable() {
             @Override
             public void run() {
                 try {
-                    if (timeoutFuture != null) {
-                        timeoutFuture.cancel(false);
-                    }
                     engine.beginHandshake();
                     handshakePromises.add(promise);
                     flush0(ctx, ctx.newPromise(), true);
