@@ -28,6 +28,9 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
     /**
      * Add the given {@link ByteBuf}.
      *
+     * Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuf}.
+     * If you need to have it increased you need to handle it by your own.
+     *
      * @param buffer    the {@link ByteBuf} to add
      * @return self     this instance
      */
@@ -35,6 +38,9 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
 
     /**
      * Add the given {@link ByteBuf} on the specific index.
+     *
+     * Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuf}.
+     * If you need to have it increased you need to handle it by your own.
      *
      * @param cIndex
      *          the index on which the {@link ByteBuf} will be added
@@ -50,6 +56,9 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
     /**
      * Add the given {@link ByteBuf}s.
      *
+     * Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuf}.
+     * If you need to have it increased you need to handle it by your own.
+     *
      * @param buffers   the {@link ByteBuf}s to add
      * @return self     this instance
      */
@@ -58,6 +67,9 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
     /**
      * Add the given {@link ByteBuf}s.
      *
+     * Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuf}.
+     * If you need to have it increased you need to handle it by your own.
+     *
      * @param buffers   the {@link ByteBuf}s to add
      * @return self     this instance
      */
@@ -65,6 +77,9 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
 
     /**
      * Add the given {@link ByteBuf}s on the specific index
+     *
+     * Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuf}.
+     * If you need to have it increased you need to handle it by your own.
      *
      * @param cIndex
      *          the index on which the {@link ByteBuf} will be added.
@@ -80,6 +95,9 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
 
     /**
      * Add the given {@link ByteBuf}s on the specific index
+     *
+     * Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuf}.
+     * If you need to have it increased you need to handle it by your own.
      *
      * @param cIndex
      *          the index on which the {@link ByteBuf} will be added.
