@@ -211,7 +211,6 @@ public class HttpPostRequestDecoder {
             offer((HttpContent) request);
         } else {
             undecodedChunk = buffer();
-            isLastChunk = true;
             parseBody();
         }
     }
