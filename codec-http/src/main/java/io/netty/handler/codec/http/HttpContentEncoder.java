@@ -143,6 +143,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
 
                 if (result == null) {
                     if (c instanceof LastHttpContent) {
+                        encodeStarted = false;
                         return new Object[] { message, new DefaultLastHttpContent(c.data().retain()) };
                     } else {
                         return new Object[] { message, new DefaultHttpContent(c.data().retain()) };
@@ -174,6 +175,10 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
 
             if (encoder != null) {
                 return encodeContent(null, c);
+            }
+
+            if (c instanceof LastHttpContent) {
+                encodeStarted = false;
             }
 
             return c.retain();
