@@ -115,12 +115,19 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                     return decoded;
                 }
 
+                if (c instanceof LastHttpContent) {
+                    decodeStarted = false;
+                }
+
                 return new Object[] { message, c.retain() };
             }
 
             if (decoder != null) {
                 return decodeContent(null, c);
             } else {
+                if (c instanceof LastHttpContent) {
+                    decodeStarted = false;
+                }
                 return c.retain();
             }
         }
@@ -213,6 +220,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
         if (decoder.finish()) {
             fetchDecoderOutput(out);
         }
+        decodeStarted = false;
         decoder = null;
     }
 
