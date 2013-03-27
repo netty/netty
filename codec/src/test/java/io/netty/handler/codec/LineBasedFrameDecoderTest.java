@@ -28,18 +28,17 @@ public class LineBasedFrameDecoderTest {
         EmbeddedByteChannel ch = new EmbeddedByteChannel(new LineBasedFrameDecoder(8192, true, false));
 
         ch.writeInbound(Unpooled.copiedBuffer("first\r\nsecond\nthird", CharsetUtil.US_ASCII));
-        Assert.assertEquals("first", ((ByteBuf)ch.readInbound()).toString(CharsetUtil.US_ASCII));
-        Assert.assertEquals("second", ((ByteBuf)ch.readInbound()).toString(CharsetUtil.US_ASCII));
+        Assert.assertEquals("first", ((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
+        Assert.assertEquals("second", ((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
         Assert.assertNull(ch.readInbound());
-
     }
     @Test
     public void testDecodeWithoutStrip() throws Exception {
         EmbeddedByteChannel ch = new EmbeddedByteChannel(new LineBasedFrameDecoder(8192, false, false));
 
         ch.writeInbound(Unpooled.copiedBuffer("first\r\nsecond\nthird", CharsetUtil.US_ASCII));
-        Assert.assertEquals("first\r\n", ((ByteBuf)ch.readInbound()).toString(CharsetUtil.US_ASCII));
-        Assert.assertEquals("second\n", ((ByteBuf)ch.readInbound()).toString(CharsetUtil.US_ASCII));
+        Assert.assertEquals("first\r\n", ((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
+        Assert.assertEquals("second\n", ((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
         Assert.assertNull(ch.readInbound());
     }
 }

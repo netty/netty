@@ -50,7 +50,7 @@ import java.util.TreeSet;
  */
 public final class CaliperRunner {
 
-    private final static InternalLogger log = InternalLoggerFactory.getInstance(CaliperRunner.class);
+    private static final InternalLogger log = InternalLoggerFactory.getInstance(CaliperRunner.class);
 
     private CaliperRunner() {
     }

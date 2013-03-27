@@ -41,7 +41,7 @@ public class ConsolidationTest {
     public void shouldConsolidationInSequence() {
         ByteBuf currentBuffer = wrappedBuffer(wrappedBuffer("a".getBytes()), wrappedBuffer("=".getBytes()));
         currentBuffer = wrappedBuffer(currentBuffer, wrappedBuffer("1".getBytes()), wrappedBuffer("&".getBytes()));
-        
+
         currentBuffer = wrappedBuffer(currentBuffer, wrappedBuffer("b".getBytes()), wrappedBuffer("=".getBytes()));
         currentBuffer = wrappedBuffer(currentBuffer, wrappedBuffer("2".getBytes()), wrappedBuffer("&".getBytes()));
 
@@ -60,5 +60,5 @@ public class ConsolidationTest {
 
         currentBuffer.release();
         copy.release();
-    }    
+    }
 }

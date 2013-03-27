@@ -25,7 +25,7 @@ import static org.junit.Assert.*;
 
 public class SnappyFramedEncoderTest {
     private EmbeddedByteChannel channel;
-    
+
     @Before
     public void setUp() {
         channel = new EmbeddedByteChannel(new SnappyFramedEncoder());
@@ -85,7 +85,7 @@ public class SnappyFramedEncoderTest {
         });
         assertEquals(expected, channel.readOutbound());
     }
-    
+
     /**
      * This test asserts that if we have a remainder after emitting a copy that
      * is less than 4 bytes (ie. the minimum required for a copy), we should
@@ -127,7 +127,7 @@ public class SnappyFramedEncoderTest {
              -1,   -1,   -1, // copy
              -1,   1 // remainder
         });
-        
+
         channel.writeOutbound(in);
         assertTrue(channel.finish());
     }

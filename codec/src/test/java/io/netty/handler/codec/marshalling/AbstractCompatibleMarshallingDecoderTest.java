@@ -121,12 +121,12 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
     }
 
     protected ChannelHandler createDecoder(int maxObjectSize) {
-        return new CompatibleMarshallingDecoder(createProvider(createMarshallerFactory(), createMarshallingConfig()), maxObjectSize);
+        return new CompatibleMarshallingDecoder(createProvider(createMarshallerFactory(),
+                createMarshallingConfig()), maxObjectSize);
     }
 
     protected UnmarshallerProvider createProvider(MarshallerFactory factory, MarshallingConfiguration config) {
         return new DefaultUnmarshallerProvider(factory, config);
-
     }
 
     protected abstract MarshallerFactory createMarshallerFactory();

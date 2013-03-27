@@ -63,7 +63,6 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         testSslEcho0(sb, cb, false);
     }
 
-
     @Test
     public void testSslEchoWithChunkHandler() throws Throwable {
         run();

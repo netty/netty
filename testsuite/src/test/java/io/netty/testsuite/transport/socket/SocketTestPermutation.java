@@ -200,7 +200,7 @@ final class SocketTestPermutation {
         return list;
     }
 
-    private SocketTestPermutation() {}
+    private SocketTestPermutation() { }
 
     interface Factory<T> {
         T newInstance();

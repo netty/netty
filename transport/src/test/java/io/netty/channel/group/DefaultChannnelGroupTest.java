@@ -25,7 +25,6 @@ import org.junit.Test;
 
 public class DefaultChannnelGroupTest {
 
-
     // Test for #1183
     @Test
     public void testNotThrowBlockingOperationException() {

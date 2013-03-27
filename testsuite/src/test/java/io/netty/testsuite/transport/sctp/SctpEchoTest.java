@@ -41,7 +41,7 @@ import static org.junit.Assert.*;
 public class SctpEchoTest extends AbstractSctpTest {
 
     private static final Random random = new Random();
-    static final byte[] data = new byte[4096];//could not test ultra jumbo frames
+    static final byte[] data = new byte[4096]; //could not test ultra jumbo frames
 
     static {
         random.nextBytes(data);
@@ -95,7 +95,7 @@ public class SctpEchoTest extends AbstractSctpTest {
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.connect().sync().channel();
 
-        for (int i = 0; i < data.length; ) {
+        for (int i = 0; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
             cc.write(Unpooled.wrappedBuffer(data, i, length));
             i += length;

@@ -37,7 +37,6 @@ public class HttpRequestEncoderTest {
         assertEquals("GET http://localhost/ HTTP/1.1\r\n", req);
     }
 
-
     @Test
     public void testUriWithPath() throws Exception {
         HttpRequestEncoder encoder = new HttpRequestEncoder();

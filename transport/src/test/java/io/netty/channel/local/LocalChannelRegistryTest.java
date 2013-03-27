@@ -57,7 +57,6 @@ public class LocalChannelRegistryTest {
                   }
               });
 
-
             // Start server
             Channel sc = sb.bind(addr).sync().channel();
 

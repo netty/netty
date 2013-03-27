@@ -110,7 +110,6 @@ public class LocalTransportThreadModelTest2 {
 
         // Wait until the connection is closed or the connection attempt fails.
         localChannel.closeFuture().awaitUninterruptibly();
-
     }
 
     @Sharable
@@ -123,7 +122,6 @@ public class LocalTransportThreadModelTest2 {
 
         public LocalHander(String name) {
             this.name = name;
-
         }
 
         @Override

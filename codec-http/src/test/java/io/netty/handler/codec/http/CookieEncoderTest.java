@@ -58,7 +58,8 @@ public class CookieEncoderTest {
 
     @Test
     public void testEncodingSingleCookieV1() {
-        String result = "myCookie=myValue; Max-Age=50; Path=\"/apathsomewhere\"; Domain=.adomainsomewhere; Secure; Comment=\"this is a Comment\"; Version=1";
+        String result = "myCookie=myValue; Max-Age=50; Path=\"/apathsomewhere\"; " +
+                "Domain=.adomainsomewhere; Secure; Comment=\"this is a Comment\"; Version=1";
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
         cookie.setVersion(1);
         cookie.setComment("this is a Comment");
@@ -72,7 +73,9 @@ public class CookieEncoderTest {
 
     @Test
     public void testEncodingSingleCookieV2() {
-        String result = "myCookie=myValue; Max-Age=50; Path=\"/apathsomewhere\"; Domain=.adomainsomewhere; Secure; Comment=\"this is a Comment\"; Version=1; CommentURL=\"http://aurl.com\"; Port=\"80,8080\"; Discard";
+        String result = "myCookie=myValue; Max-Age=50; Path=\"/apathsomewhere\"; Domain=.adomainsomewhere; " +
+                "Secure; Comment=\"this is a Comment\"; Version=1; CommentURL=\"http://aurl.com\"; " +
+                "Port=\"80,8080\"; Discard";
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
         cookie.setVersion(1);
         cookie.setComment("this is a Comment");
@@ -89,8 +92,10 @@ public class CookieEncoderTest {
 
     @Test
     public void testEncodingMultipleClientCookies() {
-        String c1 = "$Version=1; myCookie=myValue; $Path=\"/apathsomewhere\"; $Domain=.adomainsomewhere; $Port=\"80,8080\"; ";
-        String c2 = "$Version=1; myCookie2=myValue2; $Path=\"/anotherpathsomewhere\"; $Domain=.anotherdomainsomewhere; ";
+        String c1 = "$Version=1; myCookie=myValue; $Path=\"/apathsomewhere\"; " +
+                "$Domain=.adomainsomewhere; $Port=\"80,8080\"; ";
+        String c2 = "$Version=1; myCookie2=myValue2; $Path=\"/anotherpathsomewhere\"; " +
+                "$Domain=.anotherdomainsomewhere; ";
         String c3 = "$Version=1; myCookie3=myValue3";
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
         cookie.setVersion(1);

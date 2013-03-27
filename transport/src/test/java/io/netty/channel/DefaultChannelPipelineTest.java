@@ -124,7 +124,7 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test
-    public void testFreeCalled() throws InterruptedException{
+    public void testFreeCalled() throws InterruptedException {
         final CountDownLatch free = new CountDownLatch(1);
 
         final ReferenceCounted holder = new ReferenceCounted() {
@@ -194,7 +194,6 @@ public class DefaultChannelPipelineTest {
             fail();
         }
     }
-
 
     @Test
     public void testRemoveChannelHandler() {
@@ -319,7 +318,6 @@ public class DefaultChannelPipelineTest {
         group.register(channel).awaitUninterruptibly();
         final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
 
-
         final ChannelInboundByteHandlerImpl handler1 = new ChannelInboundByteHandlerImpl();
         final ChannelInboundByteHandlerImpl handler2 = new ChannelInboundByteHandlerImpl();
         pipeline.addLast("handler1", handler1);
@@ -348,7 +346,6 @@ public class DefaultChannelPipelineTest {
         group.register(channel).awaitUninterruptibly();
         final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
 
-
         final ChannelInboundByteHandlerImpl handler1 = new ChannelInboundByteHandlerImpl();
         final ChannelInboundByteHandlerImpl handler2 = new ChannelInboundByteHandlerImpl();
         pipeline.addLast("handler1", handler1);
@@ -366,7 +363,6 @@ public class DefaultChannelPipelineTest {
 
         assertTrue(latch.await(10, TimeUnit.SECONDS));
         assertTrue(handler2.updated);
-
     }
 
     @Test
@@ -375,7 +371,6 @@ public class DefaultChannelPipelineTest {
         LocalEventLoopGroup group = new LocalEventLoopGroup();
         group.register(channel).awaitUninterruptibly();
         final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
-
 
         final ChannelOutboundByteHandlerImpl handler1 = new ChannelOutboundByteHandlerImpl();
         final ChannelOutboundByteHandlerImpl handler2 = new ChannelOutboundByteHandlerImpl();
@@ -396,7 +391,6 @@ public class DefaultChannelPipelineTest {
 
         assertTrue(latch.await(10, TimeUnit.SECONDS));
         assertTrue(handler1.flushed);
-
     }
 
     @Test
@@ -405,7 +399,6 @@ public class DefaultChannelPipelineTest {
         LocalEventLoopGroup group = new LocalEventLoopGroup();
         group.register(channel).awaitUninterruptibly();
         final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
-
 
         final ChannelOutboundByteHandlerImpl handler1 = new ChannelOutboundByteHandlerImpl();
         final ChannelOutboundByteHandlerImpl handler2 = new ChannelOutboundByteHandlerImpl();
@@ -433,7 +426,6 @@ public class DefaultChannelPipelineTest {
         group.register(channel).awaitUninterruptibly();
         final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
 
-
         final ByteHandlerImpl handler1 = new ByteHandlerImpl();
         final ByteHandlerImpl handler2 = new ByteHandlerImpl();
         pipeline.addLast("handler1", handler1);
@@ -456,8 +448,8 @@ public class DefaultChannelPipelineTest {
         });
 
         assertTrue(latch.await(10, TimeUnit.SECONDS));
-        assertTrue(((ChannelInboundByteHandlerImpl)handler2.stateHandler()).updated);
-        assertTrue(((ChannelOutboundByteHandlerImpl)handler2.operationHandler()).flushed);
+        assertTrue(((ChannelInboundByteHandlerImpl) handler2.stateHandler()).updated);
+        assertTrue(((ChannelOutboundByteHandlerImpl) handler2.operationHandler()).flushed);
     }
 
     @Test
@@ -466,7 +458,6 @@ public class DefaultChannelPipelineTest {
         LocalEventLoopGroup group = new LocalEventLoopGroup();
         group.register(channel).awaitUninterruptibly();
         final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
-
 
         final ChannelOutboundByteHandlerImpl handler1 = new ChannelOutboundByteHandlerImpl();
         final ByteHandlerImpl handler2 = new ByteHandlerImpl();
@@ -498,7 +489,6 @@ public class DefaultChannelPipelineTest {
         assertTrue(latch.await(10, TimeUnit.SECONDS));
         assertTrue(handler1.flushed);
         assertTrue(handler3.updated);
-
     }
 
     @Test
@@ -507,7 +497,6 @@ public class DefaultChannelPipelineTest {
         LocalEventLoopGroup group = new LocalEventLoopGroup();
         group.register(channel).awaitUninterruptibly();
         final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
-
 
         final ChannelInboundMessageHandlerImpl handler1 = new ChannelInboundMessageHandlerImpl();
         final ChannelInboundMessageHandlerImpl handler2 = new ChannelInboundMessageHandlerImpl();
@@ -537,7 +526,6 @@ public class DefaultChannelPipelineTest {
         group.register(channel).awaitUninterruptibly();
         final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
 
-
         final ChannelInboundMessageHandlerImpl handler1 = new ChannelInboundMessageHandlerImpl();
         final ChannelInboundMessageHandlerImpl handler2 = new ChannelInboundMessageHandlerImpl();
         pipeline.addLast("handler1", handler1);
@@ -563,7 +551,6 @@ public class DefaultChannelPipelineTest {
         LocalEventLoopGroup group = new LocalEventLoopGroup();
         group.register(channel).awaitUninterruptibly();
         final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
-
 
         final ChannelOutboundMessageHandlerImpl handler1 = new ChannelOutboundMessageHandlerImpl();
         final ChannelOutboundMessageHandlerImpl handler2 = new ChannelOutboundMessageHandlerImpl();
@@ -593,7 +580,6 @@ public class DefaultChannelPipelineTest {
         group.register(channel).awaitUninterruptibly();
         final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
 
-
         final ChannelOutboundMessageHandlerImpl handler1 = new ChannelOutboundMessageHandlerImpl();
         final ChannelOutboundMessageHandlerImpl handler2 = new ChannelOutboundMessageHandlerImpl();
         pipeline.addLast("handler1", handler1);
@@ -620,7 +606,6 @@ public class DefaultChannelPipelineTest {
         group.register(channel).awaitUninterruptibly();
         final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
 
-
         final MessageHandlerImpl handler1 = new MessageHandlerImpl();
         final MessageHandlerImpl handler2 = new MessageHandlerImpl();
         pipeline.addLast("handler1", handler1);
@@ -643,9 +628,8 @@ public class DefaultChannelPipelineTest {
         });
 
         assertTrue(latch.await(10, TimeUnit.SECONDS));
-        assertTrue(((ChannelInboundMessageHandlerImpl)handler2.stateHandler()).updated);
-        assertTrue(((ChannelOutboundMessageHandlerImpl)handler2.operationHandler()).flushed);
-
+        assertTrue(((ChannelInboundMessageHandlerImpl) handler2.stateHandler()).updated);
+        assertTrue(((ChannelOutboundMessageHandlerImpl) handler2.operationHandler()).flushed);
     }
 
     @Test
@@ -688,7 +672,6 @@ public class DefaultChannelPipelineTest {
         group.register(channel).awaitUninterruptibly();
         final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
 
-
         final ChannelOutboundMessageHandlerImpl handler1 = new ChannelOutboundMessageHandlerImpl();
         final MessageHandlerImpl handler2 = new MessageHandlerImpl();
         final ChannelInboundMessageHandlerImpl handler3 = new ChannelInboundMessageHandlerImpl();
@@ -719,7 +702,6 @@ public class DefaultChannelPipelineTest {
         assertTrue(latch.await(10, TimeUnit.SECONDS));
         assertTrue(handler1.flushed);
         assertTrue(handler3.updated);
-
     }
     private static int next(DefaultChannelHandlerContext ctx) {
         DefaultChannelHandlerContext next = ctx.next;
@@ -795,7 +777,8 @@ public class DefaultChannelPipelineTest {
         }
     }
 
-    private static final class ChannelInboundMessageHandlerImpl extends ChannelStateHandlerAdapter implements ChannelInboundMessageHandler<Object> {
+    private static final class ChannelInboundMessageHandlerImpl extends ChannelStateHandlerAdapter
+            implements ChannelInboundMessageHandler<Object> {
         boolean updated;
         @Override
         public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
@@ -813,7 +796,8 @@ public class DefaultChannelPipelineTest {
         }
     }
 
-    private static final class ChannelOutboundMessageHandlerImpl extends ChannelOperationHandlerAdapter implements ChannelOutboundMessageHandler<Object> {
+    private static final class ChannelOutboundMessageHandlerImpl extends ChannelOperationHandlerAdapter
+            implements ChannelOutboundMessageHandler<Object> {
         boolean flushed;
         @Override
         public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
@@ -832,7 +816,8 @@ public class DefaultChannelPipelineTest {
         }
     }
 
-    private static final class ByteHandlerImpl extends CombinedChannelDuplexHandler implements ChannelInboundByteHandler, ChannelOutboundByteHandler{
+    private static final class ByteHandlerImpl extends CombinedChannelDuplexHandler
+            implements ChannelInboundByteHandler, ChannelOutboundByteHandler {
         ByteHandlerImpl() {
             super(new ChannelInboundByteHandlerImpl(), new ChannelOutboundByteHandlerImpl());
         }
@@ -891,7 +876,6 @@ public class DefaultChannelPipelineTest {
         public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return ((ChannelOutboundMessageHandler<Object>) operationHandler()).newOutboundBuffer(ctx);
         }
-
 
         @SuppressWarnings("unchecked")
         @Override

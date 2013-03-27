@@ -52,11 +52,11 @@ public class HttpObjecctAggregatorTest {
         DefaultFullHttpRequest aggratedMessage = (DefaultFullHttpRequest) embedder.readInbound();
         assertNotNull(aggratedMessage);
 
-        assertEquals(chunk1.data().readableBytes() + chunk2.data().readableBytes(), HttpHeaders.getContentLength(aggratedMessage));
+        assertEquals(chunk1.data().readableBytes() + chunk2.data().readableBytes(),
+                HttpHeaders.getContentLength(aggratedMessage));
         assertEquals(aggratedMessage.headers().get("X-Test"), Boolean.TRUE.toString());
         checkContentBuffer(aggratedMessage);
         assertNull(embedder.readInbound());
-
     }
 
     private static void checkContentBuffer(DefaultFullHttpRequest aggregatedMessage) {
@@ -93,15 +93,14 @@ public class HttpObjecctAggregatorTest {
         DefaultFullHttpRequest aggratedMessage = (DefaultFullHttpRequest) embedder.readInbound();
         assertNotNull(aggratedMessage);
 
-        assertEquals(chunk1.data().readableBytes() + chunk2.data().readableBytes(), HttpHeaders.getContentLength(aggratedMessage));
+        assertEquals(chunk1.data().readableBytes() + chunk2.data().readableBytes(),
+                HttpHeaders.getContentLength(aggratedMessage));
         assertEquals(aggratedMessage.headers().get("X-Test"), Boolean.TRUE.toString());
         assertEquals(aggratedMessage.headers().get("X-Trailer"), Boolean.TRUE.toString());
         checkContentBuffer(aggratedMessage);
 
         assertNull(embedder.readInbound());
-
     }
-
 
     @Test(expected = TooLongFrameException.class)
     public void testTooLongFrameException() {
@@ -115,7 +114,6 @@ public class HttpObjecctAggregatorTest {
         assertFalse(embedder.writeInbound(chunk1));
         embedder.writeInbound(chunk2);
         fail();
-
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -125,7 +123,7 @@ public class HttpObjecctAggregatorTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void testInvalidMaxCumulationBufferComponents() {
-        HttpObjectAggregator aggr= new HttpObjectAggregator(Integer.MAX_VALUE);
+        HttpObjectAggregator aggr = new HttpObjectAggregator(Integer.MAX_VALUE);
         aggr.setMaxCumulationBufferComponents(1);
     }
 

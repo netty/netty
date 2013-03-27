@@ -1,12 +1,12 @@
 /*
  * Copyright 2012 The Netty Project
- * 
+ *
  * The Netty Project licenses this file to you under the Apache License, version
  * 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at:
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
@@ -27,7 +27,7 @@ import static io.netty.handler.codec.http.HttpHeaders.Values.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 
 public class WebSocketRequestBuilder {
-    
+
     private HttpVersion httpVersion;
     private HttpMethod method;
     private String uri;
@@ -37,17 +37,17 @@ public class WebSocketRequestBuilder {
     private String key;
     private String origin;
     private WebSocketVersion version;
-    
+
     public WebSocketRequestBuilder httpVersion(HttpVersion httpVersion) {
         this.httpVersion = httpVersion;
         return this;
     }
-    
+
     public WebSocketRequestBuilder method(HttpMethod method) {
         this.method = method;
         return this;
     }
-    
+
     public WebSocketRequestBuilder uri(String uri) {
         this.uri = uri;
         return this;
@@ -57,46 +57,46 @@ public class WebSocketRequestBuilder {
         this.host = host;
         return this;
     }
-    
+
     public WebSocketRequestBuilder upgrade(String upgrade) {
         this.upgrade = upgrade;
         return this;
     }
-    
+
     public WebSocketRequestBuilder connection(String connection) {
         this.connection = connection;
         return this;
     }
-    
+
     public WebSocketRequestBuilder key(String key) {
         this.key = key;
         return this;
     }
-    
+
     public WebSocketRequestBuilder origin(String origin) {
         this.origin = origin;
         return this;
     }
-    
+
     public WebSocketRequestBuilder version13() {
         version = WebSocketVersion.V13;
         return this;
     }
-    
+
     public WebSocketRequestBuilder version8() {
         version = WebSocketVersion.V08;
         return this;
     }
-    
+
     public WebSocketRequestBuilder version00() {
         version = null;
         return this;
     }
-    
+
     public WebSocketRequestBuilder noVersion() {
         return this;
     }
-    
+
     public FullHttpRequest build() {
         FullHttpRequest req = new DefaultFullHttpRequest(httpVersion, method, uri);
         HttpHeaders headers = req.headers();
@@ -121,7 +121,7 @@ public class WebSocketRequestBuilder {
         }
         return req;
     }
-    
+
     public static HttpRequest sucessful() {
         return new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
                 .method(HttpMethod.GET)

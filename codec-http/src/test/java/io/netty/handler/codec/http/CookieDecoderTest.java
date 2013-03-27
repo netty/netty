@@ -29,7 +29,8 @@ public class CookieDecoderTest {
     @Test
     public void testDecodingSingleCookieV0() {
         String cookieString = "myCookie=myValue;expires=XXX;path=/apathsomewhere;domain=.adomainsomewhere;secure;";
-        cookieString = cookieString.replace("XXX", new HttpHeaderDateFormat().format(new Date(System.currentTimeMillis() + 50000)));
+        cookieString = cookieString.replace("XXX",
+                new HttpHeaderDateFormat().format(new Date(System.currentTimeMillis() + 50000)));
 
         Set<Cookie> cookies = CookieDecoder.decode(cookieString);
         assertEquals(1, cookies.size());
@@ -60,7 +61,9 @@ public class CookieDecoderTest {
 
     @Test
     public void testDecodingSingleCookieV0ExtraParamsIgnored() {
-        String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=0;commentURL=http://aurl.com;port=\"80,8080\";discard;";
+        String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;" +
+                "domain=.adomainsomewhere;secure;comment=this is a comment;version=0;" +
+                "commentURL=http://aurl.com;port=\"80,8080\";discard;";
         Set<Cookie> cookies = CookieDecoder.decode(cookieString);
         assertEquals(1, cookies.size());
         Cookie cookie = cookies.iterator().next();
@@ -78,7 +81,8 @@ public class CookieDecoderTest {
     }
     @Test
     public void testDecodingSingleCookieV1() {
-        String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=1;";
+        String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;" +
+                "domain=.adomainsomewhere;secure;comment=this is a comment;version=1;";
         Set<Cookie> cookies = CookieDecoder.decode(cookieString);
         assertEquals(1, cookies.size());
         Cookie cookie = cookies.iterator().next();
@@ -97,7 +101,9 @@ public class CookieDecoderTest {
 
     @Test
     public void testDecodingSingleCookieV1ExtraParamsIgnored() {
-        String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=1;commentURL=http://aurl.com;port='80,8080';discard;";
+        String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;" +
+                "domain=.adomainsomewhere;secure;comment=this is a comment;version=1;" +
+                "commentURL=http://aurl.com;port='80,8080';discard;";
         Set<Cookie> cookies = CookieDecoder.decode(cookieString);
         assertEquals(1, cookies.size());
         Cookie cookie = cookies.iterator().next();
@@ -115,7 +121,9 @@ public class CookieDecoderTest {
     }
     @Test
     public void testDecodingSingleCookieV2() {
-        String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=2;commentURL=http://aurl.com;port=\"80,8080\";discard;";
+        String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;" +
+                "domain=.adomainsomewhere;secure;comment=this is a comment;version=2;" +
+                "commentURL=http://aurl.com;port=\"80,8080\";discard;";
         Set<Cookie> cookies = CookieDecoder.decode(cookieString);
         assertEquals(1, cookies.size());
         Cookie cookie = cookies.iterator().next();
@@ -134,11 +142,14 @@ public class CookieDecoderTest {
         assertEquals(2, cookie.getVersion());
     }
 
-
     @Test
     public void testDecodingMultipleCookies() {
-        String c1 = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=2;commentURL=\"http://aurl.com\";port='80,8080';discard;";
-        String c2 = "myCookie2=myValue2;max-age=0;path=/anotherpathsomewhere;domain=.anotherdomainsomewhere;comment=this is another comment;version=2;commentURL=http://anotherurl.com;";
+        String c1 = "myCookie=myValue;max-age=50;path=/apathsomewhere;" +
+                "domain=.adomainsomewhere;secure;comment=this is a comment;version=2;" +
+                "commentURL=\"http://aurl.com\";port='80,8080';discard;";
+        String c2 = "myCookie2=myValue2;max-age=0;path=/anotherpathsomewhere;" +
+                "domain=.anotherdomainsomewhere;comment=this is another comment;version=2;" +
+                "commentURL=http://anotherurl.com;";
         String c3 = "myCookie3=myValue3;max-age=0;version=2;";
 
         Set<Cookie> cookies = CookieDecoder.decode(c1 + c2 + c3);
@@ -173,7 +184,7 @@ public class CookieDecoderTest {
         cookie = it.next();
         assertNotNull(cookie);
         assertEquals("myValue3", cookie.getValue());
-        assertNull( cookie.getComment());
+        assertNull(cookie.getComment());
         assertNull(cookie.getCommentUrl());
         assertNull(cookie.getDomain());
         assertFalse(cookie.isDiscard());
@@ -268,7 +279,6 @@ public class CookieDecoderTest {
             "g=\"\\\\\"," +
             "h=\"';,\\x\"";
 
-
         Set<Cookie> cookies = CookieDecoder.decode(source);
         Iterator<Cookie> it = cookies.iterator();
         Cookie c;
@@ -315,7 +325,8 @@ public class CookieDecoderTest {
             "kw-2E343B92-B097-442c-BFA5-BE371E0325A2=unfinished furniture; " +
             "__utma=48461872.1094088325.1258140131.1258140131.1258140131.1; " +
             "__utmb=48461872.13.10.1258140131; __utmc=48461872; " +
-            "__utmz=48461872.1258140131.1.1.utmcsr=overstock.com|utmccn=(referral)|utmcmd=referral|utmcct=/Home-Garden/Furniture/Clearance,/clearance,/32/dept.html";
+            "__utmz=48461872.1258140131.1.1.utmcsr=overstock.com|utmccn=(referral)|" +
+                    "utmcmd=referral|utmcct=/Home-Garden/Furniture/Clearance,/clearance,/32/dept.html";
         Set<Cookie> cookies = CookieDecoder.decode(source);
         Iterator<Cookie> it = cookies.iterator();
         Cookie c;
@@ -334,7 +345,9 @@ public class CookieDecoderTest {
 
         c = it.next();
         assertEquals("__utmz", c.getName());
-        assertEquals("48461872.1258140131.1.1.utmcsr=overstock.com|utmccn=(referral)|utmcmd=referral|utmcct=/Home-Garden/Furniture/Clearance,/clearance,/32/dept.html", c.getValue());
+        assertEquals("48461872.1258140131.1.1.utmcsr=overstock.com|" +
+                "utmccn=(referral)|utmcmd=referral|utmcct=/Home-Garden/Furniture/Clearance,/clearance,/32/dept.html",
+                c.getValue());
 
         c = it.next();
         assertEquals("ARPT", c.getName());

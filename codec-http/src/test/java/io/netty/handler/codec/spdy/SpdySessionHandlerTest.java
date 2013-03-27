@@ -147,8 +147,8 @@ public class SpdySessionHandlerTest {
         assertNull(sessionHandler.readOutbound());
         SpdyHeadersFrame spdyHeadersFrame = new DefaultSpdyHeadersFrame(localStreamID);
 
-        spdyHeadersFrame.headers().add("HEADER","test1");
-        spdyHeadersFrame.headers().add("HEADER","test2");
+        spdyHeadersFrame.headers().add("HEADER", "test1");
+        spdyHeadersFrame.headers().add("HEADER", "test2");
 
         sessionHandler.writeInbound(spdyHeadersFrame);
         assertHeaders(sessionHandler.readOutbound(), localStreamID, spdyHeadersFrame);
@@ -178,7 +178,6 @@ public class SpdySessionHandlerTest {
         assertNull(sessionHandler.readOutbound());
         spdySynStreamFrame.setUnidirectional(false);
 
-
         // Check if session handler returns PROTOCOL_ERROR if it receives
         // multiple SYN_STREAM frames for the same active Stream-ID
         sessionHandler.writeInbound(spdySynStreamFrame);
@@ -193,7 +192,6 @@ public class SpdySessionHandlerTest {
         assertRstStream(sessionHandler.readOutbound(), localStreamID - 1, SpdyStreamStatus.PROTOCOL_ERROR);
         assertNull(sessionHandler.readOutbound());
         spdySynStreamFrame.setStreamId(localStreamID);
-
 
         // Check if session handler correctly limits the number of
         // concurrent streams in the SETTINGS frame

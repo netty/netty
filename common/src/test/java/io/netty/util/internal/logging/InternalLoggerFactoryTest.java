@@ -43,7 +43,6 @@ public class InternalLoggerFactoryTest {
         InternalLoggerFactory.setDefaultFactory(oldLoggerFactory);
     }
 
-
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullDefaultFactory() {
         InternalLoggerFactory.setDefaultFactory(null);
@@ -52,12 +51,12 @@ public class InternalLoggerFactoryTest {
     @Test
     public void shouldGetInstance() {
         InternalLoggerFactory.setDefaultFactory(oldLoggerFactory);
-        
+
         String helloWorld = "Hello, world!";
-        
+
         InternalLogger one = InternalLoggerFactory.getInstance("helloWorld");
         InternalLogger two = InternalLoggerFactory.getInstance(helloWorld.getClass());
-        
+
         assertNotNull(one);
         assertNotNull(two);
         assertNotSame(one, two);

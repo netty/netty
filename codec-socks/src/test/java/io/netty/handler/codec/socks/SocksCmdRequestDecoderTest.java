@@ -26,8 +26,12 @@ import static org.junit.Assert.*;
 public class SocksCmdRequestDecoderTest {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SocksCmdRequestDecoderTest.class);
 
-    private static void testSocksCmdRequestDecoderWithDifferentParams(SocksCmdType cmdType, SocksAddressType addressType, String host, int port) {
-        logger.debug("Testing cmdType: " + cmdType + " addressType: " + addressType + " host: " + host + " port: " + port);
+    private static void testSocksCmdRequestDecoderWithDifferentParams(SocksCmdType cmdType,
+                                                                      SocksAddressType addressType,
+                                                                      String host,
+                                                                      int port) {
+        logger.debug("Testing cmdType: " + cmdType + " addressType: " + addressType + " host: " + host +
+                " port: " + port);
         SocksCmdRequest msg = new SocksCmdRequest(cmdType, addressType, host, port);
         SocksCmdRequestDecoder decoder = new SocksCmdRequestDecoder();
         EmbeddedByteChannel embedder = new EmbeddedByteChannel(decoder);
@@ -46,7 +50,7 @@ public class SocksCmdRequestDecoderTest {
 
     @Test
     public void testCmdRequestDecoderIPv4() {
-        String[] hosts = {"127.0.0.1",};
+        String[] hosts = {"127.0.0.1", };
         int[] ports = {0, 32769, 65535 };
         for (SocksCmdType cmdType : SocksCmdType.values()) {
             for (String host : hosts) {

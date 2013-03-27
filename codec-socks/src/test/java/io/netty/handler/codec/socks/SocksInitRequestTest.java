@@ -20,10 +20,10 @@ import static org.junit.Assert.assertTrue;
 
 public class SocksInitRequestTest {
     @Test
-    public void testConstructorParamsAreNotNull(){
+    public void testConstructorParamsAreNotNull() {
         try {
             new SocksInitRequest(null);
-        } catch (Exception e){
+        } catch (Exception e) {
             assertTrue(e instanceof NullPointerException);
         }
     }
