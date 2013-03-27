@@ -27,10 +27,6 @@ public class DefaultByteBufHolder implements ByteBufHolder {
         if (data == null) {
             throw new NullPointerException("data");
         }
-        if (data.unwrap() != null && !(data instanceof SwappedByteBuf)) {
-            throw new IllegalArgumentException("Only not-derived ByteBuf instance are supported, you used: "
-                    + data.getClass().getSimpleName());
-        }
         this.data = data;
     }
 
