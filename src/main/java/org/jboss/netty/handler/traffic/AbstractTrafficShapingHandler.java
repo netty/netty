@@ -479,6 +479,7 @@ public abstract class AbstractTrafficShapingHandler extends
         if (timeout != null) {
             timeout.cancel();
         }
+        timer.stop();
     }
 
     @Override

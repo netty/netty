@@ -51,7 +51,7 @@ import org.jboss.netty.util.Timer;
  * {@link OrderedMemoryAwareThreadPoolExecutor} or {@link MemoryAwareThreadPoolExecutor}).<br>
  * <tt>pipeline.addLast("GLOBAL_TRAFFIC_SHAPING", myHandler);</tt><br><br>
  * </li>
- * <li>When you shutdown your application, release all the external resources (except the timer internal itself)
+ * <li>When you shutdown your application, release all the external resources
  * by calling:<br>
  * <tt>myHandler.releaseExternalResources();</tt><br>
  * </li>
