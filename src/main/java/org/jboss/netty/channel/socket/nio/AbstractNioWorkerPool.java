@@ -112,7 +112,7 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker>
 
     public void releaseExternalResources() {
         shutdown();
-        ExecutorUtil.terminate(workerExecutor);
+        ExecutorUtil.shutdownNow(workerExecutor);
     }
 
     public void shutdown() {

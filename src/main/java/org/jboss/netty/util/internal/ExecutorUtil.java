@@ -28,6 +28,30 @@ import java.util.concurrent.TimeUnit;
 public final class ExecutorUtil {
 
     /**
+     * Try to call {@link ExecutorService#shutdownNow()}
+     */
+    public static void shutdownNow(Executor executor) {
+        if (executor instanceof ExecutorService) {
+            ExecutorService es = (ExecutorService) executor;
+            try {
+                es.shutdownNow();
+            } catch (SecurityException ex) {
+                // Running in a restricted environment - fall back.
+                try {
+                    es.shutdown();
+                } catch (SecurityException ex2) {
+                    // Running in a more restricted environment.
+                    // Can't shut down this executor - skip to the next.
+                } catch (NullPointerException ex2) {
+                    // Some JDK throws NPE here, but shouldn't.
+                }
+            } catch (NullPointerException ex) {
+                // Some JDK throws NPE here, but shouldn't.
+            }
+        }
+    }
+
+    /**
      * Returns {@code true} if and only if the specified {@code executor}
      * is an {@link ExecutorService} and is shut down.  Please note that this
      * method returns {@code false} if the specified {@code executor} is not an
@@ -88,22 +112,7 @@ public final class ExecutorUtil {
 
             ExecutorService es = (ExecutorService) e;
             for (;;) {
-                try {
-                    es.shutdownNow();
-                } catch (SecurityException ex) {
-                    // Running in a restricted environment - fall back.
-                    try {
-                        es.shutdown();
-                    } catch (SecurityException ex2) {
-                        // Running in a more restricted environment.
-                        // Can't shut down this executor - skip to the next.
-                        break;
-                    } catch (NullPointerException ex2) {
-                        // Some JDK throws NPE here, but shouldn't.
-                    }
-                } catch (NullPointerException ex) {
-                    // Some JDK throws NPE here, but shouldn't.
-                }
+                shutdownNow(es);
 
                 try {
                     if (es.awaitTermination(100, TimeUnit.MILLISECONDS)) {

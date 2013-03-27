@@ -121,12 +121,12 @@ public class OioDatagramChannelFactory implements DatagramChannelFactory {
 
     public void shutdown() {
         if (shutdownExecutor) {
-            ExecutorUtil.terminate(workerExecutor);
+            ExecutorUtil.shutdownNow(workerExecutor);
         }
     }
 
     public void releaseExternalResources() {
         shutdown();
-        ExecutorUtil.terminate(workerExecutor);
+        ExecutorUtil.shutdownNow(workerExecutor);
     }
 }

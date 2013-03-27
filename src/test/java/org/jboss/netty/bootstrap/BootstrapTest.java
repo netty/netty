@@ -24,11 +24,15 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.util.DummyHandler;
 import org.junit.Test;
 
@@ -270,5 +274,21 @@ public class BootstrapTest {
 
     protected Bootstrap newBootstrap() {
         return new Bootstrap();
+    }
+
+    @Test
+    public void testReleaseSharedNotDeadlock() {
+        // create bootstraps
+        final ExecutorService pool = Executors.newFixedThreadPool(2);
+        final ClientBootstrap client = new ClientBootstrap(
+                new NioClientSocketChannelFactory(pool,
+                        Executors.newCachedThreadPool()));
+        final ServerBootstrap server = new ServerBootstrap(
+                new NioServerSocketChannelFactory(pool,
+                        Executors.newCachedThreadPool()));
+
+        // release resources
+        client.releaseExternalResources();
+        server.releaseExternalResources();
     }
 }
