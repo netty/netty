@@ -25,5 +25,4 @@ public class RiverThreadLocalCompatibleMarshallingDecoderTest extends RiverCompa
         return new ThreadLocalUnmarshallerProvider(factory, config);
     }
 
-
 }

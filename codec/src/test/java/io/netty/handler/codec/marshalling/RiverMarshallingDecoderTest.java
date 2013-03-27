@@ -30,8 +30,8 @@ public class RiverMarshallingDecoderTest extends RiverCompatibleMarshallingDecod
 
     @Override
     protected ChannelHandler createDecoder(int maxObjectSize) {
-        return new MarshallingDecoder(createProvider(createMarshallerFactory(), createMarshallingConfig()), maxObjectSize);
+        return new MarshallingDecoder(createProvider(createMarshallerFactory(),
+                createMarshallingConfig()), maxObjectSize);
     }
-
 
 }

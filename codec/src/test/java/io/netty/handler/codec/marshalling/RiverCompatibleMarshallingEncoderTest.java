@@ -21,7 +21,6 @@ import org.jboss.marshalling.MarshallingConfiguration;
 
 public class RiverCompatibleMarshallingEncoderTest extends AbstractCompatibleMarshallingEncoderTest {
 
-
     @Override
     protected MarshallerFactory createMarshallerFactory() {
         return Marshalling.getProvidedMarshallerFactory("river");

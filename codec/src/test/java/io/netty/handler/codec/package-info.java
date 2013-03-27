@@ -13,16 +13,8 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.marshalling;
 
-import org.jboss.marshalling.MarshallerFactory;
-import org.jboss.marshalling.MarshallingConfiguration;
-
-public class RiverThreadLocalMarshallingDecoderTest extends RiverMarshallingDecoderTest {
-
-    @Override
-    protected UnmarshallerProvider createProvider(MarshallerFactory factory, MarshallingConfiguration config) {
-        return new ThreadLocalUnmarshallerProvider(factory, config);
-    }
-
-}
+/**
+ * Test classes for extensible decoder and its common implementations
+ */
+package io.netty.handler.codec;
