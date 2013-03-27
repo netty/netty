@@ -568,7 +568,6 @@ public class UnpooledTest {
 
         assertEquals(0, Unpooled.copyBoolean(null).capacity());
         assertEquals(0, Unpooled.copyBoolean(new boolean[0]).capacity());
-
     }
 
     @Test

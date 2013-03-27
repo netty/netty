@@ -29,7 +29,7 @@ import org.osgi.framework.wiring.BundleWiring;
 /**
  * Unit Test Utilities.
  */
-public class UnitHelp {
+public final class UnitHelp {
 
     private UnitHelp() {
     }
@@ -106,7 +106,6 @@ public class UnitHelp {
 
                 /** install java unit bundles */
                 junitBundles());
-
     }
 
     /**

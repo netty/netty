@@ -30,7 +30,7 @@ public abstract class AbstractUdtTest {
      * UDT test assumptions.
      */
     @BeforeClass
-    public static void assumeConditions(){
+    public static void assumeConditions() {
         assumeTrue(UnitHelp.canLoadAndInitClass("com.barchart.udt.SocketUDT"));
     }
 

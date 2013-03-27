@@ -77,7 +77,7 @@ public class TypeParameterMatcherTest {
 
     public static class TypeY<D extends C, E extends A, F extends B> extends TypeX<E, F, D> { }
 
-    public static abstract class TypeZ<G extends AA, H extends BB> extends TypeY<CC, G, H> { }
+    public abstract static class TypeZ<G extends AA, H extends BB> extends TypeY<CC, G, H> { }
 
     public static class TypeQ<I extends BBB> extends TypeZ<AAA, I> { }
 

@@ -24,7 +24,7 @@ import java.util.Map.Entry;
 import static org.junit.Assert.*;
 
 public class NetUtilTest {
-    private final static Map<String, byte[]> validIpV4Hosts = new HashMap<String, byte[]>() {
+    private static final Map<String, byte[]> validIpV4Hosts = new HashMap<String, byte[]>() {
         private static final long serialVersionUID = 2629792739366724032L;
         {
             put("192.168.1.0", new byte[]{
@@ -42,10 +42,9 @@ public class NetUtilTest {
             put("127.0.0.1", new byte[]{
                     0x7f, 0x00, 0x00, 0x01
             });
-
         }
     };
-    private final static Map<String, byte[]> invalidIpV4Hosts = new HashMap<String, byte[]>() {
+    private static final Map<String, byte[]> invalidIpV4Hosts = new HashMap<String, byte[]>() {
         private static final long serialVersionUID = 1299215199895717282L;
         {
             put("1.256.3.4", null);
@@ -53,7 +52,7 @@ public class NetUtilTest {
             put("1.1.1.1.1", null);
         }
     };
-    private final static Map<String, byte[]> validIpV6Hosts = new HashMap<String, byte[]>() {
+    private static final Map<String, byte[]> validIpV6Hosts = new HashMap<String, byte[]>() {
         private static final long serialVersionUID = 3999763170377573184L;
         {
             put("::ffff:5.6.7.8", new byte[]{
@@ -165,7 +164,7 @@ public class NetUtilTest {
             );
         }
     };
-    private final static Map<String, byte[]> invalidIpV6Hosts = new HashMap<String, byte[]>() {
+    private static final Map<String, byte[]> invalidIpV6Hosts = new HashMap<String, byte[]>() {
         private static final long serialVersionUID = -5870810805409009696L;
         {
             // Test method with garbage.

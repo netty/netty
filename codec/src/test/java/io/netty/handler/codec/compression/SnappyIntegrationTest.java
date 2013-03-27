@@ -70,12 +70,11 @@ public class SnappyIntegrationTest {
         }));
     }
 
-
     // These tests were found using testRandom() with large RANDOM_RUNS.
 
     // Tests that copies do not attempt to overrun into a previous frame chunk
     @Test
-    public void test5323211032315942961(){
+    public void test5323211032315942961() {
         testWithSeed(5323211032315942961L);
     }
 

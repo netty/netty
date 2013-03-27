@@ -45,7 +45,7 @@ public abstract class AbstractSocketTest {
     protected volatile Bootstrap cb;
     protected volatile InetSocketAddress addr;
     protected volatile Factory<Bootstrap> currentBootstrap;
-    
+
     protected void run() throws Throwable {
         int i = 0;
         for (Entry<Factory<ServerBootstrap>, Factory<Bootstrap>> e: COMBO) {

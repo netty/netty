@@ -82,7 +82,6 @@ public class NioUdtByteRendezvousChannelTest extends AbstractUdtTest {
                     .meter().count());
 
             Thread.sleep(1000);
-
         }
 
         connectFuture1.channel().close().sync();
@@ -98,7 +97,6 @@ public class NioUdtByteRendezvousChannelTest extends AbstractUdtTest {
 
         boot1.shutdown();
         boot2.shutdown();
-
     }
 
 }

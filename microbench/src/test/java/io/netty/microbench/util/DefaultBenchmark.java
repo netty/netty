@@ -118,7 +118,8 @@ public abstract class DefaultBenchmark extends SimpleBenchmark {
                         deleted = true;
                         System.out.println();
                     }
-                    System.out.println(" Deleted old report: " + name.substring(prefix.length(), name.length() - suffix.length()));
+                    System.out.println(" Deleted old report: " +
+                            name.substring(prefix.length(), name.length() - suffix.length()));
                 }
             }
         }

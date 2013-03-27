@@ -46,7 +46,6 @@ public final class BootHelp {
                 .localAddress(self).remoteAddress(peer).handler(handler);
 
         return boot;
-
     }
 
     /**
@@ -67,7 +66,6 @@ public final class BootHelp {
                 .localAddress(self).remoteAddress(peer).handler(handler);
 
         return boot;
-
     }
 
     private BootHelp() { }

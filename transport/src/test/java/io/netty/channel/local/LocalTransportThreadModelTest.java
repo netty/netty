@@ -319,7 +319,6 @@ public class LocalTransportThreadModelTest {
             }
 
             ch.close().sync();
-
         } finally {
             l.shutdown();
             e1.shutdown();

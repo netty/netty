@@ -38,7 +38,7 @@ public class NioUdtProviderTest extends AbstractUdtTest {
         assertNotNull(NioUdtProvider.MESSAGE_ACCEPTOR.newChannel());
         assertNotNull(NioUdtProvider.MESSAGE_CONNECTOR.newChannel());
         assertNotNull(NioUdtProvider.MESSAGE_RENDEZVOUS.newChannel());
-        
+
         // acceptor types
         assertTrue(NioUdtProvider.BYTE_ACCEPTOR.newChannel() instanceof UdtServerChannel);
         assertTrue(NioUdtProvider.MESSAGE_ACCEPTOR.newChannel() instanceof UdtServerChannel);

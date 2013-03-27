@@ -99,7 +99,8 @@ public abstract class AbstractCompositeByteBufTest extends
      */
     @Test
     public void testComponentAtOffset() {
-        CompositeByteBuf buf = (CompositeByteBuf) wrappedBuffer(new byte[]{1, 2, 3, 4, 5}, new byte[]{4, 5, 6, 7, 8, 9, 26});
+        CompositeByteBuf buf = (CompositeByteBuf) wrappedBuffer(new byte[]{1, 2, 3, 4, 5},
+                new byte[]{4, 5, 6, 7, 8, 9, 26});
 
         //Ensure that a random place will be fine
         assertEquals(5, buf.componentAtOffset(2).capacity());
@@ -412,7 +413,7 @@ public abstract class AbstractCompositeByteBufTest extends
         assertFalse(BufUtil.equals(a, b));
     }
 
-    @Test 
+    @Test
     public void testEmptyBuffer() {
         ByteBuf b = freeLater(wrappedBuffer(new byte[]{1, 2}, new byte[]{3, 4}));
         b.readBytes(new byte[4]);

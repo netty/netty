@@ -28,7 +28,7 @@ public class ReadOnlyUnsafeDirectByteBufferBufTest extends ReadOnlyDirectByteBuf
      * Needs unsafe to run
      */
     @BeforeClass
-    public static void assumeConditions(){
+    public static void assumeConditions() {
         assumeTrue(PlatformDependent.hasUnsafe());
     }
 

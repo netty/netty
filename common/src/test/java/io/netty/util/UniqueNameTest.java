@@ -47,12 +47,12 @@ public class UniqueNameTest {
         names = PlatformDependent.newConcurrentHashMap();
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test(expected = NullPointerException.class)
     public void testCannnotProvideNullMap() {
         new UniqueName(null, "Nothing");
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test(expected = NullPointerException.class)
     public void testCannotProvideNullName() {
         new UniqueName(names, null);
     }

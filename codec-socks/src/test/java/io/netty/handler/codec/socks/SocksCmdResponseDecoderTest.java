@@ -25,13 +25,14 @@ import static org.junit.Assert.*;
 public class SocksCmdResponseDecoderTest {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SocksCmdResponseDecoderTest.class);
 
-    private static void testSocksCmdResponseDecoderWithDifferentParams(SocksCmdStatus cmdStatus, SocksAddressType addressType){
+    private static void testSocksCmdResponseDecoderWithDifferentParams(SocksCmdStatus cmdStatus,
+                                                                       SocksAddressType addressType) {
         logger.debug("Testing cmdStatus: " + cmdStatus + " addressType: " + addressType);
         SocksResponse msg = new SocksCmdResponse(cmdStatus, addressType);
         SocksCmdResponseDecoder decoder = new SocksCmdResponseDecoder();
         EmbeddedByteChannel embedder = new EmbeddedByteChannel(decoder);
         SocksCommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
-        if (addressType == SocksAddressType.UNKNOWN){
+        if (addressType == SocksAddressType.UNKNOWN) {
             assertTrue(embedder.readInbound() instanceof UnknownSocksResponse);
         } else {
             msg = (SocksResponse) embedder.readInbound();
@@ -41,9 +42,9 @@ public class SocksCmdResponseDecoderTest {
     }
 
     @Test
-    public void testSocksCmdResponseDecoder(){
-        for (SocksCmdStatus cmdStatus: SocksCmdStatus.values()){
-            for (SocksAddressType addressType: SocksAddressType.values()){
+    public void testSocksCmdResponseDecoder() {
+        for (SocksCmdStatus cmdStatus: SocksCmdStatus.values()) {
+            for (SocksAddressType addressType: SocksAddressType.values()) {
                 testSocksCmdResponseDecoderWithDifferentParams(cmdStatus, addressType);
             }
         }

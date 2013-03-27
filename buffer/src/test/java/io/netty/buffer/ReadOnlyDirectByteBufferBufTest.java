@@ -44,7 +44,6 @@ public class ReadOnlyDirectByteBufferBufTest {
         buf.setByte(0, 1);
     }
 
-
     @Test(expected = ReadOnlyBufferException.class)
     public void testSetInt() {
         ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
@@ -109,10 +108,10 @@ public class ReadOnlyDirectByteBufferBufTest {
         Assert.assertFalse(buf.isReadable());
     }
 
-
     @Test
     public void testGetReadShort() {
-        ByteBuf buf = buffer(((ByteBuffer) allocate(8).putShort((short) 1).putShort((short) 2).flip()).asReadOnlyBuffer());
+        ByteBuf buf = buffer(((ByteBuffer) allocate(8).putShort((short) 1)
+                .putShort((short) 2).flip()).asReadOnlyBuffer());
         Assert.assertEquals(1, buf.getShort(0));
         Assert.assertEquals(2, buf.getShort(2));
 

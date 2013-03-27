@@ -25,8 +25,8 @@ import static org.junit.Assert.*;
 public class SocksAuthResponseDecoderTest {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SocksAuthResponseDecoderTest.class);
 
-    private static void testSocksAuthResponseDecoderWithDifferentParams(SocksAuthStatus authStatus){
-        logger.debug("Testing SocksAuthResponseDecoder with authStatus: "+ authStatus);
+    private static void testSocksAuthResponseDecoderWithDifferentParams(SocksAuthStatus authStatus) {
+        logger.debug("Testing SocksAuthResponseDecoder with authStatus: " + authStatus);
         SocksAuthResponse msg = new SocksAuthResponse(authStatus);
         SocksAuthResponseDecoder decoder = new SocksAuthResponseDecoder();
         EmbeddedByteChannel embedder = new EmbeddedByteChannel(decoder);
@@ -37,9 +37,9 @@ public class SocksAuthResponseDecoderTest {
     }
 
     @Test
-    public void testSocksCmdResponseDecoder(){
-        for (SocksAuthStatus authStatus: SocksAuthStatus.values()){
-                testSocksAuthResponseDecoderWithDifferentParams(authStatus);
+    public void testSocksCmdResponseDecoder() {
+        for (SocksAuthStatus authStatus: SocksAuthStatus.values()) {
+            testSocksAuthResponseDecoderWithDifferentParams(authStatus);
         }
     }
 }

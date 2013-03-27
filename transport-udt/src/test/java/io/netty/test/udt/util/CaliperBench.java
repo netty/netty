@@ -94,7 +94,6 @@ public abstract class CaliperBench extends SimpleBenchmark {
                 continue;
             }
         }
-
     }
 
 }
