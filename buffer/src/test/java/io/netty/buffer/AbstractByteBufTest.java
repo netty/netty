@@ -1519,7 +1519,6 @@ public abstract class AbstractByteBufTest {
         buffer.setIndex(0, value.length);
         buffer.setBytes(0, value);
 
-
         assertEquals(0, buffer.compareTo(wrappedBuffer(value)));
         assertEquals(0, buffer.compareTo(wrappedBuffer(value).order(LITTLE_ENDIAN)));
 

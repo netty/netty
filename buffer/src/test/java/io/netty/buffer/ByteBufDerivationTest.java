@@ -105,8 +105,6 @@ public class ByteBufDerivationTest {
 
         ro.setIndex(2, 6);
         assertThat(buf.readerIndex(), is(1));
-        assertThat(buf.writerIndex(), is(7));
-
     }
 
     @Test
