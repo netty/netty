@@ -17,6 +17,7 @@ package org.jboss.netty.channel.socket.nio;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ConnectTimeoutException;
 import org.jboss.netty.util.ThreadNameDeterminer;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.Timeout;
@@ -133,7 +134,7 @@ public final class NioClientBoss extends AbstractNioSelector implements Boss {
                     currentTimeNanos >= ch.connectDeadlineNanos) {
 
                 if (cause == null) {
-                    cause = new ConnectException("connection timed out: " + ch.requestedRemoteAddress);
+                    cause = new ConnectTimeoutException("connection timed out: " + ch.requestedRemoteAddress);
                 }
 
                 ch.connectFuture.setFailure(cause);
