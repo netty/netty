@@ -459,7 +459,16 @@ public class SpdySessionHandler
                     msg instanceof SpdyGoAwayFrame ||
                     msg instanceof SpdyHeadersFrame ||
                     msg instanceof SpdyWindowUpdateFrame) {
-                handleOutboundMessage(ctx, msg);
+                try {
+                    handleOutboundMessage(ctx, msg, promise);
+                } catch (SpdyProtocolException e) {
+                    if (e == PROTOCOL_EXCEPTION) {
+                        // on the case of PROTOCOL_EXCEPTION faile the promise directly
+                        // See #1211
+                        promise.setFailure(PROTOCOL_EXCEPTION);
+                        return;
+                    }
+                }
             } else {
                 ctx.nextOutboundMessageBuffer().add(msg);
             }
@@ -467,7 +476,7 @@ public class SpdySessionHandler
         ctx.flush(promise);
     }
 
-    private void handleOutboundMessage(ChannelHandlerContext ctx, Object msg)
+    private void handleOutboundMessage(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
             throws Exception {
 
         if (msg instanceof SpdyDataFrame) {
@@ -477,8 +486,7 @@ public class SpdySessionHandler
 
             // Frames must not be sent on half-closed streams
             if (spdySession.isLocalSideClosed(streamID)) {
-                ctx.fireExceptionCaught(PROTOCOL_EXCEPTION);
-                return;
+                throw PROTOCOL_EXCEPTION;
             }
 
             /*
@@ -568,16 +576,14 @@ public class SpdySessionHandler
             int streamID = spdySynStreamFrame.getStreamId();
 
             if (isRemoteInitiatedID(streamID)) {
-                ctx.fireExceptionCaught(PROTOCOL_EXCEPTION);
-                return;
+                throw PROTOCOL_EXCEPTION;
             }
 
             byte priority = spdySynStreamFrame.getPriority();
             boolean remoteSideClosed = spdySynStreamFrame.isUnidirectional();
             boolean localSideClosed = spdySynStreamFrame.isLast();
             if (!acceptStream(streamID, priority, remoteSideClosed, localSideClosed)) {
-                ctx.fireExceptionCaught(PROTOCOL_EXCEPTION);
-                return;
+                throw PROTOCOL_EXCEPTION;
             }
 
         } else if (msg instanceof SpdySynReplyFrame) {
@@ -587,8 +593,7 @@ public class SpdySessionHandler
 
             // Frames must not be sent on half-closed streams
             if (!isRemoteInitiatedID(streamID) || spdySession.isLocalSideClosed(streamID)) {
-                ctx.fireExceptionCaught(PROTOCOL_EXCEPTION);
-                return;
+                throw PROTOCOL_EXCEPTION;
             }
 
             // Close the local side of the stream if this is the last frame
@@ -641,8 +646,7 @@ public class SpdySessionHandler
 
             // Why is this being sent? Intercept it and fail the write.
             // Should have sent a CLOSE ChannelStateEvent
-            ctx.fireExceptionCaught(PROTOCOL_EXCEPTION);
-            return;
+            throw PROTOCOL_EXCEPTION;
 
         } else if (msg instanceof SpdyHeadersFrame) {
 
@@ -651,8 +655,7 @@ public class SpdySessionHandler
 
             // Frames must not be sent on half-closed streams
             if (spdySession.isLocalSideClosed(streamID)) {
-                ctx.fireExceptionCaught(PROTOCOL_EXCEPTION);
-                return;
+                throw PROTOCOL_EXCEPTION;
             }
 
             // Close the local side of the stream if this is the last frame
@@ -663,7 +666,7 @@ public class SpdySessionHandler
         } else if (msg instanceof SpdyWindowUpdateFrame) {
 
             // Why is this being sent? Intercept it and fail the write.
-            ctx.fireExceptionCaught(PROTOCOL_EXCEPTION);
+            throw PROTOCOL_EXCEPTION;
         }
 
         ctx.nextOutboundMessageBuffer().add(msg);
