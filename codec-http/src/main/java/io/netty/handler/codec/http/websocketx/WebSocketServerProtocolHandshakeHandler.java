@@ -68,6 +68,9 @@ class WebSocketServerProtocolHandshakeHandler
                 public void operationComplete(ChannelFuture future) throws Exception {
                     if (!future.isSuccess()) {
                         ctx.fireExceptionCaught(future.cause());
+                    } else {
+                        ctx.fireUserEventTriggered(
+                                WebSocketServerProtocolHandler.ServerHandshakeStateEvent.HANDSHAKE_COMPLETE);
                     }
                 }
             });
