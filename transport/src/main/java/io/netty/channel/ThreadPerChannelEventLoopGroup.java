@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 
+import io.netty.util.concurrent.AbstractEventExecutorGroup;
 import io.netty.util.internal.PlatformDependent;
 
 import java.util.Collections;
@@ -29,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * An {@link EventLoopGroup} that creates one {@link EventLoop} per {@link Channel}.
  */
-public class ThreadPerChannelEventLoopGroup implements EventLoopGroup {
+public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup implements EventLoopGroup {
 
     private static final Object[] NO_ARGS = new Object[0];
     private static final StackTraceElement[] STACK_ELEMENTS = new StackTraceElement[0];

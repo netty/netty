@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Abstract base class for {@link EventExecutorGroup} implementations that handles their tasks with multiple threads at
  * the same time.
  */
-public abstract class MultithreadEventExecutorGroup implements EventExecutorGroup {
+public abstract class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
 
     public static final int DEFAULT_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 2;
     private static final AtomicInteger poolId = new AtomicInteger();
