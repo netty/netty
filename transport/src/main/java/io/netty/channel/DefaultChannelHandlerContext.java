@@ -64,7 +64,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     // 'bridge' so that the two handlers access each other's buffer only via the bridges.
     // The content written into a bridge is flushed into the actual buffer by flushBridge().
     //
-    // Note we use an AtomicReferenceFieldUpdater for atomic operations on these to safe memory. This will safe us
+    // Note we use an AtomicReferenceFieldUpdater for atomic operations on these to save memory. This will save us
     // 64 bytes per Bridge.
     @SuppressWarnings("UnusedDeclaration")
     private volatile MessageBridge inMsgBridge;
