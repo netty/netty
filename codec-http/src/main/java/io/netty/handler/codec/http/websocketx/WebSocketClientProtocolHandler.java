@@ -17,6 +17,7 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelStateHandler;
 import io.netty.handler.codec.http.HttpHeaders;
 
 import java.net.URI;
@@ -30,11 +31,30 @@ import java.net.URI;
  * the {@code handleCloseFrames} is {@code false}, default is {@code true}.
  *
  * This implementation will establish the websocket connection once the connection to the remote server was complete.
+ *
+ * To know once a handshake was done you can intercept the
+ * {@link ChannelStateHandler#userEventTriggered(ChannelHandlerContext, Object)} and check if the event was of type
+ * {@link ClientHandshakeStateEvent#HANDSHAKE_ISSUED} or {@link ClientHandshakeStateEvent#HANDSHAKE_COMPLETE}.
  */
 public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
 
     private final WebSocketClientHandshaker handshaker;
     private final boolean handleCloseFrames;
+
+    /**
+     * Events that are fired to notify about handshake status
+     */
+    public enum ClientHandshakeStateEvent {
+        /**
+         * The Handshake was started but the server did not response yet to the request
+         */
+        HANDSHAKE_ISSUED,
+
+        /**
+         * The Handshake was complete succesful and so the channel was upgraded to websockets
+         */
+        HANDSHAKE_COMPLETE
+    }
 
     /**
      * Base constructor

@@ -20,6 +20,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelStateHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -40,8 +41,22 @@ import static io.netty.handler.codec.http.HttpVersion.*;
  * The implementation of this handler assumes that you just want to run  a websocket server and not process other types
  * HTTP requests (like GET and POST). If you wish to support both HTTP requests and websockets in the one server, refer
  * to the <tt>io.netty.example.http.websocketx.server.WebSocketServer</tt> example.
+ *
+ * To know once a handshake was done you can intercept the
+ * {@link ChannelStateHandler#userEventTriggered(ChannelHandlerContext, Object)} and check if the event was of type
+ * {@link ServerHandshakeStateEvent#HANDSHAKE_COMPLETE}.
  */
 public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
+
+    /**
+     * Events that are fired to notify about handshake status
+     */
+    public enum ServerHandshakeStateEvent {
+        /**
+         * The Handshake was complete succesful and so the channel was upgraded to websockets
+         */
+        HANDSHAKE_COMPLETE
+    }
 
     private static final AttributeKey<WebSocketServerHandshaker> HANDSHAKER_ATTR_KEY =
             new AttributeKey<WebSocketServerHandshaker>(WebSocketServerHandshaker.class.getName());

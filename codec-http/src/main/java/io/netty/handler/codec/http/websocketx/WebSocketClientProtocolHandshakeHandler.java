@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
@@ -28,15 +29,27 @@ class WebSocketClientProtocolHandshakeHandler extends ChannelInboundMessageHandl
     }
 
     @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+    public void channelActive(final ChannelHandlerContext ctx) throws Exception {
         super.channelActive(ctx);
-        handshaker.handshake(ctx.channel()).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
+        handshaker.handshake(ctx.channel()).addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                if (!future.isSuccess()) {
+                    ctx.fireExceptionCaught(future.cause());
+                } else {
+                    ctx.fireUserEventTriggered(
+                            WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_ISSUED);
+                }
+            }
+        });
     }
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
         if (!handshaker.isHandshakeComplete()) {
             handshaker.finishHandshake(ctx.channel(), msg);
+            ctx.fireUserEventTriggered(
+                    WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_COMPLETE);
             ctx.pipeline().removeAndForward(this);
             return;
         }
