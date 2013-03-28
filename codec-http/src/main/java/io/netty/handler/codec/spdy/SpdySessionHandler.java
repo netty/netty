@@ -792,7 +792,7 @@ public class SpdySessionHandler
             spdySession.closeLocalSide(streamID);
         }
         if (closeSessionFuture != null && spdySession.noActiveStreams()) {
-            closeSessionFuture.setSuccess();
+            closeSessionFuture.trySuccess();
         }
     }
 
@@ -802,7 +802,7 @@ public class SpdySessionHandler
         }
 
         if (closeSessionFuture != null && spdySession.noActiveStreams()) {
-            closeSessionFuture.setSuccess();
+            closeSessionFuture.trySuccess();
         }
     }
 
