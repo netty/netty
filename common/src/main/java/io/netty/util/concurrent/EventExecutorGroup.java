@@ -15,7 +15,9 @@
  */
 package io.netty.util.concurrent;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -24,40 +26,31 @@ import java.util.concurrent.TimeUnit;
  * to shut them down in a global fashion.
  *
  */
-public interface EventExecutorGroup {
+public interface EventExecutorGroup extends ScheduledExecutorService {
 
     /**
      * Returns one of the {@link EventExecutor}s that belong to this group.
      */
     EventExecutor next();
 
-    /**
-     * Shuts down all {@link EventExecutor}s managed by this group.
-     *
-     * @see ExecutorService#shutdown()
-     */
-    void shutdown();
+    @Override
+    Future<?> submit(Runnable task);
 
-    /**
-     * Returns {@code true} if and only if {@link #shutdown()} has been called.
-     *
-     * @see ExecutorService#isShutdown()
-     */
-    boolean isShutdown();
+    @Override
+    <T> Future<T> submit(Runnable task, T result);
 
-    /**
-     * Returns {@code true} if and only if {@link #shutdown()} has been called and all
-     * {@link EventExecutor}s managed by this group has been terminated completely.
-     *
-     * @see ExecutorService#isTerminated()
-     */
-    boolean isTerminated();
+    @Override
+    <T> Future<T> submit(Callable<T> task);
 
-    /**
-     * Waits until {@link #isTerminated()} returns {@code true} or the specified amount of time
-     * passes.
-     *
-     * @see ExecutorService#awaitTermination(long, TimeUnit)
-     */
-    boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException;
+    @Override
+    ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit);
+
+    @Override
+    <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit);
+
+    @Override
+    ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit);
+
+    @Override
+    ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit);
 }
