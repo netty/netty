@@ -49,7 +49,5 @@ public class DependencyIT {
         } else {
             System.out.println("all transitive dependencies are osgi bundles");
         }
-
     }
-
 }
