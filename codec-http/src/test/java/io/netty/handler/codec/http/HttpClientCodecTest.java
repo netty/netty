@@ -26,12 +26,13 @@ import static org.junit.Assert.*;
 
 public class HttpClientCodecTest {
 
-    private static final String RESPONSE = "HTTP/1.0 200 OK\r\n" + "Date: Fri, 31 Dec 1999 23:59:59 GMT\r\n" + "Content-Type: text/html\r\n" + "Content-Length: 28\r\n" + "\r\n"
+    private static final String RESPONSE = "HTTP/1.0 200 OK\r\n" + "Date: Fri, 31 Dec 1999 23:59:59 GMT\r\n" +
+            "Content-Type: text/html\r\n" + "Content-Length: 28\r\n" + "\r\n"
             + "<html><body></body></html>\r\n";
-    private static final String INCOMPLETE_CHUNKED_RESPONSE = "HTTP/1.1 200 OK\r\n" + "Content-Type: text/plain\r\n" + "Transfer-Encoding: chunked\r\n" + "\r\n"
-            +"5\r\n" + "first\r\n" + "6\r\n" + "second\r\n" + "0\r\n";
+    private static final String INCOMPLETE_CHUNKED_RESPONSE = "HTTP/1.1 200 OK\r\n" + "Content-Type: text/plain\r\n" +
+            "Transfer-Encoding: chunked\r\n" + "\r\n" +
+            "5\r\n" + "first\r\n" + "6\r\n" + "second\r\n" + "0\r\n";
     private static final String CHUNKED_RESPONSE = INCOMPLETE_CHUNKED_RESPONSE + "\r\n";
-
 
     @Test
     public void testFailsNotOnRequestResponse() {
@@ -58,7 +59,8 @@ public class HttpClientCodecTest {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
         EmbeddedByteChannel ch = new EmbeddedByteChannel(codec);
 
-        assertTrue(ch.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/")));
+        assertTrue(ch.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+                "http://localhost/")));
         assertNotNull(ch.readOutbound());
 
         try {
@@ -67,7 +69,6 @@ public class HttpClientCodecTest {
         } catch (CodecException e) {
             assertTrue(e instanceof PrematureChannelClosureException);
         }
-
     }
 
     @Test
@@ -84,6 +85,5 @@ public class HttpClientCodecTest {
         } catch (CodecException e) {
             assertTrue(e instanceof PrematureChannelClosureException);
         }
-
     }
 }

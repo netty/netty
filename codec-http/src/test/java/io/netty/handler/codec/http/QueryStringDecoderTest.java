@@ -184,7 +184,6 @@ public class QueryStringDecoderTest {
         Assert.assertEquals(1, entry.getValue().size());
         Assert.assertEquals("value1", entry.getValue().get(0));
 
-
         entry = entries.next();
         Assert.assertEquals("param2", entry.getKey());
         Assert.assertEquals(1, entry.getValue().size());
@@ -213,7 +212,6 @@ public class QueryStringDecoderTest {
         Assert.assertEquals(1, entry.getValue().size());
         Assert.assertEquals("value1", entry.getValue().get(0));
 
-
         entry = entries.next();
         Assert.assertEquals("param2", entry.getKey());
         Assert.assertEquals(1, entry.getValue().size());
@@ -241,7 +239,6 @@ public class QueryStringDecoderTest {
         Assert.assertEquals("param1", entry.getKey());
         Assert.assertEquals(1, entry.getValue().size());
         Assert.assertEquals("value1", entry.getValue().get(0));
-
 
         entry = entries.next();
         Assert.assertEquals("param2", entry.getKey());
