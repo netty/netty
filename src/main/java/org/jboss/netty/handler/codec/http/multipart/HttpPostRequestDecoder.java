@@ -410,7 +410,7 @@ public class HttpPostRequestDecoder {
     /**
      * Utility function to add a new decoded data
      */
-    private void addHttpData(InterfaceHttpData data) {
+    protected void addHttpData(InterfaceHttpData data) {
         if (data == null) {
             return;
         }
@@ -421,7 +421,6 @@ public class HttpPostRequestDecoder {
         }
         datas.add(data);
         bodyListHttpData.add(data);
-        this.httpDataAdded(data);
     }
 
     /**
@@ -1083,7 +1082,7 @@ public class HttpPostRequestDecoder {
      * @return the InterfaceHttpData if any
      * @throws ErrorDataDecoderException
      */
-    private InterfaceHttpData getFileUpload(String delimiter)
+    protected InterfaceHttpData getFileUpload(String delimiter)
             throws ErrorDataDecoderException {
         // eventually restart from existing FileUpload
         // Now get value according to Content-Type and Charset
@@ -1150,7 +1149,6 @@ public class HttpPostRequestDecoder {
                         nameAttribute.getValue(), filenameAttribute.getValue(),
                         contentTypeAttribute.getValue(), mechanism.value(),
                         localCharset, size);
-                this.fileUploadStarted(currentFileUpload);
             } catch (NullPointerException e) {
                 throw new ErrorDataDecoderException(e);
             } catch (IllegalArgumentException e) {
@@ -1565,7 +1563,6 @@ public class HttpPostRequestDecoder {
         }
         ChannelBuffer buffer = undecodedChunk.slice(readerIndex, lastPosition -
                 readerIndex);
-        httpChunkReceived(buffer);
         if (found) {
             // found so lastPosition is correct and final
             try {
@@ -1680,7 +1677,6 @@ public class HttpPostRequestDecoder {
         }
         lastPosition = sao.getReadPosition(lastrealpos);
         ChannelBuffer buffer = undecodedChunk.slice(readerIndex, lastPosition - readerIndex);
-        httpChunkReceived(buffer);
         if (found) {
             // found so lastPosition is correct and final
             try {
@@ -1955,24 +1951,6 @@ public class HttpPostRequestDecoder {
         undecodedChunk.readerIndex(undecodedChunk.readerIndex() - 1);
         return false;
     }
-
-    /**
-     *
-     * Callback to be used by subclasses when they want to receive http processing events.
-     *
-     * @param data
-     */
-
-    protected void httpDataAdded( InterfaceHttpData data ) {}
-
-    /**
-     *
-     * Callback for subclasses to know that a file upload action has started.
-     *
-     * @param fileUpload
-     */
-
-    protected void fileUploadStarted( FileUpload fileUpload ) {}
 
     /**
      *
