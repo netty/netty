@@ -1,11 +1,11 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,24 +14,8 @@
  * under the License.
  */
 
+/**
+ * UDT NIO
+ */
 package io.netty.test.udt.nio;
 
-import io.netty.test.udt.util.UnitHelp;
-import org.junit.BeforeClass;
-
-import static org.junit.Assume.*;
-
-/**
- * Base for UDT tests.
- */
-public abstract class AbstractUdtTest {
-
-    /**
-     * UDT test assumptions.
-     */
-    @BeforeClass
-    public static void assumeConditions() {
-        assumeTrue(UnitHelp.canLoadAndInitClass("com.barchart.udt.SocketUDT"));
-    }
-
-}

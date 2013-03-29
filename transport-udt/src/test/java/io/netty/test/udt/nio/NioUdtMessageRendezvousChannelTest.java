@@ -44,7 +44,6 @@ public class NioUdtMessageRendezvousChannelTest extends AbstractUdtTest {
     @Test
     public void metadata() throws Exception {
         assertEquals(BufType.MESSAGE, new NioUdtMessageRendezvousChannel().metadata().bufferType());
-
     }
 
     /**
@@ -87,7 +86,6 @@ public class NioUdtMessageRendezvousChannelTest extends AbstractUdtTest {
                     .meter().count());
 
             Thread.sleep(1000);
-
         }
 
         connectFuture1.channel().close().sync();
@@ -103,7 +101,6 @@ public class NioUdtMessageRendezvousChannelTest extends AbstractUdtTest {
 
         boot1.shutdown();
         boot2.shutdown();
-
     }
 
 }

@@ -53,7 +53,6 @@ public class EchoByteHandler extends ChannelInboundByteHandlerAdapter {
         for (int i = 0; i < message.capacity(); i++) {
             message.writeByte((byte) i);
         }
-
     }
 
     @Override
@@ -65,7 +64,6 @@ public class EchoByteHandler extends ChannelInboundByteHandlerAdapter {
         ctx.write(message);
 
         ctx.flush();
-
     }
 
     @Override
@@ -83,7 +81,6 @@ public class EchoByteHandler extends ChannelInboundByteHandlerAdapter {
         out.writeBytes(in);
 
         ctx.flush();
-
     }
 
     @Override
@@ -93,7 +90,6 @@ public class EchoByteHandler extends ChannelInboundByteHandlerAdapter {
         log.error("exception : {}", e.getMessage());
 
         ctx.close();
-
     }
 
     @Override
