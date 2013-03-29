@@ -16,12 +16,15 @@
 package io.netty.testsuite.util;
 
 import io.netty.util.NetUtil;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.channels.Channel;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Locale;
 
 public final class TestUtils {
 

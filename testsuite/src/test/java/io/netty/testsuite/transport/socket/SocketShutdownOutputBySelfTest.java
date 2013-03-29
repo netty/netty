@@ -68,7 +68,6 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
             // If half-closed, the peer should be able to write something.
             s.getOutputStream().write(1);
             assertEquals(1, (int) h.queue.take());
-
         } finally {
             if (s != null) {
                 s.close();

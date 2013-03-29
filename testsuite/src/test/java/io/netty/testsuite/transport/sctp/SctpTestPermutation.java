@@ -117,8 +117,7 @@ public final class SctpTestPermutation {
         return list;
     }
 
-
-    private SctpTestPermutation() {}
+    private SctpTestPermutation() { }
 
     interface Factory<T> {
         T newInstance();

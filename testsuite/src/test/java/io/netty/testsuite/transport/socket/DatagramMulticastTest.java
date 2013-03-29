@@ -92,7 +92,6 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
 
         sc.close().awaitUninterruptibly();
         cc.close().awaitUninterruptibly();
-
     }
 
     private static final class MulticastTestHandler extends ChannelInboundMessageHandlerAdapter<DatagramPacket> {
