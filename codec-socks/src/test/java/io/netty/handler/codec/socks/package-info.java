@@ -13,18 +13,8 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
+/**
+ * Test classes for encoder, decoder and their related message types for Socks.
+ */
 package io.netty.handler.codec.socks;
-
-import org.junit.Test;
-import static org.junit.Assert.assertTrue;
-
-public class SocksInitRequestTest {
-    @Test
-    public void testConstructorParamsAreNotNull() {
-        try {
-            new SocksInitRequest(null);
-        } catch (Exception e) {
-            assertTrue(e instanceof NullPointerException);
-        }
-    }
-}
