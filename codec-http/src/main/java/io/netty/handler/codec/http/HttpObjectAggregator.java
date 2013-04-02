@@ -47,8 +47,8 @@ import static io.netty.handler.codec.http.HttpHeaders.*;
  */
 public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
     public static final int DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS = 1024;
-    private static final ByteBuf CONTINUE = Unpooled.copiedBuffer(
-            "HTTP/1.1 100 Continue\r\n\r\n", CharsetUtil.US_ASCII);
+    private static final ByteBuf CONTINUE = Unpooled.unreleasableBuffer(Unpooled.copiedBuffer(
+            "HTTP/1.1 100 Continue\r\n\r\n", CharsetUtil.US_ASCII));
 
     private final int maxContentLength;
     private FullHttpMessage currentMessage;
