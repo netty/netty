@@ -410,7 +410,7 @@ public class HttpPostRequestDecoder {
     /**
      * Utility function to add a new decoded data
      */
-    private void addHttpData(InterfaceHttpData data) {
+    protected void addHttpData(InterfaceHttpData data) {
         if (data == null) {
             return;
         }
@@ -1082,7 +1082,7 @@ public class HttpPostRequestDecoder {
      * @return the InterfaceHttpData if any
      * @throws ErrorDataDecoderException
      */
-    private InterfaceHttpData getFileUpload(String delimiter)
+    protected InterfaceHttpData getFileUpload(String delimiter)
             throws ErrorDataDecoderException {
         // eventually restart from existing FileUpload
         // Now get value according to Content-Type and Charset
@@ -1951,6 +1951,15 @@ public class HttpPostRequestDecoder {
         undecodedChunk.readerIndex(undecodedChunk.readerIndex() - 1);
         return false;
     }
+
+    /**
+     *
+     * Callback for subclasses when file upload data is read.
+     *
+     * @param buffer
+     */
+
+    protected void httpChunkReceived( ChannelBuffer buffer ) {}
 
     /**
      * Split the very first line (Content-Type value) in 2 Strings
