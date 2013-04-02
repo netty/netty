@@ -423,7 +423,7 @@ public class HttpPostRequestDecoder {
     /**
      * Utility function to add a new decoded data
      */
-    private void addHttpData(InterfaceHttpData data) {
+    protected void addHttpData(InterfaceHttpData data) {
         if (data == null) {
             return;
         }
@@ -1064,7 +1064,7 @@ public class HttpPostRequestDecoder {
      * @return the InterfaceHttpData if any
      * @throws ErrorDataDecoderException
      */
-    private InterfaceHttpData getFileUpload(String delimiter) throws ErrorDataDecoderException {
+    protected InterfaceHttpData getFileUpload(String delimiter) throws ErrorDataDecoderException {
         // eventually restart from existing FileUpload
         // Now get value according to Content-Type and Charset
         Attribute encoding = currentFieldAttributes.get(HttpHeaders.Names.CONTENT_TRANSFER_ENCODING);
