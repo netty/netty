@@ -24,7 +24,9 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
-import io.netty.handler.codec.MessageToByteEncoder;
+import io.netty.handler.codec.MessageToMessageEncoder;
+
+import static io.netty.buffer.Unpooled.*;
 
 /**
  * Encodes the requested <a href="http://code.google.com/p/protobuf/">Google
@@ -54,16 +56,16 @@ import io.netty.handler.codec.MessageToByteEncoder;
  * </pre>
  */
 @Sharable
-public class ProtobufEncoder extends MessageToByteEncoder<MessageLiteOrBuilder> {
+public class ProtobufEncoder extends MessageToMessageEncoder<MessageLiteOrBuilder> {
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, MessageLiteOrBuilder msg, ByteBuf out) throws Exception {
+    protected Object encode(ChannelHandlerContext ctx, MessageLiteOrBuilder msg) throws Exception {
         if (msg instanceof MessageLite) {
-            out.writeBytes(((MessageLite) msg).toByteArray());
-            return;
+            return wrappedBuffer(((MessageLite) msg).toByteArray());
         }
         if (msg instanceof MessageLite.Builder) {
-            out.writeBytes(((MessageLite.Builder) msg).build().toByteArray());
+            return wrappedBuffer(((MessageLite.Builder) msg).build().toByteArray());
         }
+        return null;
     }
 }
