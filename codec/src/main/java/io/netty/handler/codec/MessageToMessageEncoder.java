@@ -17,6 +17,7 @@ package io.netty.handler.codec;
 
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
 
 /**
@@ -51,7 +52,11 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundMessageH
     @Override
     public final void flush(ChannelHandlerContext ctx, I msg) throws Exception {
         try {
-            ctx.nextOutboundMessageBuffer().unfoldAndAdd(encode(ctx, msg));
+            Object encoded = encode(ctx, msg);
+            // Handle special case when the encoded output is a ByteBuf and the next handler in the pipeline
+            // accept bytes. Related to #1222
+            ChannelHandlerUtil.addToNextOutboundBuffer(ctx, encoded);
+
         } catch (CodecException e) {
             throw e;
         } catch (Exception e) {
