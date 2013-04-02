@@ -220,6 +220,7 @@ public class SslHandler extends FrameDecoder
     int ignoreClosedChannelException;
     final Object ignoreClosedChannelExceptionLock = new Object();
     private final Queue<PendingWrite> pendingUnencryptedWrites = new LinkedList<PendingWrite>();
+    private final NonReentrantLock pendingUnencryptedWritesLock = new NonReentrantLock();
     private final Queue<MessageEvent> pendingEncryptedWrites = new ConcurrentLinkedQueue<MessageEvent>();
     private final NonReentrantLock pendingEncryptedWritesLock = new NonReentrantLock();
 
@@ -619,9 +620,12 @@ public class SslHandler extends FrameDecoder
         } else {
             pendingWrite = new PendingWrite(evt.getFuture(), null);
         }
-        synchronized (pendingUnencryptedWrites) {
-            boolean offered = pendingUnencryptedWrites.offer(pendingWrite);
-            assert offered;
+
+        pendingUnencryptedWritesLock.lock();
+        try {
+            pendingUnencryptedWrites.add(pendingWrite);
+        } finally {
+            pendingUnencryptedWritesLock.unlock();
         }
 
         wrap(context, evt.getChannel());
@@ -938,7 +942,8 @@ public class SslHandler extends FrameDecoder
                 // Acquire a lock to make sure unencrypted data is polled
                 // in order and their encrypted counterpart is offered in
                 // order.
-                synchronized (pendingUnencryptedWrites) {
+                pendingUnencryptedWritesLock.lock();
+                try {
                     pendingWrite = pendingUnencryptedWrites.peek();
                     if (pendingWrite == null) {
                         break;
@@ -1028,6 +1033,8 @@ public class SslHandler extends FrameDecoder
                             }
                         }
                     }
+                } finally {
+                    pendingUnencryptedWritesLock.unlock();
                 }
             }
         } catch (SSLException e) {
@@ -1056,11 +1063,14 @@ public class SslHandler extends FrameDecoder
                 // Please note that we do not call setFailure while a lock is
                 // acquired, to avoid a potential dead lock.
                 for (;;) {
-                    synchronized (pendingUnencryptedWrites) {
+                    pendingUnencryptedWritesLock.lock();
+                    try {
                         pendingWrite = pendingUnencryptedWrites.poll();
                         if (pendingWrite == null) {
                             break;
                         }
+                    } finally {
+                        pendingUnencryptedWritesLock.unlock();
                     }
 
                     pendingWrite.future.setFailure(cause);
@@ -1076,7 +1086,7 @@ public class SslHandler extends FrameDecoder
     private void offerEncryptedWriteRequest(MessageEvent encryptedWrite) {
         final boolean locked = pendingEncryptedWritesLock.tryLock();
         try {
-            pendingEncryptedWrites.offer(encryptedWrite);
+            pendingEncryptedWrites.add(encryptedWrite);
         } finally {
             if (locked) {
                 pendingEncryptedWritesLock.unlock();
@@ -1259,7 +1269,7 @@ public class SslHandler extends FrameDecoder
                 // i.e. pendingUnencryptedWrites -> handshakeLock vs.
                 //      handshakeLock -> pendingUnencryptedLock -> handshakeLock
                 //
-                // There is also a same issue between pendingEncryptedWrites
+                // There is also the same issue between pendingEncryptedWrites
                 // and pendingUnencryptedWrites.
                 if (!Thread.holdsLock(handshakeLock) &&
                         !pendingEncryptedWritesLock.isHeldByCurrentThread()) {
@@ -1558,8 +1568,12 @@ public class SslHandler extends FrameDecoder
         // See https://github.com/netty/netty/issues/989
         ctx.getPipeline().execute(new Runnable() {
             public void run() {
+                if (!pendingUnencryptedWritesLock.tryLock()) {
+                    return;
+                }
+
                 Throwable cause = null;
-                synchronized (pendingUnencryptedWrites) {
+                try {
                     for (;;) {
                         PendingWrite pw = pendingUnencryptedWrites.poll();
                         if (pw == null) {
@@ -1581,6 +1595,8 @@ public class SslHandler extends FrameDecoder
                         }
                         ev.getFuture().setFailure(cause);
                     }
+                } finally {
+                    pendingUnencryptedWritesLock.unlock();
                 }
 
                 if (cause != null) {
