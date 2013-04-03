@@ -25,10 +25,12 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
- * Default {@link MessageBuf} implementation
+ * Default {@link MessageBuf} implementation.
+ *
+ * You should use {@link Unpooled#messageBuffer()} to create an instance
  *
  */
-final class DefaultMessageBuf<T> extends AbstractMessageBuf<T> {
+public class DefaultMessageBuf<T> extends AbstractMessageBuf<T> {
 
     private static final int MIN_INITIAL_CAPACITY = 8;
     private static final Object[] PLACEHOLDER = new Object[2];
@@ -37,15 +39,15 @@ final class DefaultMessageBuf<T> extends AbstractMessageBuf<T> {
     private int head;
     private int tail;
 
-    DefaultMessageBuf() {
+    protected DefaultMessageBuf() {
         this(MIN_INITIAL_CAPACITY << 1);
     }
 
-    DefaultMessageBuf(int initialCapacity) {
+    protected DefaultMessageBuf(int initialCapacity) {
         this(initialCapacity, Integer.MAX_VALUE);
     }
 
-    DefaultMessageBuf(int initialCapacity, int maxCapacity) {
+    protected DefaultMessageBuf(int initialCapacity, int maxCapacity) {
         super(maxCapacity);
 
         if (initialCapacity < 0) {

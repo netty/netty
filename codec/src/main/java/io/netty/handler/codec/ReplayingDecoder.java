@@ -16,7 +16,6 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandlerUtil;
@@ -365,7 +364,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        MessageBuf<Object> out = decoderOutput();
+        OutputMessageBuf out = decoderOutput();
 
         try {
             replayable.terminate();
@@ -387,13 +386,19 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
         } finally {
 
             boolean decoded = false;
-            for (;;) {
-                Object msg = out.poll();
-                if (msg == null) {
-                    break;
+            if (out.containsByteBuf()) {
+                for (;;) {
+                    Object msg = out.poll();
+                    if (msg == null) {
+                        break;
+                    }
+                    decoded = true;
+                    ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg);
                 }
-                decoded = true;
-                ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg);
+            } else {
+                if (out.drainTo(ctx.nextInboundMessageBuffer()) > 0) {
+                    decoded = true;
+                }
             }
             if (decoded) {
                 ctx.fireInboundBufferUpdated();
@@ -407,7 +412,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
     protected void callDecode(ChannelHandlerContext ctx, ByteBuf buf) {
         boolean wasNull = false;
         ByteBuf in = cumulation;
-        MessageBuf<Object> out = decoderOutput();
+        OutputMessageBuf out = decoderOutput();
         boolean decoded = false;
 
         assert out.isEmpty();
@@ -460,13 +465,19 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                 }
             }
         } finally {
-            for (;;) {
-                Object msg = out.poll();
-                if (msg == null) {
-                    break;
+            if (out.containsByteBuf()) {
+                for (;;) {
+                    Object msg = out.poll();
+                    if (msg == null) {
+                        break;
+                    }
+                    decoded = true;
+                    ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg);
                 }
-                decoded = true;
-                ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg);
+            } else {
+                if (out.drainTo(ctx.nextInboundMessageBuffer()) > 0) {
+                    decoded = true;
+                }
             }
             if (decoded) {
                 decodeWasNull = false;

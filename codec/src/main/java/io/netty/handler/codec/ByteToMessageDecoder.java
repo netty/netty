@@ -17,7 +17,6 @@ package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundByteHandler;
@@ -46,23 +45,13 @@ public abstract class ByteToMessageDecoder
     private volatile boolean singleDecode;
     private boolean decodeWasNull;
 
-    private static final ThreadLocal<MessageBuf<Object>> decoderOutput =
-            new ThreadLocal<MessageBuf<Object>>() {
+    private static final ThreadLocal<OutputMessageBuf> decoderOutput =
+            new ThreadLocal<OutputMessageBuf>() {
                 @Override
-                protected MessageBuf<Object> initialValue() {
-                    return Unpooled.messageBuffer();
+                protected OutputMessageBuf initialValue() {
+                    return new OutputMessageBuf();
                 }
             };
-
-    @Override
-    public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return super.newInboundBuffer(ctx);
-    }
-
-    @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        super.freeInboundBuffer(ctx);
-    }
 
     /**
      * If set then only one message is decoded on each {@link #inboundBufferUpdated(ChannelHandlerContext)} call.
@@ -102,7 +91,7 @@ public abstract class ByteToMessageDecoder
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        MessageBuf<Object> out = decoderOutput();
+        OutputMessageBuf out = decoderOutput();
         try {
             ByteBuf in = ctx.inboundByteBuffer();
             if (in.isReadable()) {
@@ -118,13 +107,19 @@ public abstract class ByteToMessageDecoder
             }
         } finally {
             boolean decoded = false;
-            for (;;) {
-                Object msg = out.poll();
-                if (msg == null) {
-                    break;
+            if (out.containsByteBuf()) {
+                for (;;) {
+                    Object msg = out.poll();
+                    if (msg == null) {
+                        break;
+                    }
+                    decoded = true;
+                    ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg);
                 }
-                decoded = true;
-                ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg);
+            } else {
+                if (out.drainTo(ctx.nextInboundMessageBuffer()) > 0) {
+                    decoded = true;
+                }
             }
             if (decoded) {
                 ctx.fireInboundBufferUpdated();
@@ -136,7 +131,7 @@ public abstract class ByteToMessageDecoder
     protected void callDecode(ChannelHandlerContext ctx, ByteBuf in) {
         boolean wasNull = false;
         boolean decoded = false;
-        MessageBuf<Object> out = decoderOutput();
+        OutputMessageBuf out = decoderOutput();
 
         assert out.isEmpty();
 
@@ -173,13 +168,19 @@ public abstract class ByteToMessageDecoder
                 }
             }
         } finally {
-            for (;;) {
-                Object msg = out.poll();
-                if (msg == null) {
-                    break;
+            if (out.containsByteBuf()) {
+                for (;;) {
+                    Object msg = out.poll();
+                    if (msg == null) {
+                        break;
+                    }
+                    decoded = true;
+                    ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg);
                 }
-                decoded = true;
-                ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg);
+            } else {
+                if (out.drainTo(ctx.nextInboundMessageBuffer()) > 0) {
+                    decoded = true;
+                }
             }
 
             if (decoded) {
@@ -217,7 +218,7 @@ public abstract class ByteToMessageDecoder
         decode(ctx, in, out);
     }
 
-    final MessageBuf<Object> decoderOutput() {
+    final OutputMessageBuf decoderOutput() {
         return decoderOutput.get();
     }
 
