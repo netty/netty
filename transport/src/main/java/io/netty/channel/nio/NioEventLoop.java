@@ -73,7 +73,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             }
         } catch (SecurityException e) {
             if (logger.isDebugEnabled()) {
-                logger.debug("Unable to get/set System Property '" + key + '\'', e);
+                logger.debug("Unable to get/set System Property: {}", key, e);
             }
         }
 
@@ -85,7 +85,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         SELECTOR_AUTO_REBUILD_THRESHOLD = selectorAutoRebuildThreshold;
 
         if (logger.isDebugEnabled()) {
-            logger.debug("Selector auto-rebuild threshold: {}", SELECTOR_AUTO_REBUILD_THRESHOLD);
+            logger.debug("io.netty.selectorAutoRebuildThreshold: {}", SELECTOR_AUTO_REBUILD_THRESHOLD);
         }
     }
 

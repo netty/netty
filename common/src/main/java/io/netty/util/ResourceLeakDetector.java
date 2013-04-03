@@ -33,10 +33,9 @@ public final class ResourceLeakDetector<T> {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ResourceLeakDetector.class);
 
     static {
-        if (ENABLED) {
-            logger.debug("Resource leak detection enabled.");
-        }
+        logger.debug("io.netty.resourceLeakDetection: {}", ENABLED);
     }
+
     private static final int DEFAULT_SAMPLING_INTERVAL = 113;
 
     private static final ResourceLeak NOOP = new ResourceLeak() {
