@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.spdy;
 
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
@@ -27,7 +28,6 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -139,9 +139,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
     }
 
     @Override
-    protected Object encode(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
-
-        List<Object> out = new ArrayList<Object>();
+    protected void encode(ChannelHandlerContext ctx, HttpObject msg, MessageBuf<Object> out) throws Exception {
 
         boolean valid = false;
 
@@ -199,8 +197,6 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
         if (!valid) {
             throw new UnsupportedMessageTypeException(msg);
         }
-
-        return out.toArray();
     }
 
     private SpdySynStreamFrame createSynStreamFrame(HttpMessage httpMessage)

@@ -16,6 +16,7 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
@@ -65,7 +66,8 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyDataOrControlFr
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, SpdyDataOrControlFrame msg) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, SpdyDataOrControlFrame msg, MessageBuf<Object> out)
+            throws Exception {
         if (msg instanceof SpdySynStreamFrame) {
 
             // HTTP requests/responses are mapped one-to-one to SPDY streams.
@@ -106,7 +108,8 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyDataOrControlFr
 
                     if (spdySynStreamFrame.isLast()) {
                         HttpHeaders.setContentLength(httpResponseWithEntity, 0);
-                        return httpResponseWithEntity;
+                        out.add(httpResponseWithEntity);
+                        return;
                     } else {
                         // Response body will follow in a series of Data Frames
                         messageMap.put(Integer.valueOf(streamID), httpResponseWithEntity);
@@ -125,7 +128,8 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyDataOrControlFr
                     SpdyHttpHeaders.setStreamId(httpRequestWithEntity, streamID);
 
                     if (spdySynStreamFrame.isLast()) {
-                        return httpRequestWithEntity;
+                        out.add(httpRequestWithEntity);
+                        return;
                     } else {
                         // Request body will follow in a series of Data Frames
                         messageMap.put(Integer.valueOf(streamID), httpRequestWithEntity);
@@ -155,7 +159,8 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyDataOrControlFr
 
                 if (spdySynReplyFrame.isLast()) {
                     HttpHeaders.setContentLength(httpResponseWithEntity, 0);
-                    return httpResponseWithEntity;
+                    out.add(httpResponseWithEntity);
+                    return;
                 } else {
                     // Response body will follow in a series of Data Frames
                     messageMap.put(Integer.valueOf(streamID), httpResponseWithEntity);
@@ -177,7 +182,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyDataOrControlFr
             // If message is not in map discard HEADERS frame.
             // SpdySessionHandler should prevent this from happening.
             if (httpMessage == null) {
-                return null;
+                return;
             }
 
             for (Map.Entry<String, String> e: spdyHeadersFrame.headers().entries()) {
@@ -193,7 +198,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyDataOrControlFr
             // If message is not in map discard Data Frame.
             // SpdySessionHandler should prevent this from happening.
             if (fullHttpMessage == null) {
-                return null;
+                return;
             }
 
             ByteBuf content = fullHttpMessage.data();
@@ -210,7 +215,8 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyDataOrControlFr
             if (spdyDataFrame.isLast()) {
                 HttpHeaders.setContentLength(fullHttpMessage, content.readableBytes());
                 messageMap.remove(streamID);
-                return fullHttpMessage;
+                out.add(fullHttpMessage);
+                return;
             }
 
         } else if (msg instanceof SpdyRstStreamFrame) {
@@ -219,8 +225,6 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyDataOrControlFr
             Integer streamID = Integer.valueOf(spdyRstStreamFrame.getStreamId());
             messageMap.remove(streamID);
         }
-
-        return null;
     }
 
     private static FullHttpRequest createHttpRequest(int spdyVersion, SpdyHeaderBlock requestFrame)

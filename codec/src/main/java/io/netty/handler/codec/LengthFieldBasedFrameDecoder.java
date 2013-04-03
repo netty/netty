@@ -16,6 +16,7 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.serialization.ObjectDecoder;
@@ -347,6 +348,13 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
     }
 
     @Override
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, MessageBuf<Object> out) throws Exception {
+        Object decoded = decode(ctx, in);
+        if (decoded != null) {
+            out.add(decoded);
+        }
+    }
+
     protected Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         if (discardingTooLongFrame) {
             long bytesToDiscard = this.bytesToDiscard;
@@ -446,12 +454,12 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
             discardingTooLongFrame = false;
             if (!failFast ||
                 failFast && firstDetectionOfTooLongFrame) {
-                fail(ctx, tooLongFrameLength);
+                fail(tooLongFrameLength);
             }
         } else {
             // Keep discarding and notify handlers if necessary.
             if (failFast && firstDetectionOfTooLongFrame) {
-                fail(ctx, tooLongFrameLength);
+                fail(tooLongFrameLength);
             }
         }
     }
@@ -473,17 +481,15 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
         return frame;
     }
 
-    private void fail(ChannelHandlerContext ctx, long frameLength) {
+    private void fail(long frameLength) {
         if (frameLength > 0) {
-            ctx.fireExceptionCaught(
-                    new TooLongFrameException(
+            throw new TooLongFrameException(
                             "Adjusted frame length exceeds " + maxFrameLength +
-                            ": " + frameLength + " - discarded"));
+                            ": " + frameLength + " - discarded");
         } else {
-            ctx.fireExceptionCaught(
-                    new TooLongFrameException(
+            throw new TooLongFrameException(
                             "Adjusted frame length exceeds " + maxFrameLength +
-                            " - discarding"));
+                            " - discarding");
         }
     }
 }

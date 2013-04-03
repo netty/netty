@@ -19,8 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.embedded.EmbeddedByteChannel;
-import io.netty.handler.codec.CodecException;
-import io.netty.handler.codec.TooLongFrameException;
 import org.jboss.marshalling.Marshaller;
 import org.jboss.marshalling.MarshallerFactory;
 import org.jboss.marshalling.Marshalling;
@@ -112,12 +110,12 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
         marshaller.close();
 
         byte[] testBytes = bout.toByteArray();
-        try {
-            ch.writeInbound(input(testBytes));
-            fail();
-        } catch (CodecException e) {
-            assertEquals(TooLongFrameException.class, e.getClass());
-        }
+        onTooBigFrame(ch, input(testBytes));
+    }
+
+    protected void onTooBigFrame(EmbeddedByteChannel ch, ByteBuf input) {
+        ch.writeInbound(input);
+        assertFalse(ch.isActive());
     }
 
     protected ChannelHandler createDecoder(int maxObjectSize) {

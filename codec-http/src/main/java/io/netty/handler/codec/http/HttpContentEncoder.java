@@ -18,6 +18,7 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedByteChannel;
@@ -55,28 +56,29 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
     private HttpMessage message;
     private boolean encodeStarted;
     private boolean continueResponse;
+
     @Override
-    protected Object decode(ChannelHandlerContext ctx, HttpMessage msg)
+    protected void decode(ChannelHandlerContext ctx, HttpMessage msg, MessageBuf<Object> out)
             throws Exception {
         String acceptedEncoding = msg.headers().get(HttpHeaders.Names.ACCEPT_ENCODING);
         if (acceptedEncoding == null) {
             acceptedEncoding = HttpHeaders.Values.IDENTITY;
         }
         acceptEncodingQueue.add(acceptedEncoding);
-        BufUtil.retain(msg);
-        return msg;
+        out.add(BufUtil.retain(msg));
     }
 
     @Override
-    protected Object encode(ChannelHandlerContext ctx, HttpObject msg)
+    protected void encode(ChannelHandlerContext ctx, HttpObject msg, MessageBuf<Object> out)
             throws Exception {
         if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().code() == 100) {
-            // 100-continue response must be passed through.
-            BufUtil.retain(msg);
+
             if (!(msg instanceof LastHttpContent)) {
                 continueResponse = true;
             }
-            return msg;
+            // 100-continue response must be passed through.
+            out.add(BufUtil.retain(msg));
+            return;
         }
 
         if (continueResponse) {
@@ -84,8 +86,8 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
                 continueResponse = false;
             }
             // 100-continue response must be passed through.
-            BufUtil.retain(msg);
-            return msg;
+            out.add(BufUtil.retain(msg));
+            return;
         }
 
         // handle the case of single complete message without content
@@ -97,7 +99,8 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
                 throw new IllegalStateException("cannot send more responses than requests");
             }
 
-            return ((FullHttpMessage) msg).retain();
+            out.add(BufUtil.retain(msg));
+            return;
         }
 
         if (msg instanceof HttpMessage) {
@@ -115,7 +118,8 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
                     message = new DefaultHttpResponse(res.getProtocolVersion(), res.getStatus());
                     message.headers().set(res.headers());
                 } else {
-                    return msg;
+                    out.add(msg);
+                    return;
                 }
             } else {
                 message = (HttpMessage) msg;
@@ -144,9 +148,13 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
                 if (result == null) {
                     if (c instanceof LastHttpContent) {
                         encodeStarted = false;
-                        return new Object[] { message, new DefaultLastHttpContent(c.data().retain()) };
+                        out.add(message);
+                        out.add(new DefaultLastHttpContent(c.data().retain()));
+                        return;
                     } else {
-                        return new Object[] { message, new DefaultHttpContent(c.data().retain()) };
+                        out.add(message);
+                        out.add(new DefaultHttpContent(c.data().retain()));
+                        return;
                     }
                 }
 
@@ -158,7 +166,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
                         HttpHeaders.Names.CONTENT_ENCODING,
                         result.targetContentEncoding());
 
-                Object[] encoded = encodeContent(message, c);
+                HttpObject[] encoded = encodeContent(message, c);
 
                 if (!HttpHeaders.isTransferEncodingChunked(message) && encoded.length == 3) {
                     if (headers.contains(HttpHeaders.Names.CONTENT_LENGTH)) {
@@ -170,23 +178,29 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
                                 Long.toString(length));
                     }
                 }
-                return encoded;
+                for (HttpObject obj: encoded) {
+                    out.add(obj);
+                }
+                return;
             }
 
             if (encoder != null) {
-                return encodeContent(null, c);
+                HttpObject[] encoded =  encodeContent(null, c);
+                for (HttpObject obj: encoded) {
+                    out.add(obj);
+                }
+                return;
             }
 
             if (c instanceof LastHttpContent) {
                 encodeStarted = false;
             }
 
-            return c.retain();
+            out.add(c.retain());
         }
-        return null;
     }
 
-    private Object[] encodeContent(HttpMessage header, HttpContent c) {
+    private HttpObject[] encodeContent(HttpMessage header, HttpContent c) {
         ByteBuf newContent = Unpooled.buffer();
         ByteBuf content = c.data();
         encode(content, newContent);
@@ -199,23 +213,24 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
             // the last product on closure,
             if (lastProduct.isReadable()) {
                 if (header == null) {
-                    return new Object[] { new DefaultHttpContent(newContent), new DefaultLastHttpContent(lastProduct)};
+                    return new HttpObject[] { new DefaultHttpContent(newContent),
+                            new DefaultLastHttpContent(lastProduct)};
                 } else {
-                    return new Object[] { header,  new DefaultHttpContent(newContent),
+                    return new HttpObject[] { header,  new DefaultHttpContent(newContent),
                             new DefaultLastHttpContent(lastProduct)};
                 }
             } else {
                 if (header == null) {
-                    return new Object[] { new DefaultLastHttpContent(newContent) };
+                    return new HttpObject[] { new DefaultLastHttpContent(newContent) };
                 } else {
-                    return new Object[] { header, new DefaultLastHttpContent(newContent) };
+                    return new HttpObject[] { header, new DefaultLastHttpContent(newContent) };
                 }
             }
         }
         if (header == null) {
-            return new Object[] { new DefaultHttpContent(newContent) };
+            return new HttpObject[] { new DefaultHttpContent(newContent) };
         } else {
-            return new Object[] { header, new DefaultHttpContent(newContent) };
+            return new HttpObject[] { header, new DefaultHttpContent(newContent) };
         }
     }
 
