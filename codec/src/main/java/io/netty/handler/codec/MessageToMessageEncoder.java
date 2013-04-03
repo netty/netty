@@ -16,6 +16,7 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.MessageBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
@@ -28,20 +29,24 @@ import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
  * <pre>
  *     public class IntegerToStringEncoder extends
  *             {@link MessageToMessageEncoder}&lt;{@link Integer}&gt; {
- *         public StringToIntegerDecoder() {
- *             super(String.class);
- *         }
  *
  *         {@code @Override}
- *         public {@link Object} encode({@link ChannelHandlerContext} ctx, {@link Integer} message)
+ *         public void encode({@link ChannelHandlerContext} ctx, {@link Integer} message, {@link MessageBuf} out)
  *                 throws {@link Exception} {
- *             return message.toString();
+ *             out.add(message.toString());
  *         }
  *     }
  * </pre>
  *
  */
 public abstract class MessageToMessageEncoder<I> extends ChannelOutboundMessageHandlerAdapter<I> {
+    private static final ThreadLocal<MessageBuf<Object>> encoderOutput =
+            new ThreadLocal<MessageBuf<Object>>() {
+                @Override
+                protected MessageBuf<Object> initialValue() {
+                    return Unpooled.messageBuffer();
+                }
+            };
 
     protected MessageToMessageEncoder() { }
 
@@ -51,16 +56,30 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundMessageH
 
     @Override
     public final void flush(ChannelHandlerContext ctx, I msg) throws Exception {
-        try {
-            Object encoded = encode(ctx, msg);
-            // Handle special case when the encoded output is a ByteBuf and the next handler in the pipeline
-            // accept bytes. Related to #1222
-            ChannelHandlerUtil.addToNextOutboundBuffer(ctx, encoded);
+        MessageBuf<Object> out = encoderOutput.get();
 
+        assert out.isEmpty();
+
+        try {
+            encode(ctx, msg, out);
         } catch (CodecException e) {
             throw e;
-        } catch (Exception e) {
-            throw new CodecException(e);
+        } catch (Throwable cause) {
+            if (cause instanceof CodecException) {
+                throw (CodecException) cause;
+            } else {
+                throw new EncoderException(cause);
+            }
+        } finally {
+            for (;;) {
+                Object encoded = out.poll();
+                if (encoded == null) {
+                    break;
+                }
+                // Handle special case when the encoded output is a ByteBuf and the next handler in the pipeline
+                // accept bytes. Related to #1222
+                ChannelHandlerUtil.addToNextOutboundBuffer(ctx, encoded);
+            }
         }
     }
 
@@ -70,9 +89,9 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundMessageH
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link MessageToMessageEncoder} belongs to
      * @param msg           the message to encode to an other one
-     * @return message      the encoded message or {@code null} if more messages are needed be cause the implementation
+     * @param out           the {@link MessageBuf} into which the encoded msg should be added
      *                      needs to do some kind of aggragation
      * @throws Exception    is thrown if an error accour
      */
-    protected abstract Object encode(ChannelHandlerContext ctx, I msg) throws Exception;
+    protected abstract void encode(ChannelHandlerContext ctx, I msg, MessageBuf<Object> out) throws Exception;
 }

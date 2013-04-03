@@ -17,6 +17,7 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
@@ -45,10 +46,11 @@ public class WebSocketFrameAggregator extends MessageToMessageDecoder<WebSocketF
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, WebSocketFrame msg) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, WebSocketFrame msg, MessageBuf<Object> out) throws Exception {
         if (currentFrame == null) {
             if (msg.isFinalFragment()) {
-                return msg.retain();
+                out.add(msg.retain());
+                return;
             }
             ByteBuf buf = ctx.alloc().compositeBuffer().addComponent(msg.data().retain());
             buf.writerIndex(buf.writerIndex() + msg.data().readableBytes());
@@ -61,7 +63,7 @@ public class WebSocketFrameAggregator extends MessageToMessageDecoder<WebSocketF
                 throw new IllegalStateException(
                         "WebSocket frame was not of type TextWebSocketFrame or BinaryWebSocketFrame");
             }
-            return null;
+            return;
         }
         if (msg instanceof ContinuationWebSocketFrame) {
             CompositeByteBuf content = (CompositeByteBuf) currentFrame.data();
@@ -76,13 +78,14 @@ public class WebSocketFrameAggregator extends MessageToMessageDecoder<WebSocketF
             if (msg.isFinalFragment()) {
                 WebSocketFrame frame = this.currentFrame;
                 this.currentFrame = null;
-                return frame;
+                out.add(frame);
+                return;
             } else {
-                return null;
+                return;
             }
         }
         // It is possible to receive CLOSE/PING/PONG frames during fragmented frames so just pass them to the next
         // handler in the chain
-        return msg.retain();
+        out.add(msg.retain());
     }
 }
