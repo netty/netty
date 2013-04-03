@@ -18,19 +18,64 @@ package io.netty.buffer;
 
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
-    private static final int DEFAULT_NUM_HEAP_ARENA = Runtime.getRuntime().availableProcessors();
-    private static final int DEFAULT_NUM_DIRECT_ARENA = Runtime.getRuntime().availableProcessors();
-    private static final int DEFAULT_PAGE_SIZE = 8192;
-    private static final int DEFAULT_MAX_ORDER = 11; // 8192 << 11 = 16 MiB per chunk
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(PooledByteBufAllocator.class);
+
+    private static final int DEFAULT_NUM_HEAP_ARENA = Math.max(1, SystemPropertyUtil.getInt(
+            "io.netty.allocator.numHeapArenas", Runtime.getRuntime().availableProcessors()));
+    private static final int DEFAULT_NUM_DIRECT_ARENA = Math.max(1, SystemPropertyUtil.getInt(
+            "io.netty.allocator.numDirectArenas", Runtime.getRuntime().availableProcessors()));
+    private static final int DEFAULT_PAGE_SIZE;
+    private static final int DEFAULT_MAX_ORDER; // 8192 << 11 = 16 MiB per chunk
 
     private static final int MIN_PAGE_SIZE = 4096;
     private static final int MAX_CHUNK_SIZE = (int) (((long) Integer.MAX_VALUE + 1) / 2);
+
+    static {
+        int defaultPageSize = SystemPropertyUtil.getInt("io.netty.allocator.pageSize", 8192);
+        Throwable pageSizeFallbackCause = null;
+        try {
+            validateAndCalculatePageShifts(defaultPageSize);
+        } catch (Throwable t) {
+            pageSizeFallbackCause = t;
+            defaultPageSize = 8192;
+        }
+        DEFAULT_PAGE_SIZE = defaultPageSize;
+
+        int defaultMaxOrder = SystemPropertyUtil.getInt("io.netty.allocator.maxOrder", 11);
+        Throwable maxOrderFallbackCause = null;
+        try {
+            validateAndCalculateChunkSize(DEFAULT_PAGE_SIZE, defaultMaxOrder);
+        } catch (Throwable t) {
+            maxOrderFallbackCause = t;
+            defaultMaxOrder = 11;
+        }
+        DEFAULT_MAX_ORDER = defaultMaxOrder;
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("io.netty.allocator.numHeapArenas: {}", DEFAULT_NUM_HEAP_ARENA);
+            logger.debug("io.netty.allocator.numDirectArenas: {}", DEFAULT_NUM_DIRECT_ARENA);
+            if (pageSizeFallbackCause == null) {
+                logger.debug("io.netty.allocator.pageSize: {}", DEFAULT_PAGE_SIZE);
+            } else {
+                logger.debug("io.netty.allocator.pageSize: {}", DEFAULT_PAGE_SIZE, pageSizeFallbackCause);
+            }
+            if (maxOrderFallbackCause == null) {
+                logger.debug("io.netty.allocator.maxOrder: {}", DEFAULT_MAX_ORDER);
+            } else {
+                logger.debug("io.netty.allocator.maxOrder: {}", DEFAULT_MAX_ORDER, maxOrderFallbackCause);
+            }
+            logger.debug("io.netty.allocator.chunkSize: {}", DEFAULT_PAGE_SIZE << DEFAULT_MAX_ORDER);
+        }
+    }
 
     public static final PooledByteBufAllocator DEFAULT =
             new PooledByteBufAllocator(PlatformDependent.directBufferPreferred());
