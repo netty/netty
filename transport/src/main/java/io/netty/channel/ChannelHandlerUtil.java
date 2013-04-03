@@ -221,7 +221,7 @@ public final class ChannelHandlerUtil {
                 return true;
             }
         }
-        return ctx.nextOutboundMessageBuffer().unfoldAndAdd(msg);
+        return ctx.nextOutboundMessageBuffer().add(msg);
     }
 
     /**
@@ -235,7 +235,7 @@ public final class ChannelHandlerUtil {
                 return true;
             }
         }
-        return ctx.nextInboundMessageBuffer().unfoldAndAdd(msg);
+        return ctx.nextInboundMessageBuffer().add(msg);
     }
 
     private ChannelHandlerUtil() { }

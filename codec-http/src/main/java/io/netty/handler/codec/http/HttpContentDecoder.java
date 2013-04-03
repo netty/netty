@@ -18,6 +18,7 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedByteChannel;
@@ -50,14 +51,15 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
     private boolean continueResponse;
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, HttpObject msg, MessageBuf<Object> out) throws Exception {
         if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().code() == 100) {
-            // 100-continue response must be passed through.
-            BufUtil.retain(msg);
+
             if (!(msg instanceof LastHttpContent)) {
                 continueResponse = true;
             }
-            return msg;
+            // 100-continue response must be passed through.
+            out.add(BufUtil.retain(msg));
+            return;
         }
 
         if (continueResponse) {
@@ -65,8 +67,8 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                 continueResponse = false;
             }
             // 100-continue response must be passed through.
-            BufUtil.retain(msg);
-            return msg;
+            out.add(BufUtil.retain(msg));
+            return;
         }
 
         if (msg instanceof HttpMessage) {
@@ -112,27 +114,34 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                                 HttpHeaders.Names.CONTENT_LENGTH,
                                 Integer.toString(((ByteBufHolder) decoded[1]).data().readableBytes()));
                     }
-                    return decoded;
+
+                    for (Object obj: decoded) {
+                        out.add(obj);
+                    }
+                    return;
                 }
 
                 if (c instanceof LastHttpContent) {
                     decodeStarted = false;
                 }
-
-                return new Object[] { message, c.retain() };
+                out.add(message);
+                out.add(c.retain());
+                return;
             }
 
             if (decoder != null) {
-                return decodeContent(null, c);
+                Object[] decoded = decodeContent(null, c);
+
+                for (Object obj: decoded) {
+                    out.add(obj);
+                }
             } else {
                 if (c instanceof LastHttpContent) {
                     decodeStarted = false;
                 }
-                return c.retain();
+                out.add(c.retain());
             }
         }
-
-        return null;
     }
 
     private Object[] decodeContent(HttpMessage header, HttpContent c) {

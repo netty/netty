@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
@@ -49,21 +50,21 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<Void> {
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, MessageBuf<Object> out) throws Exception {
         // Discard all data received if closing handshake was received before.
         if (receivedClosingHandshake) {
             in.skipBytes(actualReadableBytes());
-            return null;
+            return;
         }
 
         // Decode a frame otherwise.
         byte type = in.readByte();
         if ((type & 0x80) == 0x80) {
             // If the MSB on type is set, decode the frame length
-            return decodeBinaryFrame(ctx, type, in);
+            out.add(decodeBinaryFrame(ctx, type, in));
         } else {
             // Decode a 0xff terminated UTF-8 string
-            return decodeTextFrame(ctx, in);
+            out.add(decodeTextFrame(ctx, in));
         }
     }
 

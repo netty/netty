@@ -18,6 +18,7 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -106,7 +107,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, HttpObject msg, MessageBuf<Object> out) throws Exception {
         FullHttpMessage currentMessage = this.currentMessage;
 
         if (msg instanceof HttpMessage) {
@@ -126,8 +127,8 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             if (!m.getDecoderResult().isSuccess()) {
                 removeTransferEncodingChunked(m);
                 this.currentMessage = null;
-                BufUtil.retain(m);
-                return m;
+                out.add(BufUtil.retain(m));
+                return;
             }
             if (msg instanceof HttpRequest) {
                 HttpRequest header = (HttpRequest) msg;
@@ -146,8 +147,6 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
 
             // A streamed message - initialize the cumulative buffer, and wait for incoming chunks.
             removeTransferEncodingChunked(currentMessage);
-            return null;
-
         } else if (msg instanceof HttpContent) {
             assert currentMessage != null;
 
@@ -196,9 +195,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
                         String.valueOf(content.readableBytes()));
 
                 // All done
-                return currentMessage;
-            } else {
-                return null;
+                out.add(currentMessage);
             }
         } else {
             throw new Error();

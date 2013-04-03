@@ -16,7 +16,9 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.MessageBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 
@@ -29,20 +31,25 @@ import io.netty.channel.ChannelInboundMessageHandlerAdapter;
  * <pre>
  *     public class StringToIntegerDecoder extends
  *             {@link MessageToMessageDecoder}&lt;{@link String}&gt; {
- *         public StringToIntegerDecoder() {
- *             super(String.class);
- *         }
  *
  *         {@code @Override}
- *         public {@link Object} decode({@link ChannelHandlerContext} ctx, {@link String} message)
- *                 throws {@link Exception} {
- *             return message.length());
+ *         public void decode({@link ChannelHandlerContext} ctx, {@link String} message,
+ *                 {@link MessageBuf} out) throws {@link Exception} {
+ *             out.add(message.length());
  *         }
  *     }
  * </pre>
  *
  */
 public abstract class MessageToMessageDecoder<I> extends ChannelInboundMessageHandlerAdapter<I> {
+
+    private static final ThreadLocal<MessageBuf<Object>> decoderOutput =
+            new ThreadLocal<MessageBuf<Object>>() {
+                @Override
+                protected MessageBuf<Object> initialValue() {
+                    return Unpooled.messageBuffer();
+                }
+            };
 
     protected MessageToMessageDecoder() { }
 
@@ -52,7 +59,18 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundMessageHa
 
     @Override
     public final void messageReceived(ChannelHandlerContext ctx, I msg) throws Exception {
-        ctx.nextInboundMessageBuffer().unfoldAndAdd(decode(ctx, msg));
+        MessageBuf<Object> out = decoderOutput.get();
+        try {
+            decode(ctx, msg, out);
+        } finally {
+            for (;;) {
+                Object obj =  out.poll();
+                if (obj == null) {
+                    break;
+                }
+                ChannelHandlerUtil.addToNextInboundBuffer(ctx, obj);
+            }
+        }
     }
 
     /**
@@ -61,9 +79,8 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundMessageHa
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link MessageToMessageDecoder} belongs to
      * @param msg           the message to decode to an other one
-     * @return message      the decoded message or {@code null} if more messages are needed be cause the implementation
-     *                      needs to do some kind of aggragation
+     * @param out           the {@link MessageBuf} to which decoded messages should be added
      * @throws Exception    is thrown if an error accour
      */
-    protected abstract Object decode(ChannelHandlerContext ctx, I msg) throws Exception;
+    protected abstract void decode(ChannelHandlerContext ctx, I msg, MessageBuf<Object> out) throws Exception;
 }

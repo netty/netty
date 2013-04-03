@@ -18,6 +18,11 @@ package io.netty.handler.codec.marshalling;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.embedded.EmbeddedByteChannel;
+import io.netty.handler.codec.CodecException;
+import io.netty.handler.codec.TooLongFrameException;
+
+import static org.junit.Assert.*;
 
 public class SerialMarshallingDecoderTest extends SerialCompatibleMarshallingDecoderTest {
 
@@ -34,4 +39,13 @@ public class SerialMarshallingDecoderTest extends SerialCompatibleMarshallingDec
                 createMarshallingConfig()), maxObjectSize);
     }
 
+    @Override
+    protected void onTooBigFrame(EmbeddedByteChannel ch, ByteBuf input) {
+        try {
+            ch.writeInbound(input);
+            fail();
+        } catch (CodecException e) {
+            assertEquals(TooLongFrameException.class, e.getClass());
+        }
+    }
 }

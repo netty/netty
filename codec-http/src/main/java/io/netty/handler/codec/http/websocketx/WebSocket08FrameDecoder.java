@@ -54,6 +54,7 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.CorruptedFrameException;
@@ -117,12 +118,12 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, MessageBuf<Object> out) throws Exception {
 
         // Discard all data received if closing handshake was received before.
         if (receivedClosingHandshake) {
             in.skipBytes(actualReadableBytes());
-            return null;
+            return;
         }
 
         switch (state()) {
@@ -148,31 +149,31 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 
                 if (frameRsv != 0 && !allowExtensions) {
                     protocolViolation(ctx, "RSV != 0 and no extension negotiated, RSV:" + frameRsv);
-                    return null;
+                    return;
                 }
 
                 if (maskedPayload && !frameMasked) {
                     protocolViolation(ctx, "unmasked client to server frame");
-                    return null;
+                    return;
                 }
                 if (frameOpcode > 7) { // control frame (have MSB in opcode set)
 
                     // control frames MUST NOT be fragmented
                     if (!frameFinalFlag) {
                         protocolViolation(ctx, "fragmented control frame");
-                        return null;
+                        return;
                     }
 
                     // control frames MUST have payload 125 octets or less
                     if (framePayloadLen1 > 125) {
                         protocolViolation(ctx, "control frame with payload length > 125 octets");
-                        return null;
+                        return;
                     }
 
                     // check for reserved control frame opcodes
                     if (!(frameOpcode == OPCODE_CLOSE || frameOpcode == OPCODE_PING || frameOpcode == OPCODE_PONG)) {
                         protocolViolation(ctx, "control frame using reserved opcode " + frameOpcode);
-                        return null;
+                        return;
                     }
 
                     // close frame : if there is a body, the first two bytes of the
@@ -180,25 +181,25 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
                     // order) representing a getStatus code
                     if (frameOpcode == 8 && framePayloadLen1 == 1) {
                         protocolViolation(ctx, "received close control frame with payload len 1");
-                        return null;
+                        return;
                     }
                 } else { // data frame
                     // check for reserved data frame opcodes
                     if (!(frameOpcode == OPCODE_CONT || frameOpcode == OPCODE_TEXT || frameOpcode == OPCODE_BINARY)) {
                         protocolViolation(ctx, "data frame using reserved opcode " + frameOpcode);
-                        return null;
+                        return;
                     }
 
                     // check opcode vs message fragmentation state 1/2
                     if (fragmentedFramesCount == 0 && frameOpcode == OPCODE_CONT) {
                         protocolViolation(ctx, "received continuation data frame outside fragmented message");
-                        return null;
+                        return;
                     }
 
                     // check opcode vs message fragmentation state 2/2
                     if (fragmentedFramesCount != 0 && frameOpcode != OPCODE_CONT && frameOpcode != OPCODE_PING) {
                         protocolViolation(ctx, "received non-continuation data frame while inside fragmented message");
-                        return null;
+                        return;
                     }
                 }
 
@@ -207,7 +208,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
                     framePayloadLength = in.readUnsignedShort();
                     if (framePayloadLength < 126) {
                         protocolViolation(ctx, "invalid data frame length (not using minimal length encoding)");
-                        return null;
+                        return;
                     }
                 } else if (framePayloadLen1 == 127) {
                     framePayloadLength = in.readLong();
@@ -216,7 +217,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 
                     if (framePayloadLength < 65536) {
                         protocolViolation(ctx, "invalid data frame length (not using minimal length encoding)");
-                        return null;
+                        return;
                     }
                 } else {
                     framePayloadLength = framePayloadLen1;
@@ -224,7 +225,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 
                 if (framePayloadLength > maxFramePayloadLength) {
                     protocolViolation(ctx, "Max frame length of " + maxFramePayloadLength + " has been exceeded.");
-                    return null;
+                    return;
                 }
 
                 if (logger.isDebugEnabled()) {
@@ -262,7 +263,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
                     framePayloadBytesRead += rbytes;
 
                     // Return null to wait for more bytes to arrive
-                    return null;
+                    return;
                 } else if (willHaveReadByteCount > framePayloadLength) {
                     // We have more than what we need so read up to the end of frame
                     // Leave the remainder in the buffer for next frame
@@ -291,15 +292,18 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
                 // Processing ping/pong/close frames because they cannot be
                 // fragmented
                 if (frameOpcode == OPCODE_PING) {
-                    return new PingWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
+                    out.add(new PingWebSocketFrame(frameFinalFlag, frameRsv, framePayload));
+                    return;
                 }
                 if (frameOpcode == OPCODE_PONG) {
-                    return new PongWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
+                    out.add(new PongWebSocketFrame(frameFinalFlag, frameRsv, framePayload));
+                    return;
                 }
                 if (frameOpcode == OPCODE_CLOSE) {
                     checkCloseFrameBody(ctx, framePayload);
                     receivedClosingHandshake = true;
-                    return new CloseWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
+                    out.add(new CloseWebSocketFrame(frameFinalFlag, frameRsv, framePayload));
+                    return;
                 }
 
                 // Processing for possible fragmented messages for text and binary
@@ -345,11 +349,14 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 
                 // Return the frame
                 if (frameOpcode == OPCODE_TEXT) {
-                    return new TextWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
+                    out.add(new TextWebSocketFrame(frameFinalFlag, frameRsv, framePayload));
+                    return;
                 } else if (frameOpcode == OPCODE_BINARY) {
-                    return new BinaryWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
+                    out.add(new BinaryWebSocketFrame(frameFinalFlag, frameRsv, framePayload));
+                    return;
                 } else if (frameOpcode == OPCODE_CONT) {
-                    return new ContinuationWebSocketFrame(frameFinalFlag, frameRsv, framePayload, aggregatedText);
+                    out.add(new ContinuationWebSocketFrame(frameFinalFlag, frameRsv, framePayload, aggregatedText));
+                    return;
                 } else {
                     throw new UnsupportedOperationException("Cannot decode web socket frame with opcode: "
                             + frameOpcode);
@@ -358,7 +365,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
                 // If we don't keep reading Netty will throw an exception saying
                 // we can't return null if no bytes read and state not changed.
                 in.readByte();
-                return null;
+                return;
             default:
                 throw new Error("Shouldn't reach here.");
         }

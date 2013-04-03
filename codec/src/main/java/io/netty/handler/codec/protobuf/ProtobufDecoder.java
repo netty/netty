@@ -19,6 +19,7 @@ import com.google.protobuf.ExtensionRegistry;
 import com.google.protobuf.Message;
 import com.google.protobuf.MessageLite;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -94,7 +95,7 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf msg, MessageBuf<Object> out) throws Exception {
         final byte[] array;
         final int offset;
         final int length = msg.readableBytes();
@@ -109,15 +110,15 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
 
         if (extensionRegistry == null) {
             if (HAS_PARSER) {
-                return prototype.getParserForType().parseFrom(array, offset, length);
+                out.add(prototype.getParserForType().parseFrom(array, offset, length));
             } else {
-                return prototype.newBuilderForType().mergeFrom(array, offset, length).build();
+                out.add(prototype.newBuilderForType().mergeFrom(array, offset, length).build());
             }
         } else {
             if (HAS_PARSER) {
-                return prototype.getParserForType().parseFrom(array, offset, length, extensionRegistry);
+                out.add(prototype.getParserForType().parseFrom(array, offset, length, extensionRegistry));
             } else {
-                return prototype.newBuilderForType().mergeFrom(array, offset, length, extensionRegistry).build();
+                out.add(prototype.newBuilderForType().mergeFrom(array, offset, length, extensionRegistry).build());
             }
         }
     }
