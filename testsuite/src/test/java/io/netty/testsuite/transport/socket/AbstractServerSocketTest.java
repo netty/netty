@@ -57,8 +57,6 @@ public abstract class AbstractServerSocketTest {
                 m.invoke(this, sb);
             } catch (InvocationTargetException ex) {
                 throw ex.getCause();
-            } finally {
-                sb.shutdown();
             }
         }
     }
