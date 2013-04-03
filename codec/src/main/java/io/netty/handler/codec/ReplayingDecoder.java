@@ -406,77 +406,75 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
     @Override
     protected void callDecode(ChannelHandlerContext ctx, ByteBuf buf) {
         boolean wasNull = false;
-
         ByteBuf in = cumulation;
         MessageBuf<Object> out = decoderOutput();
         boolean decoded = false;
-        while (in.isReadable()) {
-            try {
-                int oldReaderIndex = checkpoint = in.readerIndex();
-                int outSize = out.size();
-                S oldState = state;
+
+        assert out.isEmpty();
+
+        try {
+            while (in.isReadable()) {
                 try {
-                    decode(ctx, replayable, out);
-                    if (outSize == out.size()) {
-                        wasNull = true;
-                        if (oldReaderIndex == in.readerIndex() && oldState == state) {
-                            throw new IllegalStateException(
-                                    "null cannot be returned if no data is consumed and state didn't change.");
-                        } else {
-                            // Previous data has been discarded or caused state transition.
-                            // Probably it is reading on.
-                            continue;
+                    int oldReaderIndex = checkpoint = in.readerIndex();
+                    int outSize = out.size();
+                    S oldState = state;
+                    try {
+                        decode(ctx, replayable, out);
+                        if (outSize == out.size()) {
+                            wasNull = true;
+                            if (oldReaderIndex == in.readerIndex() && oldState == state) {
+                                throw new IllegalStateException(
+                                        "null cannot be returned if no data is consumed and state didn't change.");
+                            } else {
+                                // Previous data has been discarded or caused state transition.
+                                // Probably it is reading on.
+                                continue;
+                            }
                         }
-                    }
-                } catch (Signal replay) {
-                    replay.expect(REPLAY);
-                    // Return to the checkpoint (or oldPosition) and retry.
-                    int checkpoint = this.checkpoint;
-                    if (checkpoint >= 0) {
-                        in.readerIndex(checkpoint);
-                    } else {
-                        // Called by cleanup() - no need to maintain the readerIndex
-                        // anymore because the buffer has been released already.
-                    }
-                    break;
-                }
-                wasNull = false;
-
-                if (oldReaderIndex == in.readerIndex() && oldState == state) {
-                    throw new IllegalStateException(
-                            "decode() method must consume at least one byte " +
-                            "if it returned a decoded message (caused by: " +
-                            getClass() + ')');
-                }
-            } catch (Throwable t) {
-                if (t instanceof CodecException) {
-                    throw (CodecException) t;
-                } else {
-                    throw new DecoderException(t);
-                }
-            } finally {
-
-                for (;;) {
-                    Object msg = out.poll();
-                    if (msg == null) {
+                    } catch (Signal replay) {
+                        replay.expect(REPLAY);
+                        // Return to the checkpoint (or oldPosition) and retry.
+                        int checkpoint = this.checkpoint;
+                        if (checkpoint >= 0) {
+                            in.readerIndex(checkpoint);
+                        } else {
+                            // Called by cleanup() - no need to maintain the readerIndex
+                            // anymore because the buffer has been released already.
+                        }
                         break;
                     }
-                    decoded = true;
-                    ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg);
-                }
-                if (decoded) {
-                    decoded = false;
-                    ctx.fireInboundBufferUpdated();
+                    wasNull = false;
+
+                    if (oldReaderIndex == in.readerIndex() && oldState == state) {
+                        throw new IllegalStateException(
+                               "decode() method must consume at least one byte " +
+                               "if it returned a decoded message (caused by: " +
+                               getClass() + ')');
+                    }
+                } catch (Throwable t) {
+                    if (t instanceof CodecException) {
+                        throw (CodecException) t;
+                    } else {
+                        throw new DecoderException(t);
+                    }
                 }
             }
-        }
-
-        if (decoded) {
-            decodeWasNull = false;
-            ctx.fireInboundBufferUpdated();
-        } else {
-            if (wasNull) {
-                decodeWasNull = true;
+        } finally {
+            for (;;) {
+                Object msg = out.poll();
+                if (msg == null) {
+                    break;
+                }
+                decoded = true;
+                ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg);
+            }
+            if (decoded) {
+                decodeWasNull = false;
+                ctx.fireInboundBufferUpdated();
+            } else {
+                if (wasNull) {
+                    decodeWasNull = true;
+                }
             }
         }
     }
