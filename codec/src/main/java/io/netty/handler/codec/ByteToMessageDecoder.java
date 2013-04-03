@@ -45,18 +45,23 @@ public abstract class ByteToMessageDecoder
 
     private volatile boolean singleDecode;
     private boolean decodeWasNull;
-    private MessageBuf<Object> decoderOutput;
+
+    private static final ThreadLocal<MessageBuf<Object>> decoderOutput =
+            new ThreadLocal<MessageBuf<Object>>() {
+                @Override
+                protected MessageBuf<Object> initialValue() {
+                    return Unpooled.messageBuffer();
+                }
+            };
 
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        decoderOutput = Unpooled.messageBuffer();
         return super.newInboundBuffer(ctx);
     }
 
     @Override
     public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         super.freeInboundBuffer(ctx);
-        decoderOutput.release();
     }
 
     /**
@@ -130,64 +135,60 @@ public abstract class ByteToMessageDecoder
 
     protected void callDecode(ChannelHandlerContext ctx, ByteBuf in) {
         boolean wasNull = false;
-
         boolean decoded = false;
         MessageBuf<Object> out = decoderOutput();
 
         assert out.isEmpty();
 
-        while (in.isReadable()) {
-            try {
-                int outSize = out.size();
-                int oldInputLength = in.readableBytes();
-                decode(ctx, in, out);
-                if (outSize == out.size()) {
-                    wasNull = true;
+        try {
+            while (in.isReadable()) {
+                try {
+                    int outSize = out.size();
+                    int oldInputLength = in.readableBytes();
+                    decode(ctx, in, out);
+                    if (outSize == out.size()) {
+                        wasNull = true;
+                        if (oldInputLength == in.readableBytes()) {
+                            break;
+                        } else {
+                            continue;
+                        }
+                    }
+
+                    wasNull = false;
                     if (oldInputLength == in.readableBytes()) {
+                        throw new IllegalStateException(
+                             "decode() did not read anything but decoded a message.");
+                    }
+
+                    if (isSingleDecode()) {
                         break;
+                    }
+                } catch (Throwable t) {
+                    if (t instanceof CodecException) {
+                        throw (CodecException) t;
                     } else {
-                        continue;
+                        throw new DecoderException(t);
                     }
-                }
-
-                wasNull = false;
-                if (oldInputLength == in.readableBytes()) {
-                    throw new IllegalStateException(
-                            "decode() did not read anything but decoded a message.");
-                }
-
-                if (isSingleDecode()) {
-                    break;
-                }
-            } catch (Throwable t) {
-                if (t instanceof CodecException) {
-                    throw (CodecException) t;
-                } else {
-                    throw new DecoderException(t);
-                }
-            } finally {
-                for (;;) {
-                    Object msg = out.poll();
-                    if (msg == null) {
-                        break;
-                    }
-                    decoded = true;
-                    ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg);
-                }
-
-                if (decoded) {
-                    decoded = false;
-                    ctx.fireInboundBufferUpdated();
                 }
             }
-        }
+        } finally {
+            for (;;) {
+                Object msg = out.poll();
+                if (msg == null) {
+                    break;
+                }
+                decoded = true;
+                ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg);
+            }
 
-        if (decoded) {
-            decodeWasNull = false;
-            ctx.fireInboundBufferUpdated();
-        } else {
-            if (wasNull) {
-                decodeWasNull = true;
+            if (decoded) {
+                decodeWasNull = false;
+                ctx.fireInboundBufferUpdated();
+            } else {
+                if (wasNull) {
+                    decodeWasNull = true;
+                }
             }
         }
     }
@@ -217,7 +218,7 @@ public abstract class ByteToMessageDecoder
     }
 
     final MessageBuf<Object> decoderOutput() {
-        return decoderOutput;
+        return decoderOutput.get();
     }
 
 }
