@@ -17,7 +17,6 @@ package io.netty.handler.codec;
 
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 
@@ -54,17 +53,7 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundMessageHa
         try {
             decode(ctx, msg, out);
         } finally {
-            if (out.containsByteBuf()) {
-                for (;;) {
-                    Object decoded = out.poll();
-                    if (decoded == null) {
-                        break;
-                    }
-                    ChannelHandlerUtil.addToNextInboundBuffer(ctx, decoded);
-                }
-            } else {
-                out.drainTo(ctx.nextInboundMessageBuffer());
-            }
+            out.drainToNextInbound(ctx);
         }
     }
 

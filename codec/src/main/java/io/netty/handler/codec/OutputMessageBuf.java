@@ -15,11 +15,15 @@
  */
 package io.netty.handler.codec;
 
+import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultMessageBuf;
+import io.netty.buffer.MessageBuf;
+import io.netty.channel.ChannelHandlerContext;
 
 final class OutputMessageBuf extends DefaultMessageBuf<Object> {
     private int byteBufs;
+    private int nonByteBufs;
 
     private static final ThreadLocal<OutputMessageBuf> output =
             new ThreadLocal<OutputMessageBuf>() {
@@ -47,8 +51,12 @@ final class OutputMessageBuf extends DefaultMessageBuf<Object> {
     @Override
     public boolean offer(Object e) {
         boolean added =  super.offer(e);
-        if (added && e instanceof ByteBuf) {
-            byteBufs++;
+        if (added) {
+            if (e instanceof ByteBuf) {
+                byteBufs++;
+            } else {
+                nonByteBufs++;
+            }
         }
         return added;
     }
@@ -57,8 +65,12 @@ final class OutputMessageBuf extends DefaultMessageBuf<Object> {
     public boolean remove(Object o) {
         boolean removed = super.remove(o);
 
-        if (removed && o instanceof ByteBuf) {
-            byteBufs--;
+        if (removed) {
+            if (o instanceof ByteBuf) {
+                byteBufs--;
+            } else {
+                nonByteBufs--;
+            }
         }
         return removed;
     }
@@ -66,8 +78,13 @@ final class OutputMessageBuf extends DefaultMessageBuf<Object> {
     @Override
     public Object poll() {
         Object o = super.poll();
+        if (o == null) {
+            return o;
+        }
         if (o instanceof ByteBuf) {
             byteBufs--;
+        } else {
+            nonByteBufs--;
         }
         return o;
     }
@@ -76,9 +93,84 @@ final class OutputMessageBuf extends DefaultMessageBuf<Object> {
     public void clear() {
         super.clear();
         byteBufs = 0;
+        nonByteBufs = 0;
     }
 
-    public boolean containsByteBuf() {
+    private boolean containsByteBuf() {
         return byteBufs > 0;
+    }
+
+    private boolean containsNonByteBuf() {
+       return nonByteBufs > 0;
+    }
+
+    public boolean drainToNextInbound(ChannelHandlerContext ctx) {
+        if (containsByteBuf() && ctx.nextInboundBufferType() == BufType.BYTE) {
+            ByteBuf buf = ctx.nextInboundByteBuffer();
+            boolean drained = false;
+            if (!containsNonByteBuf()) {
+                for (;;) {
+                    Object o = poll();
+                    if (o == null) {
+                        break;
+                    }
+                    buf.writeBytes((ByteBuf) o);
+                    drained = true;
+                }
+            } else {
+                // mixed case
+                MessageBuf<Object> msgBuf = ctx.nextInboundMessageBuffer();
+                for (;;) {
+                    Object o = poll();
+                    if (o == null) {
+                        break;
+                    }
+                    if (o instanceof ByteBuf) {
+                        buf.writeBytes((ByteBuf) o);
+                    } else {
+                        msgBuf.add(o);
+                    }
+                    drained = true;
+                }
+            }
+            return drained;
+        } else {
+            return drainTo(ctx.nextInboundMessageBuffer()) > 0;
+        }
+    }
+
+    public boolean drainToNextOutbound(ChannelHandlerContext ctx) {
+        if (containsByteBuf() && ctx.nextOutboundBufferType() == BufType.BYTE) {
+            ByteBuf buf = ctx.nextOutboundByteBuffer();
+            boolean drained = false;
+            if (!containsNonByteBuf()) {
+                for (;;) {
+                    Object o = poll();
+                    if (o == null) {
+                        break;
+                    }
+                    buf.writeBytes((ByteBuf) o);
+                    drained = true;
+                }
+            } else {
+                // mixed case
+                MessageBuf<Object> msgBuf = ctx.nextOutboundMessageBuffer();
+                for (;;) {
+                    Object o = poll();
+                    if (o == null) {
+                        break;
+                    }
+                    if (o instanceof ByteBuf) {
+                        buf.writeBytes((ByteBuf) o);
+                    } else {
+                        msgBuf.add(o);
+                    }
+                    drained = true;
+                }
+            }
+            return drained;
+        } else {
+            return drainTo(ctx.nextOutboundMessageBuffer()) > 0;
+        }
     }
 }
