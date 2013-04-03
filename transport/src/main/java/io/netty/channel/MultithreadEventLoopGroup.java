@@ -28,8 +28,7 @@ public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutor
     /**
      * @see {@link MultithreadEventExecutorGroup##MultithreadEventLoopGroup(int,ThreadFactory, Object...)}
      */
-    protected MultithreadEventLoopGroup(int nThreads, ThreadFactory threadFactory,
-            Object... args) {
+    protected MultithreadEventLoopGroup(int nThreads, ThreadFactory threadFactory, Object... args) {
         super(nThreads, threadFactory, args);
     }
 
