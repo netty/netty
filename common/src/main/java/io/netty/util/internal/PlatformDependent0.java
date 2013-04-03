@@ -15,6 +15,8 @@
  */
 package io.netty.util.internal;
 
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 import sun.misc.Cleaner;
 import sun.misc.Unsafe;
 
@@ -28,6 +30,7 @@ import java.nio.ByteBuffer;
  */
 final class PlatformDependent0 {
 
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(PlatformDependent0.class);
     private static final Unsafe UNSAFE;
     private static final long CLEANER_FIELD_OFFSET;
     private static final long ADDRESS_FIELD_OFFSET;
@@ -50,6 +53,7 @@ final class PlatformDependent0 {
         } catch (Throwable t) {
             cleanerField = null;
         }
+        logger.debug("java.nio.ByteBuffer.cleaner: {}", cleanerField != null? "available" : "unavailable");
 
         Field addressField;
         try {
@@ -68,6 +72,7 @@ final class PlatformDependent0 {
         } catch (Throwable t) {
             addressField = null;
         }
+        logger.debug("java.nio.Buffer.address: {}", addressField != null? "available" : "unavailable");
 
         Unsafe unsafe;
         if (addressField != null && cleanerField != null) {
@@ -75,12 +80,21 @@ final class PlatformDependent0 {
                 Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
                 unsafeField.setAccessible(true);
                 unsafe = (Unsafe) unsafeField.get(null);
+                logger.debug("sun.misc.Unsafe.theUnsafe: {}", unsafe != null? "available" : "unavailable");
 
                 // Ensure the unsafe supports all necessary methods to work around the mistake in the latest OpenJDK.
                 // https://github.com/netty/netty/issues/1061
                 // http://www.mail-archive.com/jdk6-dev@openjdk.java.net/msg00698.html
-                unsafe.getClass().getDeclaredMethod(
-                        "copyMemory", new Class[] { Object.class, long.class, Object.class, long.class, long.class });
+                try {
+                    unsafe.getClass().getDeclaredMethod(
+                            "copyMemory",
+                            new Class[] { Object.class, long.class, Object.class, long.class, long.class });
+
+                    logger.debug("sun.misc.Unsafe.copyMemory(Object, long, Object, long, long): available");
+                } catch (NoSuchMethodError t) {
+                    logger.debug("sun.misc.Unsafe.copyMemory(Object, long, Object, long, long): unavailable");
+                    throw t;
+                }
             } catch (Throwable cause) {
                 unsafe = null;
             }
@@ -111,7 +125,9 @@ final class PlatformDependent0 {
                 //noinspection DynamicRegexReplaceableByCompiledPattern
                 unaligned = arch.matches("^(i[3-6]86|x86(_64)?|x64|amd64)$");
             }
+
             UNALIGNED = unaligned;
+            logger.debug("java.nio.Bits.unaligned: {}", UNALIGNED);
         }
     }
 
