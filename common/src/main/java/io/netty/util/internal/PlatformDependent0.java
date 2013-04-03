@@ -90,9 +90,9 @@ final class PlatformDependent0 {
                             "copyMemory",
                             new Class[] { Object.class, long.class, Object.class, long.class, long.class });
 
-                    logger.debug("sun.misc.Unsafe.copyMemory(Object, long, Object, long, long): available");
+                    logger.debug("sun.misc.Unsafe.copyMemory: available");
                 } catch (NoSuchMethodError t) {
-                    logger.debug("sun.misc.Unsafe.copyMemory(Object, long, Object, long, long): unavailable");
+                    logger.debug("sun.misc.Unsafe.copyMemory: unavailable");
                     throw t;
                 }
             } catch (Throwable cause) {

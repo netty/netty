@@ -482,7 +482,7 @@ public final class PlatformDependent {
             logger.debug("Javassist: unavailable");
             logger.warn(
                     "You don't have Javassist in your class path or you don't have enough permission " +
-                            "to load dynamically generated classes.  Please check the configuration for better performance.");
+                    "to load dynamically generated classes.  Please check the configuration for better performance.");
             return false;
         }
     }

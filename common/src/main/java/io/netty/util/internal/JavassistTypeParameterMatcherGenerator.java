@@ -59,7 +59,11 @@ final class JavassistTypeParameterMatcherGenerator {
             method.setAccessible(true);
 
             Class<?> generated = (Class<?>) method.invoke(classLoader, className, byteCode, 0, byteCode.length);
-            logger.debug("Generated: {}", generated.getName());
+            if (type != Object.class) {
+                logger.debug("Generated: {}", generated.getName());
+            } else {
+                // Object.class is only used when checking if Javassist is available.
+            }
             return (TypeParameterMatcher) generated.newInstance();
         } catch (RuntimeException e) {
             throw e;
