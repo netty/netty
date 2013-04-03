@@ -97,14 +97,21 @@ public abstract class ByteToMessageDecoder
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        MessageBuf<Object> out = decoderOutput();
         try {
             ByteBuf in = ctx.inboundByteBuffer();
             if (in.isReadable()) {
                 callDecode(ctx, in);
             }
-            MessageBuf<Object> out = decoderOutput();
             decodeLast(ctx, in, out);
 
+        } catch (Throwable t) {
+            if (t instanceof CodecException) {
+                throw (CodecException) t;
+            } else {
+                throw new DecoderException(t);
+            }
+        } finally {
             boolean decoded = false;
             for (;;) {
                 Object msg = out.poll();
@@ -117,13 +124,6 @@ public abstract class ByteToMessageDecoder
             if (decoded) {
                 ctx.fireInboundBufferUpdated();
             }
-        } catch (Throwable t) {
-            if (t instanceof CodecException) {
-                ctx.fireExceptionCaught(t);
-            } else {
-                ctx.fireExceptionCaught(new DecoderException(t));
-            }
-        } finally {
             ctx.fireChannelInactive();
         }
     }
@@ -133,6 +133,8 @@ public abstract class ByteToMessageDecoder
 
         boolean decoded = false;
         MessageBuf<Object> out = decoderOutput();
+
+        assert out.isEmpty();
 
         while (in.isReadable()) {
             try {
@@ -153,32 +155,30 @@ public abstract class ByteToMessageDecoder
                     throw new IllegalStateException(
                             "decode() did not read anything but decoded a message.");
                 }
-                decoded = true;
-
-                for (;;) {
-                    Object msg = out.poll();
-                    if (msg == null) {
-                        break;
-                    }
-                    ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg);
-                }
 
                 if (isSingleDecode()) {
                     break;
                 }
             } catch (Throwable t) {
+                if (t instanceof CodecException) {
+                    throw (CodecException) t;
+                } else {
+                    throw new DecoderException(t);
+                }
+            } finally {
+                for (;;) {
+                    Object msg = out.poll();
+                    if (msg == null) {
+                        break;
+                    }
+                    decoded = true;
+                    ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg);
+                }
+
                 if (decoded) {
                     decoded = false;
                     ctx.fireInboundBufferUpdated();
                 }
-
-                if (t instanceof CodecException) {
-                    ctx.fireExceptionCaught(t);
-                } else {
-                    ctx.fireExceptionCaught(new DecoderException(t));
-                }
-
-                break;
             }
         }
 

@@ -40,14 +40,13 @@ public class SpdyHttpResponseStreamIdHandler extends
     }
 
     @Override
-    protected Object encode(ChannelHandlerContext ctx, HttpMessage msg) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, HttpMessage msg, MessageBuf<Object> out) throws Exception {
         Integer id = ids.poll();
         if (id != null && id.intValue() != NO_ID && !msg.headers().contains(SpdyHttpHeaders.Names.STREAM_ID)) {
             SpdyHttpHeaders.setStreamId(msg, id);
         }
 
-        BufUtil.retain(msg);
-        return msg;
+        out.add(BufUtil.retain(msg));
     }
 
     @Override

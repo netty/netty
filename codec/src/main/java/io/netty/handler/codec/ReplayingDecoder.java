@@ -365,6 +365,8 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        MessageBuf<Object> out = decoderOutput();
+
         try {
             replayable.terminate();
             ByteBuf in = cumulation;
@@ -372,8 +374,17 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                 callDecode(ctx, in);
             }
 
-            MessageBuf<Object> out = decoderOutput();
             decodeLast(ctx, replayable, out);
+        } catch (Signal replay) {
+            // Ignore
+            replay.expect(REPLAY);
+        } catch (Throwable t) {
+            if (t instanceof CodecException) {
+                throw (CodecException) t;
+            } else {
+                throw new DecoderException(t);
+            }
+        } finally {
 
             boolean decoded = false;
             for (;;) {
@@ -387,16 +398,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
             if (decoded) {
                 ctx.fireInboundBufferUpdated();
             }
-        } catch (Signal replay) {
-            // Ignore
-            replay.expect(REPLAY);
-        } catch (Throwable t) {
-            if (t instanceof CodecException) {
-                ctx.fireExceptionCaught(t);
-            } else {
-                ctx.fireExceptionCaught(new DecoderException(t));
-            }
-        } finally {
+
             ctx.fireChannelInactive();
         }
     }
@@ -446,30 +448,26 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                             "if it returned a decoded message (caused by: " +
                             getClass() + ')');
                 }
-
-                // A successful decode
-                decoded = true;
+            } catch (Throwable t) {
+                if (t instanceof CodecException) {
+                    throw (CodecException) t;
+                } else {
+                    throw new DecoderException(t);
+                }
+            } finally {
 
                 for (;;) {
                     Object msg = out.poll();
                     if (msg == null) {
                         break;
                     }
+                    decoded = true;
                     ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg);
                 }
-            } catch (Throwable t) {
                 if (decoded) {
                     decoded = false;
                     ctx.fireInboundBufferUpdated();
                 }
-
-                if (t instanceof CodecException) {
-                    ctx.fireExceptionCaught(t);
-                } else {
-                    ctx.fireExceptionCaught(new DecoderException(t));
-                }
-
-                break;
             }
         }
 
