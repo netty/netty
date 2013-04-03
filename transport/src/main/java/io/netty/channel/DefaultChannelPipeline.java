@@ -751,7 +751,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     public ChannelHandler first() {
         DefaultChannelHandlerContext first = head.next;
-        if (first == null) {
+        if (first == head) {
             return null;
         }
         return first.handler();
