@@ -77,8 +77,8 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
 
         @Override
         @SuppressWarnings("unchecked")
-        protected Object decode(ChannelHandlerContext ctx, Object msg) throws Exception {
-            return MessageToMessageCodec.this.decode(ctx, (INBOUND_IN) msg);
+        protected void decode(ChannelHandlerContext ctx, Object msg, MessageBuf<Object> out) throws Exception {
+            MessageToMessageCodec.this.decode(ctx, (INBOUND_IN) msg, out);
         }
     };
 
@@ -148,5 +148,5 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
     }
 
     protected abstract Object encode(ChannelHandlerContext ctx, OUTBOUND_IN msg) throws Exception;
-    protected abstract Object decode(ChannelHandlerContext ctx, INBOUND_IN msg) throws Exception;
+    protected abstract void decode(ChannelHandlerContext ctx, INBOUND_IN msg, MessageBuf<Object> out) throws Exception;
 }

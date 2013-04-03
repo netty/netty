@@ -208,29 +208,6 @@ public abstract class AbstractMessageBuf<T> extends AbstractQueue<T> implements 
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public boolean unfoldAndAdd(Object o) {
-        if (o == null) {
-            return false;
-        }
-
-        if (o instanceof Object[]) {
-            Object[] a = (Object[]) o;
-            int i;
-            for (i = 0; i < a.length; i ++) {
-                Object m = a[i];
-                if (m == null) {
-                    break;
-                }
-                add((T) m);
-            }
-            return i != 0;
-        }
-
-        return add((T) o);
-    }
-
-    @Override
     public int drainTo(Collection<? super T> c) {
         ensureAccessible();
         int cnt = 0;

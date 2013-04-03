@@ -195,11 +195,6 @@ public abstract class FilteredMessageBuf implements MessageBuf<Object> {
     }
 
     @Override
-    public boolean unfoldAndAdd(Object o) {
-        return buf.unfoldAndAdd(o);
-    }
-
-    @Override
     public int refCnt() {
         return buf.refCnt();
     }

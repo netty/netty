@@ -16,6 +16,7 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.BufUtil;
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.handler.codec.http.HttpMessage;
@@ -50,7 +51,7 @@ public class SpdyHttpResponseStreamIdHandler extends
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Object msg) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, Object msg, MessageBuf<Object> out) throws Exception {
         if (msg instanceof HttpMessage) {
             boolean contains = ((HttpMessage) msg).headers().contains(SpdyHttpHeaders.Names.STREAM_ID);
             if (!contains) {
@@ -62,7 +63,6 @@ public class SpdyHttpResponseStreamIdHandler extends
             ids.remove(((SpdyRstStreamFrame) msg).getStreamId());
         }
 
-        BufUtil.retain(msg);
-        return msg;
+        out.add(BufUtil.retain(msg));
     }
 }

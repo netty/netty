@@ -18,6 +18,7 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedByteChannel;
@@ -55,16 +56,16 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
     private HttpMessage message;
     private boolean encodeStarted;
     private boolean continueResponse;
+
     @Override
-    protected Object decode(ChannelHandlerContext ctx, HttpMessage msg)
+    protected void decode(ChannelHandlerContext ctx, HttpMessage msg, MessageBuf<Object> out)
             throws Exception {
         String acceptedEncoding = msg.headers().get(HttpHeaders.Names.ACCEPT_ENCODING);
         if (acceptedEncoding == null) {
             acceptedEncoding = HttpHeaders.Values.IDENTITY;
         }
         acceptEncodingQueue.add(acceptedEncoding);
-        BufUtil.retain(msg);
-        return msg;
+        out.add(BufUtil.retain(msg));
     }
 
     @Override

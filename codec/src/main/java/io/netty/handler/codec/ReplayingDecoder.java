@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.Signal;
 
@@ -371,7 +372,19 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                 callDecode(ctx, in);
             }
 
-            if (ctx.nextInboundMessageBuffer().unfoldAndAdd(decodeLast(ctx, replayable))) {
+            MessageBuf<Object> out = decoderOutput();
+            decodeLast(ctx, replayable, out);
+
+            boolean decoded = false;
+            for (;;) {
+                Object msg = out.poll();
+                if (msg == null) {
+                    break;
+                }
+                decoded = true;
+                ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg);
+            }
+            if (decoded) {
                 ctx.fireInboundBufferUpdated();
             }
         } catch (Signal replay) {
@@ -393,16 +406,17 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
         boolean wasNull = false;
 
         ByteBuf in = cumulation;
-        MessageBuf<Object> out = ctx.nextInboundMessageBuffer();
+        MessageBuf<Object> out = decoderOutput();
         boolean decoded = false;
         while (in.isReadable()) {
             try {
                 int oldReaderIndex = checkpoint = in.readerIndex();
-                Object result = null;
+                int outSize = out.size();
                 S oldState = state;
                 try {
-                    result = decode(ctx, replayable);
-                    if (result == null) {
+                    decode(ctx, replayable, out);
+                    if (outSize == out.size()) {
+                        wasNull = true;
                         if (oldReaderIndex == in.readerIndex() && oldState == state) {
                             throw new IllegalStateException(
                                     "null cannot be returned if no data is consumed and state didn't change.");
@@ -422,13 +436,6 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                         // Called by cleanup() - no need to maintain the readerIndex
                         // anymore because the buffer has been released already.
                     }
-                }
-
-                if (result == null) {
-                    wasNull = true;
-
-                    // Seems like more data is required.
-                    // Let us wait for the next notification.
                     break;
                 }
                 wasNull = false;
@@ -441,11 +448,14 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                 }
 
                 // A successful decode
-                if (out.unfoldAndAdd(result)) {
-                    decoded = true;
-                    if (isSingleDecode()) {
+                decoded = true;
+
+                for (;;) {
+                    Object msg = out.poll();
+                    if (msg == null) {
                         break;
                     }
+                    ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg);
                 }
             } catch (Throwable t) {
                 if (decoded) {

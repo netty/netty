@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.FilteredMessageBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -119,6 +120,7 @@ public final class HttpClientCodec
     }
 
     private final class Encoder extends HttpRequestEncoder {
+
         @Override
         protected void encode(
                 ChannelHandlerContext ctx, HttpObject msg, ByteBuf out) throws Exception {
@@ -139,28 +141,32 @@ public final class HttpClientCodec
     }
 
     private final class Decoder extends HttpResponseDecoder {
-
         Decoder(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
             super(maxInitialLineLength, maxHeaderSize, maxChunkSize);
         }
 
         @Override
-        protected Object decode(
-                ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+        protected void decode(
+                ChannelHandlerContext ctx, ByteBuf buffer, MessageBuf<Object> out) throws Exception {
             if (done) {
                 int readable = actualReadableBytes();
                 if (readable == 0) {
                     // if non is readable just return null
                     // https://github.com/netty/netty/issues/1159
-                    return null;
+                    return;
                 }
-                return buffer.readBytes(readable);
+                out.add(buffer.readBytes(readable));
             } else {
-                Object msg = super.decode(ctx, buffer);
                 if (failOnMissingResponse) {
-                    decrement(msg);
+                    out = new FilteredMessageBuf(out) {
+                        @Override
+                        protected Object filter(Object msg) {
+                            decrement(msg);
+                            return msg;
+                        }
+                    };
                 }
-                return msg;
+                super.decode(ctx, buffer, out);
             }
         }
 
@@ -172,11 +178,6 @@ public final class HttpClientCodec
             // check if it's an Header and its transfer encoding is not chunked.
             if (msg instanceof LastHttpContent) {
                 requestResponseCounter.decrementAndGet();
-            } else if (msg instanceof Object[]) {
-                Object[] objects = (Object[]) msg;
-                for (Object obj: objects) {
-                    decrement(obj);
-                }
             }
         }
 

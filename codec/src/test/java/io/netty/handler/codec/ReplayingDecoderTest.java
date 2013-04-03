@@ -17,6 +17,7 @@ package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufIndexFinder;
+import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedByteChannel;
@@ -53,10 +54,10 @@ public class ReplayingDecoderTest {
         }
 
         @Override
-        protected ByteBuf decode(ChannelHandlerContext ctx, ByteBuf in) {
+        protected void decode(ChannelHandlerContext ctx, ByteBuf in, MessageBuf<Object> out) {
             ByteBuf msg = in.readBytes(in.bytesBefore(ByteBufIndexFinder.LF));
             in.skipBytes(1);
-            return msg;
+            out.add(msg);
         }
     }
 }
