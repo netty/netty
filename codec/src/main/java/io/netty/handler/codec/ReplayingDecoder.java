@@ -18,7 +18,6 @@ package io.netty.handler.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.Signal;
 
@@ -384,23 +383,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                 throw new DecoderException(t);
             }
         } finally {
-
-            boolean decoded = false;
-            if (out.containsByteBuf()) {
-                for (;;) {
-                    Object msg = out.poll();
-                    if (msg == null) {
-                        break;
-                    }
-                    decoded = true;
-                    ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg);
-                }
-            } else {
-                if (out.drainTo(ctx.nextInboundMessageBuffer()) > 0) {
-                    decoded = true;
-                }
-            }
-            if (decoded) {
+            if (out.drainToNextInbound(ctx)) {
                 ctx.fireInboundBufferUpdated();
             }
 
@@ -413,8 +396,6 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
         boolean wasNull = false;
         ByteBuf in = cumulation;
         OutputMessageBuf out = OutputMessageBuf.get();
-        boolean decoded = false;
-
         assert out.isEmpty();
 
         try {
@@ -465,21 +446,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                 }
             }
         } finally {
-            if (out.containsByteBuf()) {
-                for (;;) {
-                    Object msg = out.poll();
-                    if (msg == null) {
-                        break;
-                    }
-                    decoded = true;
-                    ChannelHandlerUtil.addToNextInboundBuffer(ctx, msg);
-                }
-            } else {
-                if (out.drainTo(ctx.nextInboundMessageBuffer()) > 0) {
-                    decoded = true;
-                }
-            }
-            if (decoded) {
+            if (out.drainToNextInbound(ctx)) {
                 decodeWasNull = false;
                 ctx.fireInboundBufferUpdated();
             } else {
