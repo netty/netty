@@ -28,7 +28,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public abstract class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
 
-    public static final int DEFAULT_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 2;
     private static final AtomicInteger poolId = new AtomicInteger();
 
     private final EventExecutor[] children;
@@ -37,20 +36,15 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
     /**
      * Create a new instance.
      *
-     * @param nThreads          the number of threads that will be used by this instance. Use 0 for the default number
-     *                          of {@link #DEFAULT_POOL_SIZE}
+     * @param nThreads          the number of threads that will be used by this instance.
      * @param threadFactory     the ThreadFactory to use, or {@code null} if the default should be used.
      * @param args              arguments which will passed to each {@link #newChild(ThreadFactory, Object...)} call
      */
     protected MultithreadEventExecutorGroup(int nThreads, ThreadFactory threadFactory, Object... args) {
-        if (nThreads < 0) {
-            throw new IllegalArgumentException(String.format(
-                    "nThreads: %d (expected: >= 0)", nThreads));
+        if (nThreads <= 0) {
+            throw new IllegalArgumentException(String.format("nThreads: %d (expected: > 0)", nThreads));
         }
 
-        if (nThreads == 0) {
-            nThreads = DEFAULT_POOL_SIZE;
-        }
         if (threadFactory == null) {
             threadFactory = new DefaultThreadFactory();
         }
