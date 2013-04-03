@@ -42,17 +42,16 @@ public class AioEventLoopGroup extends MultithreadEventLoopGroup {
     }
 
     /**
-     * Create a new instance which use the default number of threads of {@link #DEFAULT_POOL_SIZE}.
+     * Create a new instance which use the default number of threads of {@link #DEFAULT_EVENT_LOOP_THREADS}.
      */
     public AioEventLoopGroup() {
-        this(0);
+        this(DEFAULT_EVENT_LOOP_THREADS);
     }
 
     /**
      * Create a new instance
      *
-     * @param nThreads          the number of threads that will be used by this instance. Use 0 for the default number
-     *                          of {@link #DEFAULT_POOL_SIZE}
+     * @param nThreads          the number of threads that will be used by this instance
      */
     public AioEventLoopGroup(int nThreads) {
         this(nThreads, null);
@@ -61,8 +60,7 @@ public class AioEventLoopGroup extends MultithreadEventLoopGroup {
     /**
      * Create a new instance.
      *
-     * @param nThreads          the number of threads that will be used by this instance. Use 0 for the default number
-     *                          of {@link #DEFAULT_POOL_SIZE}
+     * @param nThreads          the number of threads that will be used by this instance
      * @param threadFactory     the ThreadFactory to use, or {@code null} if the default should be used.
      */
     public AioEventLoopGroup(int nThreads, ThreadFactory threadFactory) {

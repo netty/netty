@@ -15,7 +15,11 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.MultithreadEventExecutorGroup;
+import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.concurrent.ThreadFactory;
 
@@ -25,11 +29,26 @@ import java.util.concurrent.ThreadFactory;
  */
 public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutorGroup implements EventLoopGroup {
 
-    /**
-     * @see {@link MultithreadEventExecutorGroup##MultithreadEventLoopGroup(int,ThreadFactory, Object...)}
-     */
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(MultithreadEventLoopGroup.class);
+
+    public static final int DEFAULT_EVENT_LOOP_THREADS;
+
+    static {
+        DEFAULT_EVENT_LOOP_THREADS = Math.max(1, SystemPropertyUtil.getInt(
+                "io.netty.eventLoopThreads", Runtime.getRuntime().availableProcessors() * 2));
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("io.netty.eventLoopThreads: {}", DEFAULT_EVENT_LOOP_THREADS);
+        }
+    }
+
     protected MultithreadEventLoopGroup(int nThreads, ThreadFactory threadFactory, Object... args) {
         super(nThreads, threadFactory, args);
+    }
+
+    @Override
+    protected ThreadFactory newDefaultThreadFactory() {
+        return new DefaultThreadFactory(getClass(), Thread.MAX_PRIORITY);
     }
 
     @Override

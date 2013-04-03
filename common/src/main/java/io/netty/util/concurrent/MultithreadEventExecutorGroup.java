@@ -28,8 +28,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public abstract class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
 
-    private static final AtomicInteger poolId = new AtomicInteger();
-
     private final EventExecutor[] children;
     private final AtomicInteger childIndex = new AtomicInteger();
 
@@ -46,7 +44,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
         }
 
         if (threadFactory == null) {
-            threadFactory = new DefaultThreadFactory();
+            threadFactory = newDefaultThreadFactory();
         }
 
         children = new SingleThreadEventExecutor[nThreads];
@@ -66,6 +64,10 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
                 }
             }
         }
+    }
+
+    protected ThreadFactory newDefaultThreadFactory() {
+        return new DefaultThreadFactory(getClass());
     }
 
     @Override
@@ -137,32 +139,5 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
             }
         }
         return isTerminated();
-    }
-
-    private final class DefaultThreadFactory implements ThreadFactory {
-        private final AtomicInteger nextId = new AtomicInteger();
-        private final String prefix;
-
-        DefaultThreadFactory() {
-            String typeName = MultithreadEventExecutorGroup.this.getClass().getSimpleName();
-            typeName = Character.toLowerCase(typeName.charAt(0)) + typeName.substring(1);
-            prefix = typeName + '-' + poolId.incrementAndGet() + '-';
-        }
-
-        @Override
-        public Thread newThread(Runnable r) {
-            Thread t = new Thread(r, prefix + nextId.incrementAndGet());
-            try {
-                if (t.isDaemon()) {
-                    t.setDaemon(false);
-                }
-                if (t.getPriority() != Thread.MAX_PRIORITY) {
-                    t.setPriority(Thread.MAX_PRIORITY);
-                }
-            } catch (Exception ignored) {
-                // Doesn't matter even if failed to set.
-            }
-            return t;
-        }
     }
 }

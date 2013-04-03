@@ -29,11 +29,11 @@ import java.util.concurrent.ThreadFactory;
 public class NioEventLoopGroup extends MultithreadEventLoopGroup {
 
     /**
-     * Create a new instance using {@link #DEFAULT_POOL_SIZE} number of threads, the default {@link ThreadFactory} and
-     * the  {@link SelectorProvider} which is returned by {@link SelectorProvider#provider()}.
+     * Create a new instance using {@link #DEFAULT_EVENT_LOOP_THREADS} number of threads, the default
+     * {@link ThreadFactory} and  the {@link SelectorProvider} which is returned by {@link SelectorProvider#provider()}.
      */
     public NioEventLoopGroup() {
-        this(0);
+        this(DEFAULT_EVENT_LOOP_THREADS);
     }
 
     /**
