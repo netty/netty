@@ -26,7 +26,7 @@ import java.util.Queue;
 public interface MessageBuf<T> extends Buf, Queue<T> {
 
     /**
-     * Drain the content of te {@link MessageBuf} to the given {@link Collection}.
+     * Drain the content of the {@link MessageBuf} to the given {@link Collection}.
      *
      * @param c         the {@link Collection} to drain the content to
      * @return number   the number of objects which was transfered
@@ -34,7 +34,7 @@ public interface MessageBuf<T> extends Buf, Queue<T> {
     int drainTo(Collection<? super T> c);
 
     /**
-     * Drain the content of te {@link MessageBuf} to the given {@link Collection}.
+     * Drain the content of the {@link MessageBuf} to the given {@link Collection}.
      *
      * @param c             the {@link Collection} to drain the content to
      * @param maxElements   the max number of elements to drain
