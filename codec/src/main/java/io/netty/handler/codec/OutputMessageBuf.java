@@ -20,15 +20,28 @@ import io.netty.buffer.DefaultMessageBuf;
 
 final class OutputMessageBuf extends DefaultMessageBuf<Object> {
     private int byteBufs;
-    public OutputMessageBuf() {
+
+    private static final ThreadLocal<OutputMessageBuf> output =
+            new ThreadLocal<OutputMessageBuf>() {
+                @Override
+                protected OutputMessageBuf initialValue() {
+                    return new OutputMessageBuf();
+                }
+
+                @Override
+                public OutputMessageBuf get() {
+                    OutputMessageBuf buf = super.get();
+                    // Just to be sure
+                    buf.clear();
+                    return buf;
+                }
+            };
+
+    static OutputMessageBuf get() {
+        return output.get();
     }
 
-    public OutputMessageBuf(int initialCapacity) {
-        super(initialCapacity);
-    }
-
-    public OutputMessageBuf(int initialCapacity, int maxCapacity) {
-        super(initialCapacity, maxCapacity);
+    private OutputMessageBuf() {
     }
 
     @Override
