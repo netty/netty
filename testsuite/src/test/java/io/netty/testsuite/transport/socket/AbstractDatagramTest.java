@@ -32,8 +32,7 @@ import java.util.Map.Entry;
 
 public abstract class AbstractDatagramTest {
 
-    private static final List<Entry<Factory<Bootstrap>, Factory<Bootstrap>>> COMBO =
-            SocketTestPermutation.datagram();
+    private static final List<Entry<Factory<Bootstrap>, Factory<Bootstrap>>> COMBO = SocketTestPermutation.datagram();
 
     @Rule
     public final TestName testName = new TestName();
@@ -62,9 +61,6 @@ public abstract class AbstractDatagramTest {
                 m.invoke(this, sb, cb);
             } catch (InvocationTargetException ex) {
                 throw ex.getCause();
-            } finally {
-                sb.shutdown();
-                cb.shutdown();
             }
         }
     }

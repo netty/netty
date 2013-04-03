@@ -65,9 +65,6 @@ public abstract class AbstractSctpTest {
                 m.invoke(this, sb, cb);
             } catch (InvocationTargetException ex) {
                 throw ex.getCause();
-            } finally {
-                sb.shutdown();
-                cb.shutdown();
             }
         }
     }

@@ -19,6 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ChannelFactory;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.aio.AioEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.oio.OioEventLoopGroup;
@@ -31,6 +32,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.socket.oio.OioDatagramChannel;
 import io.netty.channel.socket.oio.OioServerSocketChannel;
 import io.netty.channel.socket.oio.OioSocketChannel;
+import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.internal.PlatformDependent;
 
 import java.util.ArrayList;
@@ -42,6 +44,21 @@ final class SocketTestPermutation {
     // TODO: AIO transport tests fail with 'An existing connection was forcibly closed by the remote host' on Windows.
     //       Disabling test until the root cause is known.
     private static final boolean TEST_AIO = !PlatformDependent.isWindows();
+
+    private static final int BOSSES = 2;
+    private static final int WORKERS = 3;
+    private static final EventLoopGroup nioBossGroup =
+            new NioEventLoopGroup(BOSSES, new DefaultThreadFactory("testsuite-nio-boss", true));
+    private static final EventLoopGroup nioWorkerGroup =
+            new NioEventLoopGroup(WORKERS, new DefaultThreadFactory("testsuite-nio-worker", true));
+    private static final EventLoopGroup aioBossGroup =
+            new AioEventLoopGroup(BOSSES, new DefaultThreadFactory("testsuite-aio-boss", true));
+    private static final EventLoopGroup aioWorkerGroup =
+            new AioEventLoopGroup(WORKERS, new DefaultThreadFactory("testsuite-aio-worker", true));
+    private static final EventLoopGroup oioBossGroup =
+            new OioEventLoopGroup(Integer.MAX_VALUE, new DefaultThreadFactory("testsuite-oio-boss", true));
+    private static final EventLoopGroup oioWorkerGroup =
+            new OioEventLoopGroup(Integer.MAX_VALUE, new DefaultThreadFactory("testsuite-oio-worker", true));
 
     static List<Entry<Factory<ServerBootstrap>, Factory<Bootstrap>>> socket() {
         List<Entry<Factory<ServerBootstrap>, Factory<Bootstrap>>> list =
@@ -93,7 +110,7 @@ final class SocketTestPermutation {
         bfs.add(new Factory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
-                return new Bootstrap().group(new NioEventLoopGroup()).channelFactory(new ChannelFactory<Channel>() {
+                return new Bootstrap().group(nioWorkerGroup).channelFactory(new ChannelFactory<Channel>() {
                     @Override
                     public Channel newChannel() {
                        return new NioDatagramChannel(InternetProtocolFamily.IPv4);
@@ -109,7 +126,7 @@ final class SocketTestPermutation {
         bfs.add(new Factory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
-                return new Bootstrap().group(new OioEventLoopGroup()).channel(OioDatagramChannel.class);
+                return new Bootstrap().group(oioWorkerGroup).channel(OioDatagramChannel.class);
             }
         });
 
@@ -147,27 +164,24 @@ final class SocketTestPermutation {
         list.add(new Factory<ServerBootstrap>() {
             @Override
             public ServerBootstrap newInstance() {
-                return new ServerBootstrap().
-                                group(new NioEventLoopGroup(), new NioEventLoopGroup()).
-                                channel(NioServerSocketChannel.class);
+                return new ServerBootstrap().group(nioBossGroup, nioWorkerGroup)
+                                            .channel(NioServerSocketChannel.class);
             }
         });
         if (TEST_AIO) {
             list.add(new Factory<ServerBootstrap>() {
                 @Override
                 public ServerBootstrap newInstance() {
-                    final AioEventLoopGroup parentGroup = new AioEventLoopGroup();
-                    final AioEventLoopGroup childGroup = new AioEventLoopGroup();
-                    return new ServerBootstrap().group(parentGroup, childGroup).channel(AioServerSocketChannel.class);
+                    return new ServerBootstrap().group(aioBossGroup, aioWorkerGroup)
+                                                .channel(AioServerSocketChannel.class);
                 }
             });
         }
         list.add(new Factory<ServerBootstrap>() {
             @Override
             public ServerBootstrap newInstance() {
-                return new ServerBootstrap().
-                                group(new OioEventLoopGroup(), new OioEventLoopGroup()).
-                                channel(OioServerSocketChannel.class);
+                return new ServerBootstrap().group(oioBossGroup, oioWorkerGroup)
+                                            .channel(OioServerSocketChannel.class);
             }
         });
 
@@ -179,22 +193,21 @@ final class SocketTestPermutation {
         list.add(new Factory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
-                return new Bootstrap().group(new NioEventLoopGroup()).channel(NioSocketChannel.class);
+                return new Bootstrap().group(nioWorkerGroup).channel(NioSocketChannel.class);
             }
         });
         if (TEST_AIO) {
             list.add(new Factory<Bootstrap>() {
                 @Override
                 public Bootstrap newInstance() {
-                    final AioEventLoopGroup loop = new AioEventLoopGroup();
-                    return new Bootstrap().group(loop).channel(AioSocketChannel.class);
+                    return new Bootstrap().group(aioWorkerGroup).channel(AioSocketChannel.class);
                 }
             });
         }
         list.add(new Factory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
-                return new Bootstrap().group(new OioEventLoopGroup()).channel(OioSocketChannel.class);
+                return new Bootstrap().group(oioWorkerGroup).channel(OioSocketChannel.class);
             }
         });
         return list;
