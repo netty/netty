@@ -16,7 +16,6 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.MessageBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
@@ -40,11 +39,11 @@ import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
  *
  */
 public abstract class MessageToMessageEncoder<I> extends ChannelOutboundMessageHandlerAdapter<I> {
-    private static final ThreadLocal<MessageBuf<Object>> encoderOutput =
-            new ThreadLocal<MessageBuf<Object>>() {
+    private static final ThreadLocal<OutputMessageBuf> encoderOutput =
+            new ThreadLocal<OutputMessageBuf>() {
                 @Override
-                protected MessageBuf<Object> initialValue() {
-                    return Unpooled.messageBuffer();
+                protected OutputMessageBuf initialValue() {
+                    return new OutputMessageBuf();
                 }
             };
 
@@ -56,7 +55,7 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundMessageH
 
     @Override
     public final void flush(ChannelHandlerContext ctx, I msg) throws Exception {
-        MessageBuf<Object> out = encoderOutput.get();
+        OutputMessageBuf out = encoderOutput.get();
 
         assert out.isEmpty();
 
@@ -71,14 +70,18 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundMessageH
                 throw new EncoderException(cause);
             }
         } finally {
-            for (;;) {
-                Object encoded = out.poll();
-                if (encoded == null) {
-                    break;
+            if (out.containsByteBuf()) {
+                for (;;) {
+                    Object encoded = out.poll();
+                    if (encoded == null) {
+                        break;
+                    }
+                    // Handle special case when the encoded output is a ByteBuf and the next handler in the pipeline
+                    // accept bytes. Related to #1222
+                    ChannelHandlerUtil.addToNextOutboundBuffer(ctx, encoded);
                 }
-                // Handle special case when the encoded output is a ByteBuf and the next handler in the pipeline
-                // accept bytes. Related to #1222
-                ChannelHandlerUtil.addToNextOutboundBuffer(ctx, encoded);
+            } else {
+                out.drainTo(ctx.nextOutboundMessageBuffer());
             }
         }
     }

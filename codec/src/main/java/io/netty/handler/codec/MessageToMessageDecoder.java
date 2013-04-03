@@ -16,7 +16,6 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.MessageBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundMessageHandler;
@@ -43,11 +42,11 @@ import io.netty.channel.ChannelInboundMessageHandlerAdapter;
  */
 public abstract class MessageToMessageDecoder<I> extends ChannelInboundMessageHandlerAdapter<I> {
 
-    private static final ThreadLocal<MessageBuf<Object>> decoderOutput =
-            new ThreadLocal<MessageBuf<Object>>() {
+    private static final ThreadLocal<OutputMessageBuf> decoderOutput =
+            new ThreadLocal<OutputMessageBuf>() {
                 @Override
-                protected MessageBuf<Object> initialValue() {
-                    return Unpooled.messageBuffer();
+                protected OutputMessageBuf initialValue() {
+                    return new OutputMessageBuf();
                 }
             };
 
@@ -59,16 +58,20 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundMessageHa
 
     @Override
     public final void messageReceived(ChannelHandlerContext ctx, I msg) throws Exception {
-        MessageBuf<Object> out = decoderOutput.get();
+        OutputMessageBuf out = decoderOutput.get();
         try {
             decode(ctx, msg, out);
         } finally {
-            for (;;) {
-                Object obj =  out.poll();
-                if (obj == null) {
-                    break;
+            if (out.containsByteBuf()) {
+                for (;;) {
+                    Object decoded = out.poll();
+                    if (decoded == null) {
+                        break;
+                    }
+                    ChannelHandlerUtil.addToNextInboundBuffer(ctx, decoded);
                 }
-                ChannelHandlerUtil.addToNextInboundBuffer(ctx, obj);
+            } else {
+                out.drainTo(ctx.nextInboundMessageBuffer());
             }
         }
     }
