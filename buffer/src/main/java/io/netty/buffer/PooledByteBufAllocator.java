@@ -87,8 +87,10 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         private final AtomicInteger index = new AtomicInteger();
         @Override
         protected PoolThreadCache initialValue() {
-            int idx = Math.abs(index.getAndIncrement() % heapArenas.length);
-            return new PoolThreadCache(heapArenas[idx], directArenas[idx]);
+            int idx = index.getAndIncrement();
+            int heapIdx = Math.abs(idx % heapArenas.length);
+            int directIdx = Math.abs(idx % directArenas.length);
+            return new PoolThreadCache(heapArenas[heapIdx], directArenas[directIdx]);
         }
     };
 
