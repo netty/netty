@@ -18,6 +18,7 @@ package io.netty.example.securechat;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.example.telnet.TelnetClient;
@@ -39,9 +40,10 @@ public class SecureChatClient {
     }
 
     public void run() throws Exception {
-        Bootstrap b = new Bootstrap();
+        EventLoopGroup group = new NioEventLoopGroup();
         try {
-            b.group(new NioEventLoopGroup())
+            Bootstrap b = new Bootstrap();
+            b.group(group)
              .channel(NioSocketChannel.class)
              .handler(new SecureChatClientInitializer());
 
@@ -74,7 +76,7 @@ public class SecureChatClient {
             }
         } finally {
             // The connection is closed automatically on shutdown.
-            b.shutdown();
+            group.shutdown();
         }
     }
 

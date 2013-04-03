@@ -17,6 +17,7 @@ package io.netty.example.discard;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
@@ -36,9 +37,10 @@ public class DiscardClient {
     }
 
     public void run() throws Exception {
-        Bootstrap b = new Bootstrap();
+        EventLoopGroup group = new NioEventLoopGroup();
         try {
-            b.group(new NioEventLoopGroup())
+            Bootstrap b = new Bootstrap();
+            b.group(group)
              .channel(NioSocketChannel.class)
              .handler(new DiscardClientHandler(firstMessageSize));
 
@@ -48,7 +50,7 @@ public class DiscardClient {
             // Wait until the connection is closed.
             f.channel().closeFuture().sync();
         } finally {
-            b.shutdown();
+            group.shutdown();
         }
     }
 

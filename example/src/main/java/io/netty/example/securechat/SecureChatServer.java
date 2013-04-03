@@ -16,6 +16,7 @@
 package io.netty.example.securechat;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.example.telnet.TelnetServer;
@@ -32,15 +33,18 @@ public class SecureChatServer {
     }
 
     public void run() throws InterruptedException {
-        ServerBootstrap b = new ServerBootstrap();
+        EventLoopGroup bossGroup = new NioEventLoopGroup();
+        EventLoopGroup workerGroup = new NioEventLoopGroup();
         try {
-            b.group(new NioEventLoopGroup(), new NioEventLoopGroup())
+            ServerBootstrap b = new ServerBootstrap();
+            b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
              .childHandler(new SecureChatServerInitializer());
 
             b.bind(port).sync().channel().closeFuture().sync();
         } finally {
-            b.shutdown();
+            bossGroup.shutdown();
+            workerGroup.shutdown();
         }
     }
 

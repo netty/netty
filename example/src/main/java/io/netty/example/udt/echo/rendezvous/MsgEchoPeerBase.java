@@ -48,11 +48,11 @@ public abstract class MsgEchoPeerBase {
 
     public void run() throws Exception {
         // Configure the peer.
-        final Bootstrap boot = new Bootstrap();
         final ThreadFactory connectFactory = new UtilThreadFactory("rendezvous");
         final NioEventLoopGroup connectGroup = new NioEventLoopGroup(1,
                 connectFactory, NioUdtProvider.MESSAGE_PROVIDER);
         try {
+            final Bootstrap boot = new Bootstrap();
             boot.group(connectGroup)
                     .channelFactory(NioUdtProvider.MESSAGE_RENDEZVOUS)
                     .handler(new ChannelInitializer<UdtChannel>() {
@@ -70,7 +70,7 @@ public abstract class MsgEchoPeerBase {
             f.channel().closeFuture().sync();
         } finally {
             // Shut down the event loop to terminate all threads.
-            boot.shutdown();
+            connectGroup.shutdown();
         }
     }
 

@@ -18,10 +18,11 @@ package io.netty.example.sctp;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.oio.OioEventLoopGroup;
 import io.netty.channel.sctp.SctpChannel;
 import io.netty.channel.sctp.SctpChannelOption;
 import io.netty.channel.sctp.oio.OioSctpChannel;
-import io.netty.channel.oio.OioEventLoopGroup;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 
@@ -47,9 +48,10 @@ public class OioSctpEchoClient {
 
     public void run() throws Exception {
         // Configure the client.
-        Bootstrap b = new Bootstrap();
+        EventLoopGroup group = new OioEventLoopGroup();
         try {
-            b.group(new OioEventLoopGroup())
+            Bootstrap b = new Bootstrap();
+            b.group(group)
              .channel(OioSctpChannel.class)
              .option(SctpChannelOption.SCTP_NODELAY, true)
              .handler(new ChannelInitializer<SctpChannel>() {
@@ -68,7 +70,7 @@ public class OioSctpEchoClient {
             f.channel().closeFuture().sync();
         } finally {
             // Shut down the event loop to terminate all threads.
-            b.shutdown();
+            group.shutdown();
         }
     }
 

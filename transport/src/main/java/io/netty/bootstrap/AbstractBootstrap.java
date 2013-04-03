@@ -189,10 +189,13 @@ abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C extends Ch
     }
 
     /**
+     * @deprecated Use {@link EventLoopGroup#shutdown()} instead.
+     *
      * Shutdown the {@link AbstractBootstrap} and the {@link EventLoopGroup} which is
      * used by it. Only call this if you don't share the {@link EventLoopGroup}
      * between different {@link AbstractBootstrap}'s.
      */
+    @Deprecated
     public void shutdown() {
         if (group != null) {
             group.shutdown();

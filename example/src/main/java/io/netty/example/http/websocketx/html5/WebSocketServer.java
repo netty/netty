@@ -18,8 +18,9 @@ package io.netty.example.http.websocketx.html5;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
@@ -57,9 +58,11 @@ public class WebSocketServer {
     }
 
     public void run() throws Exception {
-        final ServerBootstrap sb = new ServerBootstrap();
+        EventLoopGroup bossGroup = new NioEventLoopGroup();
+        EventLoopGroup workerGroup = new NioEventLoopGroup();
         try {
-            sb.group(new NioEventLoopGroup(), new NioEventLoopGroup())
+            final ServerBootstrap sb = new ServerBootstrap();
+            sb.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
              .childHandler(new ChannelInitializer<SocketChannel>() {
                 @Override
@@ -78,7 +81,8 @@ public class WebSocketServer {
 
             ch.closeFuture().sync();
         } finally {
-            sb.shutdown();
+            bossGroup.shutdown();
+            workerGroup.shutdown();
         }
     }
 
