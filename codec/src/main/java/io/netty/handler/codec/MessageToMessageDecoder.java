@@ -42,14 +42,6 @@ import io.netty.channel.ChannelInboundMessageHandlerAdapter;
  */
 public abstract class MessageToMessageDecoder<I> extends ChannelInboundMessageHandlerAdapter<I> {
 
-    private static final ThreadLocal<OutputMessageBuf> decoderOutput =
-            new ThreadLocal<OutputMessageBuf>() {
-                @Override
-                protected OutputMessageBuf initialValue() {
-                    return new OutputMessageBuf();
-                }
-            };
-
     protected MessageToMessageDecoder() { }
 
     protected MessageToMessageDecoder(Class<? extends I> inboundMessageType) {
@@ -58,7 +50,7 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundMessageHa
 
     @Override
     public final void messageReceived(ChannelHandlerContext ctx, I msg) throws Exception {
-        OutputMessageBuf out = decoderOutput.get();
+        OutputMessageBuf out = OutputMessageBuf.get();
         try {
             decode(ctx, msg, out);
         } finally {

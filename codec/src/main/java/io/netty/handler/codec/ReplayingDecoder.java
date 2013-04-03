@@ -364,7 +364,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        OutputMessageBuf out = decoderOutput();
+        OutputMessageBuf out = OutputMessageBuf.get();
 
         try {
             replayable.terminate();
@@ -412,7 +412,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
     protected void callDecode(ChannelHandlerContext ctx, ByteBuf buf) {
         boolean wasNull = false;
         ByteBuf in = cumulation;
-        OutputMessageBuf out = decoderOutput();
+        OutputMessageBuf out = OutputMessageBuf.get();
         boolean decoded = false;
 
         assert out.isEmpty();

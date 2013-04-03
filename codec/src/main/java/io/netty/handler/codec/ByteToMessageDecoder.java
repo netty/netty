@@ -45,14 +45,6 @@ public abstract class ByteToMessageDecoder
     private volatile boolean singleDecode;
     private boolean decodeWasNull;
 
-    private static final ThreadLocal<OutputMessageBuf> decoderOutput =
-            new ThreadLocal<OutputMessageBuf>() {
-                @Override
-                protected OutputMessageBuf initialValue() {
-                    return new OutputMessageBuf();
-                }
-            };
-
     /**
      * If set then only one message is decoded on each {@link #inboundBufferUpdated(ChannelHandlerContext)} call.
      * This may be useful if you need to do some protocol upgrade and want to make sure nothing is mixed up.
@@ -91,7 +83,7 @@ public abstract class ByteToMessageDecoder
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        OutputMessageBuf out = decoderOutput();
+        OutputMessageBuf out = OutputMessageBuf.get();
         try {
             ByteBuf in = ctx.inboundByteBuffer();
             if (in.isReadable()) {
@@ -131,7 +123,7 @@ public abstract class ByteToMessageDecoder
     protected void callDecode(ChannelHandlerContext ctx, ByteBuf in) {
         boolean wasNull = false;
         boolean decoded = false;
-        OutputMessageBuf out = decoderOutput();
+        OutputMessageBuf out = OutputMessageBuf.get();
 
         assert out.isEmpty();
 
@@ -217,9 +209,4 @@ public abstract class ByteToMessageDecoder
     protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, MessageBuf<Object> out) throws Exception {
         decode(ctx, in, out);
     }
-
-    final OutputMessageBuf decoderOutput() {
-        return decoderOutput.get();
-    }
-
 }

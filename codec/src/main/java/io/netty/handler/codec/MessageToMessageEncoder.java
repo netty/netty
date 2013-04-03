@@ -39,13 +39,6 @@ import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
  *
  */
 public abstract class MessageToMessageEncoder<I> extends ChannelOutboundMessageHandlerAdapter<I> {
-    private static final ThreadLocal<OutputMessageBuf> encoderOutput =
-            new ThreadLocal<OutputMessageBuf>() {
-                @Override
-                protected OutputMessageBuf initialValue() {
-                    return new OutputMessageBuf();
-                }
-            };
 
     protected MessageToMessageEncoder() { }
 
@@ -55,9 +48,7 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundMessageH
 
     @Override
     public final void flush(ChannelHandlerContext ctx, I msg) throws Exception {
-        OutputMessageBuf out = encoderOutput.get();
-
-        assert out.isEmpty();
+        OutputMessageBuf out = OutputMessageBuf.get();
 
         try {
             encode(ctx, msg, out);
