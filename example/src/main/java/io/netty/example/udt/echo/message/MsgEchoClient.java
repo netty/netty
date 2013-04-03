@@ -55,11 +55,11 @@ public class MsgEchoClient {
 
     public void run() throws Exception {
         // Configure the client.
-        final Bootstrap boot = new Bootstrap();
         final ThreadFactory connectFactory = new UtilThreadFactory("connect");
         final NioEventLoopGroup connectGroup = new NioEventLoopGroup(1,
                 connectFactory, NioUdtProvider.MESSAGE_PROVIDER);
         try {
+            final Bootstrap boot = new Bootstrap();
             boot.group(connectGroup)
                     .channelFactory(NioUdtProvider.MESSAGE_CONNECTOR)
                     .handler(new ChannelInitializer<UdtChannel>() {
@@ -77,7 +77,7 @@ public class MsgEchoClient {
             f.channel().closeFuture().sync();
         } finally {
             // Shut down the event loop to terminate all threads.
-            boot.shutdown();
+            connectGroup.shutdown();
         }
     }
 

@@ -49,11 +49,11 @@ public class ByteEchoPeerBase {
     }
 
     public void run() throws Exception {
-        final Bootstrap bootstrap = new Bootstrap();
         final ThreadFactory connectFactory = new UtilThreadFactory("rendezvous");
         final NioEventLoopGroup connectGroup = new NioEventLoopGroup(1,
                 connectFactory, NioUdtProvider.BYTE_PROVIDER);
         try {
+            final Bootstrap bootstrap = new Bootstrap();
             bootstrap.group(connectGroup)
                     .channelFactory(NioUdtProvider.BYTE_RENDEZVOUS)
                     .handler(new ChannelInitializer<UdtChannel>() {
@@ -67,7 +67,7 @@ public class ByteEchoPeerBase {
             final ChannelFuture future = bootstrap.connect(peerAddress, myAddress).sync();
             future.channel().closeFuture().sync();
         } finally {
-            bootstrap.shutdown();
+            connectGroup.shutdown();
         }
     }
 }

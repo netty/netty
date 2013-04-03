@@ -16,6 +16,7 @@
 package io.netty.example.socksproxy;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
@@ -29,14 +30,17 @@ public final class SocksServer {
     public void run() throws Exception {
         System.err.println(
                 "Listening on*:" + localPort + "...");
-        ServerBootstrap b = new ServerBootstrap();
+        EventLoopGroup bossGroup = new NioEventLoopGroup();
+        EventLoopGroup workerGroup = new NioEventLoopGroup();
         try {
-            b.group(new NioEventLoopGroup(), new NioEventLoopGroup())
-                    .channel(NioServerSocketChannel.class)
-                    .childHandler(new SocksServerInitializer());
+            ServerBootstrap b = new ServerBootstrap();
+            b.group(bossGroup, workerGroup)
+             .channel(NioServerSocketChannel.class)
+             .childHandler(new SocksServerInitializer());
             b.bind(localPort).sync().channel().closeFuture().sync();
         } finally {
-            b.shutdown();
+            bossGroup.shutdown();
+            workerGroup.shutdown();
         }
     }
 

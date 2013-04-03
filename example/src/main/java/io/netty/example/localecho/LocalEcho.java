@@ -20,6 +20,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalEventLoopGroup;
@@ -43,13 +44,14 @@ public class LocalEcho {
         // Address to bind on / connect to.
         final LocalAddress addr = new LocalAddress(port);
 
-        Bootstrap cb = new Bootstrap();
-        ServerBootstrap sb = new ServerBootstrap();
+        EventLoopGroup serverGroup = new LocalEventLoopGroup();
+        EventLoopGroup clientGroup = new NioEventLoopGroup(); // NIO event loops are also OK
         try {
             // Note that we can use any event loop to ensure certain local channels
             // are handled by the same event loop thread which drives a certain socket channel
             // to reduce the communication latency between socket channels and local channels.
-            sb.group(new LocalEventLoopGroup())
+            ServerBootstrap sb = new ServerBootstrap();
+            sb.group(serverGroup)
               .channel(LocalServerChannel.class)
               .handler(new ChannelInitializer<LocalServerChannel>() {
                   @Override
@@ -66,7 +68,8 @@ public class LocalEcho {
                   }
               });
 
-            cb.group(new NioEventLoopGroup()) // NIO event loops are also OK
+            Bootstrap cb = new Bootstrap();
+            cb.group(clientGroup)
               .channel(LocalChannel.class)
               .handler(new ChannelInitializer<LocalChannel>() {
                   @Override
@@ -102,8 +105,8 @@ public class LocalEcho {
                 lastWriteFuture.awaitUninterruptibly();
             }
         } finally {
-            sb.shutdown();
-            cb.shutdown();
+            serverGroup.shutdown();
+            clientGroup.shutdown();
         }
     }
 

@@ -178,6 +178,8 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
     }
 
     @Override
+    @Deprecated
+    @SuppressWarnings("deprecation")
     public void shutdown() {
         super.shutdown();
         if (childGroup != null) {

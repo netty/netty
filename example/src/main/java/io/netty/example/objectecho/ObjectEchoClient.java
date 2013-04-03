@@ -17,8 +17,9 @@ package io.netty.example.objectecho;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.example.echo.EchoClient;
 import io.netty.handler.codec.serialization.ClassResolvers;
@@ -41,9 +42,10 @@ public class ObjectEchoClient {
     }
 
     public void run() throws Exception {
-        Bootstrap b = new Bootstrap();
+        EventLoopGroup group = new NioEventLoopGroup();
         try {
-            b.group(new NioEventLoopGroup())
+            Bootstrap b = new Bootstrap();
+            b.group(group)
              .channel(NioSocketChannel.class)
              .handler(new ChannelInitializer<SocketChannel>() {
                 @Override
@@ -58,7 +60,7 @@ public class ObjectEchoClient {
             // Start the connection attempt.
             b.connect(host, port).sync().channel().closeFuture().sync();
         } finally {
-            b.shutdown();
+            group.shutdown();
         }
     }
 

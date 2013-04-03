@@ -41,8 +41,9 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpClientCodec;
@@ -65,8 +66,9 @@ public class WebSocketClient {
     }
 
     public void run() throws Exception {
-        Bootstrap b = new Bootstrap();
+        EventLoopGroup group = new NioEventLoopGroup();
         try {
+            Bootstrap b = new Bootstrap();
             String protocol = uri.getScheme();
             if (!"ws".equals(protocol)) {
                 throw new IllegalArgumentException("Unsupported protocol: " + protocol);
@@ -83,7 +85,7 @@ public class WebSocketClient {
                             WebSocketClientHandshakerFactory.newHandshaker(
                                     uri, WebSocketVersion.V13, null, false, customHeaders));
 
-            b.group(new NioEventLoopGroup())
+            b.group(group)
              .channel(NioSocketChannel.class)
              .handler(new ChannelInitializer<SocketChannel>() {
                  @Override
@@ -117,7 +119,7 @@ public class WebSocketClient {
             // responds to the CloseWebSocketFrame.
             ch.closeFuture().sync();
         } finally {
-            b.shutdown();
+            group.shutdown();
         }
     }
 

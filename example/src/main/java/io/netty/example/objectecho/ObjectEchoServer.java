@@ -17,8 +17,9 @@ package io.netty.example.objectecho;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.example.echo.EchoServer;
 import io.netty.handler.codec.serialization.ClassResolvers;
@@ -37,9 +38,11 @@ public class ObjectEchoServer {
     }
 
     public void run() throws Exception {
-        ServerBootstrap b = new ServerBootstrap();
+        EventLoopGroup bossGroup = new NioEventLoopGroup();
+        EventLoopGroup workerGroup = new NioEventLoopGroup();
         try {
-            b.group(new NioEventLoopGroup(), new NioEventLoopGroup())
+            ServerBootstrap b = new ServerBootstrap();
+            b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
              .childHandler(new ChannelInitializer<SocketChannel>() {
                 @Override
@@ -54,7 +57,8 @@ public class ObjectEchoServer {
             // Bind and start to accept incoming connections.
             b.bind(port).sync().channel().closeFuture().sync();
         } finally {
-            b.shutdown();
+            bossGroup.shutdown();
+            workerGroup.shutdown();
         }
     }
 

@@ -17,6 +17,7 @@ package io.netty.example.http.snoop;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.ClientCookieEncoder;
@@ -61,9 +62,10 @@ public class HttpSnoopClient {
         boolean ssl = "https".equalsIgnoreCase(scheme);
 
         // Configure the client.
-        Bootstrap b = new Bootstrap();
+        EventLoopGroup group = new NioEventLoopGroup();
         try {
-            b.group(new NioEventLoopGroup())
+            Bootstrap b = new Bootstrap();
+            b.group(group)
              .channel(NioSocketChannel.class)
              .handler(new HttpSnoopClientInitializer(ssl));
 
@@ -91,7 +93,7 @@ public class HttpSnoopClient {
             ch.closeFuture().sync();
         } finally {
             // Shut down executor threads to exit.
-            b.shutdown();
+            group.shutdown();
         }
     }
 

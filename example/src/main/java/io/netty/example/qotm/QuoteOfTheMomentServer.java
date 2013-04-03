@@ -17,8 +17,9 @@ package io.netty.example.qotm;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioDatagramChannel;
 
 /**
  * A UDP server that responds to the QOTM (quote of the moment) request to a
@@ -35,16 +36,17 @@ public class QuoteOfTheMomentServer {
     }
 
     public void run() throws Exception {
-        Bootstrap b = new Bootstrap();
+        EventLoopGroup group = new NioEventLoopGroup();
         try {
-            b.group(new NioEventLoopGroup())
+            Bootstrap b = new Bootstrap();
+            b.group(group)
              .channel(NioDatagramChannel.class)
              .option(ChannelOption.SO_BROADCAST, true)
              .handler(new QuoteOfTheMomentServerHandler());
 
             b.bind(port).sync().channel().closeFuture().await();
         } finally {
-            b.shutdown();
+            group.shutdown();
         }
     }
 

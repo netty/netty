@@ -52,8 +52,8 @@ public class MsgEchoServer {
         final NioEventLoopGroup connectGroup = new NioEventLoopGroup(1,
                 connectFactory, NioUdtProvider.MESSAGE_PROVIDER);
         // Configure the server.
-        final ServerBootstrap boot = new ServerBootstrap();
         try {
+            final ServerBootstrap boot = new ServerBootstrap();
             boot.group(acceptGroup, connectGroup)
                     .channelFactory(NioUdtProvider.MESSAGE_ACCEPTOR)
                     .option(ChannelOption.SO_BACKLOG, 10)
@@ -73,7 +73,8 @@ public class MsgEchoServer {
             future.channel().closeFuture().sync();
         } finally {
             // Shut down all event loops to terminate all threads.
-            boot.shutdown();
+            acceptGroup.shutdown();
+            connectGroup.shutdown();
         }
     }
 

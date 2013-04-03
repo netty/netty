@@ -50,14 +50,15 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class LocalTransportThreadModelTest {
 
-    private static ServerBootstrap sb;
+    private static EventLoopGroup group;
     private static LocalAddress localAddr;
 
     @BeforeClass
     public static void init() {
         // Configure a test server
-        sb = new ServerBootstrap();
-        sb.group(new LocalEventLoopGroup())
+        group = new LocalEventLoopGroup();
+        ServerBootstrap sb = new ServerBootstrap();
+        sb.group(group)
           .channel(LocalServerChannel.class)
           .childHandler(new ChannelInitializer<LocalChannel>() {
               @Override
@@ -76,7 +77,7 @@ public class LocalTransportThreadModelTest {
 
     @AfterClass
     public static void destroy() {
-        sb.shutdown();
+        group.shutdown();
     }
 
     @Test(timeout = 30000)

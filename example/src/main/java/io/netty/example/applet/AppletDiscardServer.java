@@ -21,8 +21,9 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.CharsetUtil;
 
@@ -35,19 +36,23 @@ public class AppletDiscardServer extends JApplet {
 
     private static final long serialVersionUID = -7824894101960583175L;
 
-    private ServerBootstrap bootstrap;
+    private EventLoopGroup bossGroup;
+    private EventLoopGroup workerGroup;
 
     @Override
     public void init() {
+        bossGroup = new NioEventLoopGroup();
+        workerGroup = new NioEventLoopGroup();
         try {
-            bootstrap = new ServerBootstrap();
-            bootstrap.group(new NioEventLoopGroup(), new NioEventLoopGroup()).channel(NioServerSocketChannel.class)
-                    .childHandler(new ChannelInitializer<SocketChannel>() {
-                @Override
-                public void initChannel(SocketChannel ch) throws Exception {
-                    ch.pipeline().addLast(new DiscardServerHandler());
-                }
-            });
+            ServerBootstrap bootstrap = new ServerBootstrap();
+            bootstrap.group(bossGroup, workerGroup)
+                     .channel(NioServerSocketChannel.class)
+                     .childHandler(new ChannelInitializer<SocketChannel>() {
+                         @Override
+                         public void initChannel(SocketChannel ch) throws Exception {
+                             ch.pipeline().addLast(new DiscardServerHandler());
+                         }
+                     });
             ChannelFuture f = bootstrap.bind(9999).sync();
             f.channel().closeFuture().sync();
         } catch (Exception ex) {
@@ -59,8 +64,11 @@ public class AppletDiscardServer extends JApplet {
     @Override
     public void destroy() {
         super.destroy();
-        if (bootstrap != null) {
-            bootstrap.shutdown();
+        if (bossGroup != null) {
+            bossGroup.shutdown();
+        }
+        if (workerGroup != null) {
+            workerGroup.shutdown();
         }
     }
 

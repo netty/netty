@@ -19,6 +19,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelStateHandlerAdapter;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.junit.Test;
@@ -28,10 +29,13 @@ public class DefaultChannnelGroupTest {
     // Test for #1183
     @Test
     public void testNotThrowBlockingOperationException() {
-        final ChannelGroup allChannels = new DefaultChannelGroup();
-        ServerBootstrap b = new ServerBootstrap();
+        EventLoopGroup bossGroup = new NioEventLoopGroup();
+        EventLoopGroup workerGroup = new NioEventLoopGroup();
 
-        b.group(new NioEventLoopGroup(), new NioEventLoopGroup());
+        final ChannelGroup allChannels = new DefaultChannelGroup();
+
+        ServerBootstrap b = new ServerBootstrap();
+        b.group(bossGroup, workerGroup);
         b.childHandler(new ChannelStateHandlerAdapter() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) {
@@ -50,6 +54,8 @@ public class DefaultChannnelGroupTest {
             allChannels.add(f.channel());
             allChannels.close().awaitUninterruptibly();
         }
-        b.shutdown();
+
+        bossGroup.shutdown();
+        workerGroup.shutdown();
     }
 }

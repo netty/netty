@@ -21,6 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.EventLoopGroup;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Test;
@@ -40,15 +41,17 @@ public class LocalChannelRegistryTest {
     public void testLocalAddressReuse() throws Exception {
 
         for (int i = 0; i < 2; i ++) {
+            EventLoopGroup clientGroup = new LocalEventLoopGroup();
+            EventLoopGroup serverGroup = new LocalEventLoopGroup();
             LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
             Bootstrap cb = new Bootstrap();
             ServerBootstrap sb = new ServerBootstrap();
 
-            cb.group(new LocalEventLoopGroup())
+            cb.group(clientGroup)
               .channel(LocalChannel.class)
               .handler(new TestHandler());
 
-            sb.group(new LocalEventLoopGroup())
+            sb.group(serverGroup)
               .channel(LocalServerChannel.class)
               .childHandler(new ChannelInitializer<LocalChannel>() {
                   @Override
@@ -77,8 +80,8 @@ public class LocalChannelRegistryTest {
             // Close the channel
             cc.close().sync();
 
-            sb.shutdown();
-            cb.shutdown();
+            serverGroup.shutdown();
+            clientGroup.shutdown();
 
             sc.closeFuture().sync();
 
