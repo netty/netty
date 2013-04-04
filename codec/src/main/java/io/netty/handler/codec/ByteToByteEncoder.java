@@ -57,28 +57,25 @@ public abstract class ByteToByteEncoder extends ChannelOutboundByteHandlerAdapte
         ByteBuf out = ctx.nextOutboundByteBuffer();
         boolean encoded = false;
 
-        while (in.isReadable()) {
-            int oldInSize = in.readableBytes();
-            try {
+        try {
+            while (in.isReadable()) {
+                int oldInSize = in.readableBytes();
                 encode(ctx, in, out);
                 encoded = true;
-            } catch (Throwable t) {
-                Throwable cause;
-                if (t instanceof CodecException) {
-                    cause = t;
-                } else {
-                    cause = new EncoderException(t);
+                if (oldInSize == in.readableBytes()) {
+                    break;
                 }
-                if (encoded) {
-                    cause = new IncompleteFlushException("unable to encode all bytes", cause);
-                }
-                in.discardSomeReadBytes();
-                promise.setFailure(cause);
-                return;
             }
-            if (oldInSize == in.readableBytes()) {
-                break;
+        } catch (Throwable t) {
+            if (!(t instanceof CodecException)) {
+                t = new EncoderException(t);
             }
+            if (encoded) {
+                t = new IncompleteFlushException("unable to encode all bytes", t);
+            }
+            in.discardSomeReadBytes();
+            promise.setFailure(t);
+            return;
         }
 
         ctx.flush(promise);
