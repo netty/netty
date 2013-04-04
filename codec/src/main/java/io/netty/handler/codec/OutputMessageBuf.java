@@ -22,8 +22,7 @@ import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
 
 final class OutputMessageBuf extends DefaultMessageBuf<Object> {
-    private int byteBufs;
-    private int nonByteBufs;
+    private int byteBufCnt;
 
     private static final ThreadLocal<OutputMessageBuf> output =
             new ThreadLocal<OutputMessageBuf>() {
@@ -53,9 +52,7 @@ final class OutputMessageBuf extends DefaultMessageBuf<Object> {
         boolean added =  super.offer(e);
         if (added) {
             if (e instanceof ByteBuf) {
-                byteBufs++;
-            } else {
-                nonByteBufs++;
+                byteBufCnt ++;
             }
         }
         return added;
@@ -64,12 +61,9 @@ final class OutputMessageBuf extends DefaultMessageBuf<Object> {
     @Override
     public boolean remove(Object o) {
         boolean removed = super.remove(o);
-
         if (removed) {
             if (o instanceof ByteBuf) {
-                byteBufs--;
-            } else {
-                nonByteBufs--;
+                byteBufCnt --;
             }
         }
         return removed;
@@ -82,9 +76,7 @@ final class OutputMessageBuf extends DefaultMessageBuf<Object> {
             return o;
         }
         if (o instanceof ByteBuf) {
-            byteBufs--;
-        } else {
-            nonByteBufs--;
+            byteBufCnt --;
         }
         return o;
     }
@@ -92,85 +84,84 @@ final class OutputMessageBuf extends DefaultMessageBuf<Object> {
     @Override
     public void clear() {
         super.clear();
-        byteBufs = 0;
-        nonByteBufs = 0;
-    }
-
-    private boolean containsByteBuf() {
-        return byteBufs > 0;
-    }
-
-    private boolean containsNonByteBuf() {
-       return nonByteBufs > 0;
+        byteBufCnt = 0;
     }
 
     public boolean drainToNextInbound(ChannelHandlerContext ctx) {
-        if (containsByteBuf() && ctx.nextInboundBufferType() == BufType.BYTE) {
-            ByteBuf buf = ctx.nextInboundByteBuffer();
-            boolean drained = false;
-            if (!containsNonByteBuf()) {
-                for (;;) {
-                    Object o = poll();
-                    if (o == null) {
-                        break;
-                    }
-                    buf.writeBytes((ByteBuf) o);
-                    drained = true;
-                }
-            } else {
-                // mixed case
-                MessageBuf<Object> msgBuf = ctx.nextInboundMessageBuffer();
-                for (;;) {
-                    Object o = poll();
-                    if (o == null) {
-                        break;
-                    }
-                    if (o instanceof ByteBuf) {
-                        buf.writeBytes((ByteBuf) o);
-                    } else {
-                        msgBuf.add(o);
-                    }
-                    drained = true;
-                }
-            }
-            return drained;
-        } else {
+        final int size = size();
+        if (size == 0) {
+            return false;
+        }
+
+        final int byteBufCnt = this.byteBufCnt;
+        if (byteBufCnt == 0 || ctx.nextInboundBufferType() != BufType.BYTE) {
             return drainTo(ctx.nextInboundMessageBuffer()) > 0;
         }
+
+        final ByteBuf nextByteBuf = ctx.nextInboundByteBuffer();
+        if (byteBufCnt == size) {
+            // Contains only ByteBufs
+            for (Object o = poll();;) {
+                nextByteBuf.writeBytes((ByteBuf) o);
+                if ((o = poll()) == null) {
+                    break;
+                }
+            }
+        } else {
+            // Contains both ByteBufs and non-ByteBufs (0 < byteBufCnt < size())
+            final MessageBuf<Object> nextMsgBuf = ctx.nextInboundMessageBuffer();
+            for (Object o = poll();;) {
+                if (o instanceof ByteBuf) {
+                    nextByteBuf.writeBytes((ByteBuf) o);
+                } else {
+                    nextMsgBuf.add(o);
+                }
+
+                if ((o = poll()) == null) {
+                    break;
+                }
+            }
+        }
+
+        return true;
     }
 
     public boolean drainToNextOutbound(ChannelHandlerContext ctx) {
-        if (containsByteBuf() && ctx.nextOutboundBufferType() == BufType.BYTE) {
-            ByteBuf buf = ctx.nextOutboundByteBuffer();
-            boolean drained = false;
-            if (!containsNonByteBuf()) {
-                for (;;) {
-                    Object o = poll();
-                    if (o == null) {
-                        break;
-                    }
-                    buf.writeBytes((ByteBuf) o);
-                    drained = true;
-                }
-            } else {
-                // mixed case
-                MessageBuf<Object> msgBuf = ctx.nextOutboundMessageBuffer();
-                for (;;) {
-                    Object o = poll();
-                    if (o == null) {
-                        break;
-                    }
-                    if (o instanceof ByteBuf) {
-                        buf.writeBytes((ByteBuf) o);
-                    } else {
-                        msgBuf.add(o);
-                    }
-                    drained = true;
-                }
-            }
-            return drained;
-        } else {
+        final int size = size();
+        if (size == 0) {
+            return false;
+        }
+
+        final int byteBufCnt = this.byteBufCnt;
+        if (byteBufCnt == 0 || ctx.nextOutboundBufferType() != BufType.BYTE) {
             return drainTo(ctx.nextOutboundMessageBuffer()) > 0;
         }
+
+        final ByteBuf nextByteBuf = ctx.nextOutboundByteBuffer();
+        if (byteBufCnt == size) {
+            // Contains only ByteBufs
+            for (Object o = poll();;) {
+                nextByteBuf.writeBytes((ByteBuf) o);
+                if ((o = poll()) == null) {
+                    break;
+                }
+            }
+        } else {
+            // Contains both ByteBufs and non-ByteBufs (0 < byteBufCnt < size())
+            final MessageBuf<Object> nextMsgBuf = ctx.nextOutboundMessageBuffer();
+            for (Object o = poll();;) {
+                if (o instanceof ByteBuf) {
+                    nextByteBuf.writeBytes((ByteBuf) o);
+                } else {
+                    nextMsgBuf.add(o);
+                }
+
+                if ((o = poll()) == null) {
+                    break;
+                }
+            }
+        }
+
+        return true;
     }
 }
