@@ -99,7 +99,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     @Override
     @SuppressWarnings("unchecked")
-    public Promise<V> addListener(GenericFutureListener <? extends Future<V>> listener) {
+    public Promise<V> addListener(GenericFutureListener<? extends Future<V>> listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
         }
