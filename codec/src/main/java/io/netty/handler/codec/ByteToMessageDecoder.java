@@ -109,35 +109,33 @@ public abstract class ByteToMessageDecoder
         OutputMessageBuf out = OutputMessageBuf.get();
         try {
             while (in.isReadable()) {
-                try {
-                    int outSize = out.size();
-                    int oldInputLength = in.readableBytes();
-                    decode(ctx, in, out);
-                    if (outSize == out.size()) {
-                        wasNull = true;
-                        if (oldInputLength == in.readableBytes()) {
-                            break;
-                        } else {
-                            continue;
-                        }
-                    }
-
-                    wasNull = false;
+                int outSize = out.size();
+                int oldInputLength = in.readableBytes();
+                decode(ctx, in, out);
+                if (outSize == out.size()) {
+                    wasNull = true;
                     if (oldInputLength == in.readableBytes()) {
-                        throw new IllegalStateException(
-                             "decode() did not read anything but decoded a message.");
-                    }
-
-                    if (isSingleDecode()) {
                         break;
-                    }
-                } catch (Throwable t) {
-                    if (t instanceof CodecException) {
-                        throw (CodecException) t;
                     } else {
-                        throw new DecoderException(t);
+                        continue;
                     }
                 }
+
+                wasNull = false;
+                if (oldInputLength == in.readableBytes()) {
+                    throw new IllegalStateException(
+                         "decode() did not read anything but decoded a message.");
+                }
+
+                if (isSingleDecode()) {
+                    break;
+                }
+            }
+        } catch (Throwable t) {
+            if (t instanceof CodecException) {
+                throw (CodecException) t;
+            } else {
+                throw new DecoderException(t);
             }
         } finally {
             if (out.drainToNextInbound(ctx)) {
