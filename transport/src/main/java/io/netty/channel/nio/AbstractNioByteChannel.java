@@ -134,12 +134,6 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
     @Override
     protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
-        if (!buf.isReadable()) {
-            // Reset reader/writerIndex to 0 if the buffer is empty.
-            buf.clear();
-            return;
-        }
-
         for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
             int localFlushedAmount = doWriteBytes(buf, i == 0);
             if (localFlushedAmount > 0) {
