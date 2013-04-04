@@ -458,17 +458,15 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     }
 
     private static void processWritable(SelectionKey k, AbstractNioChannel ch) {
-        if (ch.writableTasks.isEmpty()) {
-            ch.unsafe().flushNow();
-        } else {
-            NioTask<SelectableChannel> task;
-            for (;;) {
-                task = ch.writableTasks.poll();
-                if (task == null) { break; }
-                processSelectedKey(ch.selectionKey(), task);
-            }
-            k.interestOps(k.interestOps() | SelectionKey.OP_WRITE);
+        NioTask<SelectableChannel> task;
+        for (;;) {
+            task = ch.writableTasks.poll();
+            if (task == null) { break; }
+            processSelectedKey(ch.selectionKey(), task);
         }
+
+        // Call flushNow which will also take care of clear the OP_WRITE once there is nothing left to write
+        ch.unsafe().flushNow();
     }
 
     private static void unregisterWritableTasks(AbstractNioChannel ch) {
