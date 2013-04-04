@@ -167,7 +167,10 @@ final class OutputMessageBuf extends DefaultMessageBuf<Object> {
     }
 
     private static void writeAndRelease(ByteBuf dst, ByteBuf src) {
-        dst.writeBytes(src, src.readerIndex(), src.readableBytes());
-        BufUtil.release(src);
+        try {
+            dst.writeBytes(src, src.readerIndex(), src.readableBytes());
+        } finally {
+            BufUtil.release(src);
+        }
     }
 }
