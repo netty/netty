@@ -15,21 +15,29 @@
  */
 package io.netty.handler.codec.compression;
 
+import com.jcraft.jzlib.Deflater;
+import com.jcraft.jzlib.Inflater;
 import com.jcraft.jzlib.JZlib;
-import com.jcraft.jzlib.ZStream;
 
 /**
  * Utility methods used by {@link JZlibEncoder} and {@link JZlibDecoder}.
  */
 final class ZlibUtil {
 
-    static void fail(ZStream z, String message, int resultCode) {
-        throw exception(z, message, resultCode);
+    static void fail(Inflater z, String message, int resultCode) {
+        throw inflaterException(z, message, resultCode);
     }
 
-    static CompressionException exception(ZStream z, String message, int resultCode) {
-        return new CompressionException(message + " (" + resultCode + ')' +
-                (z.msg != null? ": " + z.msg : ""));
+    static void fail(Deflater z, String message, int resultCode) {
+        throw deflaterException(z, message, resultCode);
+    }
+
+    static CompressionException inflaterException(Inflater z, String message, int resultCode) {
+        return new CompressionException(message + " (" + resultCode + ')' + (z.msg != null? ": " + z.msg : ""));
+    }
+
+    static CompressionException deflaterException(Deflater z, String message, int resultCode) {
+        return new CompressionException(message + " (" + resultCode + ')' + (z.msg != null? ": " + z.msg : ""));
     }
 
     static JZlib.WrapperType convertWrapperType(ZlibWrapper wrapper) {
