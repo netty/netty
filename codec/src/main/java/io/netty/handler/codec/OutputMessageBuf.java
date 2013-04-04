@@ -16,6 +16,7 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.BufType;
+import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultMessageBuf;
 import io.netty.buffer.MessageBuf;
@@ -102,7 +103,7 @@ final class OutputMessageBuf extends DefaultMessageBuf<Object> {
         if (byteBufCnt == size) {
             // Contains only ByteBufs
             for (Object o = poll();;) {
-                nextByteBuf.writeBytes((ByteBuf) o);
+                writeAndRelease(nextByteBuf, (ByteBuf) o);
                 if ((o = poll()) == null) {
                     break;
                 }
@@ -112,7 +113,7 @@ final class OutputMessageBuf extends DefaultMessageBuf<Object> {
             final MessageBuf<Object> nextMsgBuf = ctx.nextInboundMessageBuffer();
             for (Object o = poll();;) {
                 if (o instanceof ByteBuf) {
-                    nextByteBuf.writeBytes((ByteBuf) o);
+                    writeAndRelease(nextByteBuf, (ByteBuf) o);
                 } else {
                     nextMsgBuf.add(o);
                 }
@@ -141,7 +142,7 @@ final class OutputMessageBuf extends DefaultMessageBuf<Object> {
         if (byteBufCnt == size) {
             // Contains only ByteBufs
             for (Object o = poll();;) {
-                nextByteBuf.writeBytes((ByteBuf) o);
+                writeAndRelease(nextByteBuf, (ByteBuf) o);
                 if ((o = poll()) == null) {
                     break;
                 }
@@ -151,7 +152,7 @@ final class OutputMessageBuf extends DefaultMessageBuf<Object> {
             final MessageBuf<Object> nextMsgBuf = ctx.nextOutboundMessageBuffer();
             for (Object o = poll();;) {
                 if (o instanceof ByteBuf) {
-                    nextByteBuf.writeBytes((ByteBuf) o);
+                    writeAndRelease(nextByteBuf, (ByteBuf) o);
                 } else {
                     nextMsgBuf.add(o);
                 }
@@ -163,5 +164,10 @@ final class OutputMessageBuf extends DefaultMessageBuf<Object> {
         }
 
         return true;
+    }
+
+    private static void writeAndRelease(ByteBuf dst, ByteBuf src) {
+        dst.writeBytes(src, src.readerIndex(), src.readableBytes());
+        BufUtil.release(src);
     }
 }
