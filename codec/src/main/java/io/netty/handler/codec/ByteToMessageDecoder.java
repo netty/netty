@@ -107,9 +107,6 @@ public abstract class ByteToMessageDecoder
     protected void callDecode(ChannelHandlerContext ctx, ByteBuf in) {
         boolean wasNull = false;
         OutputMessageBuf out = OutputMessageBuf.get();
-
-        assert out.isEmpty();
-
         try {
             while (in.isReadable()) {
                 try {

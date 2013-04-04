@@ -35,8 +35,7 @@ final class OutputMessageBuf extends DefaultMessageBuf<Object> {
                 @Override
                 public OutputMessageBuf get() {
                     OutputMessageBuf buf = super.get();
-                    // Just to be sure
-                    buf.clear();
+                    assert buf.isEmpty();
                     return buf;
                 }
             };
@@ -46,6 +45,7 @@ final class OutputMessageBuf extends DefaultMessageBuf<Object> {
     }
 
     private OutputMessageBuf() {
+        super(2);
     }
 
     @Override
