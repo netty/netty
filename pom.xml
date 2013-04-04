@@ -369,7 +369,7 @@
           <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>netty-build</artifactId>
-            <version>19-SNAPSHOT</version>
+            <version>19</version>
           </dependency>
         </dependencies>
       </plugin>
