@@ -82,19 +82,16 @@ public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter
         int oldOutSize = out.readableBytes();
         try {
             decodeLast(ctx, in, out);
+        } catch (CodecException e) {
+            throw e;
         } catch (Throwable t) {
-            if (t instanceof CodecException) {
-                ctx.fireExceptionCaught(t);
-            } else {
-                ctx.fireExceptionCaught(new DecoderException(t));
+            throw new DecoderException(t);
+        } finally {
+            if (out.readableBytes() > oldOutSize) {
+                ctx.fireInboundBufferUpdated();
             }
+            ctx.fireChannelInactive();
         }
-
-        if (out.readableBytes() > oldOutSize) {
-            ctx.fireInboundBufferUpdated();
-        }
-
-        ctx.fireChannelInactive();
     }
 
     /**
@@ -102,24 +99,22 @@ public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter
      */
     private void callDecode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) {
         int oldOutSize = out.readableBytes();
-        while (in.isReadable()) {
-            int oldInSize = in.readableBytes();
-            try {
-                decode(ctx, in, out);
-            } catch (Throwable t) {
-                if (t instanceof CodecException) {
-                    ctx.fireExceptionCaught(t);
-                } else {
-                    ctx.fireExceptionCaught(new DecoderException(t));
+        try {
+            while (in.isReadable()) {
+                int oldInSize = in.readableBytes();
+                    decode(ctx, in, out);
+                if (oldInSize == in.readableBytes() || isSingleDecode()) {
+                    break;
                 }
             }
-            if (oldInSize == in.readableBytes() || isSingleDecode()) {
-                break;
+        } catch (CodecException e) {
+            throw e;
+        } catch (Throwable t) {
+            throw new DecoderException(t);
+        } finally {
+            if (out.readableBytes() > oldOutSize) {
+                ctx.fireInboundBufferUpdated();
             }
-        }
-
-        if (out.readableBytes() > oldOutSize) {
-            ctx.fireInboundBufferUpdated();
         }
     }
 
