@@ -15,14 +15,14 @@
  */
 package io.netty.handler.codec.compression;
 
+import com.jcraft.jzlib.Deflater;
+import com.jcraft.jzlib.JZlib;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import com.jcraft.jzlib.JZlib;
-import com.jcraft.jzlib.Deflater;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -380,7 +380,7 @@ public class JZlibEncoder extends ZlibEncoder {
                 // Write the ADLER32 checksum (stream footer).
                 int resultCode = z.deflate(JZlib.Z_FINISH);
                 if (resultCode != JZlib.Z_OK && resultCode != JZlib.Z_STREAM_END) {
-                    future.setFailure(ZlibUtil.exception(z, "compression failure", resultCode));
+                    future.setFailure(ZlibUtil.deflaterException(z, "compression failure", resultCode));
                     return future;
                 } else if (z.next_out_index != 0) {
                     footer = Unpooled.wrappedBuffer(out, 0, z.next_out_index);

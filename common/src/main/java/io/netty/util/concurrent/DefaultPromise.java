@@ -98,7 +98,8 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     @Override
-    public Promise<V> addListener(GenericFutureListener<? extends Future<V>> listener) {
+    @SuppressWarnings("unchecked")
+    public Promise<V> addListener(GenericFutureListener <? extends Future<V>> listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
         }
@@ -459,6 +460,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         state -= 0x10000000000L;
     }
 
+    @SuppressWarnings("unchecked")
     private void notifyListeners() {
         // This method doesn't need synchronization because:
         // 1) This method is always called after synchronized (this) block.
