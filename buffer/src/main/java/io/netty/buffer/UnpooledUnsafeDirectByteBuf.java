@@ -34,7 +34,7 @@ import java.util.Queue;
  * and {@link Unpooled#wrappedBuffer(ByteBuffer)} instead of calling the
  * constructor explicitly.
  */
-final class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf {
+public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     private static final boolean NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
 
@@ -54,7 +54,7 @@ final class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf 
      * @param initialCapacity the initial capacity of the underlying direct buffer
      * @param maxCapacity     the maximum capacity of the underlying direct buffer
      */
-    UnpooledUnsafeDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
+    protected UnpooledUnsafeDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
         super(maxCapacity);
         if (alloc == null) {
             throw new NullPointerException("alloc");
@@ -79,7 +79,7 @@ final class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf 
      *
      * @param maxCapacity the maximum capacity of the underlying direct buffer
      */
-    UnpooledUnsafeDirectByteBuf(ByteBufAllocator alloc, ByteBuffer initialBuffer, int maxCapacity) {
+    protected UnpooledUnsafeDirectByteBuf(ByteBufAllocator alloc, ByteBuffer initialBuffer, int maxCapacity) {
         super(maxCapacity);
         if (alloc == null) {
             throw new NullPointerException("alloc");

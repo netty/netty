@@ -34,7 +34,7 @@ import java.util.Queue;
  * and {@link Unpooled#wrappedBuffer(ByteBuffer)} instead of calling the
  * constructor explicitly.
  */
-final class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
+public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     private final ResourceLeak leak = leakDetector.open(this);
     private final ByteBufAllocator alloc;
@@ -51,7 +51,7 @@ final class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
      * @param initialCapacity the initial capacity of the underlying direct buffer
      * @param maxCapacity     the maximum capacity of the underlying direct buffer
      */
-    UnpooledDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
+    protected UnpooledDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
         super(maxCapacity);
         if (alloc == null) {
             throw new NullPointerException("alloc");
@@ -76,7 +76,7 @@ final class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
      *
      * @param maxCapacity the maximum capacity of the underlying direct buffer
      */
-    UnpooledDirectByteBuf(ByteBufAllocator alloc, ByteBuffer initialBuffer, int maxCapacity) {
+    protected UnpooledDirectByteBuf(ByteBufAllocator alloc, ByteBuffer initialBuffer, int maxCapacity) {
         super(maxCapacity);
         if (alloc == null) {
             throw new NullPointerException("alloc");
