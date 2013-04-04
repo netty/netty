@@ -52,6 +52,10 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundMessageHa
         OutputMessageBuf out = OutputMessageBuf.get();
         try {
             decode(ctx, msg, out);
+        } catch (CodecException e) {
+            throw e;
+        } catch (Throwable cause) {
+            throw new DecoderException(cause);
         } finally {
             out.drainToNextInbound(ctx);
         }

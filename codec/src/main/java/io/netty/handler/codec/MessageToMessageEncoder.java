@@ -53,11 +53,7 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundMessageH
         } catch (CodecException e) {
             throw e;
         } catch (Throwable cause) {
-            if (cause instanceof CodecException) {
-                throw (CodecException) cause;
-            } else {
-                throw new EncoderException(cause);
-            }
+            throw new EncoderException(cause);
         } finally {
             out.drainToNextOutbound(ctx);
         }

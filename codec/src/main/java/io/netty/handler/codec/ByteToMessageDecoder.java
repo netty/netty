@@ -89,13 +89,10 @@ public abstract class ByteToMessageDecoder
                 callDecode(ctx, in);
             }
             decodeLast(ctx, in, out);
-
-        } catch (Throwable t) {
-            if (t instanceof CodecException) {
-                throw (CodecException) t;
-            } else {
-                throw new DecoderException(t);
-            }
+        } catch (CodecException e) {
+            throw e;
+        } catch (Throwable cause) {
+            throw new DecoderException(cause);
         } finally {
             if (out.drainToNextInbound(ctx)) {
                 ctx.fireInboundBufferUpdated();
@@ -131,12 +128,10 @@ public abstract class ByteToMessageDecoder
                     break;
                 }
             }
-        } catch (Throwable t) {
-            if (t instanceof CodecException) {
-                throw (CodecException) t;
-            } else {
-                throw new DecoderException(t);
-            }
+        } catch (CodecException e) {
+            throw e;
+        } catch (Throwable cause) {
+            throw new DecoderException(cause);
         } finally {
             if (out.drainToNextInbound(ctx)) {
                 decodeWasNull = false;
