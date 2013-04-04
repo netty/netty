@@ -29,7 +29,7 @@ import java.nio.channels.ScatteringByteChannel;
 /**
  * Big endian Java heap buffer implementation.
  */
-final class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
+public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     private final ByteBufAllocator alloc;
     private byte[] array;
@@ -41,7 +41,7 @@ final class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
      * @param initialCapacity the initial capacity of the underlying byte array
      * @param maxCapacity the max capacity of the underlying byte array
      */
-    public UnpooledHeapByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
+    protected UnpooledHeapByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
         this(alloc, new byte[initialCapacity], 0, 0, maxCapacity);
     }
 
@@ -51,7 +51,7 @@ final class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
      * @param initialArray the initial underlying byte array
      * @param maxCapacity the max capacity of the underlying byte array
      */
-    public UnpooledHeapByteBuf(ByteBufAllocator alloc, byte[] initialArray, int maxCapacity) {
+    protected UnpooledHeapByteBuf(ByteBufAllocator alloc, byte[] initialArray, int maxCapacity) {
         this(alloc, initialArray, 0, initialArray.length, maxCapacity);
     }
 
