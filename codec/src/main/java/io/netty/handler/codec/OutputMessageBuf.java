@@ -23,7 +23,6 @@ import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
 
 final class OutputMessageBuf extends DefaultMessageBuf<Object> {
-    private int byteBufCnt;
 
     private static final ThreadLocal<OutputMessageBuf> output =
             new ThreadLocal<OutputMessageBuf>() {
@@ -43,6 +42,8 @@ final class OutputMessageBuf extends DefaultMessageBuf<Object> {
     static OutputMessageBuf get() {
         return output.get();
     }
+
+    private int byteBufCnt;
 
     private OutputMessageBuf() {
         super(2);
