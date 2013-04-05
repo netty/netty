@@ -64,7 +64,7 @@ public class WebSocketClientHandler extends ChannelInboundMessageHandlerAdapter<
     }
 
     @Override
-    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         handshakeFuture = ctx.newPromise();
     }
 

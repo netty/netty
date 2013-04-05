@@ -137,7 +137,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
     }
 
     @Override
-    public void afterAdd(ChannelHandlerContext ctx) {
+    public void handlerAdded(ChannelHandlerContext ctx) {
         ChannelPipeline cp = ctx.pipeline();
         if (cp.get(WebSocketClientProtocolHandshakeHandler.class) == null) {
             // Add the WebSocketClientProtocolHandshakeHandler before this one.

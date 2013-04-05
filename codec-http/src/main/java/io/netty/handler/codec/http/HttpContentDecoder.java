@@ -202,9 +202,9 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
     }
 
     @Override
-    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         cleanup();
-        super.afterRemove(ctx);
+        super.handlerRemoved(ctx);
     }
 
     @Override

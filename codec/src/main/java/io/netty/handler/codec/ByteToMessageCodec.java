@@ -61,11 +61,6 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler
     }
 
     @Override
-    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
-        decoder.beforeAdd(ctx);
-    }
-
-    @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return decoder.newInboundBuffer(ctx);
     }

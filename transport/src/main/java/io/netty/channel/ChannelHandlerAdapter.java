@@ -36,7 +36,7 @@ public abstract class ChannelHandlerAdapter implements ChannelHandler {
      * Do nothing by default, sub-classes may override this method.
      */
     @Override
-    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         // NOOP
     }
 
@@ -44,23 +44,7 @@ public abstract class ChannelHandlerAdapter implements ChannelHandler {
      * Do nothing by default, sub-classes may override this method.
      */
     @Override
-    public void afterAdd(ChannelHandlerContext ctx) throws Exception {
-        // NOOP
-    }
-
-    /**
-     * Do nothing by default, sub-classes may override this method.
-     */
-    @Override
-    public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
-        // NOOP
-    }
-
-    /**
-     * Do nothing by default, sub-classes may override this method.
-     */
-    @Override
-    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         // NOOP
     }
 

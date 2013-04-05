@@ -228,9 +228,9 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     protected abstract Result beginEncode(HttpResponse headers, String acceptEncoding) throws Exception;
 
     @Override
-    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         cleanup();
-        super.afterRemove(ctx);
+        super.handlerRemoved(ctx);
     }
 
     @Override
