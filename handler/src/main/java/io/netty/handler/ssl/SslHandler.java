@@ -1040,12 +1040,9 @@ public class SslHandler
     }
 
     @Override
-    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
-        this.ctx = ctx;
-    }
-
-    @Override
     public void afterAdd(ChannelHandlerContext ctx) throws Exception {
+        this.ctx = ctx;
+
         if (ctx.channel().isActive()) {
             // channelActvie() event has been fired already, which means this.channelActive() will
             // not be invoked. We have to initialize here instead.

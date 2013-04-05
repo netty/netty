@@ -103,7 +103,7 @@ public class ReadTimeoutHandler extends ChannelStateHandlerAdapter {
     }
 
     @Override
-    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
+    public void afterAdd(ChannelHandlerContext ctx) throws Exception {
         if (ctx.channel().isActive() && ctx.channel().isRegistered()) {
             // channelActvie() event has been fired already, which means this.channelActive() will
             // not be invoked. We have to initialize here instead.
@@ -115,7 +115,7 @@ public class ReadTimeoutHandler extends ChannelStateHandlerAdapter {
     }
 
     @Override
-    public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
+    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
         destroy();
     }
 

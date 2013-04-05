@@ -448,8 +448,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private void remove0(DefaultChannelHandlerContext ctx) {
-        callBeforeRemove(ctx);
-
         DefaultChannelHandlerContext prev = ctx.prev;
         DefaultChannelHandlerContext next = ctx.next;
         prev.next = next;
@@ -542,7 +540,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         newCtx.prev = prev;
         newCtx.next = next;
 
-        callBeforeRemove(ctx);
         callBeforeAdd(newCtx);
 
         prev.next = newCtx;
@@ -596,13 +593,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             }
             h.added = true;
         }
-        try {
-            handler.beforeAdd(ctx);
-        } catch (Throwable t) {
-            throw new ChannelPipelineException(
-                    handler.getClass().getName() +
-                    ".beforeAdd() has thrown an exception; not adding.", t);
-        }
     }
 
     private void callAfterAdd(ChannelHandlerContext ctx) {
@@ -628,16 +618,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
                         ctx.handler().getClass().getName() +
                         ".afterAdd() has thrown an exception; also failed to remove.", t);
             }
-        }
-    }
-
-    private static void callBeforeRemove(ChannelHandlerContext ctx) {
-        try {
-            ctx.handler().beforeRemove(ctx);
-        } catch (Throwable t) {
-            throw new ChannelPipelineException(
-                    ctx.handler().getClass().getName() +
-                    ".beforeRemove() has thrown an exception; not removing.", t);
         }
     }
 
@@ -1138,13 +1118,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         public void channelReadSuspended(ChannelHandlerContext ctx) throws Exception { }
 
         @Override
-        public void beforeAdd(ChannelHandlerContext ctx) throws Exception { }
-
-        @Override
         public void afterAdd(ChannelHandlerContext ctx) throws Exception { }
-
-        @Override
-        public void beforeRemove(ChannelHandlerContext ctx) throws Exception { }
 
         @Override
         public void afterRemove(ChannelHandlerContext ctx) throws Exception { }
@@ -1231,17 +1205,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public final void beforeAdd(ChannelHandlerContext ctx) throws Exception {
-            // NOOP
-        }
-
-        @Override
         public final void afterAdd(ChannelHandlerContext ctx) throws Exception {
-            // NOOP
-        }
-
-        @Override
-        public final void beforeRemove(ChannelHandlerContext ctx) throws Exception {
             // NOOP
         }
 

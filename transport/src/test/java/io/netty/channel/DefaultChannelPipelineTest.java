@@ -648,7 +648,7 @@ public class DefaultChannelPipelineTest {
             pipeline.addFirst(handler.name, handler);
 
             // Validate handler life-cycle methods called.
-            handler.validate(true, true, false, false);
+            handler.validate(true, false);
 
             // Store handler into the list.
             handlers.add(handler);
@@ -661,7 +661,7 @@ public class DefaultChannelPipelineTest {
             assertSame(handler, pipeline.remove(handler.name));
 
             // Validate handler life-cycle methods called.
-            handler.validate(true, true, true, true);
+            handler.validate(true, true);
         }
     }
 
@@ -888,9 +888,7 @@ public class DefaultChannelPipelineTest {
     private static final class LifeCycleAwareTestHandler extends ChannelHandlerAdapter {
         private final String name;
 
-        private boolean beforeAdd;
         private boolean afterAdd;
-        private boolean beforeRemove;
         private boolean afterRemove;
 
         /**
@@ -902,37 +900,21 @@ public class DefaultChannelPipelineTest {
             this.name = name;
         }
 
-        public void validate(boolean beforeAdd, boolean afterAdd, boolean beforeRemove, boolean afterRemove) {
-            assertEquals(name, beforeAdd, this.beforeAdd);
+        public void validate(boolean afterAdd, boolean afterRemove) {
             assertEquals(name, afterAdd, this.afterAdd);
-            assertEquals(name, beforeRemove, this.beforeRemove);
             assertEquals(name, afterRemove, this.afterRemove);
         }
 
         @Override
-        public void beforeAdd(ChannelHandlerContext ctx) {
-            validate(false, false, false, false);
-
-            beforeAdd = true;
-        }
-
-        @Override
         public void afterAdd(ChannelHandlerContext ctx) {
-            validate(true, false, false, false);
+            validate(false, false);
 
             afterAdd = true;
         }
 
         @Override
-        public void beforeRemove(ChannelHandlerContext ctx) {
-            validate(true, true, false, false);
-
-            beforeRemove = true;
-        }
-
-        @Override
         public void afterRemove(ChannelHandlerContext ctx) {
-            validate(true, true, true, false);
+            validate(true, false);
 
             afterRemove = true;
         }
