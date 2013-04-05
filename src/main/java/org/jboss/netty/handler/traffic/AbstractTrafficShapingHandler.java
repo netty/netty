@@ -334,14 +334,11 @@ public abstract class AbstractTrafficShapingHandler extends
     }
 
     /**
-    *
-    * @return the time that should be necessary to wait to respect limit. Can
-    *         be negative time
-    */
-    private static long getTimeToWait(long limit, long bytes, long lastTime,
-            long curtime) {
+     * @return the time that should be necessary to wait to respect limit. Can be negative time
+     */
+    private static long getTimeToWait(long limit, long bytes, long lastTime, long curtime) {
         long interval = curtime - lastTime;
-        if (interval == 0) {
+        if (interval <= 0) {
             // Time is too short, so just lets continue
             return 0;
         }
