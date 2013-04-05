@@ -632,37 +632,53 @@ public class DefaultChannelPipelineTest {
         assertTrue(((ChannelOutboundMessageHandlerImpl) handler2.operationHandler()).flushed);
     }
 
-    @Test
-    public void testLifeCycleAware() {
+    @Test(timeout = 20000)
+    public void testLifeCycleAware() throws Exception {
         LocalChannel channel = new LocalChannel();
         LocalEventLoopGroup group = new LocalEventLoopGroup();
         group.register(channel).awaitUninterruptibly();
         final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(channel);
 
-        List<LifeCycleAwareTestHandler> handlers = new ArrayList<LifeCycleAwareTestHandler>();
-
+        final List<LifeCycleAwareTestHandler> handlers = new ArrayList<LifeCycleAwareTestHandler>();
+        final CountDownLatch addLatch = new CountDownLatch(20);
         for (int i = 0; i < 20; i++) {
-            LifeCycleAwareTestHandler handler = new LifeCycleAwareTestHandler("handler-" + i);
+            final LifeCycleAwareTestHandler handler = new LifeCycleAwareTestHandler("handler-" + i);
 
             // Add handler.
             pipeline.addFirst(handler.name, handler);
+            channel.eventLoop().execute(new Runnable() {
+                @Override
+                public void run() {
+                    // Validate handler life-cycle methods called.
+                    handler.validate(true, false);
 
-            // Validate handler life-cycle methods called.
-            handler.validate(true, false);
+                    // Store handler into the list.
+                    handlers.add(handler);
 
-            // Store handler into the list.
-            handlers.add(handler);
+                    addLatch.countDown();
+                }
+            });
         }
+        addLatch.await();
 
         // Change the order of remove operations over all handlers in the pipeline.
         Collections.shuffle(handlers);
 
-        for (LifeCycleAwareTestHandler handler : handlers) {
+        final CountDownLatch removeLatch = new CountDownLatch(20);
+
+        for (final LifeCycleAwareTestHandler handler : handlers) {
             assertSame(handler, pipeline.remove(handler.name));
 
-            // Validate handler life-cycle methods called.
-            handler.validate(true, true);
+            channel.eventLoop().execute(new Runnable() {
+                @Override
+                public void run() {
+                    // Validate handler life-cycle methods called.
+                    handler.validate(true, true);
+                    removeLatch.countDown();
+                }
+            });
         }
+        removeLatch.await();
     }
 
     @Test

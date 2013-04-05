@@ -550,36 +550,9 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
         name2ctx.put(newName, newCtx);
 
-        ChannelPipelineException removeException = null;
-        ChannelPipelineException addException = null;
-        boolean removed = false;
-        try {
-            callAfterRemove(ctx, newCtx, newCtx);
-            removed = true;
-        } catch (ChannelPipelineException e) {
-            removeException = e;
-        }
-
-        boolean added = false;
-        try {
-            callAfterAdd(newCtx);
-            added = true;
-        } catch (ChannelPipelineException e) {
-            addException = e;
-        }
-
-        if (!removed && !added) {
-            logger.warn(removeException.getMessage(), removeException);
-            logger.warn(addException.getMessage(), addException);
-            throw new ChannelPipelineException(
-                    "Both " + ctx.handler().getClass().getName() +
-                    ".afterRemove() and " + newCtx.handler().getClass().getName() +
-                    ".afterAdd() failed; see logs.");
-        } else if (!removed) {
-            throw removeException;
-        } else if (!added) {
-            throw addException;
-        }
+        // remove old and add new
+        callAfterRemove(ctx, newCtx, newCtx);
+        callAfterAdd(newCtx);
     }
 
     private static void callBeforeAdd(ChannelHandlerContext ctx) {
@@ -595,7 +568,20 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private void callAfterAdd(ChannelHandlerContext ctx) {
+    private void callAfterAdd(final ChannelHandlerContext ctx) {
+        if (ctx.channel().isRegistered() && !ctx.executor().inEventLoop()) {
+            ctx.executor().execute(new Runnable() {
+                @Override
+                public void run() {
+                    callAfterAdd0(ctx);
+                }
+            });
+            return;
+        }
+        callAfterAdd0(ctx);
+    }
+
+    private void callAfterAdd0(final ChannelHandlerContext ctx) {
         try {
             ctx.handler().afterAdd(ctx);
         } catch (Throwable t) {
@@ -610,18 +596,33 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             }
 
             if (removed) {
-                throw new ChannelPipelineException(
+                fireExceptionCaught(new ChannelPipelineException(
                         ctx.handler().getClass().getName() +
-                        ".afterAdd() has thrown an exception; removed.", t);
+                        ".afterAdd() has thrown an exception; removed.", t));
             } else {
-                throw new ChannelPipelineException(
+                fireExceptionCaught(new ChannelPipelineException(
                         ctx.handler().getClass().getName() +
-                        ".afterAdd() has thrown an exception; also failed to remove.", t);
+                        ".afterAdd() has thrown an exception; also failed to remove.", t));
             }
         }
     }
 
-    private static void callAfterRemove(
+    private void callAfterRemove(
+            final DefaultChannelHandlerContext ctx, final DefaultChannelHandlerContext ctxPrev,
+            final DefaultChannelHandlerContext ctxNext) {
+        if (ctx.channel().isRegistered() && !ctx.executor().inEventLoop()) {
+            ctx.executor().execute(new Runnable() {
+                @Override
+                public void run() {
+                    callAfterRemove0(ctx, ctxPrev, ctxNext);
+                }
+            });
+            return;
+        }
+        callAfterRemove0(ctx, ctxPrev, ctxNext);
+    }
+
+    private void callAfterRemove0(
             final DefaultChannelHandlerContext ctx, DefaultChannelHandlerContext ctxPrev,
             DefaultChannelHandlerContext ctxNext) {
 
@@ -631,9 +632,9 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         try {
             handler.afterRemove(ctx);
         } catch (Throwable t) {
-            throw new ChannelPipelineException(
+            fireExceptionCaught(new ChannelPipelineException(
                     ctx.handler().getClass().getName() +
-                    ".afterRemove() has thrown an exception.", t);
+                            ".afterRemove() has thrown an exception.", t));
         }
 
         ctx.forwardBufferContent(ctxPrev, ctxNext);
