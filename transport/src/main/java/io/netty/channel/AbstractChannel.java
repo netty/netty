@@ -698,7 +698,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         promise.setFailure(t);
                     }
 
-                    if (closedChannelException != null) {
+                    if (closedChannelException == null) {
                         closedChannelException = new ClosedChannelException();
                     }
 
