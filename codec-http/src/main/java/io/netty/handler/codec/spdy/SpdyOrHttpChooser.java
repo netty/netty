@@ -23,6 +23,7 @@ import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
@@ -88,6 +89,11 @@ public abstract class SpdyOrHttpChooser extends ChannelDuplexHandler implements 
 
             ctx.fireInboundBufferUpdated();
         }
+    }
+
+    @Override
+    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        ctx.flush(promise);
     }
 
     private boolean initPipeline(ChannelHandlerContext ctx) {
