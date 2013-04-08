@@ -98,7 +98,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     /**
      * Boolean that controls determines if a blocked Selector.select should
-     * break out of its selection process. In our case we use a timeone for
+     * break out of its selection process. In our case we use a timeout for
      * the select method and the select method will block for that time unless
      * waken up.
      */

@@ -163,17 +163,32 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         private final FileRegion region;
         private final WritableByteChannel wch;
         private final ChannelPromise promise;
-
+        private final long total;
+        private long startedTime;
+        private boolean isStarted;
+        private final boolean hasListener;
         TransferTask(FileRegion region, WritableByteChannel wch, ChannelPromise promise) {
             this.region = region;
             this.wch = wch;
             this.promise = promise;
+            this.startedTime = System.currentTimeMillis();
+            this.hasListener = region.hasListener();
+            this.total = region.count();
         }
 
         void transfer() {
             try {
+                if (!isStarted){
+                    isStarted = true;
+                    startedTime = System.currentTimeMillis();
+                    if (hasListener) {
+                        region.listener().onStarted(region.position(),total,startedTime);
+                    }
+                }
                 for (;;) {
                     long localWrittenBytes = region.transferTo(wch, writtenBytes);
+                    long now = System.currentTimeMillis();
+                    long timeErased = now - startedTime;
                     if (localWrittenBytes == 0) {
                         // reschedule for write once the channel is writable again
                         eventLoop().executeWhenWritable(
@@ -181,11 +196,23 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                         return;
                     } else if (localWrittenBytes == -1) {
                         checkEOF(region, writtenBytes);
+                        //after pass the checkEOF without exception,which means we have sent
+                        //out all bytes in the file region
+                        if (hasListener) {
+                            region.listener().onFinished(writtenBytes,total,timeErased);
+                        }
+                        region.release();
                         promise.setSuccess();
                         return;
                     } else {
                         writtenBytes += localWrittenBytes;
-                        if (writtenBytes >= region.count()) {
+                        if (hasListener) {
+                            region.listener().onSending(writtenBytes,total,timeErased);
+                        }
+                        if (writtenBytes >= total) {
+                            if (hasListener) {
+                                region.listener().onFinished(writtenBytes,total,timeErased);
+                            }
                             region.release();
                             promise.setSuccess();
                             return;
@@ -193,6 +220,10 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     }
                 }
             } catch (Throwable cause) {
+                if (hasListener) {
+                    long timeErased = System.currentTimeMillis() - startedTime;
+                    region.listener().onFailure(writtenBytes,total,timeErased,cause);
+                }
                 region.release();
                 promise.setFailure(cause);
             }

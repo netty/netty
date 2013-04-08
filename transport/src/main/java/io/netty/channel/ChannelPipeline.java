@@ -71,7 +71,7 @@ import java.util.NoSuchElementException;
  *  |              /|\                                   |                 |
  *  |               |                                   \|/                |
  *  |    +----------+-----------+            +-----------+------------+    |
- *  |    | Inbound Handler N-1  |            |   Outbound Handler  2  |    |
+ *  |    | Inbound Handler N-1  |            | Outbound Handler  2    |    |
  *  |    +----------+-----------+            +-----------+------------+    |
  *  |              /|\                                   .                 |
  *  |               .                                    .                 |

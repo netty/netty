@@ -111,21 +111,52 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
         if (outChannel == null) {
             outChannel = Channels.newChannel(os);
         }
-        long written = 0;
-
-        for (;;) {
-            long localWritten = region.transferTo(outChannel, written);
-            if (localWritten == -1) {
-                checkEOF(region, written);
-                region.release();
-                promise.setSuccess();
-                return;
+        long writtenBytes = 0;
+        long startedTime = 0;
+        long total = 0;
+        boolean hasListener = region.hasListener();
+        FileRegion.FileRegionListener listener = null;
+        if (hasListener){
+            startedTime = System.currentTimeMillis();
+            total = region.count();
+            listener = region.listener();
+            listener.onStarted(region.position(),total,startedTime);
+        }
+        try {
+            for (;;) {
+                long localWritten = region.transferTo(outChannel, writtenBytes);
+                long now = System.currentTimeMillis();
+                long timeErased = now - startedTime;
+                if (localWritten == -1) {
+                    checkEOF(region, writtenBytes);
+                    if (hasListener) {
+                        listener.onFinished(writtenBytes,total,timeErased);
+                    }
+                    region.release();
+                    promise.setSuccess();
+                    return;
+                }
+                writtenBytes += localWritten;
+                if (hasListener) {
+                    listener.onSending(writtenBytes,total,timeErased);
+                }
+                if (writtenBytes >= total) {
+                    if (hasListener) {
+                        listener.onFinished(writtenBytes,total,timeErased);
+                    }
+                    region.release();
+                    promise.setSuccess();
+                    return;
+                }
             }
-            written += localWritten;
-            if (written >= region.count()) {
-                promise.setSuccess();
-                return;
+        } catch (Throwable cause) {
+            long timeErased = System.currentTimeMillis() - startedTime;
+            if (hasListener) {
+                listener.onFailure(writtenBytes,total,timeErased,cause);
             }
+            region.release();
+            promise.setFailure(cause);
+            throw (Exception)cause;
         }
     }
 

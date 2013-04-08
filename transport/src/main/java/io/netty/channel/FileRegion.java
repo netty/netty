@@ -75,4 +75,63 @@ public interface FileRegion extends ReferenceCounted {
      *                  byte of the region transferred.
      */
     long transferTo(WritableByteChannel target, long position) throws IOException;
+
+
+    /**
+     * Set the file region an listener,the listener will be called once the file region
+     * is started.
+     *
+     * @param listener the listener of the file region
+     * **/
+    FileRegion addListener(FileRegionListener listener);
+
+    /**
+     * If the file region has an listener
+     *
+     * @return true if the file region has an listener
+     * **/
+    boolean hasListener();
+
+    /**
+     * Get the file region's listener
+     *
+     * @return the listener,null if the listener has not been added
+     * **/
+    FileRegionListener listener();
+
+    public static interface FileRegionListener{
+        /**
+         *Called once the file region is stared
+         *
+         * @param position the original file region position
+         * @param total the total bytes count need to send
+         * @param startedTime when the file region started to send
+         * **/
+        public void onStarted(long position,long total,long startedTime);
+        /**
+         * Called once the file region is sending
+         *
+         * @param sentBytesCount how many bytes has been sent
+         * @param total the total bytes need to be send
+         * @param timeErased how long the file region has been sending
+         * */
+        public void onSending(long sentBytesCount,long total,long timeErased);
+        /**
+         * Called one the file region has been sent out
+         *
+         * @param sentBytesCount how many bytes has been sent
+         * @param total how many bytes has been sent out
+         * @param timeErased how long since the file region sending started
+         * */
+        public void onFinished(long sentBytesCount,long total,long timeErased);
+        /**
+         * Called one the file region sending stopped with an exception
+         *
+         * @param sentBytesCount how many bytes has been sent
+         * @param total how many bytes has been sent out
+         * @param timeErased how long since the file region sending started
+         * @param cause the cause which cause the file region sending stop
+         * */
+        public void onFailure(long sentBytesCount,long total,long timeErased,Throwable cause);
+    }
 }
