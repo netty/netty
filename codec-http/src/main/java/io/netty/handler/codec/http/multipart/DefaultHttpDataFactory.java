@@ -43,6 +43,8 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     private final boolean checkSize;
 
     private long minSize;
+    
+    private boolean checkBadName = true;
 
     /**
      * Keep all HttpDatas until cleanAllHttpDatas() is called.
@@ -77,6 +79,21 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         checkSize = true;
         this.minSize = minSize;
     }
+    
+    /**
+     * @return the checkBadName
+	 */
+	public boolean isCheckBadName() {
+		return checkBadName;
+	}
+
+	/**
+	 * Default is True (checking)
+	 * @param checkBadName True to check if names conform to HTML definition (no space, no comma, ...), or False to not check it
+	 */
+	public void setCheckBadName(boolean checkBadName) {
+		this.checkBadName = checkBadName;
+	}
 
     /**
      * @return the associated list of Files for the request
@@ -93,18 +110,18 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     @Override
     public Attribute createAttribute(HttpRequest request, String name) {
         if (useDisk) {
-            Attribute attribute = new DiskAttribute(name);
+            Attribute attribute = new DiskAttribute(name, checkBadName);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
             return attribute;
         }
         if (checkSize) {
-            Attribute attribute = new MixedAttribute(name, minSize);
+            Attribute attribute = new MixedAttribute(name, minSize, checkBadName);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
             return attribute;
         }
-        return new MemoryAttribute(name);
+        return new MemoryAttribute(name, checkBadName);
     }
 
     @Override
@@ -112,23 +129,23 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         if (useDisk) {
             Attribute attribute;
             try {
-                attribute = new DiskAttribute(name, value);
+                attribute = new DiskAttribute(name, value, checkBadName);
             } catch (IOException e) {
                 // revert to Mixed mode
-                attribute = new MixedAttribute(name, value, minSize);
+                attribute = new MixedAttribute(name, value, minSize, checkBadName);
             }
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
             return attribute;
         }
         if (checkSize) {
-            Attribute attribute = new MixedAttribute(name, value, minSize);
+            Attribute attribute = new MixedAttribute(name, value, minSize, checkBadName);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
             return attribute;
         }
         try {
-            return new MemoryAttribute(name, value);
+            return new MemoryAttribute(name, value, checkBadName);
         } catch (IOException e) {
             throw new IllegalArgumentException(e);
         }
@@ -140,20 +157,20 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
             long size) {
         if (useDisk) {
             FileUpload fileUpload = new DiskFileUpload(name, filename, contentType,
-                    contentTransferEncoding, charset, size);
+                    contentTransferEncoding, charset, size, checkBadName);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(fileUpload);
             return fileUpload;
         }
         if (checkSize) {
             FileUpload fileUpload = new MixedFileUpload(name, filename, contentType,
-                    contentTransferEncoding, charset, size, minSize);
+                    contentTransferEncoding, charset, size, minSize, checkBadName);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(fileUpload);
             return fileUpload;
         }
         return new MemoryFileUpload(name, filename, contentType,
-                contentTransferEncoding, charset, size);
+                contentTransferEncoding, charset, size, checkBadName);
     }
 
     @Override
