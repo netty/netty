@@ -28,12 +28,12 @@ import static io.netty.buffer.Unpooled.*;
  */
 public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute {
 
-    public MemoryAttribute(String name, boolean ignoreBadName) {
-        super(name, HttpConstants.DEFAULT_CHARSET, 0, ignoreBadName);
+    public MemoryAttribute(String name) {
+        super(name, HttpConstants.DEFAULT_CHARSET, 0);
     }
 
-    public MemoryAttribute(String name, String value, boolean ignoreBadName) throws IOException {
-        super(name, HttpConstants.DEFAULT_CHARSET, 0, ignoreBadName); // Attribute have no default size
+    public MemoryAttribute(String name, String value) throws IOException {
+        super(name, HttpConstants.DEFAULT_CHARSET, 0); // Attribute have no default size
         setValue(value);
     }
 
@@ -103,7 +103,7 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
 
     @Override
     public Attribute copy() {
-        MemoryAttribute attr = new MemoryAttribute(getName(), true);
+        MemoryAttribute attr = new MemoryAttribute(getName());
         attr.setCharset(getCharset());
         ByteBuf content = data();
         if (content != null) {

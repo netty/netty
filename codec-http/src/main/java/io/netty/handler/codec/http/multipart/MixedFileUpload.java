@@ -35,14 +35,14 @@ public class MixedFileUpload implements FileUpload {
 
     public MixedFileUpload(String name, String filename, String contentType,
             String contentTransferEncoding, Charset charset, long size,
-            long limitSize, boolean ignoreBadName) {
+            long limitSize) {
         this.limitSize = limitSize;
         if (size > this.limitSize) {
             fileUpload = new DiskFileUpload(name, filename, contentType,
-                    contentTransferEncoding, charset, size, ignoreBadName);
+                    contentTransferEncoding, charset, size);
         } else {
             fileUpload = new MemoryFileUpload(name, filename, contentType,
-                    contentTransferEncoding, charset, size, ignoreBadName);
+                    contentTransferEncoding, charset, size);
         }
         definedSize = size;
     }
@@ -56,7 +56,7 @@ public class MixedFileUpload implements FileUpload {
                         .getName(), fileUpload.getFilename(), fileUpload
                         .getContentType(), fileUpload
                         .getContentTransferEncoding(), fileUpload.getCharset(),
-                        definedSize, true);
+                        definedSize);
                 if (((MemoryFileUpload) fileUpload).getByteBuf() != null) {
                     diskFileUpload.addContent(((MemoryFileUpload) fileUpload)
                         .getByteBuf(), false);
@@ -146,7 +146,7 @@ public class MixedFileUpload implements FileUpload {
                         .getName(), fileUpload.getFilename(), fileUpload
                         .getContentType(), fileUpload
                         .getContentTransferEncoding(), fileUpload.getCharset(),
-                        definedSize, true);
+                        definedSize);
             }
         }
         fileUpload.setContent(buffer);
@@ -161,7 +161,7 @@ public class MixedFileUpload implements FileUpload {
                         .getName(), fileUpload.getFilename(), fileUpload
                         .getContentType(), fileUpload
                         .getContentTransferEncoding(), fileUpload.getCharset(),
-                        definedSize, true);
+                        definedSize);
             }
         }
         fileUpload.setContent(file);
@@ -175,7 +175,7 @@ public class MixedFileUpload implements FileUpload {
                     .getName(), fileUpload.getFilename(), fileUpload
                     .getContentType(), fileUpload
                     .getContentTransferEncoding(), fileUpload.getCharset(),
-                    definedSize, true);
+                    definedSize);
         }
         fileUpload.setContent(inputStream);
     }

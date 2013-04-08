@@ -38,8 +38,8 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
     private int chunkPosition;
     protected boolean isRenamed;
 
-    protected AbstractMemoryHttpData(String name, Charset charset, long size, boolean ignoreBadName) {
-        super(name, charset, size, ignoreBadName);
+    protected AbstractMemoryHttpData(String name, Charset charset, long size) {
+        super(name, charset, size);
     }
 
     @Override
