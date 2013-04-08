@@ -17,7 +17,15 @@ package io.netty.example.filetransfer;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.BufType;
-import io.netty.channel.*;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.DefaultFileRegion;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.FileRegion;
+import io.netty.channel.FileRegion.FileRegionListener;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -89,7 +97,7 @@ public class FileServer {
         new FileServer(port).run();
     }
 
-    private static final class FileRegionListenerImpl implements FileRegion.FileRegionListener{
+    private final class FileRegionListenerImpl implements FileRegionListener {
         @Override
         public void onStarted(long position, long total, long startedTime) {
             logger.info("file sending started, position :{}, total :{}, startTime :{}",
@@ -124,7 +132,7 @@ public class FileServer {
         }
     }
 
-    private static final class FileHandler extends ChannelInboundMessageHandlerAdapter<String> {
+    private final class FileHandler extends ChannelInboundMessageHandlerAdapter<String> {
         @Override
         public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
             File file = new File(msg);
