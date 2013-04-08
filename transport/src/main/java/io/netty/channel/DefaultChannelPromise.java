@@ -154,7 +154,7 @@ public class DefaultChannelPromise extends DefaultPromise<Void> implements Chann
     }
 
     @Override
-    public ChannelPromise future() {
+    public ChannelPromise promise() {
         return this;
     }
 
