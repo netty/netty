@@ -183,11 +183,11 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
         void transfer() {
             try {
-                if (!isStarted){
+                if (!isStarted) {
                     isStarted = true;
                     startedTime = System.currentTimeMillis();
                     if (hasListener) {
-                        listener.onStarted(region.position(),total,startedTime);
+                        listener.onStarted(region.position(), total, startedTime);
                     }
                 }
                 for (;;) {

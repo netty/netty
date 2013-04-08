@@ -76,7 +76,6 @@ public interface FileRegion extends ReferenceCounted {
      */
     long transferTo(WritableByteChannel target, long position) throws IOException;
 
-
     /**
      * Set the file region an listener,the listener will be called once the file region
      * is started.
@@ -101,7 +100,7 @@ public interface FileRegion extends ReferenceCounted {
     /**
      * Listener to indicate the file region sending
      * **/
-    public interface FileRegionListener{
+    public interface FileRegionListener {
 
         /**
          *Called once the file region is stared
