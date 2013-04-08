@@ -24,6 +24,8 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.FileRegion;
+import io.netty.channel.FileRegion.FileRegionListener;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -33,9 +35,12 @@ import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.util.Date;
 
 /**
  * Server that accept the path of a file an echo back its content.
@@ -43,6 +48,7 @@ import java.io.FileInputStream;
 public class FileServer {
 
     private final int port;
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(FileServer.class);
 
     public FileServer(int port) {
         this.port = port;
@@ -91,7 +97,42 @@ public class FileServer {
         new FileServer(port).run();
     }
 
-    private static final class FileHandler extends ChannelInboundMessageHandlerAdapter<String> {
+    private final class FileRegionListenerImpl implements FileRegionListener {
+        @Override
+        public void onStarted(long position, long total, long startedTime) {
+            logger.info("file sending started, position :{}, total :{}, startTime :{}",
+                    position,
+                    total,
+                    new Date(startedTime));
+        }
+
+        @Override
+        public void onSending(long sentBytesCount, long total, long timeErased) {
+            logger.info("file is sending, sentBytes :{}, total :{}, timeErased :{}MS",
+                    sentBytesCount,
+                    total,
+                    timeErased);
+        }
+
+        @Override
+        public void onFinished(long sentBytesCount, long total, long timeErased) {
+            logger.info("file is sent, sentBytes :{}, total :{}, timeErased :{}MS",
+                    sentBytesCount,
+                    total,
+                    timeErased);
+        }
+
+        @Override
+        public void onFailure(long sentBytesCount, long total, long timeErased, Throwable cause) {
+            logger.info("file is sent with exception, sentBytes :{}, total :{}, timeErased :{}MS, cause :{}",
+                    sentBytesCount,
+                    total,
+                    timeErased,
+                    cause);
+        }
+    }
+
+    private final class FileHandler extends ChannelInboundMessageHandlerAdapter<String> {
         @Override
         public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
             File file = new File(msg);
@@ -101,7 +142,8 @@ public class FileServer {
                     return;
                 }
                 ctx.write(file + " " + file.length() + '\n');
-                ctx.sendFile(new DefaultFileRegion(new FileInputStream(file).getChannel(), 0, file.length()));
+                FileRegion fileRegion = new DefaultFileRegion(new FileInputStream(file).getChannel(), 0, file.length());
+                ctx.sendFile(fileRegion.addListener(new FileRegionListenerImpl()));
                 ctx.write("\n");
             } else {
                 ctx.write("File not found: " + file + '\n');

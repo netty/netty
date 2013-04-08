@@ -33,6 +33,7 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
     private final FileChannel file;
     private final long position;
     private final long count;
+    private FileRegionListener listener;
 
     /**
      * Create a new instance
@@ -77,8 +78,23 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
         if (count == 0) {
             return 0L;
         }
-
         return file.transferTo(this.position + position, count, target);
+    }
+
+    @Override
+    public FileRegion addListener(FileRegionListener listener) {
+        this.listener = listener;
+        return this;
+    }
+
+    @Override
+    public boolean hasListener() {
+        return listener != null;
+    }
+
+    @Override
+    public FileRegionListener listener() {
+        return listener;
     }
 
     @Override
