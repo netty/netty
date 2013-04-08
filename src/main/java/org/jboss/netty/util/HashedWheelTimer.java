@@ -332,7 +332,7 @@ public class HashedWheelTimer implements Timer {
     }
 
     public Timeout newTimeout(TimerTask task, long delay, TimeUnit unit) {
-        final long currentTime = System.currentTimeMillis();
+        final long currentTime = System.nanoTime();
 
         if (task == null) {
             throw new NullPointerException("task");
@@ -343,9 +343,9 @@ public class HashedWheelTimer implements Timer {
 
         start();
 
-        delay = unit.toMillis(delay);
-        HashedWheelTimeout timeout = new HashedWheelTimeout(task, currentTime + delay);
-        scheduleTimeout(timeout, delay);
+        long delayInNanos = unit.toNanos(delay);
+        HashedWheelTimeout timeout = new HashedWheelTimeout(task, currentTime + delayInNanos);
+        scheduleTimeout(timeout, delayInNanos);
         return timeout;
     }
 
@@ -395,7 +395,7 @@ public class HashedWheelTimer implements Timer {
             List<HashedWheelTimeout> expiredTimeouts =
                 new ArrayList<HashedWheelTimeout>();
 
-            startTime = System.currentTimeMillis();
+            startTime = System.nanoTime();
             tick = 1;
 
             while (workerState.get() == WORKER_STATE_STARTED) {
@@ -480,7 +480,7 @@ public class HashedWheelTimer implements Timer {
             long deadline = startTime + tickDuration * tick;
 
             for (;;) {
-                final long currentTime = System.currentTimeMillis();
+                final long currentTime = System.nanoTime();
                 long sleepTimeMs = (deadline - currentTime + 999999) / 1000000;
 
                 if (sleepTimeMs <= 0) {
@@ -571,7 +571,7 @@ public class HashedWheelTimer implements Timer {
 
         @Override
         public String toString() {
-            long currentTime = System.currentTimeMillis();
+            long currentTime = System.nanoTime();
             long remaining = deadline - currentTime;
 
             StringBuilder buf = new StringBuilder(192);
