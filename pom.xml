@@ -285,7 +285,7 @@
         <configuration>
           <compilerVersion>1.7</compilerVersion>
           <fork>true</fork>
-          <source>1.6</source>
+          <source>1.7</source>
           <target>1.6</target>
           <debug>true</debug>
           <optimize>true</optimize>
@@ -436,7 +436,23 @@
           <tagNameFormat>netty-@{project.version}</tagNameFormat>
         </configuration>
       </plugin>
-      
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-eclipse-plugin</artifactId>
+        <version>2.9</version>
+        <configuration>
+          <sourceExcludes>
+            <sourceExclude>**/.svn/</sourceExclude>
+          </sourceExcludes>
+          <downloadSources>true</downloadSources>
+          <additionalConfig>
+            <file>
+              <name>.settings/org.eclipse.core.resources.prefs</name>
+              <content>encoding/&lt;project&gt;=${project.build.sourceEncoding}</content>
+            </file>
+          </additionalConfig>
+        </configuration>
+      </plugin>      
     </plugins>
 
     <pluginManagement>
