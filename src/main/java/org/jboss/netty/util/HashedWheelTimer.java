@@ -213,8 +213,8 @@ public class HashedWheelTimer implements Timer {
         iterators = createIterators(wheel);
         mask = wheel.length - 1;
 
-        // Convert tickDuration to milliseconds.
-        this.tickDuration = tickDuration = unit.toMillis(tickDuration);
+        // Convert tickDuration to nanos.
+        this.tickDuration = tickDuration = unit.toNanos(tickDuration);
 
         // Prevent overflow.
         if (tickDuration == Long.MAX_VALUE ||
