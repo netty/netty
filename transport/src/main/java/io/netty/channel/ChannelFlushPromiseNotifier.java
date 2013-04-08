@@ -119,9 +119,9 @@ public final class ChannelFlushPromiseNotifier {
                 break;
             }
             if (tryNotify) {
-                cp.future().tryFailure(cause);
+                cp.promise().tryFailure(cause);
             } else {
-                cp.future().setFailure(cause);
+                cp.promise().setFailure(cause);
             }
         }
         return this;
@@ -151,9 +151,9 @@ public final class ChannelFlushPromiseNotifier {
                 break;
             }
             if (tryNotify) {
-                cp.future().tryFailure(cause2);
+                cp.promise().tryFailure(cause2);
             } else {
-                cp.future().setFailure(cause2);
+                cp.promise().setFailure(cause2);
             }
         }
         return this;
@@ -185,15 +185,15 @@ public final class ChannelFlushPromiseNotifier {
             flushCheckpoints.remove();
             if (cause == null) {
                 if (tryNotify) {
-                    cp.future().trySuccess();
+                    cp.promise().trySuccess();
                 } else {
-                    cp.future().setSuccess();
+                    cp.promise().setSuccess();
                 }
             } else {
                 if (tryNotify) {
-                    cp.future().tryFailure(cause);
+                    cp.promise().tryFailure(cause);
                 } else {
-                    cp.future().setFailure(cause);
+                    cp.promise().setFailure(cause);
                 }
             }
         }
@@ -213,7 +213,7 @@ public final class ChannelFlushPromiseNotifier {
     interface FlushCheckpoint {
         long flushCheckpoint();
         void flushCheckpoint(long checkpoint);
-        ChannelPromise future();
+        ChannelPromise promise();
     }
 
     private static class DefaultFlushCheckpoint implements FlushCheckpoint {
@@ -236,7 +236,7 @@ public final class ChannelFlushPromiseNotifier {
         }
 
         @Override
-        public ChannelPromise future() {
+        public ChannelPromise promise() {
             return future;
         }
     }
