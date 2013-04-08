@@ -296,7 +296,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     /**
-     * Conect to the remote peer
+     * Connect to the remote peer
      */
     protected abstract boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception;
 
