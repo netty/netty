@@ -36,8 +36,8 @@ public class MemoryFileUpload extends AbstractMemoryHttpData implements FileUplo
     private String contentTransferEncoding;
 
     public MemoryFileUpload(String name, String filename, String contentType,
-            String contentTransferEncoding, Charset charset, long size) {
-        super(name, charset, size);
+            String contentTransferEncoding, Charset charset, long size, boolean checkBadName) {
+        super(name, charset, size, checkBadName);
         setFilename(filename);
         setContentType(contentType);
         setContentTransferEncoding(contentTransferEncoding);
@@ -132,7 +132,7 @@ public class MemoryFileUpload extends AbstractMemoryHttpData implements FileUplo
     @Override
     public FileUpload copy() {
         MemoryFileUpload upload = new MemoryFileUpload(getName(), getFilename(), getContentType(),
-                getContentTransferEncoding(), getCharset(), size);
+                getContentTransferEncoding(), getCharset(), size, false);
         ByteBuf buf = data();
         if (buf != null) {
             try {
