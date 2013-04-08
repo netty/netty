@@ -286,7 +286,7 @@ public final class PlatformDependent {
         } catch (Exception e) {
             android = false;
         }
-        if (android){
+        if (android) {
             logger.debug("Platform: Android");
         }
 
