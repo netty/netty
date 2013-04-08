@@ -98,8 +98,11 @@ public interface FileRegion extends ReferenceCounted {
      * @return the listener,null if the listener has not been added
      * **/
     FileRegionListener listener();
+    /**
+     * Listener to indicate the file region sending
+     * **/
+    public interface FileRegionListener{
 
-    public static interface FileRegionListener{
         /**
          *Called once the file region is stared
          *
@@ -107,7 +110,8 @@ public interface FileRegion extends ReferenceCounted {
          * @param total the total bytes count need to send
          * @param startedTime when the file region started to send
          * **/
-        public void onStarted(long position,long total,long startedTime);
+        void onStarted(long position, long total, long startedTime);
+
         /**
          * Called once the file region is sending
          *
@@ -115,7 +119,8 @@ public interface FileRegion extends ReferenceCounted {
          * @param total the total bytes need to be send
          * @param timeErased how long the file region has been sending
          * */
-        public void onSending(long sentBytesCount,long total,long timeErased);
+        void onSending(long sentBytesCount, long total, long timeErased);
+
         /**
          * Called one the file region has been sent out
          *
@@ -123,7 +128,8 @@ public interface FileRegion extends ReferenceCounted {
          * @param total how many bytes has been sent out
          * @param timeErased how long since the file region sending started
          * */
-        public void onFinished(long sentBytesCount,long total,long timeErased);
+        void onFinished(long sentBytesCount, long total, long timeErased);
+
         /**
          * Called one the file region sending stopped with an exception
          *
@@ -132,6 +138,6 @@ public interface FileRegion extends ReferenceCounted {
          * @param timeErased how long since the file region sending started
          * @param cause the cause which cause the file region sending stop
          * */
-        public void onFailure(long sentBytesCount,long total,long timeErased,Throwable cause);
+        void onFailure(long sentBytesCount, long total, long timeErased, Throwable cause);
     }
 }

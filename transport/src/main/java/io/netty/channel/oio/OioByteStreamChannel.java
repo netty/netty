@@ -116,11 +116,11 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
         long total = 0;
         boolean hasListener = region.hasListener();
         FileRegion.FileRegionListener listener = null;
-        if (hasListener){
+        if (hasListener) {
             startedTime = System.currentTimeMillis();
             total = region.count();
             listener = region.listener();
-            listener.onStarted(region.position(),total,startedTime);
+            listener.onStarted(region.position(), total, startedTime);
         }
         try {
             for (;;) {
@@ -130,7 +130,7 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
                 if (localWritten == -1) {
                     checkEOF(region, writtenBytes);
                     if (hasListener) {
-                        listener.onFinished(writtenBytes,total,timeErased);
+                        listener.onFinished(writtenBytes, total, timeErased);
                     }
                     region.release();
                     promise.setSuccess();
@@ -138,11 +138,11 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
                 }
                 writtenBytes += localWritten;
                 if (hasListener) {
-                    listener.onSending(writtenBytes,total,timeErased);
+                    listener.onSending(writtenBytes, total, timeErased);
                 }
                 if (writtenBytes >= total) {
                     if (hasListener) {
-                        listener.onFinished(writtenBytes,total,timeErased);
+                        listener.onFinished(writtenBytes, total, timeErased);
                     }
                     region.release();
                     promise.setSuccess();
@@ -152,11 +152,11 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
         } catch (Throwable cause) {
             long timeErased = System.currentTimeMillis() - startedTime;
             if (hasListener) {
-                listener.onFailure(writtenBytes,total,timeErased,cause);
+                listener.onFailure(writtenBytes, total, timeErased, cause);
             }
             region.release();
             promise.setFailure(cause);
-            throw (Exception)cause;
+            throw (Exception) cause;
         }
     }
 

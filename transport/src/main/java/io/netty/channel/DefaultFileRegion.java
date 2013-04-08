@@ -33,7 +33,7 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
     private final FileChannel file;
     private final long position;
     private final long count;
-    private FileRegionListener listener = null;
+    private FileRegionListener listener;
 
     /**
      * Create a new instance
