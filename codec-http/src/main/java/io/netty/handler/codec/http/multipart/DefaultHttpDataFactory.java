@@ -43,6 +43,8 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     private final boolean checkSize;
 
     private long minSize;
+    
+    private boolean ignoreCorrectNameAttribute = false;
 
     /**
      * Keep all HttpDatas until cleanAllHttpDatas() is called.
@@ -78,7 +80,22 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         this.minSize = minSize;
     }
 
+    
     /**
+	 * @return the ignoreCorrectNameAttribute
+	 */
+	public boolean isIgnoreCorrectNameAttribute() {
+		return ignoreCorrectNameAttribute;
+	}
+
+	/**
+	 * @param ignoreCorrectNameAttribute the ignoreCorrectNameAttribute to set
+	 */
+	public void setIgnoreCorrectNameAttribute(boolean ignoreCorrectNameAttribute) {
+		this.ignoreCorrectNameAttribute = ignoreCorrectNameAttribute;
+	}
+
+	/**
      * @return the associated list of Files for the request
      */
     private List<HttpData> getList(HttpRequest request) {
@@ -93,18 +110,18 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     @Override
     public Attribute createAttribute(HttpRequest request, String name) {
         if (useDisk) {
-            Attribute attribute = new DiskAttribute(name);
+            Attribute attribute = new DiskAttribute(name, ignoreCorrectNameAttribute);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
             return attribute;
         }
         if (checkSize) {
-            Attribute attribute = new MixedAttribute(name, minSize);
+            Attribute attribute = new MixedAttribute(name, minSize, ignoreCorrectNameAttribute);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
             return attribute;
         }
-        return new MemoryAttribute(name);
+        return new MemoryAttribute(name, ignoreCorrectNameAttribute);
     }
 
     @Override
@@ -112,23 +129,23 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         if (useDisk) {
             Attribute attribute;
             try {
-                attribute = new DiskAttribute(name, value);
+                attribute = new DiskAttribute(name, value, ignoreCorrectNameAttribute);
             } catch (IOException e) {
                 // revert to Mixed mode
-                attribute = new MixedAttribute(name, value, minSize);
+                attribute = new MixedAttribute(name, value, minSize, ignoreCorrectNameAttribute);
             }
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
             return attribute;
         }
         if (checkSize) {
-            Attribute attribute = new MixedAttribute(name, value, minSize);
+            Attribute attribute = new MixedAttribute(name, value, minSize, ignoreCorrectNameAttribute);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
             return attribute;
         }
         try {
-            return new MemoryAttribute(name, value);
+            return new MemoryAttribute(name, value, ignoreCorrectNameAttribute);
         } catch (IOException e) {
             throw new IllegalArgumentException(e);
         }
@@ -140,20 +157,20 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
             long size) {
         if (useDisk) {
             FileUpload fileUpload = new DiskFileUpload(name, filename, contentType,
-                    contentTransferEncoding, charset, size);
+                    contentTransferEncoding, charset, size, ignoreCorrectNameAttribute);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(fileUpload);
             return fileUpload;
         }
         if (checkSize) {
             FileUpload fileUpload = new MixedFileUpload(name, filename, contentType,
-                    contentTransferEncoding, charset, size, minSize);
+                    contentTransferEncoding, charset, size, minSize, ignoreCorrectNameAttribute);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(fileUpload);
             return fileUpload;
         }
         return new MemoryFileUpload(name, filename, contentType,
-                contentTransferEncoding, charset, size);
+                contentTransferEncoding, charset, size, ignoreCorrectNameAttribute);
     }
 
     @Override

@@ -34,7 +34,7 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
     protected Charset charset = HttpConstants.DEFAULT_CHARSET;
     protected boolean completed;
 
-    protected AbstractHttpData(String name, Charset charset, long size) {
+    protected AbstractHttpData(String name, Charset charset, long size, boolean ignoreBadName) {
         if (name == null) {
             throw new NullPointerException("name");
         }
@@ -49,21 +49,22 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
                 throw new IllegalArgumentException(
                         "name contains non-ascii character: " + name);
             }
-
-            // Check prohibited characters.
-            switch (c) {
-            case '=':
-            case ',':
-            case ';':
-            case ' ':
-            case '\t':
-            case '\r':
-            case '\n':
-            case '\f':
-            case 0x0b: // Vertical tab
-                throw new IllegalArgumentException(
-                        "name contains one of the following prohibited characters: " +
-                        "=,; \\t\\r\\n\\v\\f: " + name);
+            if (! ignoreBadName) {
+	            // Check prohibited characters.
+	            switch (c) {
+	            case '=':
+	            case ',':
+	            case ';':
+	            case ' ':
+	            case '\t':
+	            case '\r':
+	            case '\n':
+	            case '\f':
+	            case 0x0b: // Vertical tab
+	                throw new IllegalArgumentException(
+	                        "name contains one of the following prohibited characters: " +
+	                        "=,; \\t\\r\\n\\v\\f: " + name);
+	            }
             }
         }
         this.name = name;

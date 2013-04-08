@@ -38,12 +38,12 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
     /**
      * Constructor used for huge Attribute
      */
-    public DiskAttribute(String name) {
-        super(name, HttpConstants.DEFAULT_CHARSET, 0);
+    public DiskAttribute(String name, boolean ignoreBadName) {
+        super(name, HttpConstants.DEFAULT_CHARSET, 0, ignoreBadName);
     }
 
-    public DiskAttribute(String name, String value) throws IOException {
-        super(name, HttpConstants.DEFAULT_CHARSET, 0); // Attribute have no default size
+    public DiskAttribute(String name, String value, boolean ignoreBadName) throws IOException {
+        super(name, HttpConstants.DEFAULT_CHARSET, 0, ignoreBadName); // Attribute have no default size
         setValue(value);
     }
 
@@ -142,7 +142,7 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
 
     @Override
     public Attribute copy() {
-        DiskAttribute attr = new DiskAttribute(getName());
+        DiskAttribute attr = new DiskAttribute(getName(), true);
         attr.setCharset(getCharset());
         ByteBuf content = data();
         if (content != null) {

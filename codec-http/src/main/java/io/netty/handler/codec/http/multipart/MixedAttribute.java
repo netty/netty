@@ -30,27 +30,27 @@ public class MixedAttribute implements Attribute {
 
     private final long limitSize;
 
-    public MixedAttribute(String name, long limitSize) {
+    public MixedAttribute(String name, long limitSize, boolean ignoreBadName) {
         this.limitSize = limitSize;
-        attribute = new MemoryAttribute(name);
+        attribute = new MemoryAttribute(name, ignoreBadName);
     }
 
-    public MixedAttribute(String name, String value, long limitSize) {
+    public MixedAttribute(String name, String value, long limitSize, boolean ignoreBadName) {
         this.limitSize = limitSize;
         if (value.length() > this.limitSize) {
             try {
-                attribute = new DiskAttribute(name, value);
+                attribute = new DiskAttribute(name, value, ignoreBadName);
             } catch (IOException e) {
                 // revert to Memory mode
                 try {
-                    attribute = new MemoryAttribute(name, value);
+                    attribute = new MemoryAttribute(name, value, ignoreBadName);
                 } catch (IOException e1) {
                     throw new IllegalArgumentException(e);
                 }
             }
         } else {
             try {
-                attribute = new MemoryAttribute(name, value);
+                attribute = new MemoryAttribute(name, value, ignoreBadName);
             } catch (IOException e) {
                 throw new IllegalArgumentException(e);
             }
@@ -62,7 +62,7 @@ public class MixedAttribute implements Attribute {
         if (attribute instanceof MemoryAttribute) {
             if (attribute.length() + buffer.readableBytes() > limitSize) {
                 DiskAttribute diskAttribute = new DiskAttribute(attribute
-                        .getName());
+                        .getName(), true);
                 if (((MemoryAttribute) attribute).getByteBuf() != null) {
                     diskAttribute.addContent(((MemoryAttribute) attribute)
                         .getByteBuf(), false);
@@ -133,7 +133,7 @@ public class MixedAttribute implements Attribute {
         if (buffer.readableBytes() > limitSize) {
             if (attribute instanceof MemoryAttribute) {
                 // change to Disk
-                attribute = new DiskAttribute(attribute.getName());
+                attribute = new DiskAttribute(attribute.getName(), true);
             }
         }
         attribute.setContent(buffer);
@@ -144,7 +144,7 @@ public class MixedAttribute implements Attribute {
         if (file.length() > limitSize) {
             if (attribute instanceof MemoryAttribute) {
                 // change to Disk
-                attribute = new DiskAttribute(attribute.getName());
+                attribute = new DiskAttribute(attribute.getName(), true);
             }
         }
         attribute.setContent(file);
@@ -154,7 +154,7 @@ public class MixedAttribute implements Attribute {
     public void setContent(InputStream inputStream) throws IOException {
         if (attribute instanceof MemoryAttribute) {
             // change to Disk even if we don't know the size
-            attribute = new DiskAttribute(attribute.getName());
+            attribute = new DiskAttribute(attribute.getName(), true);
         }
         attribute.setContent(inputStream);
     }
