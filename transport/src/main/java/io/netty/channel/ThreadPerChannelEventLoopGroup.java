@@ -17,9 +17,12 @@ package io.netty.channel;
 
 
 import io.netty.util.concurrent.AbstractEventExecutorGroup;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.ReadOnlyIterator;
 
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -103,6 +106,11 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
     protected ThreadPerChannelEventLoop newChild(
             @SuppressWarnings("UnusedParameters") Object... args) throws Exception {
         return new ThreadPerChannelEventLoop(this);
+    }
+
+    @Override
+    public Iterator<EventExecutor> iterator() {
+        return new ReadOnlyIterator<EventExecutor>(activeChildren.iterator());
     }
 
     @Override
