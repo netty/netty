@@ -16,6 +16,7 @@
 package io.netty.util.concurrent;
 
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Set;
 import java.util.concurrent.ThreadFactory;
@@ -73,6 +74,19 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
     @Override
     public EventExecutor next() {
         return children[Math.abs(childIndex.getAndIncrement() % children.length)];
+    }
+
+    @Override
+    public Iterator<EventExecutor> iterator() {
+        return children().iterator();
+    }
+
+    /**
+     * Return the number of {@link EventExecutor} this implementation uses. This number is the maps
+     * 1:1 to the threads it use.
+     */
+    public final int executorCount() {
+        return children.length;
     }
 
     /**

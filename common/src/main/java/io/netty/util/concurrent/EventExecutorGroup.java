@@ -15,8 +15,8 @@
  */
 package io.netty.util.concurrent;
 
+import java.util.Iterator;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -26,12 +26,19 @@ import java.util.concurrent.TimeUnit;
  * to shut them down in a global fashion.
  *
  */
-public interface EventExecutorGroup extends ScheduledExecutorService {
+public interface EventExecutorGroup extends ScheduledExecutorService, Iterable<EventExecutor> {
 
     /**
      * Returns one of the {@link EventExecutor}s that belong to this group.
      */
     EventExecutor next();
+
+    /**
+     * Returns a read-only {@link Iterator} over all {@link EventExecutor}, which are handled by this
+     * {@link EventExecutorGroup} at the time of invoke this method.
+     */
+    @Override
+    Iterator<EventExecutor> iterator();
 
     @Override
     Future<?> submit(Runnable task);
