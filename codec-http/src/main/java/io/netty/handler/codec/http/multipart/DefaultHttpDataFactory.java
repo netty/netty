@@ -43,7 +43,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     private final boolean checkSize;
 
     private long minSize;
-    
+
     private boolean checkBadName = true;
 
     /**
@@ -79,21 +79,22 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         checkSize = true;
         this.minSize = minSize;
     }
-    
+
     /**
      * @return the checkBadName
-	 */
-	public boolean isCheckBadName() {
-		return checkBadName;
-	}
+     */
+    public boolean isCheckBadName() {
+        return checkBadName;
+    }
 
-	/**
-	 * Default is True (checking)
-	 * @param checkBadName True to check if names conform to HTML definition (no space, no comma, ...), or False to not check it
-	 */
-	public void setCheckBadName(boolean checkBadName) {
-		this.checkBadName = checkBadName;
-	}
+    /**
+     * Default is True (checking)
+     * @param checkBadName True to check if names conform to HTML definition (no space, no comma, ...),
+     * or False to not check it
+     */
+    public void setCheckBadName(boolean checkBadName) {
+        this.checkBadName = checkBadName;
+    }
 
     /**
      * @return the associated list of Files for the request
