@@ -29,8 +29,11 @@ import io.netty.channel.ChannelOutboundByteHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelStateHandler;
-import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.FileRegion;
+import io.netty.util.concurrent.DefaultPromise;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
@@ -60,10 +63,9 @@ import java.util.regex.Pattern;
  *
  * <h3>Beginning the handshake</h3>
  * <p>
- * You must make sure not to write a message while the
- * {@linkplain #handshake() handshake} is in progress unless you are
- * renegotiating.  You will be notified by the {@link ChannelFuture} which is
- * returned by the {@link #handshake()} method when the handshake
+ * You must make sure not to write a message while the handshake is in progress unless you are
+ * renegotiating.  You will be notified by the {@link Future} which is
+ * returned by the {@link #handshakeFuture()} method when the handshake
  * process succeeds or fails.
  * <p>
  * Beside using the handshake {@link ChannelFuture} to get notified about the completation of the handshake it's
@@ -126,7 +128,7 @@ import java.util.regex.Pattern;
  * <li>create a new {@link SslHandler} instance with {@code startTls} flag set
  *     to {@code false},</li>
  * <li>insert the {@link SslHandler} to the {@link ChannelPipeline}, and</li>
- * <li>Initiate SSL handshake by calling {@link SslHandler#handshake()}.</li>
+ * <li>Initiate SSL handshake.</li>
  * </ol>
  *
  * <h3>Known issues</h3>
@@ -284,29 +286,10 @@ public class SslHandler
     }
 
     /**
-     * Returns a {@link ChannelFuture} that will get notified once the handshake completes.
+     * Returns a {@link Future} that will get notified once the handshake completes.
      */
-    public ChannelFuture handshake() {
-        return handshake(new LazyChannelPromise());
-    }
-
-    /**
-     * Returns a {@link ChannelPromise} which is notified when the handshake
-     *         succeeds or fails.
-     */
-    public synchronized ChannelFuture handshake(final ChannelPromise promise) {
-        handshakePromise.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                if (future.isSuccess()) {
-                    promise.setSuccess();
-                } else {
-                    promise.setFailure(future.cause());
-                }
-            }
-        });
-
-        return promise;
+    public Future<Channel> handshakeFuture() {
+        return handshakePromise;
     }
 
     /**
@@ -349,7 +332,7 @@ public class SslHandler
      * For more informations see the apidocs of {@link SSLEngine}
      *
      */
-    public ChannelFuture sslCloseFuture() {
+    public Future<Channel> sslCloseFuture() {
         return sslCloseFuture;
     }
 
@@ -841,7 +824,7 @@ public class SslHandler
                 switch (result.getStatus()) {
                 case CLOSED:
                     // notify about the CLOSED state of the SSLEngine. See #137
-                    sslCloseFuture.trySuccess();
+                    sslCloseFuture.trySuccess(ctx.channel());
                     break;
                 case BUFFER_UNDERFLOW:
                     break loop;
@@ -925,7 +908,7 @@ public class SslHandler
      * Notify all the handshake futures about the successfully handshake
      */
     private void setHandshakeSuccess() {
-        if (handshakePromise.trySuccess()) {
+        if (handshakePromise.trySuccess(ctx.channel())) {
             ctx.fireUserEventTriggered(HANDSHAKE_SUCCESS_EVENT);
         }
     }
@@ -990,7 +973,7 @@ public class SslHandler
         }
     }
 
-    private ChannelFuture handshake0() {
+    private Future<Channel> handshake0() {
         final ScheduledFuture<?> timeoutFuture;
         if (handshakeTimeoutMillis > 0) {
             timeoutFuture = ctx.executor().schedule(new Runnable() {
@@ -1011,9 +994,9 @@ public class SslHandler
             timeoutFuture = null;
         }
 
-        handshakePromise.addListener(new ChannelFutureListener() {
+        handshakePromise.addListener(new GenericFutureListener<Future<Channel>>() {
             @Override
-            public void operationComplete(ChannelFuture f) throws Exception {
+            public void operationComplete(Future<Channel> f) throws Exception {
                 if (timeoutFuture != null) {
                     timeoutFuture.cancel(false);
                 }
@@ -1032,16 +1015,16 @@ public class SslHandler
     }
 
     /**
-     * Calls {@link #handshake()} once the {@link Channel} is connected
+     * Issues a SSL handshake once connected when used in client-mode
      */
     @Override
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
         if (!startTls && engine.getUseClientMode()) {
             // issue and handshake and add a listener to it which will fire an exception event if
             // an exception was thrown while doing the handshake
-            handshake0().addListener(new ChannelFutureListener() {
+            handshake0().addListener(new GenericFutureListener<Future<Channel>>() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(Future<Channel> future) throws Exception {
                     if (!future.isSuccess()) {
                         ctx.pipeline().fireExceptionCaught(future.cause());
                         ctx.close();
@@ -1105,18 +1088,14 @@ public class SslHandler
         }
     }
 
-    private final class LazyChannelPromise extends DefaultChannelPromise {
-        public LazyChannelPromise() {
-            super(null);
-        }
+    private final class LazyChannelPromise extends DefaultPromise<Channel> {
 
         @Override
-        public Channel channel() {
+        protected EventExecutor executor() {
             if (ctx == null) {
                 throw new IllegalStateException();
-            } else {
-                return ctx.channel();
             }
+            return ctx.executor();
         }
     }
 }
