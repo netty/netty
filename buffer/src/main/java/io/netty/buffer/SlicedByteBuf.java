@@ -265,6 +265,6 @@ public class SlicedByteBuf extends AbstractDerivedByteBuf {
     @Override
     public ByteBuffer[] nioBuffers(int index, int length) {
         checkIndex(index, length);
-        return buffer.nioBuffers(index, length);
+        return buffer.nioBuffers(index + adjustment, length);
     }
 }
