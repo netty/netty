@@ -28,9 +28,6 @@ import io.netty.util.internal.TypeParameterMatcher;
  * <pre>
  *     public class StringHandler extends
  *             {@link ChannelInboundMessageHandlerAdapter}&lt;{@link String}&gt; {
- *         public StringToIntegerDecoder() {
- *             super(String.class);
- *         }
  *
  *         {@code @Override}
  *         public void messageReceived({@link ChannelHandlerContext} ctx, {@link String} message)
@@ -45,6 +42,32 @@ import io.netty.util.internal.TypeParameterMatcher;
  * If your {@link ChannelInboundMessageHandlerAdapter} handles messages of type {@link ByteBuf} or {@link Object}
  * and you want to add a {@link ByteBuf} to the next buffer in the {@link ChannelPipeline} use
  * {@link ChannelHandlerUtil#addToNextInboundBuffer(ChannelHandlerContext, Object)}.
+ *
+ * <p>
+ * One limitation to keep in mind is that it is not possible to detect the handled message type of you specify
+ * {@code I} while instance your class. Because of this Netty does not allow to do so and will throw an Exception
+ * if you try. For this cases you should handle the type detection by your self by override the
+ * {@link #acceptInboundMessage(Object)} method and use {@link Object} as type parameter.
+ *
+ * <pre>
+ *    public class GenericHandler&lt;I&gt; extends
+ *             {@link ChannelInboundMessageHandlerAdapter}&lt;{@link Object}&gt; {
+ *
+ *         {@code @Override}
+ *         public void messageReceived({@link ChannelHandlerContext} ctx, {@link Object} message)
+ *                 throws {@link Exception} {
+ *             I msg = (I) message;
+ *             // Do something with the msg
+ *             ...
+ *             ...
+ *         }
+ *
+ *         {@code @Override}
+ *         public boolean acceptInboundMessage(Object msg) throws Exception {
+ *             // Add your check here
+ *         }
+ *     }
+ * </pre>
  *
  * @param <I>   The type of the messages to handle
  */
