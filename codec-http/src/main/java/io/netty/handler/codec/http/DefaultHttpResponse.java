@@ -59,7 +59,7 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
     public String toString() {
         StringBuilder buf = new StringBuilder();
         buf.append(getClass().getSimpleName());
-        buf.append(", decodeResult: ");
+        buf.append("(decodeResult: ");
         buf.append(getDecoderResult());
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
