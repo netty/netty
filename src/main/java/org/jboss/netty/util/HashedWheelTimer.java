@@ -214,14 +214,13 @@ public class HashedWheelTimer implements Timer {
         mask = wheel.length - 1;
 
         // Convert tickDuration to nanos.
-        this.tickDuration = tickDuration = unit.toNanos(tickDuration);
+        this.tickDuration = unit.toNanos(tickDuration);
 
         // Prevent overflow.
-        if (tickDuration == Long.MAX_VALUE ||
-                tickDuration >= Long.MAX_VALUE / wheel.length) {
-            throw new IllegalArgumentException(
-                    "tickDuration is too long: " +
-                    tickDuration +  ' ' + unit);
+        if (this.tickDuration >= Long.MAX_VALUE / wheel.length) {
+            throw new IllegalArgumentException(String.format(
+                    "tickDuration: %d (expected: 0 < tickDuration in nanos < %d",
+                    tickDuration, Long.MAX_VALUE / wheel.length));
         }
 
         workerThread = threadFactory.newThread(new ThreadRenamingRunnable(
@@ -373,7 +372,7 @@ public class HashedWheelTimer implements Timer {
             if (workerState.get() == WORKER_STATE_SHUTDOWN) {
                 throw new IllegalStateException("Cannot enqueue after shutdown");
             }
-            final int stopIndex = (int) ((wheelCursor + relativeIndex) & mask);
+            final int stopIndex = (int) (wheelCursor + relativeIndex & mask);
             timeout.stopIndex = stopIndex;
             timeout.remainingRounds = remainingRounds;
 
