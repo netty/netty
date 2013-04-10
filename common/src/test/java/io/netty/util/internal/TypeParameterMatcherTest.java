@@ -16,7 +16,10 @@
 
 package io.netty.util.internal;
 
+import org.junit.Ignore;
 import org.junit.Test;
+
+import java.util.Date;
 
 import static org.junit.Assert.*;
 
@@ -127,5 +130,21 @@ public class TypeParameterMatcherTest {
     public void testInnerClass() throws Exception {
         TypeParameterMatcher m = TypeParameterMatcher.find(new V<String>().u, U.class, "E");
         assertTrue(m.match(new Object()));
+    }
+
+    private abstract class W<E> {
+        // Noop
+    }
+
+    private class X<T, E> extends W<E> {
+        // Noop
+    }
+
+    @Ignore("Fail currently because of #1247")
+    @Test
+    public void testConcreteClassWithGeneric() throws Exception {
+        TypeParameterMatcher m = TypeParameterMatcher.find(new X<String, Date>(), W.class, "E");
+        assertTrue(m.match(new Date()));
+        assertFalse(m.match(new Object()));
     }
 }
