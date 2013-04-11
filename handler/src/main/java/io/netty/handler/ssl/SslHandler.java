@@ -28,6 +28,7 @@ import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelOutboundByteHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelStateHandler;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.FileRegion;
 import io.netty.util.concurrent.ImmediateExecutor;
@@ -66,6 +67,11 @@ import java.util.regex.Pattern;
  * renegotiating.  You will be notified by the {@link ChannelFuture} which is
  * returned by the {@link #handshake()} method when the handshake
  * process succeeds or fails.
+ * <p>
+ * Beside using the handshake {@link ChannelFuture} to get notified about the completation of the handshake it's
+ * also possible to detect it by implement the
+ * {@link ChannelStateHandler#userEventTriggered(ChannelHandlerContext, Object)}
+ * method and check for a {@link HandshakeCompletionEvent}.
  *
  * <h3>Handshake</h3>
  * <p>
@@ -172,6 +178,8 @@ public class SslHandler
 
     private volatile long handshakeTimeoutMillis = 10000;
     private volatile long closeNotifyTimeoutMillis = 3000;
+
+    private static final HandshakeCompletionEvent HANDSHAKE_SUCCESS_EVENT = new HandshakeCompletionEvent(null);
 
     /**
      * Creates a new instance.
@@ -958,12 +966,16 @@ public class SslHandler
      * Notify all the handshake futures about the successfully handshake
      */
     private void setHandshakeSuccess() {
-        for (;;) {
-            ChannelPromise p = handshakePromises.poll();
-            if (p == null) {
-                break;
+        try {
+            for (;;) {
+                ChannelPromise p = handshakePromises.poll();
+                if (p == null) {
+                    break;
+                }
+                p.setSuccess();
             }
-            p.setSuccess();
+        } finally {
+            ctx.fireUserEventTriggered(HANDSHAKE_SUCCESS_EVENT);
         }
     }
 
@@ -971,39 +983,41 @@ public class SslHandler
      * Notify all the handshake futures about the failure during the handshake.
      */
     private void setHandshakeFailure(Throwable cause) {
-
-        // Release all resources such as internal buffers that SSLEngine
-        // is managing.
-        engine.closeOutbound();
-
-        final boolean disconnected = cause == null || cause instanceof ClosedChannelException;
         try {
-            engine.closeInbound();
-        } catch (SSLException e) {
-            if (!disconnected) {
-                logger.warn("SSLEngine.closeInbound() raised an exception after a handshake failure.", e);
-            } else if (!closeNotifyWriteListener.done) {
-                logger.warn("SSLEngine.closeInbound() raised an exception due to closed connection.", e);
-            } else {
-                // cause == null && sentCloseNotify
-                // closeInbound() will raise an exception with bogus truncation attack warning.
-            }
-        }
+            // Release all resources such as internal buffers that SSLEngine
+            // is managing.
+            engine.closeOutbound();
 
-        if (!handshakePromises.isEmpty()) {
-            if (cause == null) {
-                cause = new ClosedChannelException();
-            }
-
-            for (;;) {
-                ChannelPromise p = handshakePromises.poll();
-                if (p == null) {
-                    break;
+            final boolean disconnected = cause == null || cause instanceof ClosedChannelException;
+            try {
+                engine.closeInbound();
+            } catch (SSLException e) {
+                if (!disconnected) {
+                    logger.warn("SSLEngine.closeInbound() raised an exception after a handshake failure.", e);
+                } else if (!closeNotifyWriteListener.done) {
+                    logger.warn("SSLEngine.closeInbound() raised an exception due to closed connection.", e);
+                } else {
+                    // cause == null && sentCloseNotify
+                    // closeInbound() will raise an exception with bogus truncation attack warning.
                 }
-                p.setFailure(cause);
             }
-        }
 
+            if (!handshakePromises.isEmpty()) {
+                if (cause == null) {
+                    cause = new ClosedChannelException();
+                }
+
+                for (;;) {
+                    ChannelPromise p = handshakePromises.poll();
+                    if (p == null) {
+                        break;
+                    }
+                    p.setFailure(cause);
+                }
+            }
+        } finally {
+            ctx.fireUserEventTriggered(new HandshakeCompletionEvent(cause));
+        }
         flush0(ctx, 0, cause);
     }
 
