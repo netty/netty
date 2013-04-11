@@ -20,10 +20,11 @@ package io.netty.handler.ssl;
  * Event that is fired once the SSL handshake is complete, which may be because it was successful or there
  * was an error.
  */
-public final class HandshakeCompletionEvent {
+public final class SslHandshakeCompletionEvent {
+
     private final Throwable cause;
 
-    HandshakeCompletionEvent(Throwable cause) {
+    SslHandshakeCompletionEvent(Throwable cause) {
         this.cause = cause;
     }
 

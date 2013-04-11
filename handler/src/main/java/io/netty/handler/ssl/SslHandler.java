@@ -71,7 +71,7 @@ import java.util.regex.Pattern;
  * Beside using the handshake {@link ChannelFuture} to get notified about the completation of the handshake it's
  * also possible to detect it by implement the
  * {@link ChannelStateHandler#userEventTriggered(ChannelHandlerContext, Object)}
- * method and check for a {@link HandshakeCompletionEvent}.
+ * method and check for a {@link SslHandshakeCompletionEvent}.
  *
  * <h3>Handshake</h3>
  * <p>
@@ -179,7 +179,7 @@ public class SslHandler
     private volatile long handshakeTimeoutMillis = 10000;
     private volatile long closeNotifyTimeoutMillis = 3000;
 
-    private static final HandshakeCompletionEvent HANDSHAKE_SUCCESS_EVENT = new HandshakeCompletionEvent(null);
+    private static final SslHandshakeCompletionEvent HANDSHAKE_SUCCESS_EVENT = new SslHandshakeCompletionEvent(null);
 
     /**
      * Creates a new instance.
@@ -1016,7 +1016,7 @@ public class SslHandler
                 }
             }
         } finally {
-            ctx.fireUserEventTriggered(new HandshakeCompletionEvent(cause));
+            ctx.fireUserEventTriggered(new SslHandshakeCompletionEvent(cause));
         }
         flush0(ctx, 0, cause);
     }
