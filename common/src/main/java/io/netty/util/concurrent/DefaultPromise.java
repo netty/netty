@@ -39,9 +39,22 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     };
     private static final Signal SUCCESS = new Signal(DefaultPromise.class.getName() + ".SUCCESS");
     private final EventExecutor executor;
-
+    private final GenericFutureListenerExceptionHandler<? extends Future<?>> exceptionHandler;
     private volatile Object result;
     private Object listeners; // Can be ChannelFutureListener or DefaultChannelPromiseListeners
+
+    @SuppressWarnings("rawtypes")
+    static final GenericFutureListenerExceptionHandler LOGGING_HANDLER =
+            new GenericFutureListenerExceptionHandler<Future<?>>() {
+        @Override
+        public void exceptionCaught(Future<?> future, GenericFutureListener<Future<?>> listener, Throwable cause) {
+            if (logger.isWarnEnabled()) {
+                logger.warn(
+                        "An exception was thrown by " +
+                                GenericFutureListener.class.getSimpleName() + '.', cause);
+            }
+        }
+    };
 
     /**
      * The the most significant 24 bits of this field represents the number of waiter threads waiting for this promise
@@ -58,16 +71,29 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      * @param executor
      *        the {@link EventExecutor} which is used to notify the promise once it is complete
      */
+    @SuppressWarnings("unchecked")
     public DefaultPromise(EventExecutor executor) {
+        this(executor, LOGGING_HANDLER);
+    }
+
+    public DefaultPromise(EventExecutor executor, GenericFutureListenerExceptionHandler<? extends Future<?>>
+            exceptionHandler) {
         if (executor == null) {
             throw new NullPointerException("executor");
         }
         this.executor = executor;
+        this.exceptionHandler = exceptionHandler;
     }
 
+    @SuppressWarnings("unchecked")
     protected DefaultPromise() {
+        this(LOGGING_HANDLER);
+    }
+
+    protected DefaultPromise(GenericFutureListenerExceptionHandler<? extends Future<?>> exceptionHandler) {
         // only for subclasses
         executor = null;
+        this.exceptionHandler = exceptionHandler;
     }
 
     protected EventExecutor executor() {
@@ -105,7 +131,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         }
 
         if (isDone()) {
-            notifyListener(executor(), this, listener);
+            notifyListener(executor(), this, listener, exceptionHandler);
             return this;
         }
 
@@ -125,7 +151,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             }
         }
 
-        notifyListener(executor(), this, listener);
+        notifyListener(executor(), this, listener, exceptionHandler);
         return this;
     }
 
@@ -475,9 +501,9 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
             if (listeners instanceof DefaultPromiseListeners) {
-                notifyListeners0(this, (DefaultPromiseListeners) listeners);
+                notifyListeners0(this, (DefaultPromiseListeners) listeners, exceptionHandler);
             } else {
-                notifyListener0(this, (GenericFutureListener<? extends Future<V>>) listeners);
+                notifyListener0(this, (GenericFutureListener<? extends Future<V>>) listeners, exceptionHandler);
             }
             listeners = null;
         } else {
@@ -488,10 +514,12 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                     @Override
                     public void run() {
                         if (listeners instanceof DefaultPromiseListeners) {
-                            notifyListeners0(DefaultPromise.this, (DefaultPromiseListeners) listeners);
+                            notifyListeners0(
+                                    DefaultPromise.this, (DefaultPromiseListeners) listeners, exceptionHandler);
                         } else {
                             notifyListener0(
-                                    DefaultPromise.this, (GenericFutureListener<? extends Future<V>>) listeners);
+                                    DefaultPromise.this, (GenericFutureListener<? extends Future<V>>) listeners,
+                                    exceptionHandler);
                         }
                     }
                 });
@@ -501,27 +529,29 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         }
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     private static void notifyListeners0(final Future<?> future,
-                                         DefaultPromiseListeners listeners) {
+                                         DefaultPromiseListeners listeners,
+                                         GenericFutureListenerExceptionHandler exceptionHandler) {
         final GenericFutureListener<? extends Future<?>>[] a = listeners.listeners();
         final int size = listeners.size();
         for (int i = 0; i < size; i ++) {
-            notifyListener0(future, a[i]);
+            notifyListener0(future, a[i], exceptionHandler);
         }
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     protected static void notifyListener(
             final EventExecutor eventExecutor, final Future<?> future,
-            final GenericFutureListener<? extends Future<?>> l) {
+            final GenericFutureListener<? extends Future<?>> l,
+            final GenericFutureListenerExceptionHandler exceptionHandler) {
 
         if (eventExecutor.inEventLoop()) {
             final Integer stackDepth = LISTENER_STACK_DEPTH.get();
             if (stackDepth < MAX_LISTENER_STACK_DEPTH) {
                 LISTENER_STACK_DEPTH.set(stackDepth + 1);
                 try {
-                    notifyListener0(future, l);
+                    notifyListener0(future, l, exceptionHandler);
                 } finally {
                     LISTENER_STACK_DEPTH.set(stackDepth);
                 }
@@ -533,7 +563,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             eventExecutor.execute(new Runnable() {
             @Override
             public void run() {
-                notifyListener(eventExecutor, future, l);
+                notifyListener(eventExecutor, future, l, exceptionHandler);
             }
         });
         } catch (Throwable t) {
@@ -542,15 +572,12 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    private static void notifyListener0(Future future, GenericFutureListener l) {
+    private static void notifyListener0(Future future, GenericFutureListener l,
+                                        GenericFutureListenerExceptionHandler exceptionHandler) {
         try {
             l.operationComplete(future);
         } catch (Throwable t) {
-            if (logger.isWarnEnabled()) {
-                logger.warn(
-                        "An exception was thrown by " +
-                                GenericFutureListener.class.getSimpleName() + '.', t);
-            }
+            exceptionHandler.exceptionCaught(future, l, t);
         }
     }
 

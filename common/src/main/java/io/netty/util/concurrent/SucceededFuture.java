@@ -28,6 +28,12 @@ public final class SucceededFuture<V> extends CompleteFuture<V> {
      *
      * @param executor the {@link EventExecutor} associated with this future
      */
+    public SucceededFuture(EventExecutor executor,
+                           GenericFutureListenerExceptionHandler<? extends Future<V>> exceptionHandler, V result) {
+        super(executor, exceptionHandler);
+        this.result = result;
+    }
+
     public SucceededFuture(EventExecutor executor, V result) {
         super(executor);
         this.result = result;

@@ -18,8 +18,8 @@ package io.netty.util.concurrent;
 
 public abstract class CompletePromise<V> extends CompleteFuture<V> implements Promise<V> {
 
-    protected CompletePromise(EventExecutor executor) {
-        super(executor);
+    protected CompletePromise(EventExecutor executor, GenericFutureListenerExceptionHandler exceptionHandler) {
+        super(executor, exceptionHandler);
     }
 
     @Override
