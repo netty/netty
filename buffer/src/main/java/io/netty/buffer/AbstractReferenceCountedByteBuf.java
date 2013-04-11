@@ -61,6 +61,13 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
         }
     }
 
+    /**
+     * An unsafe operation intended for use by a subclass that sets the reference count of the buffer directly
+     */
+    protected final void setRefCnt(int refCnt) {
+        this.refCnt = refCnt;
+    }
+
     @Override
     public ByteBuf retain() {
         for (;;) {

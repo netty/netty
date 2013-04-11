@@ -56,6 +56,13 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
         }
     }
 
+    /**
+     * An unsafe operation intended for use by a subclass that sets the reference count of the buffer directly
+     */
+    protected final void setRefCnt(int refCnt) {
+        this.refCnt = refCnt;
+    }
+
     @Override
     public ReferenceCounted retain() {
         for (;;) {
