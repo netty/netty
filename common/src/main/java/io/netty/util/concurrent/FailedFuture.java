@@ -32,7 +32,18 @@ public final class FailedFuture<V> extends CompleteFuture<V> {
      * @param executor the {@link EventExecutor} associated with this future
      * @param cause   the cause of failure
      */
-    public FailedFuture(EventExecutor executor, Throwable cause) {
+    public FailedFuture(EventExecutor executor,
+                        GenericFutureListenerExceptionHandler<? extends Future<V>> exceptionHandler,
+                        Throwable cause) {
+        super(executor, exceptionHandler);
+        if (cause == null) {
+            throw new NullPointerException("cause");
+        }
+        this.cause = cause;
+    }
+
+    public FailedFuture(EventExecutor executor,
+                        Throwable cause) {
         super(executor);
         if (cause == null) {
             throw new NullPointerException("cause");

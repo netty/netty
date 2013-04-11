@@ -24,14 +24,21 @@ import java.util.concurrent.TimeUnit;
 public abstract class CompleteFuture<V> extends AbstractFuture<V> {
 
     private final EventExecutor executor;
-
+    private final GenericFutureListenerExceptionHandler<? extends Future<V>> exceptionHandler;
     /**
      * Creates a new instance.
      *
      * @param executor the {@link EventExecutor} associated with this future
      */
-    protected CompleteFuture(EventExecutor executor) {
+    protected CompleteFuture(EventExecutor executor,
+                             GenericFutureListenerExceptionHandler<? extends Future<V>> exceptionHandler) {
         this.executor = executor;
+        this.exceptionHandler = exceptionHandler;
+    }
+
+    @SuppressWarnings("unchecked")
+    protected CompleteFuture(EventExecutor executor) {
+        this(executor, DefaultPromise.LOGGING_HANDLER);
     }
 
     protected EventExecutor executor() {
@@ -43,7 +50,7 @@ public abstract class CompleteFuture<V> extends AbstractFuture<V> {
         if (listener == null) {
             throw new NullPointerException("listener");
         }
-        DefaultPromise.notifyListener(executor(), this, listener);
+        DefaultPromise.notifyListener(executor(), this, listener, exceptionHandler);
         return this;
     }
 
@@ -56,7 +63,7 @@ public abstract class CompleteFuture<V> extends AbstractFuture<V> {
             if (l == null) {
                 break;
             }
-            DefaultPromise.notifyListener(executor(), this, l);
+            DefaultPromise.notifyListener(executor(), this, l, exceptionHandler);
         }
         return this;
     }

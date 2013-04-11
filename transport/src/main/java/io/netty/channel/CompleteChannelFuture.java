@@ -34,7 +34,7 @@ abstract class CompleteChannelFuture extends CompleteFuture<Void> implements Cha
      * @param channel the {@link Channel} associated with this future
      */
     protected CompleteChannelFuture(Channel channel, EventExecutor executor) {
-        super(executor);
+        super(executor, DefaultChannelPromise.EXCEPTION_HANDLER);
         if (channel == null) {
             throw new NullPointerException("channel");
         }

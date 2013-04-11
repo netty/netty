@@ -20,12 +20,23 @@ import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.concurrent.GenericFutureListenerExceptionHandler;
 
 /**
  * The default {@link ChannelPromise} implementation.  It is recommended to use {@link Channel#newPromise()} to create
  * a new {@link ChannelPromise} rather than calling the constructor explicitly.
  */
 public class DefaultChannelPromise extends DefaultPromise<Void> implements ChannelPromise, FlushCheckpoint {
+
+    static final GenericFutureListenerExceptionHandler<ChannelFuture> EXCEPTION_HANDLER =
+            new GenericFutureListenerExceptionHandler<ChannelFuture>() {
+
+        @Override
+        public void exceptionCaught(ChannelFuture future, GenericFutureListener<ChannelFuture> listener,
+                                    Throwable cause) {
+            future.channel().pipeline().fireExceptionCaught(cause);
+        }
+    };
 
     private final Channel channel;
 
@@ -36,6 +47,7 @@ public class DefaultChannelPromise extends DefaultPromise<Void> implements Chann
      *        the {@link Channel} associated with this future
      */
     public DefaultChannelPromise(Channel channel) {
+        super(EXCEPTION_HANDLER);
         this.channel = channel;
     }
 
@@ -46,7 +58,7 @@ public class DefaultChannelPromise extends DefaultPromise<Void> implements Chann
      *        the {@link Channel} associated with this future
      */
     public DefaultChannelPromise(Channel channel, EventExecutor executor) {
-        super(executor);
+        super(executor, EXCEPTION_HANDLER);
         this.channel = channel;
     }
 
