@@ -16,6 +16,7 @@
 package org.jboss.netty.handler.codec.http.websocketx;
 
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders.Names;
 import org.jboss.netty.handler.codec.http.HttpRequest;
@@ -109,13 +110,13 @@ public class WebSocketServerHandshakerFactory {
      * @param channel
      *            Channel
      */
-    public void sendUnsupportedWebSocketVersionResponse(Channel channel) {
+    public ChannelFuture sendUnsupportedWebSocketVersionResponse(Channel channel) {
         HttpResponse res = new DefaultHttpResponse(
                 HttpVersion.HTTP_1_1,
                 HttpResponseStatus.SWITCHING_PROTOCOLS);
         res.setStatus(HttpResponseStatus.UPGRADE_REQUIRED);
         res.setHeader(Names.SEC_WEBSOCKET_VERSION, WebSocketVersion.V13.toHttpHeaderValue());
-        channel.write(res);
+        return channel.write(res);
     }
 
 }
