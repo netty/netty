@@ -131,7 +131,7 @@ public class TypeParameterMatcherTest {
         assertTrue(m.match(new Object()));
     }
 
-    private static abstract class W<E> {
+    private abstract static class W<E> {
         E e;
     }
 
