@@ -334,53 +334,61 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             return true;
         }
 
+        boolean nextBufferHadEnoughRoom = true;
         for (;;) {
             Object o = bridge.peek();
             if (o == null) {
                 break;
             }
 
-            if (o instanceof Object[]) {
-                Object[] data = (Object[]) o;
-                int i;
-                for (i = 0; i < data.length; i ++) {
-                    Object m = data[i];
-                    if (m == null) {
-                        break;
-                    }
-
-                    if (msgBuf.offer(m)) {
-                        data[i] = null;
-                    } else {
-                        System.arraycopy(data, i, data, 0, data.length - i);
-                        for (int j = i + 1; j < data.length; j ++) {
-                            data[j] = null;
+            try {
+                if (o instanceof Object[]) {
+                    Object[] data = (Object[]) o;
+                    int i;
+                    for (i = 0; i < data.length; i ++) {
+                        Object m = data[i];
+                        if (m == null) {
+                            break;
                         }
-                        return false;
-                    }
-                }
-            } else if (o instanceof ByteBuf) {
-                ByteBuf data = (ByteBuf) o;
-                if (byteBuf.writerIndex() > byteBuf.maxCapacity() - data.readableBytes()) {
-                    // The target buffer is not going to be able to accept all data in the bridge.
-                    byteBuf.capacity(byteBuf.maxCapacity());
-                    byteBuf.writeBytes(data, byteBuf.writableBytes());
-                    return false;
-                } else {
-                    try {
-                        byteBuf.writeBytes(data);
-                    } finally {
-                        data.release();
-                    }
-                }
-            } else {
-                throw new Error();
-            }
 
-            bridge.remove();
+                        if (msgBuf.offer(m)) {
+                            data[i] = null;
+                        } else {
+                            System.arraycopy(data, i, data, 0, data.length - i);
+                            for (int j = i + 1; j < data.length; j ++) {
+                                data[j] = null;
+                            }
+                            nextBufferHadEnoughRoom = false;
+                            break;
+                        }
+                    }
+                } else if (o instanceof ByteBuf) {
+                    ByteBuf data = (ByteBuf) o;
+                    if (byteBuf.writerIndex() > byteBuf.maxCapacity() - data.readableBytes()) {
+                        // The target buffer is not going to be able to accept all data in the bridge.
+                        byteBuf.capacity(byteBuf.maxCapacity());
+                        byteBuf.writeBytes(data, byteBuf.writableBytes());
+                        nextBufferHadEnoughRoom = false;
+                        break;
+                    } else {
+                        try {
+                            byteBuf.writeBytes(data);
+                        } finally {
+                            data.release();
+                        }
+                    }
+                } else {
+                    throw new Error();
+                }
+            } finally {
+                if (nextBufferHadEnoughRoom) {
+                    Object removed = bridge.remove();
+                    assert removed == o;
+                }
+            }
         }
 
-        return true;
+        return nextBufferHadEnoughRoom;
     }
 
     void setRemoved() {
@@ -434,10 +442,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
 
         // Warn if the bridge has unflushed elements.
-        Queue<Object> bridge;
-        bridge = inBridge;
-        if (bridge != null && !bridge.isEmpty()) {
-            logger.warn("inbound bridge not empty - bug?: {}", bridge.size());
+        if (logger.isWarnEnabled()) {
+            Queue<Object> bridge;
+            bridge = inBridge;
+            if (bridge != null && !bridge.isEmpty()) {
+                logger.warn("inbound bridge not empty - bug?: {}", bridge.size());
+            }
         }
     }
 
@@ -450,9 +460,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
 
         // Warn if the bridge has unflushed elements.
-        Queue<Object> bridge = outBridge;
-        if (bridge != null && !bridge.isEmpty()) {
-            logger.warn("outbound bridge not empty - bug?: {}", bridge.size());
+        if (logger.isWarnEnabled()) {
+            Queue<Object> bridge = outBridge;
+            if (bridge != null && !bridge.isEmpty()) {
+                logger.warn("outbound bridge not empty - bug?: {}", bridge.size());
+            }
         }
     }
 
