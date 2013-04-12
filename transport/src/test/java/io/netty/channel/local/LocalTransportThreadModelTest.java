@@ -81,7 +81,7 @@ public class LocalTransportThreadModelTest {
     }
 
     @Test(timeout = 30000)
-    @Ignore
+    @Ignore("regression test")
     public void testStagedExecutionMultiple() throws Throwable {
         for (int i = 0; i < 10; i ++) {
             testStagedExecution();
@@ -206,7 +206,7 @@ public class LocalTransportThreadModelTest {
     }
 
     @Test(timeout = 30000)
-    @Ignore
+    @Ignore("regression test")
     public void testConcurrentMessageBufferAccess() throws Throwable {
         EventLoopGroup l = new LocalEventLoopGroup(4, new PrefixThreadFactory("l"));
         EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e1"));
