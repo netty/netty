@@ -40,6 +40,7 @@ interface ChannelPropertyAccess {
      */
     ChannelPromise newPromise();
 
+    ChannelTransferPromise newTransferPromise(long total);
     /**
      * Create a new {@link ChannelFuture} which is marked as successes already. So {@link ChannelFuture#isSuccess()}
      * will return {@code true}. All {@link FutureListener} added to it will be notified directly. Also
