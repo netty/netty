@@ -13,39 +13,37 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.util.concurrent;
 
 import java.util.Arrays;
 import java.util.EventListener;
 
-final class DefaultPromiseListeners {
-    private GenericFutureListener<? extends Future<?>>[] listeners;
+public final class DefaultEventListeners {
+    private EventListener[] listeners;
     private int size;
 
-    @SuppressWarnings("unchecked")
-    DefaultPromiseListeners(GenericFutureListener<? extends Future<?>> firstListener,
-                            GenericFutureListener<? extends Future<?>> secondListener) {
-
-        listeners = new GenericFutureListener[] { firstListener, secondListener };
+    public DefaultEventListeners(EventListener firstListener, EventListener secondListener) {
+        listeners = new EventListener[2];
+        listeners [0] = firstListener;
+        listeners [1] = secondListener;
         size = 2;
     }
 
-    void add(GenericFutureListener<? extends Future<?>> l) {
-        GenericFutureListener<? extends Future<?>>[] listeners = this.listeners;
+    public void add(EventListener t) {
+        EventListener[] listeners = this.listeners;
         final int size = this.size;
         if (size == listeners.length) {
             this.listeners = listeners = Arrays.copyOf(listeners, size << 1);
         }
-        listeners[size] = l;
+        listeners[size] = t;
         this.size = size + 1;
     }
 
-    void remove(EventListener l) {
+    public void remove(EventListener t) {
         final EventListener[] listeners = this.listeners;
         int size = this.size;
         for (int i = 0; i < size; i ++) {
-            if (listeners[i] == l) {
+            if (listeners[i] == t) {
                 int listenersToMove = size - i - 1;
                 if (listenersToMove > 0) {
                     System.arraycopy(listeners, i + 1, listeners, i, listenersToMove);
@@ -54,14 +52,13 @@ final class DefaultPromiseListeners {
                 this.size = size;
                 return;
             }
-        }
-    }
+        }    }
 
-    GenericFutureListener<? extends Future<?>>[] listeners() {
+    public EventListener[] listeners() {
         return listeners;
     }
 
-    int size() {
+    public int size() {
         return size;
     }
 }

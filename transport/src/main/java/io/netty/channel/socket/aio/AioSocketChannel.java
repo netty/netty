@@ -24,6 +24,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelTransferPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
 import io.netty.channel.aio.AbstractAioChannel;
@@ -561,6 +562,10 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                             return;
                         }
                         written += result;
+
+                        if (promise instanceof ChannelTransferPromise) {
+                            ((ChannelTransferPromise) promise).incrementTransferredBytes(result);
+                        }
 
                         if (written >= region.count()) {
                             region.release();

@@ -20,6 +20,7 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.EventListener;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.TimeUnit.*;
@@ -114,11 +115,11 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                 if (listeners == null) {
                     listeners = listener;
                 } else {
-                    if (listeners instanceof DefaultPromiseListeners) {
-                        ((DefaultPromiseListeners) listeners).add(listener);
+                    if (listeners instanceof DefaultEventListeners) {
+                        ((DefaultEventListeners) listeners).add(listener);
                     } else {
-                        listeners = new DefaultPromiseListeners(
-                                (GenericFutureListener<? extends Future<V>>) listeners, listener);
+                        listeners = new DefaultEventListeners(
+                                (EventListener) listeners, listener);
                     }
                 }
                 return this;
@@ -145,6 +146,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public Promise<V> removeListener(GenericFutureListener<? extends Future<V>> listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
@@ -156,8 +158,8 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
         synchronized (this) {
             if (!isDone()) {
-                if (listeners instanceof DefaultPromiseListeners) {
-                    ((DefaultPromiseListeners) listeners).remove(listener);
+                if (listeners instanceof DefaultEventListeners) {
+                    ((DefaultEventListeners) listeners).remove(listener);
                 } else if (listeners == listener) {
                     listeners = null;
                 }
@@ -474,8 +476,8 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            if (listeners instanceof DefaultPromiseListeners) {
-                notifyListeners0(this, (DefaultPromiseListeners) listeners);
+            if (listeners instanceof DefaultEventListeners) {
+                notifyListeners0(this, (DefaultEventListeners) listeners);
             } else {
                 notifyListener0(this, (GenericFutureListener<? extends Future<V>>) listeners);
             }
@@ -487,8 +489,8 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                 executor.execute(new Runnable() {
                     @Override
                     public void run() {
-                        if (listeners instanceof DefaultPromiseListeners) {
-                            notifyListeners0(DefaultPromise.this, (DefaultPromiseListeners) listeners);
+                        if (listeners instanceof DefaultEventListeners) {
+                            notifyListeners0(DefaultPromise.this, (DefaultEventListeners) listeners);
                         } else {
                             notifyListener0(
                                     DefaultPromise.this, (GenericFutureListener<? extends Future<V>>) listeners);
@@ -501,13 +503,13 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         }
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     private static void notifyListeners0(final Future<?> future,
-                                         DefaultPromiseListeners listeners) {
-        final GenericFutureListener<? extends Future<?>>[] a = listeners.listeners();
+                                         DefaultEventListeners listeners) {
+        final EventListener[] a = listeners.listeners();
         final int size = listeners.size();
         for (int i = 0; i < size; i ++) {
-            notifyListener0(future, a[i]);
+            notifyListener0(future, (GenericFutureListener) a[i]);
         }
     }
 
