@@ -42,6 +42,11 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
     private String contentTransferEncoding;
 
     public DiskFileUpload(String name, String filename, String contentType,
+            String contentTransferEncoding, Charset charset, long size) {
+        this(name, filename, contentType, contentTransferEncoding, charset, size, false);
+    }
+
+    public DiskFileUpload(String name, String filename, String contentType,
             String contentTransferEncoding, Charset charset, long size, boolean checkBadName) {
         super(name, charset, size, checkBadName);
         setFilename(filename);

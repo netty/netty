@@ -44,6 +44,9 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
 
     private long minSize;
 
+    /**
+     * Default should check the correctness with W3c rules on attribute names
+     */
     private boolean checkBadName = true;
 
     /**
@@ -81,16 +84,20 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     }
 
     /**
-     * @return the checkBadName
+     * @return True if the current Factory is checking the correctness of the attribute names regarding W3c rules
+     * which say character are ASCII (less than 127) and no characters from "=,; \t\r\n\v\f:"
      */
     public boolean isCheckBadName() {
         return checkBadName;
     }
 
     /**
-     * Default is True (checking)
-     * @param checkBadName True to check if names conform to HTML definition (no space, no comma, ...),
-     * or False to not check it
+     * Note that it is still possible to check later on manually using
+     * {@link AbstractHttpData}.isNameCorrectlySPelledVersusW3c(String name) method
+     *
+     * @param checkBadName True to check if names conform to HTML definition ASCII (less than 127)
+     * and no characters from "=,; \t\r\n\v\f:", and False to ignore this check.
+     *
      */
     public void setCheckBadName(boolean checkBadName) {
         this.checkBadName = checkBadName;

@@ -42,6 +42,10 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         super(name, charset, size, checkBadName);
     }
 
+    protected AbstractDiskHttpData(String name, Charset charset, long size) {
+        this(name, charset, size, false);
+    }
+
     /**
      *
      * @return the real DiskFilename (basename)

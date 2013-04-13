@@ -35,6 +35,13 @@ public class MixedFileUpload implements FileUpload {
 
     public MixedFileUpload(String name, String filename, String contentType,
             String contentTransferEncoding, Charset charset, long size,
+            long limitSize) {
+        this(name, filename, contentType, contentTransferEncoding, charset, size,
+           limitSize, false);
+    }
+
+    public MixedFileUpload(String name, String filename, String contentType,
+            String contentTransferEncoding, Charset charset, long size,
             long limitSize, boolean checkBadName) {
         this.limitSize = limitSize;
         if (size > this.limitSize) {

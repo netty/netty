@@ -30,9 +30,17 @@ public class MixedAttribute implements Attribute {
 
     private final long limitSize;
 
+    public MixedAttribute(String name, long limitSize) {
+        this(name, limitSize, false);
+    }
+
     public MixedAttribute(String name, long limitSize, boolean checkBadName) {
         this.limitSize = limitSize;
         attribute = new MemoryAttribute(name, checkBadName);
+    }
+
+    public MixedAttribute(String name, String value, long limitSize) {
+        this(name, value, limitSize, false);
     }
 
     public MixedAttribute(String name, String value, long limitSize, boolean checkBadName) {

@@ -28,12 +28,20 @@ import static io.netty.buffer.Unpooled.*;
  */
 public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute {
 
+    public MemoryAttribute(String name) {
+        this(name, false);
+    }
+
     public MemoryAttribute(String name, boolean checkBadName) {
-        super(name, HttpConstants.DEFAULT_CHARSET, 0, checkBadName);
+        super(name, HttpConstants.DEFAULT_CHARSET, 0, checkBadName); // Attribute have no default size
+    }
+
+    public MemoryAttribute(String name, String value) throws IOException {
+        this(name, value, false);
     }
 
     public MemoryAttribute(String name, String value, boolean checkBadName) throws IOException {
-        super(name, HttpConstants.DEFAULT_CHARSET, 0, checkBadName); // Attribute have no default size
+        this(name, checkBadName);
         setValue(value);
     }
 

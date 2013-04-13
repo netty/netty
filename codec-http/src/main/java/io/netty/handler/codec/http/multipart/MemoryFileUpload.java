@@ -36,6 +36,11 @@ public class MemoryFileUpload extends AbstractMemoryHttpData implements FileUplo
     private String contentTransferEncoding;
 
     public MemoryFileUpload(String name, String filename, String contentType,
+            String contentTransferEncoding, Charset charset, long size) {
+        this(name, filename, contentType, contentTransferEncoding, charset, size, false);
+    }
+
+    public MemoryFileUpload(String name, String filename, String contentType,
             String contentTransferEncoding, Charset charset, long size, boolean checkBadName) {
         super(name, charset, size, checkBadName);
         setFilename(filename);

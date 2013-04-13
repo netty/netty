@@ -34,6 +34,40 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
     protected Charset charset = HttpConstants.DEFAULT_CHARSET;
     protected boolean completed;
 
+    protected AbstractHttpData(String name, Charset charset, long size) {
+        this(name, charset, size, false);
+    }
+
+    /**
+     * Convenient method to check if an attribute name respects the W3C rules
+     * (character are ASCII (less than 127) and no characters from "=,; \t\r\n\v\f:")
+     * @param name the attribute name to check
+     * @return True if the name is conform with the W3C rules
+     */
+    public static boolean isNameCorrectlySPelledVersusW3c(String name) {
+        for (int i = 0; i < name.length(); i ++) {
+            char c = name.charAt(i);
+            if (c > 127) {
+                return false;
+            }
+
+            // Check prohibited characters.
+            switch (c) {
+            case '=':
+            case ',':
+            case ';':
+            case ' ':
+            case '\t':
+            case '\r':
+            case '\n':
+            case '\f':
+            case 0x0b: // Vertical tab
+                 return false;
+            }
+        }
+        return true;
+    }
+
     protected AbstractHttpData(String name, Charset charset, long size, boolean checkBadName) {
         if (name == null) {
             throw new NullPointerException("name");
@@ -42,31 +76,10 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
         if (name.isEmpty()) {
             throw new IllegalArgumentException("empty name");
         }
-
-        for (int i = 0; i < name.length(); i ++) {
-            char c = name.charAt(i);
-            if (c > 127) {
-                throw new IllegalArgumentException(
-                        "name contains non-ascii character: " + name);
-            }
-
-            if (checkBadName) {
-                // Check prohibited characters.
-                switch (c) {
-                case '=':
-                case ',':
-                case ';':
-                case ' ':
-                case '\t':
-                case '\r':
-                case '\n':
-                case '\f':
-                case 0x0b: // Vertical tab
-                    throw new IllegalArgumentException(
-                            "name contains one of the following prohibited characters: " +
+        if (checkBadName && ! isNameCorrectlySPelledVersusW3c(name)) {
+            throw new IllegalArgumentException(
+                    "name contains non-ascii character or one of the following prohibited characters: " +
                             "=,; \\t\\r\\n\\v\\f: " + name);
-                }
-            }
         }
         this.name = name;
         if (charset != null) {
