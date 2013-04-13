@@ -39,7 +39,9 @@ interface ChannelPropertyAccess {
      * Return a new {@link ChannelPromise}.
      */
     ChannelPromise newPromise();
-
+    /**
+     *Return an new {@link ChannelTransferPromise}
+     **/
     ChannelTransferPromise newTransferPromise(long total);
     /**
      * Create a new {@link ChannelFuture} which is marked as successes already. So {@link ChannelFuture#isSuccess()}

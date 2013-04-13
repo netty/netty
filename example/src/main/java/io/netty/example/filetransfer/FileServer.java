@@ -17,10 +17,19 @@ package io.netty.example.filetransfer;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.BufType;
-import io.netty.channel.*;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelTransferPromise;
+import io.netty.channel.DefaultFileRegion;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.FileRegion;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.TransferFutureListener;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
@@ -102,16 +111,16 @@ public class FileServer {
                 promise.addTransferFutureListner(new TransferFutureListener() {
                     @Override
                     public void onTransfered(long amount, long total) throws Exception {
-                        System.out.println("amount :"+amount+" total :"+total);
+                        System.out.println("amount :" + amount + " total :" + total);
                     }
                 });
                 promise.addListener(new FutureListener<Void>() {
                     @Override
                     public void operationComplete(Future<Void> future) throws Exception {
-                        System.out.println("OK");
+                        System.out.println("File sent OK");
                     }
                 });
-                ctx.sendFile(region,promise);
+                ctx.sendFile(region, promise);
                 ctx.write("\n");
             } else {
                 ctx.write("File not found: " + file + '\n');

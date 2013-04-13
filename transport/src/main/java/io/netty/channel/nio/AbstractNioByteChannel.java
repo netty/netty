@@ -16,9 +16,13 @@
 package io.netty.channel.nio;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelTranferPromise;
+import io.netty.channel.FileRegion;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
-
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectableChannel;

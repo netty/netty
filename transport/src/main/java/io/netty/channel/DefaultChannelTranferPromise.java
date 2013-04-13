@@ -1,28 +1,42 @@
+/*
+ * Copyright 2013 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package io.netty.channel;
 
-import io.netty.util.concurrent.*;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * Created with IntelliJ IDEA.
- * User: kerr
- * Date: 13-4-12
- * Time: 下午11:46
- * To change this template use File | Settings | File Templates.
+ * The default {@link ChannelTransferPromise} implementation.  It is recommended to use {@link Channel#newPromise()} to
+ * create a new {@link ChannelTransferPromise} rather than calling the constructor explicitly.
  */
-public class DefaultChannelTranferPromise extends DefaultChannelPromise implements ChannelTransferPromise{
+public class DefaultChannelTranferPromise extends DefaultChannelPromise implements ChannelTransferPromise {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(DefaultChannelTranferPromise.class);
     private static final int MAX_LISTENER_STACK_DEPTH = 8;
     private static final ThreadLocal<Integer> TRANSFER_LISTENER_STACK_DEPTH = new ThreadLocal<Integer>();
     private final long total;
-    private long amount = 0;
+    private long amount;
     //now just for simple
-    private List<TransferFutureListener> transferListeners = new CopyOnWriteArrayList<TransferFutureListener>();
+    private List<TransferFutureListener> transferListeners;
     public DefaultChannelTranferPromise(Channel channel, long total) {
         super(channel);
         this.total = total;
@@ -36,7 +50,7 @@ public class DefaultChannelTranferPromise extends DefaultChannelPromise implemen
     @Override
     public void setTransferedAmount(long amount) {
         this.amount = amount;
-        logger.info("update amount :{}",amount);
+        logger.info("update amount :{}", amount);
         notifyTransferListeners(amount);
     }
 
@@ -79,25 +93,47 @@ public class DefaultChannelTranferPromise extends DefaultChannelPromise implemen
     @Override
     public ChannelTransferSensor addTransferFutureListner(TransferFutureListener listener) {
         if (listener == null) {
-            throw new NullPointerException("listener is null");
+            throw new NullPointerException("listener can not be null");
         }
-        System.out.println("add");
 
         if (isDone()) {
-            System.out.println("Done");
             notifyTranferListener(executor(), amount, total, listener);
         }
-        transferListeners.add(listener);
+        synchronized (this) {
+            if (!isDone()) {
+                if (transferListeners == null) {
+                    transferListeners = new ArrayList<TransferFutureListener>();
+                }
+                transferListeners.add(listener);
+            }
+        }
+        notifyTranferListener(executor(), amount, total, listener);
         return this;
     }
 
     @Override
     public ChannelTransferSensor addTransferFutureListeners(TransferFutureListener... listeners) {
         if (listeners == null) {
-            return this;
+            throw new NullPointerException("listeners can not be null");
         }
-        for (TransferFutureListener l : listeners) {
-            transferListeners.add(l);
+        if (isDone()) {
+            for (TransferFutureListener l : listeners) {
+                notifyTranferListener(executor(), amount, total, l);
+            }
+        }
+        synchronized (this) {
+            if (!isDone()) {
+                if (transferListeners == null) {
+                    transferListeners = new ArrayList<TransferFutureListener>();
+                }
+                for (TransferFutureListener l : listeners) {
+                    if (l == null) {
+                        break;
+                    }
+                    transferListeners.add(l);
+                    notifyTranferListener(executor(), amount, total, l);
+                }
+            }
         }
         return this;
     }
@@ -105,19 +141,35 @@ public class DefaultChannelTranferPromise extends DefaultChannelPromise implemen
     @Override
     public ChannelTransferSensor removeTransferFutureListener(TransferFutureListener listener) {
         if (listener == null) {
+            throw new NullPointerException("listener can not be null");
+        }
+        if (isDone()) {
             return this;
         }
-        transferListeners.remove(listener);
+        if (transferListeners == null) {
+            return this;
+        }
+        synchronized (this) {
+            transferListeners.remove(listener);
+        }
         return this;
     }
 
     @Override
     public ChannelTransferSensor removeTransferFutureListeners(TransferFutureListener... listeners) {
         if (listeners == null) {
+            throw new NullPointerException("listeners can not be null");
+        }
+        if (isDone()) {
             return this;
         }
-        for (TransferFutureListener l : listeners) {
-            transferListeners.remove(l);
+        if (transferListeners == null) {
+            return this;
+        }
+        synchronized (this) {
+            for (TransferFutureListener l : listeners) {
+                transferListeners.remove(l);
+            }
         }
         return this;
     }
@@ -125,18 +177,20 @@ public class DefaultChannelTranferPromise extends DefaultChannelPromise implemen
     protected static void notifyTranferListener(final EventExecutor eventExecutor, final long amount,
                                                 final long total, final TransferFutureListener l) {
         if (eventExecutor.inEventLoop()) {
-            final Integer stackDepth = TRANSFER_LISTENER_STACK_DEPTH.get();
+            Integer stackDepth = TRANSFER_LISTENER_STACK_DEPTH.get();
+            if (stackDepth == null) {
+                stackDepth = 0;
+            }
             if (stackDepth < MAX_LISTENER_STACK_DEPTH) {
                 TRANSFER_LISTENER_STACK_DEPTH.set(stackDepth + 1);
                 try {
-                    notifyTranferListener0(amount,total,l);
+                    notifyTranferListener0(amount, total, l);
                 } finally {
                     TRANSFER_LISTENER_STACK_DEPTH.set(stackDepth);
                 }
                 return;
             }
         }
-
         try {
             eventExecutor.execute(new Runnable() {
                 @Override
@@ -156,13 +210,13 @@ public class DefaultChannelTranferPromise extends DefaultChannelPromise implemen
 
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            notifyTransferListeners0(amount,total,transferListeners);
+            notifyTransferListeners0(amount, total, transferListeners);
         } else {
             try {
                 executor.execute(new Runnable() {
                     @Override
                     public void run() {
-                        notifyTransferListeners0(amount,total,transferListeners);
+                        notifyTransferListeners0(amount, total, transferListeners);
                     }
                 });
             } catch (Throwable t) {
@@ -172,22 +226,19 @@ public class DefaultChannelTranferPromise extends DefaultChannelPromise implemen
     }
 
     private static void notifyTransferListeners0(long amount, long total, Iterable<TransferFutureListener> listeners) {
-        for (TransferFutureListener l : listeners){
-            notifyTranferListener0(amount,total,l);
+        for (TransferFutureListener l : listeners) {
+            notifyTranferListener0(amount, total, l);
         }
     }
 
     private static void notifyTranferListener0(long amount, long total, TransferFutureListener l) {
         try {
-            l.onTransfered(amount,total);
+            l.onTransfered(amount, total);
         } catch (Throwable t) {
             if (logger.isWarnEnabled()) {
                 logger.warn("an exception is throw by {}:",
                         DefaultChannelTranferPromise.class.getSimpleName());
             }
-
         }
     }
-
-
 }
