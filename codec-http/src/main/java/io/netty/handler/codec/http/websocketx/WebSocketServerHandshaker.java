@@ -167,9 +167,9 @@ public abstract class WebSocketServerHandshaker {
                             return;
                         }
                         p.addBefore(ctx.name(), "wsencoder", newWebsocketDecoder());
-                        p.replaceAndForward(ctx.name(), "wsdecoder", newWebSocketEncoder());
+                        p.replace(ctx.name(), "wsdecoder", newWebSocketEncoder());
                     } else {
-                        p.replaceAndForward(ctx.name(), "wsdecoder", newWebsocketDecoder());
+                        p.replace(ctx.name(), "wsdecoder", newWebsocketDecoder());
 
                         p.replace(HttpResponseEncoder.class, "wsencoder", newWebSocketEncoder());
                     }

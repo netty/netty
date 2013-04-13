@@ -50,7 +50,7 @@ class WebSocketClientProtocolHandshakeHandler extends ChannelInboundMessageHandl
             handshaker.finishHandshake(ctx.channel(), msg);
             ctx.fireUserEventTriggered(
                     WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_COMPLETE);
-            ctx.pipeline().removeAndForward(this);
+            ctx.pipeline().remove(this);
             return;
         }
         throw new IllegalStateException("WebSocketClientHandshaker should have been non finished yet");

@@ -401,33 +401,22 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelPipeline remove(ChannelHandler handler) {
-        remove(getContextOrDie(handler), false);
-        return this;
-    }
-
-    @Override
-    public ChannelPipeline removeAndForward(ChannelHandler handler) {
-        remove(getContextOrDie(handler), true);
+        remove(getContextOrDie(handler));
         return this;
     }
 
     @Override
     public ChannelHandler remove(String name) {
-        return remove(getContextOrDie(name), false).handler();
-    }
-
-    @Override
-    public ChannelHandler removeAndForward(String name) {
-        return remove(getContextOrDie(name), true).handler();
+        return remove(getContextOrDie(name)).handler();
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public <T extends ChannelHandler> T remove(Class<T> handlerType) {
-        return (T) remove(getContextOrDie(handlerType), false).handler();
+        return (T) remove(getContextOrDie(handlerType)).handler();
     }
 
-    private DefaultChannelHandlerContext remove(final DefaultChannelHandlerContext ctx, final boolean forward) {
+    private DefaultChannelHandlerContext remove(final DefaultChannelHandlerContext ctx) {
         assert ctx != head && ctx != tail;
 
         DefaultChannelHandlerContext context;
@@ -435,14 +424,14 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         synchronized (this) {
             if (!ctx.channel().isRegistered() || ctx.executor().inEventLoop()) {
-                remove0(ctx, forward);
+                remove0(ctx);
                 return ctx;
             } else {
                future = ctx.executor().submit(new Runnable() {
                    @Override
                    public void run() {
                        synchronized (DefaultChannelPipeline.this) {
-                           remove0(ctx, forward);
+                           remove0(ctx);
                        }
                    }
                });
@@ -458,13 +447,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         return context;
     }
 
-    @SuppressWarnings("unchecked")
-    @Override
-    public <T extends ChannelHandler> T removeAndForward(Class<T> handlerType) {
-        return (T) remove(getContextOrDie(handlerType), true).handler();
-    }
-
-    private void remove0(DefaultChannelHandlerContext ctx, boolean forward) {
+    private void remove0(DefaultChannelHandlerContext ctx) {
         callBeforeRemove(ctx);
 
         DefaultChannelHandlerContext prev = ctx.prev;
@@ -473,7 +456,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         next.prev = prev;
         name2ctx.remove(ctx.name());
 
-        callAfterRemove(ctx, prev, next, forward);
+        callAfterRemove(ctx, prev, next);
     }
 
     @Override
@@ -481,7 +464,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         if (head.next == tail) {
             throw new NoSuchElementException();
         }
-        return remove(head.next, false).handler();
+        return remove(head.next).handler();
     }
 
     @Override
@@ -489,41 +472,30 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         if (head.next == tail) {
             throw new NoSuchElementException();
         }
-        return remove(tail.prev, false).handler();
+        return remove(tail.prev).handler();
     }
 
     @Override
     public ChannelPipeline replace(ChannelHandler oldHandler, String newName, ChannelHandler newHandler) {
-        replace(getContextOrDie(oldHandler), newName, newHandler, false);
-        return this;
-    }
-
-    @Override
-    public ChannelPipeline replaceAndForward(ChannelHandler oldHandler, String newName, ChannelHandler newHandler) {
-        replace(getContextOrDie(oldHandler), newName, newHandler, true);
+        replace(getContextOrDie(oldHandler), newName, newHandler);
         return this;
     }
 
     @Override
     public ChannelHandler replace(String oldName, String newName, ChannelHandler newHandler) {
-        return replace(getContextOrDie(oldName), newName, newHandler, false);
-    }
-
-    @Override
-    public ChannelHandler replaceAndForward(String oldName, String newName, ChannelHandler newHandler) {
-        return replace(getContextOrDie(oldName), newName, newHandler, true);
+        return replace(getContextOrDie(oldName), newName, newHandler);
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public <T extends ChannelHandler> T replace(
             Class<T> oldHandlerType, String newName, ChannelHandler newHandler) {
-        return (T) replace(getContextOrDie(oldHandlerType), newName, newHandler, false);
+        return (T) replace(getContextOrDie(oldHandlerType), newName, newHandler);
     }
 
     private ChannelHandler replace(
             final DefaultChannelHandlerContext ctx, final String newName,
-            ChannelHandler newHandler, final boolean forward) {
+            ChannelHandler newHandler) {
 
         assert ctx != head && ctx != tail;
 
@@ -538,7 +510,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
                     new DefaultChannelHandlerContext(this, ctx.executor, newName, newHandler);
 
             if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
-                replace0(ctx, newName, newCtx, forward);
+                replace0(ctx, newName, newCtx);
 
                 return ctx.handler();
             } else {
@@ -546,7 +518,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
                     @Override
                     public void run() {
                         synchronized (DefaultChannelPipeline.this) {
-                            replace0(ctx, newName, newCtx, forward);
+                            replace0(ctx, newName, newCtx);
                         }
                     }
                 });
@@ -561,15 +533,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         return ctx.handler();
     }
 
-    @SuppressWarnings("unchecked")
-    @Override
-    public <T extends ChannelHandler> T replaceAndForward(
-            Class<T> oldHandlerType, String newName, ChannelHandler newHandler) {
-        return (T) replace(getContextOrDie(oldHandlerType), newName, newHandler, true);
-    }
-
     private void replace0(DefaultChannelHandlerContext ctx, String newName,
-                          DefaultChannelHandlerContext newCtx, boolean forward) {
+                          DefaultChannelHandlerContext newCtx) {
         boolean sameName = ctx.name().equals(newName);
 
         DefaultChannelHandlerContext prev = ctx.prev;
@@ -592,7 +557,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         ChannelPipelineException addException = null;
         boolean removed = false;
         try {
-            callAfterRemove(ctx, newCtx, newCtx, forward);
+            callAfterRemove(ctx, newCtx, newCtx);
             removed = true;
         } catch (ChannelPipelineException e) {
             removeException = e;
@@ -646,7 +611,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         } catch (Throwable t) {
             boolean removed = false;
             try {
-                remove((DefaultChannelHandlerContext) ctx, false);
+                remove((DefaultChannelHandlerContext) ctx);
                 removed = true;
             } catch (Throwable t2) {
                 if (logger.isWarnEnabled()) {
@@ -678,7 +643,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     private static void callAfterRemove(
             final DefaultChannelHandlerContext ctx, DefaultChannelHandlerContext ctxPrev,
-            DefaultChannelHandlerContext ctxNext, boolean forward) {
+            DefaultChannelHandlerContext ctxNext) {
 
         final ChannelHandler handler = ctx.handler();
 
@@ -691,11 +656,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
                     ".afterRemove() has thrown an exception.", t);
         }
 
-        if (forward) {
-            ctx.forwardBufferContent(ctxPrev, ctxNext);
-        } else {
-            ctx.clearBuffer();
-        }
+        ctx.forwardBufferContent(ctxPrev, ctxNext);
 
         ctx.setRemoved();
     }
