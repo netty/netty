@@ -329,7 +329,7 @@ public class DefaultChannelPipelineTest {
                 pipeline.context(handler1).inboundByteBuffer().writeLong(8);
                 assertEquals(8, pipeline.context(handler1).inboundByteBuffer().readableBytes());
                 assertEquals(0, pipeline.context(handler2).inboundByteBuffer().readableBytes());
-                pipeline.removeAndForward(handler1);
+                pipeline.remove(handler1);
                 assertEquals(8, pipeline.context(handler2).inboundByteBuffer().readableBytes());
                 latch.countDown();
             }
@@ -355,7 +355,7 @@ public class DefaultChannelPipelineTest {
             public void run() {
                 pipeline.context(handler1).inboundByteBuffer().writeLong(8);
                 assertEquals(8, pipeline.context(handler1).inboundByteBuffer().readableBytes());
-                pipeline.replaceAndForward(handler1, "handler2", handler2);
+                pipeline.replace(handler1, "handler2", handler2);
                 assertEquals(8, pipeline.context(handler2).inboundByteBuffer().readableBytes());
                 latch.countDown();
             }
@@ -383,7 +383,7 @@ public class DefaultChannelPipelineTest {
                 pipeline.context(handler2).outboundByteBuffer().writeLong(8);
                 assertEquals(8, pipeline.context(handler2).outboundByteBuffer().readableBytes());
                 assertEquals(0, pipeline.context(handler1).outboundByteBuffer().readableBytes());
-                pipeline.removeAndForward(handler2);
+                pipeline.remove(handler2);
                 assertEquals(8, pipeline.context(handler1).outboundByteBuffer().readableBytes());
                 latch.countDown();
             }
@@ -409,7 +409,7 @@ public class DefaultChannelPipelineTest {
             public void run() {
                 pipeline.context(handler1).outboundByteBuffer().writeLong(8);
                 assertEquals(8, pipeline.context(handler1).outboundByteBuffer().readableBytes());
-                pipeline.replaceAndForward(handler1, "handler2", handler2);
+                pipeline.replace(handler1, "handler2", handler2);
                 assertEquals(8, pipeline.context(handler2).outboundByteBuffer().readableBytes());
                 latch.countDown();
             }
@@ -439,7 +439,7 @@ public class DefaultChannelPipelineTest {
                 assertEquals(8, pipeline.context(handler1).outboundByteBuffer().readableBytes());
                 assertEquals(8, pipeline.context(handler1).inboundByteBuffer().readableBytes());
 
-                pipeline.replaceAndForward(handler1, "handler2", handler2);
+                pipeline.replace(handler1, "handler2", handler2);
                 assertEquals(8, pipeline.context(handler2).outboundByteBuffer().readableBytes());
                 assertEquals(8, pipeline.context(handler2).inboundByteBuffer().readableBytes());
 
@@ -479,7 +479,7 @@ public class DefaultChannelPipelineTest {
                 assertEquals(0, pipeline.context(handler1).outboundByteBuffer().readableBytes());
                 assertEquals(0, pipeline.context(handler3).inboundByteBuffer().readableBytes());
 
-                pipeline.removeAndForward(handler2);
+                pipeline.remove(handler2);
                 assertEquals(8, pipeline.context(handler1).outboundByteBuffer().readableBytes());
                 assertEquals(8, pipeline.context(handler3).inboundByteBuffer().readableBytes());
                 latch.countDown();
@@ -509,7 +509,7 @@ public class DefaultChannelPipelineTest {
                 pipeline.context(handler1).inboundMessageBuffer().add(new Object());
                 assertEquals(1, pipeline.context(handler1).inboundMessageBuffer().size());
                 assertEquals(0, pipeline.context(handler2).inboundMessageBuffer().size());
-                pipeline.removeAndForward(handler1);
+                pipeline.remove(handler1);
                 assertEquals(1, pipeline.context(handler2).inboundMessageBuffer().size());
                 latch.countDown();
             }
@@ -535,7 +535,7 @@ public class DefaultChannelPipelineTest {
             public void run() {
                 pipeline.context(handler1).inboundMessageBuffer().add(new Object());
                 assertEquals(1, pipeline.context(handler1).inboundMessageBuffer().size());
-                pipeline.replaceAndForward(handler1, "handler2", handler2);
+                pipeline.replace(handler1, "handler2", handler2);
                 assertEquals(1, pipeline.context(handler2).inboundMessageBuffer().size());
                 latch.countDown();
             }
@@ -563,7 +563,7 @@ public class DefaultChannelPipelineTest {
                 pipeline.context(handler2).outboundMessageBuffer().add(new Object());
                 assertEquals(1, pipeline.context(handler2).outboundMessageBuffer().size());
                 assertEquals(0, pipeline.context(handler1).outboundMessageBuffer().size());
-                pipeline.removeAndForward(handler2);
+                pipeline.remove(handler2);
                 assertEquals(1, pipeline.context(handler1).outboundMessageBuffer().size());
                 latch.countDown();
             }
@@ -589,7 +589,7 @@ public class DefaultChannelPipelineTest {
             public void run() {
                 pipeline.context(handler1).outboundMessageBuffer().add(new Object());
                 assertEquals(1, pipeline.context(handler1).outboundMessageBuffer().size());
-                pipeline.replaceAndForward(handler1, "handler2", handler2);
+                pipeline.replace(handler1, "handler2", handler2);
                 assertEquals(1, pipeline.context(handler2).outboundMessageBuffer().size());
                 latch.countDown();
             }
@@ -619,7 +619,7 @@ public class DefaultChannelPipelineTest {
                 assertEquals(1, pipeline.context(handler1).outboundMessageBuffer().size());
                 assertEquals(1, pipeline.context(handler1).inboundMessageBuffer().size());
 
-                pipeline.replaceAndForward(handler1, "handler2", handler2);
+                pipeline.replace(handler1, "handler2", handler2);
                 assertEquals(1, pipeline.context(handler2).outboundMessageBuffer().size());
                 assertEquals(1, pipeline.context(handler2).inboundMessageBuffer().size());
 
@@ -692,7 +692,7 @@ public class DefaultChannelPipelineTest {
                 assertEquals(0, pipeline.context(handler1).outboundMessageBuffer().size());
                 assertEquals(0, pipeline.context(handler3).inboundMessageBuffer().size());
 
-                pipeline.removeAndForward(handler2);
+                pipeline.remove(handler2);
                 assertEquals(1, pipeline.context(handler1).outboundMessageBuffer().size());
                 assertEquals(1, pipeline.context(handler3).inboundMessageBuffer().size());
                 latch.countDown();
