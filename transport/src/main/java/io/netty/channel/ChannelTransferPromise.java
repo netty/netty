@@ -19,12 +19,12 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 
 /**
- * Special {@link ChannelPromise} which can be notify the transferred bytes amount.
+ * Special {@link ChannelPromise} which will be notified once the associated bytes is transferring.
  */
 public interface ChannelTransferPromise extends ChannelTransferFuture, ChannelPromise {
 
     /**
-     * Set the current transferred bytes amount
+     * Increment the current transferred bytes amount
      * */
     void incrementTransferredBytes(long amount);
 

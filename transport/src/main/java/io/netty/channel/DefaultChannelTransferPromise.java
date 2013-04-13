@@ -21,9 +21,6 @@ import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * The default {@link ChannelTransferPromise} implementation.  It is recommended to use
  * {@link Channel#newTransferPromise(long)} to create a new {@link ChannelTransferPromise} rather than calling the
@@ -36,8 +33,7 @@ public class DefaultChannelTransferPromise extends DefaultChannelPromise impleme
     private static final ThreadLocal<Integer> TRANSFER_LISTENER_STACK_DEPTH = new ThreadLocal<Integer>();
     private final long total;
     private long amount;
-    //now just for simple
-    private List<TransferFutureListener> transferListeners;
+    private Object transferListeners; //can be TransferFutureListener or DefaultTransferFutureListeners;
     public DefaultChannelTransferPromise(Channel channel, long total) {
         super(channel);
         this.total = total;
@@ -81,13 +77,13 @@ public class DefaultChannelTransferPromise extends DefaultChannelPromise impleme
 
     @Override
     public ChannelTransferPromise await() throws InterruptedException {
-        this.await();
+        super.await();
         return this;
     }
 
     @Override
     public ChannelTransferPromise awaitUninterruptibly() {
-        this.awaitUninterruptibly();
+        super.awaitUninterruptibly();
         return this;
     }
 
@@ -110,17 +106,25 @@ public class DefaultChannelTransferPromise extends DefaultChannelPromise impleme
         }
 
         if (isDone()) {
-            notifyTranferListener(executor(), amount, total, listener);
+            notifyTransferListener(executor(), amount, total, listener);
         }
         synchronized (this) {
             if (!isDone()) {
                 if (transferListeners == null) {
-                    transferListeners = new ArrayList<TransferFutureListener>();
+                    transferListeners = listener;
+                } else {
+                    if (transferListeners instanceof DefaultTransferListeners) {
+                        ((DefaultTransferListeners) transferListeners).add(listener);
+                    } else {
+                        transferListeners = new DefaultTransferListeners(
+                                (TransferFutureListener) transferListeners, listener);
+                    }
                 }
-                transferListeners.add(listener);
+                return this;
             }
         }
-        notifyTranferListener(executor(), amount, total, listener);
+
+        notifyTransferListener(executor(), amount, total, listener);
         return this;
     }
 
@@ -131,20 +135,25 @@ public class DefaultChannelTransferPromise extends DefaultChannelPromise impleme
         }
         if (isDone()) {
             for (TransferFutureListener l : listeners) {
-                notifyTranferListener(executor(), amount, total, l);
+                if (l == null) {
+                    break;
+                }
+                notifyTransferListener(executor(), amount, total, l);
             }
         }
         synchronized (this) {
-            if (!isDone()) {
-                if (transferListeners == null) {
-                    transferListeners = new ArrayList<TransferFutureListener>();
+            Object localTransferListeners = this.transferListeners;
+            if (localTransferListeners == null) {
+                localTransferListeners = new DefaultTransferListeners();
+            }
+            DefaultTransferListeners transferListeners = (DefaultTransferListeners) localTransferListeners;
+            for (TransferFutureListener l : listeners) {
+                if (l == null) {
+                    break;
                 }
-                for (TransferFutureListener l : listeners) {
-                    if (l == null) {
-                        break;
-                    }
+                if (!isDone()) {
                     transferListeners.add(l);
-                    notifyTranferListener(executor(), amount, total, l);
+                    notifyTransferListener(executor(), amount, total, l);
                 }
             }
         }
@@ -163,7 +172,13 @@ public class DefaultChannelTransferPromise extends DefaultChannelPromise impleme
             return this;
         }
         synchronized (this) {
-            transferListeners.remove(listener);
+            if (!isDone()) {
+                if (transferListeners instanceof DefaultTransferListeners) {
+                    ((DefaultTransferListeners) transferListeners).remove(listener);
+                } else if (transferListeners == listener) {
+                    transferListeners = null;
+                }
+            }
         }
         return this;
     }
@@ -181,13 +196,13 @@ public class DefaultChannelTransferPromise extends DefaultChannelPromise impleme
         }
         synchronized (this) {
             for (TransferFutureListener l : listeners) {
-                transferListeners.remove(l);
+                ((DefaultTransferListeners) transferListeners).remove(l);
             }
         }
         return this;
     }
 
-    protected static void notifyTranferListener(final EventExecutor eventExecutor, final long amount,
+    protected static void notifyTransferListener(final EventExecutor eventExecutor, final long amount,
                                                 final long total, final TransferFutureListener l) {
         if (eventExecutor.inEventLoop()) {
             Integer stackDepth = TRANSFER_LISTENER_STACK_DEPTH.get();
@@ -197,7 +212,7 @@ public class DefaultChannelTransferPromise extends DefaultChannelPromise impleme
             if (stackDepth < MAX_LISTENER_STACK_DEPTH) {
                 TRANSFER_LISTENER_STACK_DEPTH.set(stackDepth + 1);
                 try {
-                    notifyTranferListener0(amount, total, l);
+                    notifyTransferListener0(amount, total, l);
                 } finally {
                     TRANSFER_LISTENER_STACK_DEPTH.set(stackDepth);
                 }
@@ -208,7 +223,7 @@ public class DefaultChannelTransferPromise extends DefaultChannelPromise impleme
             eventExecutor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    notifyTranferListener(eventExecutor, amount, total, l);
+                    notifyTransferListener(eventExecutor, amount, total, l);
                 }
             });
         } catch (Throwable t) {
@@ -217,19 +232,27 @@ public class DefaultChannelTransferPromise extends DefaultChannelPromise impleme
     }
 
     private void notifyTransferListeners(final long amount) {
-        if (transferListeners == null || transferListeners.isEmpty()) {
+        if (transferListeners == null) {
             return;
         }
 
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            notifyTransferListeners0(amount, total, transferListeners);
+            if (transferListeners instanceof DefaultTransferListeners) {
+                notifyTransferListeners0(amount, total, (DefaultTransferListeners) transferListeners);
+            } else {
+                notifyTransferListener0(amount, total, (TransferFutureListener) transferListeners);
+            }
         } else {
             try {
                 executor.execute(new Runnable() {
                     @Override
                     public void run() {
-                        notifyTransferListeners0(amount, total, transferListeners);
+                        if (transferListeners instanceof DefaultTransferListeners) {
+                            notifyTransferListeners0(amount, total, (DefaultTransferListeners) transferListeners);
+                        } else {
+                            notifyTransferListener0(amount, total, (TransferFutureListener) transferListeners);
+                        }
                     }
                 });
             } catch (Throwable t) {
@@ -238,15 +261,16 @@ public class DefaultChannelTransferPromise extends DefaultChannelPromise impleme
         }
     }
 
-    private static void notifyTransferListeners0(long amount, long total, Iterable<TransferFutureListener> listeners) {
-        for (TransferFutureListener l : listeners) {
-            notifyTranferListener0(amount, total, l);
+    private static void notifyTransferListeners0(long amount, long total, DefaultTransferListeners listeners) {
+        final TransferFutureListener[] allListeners = listeners.listeners();
+        for (TransferFutureListener l : allListeners) {
+            notifyTransferListener0(amount, total, l);
         }
     }
 
-    private static void notifyTranferListener0(long amount, long total, TransferFutureListener l) {
+    private static void notifyTransferListener0(long amount, long total, TransferFutureListener l) {
         try {
-            l.onTransfered(amount, total);
+            l.onTransferred(amount, total);
         } catch (Throwable t) {
             if (logger.isWarnEnabled()) {
                 logger.warn("an exception is throw by {}:",

@@ -19,13 +19,40 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 
 /**
- * This interface defined the methods which an {@link ChannelTransferPromise} should use
+ * An special {@link ChannelFuture} which is used to indicate the {@link FileRegion} transfer progress
  */
 public interface ChannelTransferFuture extends ChannelFuture {
 
+    /**
+     * Adds the specified listener to this future.  The
+     * specified listener is notified when this bytes associated with this if being transferred.
+     * If this future is already completed, the specified listener is notified immediately.
+     */
     ChannelTransferFuture addTransferFutureListener(TransferFutureListener listener);
+
+    /**
+     * Adds the specified listeners to this future.  The
+     * specified listeners is notified when this bytes associated with this if being transferred.
+     * If this future is already completed, the specified listeners is notified immediately.
+     */
     ChannelTransferFuture addTransferFutureListeners(TransferFutureListener ... listeners);
+
+    /**
+     * Removes the specified listener from this future.
+     * The specified listener is no longer notified when this
+     * future is {@linkplain #isDone() done}.  If the specified
+     * listener is not associated with this future, this method
+     * does nothing and returns silently.
+     */
     ChannelTransferFuture removeTransferFutureListener(TransferFutureListener listener);
+
+    /**
+     * Removes the specified listener from this future.
+     * The specified listener is no longer notified when this
+     * future is {@linkplain #isDone() done}.  If the specified
+     * listener is not associated with this future, this method
+     * does nothing and returns silently.
+     */
     ChannelTransferFuture removeTransferFutureListeners(TransferFutureListener ... listeners);
 
     @Override

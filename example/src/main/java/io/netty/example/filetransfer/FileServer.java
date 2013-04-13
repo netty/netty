@@ -110,7 +110,7 @@ public class FileServer {
                 ChannelTransferPromise promise = ctx.newTransferPromise(region.count());
                 promise.addTransferFutureListener(new TransferFutureListener() {
                     @Override
-                    public void onTransfered(long amount, long total) throws Exception {
+                    public void onTransferred(long amount, long total) throws Exception {
                         System.out.println("amount :" + amount + " total :" + total);
                     }
                 });
