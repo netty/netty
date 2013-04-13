@@ -1536,7 +1536,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelTransferPromise newTransferPromise(long  total) {
-        return new DefaultChannelTranferPromise(channel(), executor(), total);
+        return new DefaultChannelTransferPromise(channel(), executor(), total);
     }
 
     @Override

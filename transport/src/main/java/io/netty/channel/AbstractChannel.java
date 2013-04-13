@@ -308,7 +308,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public ChannelTransferPromise newTransferPromise(long total) {
-        return new DefaultChannelTranferPromise(this, total);
+        return new DefaultChannelTransferPromise(this, total);
     }
 
     @Override

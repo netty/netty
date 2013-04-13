@@ -25,30 +25,31 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The default {@link ChannelTransferPromise} implementation.  It is recommended to use {@link Channel#newPromise()} to
- * create a new {@link ChannelTransferPromise} rather than calling the constructor explicitly.
+ * The default {@link ChannelTransferPromise} implementation.  It is recommended to use
+ * {@link Channel#newTransferPromise(long)} to create a new {@link ChannelTransferPromise} rather than calling the
+ * constructor explicitly.
  */
-public class DefaultChannelTranferPromise extends DefaultChannelPromise implements ChannelTransferPromise {
+public class DefaultChannelTransferPromise extends DefaultChannelPromise implements ChannelTransferPromise {
     private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(DefaultChannelTranferPromise.class);
+            InternalLoggerFactory.getInstance(DefaultChannelTransferPromise.class);
     private static final int MAX_LISTENER_STACK_DEPTH = 8;
     private static final ThreadLocal<Integer> TRANSFER_LISTENER_STACK_DEPTH = new ThreadLocal<Integer>();
     private final long total;
     private long amount;
     //now just for simple
     private List<TransferFutureListener> transferListeners;
-    public DefaultChannelTranferPromise(Channel channel, long total) {
+    public DefaultChannelTransferPromise(Channel channel, long total) {
         super(channel);
         this.total = total;
     }
 
-    public DefaultChannelTranferPromise(Channel channel, EventExecutor executor, long total) {
+    public DefaultChannelTransferPromise(Channel channel, EventExecutor executor, long total) {
         super(channel, executor);
         this.total = total;
     }
 
     @Override
-    public void setTransferedAmount(long amount) {
+    public void incrementTransferredBytes(long amount) {
         this.amount = amount;
         logger.info("update amount :{}", amount);
         notifyTransferListeners(amount);
@@ -79,6 +80,18 @@ public class DefaultChannelTranferPromise extends DefaultChannelPromise implemen
     }
 
     @Override
+    public ChannelTransferPromise await() throws InterruptedException {
+        this.await();
+        return this;
+    }
+
+    @Override
+    public ChannelTransferPromise awaitUninterruptibly() {
+        this.awaitUninterruptibly();
+        return this;
+    }
+
+    @Override
     public ChannelTransferPromise sync() throws InterruptedException {
         super.sync();
         return this;
@@ -91,7 +104,7 @@ public class DefaultChannelTranferPromise extends DefaultChannelPromise implemen
     }
 
     @Override
-    public ChannelTransferSensor addTransferFutureListner(TransferFutureListener listener) {
+    public ChannelTransferPromise addTransferFutureListener(TransferFutureListener listener) {
         if (listener == null) {
             throw new NullPointerException("listener can not be null");
         }
@@ -112,7 +125,7 @@ public class DefaultChannelTranferPromise extends DefaultChannelPromise implemen
     }
 
     @Override
-    public ChannelTransferSensor addTransferFutureListeners(TransferFutureListener... listeners) {
+    public ChannelTransferPromise addTransferFutureListeners(TransferFutureListener... listeners) {
         if (listeners == null) {
             throw new NullPointerException("listeners can not be null");
         }
@@ -139,7 +152,7 @@ public class DefaultChannelTranferPromise extends DefaultChannelPromise implemen
     }
 
     @Override
-    public ChannelTransferSensor removeTransferFutureListener(TransferFutureListener listener) {
+    public ChannelTransferPromise removeTransferFutureListener(TransferFutureListener listener) {
         if (listener == null) {
             throw new NullPointerException("listener can not be null");
         }
@@ -156,7 +169,7 @@ public class DefaultChannelTranferPromise extends DefaultChannelPromise implemen
     }
 
     @Override
-    public ChannelTransferSensor removeTransferFutureListeners(TransferFutureListener... listeners) {
+    public ChannelTransferPromise removeTransferFutureListeners(TransferFutureListener... listeners) {
         if (listeners == null) {
             throw new NullPointerException("listeners can not be null");
         }
@@ -237,7 +250,7 @@ public class DefaultChannelTranferPromise extends DefaultChannelPromise implemen
         } catch (Throwable t) {
             if (logger.isWarnEnabled()) {
                 logger.warn("an exception is throw by {}:",
-                        DefaultChannelTranferPromise.class.getSimpleName());
+                        DefaultChannelTransferPromise.class.getSimpleName());
             }
         }
     }

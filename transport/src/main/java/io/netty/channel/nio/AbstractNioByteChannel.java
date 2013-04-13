@@ -20,7 +20,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultChannelTranferPromise;
+import io.netty.channel.DefaultChannelTransferPromise;
 import io.netty.channel.FileRegion;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import java.io.IOException;
@@ -185,8 +185,8 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                         return;
                     } else {
                         writtenBytes += localWrittenBytes;
-                        if (promise instanceof DefaultChannelTranferPromise) {
-                            ((DefaultChannelTranferPromise) promise).setTransferedAmount(writtenBytes);
+                        if (promise instanceof DefaultChannelTransferPromise) {
+                            ((DefaultChannelTransferPromise) promise).incrementTransferredBytes(writtenBytes);
                         }
                         if (writtenBytes >= region.count()) {
                             region.release();

@@ -108,7 +108,7 @@ public class FileServer {
                 ctx.write(file + " " + file.length() + '\n');
                 FileRegion region = new DefaultFileRegion(new FileInputStream(file).getChannel(), 0, file.length());
                 ChannelTransferPromise promise = ctx.newTransferPromise(region.count());
-                promise.addTransferFutureListner(new TransferFutureListener() {
+                promise.addTransferFutureListener(new TransferFutureListener() {
                     @Override
                     public void onTransfered(long amount, long total) throws Exception {
                         System.out.println("amount :" + amount + " total :" + total);

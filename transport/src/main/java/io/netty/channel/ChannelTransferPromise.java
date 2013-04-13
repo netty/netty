@@ -19,16 +19,26 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 
 /**
- * Special {@link ChannelPromise} which can be notify the transfered bytes amount.
+ * Special {@link ChannelPromise} which can be notify the transferred bytes amount.
  */
-public interface ChannelTransferPromise extends ChannelPromise, ChannelTransferSensor {
+public interface ChannelTransferPromise extends ChannelTransferFuture, ChannelPromise {
+
     /**
-     * Set the current transfered bytes amount
+     * Set the current transferred bytes amount
      * */
-    void setTransferedAmount(long amount);
+    void incrementTransferredBytes(long amount);
 
     @Override
-    ChannelTransferPromise removeListeners(GenericFutureListener<? extends Future<Void>>... listeners);
+    ChannelTransferPromise addTransferFutureListener(TransferFutureListener listener);
+
+    @Override
+    ChannelTransferPromise addTransferFutureListeners(TransferFutureListener... listeners);
+
+    @Override
+    ChannelTransferPromise removeTransferFutureListener(TransferFutureListener listener);
+
+    @Override
+    ChannelTransferPromise removeTransferFutureListeners(TransferFutureListener... listeners);
 
     @Override
     ChannelTransferPromise addListener(GenericFutureListener<? extends Future<Void>> listener);
@@ -40,14 +50,17 @@ public interface ChannelTransferPromise extends ChannelPromise, ChannelTransferS
     ChannelTransferPromise removeListener(GenericFutureListener<? extends Future<Void>> listener);
 
     @Override
+    ChannelTransferPromise removeListeners(GenericFutureListener<? extends Future<Void>>... listeners);
+
+    @Override
     ChannelTransferPromise sync() throws InterruptedException;
 
     @Override
     ChannelTransferPromise syncUninterruptibly();
 
     @Override
-    ChannelPromise await() throws InterruptedException;
+    ChannelTransferPromise await() throws InterruptedException;
 
     @Override
-    ChannelPromise awaitUninterruptibly();
+    ChannelTransferPromise awaitUninterruptibly();
 }
