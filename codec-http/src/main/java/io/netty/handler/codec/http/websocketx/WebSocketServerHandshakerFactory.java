@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpRequest;
@@ -113,11 +114,11 @@ public class WebSocketServerHandshakerFactory {
      * @param channel
      *            Channel
      */
-    public static void sendUnsupportedWebSocketVersionResponse(Channel channel) {
+    public static ChannelFuture sendUnsupportedWebSocketVersionResponse(Channel channel) {
         HttpResponse res = new DefaultHttpResponse(
                 HttpVersion.HTTP_1_1,
                 HttpResponseStatus.UPGRADE_REQUIRED);
         res.headers().set(Names.SEC_WEBSOCKET_VERSION, WebSocketVersion.V13.toHttpHeaderValue());
-        channel.write(res);
+        return channel.write(res);
     }
 }
