@@ -18,6 +18,7 @@ package io.netty.channel.oio;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelTransferPromise;
 import io.netty.channel.FileRegion;
 
 import java.io.IOException;
@@ -122,6 +123,9 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
                 return;
             }
             written += localWritten;
+            if (promise instanceof DefaultChannelTransferPromise) {
+                ((DefaultChannelTransferPromise) promise).incrementTransferredBytes(written);
+            }
             if (written >= region.count()) {
                 promise.setSuccess();
                 return;

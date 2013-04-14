@@ -1558,6 +1558,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
+    public ChannelTransferPromise newTransferPromise(long  total) {
+        return new DefaultChannelTransferPromise(channel(), executor(), total);
+    }
+
+    @Override
     public ChannelFuture newSucceededFuture() {
         ChannelFuture succeededFuture = this.succeededFuture;
         if (succeededFuture == null) {
