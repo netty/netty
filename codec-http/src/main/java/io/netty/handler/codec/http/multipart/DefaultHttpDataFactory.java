@@ -93,7 +93,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
 
     /**
      * Note that it is still possible to check later on manually using
-     * {@link AbstractHttpData}.isNameCorrectlySPelledVersusW3c(String name) method
+     * {@link AbstractHttpData}.isValidHtml4Name(String name) method
      *
      * @param checkBadName True to check if names conform to HTML definition ASCII (less than 127)
      * and no characters from "=,; \t\r\n\v\f:", and False to ignore this check.

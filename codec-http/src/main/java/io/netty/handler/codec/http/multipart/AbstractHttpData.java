@@ -44,7 +44,7 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
      * @param name the attribute name to check
      * @return True if the name is conform with the W3C rules
      */
-    public static boolean isNameCorrectlySPelledVersusW3c(String name) {
+    public static boolean isValidHtml4Name(String name) {
         for (int i = 0; i < name.length(); i ++) {
             char c = name.charAt(i);
             if (c > 127) {
@@ -76,7 +76,7 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
         if (name.isEmpty()) {
             throw new IllegalArgumentException("empty name");
         }
-        if (checkBadName && ! isNameCorrectlySPelledVersusW3c(name)) {
+        if (checkBadName && ! isValidHtml4Name(name)) {
             throw new IllegalArgumentException(
                     "name contains non-ascii character or one of the following prohibited characters: " +
                             "=,; \\t\\r\\n\\v\\f: " + name);
