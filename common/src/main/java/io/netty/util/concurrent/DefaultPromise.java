@@ -114,11 +114,11 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                 if (listeners == null) {
                     listeners = listener;
                 } else {
-                    if (listeners instanceof DefaultPromiseListeners) {
-                        ((DefaultPromiseListeners) listeners).add(listener);
+                    if (listeners instanceof EventListeners) {
+                        ((EventListeners) listeners).add(listener);
                     } else {
-                        listeners = new DefaultPromiseListeners(
-                                (GenericFutureListener<? extends Future<V>>) listeners, listener);
+                        listeners = new DefaultEventListeners<GenericFutureListener>(GenericFutureListener.class,
+                                (GenericFutureListener) listeners, listener);
                     }
                 }
                 return this;
@@ -145,6 +145,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public Promise<V> removeListener(GenericFutureListener<? extends Future<V>> listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
@@ -156,8 +157,8 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
         synchronized (this) {
             if (!isDone()) {
-                if (listeners instanceof DefaultPromiseListeners) {
-                    ((DefaultPromiseListeners) listeners).remove(listener);
+                if (listeners instanceof EventListeners) {
+                    ((EventListeners) listeners).remove(listener);
                 } else if (listeners == listener) {
                     listeners = null;
                 }
@@ -474,8 +475,8 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            if (listeners instanceof DefaultPromiseListeners) {
-                notifyListeners0(this, (DefaultPromiseListeners) listeners);
+            if (listeners instanceof EventListeners) {
+                notifyListeners0(this, (EventListeners<GenericFutureListener>) listeners);
             } else {
                 notifyListener0(this, (GenericFutureListener<? extends Future<V>>) listeners);
             }
@@ -487,8 +488,8 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                 executor.execute(new Runnable() {
                     @Override
                     public void run() {
-                        if (listeners instanceof DefaultPromiseListeners) {
-                            notifyListeners0(DefaultPromise.this, (DefaultPromiseListeners) listeners);
+                        if (listeners instanceof EventListeners) {
+                            notifyListeners0(DefaultPromise.this, (EventListeners<GenericFutureListener>) listeners);
                         } else {
                             notifyListener0(
                                     DefaultPromise.this, (GenericFutureListener<? extends Future<V>>) listeners);
@@ -503,7 +504,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     @SuppressWarnings("unchecked")
     private static void notifyListeners0(final Future<?> future,
-                                         DefaultPromiseListeners listeners) {
+                                         EventListeners<GenericFutureListener> listeners) {
         final GenericFutureListener<? extends Future<?>>[] a = listeners.listeners();
         final int size = listeners.size();
         for (int i = 0; i < size; i ++) {

@@ -13,39 +13,50 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.util.concurrent;
 
+import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.EventListener;
 
-final class DefaultPromiseListeners {
-    private GenericFutureListener<? extends Future<?>>[] listeners;
+public class DefaultEventListeners<T extends EventListener> implements EventListeners<T> {
+    private T[] listeners;
     private int size;
 
-    @SuppressWarnings("unchecked")
-    DefaultPromiseListeners(GenericFutureListener<? extends Future<?>> firstListener,
-                            GenericFutureListener<? extends Future<?>> secondListener) {
+    public DefaultEventListeners(Class<T> componentType) {
+        listeners = (T[]) Array.newInstance(componentType, 1);
+        size = 0;
+    }
 
-        listeners = new GenericFutureListener[] { firstListener, secondListener };
+    public DefaultEventListeners(Class<T> componentType, int length) {
+        listeners = (T[]) Array.newInstance(componentType, length);
+        size = 0;
+    }
+
+    public DefaultEventListeners(Class<T> componentType, T firstListener, T secondListener) {
+        listeners = (T[]) Array.newInstance(componentType, 2);
+        listeners [0] = firstListener;
+        listeners [1] = secondListener;
         size = 2;
     }
 
-    void add(GenericFutureListener<? extends Future<?>> l) {
-        GenericFutureListener<? extends Future<?>>[] listeners = this.listeners;
+    @Override
+    public void add(T t) {
+        T[] listeners = this.listeners;
         final int size = this.size;
         if (size == listeners.length) {
             this.listeners = listeners = Arrays.copyOf(listeners, size << 1);
         }
-        listeners[size] = l;
+        listeners[size] = t;
         this.size = size + 1;
     }
 
-    void remove(EventListener l) {
-        final EventListener[] listeners = this.listeners;
+    @Override
+    public void remove(T t) {
+        final T[] listeners = this.listeners;
         int size = this.size;
         for (int i = 0; i < size; i ++) {
-            if (listeners[i] == l) {
+            if (listeners[i] == t) {
                 int listenersToMove = size - i - 1;
                 if (listenersToMove > 0) {
                     System.arraycopy(listeners, i + 1, listeners, i, listenersToMove);
@@ -54,14 +65,15 @@ final class DefaultPromiseListeners {
                 this.size = size;
                 return;
             }
-        }
-    }
+        }    }
 
-    GenericFutureListener<? extends Future<?>>[] listeners() {
+    @Override
+    public T[] listeners() {
         return listeners;
     }
 
-    int size() {
+    @Override
+    public int size() {
         return size;
     }
 }

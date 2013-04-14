@@ -15,7 +15,9 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.DefaultEventListeners;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.EventListeners;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.internal.logging.InternalLogger;
@@ -47,7 +49,6 @@ public class DefaultChannelTransferPromise extends DefaultChannelPromise impleme
     @Override
     public void incrementTransferredBytes(long amount) {
         this.amount = amount;
-        logger.info("update amount :{}", amount);
         notifyTransferListeners(amount);
     }
 
@@ -100,6 +101,7 @@ public class DefaultChannelTransferPromise extends DefaultChannelPromise impleme
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public ChannelTransferPromise addTransferFutureListener(TransferFutureListener listener) {
         if (listener == null) {
             throw new NullPointerException("listener can not be null");
@@ -113,10 +115,11 @@ public class DefaultChannelTransferPromise extends DefaultChannelPromise impleme
                 if (transferListeners == null) {
                     transferListeners = listener;
                 } else {
-                    if (transferListeners instanceof DefaultTransferListeners) {
-                        ((DefaultTransferListeners) transferListeners).add(listener);
+                    if (transferListeners instanceof EventListeners) {
+                        ((EventListeners) transferListeners).add(listener);
                     } else {
-                        transferListeners = new DefaultTransferListeners(
+                        transferListeners = new DefaultEventListeners<TransferFutureListener>(
+                                TransferFutureListener.class,
                                 (TransferFutureListener) transferListeners, listener);
                     }
                 }
@@ -129,6 +132,7 @@ public class DefaultChannelTransferPromise extends DefaultChannelPromise impleme
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public ChannelTransferPromise addTransferFutureListeners(TransferFutureListener... listeners) {
         if (listeners == null) {
             throw new NullPointerException("listeners can not be null");
@@ -144,9 +148,11 @@ public class DefaultChannelTransferPromise extends DefaultChannelPromise impleme
         synchronized (this) {
             Object localTransferListeners = this.transferListeners;
             if (localTransferListeners == null) {
-                localTransferListeners = new DefaultTransferListeners();
+                localTransferListeners =
+                        new DefaultEventListeners<TransferFutureListener>(TransferFutureListener.class);
             }
-            DefaultTransferListeners transferListeners = (DefaultTransferListeners) localTransferListeners;
+            EventListeners<TransferFutureListener> transferListeners =
+                    (EventListeners<TransferFutureListener>) localTransferListeners;
             for (TransferFutureListener l : listeners) {
                 if (l == null) {
                     break;
@@ -161,6 +167,7 @@ public class DefaultChannelTransferPromise extends DefaultChannelPromise impleme
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public ChannelTransferPromise removeTransferFutureListener(TransferFutureListener listener) {
         if (listener == null) {
             throw new NullPointerException("listener can not be null");
@@ -173,8 +180,8 @@ public class DefaultChannelTransferPromise extends DefaultChannelPromise impleme
         }
         synchronized (this) {
             if (!isDone()) {
-                if (transferListeners instanceof DefaultTransferListeners) {
-                    ((DefaultTransferListeners) transferListeners).remove(listener);
+                if (transferListeners instanceof EventListeners) {
+                    ((EventListeners) transferListeners).remove(listener);
                 } else if (transferListeners == listener) {
                     transferListeners = null;
                 }
@@ -184,6 +191,7 @@ public class DefaultChannelTransferPromise extends DefaultChannelPromise impleme
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public ChannelTransferPromise removeTransferFutureListeners(TransferFutureListener... listeners) {
         if (listeners == null) {
             throw new NullPointerException("listeners can not be null");
@@ -196,7 +204,7 @@ public class DefaultChannelTransferPromise extends DefaultChannelPromise impleme
         }
         synchronized (this) {
             for (TransferFutureListener l : listeners) {
-                ((DefaultTransferListeners) transferListeners).remove(l);
+                ((EventListeners) transferListeners).remove(l);
             }
         }
         return this;
@@ -231,6 +239,7 @@ public class DefaultChannelTransferPromise extends DefaultChannelPromise impleme
         }
     }
 
+    @SuppressWarnings("unchecked")
     private void notifyTransferListeners(final long amount) {
         if (transferListeners == null) {
             return;
@@ -238,8 +247,8 @@ public class DefaultChannelTransferPromise extends DefaultChannelPromise impleme
 
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            if (transferListeners instanceof DefaultTransferListeners) {
-                notifyTransferListeners0(amount, total, (DefaultTransferListeners) transferListeners);
+            if (transferListeners instanceof EventListeners) {
+                notifyTransferListeners0(amount, total, (EventListeners<TransferFutureListener>) transferListeners);
             } else {
                 notifyTransferListener0(amount, total, (TransferFutureListener) transferListeners);
             }
@@ -248,8 +257,9 @@ public class DefaultChannelTransferPromise extends DefaultChannelPromise impleme
                 executor.execute(new Runnable() {
                     @Override
                     public void run() {
-                        if (transferListeners instanceof DefaultTransferListeners) {
-                            notifyTransferListeners0(amount, total, (DefaultTransferListeners) transferListeners);
+                        if (transferListeners instanceof EventListeners) {
+                            notifyTransferListeners0(amount, total,
+                                    (EventListeners<TransferFutureListener>) transferListeners);
                         } else {
                             notifyTransferListener0(amount, total, (TransferFutureListener) transferListeners);
                         }
@@ -261,7 +271,8 @@ public class DefaultChannelTransferPromise extends DefaultChannelPromise impleme
         }
     }
 
-    private static void notifyTransferListeners0(long amount, long total, DefaultTransferListeners listeners) {
+    private static void notifyTransferListeners0(long amount, long total,
+                                                 EventListeners<TransferFutureListener> listeners) {
         final TransferFutureListener[] allListeners = listeners.listeners();
         for (TransferFutureListener l : allListeners) {
             notifyTransferListener0(amount, total, l);
