@@ -54,7 +54,7 @@ public interface EventExecutor extends EventExecutorGroup {
     /**
      * Create a new {@link ProgressivePromise}.
      */
-    <V> ProgressivePromise<V> newProgressivePromise(long total);
+    <V> ProgressivePromise<V> newProgressivePromise();
 
     /**
      * Create a new {@link Future} which is marked as successes already. So {@link Future#isSuccess()}

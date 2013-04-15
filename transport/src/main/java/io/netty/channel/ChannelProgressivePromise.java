@@ -58,5 +58,5 @@ public interface ChannelProgressivePromise extends ProgressivePromise<Void>, Cha
     ChannelProgressivePromise setFailure(Throwable cause);
 
     @Override
-    ChannelProgressivePromise setProgress(long progress);
+    ChannelProgressivePromise setProgress(long progress, long total);
 }

@@ -21,16 +21,6 @@ package io.netty.util.concurrent;
  */
 public interface ProgressiveFuture<V> extends Future<V> {
 
-    /**
-     * Returns the current progress of the operation as a positive long integer.
-     */
-    long progress();
-
-    /**
-     * Returns the maximum progress of the operation that signifies the end of operation.
-     */
-    long total();
-
     @Override
     ProgressiveFuture<V> addListener(GenericFutureListener<? extends Future<V>> listener);
 

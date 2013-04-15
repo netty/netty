@@ -187,8 +187,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     } else {
                         writtenBytes += localWrittenBytes;
                         if (promise instanceof ChannelProgressivePromise) {
-                            final ChannelProgressivePromise pp = (ChannelProgressivePromise) promise;
-                            pp.setProgress(pp.progress() + localWrittenBytes);
+                            ((ChannelProgressivePromise) promise).setProgress(writtenBytes, region.count());
                         }
                         if (writtenBytes >= region.count()) {
                             region.release();

@@ -23,7 +23,7 @@ import io.netty.util.concurrent.GenericFutureListener;
 
 /**
  * The default {@link ChannelProgressivePromise} implementation.  It is recommended to use
- * {@link Channel#newProgressivePromise(long)} to create a new {@link ChannelProgressivePromise} rather than calling the
+ * {@link Channel#newProgressivePromise()} to create a new {@link ChannelProgressivePromise} rather than calling the
  * constructor explicitly.
  */
 public class DefaultChannelProgressivePromise
@@ -37,8 +37,7 @@ public class DefaultChannelProgressivePromise
      * @param channel
      *        the {@link Channel} associated with this future
      */
-    public DefaultChannelProgressivePromise(Channel channel, long total) {
-        super(total);
+    public DefaultChannelProgressivePromise(Channel channel) {
         this.channel = channel;
     }
 
@@ -48,8 +47,8 @@ public class DefaultChannelProgressivePromise
      * @param channel
      *        the {@link Channel} associated with this future
      */
-    public DefaultChannelProgressivePromise(Channel channel, EventExecutor executor, long total) {
-        super(executor, total);
+    public DefaultChannelProgressivePromise(Channel channel, EventExecutor executor) {
+        super(executor);
         this.channel = channel;
     }
 
@@ -91,8 +90,8 @@ public class DefaultChannelProgressivePromise
     }
 
     @Override
-    public ChannelProgressivePromise setProgress(long progress) {
-        super.setProgress(progress);
+    public ChannelProgressivePromise setProgress(long progress, long total) {
+        super.setProgress(progress, total);
         return this;
     }
 
