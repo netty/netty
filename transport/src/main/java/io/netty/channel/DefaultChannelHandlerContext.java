@@ -1558,8 +1558,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public ChannelTransferPromise newTransferPromise(long  total) {
-        return new DefaultChannelTransferPromise(channel(), executor(), total);
+    public ChannelProgressivePromise newProgressivePromise(long total) {
+        return new DefaultChannelProgressivePromise(channel(), executor(), total);
     }
 
     @Override

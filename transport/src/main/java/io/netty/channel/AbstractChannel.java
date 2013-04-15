@@ -283,7 +283,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     @Override
     @SuppressWarnings("unchecked")
     public <T> MessageBuf<T> outboundMessageBuffer() {
-        return (MessageBuf<T>) pipeline.outboundMessageBuffer();
+        return pipeline.outboundMessageBuffer();
     }
 
     @Override
@@ -307,8 +307,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelTransferPromise newTransferPromise(long total) {
-        return new DefaultChannelTransferPromise(this, total);
+    public ChannelProgressivePromise newProgressivePromise(long total) {
+        return new DefaultChannelProgressivePromise(this, total);
     }
 
     @Override

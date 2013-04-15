@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,16 +16,18 @@
 package io.netty.channel;
 
 import io.netty.channel.ChannelFlushPromiseNotifier.FlushCheckpoint;
-import io.netty.util.concurrent.DefaultPromise;
+import io.netty.util.concurrent.DefaultProgressivePromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 
 /**
- * The default {@link ChannelPromise} implementation.  It is recommended to use {@link Channel#newPromise()} to create
- * a new {@link ChannelPromise} rather than calling the constructor explicitly.
+ * The default {@link ChannelProgressivePromise} implementation.  It is recommended to use
+ * {@link Channel#newProgressivePromise(long)} to create a new {@link ChannelProgressivePromise} rather than calling the
+ * constructor explicitly.
  */
-public class DefaultChannelPromise extends DefaultPromise<Void> implements ChannelPromise, FlushCheckpoint {
+public class DefaultChannelProgressivePromise
+        extends DefaultProgressivePromise<Void> implements ChannelProgressivePromise, FlushCheckpoint {
 
     private final Channel channel;
 
@@ -35,7 +37,8 @@ public class DefaultChannelPromise extends DefaultPromise<Void> implements Chann
      * @param channel
      *        the {@link Channel} associated with this future
      */
-    public DefaultChannelPromise(Channel channel) {
+    public DefaultChannelProgressivePromise(Channel channel, long total) {
+        super(total);
         this.channel = channel;
     }
 
@@ -45,8 +48,8 @@ public class DefaultChannelPromise extends DefaultPromise<Void> implements Chann
      * @param channel
      *        the {@link Channel} associated with this future
      */
-    public DefaultChannelPromise(Channel channel, EventExecutor executor) {
-        super(executor);
+    public DefaultChannelProgressivePromise(Channel channel, EventExecutor executor, long total) {
+        super(executor, total);
         this.channel = channel;
     }
 
@@ -66,12 +69,12 @@ public class DefaultChannelPromise extends DefaultPromise<Void> implements Chann
     }
 
     @Override
-    public ChannelPromise setSuccess() {
+    public ChannelProgressivePromise setSuccess() {
         return setSuccess(null);
     }
 
     @Override
-    public ChannelPromise setSuccess(Void result) {
+    public ChannelProgressivePromise setSuccess(Void result) {
         super.setSuccess(result);
         return this;
     }
@@ -82,55 +85,61 @@ public class DefaultChannelPromise extends DefaultPromise<Void> implements Chann
     }
 
     @Override
-    public ChannelPromise setFailure(Throwable cause) {
+    public ChannelProgressivePromise setFailure(Throwable cause) {
         super.setFailure(cause);
         return this;
     }
 
     @Override
-    public ChannelPromise addListener(GenericFutureListener<? extends Future<Void>> listener) {
+    public ChannelProgressivePromise setProgress(long progress) {
+        super.setProgress(progress);
+        return this;
+    }
+
+    @Override
+    public ChannelProgressivePromise addListener(GenericFutureListener<? extends Future<Void>> listener) {
         super.addListener(listener);
         return this;
     }
 
     @Override
-    public ChannelPromise addListeners(GenericFutureListener<? extends Future<Void>>... listeners) {
+    public ChannelProgressivePromise addListeners(GenericFutureListener<? extends Future<Void>>... listeners) {
         super.addListeners(listeners);
         return this;
     }
 
     @Override
-    public ChannelPromise removeListener(GenericFutureListener<? extends Future<Void>> listener) {
+    public ChannelProgressivePromise removeListener(GenericFutureListener<? extends Future<Void>> listener) {
         super.removeListener(listener);
         return this;
     }
 
     @Override
-    public ChannelPromise removeListeners(GenericFutureListener<? extends Future<Void>>... listeners) {
+    public ChannelProgressivePromise removeListeners(GenericFutureListener<? extends Future<Void>>... listeners) {
         super.removeListeners(listeners);
         return this;
     }
 
     @Override
-    public ChannelPromise sync() throws InterruptedException {
+    public ChannelProgressivePromise sync() throws InterruptedException {
         super.sync();
         return this;
     }
 
     @Override
-    public ChannelPromise syncUninterruptibly() {
+    public ChannelProgressivePromise syncUninterruptibly() {
         super.syncUninterruptibly();
         return this;
     }
 
     @Override
-    public ChannelPromise await() throws InterruptedException {
+    public ChannelProgressivePromise await() throws InterruptedException {
         super.await();
         return this;
     }
 
     @Override
-    public ChannelPromise awaitUninterruptibly() {
+    public ChannelProgressivePromise awaitUninterruptibly() {
         super.awaitUninterruptibly();
         return this;
     }
@@ -149,7 +158,7 @@ public class DefaultChannelPromise extends DefaultPromise<Void> implements Chann
     }
 
     @Override
-    public ChannelPromise promise() {
+    public ChannelProgressivePromise promise() {
         return this;
     }
 

@@ -41,9 +41,9 @@ interface ChannelPropertyAccess {
     ChannelPromise newPromise();
 
     /**
-     * Return an new {@link ChannelTransferPromise}
+     * Return an new {@link ChannelProgressivePromise}
      */
-    ChannelTransferPromise newTransferPromise(long total);
+    ChannelProgressivePromise newProgressivePromise(long total);
 
     /**
      * Create a new {@link ChannelFuture} which is marked as successes already. So {@link ChannelFuture#isSuccess()}

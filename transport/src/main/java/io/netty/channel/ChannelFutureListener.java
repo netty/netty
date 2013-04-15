@@ -70,4 +70,6 @@ public interface ChannelFutureListener extends GenericFutureListener<ChannelFutu
             }
         }
     };
+
+    // Just a type alias
 }
