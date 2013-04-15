@@ -41,8 +41,8 @@ interface ChannelPropertyAccess {
     ChannelPromise newPromise();
 
     /**
-     *Return an new {@link ChannelTransferPromise}
-     **/
+     * Return an new {@link ChannelTransferPromise}
+     */
     ChannelTransferPromise newTransferPromise(long total);
 
     /**

@@ -19,31 +19,32 @@ import java.util.Arrays;
 import java.util.EventListener;
 
 public final class DefaultEventListeners {
+
     private EventListener[] listeners;
     private int size;
 
-    public DefaultEventListeners(EventListener firstListener, EventListener secondListener) {
+    public DefaultEventListeners(EventListener first, EventListener second) {
         listeners = new EventListener[2];
-        listeners [0] = firstListener;
-        listeners [1] = secondListener;
+        listeners[0] = first;
+        listeners[1] = second;
         size = 2;
     }
 
-    public void add(EventListener t) {
+    public void add(EventListener l) {
         EventListener[] listeners = this.listeners;
         final int size = this.size;
         if (size == listeners.length) {
             this.listeners = listeners = Arrays.copyOf(listeners, size << 1);
         }
-        listeners[size] = t;
+        listeners[size] = l;
         this.size = size + 1;
     }
 
-    public void remove(EventListener t) {
+    public void remove(EventListener l) {
         final EventListener[] listeners = this.listeners;
         int size = this.size;
         for (int i = 0; i < size; i ++) {
-            if (listeners[i] == t) {
+            if (listeners[i] == l) {
                 int listenersToMove = size - i - 1;
                 if (listenersToMove > 0) {
                     System.arraycopy(listeners, i + 1, listeners, i, listenersToMove);
@@ -52,7 +53,8 @@ public final class DefaultEventListeners {
                 this.size = size;
                 return;
             }
-        }    }
+        }
+    }
 
     public EventListener[] listeners() {
         return listeners;
