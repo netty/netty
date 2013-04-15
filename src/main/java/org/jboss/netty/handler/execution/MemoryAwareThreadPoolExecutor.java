@@ -124,7 +124,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * <pre>
  *           --------------------------------&gt; Timeline --------------------------------&gt;
  *
- * Thread X: --- Channel A (Event 2) --- Channel A (Event 1) ---------------------------&gt;
+ * Thread X: --- Channel A (Event 1) --- Channel A (Event 2) ---------------------------&gt;
  *
  * Thread Y: --- Channel A (Event 3) --- Channel B (Event 2) --- Channel B (Event 3) ---&gt;
  *
