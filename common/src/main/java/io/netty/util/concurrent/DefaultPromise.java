@@ -20,7 +20,6 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.util.EventListener;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.TimeUnit.*;
@@ -42,7 +41,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private final EventExecutor executor;
 
     private volatile Object result;
-    private Object listeners; // Can be ChannelFutureListener or DefaultChannelPromiseListeners
+    private Object listeners; // Can be ChannelFutureListener or DefaultFutureListeners
 
     /**
      * The the most significant 24 bits of this field represents the number of waiter threads waiting for this promise
@@ -99,7 +98,6 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public Promise<V> addListener(GenericFutureListener<? extends Future<V>> listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
@@ -115,11 +113,13 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                 if (listeners == null) {
                     listeners = listener;
                 } else {
-                    if (listeners instanceof DefaultEventListeners) {
-                        ((DefaultEventListeners) listeners).add(listener);
+                    if (listeners instanceof DefaultFutureListeners) {
+                        ((DefaultFutureListeners) listeners).add(listener);
                     } else {
-                        listeners = new DefaultEventListeners(
-                                (EventListener) listeners, listener);
+                        @SuppressWarnings("unchecked")
+                        final GenericFutureListener<? extends Future<V>> firstListener =
+                                (GenericFutureListener<? extends Future<V>>) listeners;
+                        listeners = new DefaultFutureListeners(firstListener, listener);
                     }
                 }
                 return this;
@@ -146,7 +146,6 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public Promise<V> removeListener(GenericFutureListener<? extends Future<V>> listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
@@ -158,8 +157,8 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
         synchronized (this) {
             if (!isDone()) {
-                if (listeners instanceof DefaultEventListeners) {
-                    ((DefaultEventListeners) listeners).remove(listener);
+                if (listeners instanceof DefaultFutureListeners) {
+                    ((DefaultFutureListeners) listeners).remove(listener);
                 } else if (listeners == listener) {
                     listeners = null;
                 }
@@ -436,8 +435,8 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         return true;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
+    @SuppressWarnings("unchecked")
     public V getNow() {
         Object result = this.result;
         if (result instanceof CauseHolder || result == SUCCESS) {
@@ -462,7 +461,6 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         state -= 0x10000000000L;
     }
 
-    @SuppressWarnings("unchecked")
     private void notifyListeners() {
         // This method doesn't need synchronization because:
         // 1) This method is always called after synchronized (this) block.
@@ -470,53 +468,60 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         // 2) This method is called only when 'done' is true.  Once 'done'
         //    becomes true, the listener list is never modified - see add/removeListener()
 
+        Object listeners = this.listeners;
         if (listeners == null) {
             return;
         }
 
+        this.listeners = null;
+
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            if (listeners instanceof DefaultEventListeners) {
-                notifyListeners0(this, (DefaultEventListeners) listeners);
+            if (listeners instanceof DefaultFutureListeners) {
+                notifyListeners0(this, (DefaultFutureListeners) listeners);
             } else {
-                notifyListener0(this, (GenericFutureListener<? extends Future<V>>) listeners);
+                @SuppressWarnings("unchecked")
+                final GenericFutureListener<? extends Future<V>> l =
+                        (GenericFutureListener<? extends Future<V>>) listeners;
+                notifyListener0(this, l);
             }
-            listeners = null;
         } else {
-            final Object listeners = this.listeners;
-            this.listeners = null;
             try {
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (listeners instanceof DefaultEventListeners) {
-                            notifyListeners0(DefaultPromise.this, (DefaultEventListeners) listeners);
-                        } else {
-                            notifyListener0(
-                                    DefaultPromise.this, (GenericFutureListener<? extends Future<V>>) listeners);
+                if (listeners instanceof DefaultFutureListeners) {
+                    final DefaultFutureListeners dfl = (DefaultFutureListeners) listeners;
+                    executor.execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            notifyListeners0(DefaultPromise.this, dfl);
                         }
-                    }
-                });
+                    });
+                } else {
+                    @SuppressWarnings("unchecked")
+                    final GenericFutureListener<? extends Future<V>> l =
+                            (GenericFutureListener<? extends Future<V>>) listeners;
+                    executor.execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            notifyListener0(DefaultPromise.this, l);
+                        }
+                    });
+                }
             } catch (Throwable t) {
                 logger.error("Failed to notify listener(s). Event loop terminated?", t);
             }
         }
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    private static void notifyListeners0(final Future<?> future,
-                                         DefaultEventListeners listeners) {
-        final EventListener[] a = listeners.listeners();
+    private static void notifyListeners0(Future<?> future, DefaultFutureListeners listeners) {
+        final GenericFutureListener<?>[] a = listeners.listeners();
         final int size = listeners.size();
         for (int i = 0; i < size; i ++) {
-            notifyListener0(future, (GenericFutureListener) a[i]);
+            notifyListener0(future, a[i]);
         }
     }
 
-    @SuppressWarnings("unchecked")
     protected static void notifyListener(
-            final EventExecutor eventExecutor, final Future<?> future,
-            final GenericFutureListener<? extends Future<?>> l) {
+            final EventExecutor eventExecutor, final Future<?> future, final GenericFutureListener<?> l) {
 
         if (eventExecutor.inEventLoop()) {
             final Integer stackDepth = LISTENER_STACK_DEPTH.get();
@@ -533,11 +538,11 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
         try {
             eventExecutor.execute(new Runnable() {
-            @Override
-            public void run() {
-                notifyListener(eventExecutor, future, l);
-            }
-        });
+                @Override
+                public void run() {
+                    notifyListener(eventExecutor, future, l);
+                }
+            });
         } catch (Throwable t) {
             logger.error("Failed to notify a listener. Event loop terminated?", t);
         }
@@ -549,9 +554,118 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             l.operationComplete(future);
         } catch (Throwable t) {
             if (logger.isWarnEnabled()) {
-                logger.warn(
-                        "An exception was thrown by " +
-                                GenericFutureListener.class.getSimpleName() + '.', t);
+                logger.warn("An exception was thrown by " + l.getClass().getName() + ".operationComplete()", t);
+            }
+        }
+    }
+
+    /**
+     * Returns a {@link GenericProgressiveFutureListener}, an array of {@link GenericProgressiveFutureListener}, or
+     * {@code null}.
+     */
+    private synchronized Object progressiveListeners() {
+        Object listeners = this.listeners;
+        if (listeners == null) {
+            // No listeners added
+            return null;
+        }
+
+        if (listeners instanceof DefaultFutureListeners) {
+            // Copy DefaultFutureListeners into an array of listeners.
+            DefaultFutureListeners dfl = (DefaultFutureListeners) listeners;
+            int progressiveSize = dfl.progressiveSize();
+            switch (progressiveSize) {
+                case 0:
+                    return null;
+                case 1:
+                    for (GenericFutureListener<?> l: dfl.listeners()) {
+                        if (l instanceof GenericProgressiveFutureListener) {
+                            return l;
+                        }
+                    }
+                    return null;
+            }
+
+            GenericFutureListener<?>[] array = dfl.listeners();
+            GenericProgressiveFutureListener<?>[] copy = new GenericProgressiveFutureListener[progressiveSize];
+            for (int i = 0, j = 0; j < progressiveSize; i ++) {
+                GenericFutureListener<?> l = array[i];
+                if (l instanceof GenericProgressiveFutureListener) {
+                    copy[j ++] = (GenericProgressiveFutureListener<?>) l;
+                }
+            }
+
+            return copy;
+        } else if (listeners instanceof GenericProgressiveFutureListener) {
+            return listeners;
+        } else {
+            // Only one listener was added and it's not a progressive listener.
+            return null;
+        }
+    }
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    void notifyProgressiveListeners(final long delta) {
+        final Object listeners = progressiveListeners();
+        if (listeners == null) {
+            return;
+        }
+
+        final ProgressiveFuture<V> self = (ProgressiveFuture<V>) this;
+
+        EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            if (listeners instanceof GenericProgressiveFutureListener[]) {
+                notifyProgressiveListeners0(self, (GenericProgressiveFutureListener<?>[]) listeners, delta);
+            } else {
+                notifyProgressiveListener0(
+                        self, (GenericProgressiveFutureListener<ProgressiveFuture<V>>) listeners, delta);
+            }
+        } else {
+            try {
+                if (listeners instanceof GenericProgressiveFutureListener[]) {
+                    final GenericProgressiveFutureListener<?>[] array =
+                            (GenericProgressiveFutureListener<?>[]) listeners;
+                    executor.execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            notifyProgressiveListeners0(self, array, delta);
+                        }
+                    });
+                } else {
+                    final GenericProgressiveFutureListener<ProgressiveFuture<V>> l =
+                            (GenericProgressiveFutureListener<ProgressiveFuture<V>>) listeners;
+                    executor.execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            notifyProgressiveListener0(self, l, delta);
+                        }
+                    });
+                }
+            } catch (Throwable t) {
+                logger.error("Failed to notify listener(s). Event loop terminated?", t);
+            }
+        }
+    }
+
+    private static void notifyProgressiveListeners0(
+            ProgressiveFuture<?> future, GenericProgressiveFutureListener<?>[] listeners, long delta) {
+        for (GenericProgressiveFutureListener<?> l: listeners) {
+            if (l == null) {
+                break;
+            }
+            notifyProgressiveListener0(future, l, delta);
+        }
+    }
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private static void notifyProgressiveListener0(
+            ProgressiveFuture future, GenericProgressiveFutureListener l, long delta) {
+        try {
+            l.operationProgressed(future, delta);
+        } catch (Throwable t) {
+            if (logger.isWarnEnabled()) {
+                logger.warn("An exception was thrown by " + l.getClass().getName() + ".operationProgressed()", t);
             }
         }
     }

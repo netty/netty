@@ -15,18 +15,14 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.GenericProgressiveFutureListener;
+
 import java.util.EventListener;
 
 /**
  * An {@link EventListener} listener which will be called once the sending task associated with future is
  * being transferred.
  */
-public interface TransferFutureListener extends EventListener {
-    /**
-     * Called once the bytes is being transferred.
-     *
-     * @param amount how many bytes has been transferred
-     * @param total how many bytes need to be transfer
-     * */
-    void onTransferred(long amount, long total) throws Exception;
+public interface ChannelProgressiveFutureListener extends GenericProgressiveFutureListener<ChannelProgressiveFuture> {
+    // Just a type alias
 }
