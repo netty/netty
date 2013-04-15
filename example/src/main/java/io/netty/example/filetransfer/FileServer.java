@@ -106,15 +106,15 @@ public class FileServer {
                 }
                 ctx.write(file + " " + file.length() + '\n');
                 FileRegion region = new DefaultFileRegion(new FileInputStream(file).getChannel(), 0, file.length());
-                ChannelProgressivePromise promise = ctx.newProgressivePromise(region.count());
+                ChannelProgressivePromise promise = ctx.newProgressivePromise();
                 promise.addListener(new ChannelProgressiveFutureListener() {
                     @Override
-                    public void operationProgressed(ChannelProgressiveFuture f, long delta) throws Exception {
-                        System.err.println("progress: " + f.progress() + " / " + f.total() + " (+" + delta + ')');
+                    public void operationProgressed(ChannelProgressiveFuture f, long progress, long total) {
+                        System.err.println("progress: " + progress + " / " + total);
                     }
 
                     @Override
-                    public void operationComplete(ChannelProgressiveFuture future) throws Exception {
+                    public void operationComplete(ChannelProgressiveFuture future) {
                         System.err.println("file transfer complete");
                     }
                 });

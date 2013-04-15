@@ -564,8 +564,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                         written += result;
 
                         if (promise instanceof ChannelProgressivePromise) {
-                            final ChannelProgressivePromise pp = (ChannelProgressivePromise) promise;
-                            pp.setProgress(pp.progress() + result);
+                            ((ChannelProgressivePromise) promise).setProgress(written, region.count());
                         }
 
                         if (written >= region.count()) {

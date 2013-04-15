@@ -605,7 +605,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    void notifyProgressiveListeners(final long delta) {
+    void notifyProgressiveListeners(final long progress, final long total) {
         final Object listeners = progressiveListeners();
         if (listeners == null) {
             return;
@@ -616,10 +616,11 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
             if (listeners instanceof GenericProgressiveFutureListener[]) {
-                notifyProgressiveListeners0(self, (GenericProgressiveFutureListener<?>[]) listeners, delta);
+                notifyProgressiveListeners0(
+                        self, (GenericProgressiveFutureListener<?>[]) listeners, progress, total);
             } else {
                 notifyProgressiveListener0(
-                        self, (GenericProgressiveFutureListener<ProgressiveFuture<V>>) listeners, delta);
+                        self, (GenericProgressiveFutureListener<ProgressiveFuture<V>>) listeners, progress, total);
             }
         } else {
             try {
@@ -629,7 +630,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                     executor.execute(new Runnable() {
                         @Override
                         public void run() {
-                            notifyProgressiveListeners0(self, array, delta);
+                            notifyProgressiveListeners0(self, array, progress, total);
                         }
                     });
                 } else {
@@ -638,7 +639,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                     executor.execute(new Runnable() {
                         @Override
                         public void run() {
-                            notifyProgressiveListener0(self, l, delta);
+                            notifyProgressiveListener0(self, l, progress, total);
                         }
                     });
                 }
@@ -649,20 +650,20 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     private static void notifyProgressiveListeners0(
-            ProgressiveFuture<?> future, GenericProgressiveFutureListener<?>[] listeners, long delta) {
+            ProgressiveFuture<?> future, GenericProgressiveFutureListener<?>[] listeners, long progress, long total) {
         for (GenericProgressiveFutureListener<?> l: listeners) {
             if (l == null) {
                 break;
             }
-            notifyProgressiveListener0(future, l, delta);
+            notifyProgressiveListener0(future, l, progress, total);
         }
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private static void notifyProgressiveListener0(
-            ProgressiveFuture future, GenericProgressiveFutureListener l, long delta) {
+            ProgressiveFuture future, GenericProgressiveFutureListener l, long progress, long total) {
         try {
-            l.operationProgressed(future, delta);
+            l.operationProgressed(future, progress, total);
         } catch (Throwable t) {
             if (logger.isWarnEnabled()) {
                 logger.warn("An exception was thrown by " + l.getClass().getName() + ".operationProgressed()", t);

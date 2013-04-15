@@ -112,8 +112,8 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
         if (outChannel == null) {
             outChannel = Channels.newChannel(os);
         }
-        long written = 0;
 
+        long written = 0;
         for (;;) {
             long localWritten = region.transferTo(outChannel, written);
             if (localWritten == -1) {
@@ -125,7 +125,7 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
             written += localWritten;
             if (promise instanceof ChannelProgressivePromise) {
                 final ChannelProgressivePromise pp = (ChannelProgressivePromise) promise;
-                pp.setProgress(pp.progress() + localWritten);
+                pp.setProgress(written, region.count());
             }
             if (written >= region.count()) {
                 promise.setSuccess();

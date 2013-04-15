@@ -18,70 +18,42 @@ package io.netty.util.concurrent;
 
 public class DefaultProgressivePromise<V> extends DefaultPromise<V> implements ProgressivePromise<V> {
 
-    private final long total;
-    private volatile long progress;
-
     /**
      * Creates a new instance.
      *
-     * It is preferable to use {@link EventExecutor#newProgressivePromise(long)} to create a new progressive promise
+     * It is preferable to use {@link EventExecutor#newProgressivePromise()} to create a new progressive promise
      *
      * @param executor
      *        the {@link EventExecutor} which is used to notify the promise when it progresses or it is complete
      */
-    public DefaultProgressivePromise(EventExecutor executor, long total) {
+    public DefaultProgressivePromise(EventExecutor executor) {
         super(executor);
-        validateTotal(total);
-        this.total = total;
     }
 
-    protected DefaultProgressivePromise(long total) {
-        /* only for subclasses */
-        validateTotal(total);
-        this.total = total;
-    }
-
-    private static void validateTotal(long total) {
-        if (total < 0) {
-            throw new IllegalArgumentException("total: " + total + " (expected: >= 0)");
-        }
-    }
+    protected DefaultProgressivePromise() { /* only for subclasses */ }
 
     @Override
-    public long progress() {
-        return progress;
-    }
-
-    @Override
-    public long total() {
-        return total;
-    }
-
-    @Override
-    public ProgressivePromise<V> setProgress(long progress) {
+    public ProgressivePromise<V> setProgress(long progress, long total) {
         if (progress < 0 || progress > total) {
             throw new IllegalArgumentException(
-                    "progress: " + progress + " (expected: 0 <= progress <= " + total + ')');
+                    "progress: " + progress + " (expected: 0 <= progress <= total (" + total + "))");
         }
 
         if (isDone()) {
             throw new IllegalStateException("complete already");
         }
 
-        long oldProgress = this.progress;
-        this.progress = progress;
-        notifyProgressiveListeners(progress - oldProgress);
+        notifyProgressiveListeners(progress, total);
         return this;
     }
 
     @Override
-    public boolean tryProgress(long progress) {
+    public boolean tryProgress(long progress, long total) {
         if (progress < 0 || progress > total || isDone()) {
             return false;
         }
 
-        this.progress = progress;
-        notifyProgressiveListeners(progress);
+        notifyProgressiveListeners(progress, total);
         return true;
     }
 

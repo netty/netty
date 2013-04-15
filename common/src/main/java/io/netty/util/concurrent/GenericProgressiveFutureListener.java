@@ -17,5 +17,5 @@
 package io.netty.util.concurrent;
 
 public interface GenericProgressiveFutureListener<F extends ProgressiveFuture<?>> extends GenericFutureListener<F> {
-    void operationProgressed(F future, long delta) throws Exception;
+    void operationProgressed(F future, long progress, long total) throws Exception;
 }
