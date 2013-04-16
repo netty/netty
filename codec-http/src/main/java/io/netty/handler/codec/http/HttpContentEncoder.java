@@ -23,8 +23,11 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.MessageToMessageCodec;
+import io.netty.handler.codec.http.HttpHeaders.Names;
+import io.netty.handler.codec.http.HttpHeaders.Values;
 
 import java.util.ArrayDeque;
+import java.util.Collections;
 import java.util.Queue;
 
 /**
@@ -168,27 +171,25 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
 
                 HttpObject[] encoded = encodeContent(message, c);
 
-                if (!HttpHeaders.isTransferEncodingChunked(message) && encoded.length == 3) {
-                    if (headers.contains(HttpHeaders.Names.CONTENT_LENGTH)) {
-                        long length = ((ByteBufHolder) encoded[1]).data().readableBytes() +
-                                ((ByteBufHolder) encoded[2]).data().readableBytes();
-
-                        headers.set(
-                                HttpHeaders.Names.CONTENT_LENGTH,
-                                Long.toString(length));
+                if (encoded[0] instanceof HttpMessage && encoded[encoded.length - 1] instanceof LastHttpContent) {
+                    // Set 'Content-Length' if the length of the content is known.
+                    long contentLength = 0;
+                    for (int i = 1; i < encoded.length; i ++) {
+                        contentLength += ((ByteBufHolder) encoded[i]).data().readableBytes();
                     }
+                    headers.set(Names.CONTENT_LENGTH, contentLength);
+                    headers.remove(Names.TRANSFER_ENCODING);
+                } else {
+                    headers.remove(Names.CONTENT_LENGTH);
+                    headers.set(Names.TRANSFER_ENCODING, Values.CHUNKED);
                 }
-                for (HttpObject obj: encoded) {
-                    out.add(obj);
-                }
+
+                Collections.addAll(out, encoded);
                 return;
             }
 
             if (encoder != null) {
-                HttpObject[] encoded =  encodeContent(null, c);
-                for (HttpObject obj: encoded) {
-                    out.add(obj);
-                }
+                Collections.addAll(out, encodeContent(null, c));
                 return;
             }
 
@@ -200,7 +201,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
         }
     }
 
-    private HttpObject[] encodeContent(HttpMessage header, HttpContent c) {
+    private HttpObject[] encodeContent(HttpMessage msg, HttpContent c) {
         ByteBuf newContent = Unpooled.buffer();
         ByteBuf content = c.data();
         encode(content, newContent);
@@ -212,25 +213,25 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpMessa
             // Generate an additional chunk if the decoder produced
             // the last product on closure,
             if (lastProduct.isReadable()) {
-                if (header == null) {
+                if (msg == null) {
                     return new HttpObject[] { new DefaultHttpContent(newContent),
                             new DefaultLastHttpContent(lastProduct)};
                 } else {
-                    return new HttpObject[] { header,  new DefaultHttpContent(newContent),
+                    return new HttpObject[] { msg,  new DefaultHttpContent(newContent),
                             new DefaultLastHttpContent(lastProduct)};
                 }
             } else {
-                if (header == null) {
+                if (msg == null) {
                     return new HttpObject[] { new DefaultLastHttpContent(newContent) };
                 } else {
-                    return new HttpObject[] { header, new DefaultLastHttpContent(newContent) };
+                    return new HttpObject[] { msg, new DefaultLastHttpContent(newContent) };
                 }
             }
         }
-        if (header == null) {
+        if (msg == null) {
             return new HttpObject[] { new DefaultHttpContent(newContent) };
         } else {
-            return new HttpObject[] { header, new DefaultHttpContent(newContent) };
+            return new HttpObject[] { msg, new DefaultHttpContent(newContent) };
         }
     }
 
