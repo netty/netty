@@ -382,7 +382,7 @@ public class LocalTransportThreadModelTest {
 
                     while (true) {
                         try {
-                            Thread.sleep(1000);
+                            Thread.sleep(100);
                         } catch (InterruptedException e) {
                             return;
                         }
