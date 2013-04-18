@@ -319,7 +319,6 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf
     }
 
     private void updateComponentOffsets(int cIndex) {
-
         Component c = components.get(cIndex);
         lastAccessed = c;
         lastAccessedId = cIndex;
@@ -341,7 +340,7 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf
     @Override
     public CompositeByteBuf removeComponent(int cIndex) {
         checkComponentIndex(cIndex);
-        components.remove(cIndex);
+        components.remove(cIndex).freeIfNecessary();
         updateComponentOffsets(cIndex);
         return this;
     }
@@ -349,7 +348,13 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf
     @Override
     public CompositeByteBuf removeComponents(int cIndex, int numComponents) {
         checkComponentIndex(cIndex, numComponents);
-        components.subList(cIndex, cIndex + numComponents).clear();
+
+        List<Component> toRemove = components.subList(cIndex, cIndex + numComponents);
+        for (Component c: toRemove) {
+            c.freeIfNecessary();
+        }
+        toRemove.clear();
+
         updateComponentOffsets(cIndex);
         return this;
     }
