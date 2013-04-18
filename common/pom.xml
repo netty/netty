@@ -30,6 +30,14 @@
   <name>Netty/Common</name>
 
   <dependencies>
+    <!-- Byte code generator - completely optional -->
+    <dependency>
+      <groupId>org.javassist</groupId>
+      <artifactId>javassist</artifactId>
+      <scope>compile</scope> <!-- override the 'test' scope defined at parent pom.xml -->
+      <optional>true</optional>
+    </dependency>
+
     <!-- Logging frameworks - completely optional -->
     <dependency>
       <groupId>org.slf4j</groupId>
