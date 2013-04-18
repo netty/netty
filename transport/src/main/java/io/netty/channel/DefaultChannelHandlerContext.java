@@ -880,12 +880,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                             if (pipeline.isInboundShutdown()) {
                                 return;
                             }
-
-                            if (findContextInbound() == next) {
+                            DefaultChannelHandlerContext nextInbound = findContextInbound();
+                            if (nextInbound == next) {
                                 next.invokeInboundBufferUpdated();
                             } else {
                                 // Pipeline changed since the task was submitted; try again.
-                                fireInboundBufferUpdated0(next);
+                                fireInboundBufferUpdated0(nextInbound);
                             }
                         }
                     };
