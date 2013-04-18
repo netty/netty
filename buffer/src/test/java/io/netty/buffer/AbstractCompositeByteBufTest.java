@@ -20,9 +20,11 @@ import org.junit.Test;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static io.netty.buffer.Unpooled.*;
+import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
 /**
@@ -429,5 +431,90 @@ public abstract class AbstractCompositeByteBufTest extends
             buf.writeByte(1);
             assertEquals(1, buf.readByte());
         }
+    }
+
+    @Test
+    public void testComponentMustBeSlice() {
+        CompositeByteBuf buf = freeLater(compositeBuffer());
+        buf.addComponent(buffer(4).setIndex(1, 3));
+        assertThat(buf.component(0), is(instanceOf(SlicedByteBuf.class)));
+        assertThat(buf.component(0).capacity(), is(2));
+        assertThat(buf.component(0).maxCapacity(), is(2));
+    }
+
+    @Test
+    public void testReferenceCounts1() {
+        ByteBuf c1 = buffer().writeByte(1);
+        ByteBuf c2 = buffer().writeByte(2).retain();
+        ByteBuf c3 = buffer().writeByte(3).retain(2);
+
+        CompositeByteBuf buf = freeLater(compositeBuffer());
+        assertThat(buf.refCnt(), is(1));
+        buf.addComponents(c1, c2, c3);
+
+        assertThat(buf.refCnt(), is(1));
+
+        // Ensure that c[123]'s refCount did not change.
+        assertThat(c1.refCnt(), is(1));
+        assertThat(c2.refCnt(), is(2));
+        assertThat(c3.refCnt(), is(3));
+
+        assertThat(buf.component(0).refCnt(), is(1));
+        assertThat(buf.component(1).refCnt(), is(2));
+        assertThat(buf.component(2).refCnt(), is(3));
+
+        c3.release(2);
+        c2.release();
+    }
+
+    @Test
+    public void testReferenceCounts2() {
+        ByteBuf c1 = buffer().writeByte(1);
+        ByteBuf c2 = buffer().writeByte(2).retain();
+        ByteBuf c3 = buffer().writeByte(3).retain(2);
+
+        CompositeByteBuf bufA = freeLater(compositeBuffer());
+        bufA.addComponents(c1, c2, c3);
+
+        CompositeByteBuf bufB = freeLater(compositeBuffer());
+        bufB.addComponent(bufA);
+
+        // Ensure that bufA has been released.
+        assertThat(bufA.refCnt(), is(0));
+
+        // Ensure that c[123]'s refCnt did not change.
+        // Internally, it's:
+        // 1) increased by 1 by addComponent(), and then
+        // 2) decreased by 1 by bufA.release() which is called by addComponent().
+        assertThat(c1.refCnt(), is(1));
+        assertThat(c2.refCnt(), is(2));
+        assertThat(c3.refCnt(), is(3));
+
+    }
+
+    @Test
+    public void testReferenceCounts3() {
+        ByteBuf c1 = buffer().writeByte(1);
+        ByteBuf c2 = buffer().writeByte(2).retain();
+        ByteBuf c3 = buffer().writeByte(3).retain(2);
+
+        CompositeByteBuf buf = freeLater(compositeBuffer());
+        assertThat(buf.refCnt(), is(1));
+
+        List<ByteBuf> components = new ArrayList<ByteBuf>();
+        Collections.addAll(components, c1, c2, c3);
+        buf.addComponents(components);
+
+        // Ensure that c[123]'s refCount did not change.
+        assertThat(c1.refCnt(), is(1));
+        assertThat(c2.refCnt(), is(2));
+        assertThat(c3.refCnt(), is(3));
+
+        assertThat(buf.component(0).refCnt(), is(1));
+        assertThat(buf.component(1).refCnt(), is(2));
+        assertThat(buf.component(2).refCnt(), is(3));
+
+        c3.release(2);
+        c2.release();
     }
 }
