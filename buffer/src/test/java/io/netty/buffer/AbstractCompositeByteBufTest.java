@@ -489,7 +489,6 @@ public abstract class AbstractCompositeByteBufTest extends
         assertThat(c1.refCnt(), is(1));
         assertThat(c2.refCnt(), is(2));
         assertThat(c3.refCnt(), is(3));
-
     }
 
     @Test
