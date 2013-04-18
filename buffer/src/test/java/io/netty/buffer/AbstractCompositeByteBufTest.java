@@ -517,4 +517,20 @@ public abstract class AbstractCompositeByteBufTest extends
         c3.release(2);
         c2.release();
     }
+
+    @Test
+    public void testNestedLayout() {
+        CompositeByteBuf buf = freeLater(compositeBuffer());
+        buf.addComponent(
+                compositeBuffer()
+                        .addComponent(wrappedBuffer(new byte[]{1, 2}))
+                        .addComponent(wrappedBuffer(new byte[]{3, 4})).slice(1, 2));
+
+        ByteBuffer[] nioBuffers = buf.nioBuffers(0, 2);
+        assertThat(nioBuffers.length, is(2));
+        assertThat(nioBuffers[0].remaining(), is(1));
+        assertThat(nioBuffers[0].get(), is((byte) 2));
+        assertThat(nioBuffers[1].remaining(), is(1));
+        assertThat(nioBuffers[1].get(), is((byte) 3));
+    }
 }

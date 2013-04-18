@@ -1094,7 +1094,16 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf
             ByteBuf s = c.buf;
             int adjustment = c.offset;
             int localLength = Math.min(length, s.capacity() - (index - adjustment));
-            buffers.add(s.nioBuffer(index - adjustment, localLength));
+            switch (s.nioBufferCount()) {
+                case 0:
+                    throw new UnsupportedOperationException();
+                case 1:
+                    buffers.add(s.nioBuffer(index - adjustment, localLength));
+                    break;
+                default:
+                    Collections.addAll(buffers, s.nioBuffers(index - adjustment, localLength));
+            }
+
             index += localLength;
             length -= localLength;
             i ++;
