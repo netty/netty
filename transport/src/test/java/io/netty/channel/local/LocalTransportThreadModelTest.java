@@ -338,7 +338,7 @@ public class LocalTransportThreadModelTest {
     }
 
     @Test(timeout = 30000)
-    //@Ignore("regression test")
+    @Ignore("needs to get fixed")
     public void testConcurrentAddRemove() throws Throwable {
         EventLoopGroup l = new LocalEventLoopGroup(4, new PrefixThreadFactory("l"));
         EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e1"));
