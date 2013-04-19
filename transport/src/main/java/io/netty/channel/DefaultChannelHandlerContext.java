@@ -89,8 +89,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     DefaultChannelHandlerContext.class, NextBridgeFeeder.class, "nextOutBridgeFeeder");
 
     // Lazily instantiated tasks used to trigger events to a handler with different executor.
-    private Runnable fireInboundBufferUpdated0Task;
-    private Runnable invokeRead0Task;
+    //private Runnable fireInboundBufferUpdated0Task;
+    //private Runnable invokeRead0Task;
 
     @SuppressWarnings("unchecked")
     DefaultChannelHandlerContext(
@@ -1001,18 +1001,19 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             throw new NullPointerException("localAddress");
         }
         validateFuture(promise);
-        return findContextOutbound().invokeBind(localAddress, promise);
+        return bind0(findContextOutbound(), localAddress, promise);
     }
 
-    private ChannelFuture invokeBind(final SocketAddress localAddress, final ChannelPromise promise) {
-        EventExecutor executor = executor();
+    private ChannelFuture bind0(DefaultChannelHandlerContext next, final SocketAddress localAddress,
+                               final ChannelPromise promise) {
+        EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            invokeBind0(localAddress, promise);
+            next.invokeBind0(localAddress, promise);
         } else {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    invokeBind0(localAddress, promise);
+                    bind0(findContextOutbound(), localAddress, promise);
                 }
             });
         }
@@ -1040,19 +1041,19 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             throw new NullPointerException("remoteAddress");
         }
         validateFuture(promise);
-        return findContextOutbound().invokeConnect(remoteAddress, localAddress, promise);
+        return connect0(findContextOutbound(), remoteAddress, localAddress, promise);
     }
 
-    private ChannelFuture invokeConnect(
+    private ChannelFuture connect0(DefaultChannelHandlerContext next,
             final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
-        EventExecutor executor = executor();
+        EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            invokeConnect0(remoteAddress, localAddress, promise);
+            next.invokeConnect0(remoteAddress, localAddress, promise);
         } else {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    invokeConnect0(remoteAddress, localAddress, promise);
+                    connect0(findContextOutbound(), remoteAddress, localAddress, promise);
                 }
             });
         }
@@ -1077,21 +1078,21 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         // Translate disconnect to close if the channel has no notion of disconnect-reconnect.
         // So far, UDP/IP is the only transport that has such behavior.
         if (!channel().metadata().hasDisconnect()) {
-            return findContextOutbound().invokeClose(promise);
+            return close0(findContextOutbound(), promise);
         }
 
-        return findContextOutbound().invokeDisconnect(promise);
+        return disconnect0(findContextOutbound(), promise);
     }
 
-    private ChannelFuture invokeDisconnect(final ChannelPromise promise) {
-        EventExecutor executor = executor();
+    private ChannelFuture disconnect0(DefaultChannelHandlerContext next, final ChannelPromise promise) {
+        EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            invokeDisconnect0(promise);
+            next.invokeDisconnect0(promise);
         } else {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    invokeDisconnect0(promise);
+                    disconnect0(findContextOutbound(), promise);
                 }
             });
         }
@@ -1112,18 +1113,18 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public ChannelFuture close(ChannelPromise promise) {
         validateFuture(promise);
-        return findContextOutbound().invokeClose(promise);
+        return close0(findContextOutbound(), promise);
     }
 
-    private ChannelFuture invokeClose(final ChannelPromise promise) {
-        EventExecutor executor = executor();
+    private ChannelFuture close0(final DefaultChannelHandlerContext next, final ChannelPromise promise) {
+        EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            invokeClose0(promise);
+            next.invokeClose0(promise);
         } else {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    invokeClose0(promise);
+                    close0(findContextOutbound(), promise);
                 }
             });
         }
@@ -1144,18 +1145,18 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public ChannelFuture deregister(ChannelPromise promise) {
         validateFuture(promise);
-        return findContextOutbound().invokeDeregister(promise);
+        return deregister0(findContextOutbound(), promise);
     }
 
-    private ChannelFuture invokeDeregister(final ChannelPromise promise) {
-        EventExecutor executor = executor();
+    private ChannelFuture deregister0(final DefaultChannelHandlerContext next, final ChannelPromise promise) {
+        EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            invokeDeregister0(promise);
+            next.invokeDeregister0(promise);
         } else {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    invokeDeregister0(promise);
+                    deregister0(findContextOutbound(), promise);
                 }
             });
         }
@@ -1175,23 +1176,21 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public void read() {
-        findContextOutbound().invokeRead();
+        read0(findContextOutbound());
     }
 
-    private void invokeRead() {
-        EventExecutor executor = executor();
+    private void read0(DefaultChannelHandlerContext next) {
+        EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            invokeRead0();
+            next.invokeRead0();
         } else {
-            Runnable task = invokeRead0Task;
-            if (task == null) {
-                invokeRead0Task = task = new Runnable() {
-                    @Override
-                    public void run() {
-                        invokeRead0();
-                    }
-                };
-            }
+            Runnable task = new Runnable() {
+                @Override
+                public void run() {
+                    read();
+                }
+            };
+
             executor.execute(task);
         }
     }
@@ -1209,16 +1208,19 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public ChannelFuture flush(final ChannelPromise promise) {
         validateFuture(promise);
+        return flush0(findContextOutbound(), promise);
+    }
 
-        EventExecutor executor = executor();
+    private ChannelFuture flush0(final DefaultChannelHandlerContext next, final ChannelPromise promise) {
+        EventExecutor executor = next.executor();
         Thread currentThread = Thread.currentThread();
         if (executor.inEventLoop(currentThread)) {
-            invokePrevFlush(promise, currentThread, findContextOutbound());
+            next.invokePrevFlush(promise, currentThread, next);
         } else {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    invokePrevFlush(promise, Thread.currentThread(), findContextOutbound());
+                    flush0(findContextOutbound(), promise);
                 }
             });
         }
@@ -1298,18 +1300,19 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             throw new NullPointerException("region");
         }
         validateFuture(promise);
-        return findContextOutbound().invokeSendFile(region, promise);
+        return sendFile0(findContextOutbound(), region, promise);
     }
 
-    private ChannelFuture invokeSendFile(final FileRegion region, final ChannelPromise promise) {
-        EventExecutor executor = executor();
+    private ChannelFuture sendFile0(final DefaultChannelHandlerContext next, final FileRegion region,
+                                    final ChannelPromise promise) {
+        EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            invokeSendFile0(region, promise);
+            next.invokeSendFile0(region, promise);
         } else {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    invokeSendFile0(region, promise);
+                    sendFile0(findContextOutbound(), region, promise);
                 }
             });
         }

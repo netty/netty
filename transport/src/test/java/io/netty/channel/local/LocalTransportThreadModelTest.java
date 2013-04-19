@@ -338,7 +338,6 @@ public class LocalTransportThreadModelTest {
         }
     }
 
-
     @Test(timeout = 60000)
     public void testConcurrentAddRemoveInboundEventsMultiple() throws Throwable {
         for (int i = 0; i < 50; i ++) {
@@ -373,7 +372,7 @@ public class LocalTransportThreadModelTest {
         EventExecutorGroup e4 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e4"));
         EventExecutorGroup e5 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e5"));
 
-        final EventExecutorGroup[] groups = {e1, e2, e3};
+        final EventExecutorGroup[] groups = {e1, e2, e3, e4, e5};
         try {
             Deque<EventRecordHandler.Events> events = new ConcurrentLinkedDeque<EventRecordHandler.Events>();
             final EventForwardHandler h1 = new EventForwardHandler();
@@ -384,7 +383,9 @@ public class LocalTransportThreadModelTest {
             final EventRecordHandler  h6 = new EventRecordHandler(events, inbound);
 
             final Channel ch = new LocalChannel();
-
+            if (!inbound) {
+                ch.config().setAutoRead(false);
+            }
             ch.pipeline().addLast(e1, h1)
                     .addLast(e1, h2)
                     .addLast(e1, h3)
@@ -448,11 +449,9 @@ public class LocalTransportThreadModelTest {
 
             ch.close().sync();
 
-
             while (events.peekLast() != EventRecordHandler.Events.UNREGISTERED) {
                 Thread.sleep(10);
             }
-
 
             expectedEvents.addFirst(EventRecordHandler.Events.ACTIVE);
             expectedEvents.addFirst(EventRecordHandler.Events.REGISTERED);
@@ -485,7 +484,8 @@ public class LocalTransportThreadModelTest {
                     EventRecordHandler.Events.READ_SUSPEND, EventRecordHandler.Events.EXCEPTION_CAUGHT};
         } else {
             events = new EventRecordHandler.Events[] {
-                    EventRecordHandler.Events.READ, EventRecordHandler.Events.FLUSH,
+                    EventRecordHandler.Events.READ,
+                    EventRecordHandler.Events.FLUSH,
                     EventRecordHandler.Events.EXCEPTION_CAUGHT };
         }
 
