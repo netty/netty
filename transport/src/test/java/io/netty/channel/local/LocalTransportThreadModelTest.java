@@ -43,6 +43,7 @@ import org.junit.Test;
 
 import java.util.Deque;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Random;
@@ -337,9 +338,33 @@ public class LocalTransportThreadModelTest {
         }
     }
 
+    @Test(timeout = 60000)
+    public void testConcurrentAddRemoveInboundEventsMultiple() throws Throwable {
+        for (int i = 0; i < 50; i ++) {
+            testConcurrentAddRemoveInboundEvents();
+        }
+    }
+
     @Test(timeout = 30000)
-    @Ignore("needs to get fixed")
-    public void testConcurrentAddRemove() throws Throwable {
+    //@Ignore("needs to get fixed")
+    public void testConcurrentAddRemoveInboundEvents() throws Throwable {
+        testConcurrentAddRemove(true);
+    }
+
+    @Test(timeout = 60000)
+    public void testConcurrentAddRemoveOutboundEventsMultiple() throws Throwable {
+        for (int i = 0; i < 50; i ++) {
+            testConcurrentAddRemoveOutboundEvents();
+        }
+    }
+
+    @Test(timeout = 30000)
+    //@Ignore("needs to get fixed")
+    public void testConcurrentAddRemoveOutboundEvents() throws Throwable {
+        testConcurrentAddRemove(false);
+    }
+
+    private static void testConcurrentAddRemove(boolean inbound) throws Exception {
         EventLoopGroup l = new LocalEventLoopGroup(4, new PrefixThreadFactory("l"));
         EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e1"));
         EventExecutorGroup e2 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e2"));
@@ -347,7 +372,7 @@ public class LocalTransportThreadModelTest {
         EventExecutorGroup e4 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e4"));
         EventExecutorGroup e5 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e5"));
 
-        final EventExecutorGroup[] groups = { e1, e2, e3, e4, e5 };
+        final EventExecutorGroup[] groups = {e1, e2, e3, e4, e5};
         try {
             Deque<EventRecordHandler.Events> events = new ConcurrentLinkedDeque<EventRecordHandler.Events>();
             final EventForwardHandler h1 = new EventForwardHandler();
@@ -355,23 +380,22 @@ public class LocalTransportThreadModelTest {
             final EventForwardHandler h3 = new EventForwardHandler();
             final EventForwardHandler h4 = new EventForwardHandler();
             final EventForwardHandler h5 = new EventForwardHandler();
-            final EventRecordHandler  h6 = new EventRecordHandler(events);
+            final EventRecordHandler  h6 = new EventRecordHandler(events, inbound);
 
             final Channel ch = new LocalChannel();
-
-            // inbound:  int -> byte[4] -> int -> int -> byte[4] -> int -> /dev/null
-            // outbound: int -> int -> byte[4] -> int -> int -> byte[4] -> /dev/null
-            ch.pipeline().addLast(h1)
+            if (!inbound) {
+                ch.config().setAutoRead(false);
+            }
+            ch.pipeline().addLast(e1, h1)
                     .addLast(e1, h2)
-                    .addLast(e2, h3)
-                    .addLast(e3, h4)
-                    .addLast(e4, h5)
-                    .addLast(e5, "recorder", h6);
+                    .addLast(e1, h3)
+                    .addLast(e1, h4)
+                    .addLast(e1, h5)
+                    .addLast(e1, "recorder", h6);
 
             l.register(ch).sync().channel().connect(localAddr).sync();
 
-            final int TOTAL_CNT = 8192;
-            final LinkedList<EventRecordHandler.Events> expectedEvents = events(TOTAL_CNT);
+            final LinkedList<EventRecordHandler.Events> expectedEvents = events(inbound, 8192);
 
             Throwable cause = new Throwable();
 
@@ -398,13 +422,14 @@ public class LocalTransportThreadModelTest {
             });
             pipelineModifier.setDaemon(true);
             pipelineModifier.start();
-            for (int i = 0; i < TOTAL_CNT; i++) {
-                EventRecordHandler.Events event = expectedEvents.get(i);
+            Iterator<EventRecordHandler.Events> eventsIt = expectedEvents.iterator();
+            while (eventsIt.hasNext()) {
+                EventRecordHandler.Events event = eventsIt.next();
                 switch (event) {
                     case EXCEPTION_CAUGHT:
                         ch.pipeline().fireExceptionCaught(cause);
                         break;
-                    case INBOUND_BufFER_UPDATED:
+                    case INBOUND_BuFFER_UPDATED:
                         ch.pipeline().fireInboundBufferUpdated();
                         break;
                     case READ_SUSPEND:
@@ -413,15 +438,20 @@ public class LocalTransportThreadModelTest {
                     case USER_EVENT:
                         ch.pipeline().fireUserEventTriggered("");
                         break;
+                    case FLUSH:
+                        ch.pipeline().flush();
+                        break;
+                    case READ:
+                        ch.pipeline().read();
+                        break;
                 }
             }
 
-            while (events.size() < TOTAL_CNT + 2) {
-                System.out.println(events.size() + " <  " + (TOTAL_CNT + 2));
+            ch.close().sync();
+
+            while (events.peekLast() != EventRecordHandler.Events.UNREGISTERED) {
                 Thread.sleep(10);
             }
-
-            ch.close().sync();
 
             expectedEvents.addFirst(EventRecordHandler.Events.ACTIVE);
             expectedEvents.addFirst(EventRecordHandler.Events.REGISTERED);
@@ -431,10 +461,10 @@ public class LocalTransportThreadModelTest {
             for (;;) {
                 EventRecordHandler.Events event = events.poll();
                 if (event == null) {
-                    Assert.assertTrue(expectedEvents.isEmpty());
+                    Assert.assertTrue("Missing events:" + expectedEvents.toString(), expectedEvents.isEmpty());
                     break;
                 }
-                Assert.assertEquals(expectedEvents.poll(), event);
+                Assert.assertEquals(event, expectedEvents.poll());
             }
         } finally {
             l.shutdown();
@@ -446,10 +476,19 @@ public class LocalTransportThreadModelTest {
         }
     }
 
-    private static LinkedList<EventRecordHandler.Events> events(int size) {
-        EventRecordHandler.Events[] events = { EventRecordHandler.Events.EXCEPTION_CAUGHT,
-                EventRecordHandler.Events.USER_EVENT, EventRecordHandler.Events.INBOUND_BufFER_UPDATED,
-                EventRecordHandler.Events.READ_SUSPEND};
+    private static LinkedList<EventRecordHandler.Events> events(boolean inbound, int size) {
+        EventRecordHandler.Events[] events;
+        if (inbound) {
+            events = new EventRecordHandler.Events[] {
+                    EventRecordHandler.Events.USER_EVENT, EventRecordHandler.Events.INBOUND_BuFFER_UPDATED,
+                    EventRecordHandler.Events.READ_SUSPEND, EventRecordHandler.Events.EXCEPTION_CAUGHT};
+        } else {
+            events = new EventRecordHandler.Events[] {
+                    EventRecordHandler.Events.READ,
+                    EventRecordHandler.Events.FLUSH,
+                    EventRecordHandler.Events.EXCEPTION_CAUGHT };
+        }
+
         Random random = new Random();
         LinkedList<EventRecordHandler.Events> expectedEvents = new LinkedList<EventRecordHandler.Events>();
         for (int i = 0; i < size; i++) {
@@ -936,7 +975,7 @@ public class LocalTransportThreadModelTest {
         }
     }
 
-    private static final class EventRecordHandler extends ChannelStateHandlerAdapter {
+    private static final class EventRecordHandler extends ChannelDuplexHandler {
         public enum Events {
             EXCEPTION_CAUGHT,
             USER_EVENT,
@@ -945,13 +984,17 @@ public class LocalTransportThreadModelTest {
             ACTIVE,
             UNREGISTERED,
             REGISTERED,
-            INBOUND_BufFER_UPDATED
+            INBOUND_BuFFER_UPDATED,
+            FLUSH,
+            READ
         }
 
         private final Queue<Events> events;
+        private final boolean inbound;
 
-        public EventRecordHandler(Queue<Events> events) {
+        public EventRecordHandler(Queue<Events> events, boolean inbound) {
             this.events = events;
+            this.inbound = inbound;
         }
 
         @Override
@@ -961,12 +1004,16 @@ public class LocalTransportThreadModelTest {
 
         @Override
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-            events.add(Events.USER_EVENT);
+            if (inbound) {
+                events.add(Events.USER_EVENT);
+            }
         }
 
         @Override
         public void channelReadSuspended(ChannelHandlerContext ctx) throws Exception {
-            events.add(Events.READ_SUSPEND);
+            if (inbound) {
+                events.add(Events.READ_SUSPEND);
+            }
         }
 
         @Override
@@ -991,7 +1038,23 @@ public class LocalTransportThreadModelTest {
 
         @Override
         public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-            events.add(Events.INBOUND_BufFER_UPDATED);
+            if (inbound) {
+                events.add(Events.INBOUND_BuFFER_UPDATED);
+            }
+        }
+
+        @Override
+        public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            if (!inbound) {
+                events.add(Events.FLUSH);
+            }
+        }
+
+        @Override
+        public void read(ChannelHandlerContext ctx) {
+            if (!inbound) {
+                events.add(Events.READ);
+            }
         }
     }
 }

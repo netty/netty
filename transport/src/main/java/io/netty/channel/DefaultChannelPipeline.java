@@ -560,9 +560,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
                             ".afterRemove() has thrown an exception.", t));
         }
 
-        ctx.forwardBufferContent(ctxPrev, ctxNext);
-
-        ctx.setRemoved();
+        ctx.forwardBufferContentAndRemove(ctxPrev, ctxNext);
     }
 
     /**
