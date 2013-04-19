@@ -17,8 +17,8 @@ package org.jboss.netty.handler.codec.frame;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.Channels;
 
 /**
  * A decoder that splits the received {@link ChannelBuffer}s on line endings.
@@ -36,6 +36,7 @@ public class LineBasedFrameDecoder extends FrameDecoder {
 
     /** True if we're discarding input because we're already over maxLength.  */
     private boolean discarding;
+    private int discardedBytes;
 
     /**
      * Creates a new decoder.
@@ -73,51 +74,67 @@ public class LineBasedFrameDecoder extends FrameDecoder {
                             final Channel channel,
                             final ChannelBuffer buffer) throws Exception {
         final int eol = findEndOfLine(buffer);
-        if (eol != -1) {
-            final ChannelBuffer frame;
-            final int length = eol - buffer.readerIndex();
-            assert length >= 0: "Invalid length=" + length;
-            if (discarding) {
-                frame = null;
-                buffer.skipBytes(length);
+        if (!discarding) {
+            if (eol >= 0) {
+                final ChannelBuffer frame;
+                final int length = eol - buffer.readerIndex();
+                final int delimLength = buffer.getByte(eol) == '\r'? 2 : 1;
+
+                if (length > maxLength) {
+                    buffer.readerIndex(eol + delimLength);
+                    fail(ctx, length);
+                    return null;
+                }
+
+                try {
+                    if (stripDelimiter) {
+                        frame = extractFrame(buffer, buffer.readerIndex(), length);
+                    } else {
+                        frame = extractFrame(buffer, buffer.readerIndex(), length + delimLength);
+                    }
+                } finally {
+                    buffer.skipBytes(length + delimLength);
+                }
+                return frame;
+            } else {
+                final int length = buffer.readableBytes();
+                if (length > maxLength) {
+                    discardedBytes = length;
+                    buffer.readerIndex(buffer.writerIndex());
+                    discarding = true;
+                    if (failFast) {
+                        fail(ctx, "over " + discardedBytes);
+                    }
+                }
+                return null;
+            }
+        } else {
+            if (eol >= 0) {
+                final int length = discardedBytes + eol - buffer.readerIndex();
+                final int delimLength = buffer.getByte(eol) == '\r'? 2 : 1;
+                buffer.readerIndex(eol + delimLength);
+                discardedBytes = 0;
+                discarding = false;
                 if (!failFast) {
-                    fail(ctx, "over " + (maxLength + length) + " bytes");
+                    fail(ctx, length);
                 }
             } else {
-                int delimLength;
-                final byte delim = buffer.getByte(buffer.readerIndex() + length);
-                if (delim == '\r') {
-                    delimLength = 2;  // Skip the \r\n.
-                } else {
-                    delimLength = 1;
-                }
-                if (stripDelimiter) {
-                    frame = extractFrame(buffer, buffer.readerIndex(), length);
-                } else {
-                    frame = extractFrame(buffer, buffer.readerIndex(), length + delimLength);
-                }
-                buffer.skipBytes(length + delimLength);
+                discardedBytes = buffer.readableBytes();
+                buffer.readerIndex(buffer.writerIndex());
             }
-            return frame;
+            return null;
         }
-
-        final int buffered = buffer.readableBytes();
-        if (!discarding && buffered > maxLength) {
-            discarding = true;
-            if (failFast) {
-                fail(ctx, buffered + " bytes buffered already");
-            }
-        }
-        if (discarding) {
-            buffer.skipBytes(buffer.readableBytes());
-        }
-        return null;
     }
 
-    private void fail(final ChannelHandlerContext ctx, final String msg) {
-        Channels.fireExceptionCaught(ctx.getChannel(),
-            new TooLongFrameException("Frame length exceeds " + maxLength + " ("
-                                      + msg + ')'));
+    private void fail(final ChannelHandlerContext ctx, int length) {
+        fail(ctx, String.valueOf(length));
+    }
+
+    private void fail(final ChannelHandlerContext ctx, String length) {
+        Channels.fireExceptionCaught(
+                ctx.getChannel(),
+                new TooLongFrameException(
+                        "frame length (" + length + ") exceeds the allowed maximum (" + maxLength + ')'));
     }
 
     /**
@@ -136,5 +153,4 @@ public class LineBasedFrameDecoder extends FrameDecoder {
         }
         return -1;  // Not found.
     }
-
 }
