@@ -313,7 +313,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
     }
 
     @Override
-    public void beforeRemove(ChannelHandlerContext ctx) {
+    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
         if (trafficCounter != null) {
             trafficCounter.stop();
         }

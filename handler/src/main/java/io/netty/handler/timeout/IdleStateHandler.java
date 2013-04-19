@@ -210,7 +210,7 @@ public class IdleStateHandler extends ChannelStateHandlerAdapter implements Chan
     }
 
     @Override
-    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
+    public void afterAdd(ChannelHandlerContext ctx) throws Exception {
         if (ctx.channel().isActive() & ctx.channel().isRegistered()) {
             // channelActvie() event has been fired already, which means this.channelActive() will
             // not be invoked. We have to initialize here instead.
@@ -222,7 +222,7 @@ public class IdleStateHandler extends ChannelStateHandlerAdapter implements Chan
     }
 
     @Override
-    public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
+    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
         destroy();
     }
 

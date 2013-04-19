@@ -117,36 +117,17 @@ public class CombinedChannelDuplexHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
+    public void afterAdd(ChannelHandlerContext ctx) throws Exception {
         if (stateHandler == null) {
             throw new IllegalStateException(
                     "init() must be invoked before being added to a " + ChannelPipeline.class.getSimpleName() +
-                    " if " +  CombinedChannelDuplexHandler.class.getSimpleName() +
-                    " was constructed with the default constructor.");
+                            " if " +  CombinedChannelDuplexHandler.class.getSimpleName() +
+                            " was constructed with the default constructor.");
         }
-
-        try {
-            stateHandler.beforeAdd(ctx);
-        } finally {
-            operationHandler.beforeAdd(ctx);
-        }
-    }
-
-    @Override
-    public void afterAdd(ChannelHandlerContext ctx) throws Exception {
         try {
             stateHandler.afterAdd(ctx);
         } finally {
             operationHandler.afterAdd(ctx);
-        }
-    }
-
-    @Override
-    public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
-        try {
-            stateHandler.beforeRemove(ctx);
-        } finally {
-            operationHandler.beforeRemove(ctx);
         }
     }
 

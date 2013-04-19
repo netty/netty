@@ -113,30 +113,11 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelPipeline addFirst(EventExecutorGroup group, final String name, ChannelHandler handler) {
-        final DefaultChannelHandlerContext newCtx;
-
         synchronized (this) {
             checkDuplicateName(name);
-            newCtx = new DefaultChannelHandlerContext(this, group, name, handler);
-
-            if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
-                addFirst0(name, newCtx);
-                return this;
-            }
+            DefaultChannelHandlerContext newCtx = new DefaultChannelHandlerContext(this, group, name, handler);
+            addFirst0(name, newCtx);
         }
-
-        // Run the following 'waiting' code outside of the above synchronized block
-        // in order to avoid deadlock
-
-        executeOnEventLoop(newCtx, new Runnable() {
-            @Override
-            public void run() {
-                synchronized (DefaultChannelPipeline.this) {
-                    checkDuplicateName(name);
-                    addFirst0(name, newCtx);
-                }
-            }
-        });
 
         return this;
     }
@@ -163,30 +144,12 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelPipeline addLast(EventExecutorGroup group, final String name, ChannelHandler handler) {
-        final DefaultChannelHandlerContext newCtx;
-
         synchronized (this) {
             checkDuplicateName(name);
 
-            newCtx = new DefaultChannelHandlerContext(this, group, name, handler);
-            if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
-                addLast0(name, newCtx);
-                return this;
-            }
+            DefaultChannelHandlerContext newCtx = new DefaultChannelHandlerContext(this, group, name, handler);
+            addLast0(name, newCtx);
         }
-
-        // Run the following 'waiting' code outside of the above synchronized block
-        // in order to avoid deadlock
-
-        executeOnEventLoop(newCtx, new Runnable() {
-            @Override
-            public void run() {
-                synchronized (DefaultChannelPipeline.this) {
-                    checkDuplicateName(name);
-                    addLast0(name, newCtx);
-                }
-            }
-        });
 
         return this;
     }
@@ -215,33 +178,12 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     public ChannelPipeline addBefore(
             EventExecutorGroup group, String baseName, final String name, ChannelHandler handler) {
-        final DefaultChannelHandlerContext ctx;
-        final DefaultChannelHandlerContext newCtx;
-
         synchronized (this) {
-            ctx = getContextOrDie(baseName);
+            DefaultChannelHandlerContext ctx = getContextOrDie(baseName);
             checkDuplicateName(name);
-            newCtx = new DefaultChannelHandlerContext(this, group, name, handler);
-
-            if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
-                addBefore0(name, ctx, newCtx);
-                return this;
-            }
+            DefaultChannelHandlerContext newCtx = new DefaultChannelHandlerContext(this, group, name, handler);
+            addBefore0(name, ctx, newCtx);
         }
-
-        // Run the following 'waiting' code outside of the above synchronized block
-        // in order to avoid deadlock
-
-        executeOnEventLoop(newCtx, new Runnable() {
-            @Override
-            public void run() {
-                synchronized (DefaultChannelPipeline.this) {
-                    checkDuplicateName(name);
-                    addBefore0(name, ctx, newCtx);
-                }
-            }
-        });
-
         return this;
     }
 
@@ -267,32 +209,13 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     public ChannelPipeline addAfter(
             EventExecutorGroup group, String baseName, final String name, ChannelHandler handler) {
-        final DefaultChannelHandlerContext ctx;
-        final DefaultChannelHandlerContext newCtx;
-
         synchronized (this) {
-            ctx = getContextOrDie(baseName);
+            DefaultChannelHandlerContext ctx = getContextOrDie(baseName);
             checkDuplicateName(name);
-            newCtx = new DefaultChannelHandlerContext(this, group, name, handler);
+            DefaultChannelHandlerContext newCtx = new DefaultChannelHandlerContext(this, group, name, handler);
 
-            if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
-                addAfter0(name, ctx, newCtx);
-                return this;
-            }
+            addAfter0(name, ctx, newCtx);
         }
-
-        // Run the following 'waiting' code outside of the above synchronized block
-        // in order to avoid deadlock
-
-        executeOnEventLoop(newCtx, new Runnable() {
-            @Override
-            public void run() {
-                synchronized (DefaultChannelPipeline.this) {
-                    checkDuplicateName(name);
-                    addAfter0(name, ctx, newCtx);
-                }
-            }
-        });
 
         return this;
     }
@@ -448,8 +371,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private void remove0(DefaultChannelHandlerContext ctx) {
-        callBeforeRemove(ctx);
-
         DefaultChannelHandlerContext prev = ctx.prev;
         DefaultChannelHandlerContext next = ctx.next;
         prev.next = next;
@@ -542,7 +463,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         newCtx.prev = prev;
         newCtx.next = next;
 
-        callBeforeRemove(ctx);
         callBeforeAdd(newCtx);
 
         prev.next = newCtx;
@@ -553,36 +473,9 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
         name2ctx.put(newName, newCtx);
 
-        ChannelPipelineException removeException = null;
-        ChannelPipelineException addException = null;
-        boolean removed = false;
-        try {
-            callAfterRemove(ctx, newCtx, newCtx);
-            removed = true;
-        } catch (ChannelPipelineException e) {
-            removeException = e;
-        }
-
-        boolean added = false;
-        try {
-            callAfterAdd(newCtx);
-            added = true;
-        } catch (ChannelPipelineException e) {
-            addException = e;
-        }
-
-        if (!removed && !added) {
-            logger.warn(removeException.getMessage(), removeException);
-            logger.warn(addException.getMessage(), addException);
-            throw new ChannelPipelineException(
-                    "Both " + ctx.handler().getClass().getName() +
-                    ".afterRemove() and " + newCtx.handler().getClass().getName() +
-                    ".afterAdd() failed; see logs.");
-        } else if (!removed) {
-            throw removeException;
-        } else if (!added) {
-            throw addException;
-        }
+        // remove old and add new
+        callAfterRemove(ctx, newCtx, newCtx);
+        callAfterAdd(newCtx);
     }
 
     private static void callBeforeAdd(ChannelHandlerContext ctx) {
@@ -596,16 +489,22 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             }
             h.added = true;
         }
-        try {
-            handler.beforeAdd(ctx);
-        } catch (Throwable t) {
-            throw new ChannelPipelineException(
-                    handler.getClass().getName() +
-                    ".beforeAdd() has thrown an exception; not adding.", t);
-        }
     }
 
-    private void callAfterAdd(ChannelHandlerContext ctx) {
+    private void callAfterAdd(final ChannelHandlerContext ctx) {
+        if (ctx.channel().isRegistered() && !ctx.executor().inEventLoop()) {
+            ctx.executor().execute(new Runnable() {
+                @Override
+                public void run() {
+                    callAfterAdd0(ctx);
+                }
+            });
+            return;
+        }
+        callAfterAdd0(ctx);
+    }
+
+    private void callAfterAdd0(final ChannelHandlerContext ctx) {
         try {
             ctx.handler().afterAdd(ctx);
         } catch (Throwable t) {
@@ -620,28 +519,33 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             }
 
             if (removed) {
-                throw new ChannelPipelineException(
+                fireExceptionCaught(new ChannelPipelineException(
                         ctx.handler().getClass().getName() +
-                        ".afterAdd() has thrown an exception; removed.", t);
+                        ".afterAdd() has thrown an exception; removed.", t));
             } else {
-                throw new ChannelPipelineException(
+                fireExceptionCaught(new ChannelPipelineException(
                         ctx.handler().getClass().getName() +
-                        ".afterAdd() has thrown an exception; also failed to remove.", t);
+                        ".afterAdd() has thrown an exception; also failed to remove.", t));
             }
         }
     }
 
-    private static void callBeforeRemove(ChannelHandlerContext ctx) {
-        try {
-            ctx.handler().beforeRemove(ctx);
-        } catch (Throwable t) {
-            throw new ChannelPipelineException(
-                    ctx.handler().getClass().getName() +
-                    ".beforeRemove() has thrown an exception; not removing.", t);
+    private void callAfterRemove(
+            final DefaultChannelHandlerContext ctx, final DefaultChannelHandlerContext ctxPrev,
+            final DefaultChannelHandlerContext ctxNext) {
+        if (ctx.channel().isRegistered() && !ctx.executor().inEventLoop()) {
+            ctx.executor().execute(new Runnable() {
+                @Override
+                public void run() {
+                    callAfterRemove0(ctx, ctxPrev, ctxNext);
+                }
+            });
+            return;
         }
+        callAfterRemove0(ctx, ctxPrev, ctxNext);
     }
 
-    private static void callAfterRemove(
+    private void callAfterRemove0(
             final DefaultChannelHandlerContext ctx, DefaultChannelHandlerContext ctxPrev,
             DefaultChannelHandlerContext ctxNext) {
 
@@ -651,9 +555,9 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         try {
             handler.afterRemove(ctx);
         } catch (Throwable t) {
-            throw new ChannelPipelineException(
+            fireExceptionCaught(new ChannelPipelineException(
                     ctx.handler().getClass().getName() +
-                    ".afterRemove() has thrown an exception.", t);
+                            ".afterRemove() has thrown an exception.", t));
         }
 
         ctx.forwardBufferContent(ctxPrev, ctxNext);
@@ -1138,13 +1042,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         public void channelReadSuspended(ChannelHandlerContext ctx) throws Exception { }
 
         @Override
-        public void beforeAdd(ChannelHandlerContext ctx) throws Exception { }
-
-        @Override
         public void afterAdd(ChannelHandlerContext ctx) throws Exception { }
-
-        @Override
-        public void beforeRemove(ChannelHandlerContext ctx) throws Exception { }
 
         @Override
         public void afterRemove(ChannelHandlerContext ctx) throws Exception { }
@@ -1231,17 +1129,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public final void beforeAdd(ChannelHandlerContext ctx) throws Exception {
-            // NOOP
-        }
-
-        @Override
         public final void afterAdd(ChannelHandlerContext ctx) throws Exception {
-            // NOOP
-        }
-
-        @Override
-        public final void beforeRemove(ChannelHandlerContext ctx) throws Exception {
             // NOOP
         }
 

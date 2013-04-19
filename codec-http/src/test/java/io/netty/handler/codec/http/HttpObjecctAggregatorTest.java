@@ -132,7 +132,7 @@ public class HttpObjecctAggregatorTest {
         HttpObjectAggregator aggr = new HttpObjectAggregator(Integer.MAX_VALUE);
         ChannelHandlerContext ctx = EasyMock.createMock(ChannelHandlerContext.class);
         EasyMock.replay(ctx);
-        aggr.beforeAdd(ctx);
+        aggr.afterAdd(ctx);
         aggr.setMaxCumulationBufferComponents(10);
     }
 }

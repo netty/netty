@@ -17,23 +17,17 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOperationHandlerAdapter;
-import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.ByteToByteEncoder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.testsuite.util.BogusSslContextFactory;
+import io.netty.util.concurrent.Future;
 import org.junit.Test;
 
 import javax.net.ssl.SSLEngine;
@@ -105,7 +99,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.connect().sync().channel();
-        ChannelFuture hf = cc.pipeline().get(SslHandler.class).handshake();
+        Future<Channel> hf = cc.pipeline().get(SslHandler.class).handshakeFuture();
         cc.write(Unpooled.wrappedBuffer(data, 0, FIRST_MESSAGE_SIZE));
         final AtomicBoolean firstByteWriteFutureDone = new AtomicBoolean();
 

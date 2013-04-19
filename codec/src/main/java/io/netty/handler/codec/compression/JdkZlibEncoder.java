@@ -262,7 +262,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
+    public void afterAdd(ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
     }
 }
