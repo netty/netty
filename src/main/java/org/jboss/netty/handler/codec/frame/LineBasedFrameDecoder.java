@@ -77,20 +77,21 @@ public class LineBasedFrameDecoder extends FrameDecoder {
             final ChannelBuffer frame;
             final int length = eol - buffer.readerIndex();
             assert length >= 0: "Invalid length=" + length;
+            int delimLength;
+            final byte delim = buffer.getByte(buffer.readerIndex() + length);
+            if (delim == '\r') {
+                delimLength = 2;  // Skip the \r\n.
+            } else {
+                delimLength = 1;
+            }
             if (discarding) {
                 frame = null;
-                buffer.skipBytes(length);
+                buffer.skipBytes(length + delimLength);
+                discarding = false;
                 if (!failFast) {
                     fail(ctx, "over " + (maxLength + length) + " bytes");
                 }
             } else {
-                int delimLength;
-                final byte delim = buffer.getByte(buffer.readerIndex() + length);
-                if (delim == '\r') {
-                    delimLength = 2;  // Skip the \r\n.
-                } else {
-                    delimLength = 1;
-                }
                 if (stripDelimiter) {
                     frame = extractFrame(buffer, buffer.readerIndex(), length);
                 } else {
