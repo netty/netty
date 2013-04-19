@@ -16,29 +16,80 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.util.CharsetUtil;
-import org.junit.Assert;
 import org.junit.Test;
+
+import static io.netty.buffer.Unpooled.*;
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.*;
 
 public class LineBasedFrameDecoderTest {
     @Test
     public void testDecodeWithStrip() throws Exception {
         EmbeddedByteChannel ch = new EmbeddedByteChannel(new LineBasedFrameDecoder(8192, true, false));
 
-        ch.writeInbound(Unpooled.copiedBuffer("first\r\nsecond\nthird", CharsetUtil.US_ASCII));
-        Assert.assertEquals("first", ((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
-        Assert.assertEquals("second", ((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
-        Assert.assertNull(ch.readInbound());
+        ch.writeInbound(copiedBuffer("first\r\nsecond\nthird", CharsetUtil.US_ASCII));
+        assertEquals("first", ((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
+        assertEquals("second", ((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
+        assertNull(ch.readInbound());
     }
+
     @Test
     public void testDecodeWithoutStrip() throws Exception {
         EmbeddedByteChannel ch = new EmbeddedByteChannel(new LineBasedFrameDecoder(8192, false, false));
 
-        ch.writeInbound(Unpooled.copiedBuffer("first\r\nsecond\nthird", CharsetUtil.US_ASCII));
-        Assert.assertEquals("first\r\n", ((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
-        Assert.assertEquals("second\n", ((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
-        Assert.assertNull(ch.readInbound());
+        ch.writeInbound(copiedBuffer("first\r\nsecond\nthird", CharsetUtil.US_ASCII));
+        assertEquals("first\r\n", ((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
+        assertEquals("second\n", ((ByteBuf) ch.readInbound()).toString(CharsetUtil.US_ASCII));
+        assertNull(ch.readInbound());
+    }
+
+    @Test
+    public void testTooLongLine1() throws Exception {
+        EmbeddedByteChannel ch = new EmbeddedByteChannel(new LineBasedFrameDecoder(16, false, false));
+
+        try {
+            ch.writeInbound(copiedBuffer("12345678901234567890\r\nfirst\nsecond", CharsetUtil.US_ASCII));
+            fail();
+        } catch (Exception e) {
+            assertThat(e, is(instanceOf(TooLongFrameException.class)));
+        }
+
+        assertThat((ByteBuf) ch.readInbound(), is(copiedBuffer("first\n", CharsetUtil.US_ASCII)));
+        assertThat(ch.finish(), is(false));
+    }
+
+    @Test
+    public void testTooLongLine2() throws Exception {
+        EmbeddedByteChannel ch = new EmbeddedByteChannel(new LineBasedFrameDecoder(16, false, false));
+
+        assertFalse(ch.writeInbound(copiedBuffer("12345678901234567", CharsetUtil.US_ASCII)));
+        try {
+            ch.writeInbound(copiedBuffer("890\r\nfirst\r\n", CharsetUtil.US_ASCII));
+            fail();
+        } catch (Exception e) {
+            assertThat(e, is(instanceOf(TooLongFrameException.class)));
+        }
+
+        assertThat((ByteBuf) ch.readInbound(), is(copiedBuffer("first\r\n", CharsetUtil.US_ASCII)));
+        assertThat(ch.finish(), is(false));
+    }
+
+    @Test
+    public void testTooLongLineWithFailFast() throws Exception {
+        EmbeddedByteChannel ch = new EmbeddedByteChannel(new LineBasedFrameDecoder(16, false, true));
+
+        try {
+            ch.writeInbound(copiedBuffer("12345678901234567", CharsetUtil.US_ASCII));
+            fail();
+        } catch (Exception e) {
+            assertThat(e, is(instanceOf(TooLongFrameException.class)));
+        }
+
+        assertThat(ch.writeInbound(copiedBuffer("890", CharsetUtil.US_ASCII)), is(false));
+        assertThat(ch.writeInbound(copiedBuffer("123\r\nfirst\r\n", CharsetUtil.US_ASCII)), is(true));
+        assertThat((ByteBuf) ch.readInbound(), is(copiedBuffer("first\r\n", CharsetUtil.US_ASCII)));
+        assertThat(ch.finish(), is(false));
     }
 }
