@@ -50,7 +50,7 @@ public class LocalTransportThreadModelTest3 {
         ACTIVE,
         UNREGISTERED,
         REGISTERED,
-        INBOUND_BuFFER_UPDATED,
+        INBOUND_BUFFER_UPDATED,
         FLUSH,
         READ
     }
@@ -176,7 +176,7 @@ public class LocalTransportThreadModelTest3 {
                     case EXCEPTION_CAUGHT:
                         ch.pipeline().fireExceptionCaught(cause);
                         break;
-                    case INBOUND_BuFFER_UPDATED:
+                    case INBOUND_BUFFER_UPDATED:
                         ch.pipeline().fireInboundBufferUpdated();
                         break;
                     case READ_SUSPEND:
@@ -227,7 +227,7 @@ public class LocalTransportThreadModelTest3 {
         EventType[] events;
         if (inbound) {
             events = new EventType[] {
-                    EventType.USER_EVENT, EventType.INBOUND_BuFFER_UPDATED, EventType.READ_SUSPEND, EventType.EXCEPTION_CAUGHT};
+                    EventType.USER_EVENT, EventType.INBOUND_BUFFER_UPDATED, EventType.READ_SUSPEND, EventType.EXCEPTION_CAUGHT};
         } else {
             events = new EventType[] {
                     EventType.READ, EventType.FLUSH, EventType.EXCEPTION_CAUGHT };
@@ -305,7 +305,7 @@ public class LocalTransportThreadModelTest3 {
         @Override
         public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
             if (inbound) {
-                events.add(EventType.INBOUND_BuFFER_UPDATED);
+                events.add(EventType.INBOUND_BUFFER_UPDATED);
             }
         }
 
