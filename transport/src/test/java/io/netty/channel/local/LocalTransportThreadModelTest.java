@@ -21,7 +21,6 @@ import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundByteHandler;
@@ -31,9 +30,9 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundByteHandler;
 import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.ChannelStateHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutorGroup;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -41,18 +40,11 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import java.util.Deque;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.Queue;
-import java.util.Random;
 import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class LocalTransportThreadModelTest {
@@ -97,9 +89,9 @@ public class LocalTransportThreadModelTest {
 
     @Test(timeout = 5000)
     public void testStagedExecution() throws Throwable {
-        EventLoopGroup l = new LocalEventLoopGroup(4, new PrefixThreadFactory("l"));
-        EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e1"));
-        EventExecutorGroup e2 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e2"));
+        EventLoopGroup l = new LocalEventLoopGroup(4, new DefaultThreadFactory("l"));
+        EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e1"));
+        EventExecutorGroup e2 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e2"));
         ThreadNameAuditor h1 = new ThreadNameAuditor();
         ThreadNameAuditor h2 = new ThreadNameAuditor();
         ThreadNameAuditor h3 = new ThreadNameAuditor();
@@ -215,12 +207,12 @@ public class LocalTransportThreadModelTest {
     @Test(timeout = 30000)
     @Ignore("regression test")
     public void testConcurrentMessageBufferAccess() throws Throwable {
-        EventLoopGroup l = new LocalEventLoopGroup(4, new PrefixThreadFactory("l"));
-        EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e1"));
-        EventExecutorGroup e2 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e2"));
-        EventExecutorGroup e3 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e3"));
-        EventExecutorGroup e4 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e4"));
-        EventExecutorGroup e5 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e5"));
+        EventLoopGroup l = new LocalEventLoopGroup(4, new DefaultThreadFactory("l"));
+        EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e1"));
+        EventExecutorGroup e2 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e2"));
+        EventExecutorGroup e3 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e3"));
+        EventExecutorGroup e4 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e4"));
+        EventExecutorGroup e5 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e5"));
 
         try {
             final MessageForwarder1 h1 = new MessageForwarder1();
@@ -335,127 +327,6 @@ public class LocalTransportThreadModelTest {
             e4.shutdown();
             e5.shutdown();
         }
-    }
-
-    @Test(timeout = 30000)
-    @Ignore("needs to get fixed")
-    public void testConcurrentAddRemove() throws Throwable {
-        EventLoopGroup l = new LocalEventLoopGroup(4, new PrefixThreadFactory("l"));
-        EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e1"));
-        EventExecutorGroup e2 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e2"));
-        EventExecutorGroup e3 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e3"));
-        EventExecutorGroup e4 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e4"));
-        EventExecutorGroup e5 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e5"));
-
-        final EventExecutorGroup[] groups = { e1, e2, e3, e4, e5 };
-        try {
-            Deque<EventRecordHandler.Events> events = new ConcurrentLinkedDeque<EventRecordHandler.Events>();
-            final EventForwardHandler h1 = new EventForwardHandler();
-            final EventForwardHandler h2 = new EventForwardHandler();
-            final EventForwardHandler h3 = new EventForwardHandler();
-            final EventForwardHandler h4 = new EventForwardHandler();
-            final EventForwardHandler h5 = new EventForwardHandler();
-            final EventRecordHandler  h6 = new EventRecordHandler(events);
-
-            final Channel ch = new LocalChannel();
-
-            // inbound:  int -> byte[4] -> int -> int -> byte[4] -> int -> /dev/null
-            // outbound: int -> int -> byte[4] -> int -> int -> byte[4] -> /dev/null
-            ch.pipeline().addLast(h1)
-                    .addLast(e1, h2)
-                    .addLast(e2, h3)
-                    .addLast(e3, h4)
-                    .addLast(e4, h5)
-                    .addLast(e5, "recorder", h6);
-
-            l.register(ch).sync().channel().connect(localAddr).sync();
-
-            final int TOTAL_CNT = 8192;
-            final LinkedList<EventRecordHandler.Events> expectedEvents = events(TOTAL_CNT);
-
-            Throwable cause = new Throwable();
-
-            Thread pipelineModifier = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    Random random = new Random();
-
-                    while (true) {
-                        try {
-                            Thread.sleep(100);
-                        } catch (InterruptedException e) {
-                            return;
-                        }
-                        if (!ch.isRegistered()) {
-                            continue;
-                        }
-                        //EventForwardHandler forwardHandler = forwarders[random.nextInt(forwarders.length)];
-                        ChannelHandler handler = ch.pipeline().removeFirst();
-                        ch.pipeline().addBefore(groups[random.nextInt(groups.length)], "recorder",
-                                UUID.randomUUID().toString(), handler);
-                    }
-                }
-            });
-            pipelineModifier.setDaemon(true);
-            pipelineModifier.start();
-            for (int i = 0; i < TOTAL_CNT; i++) {
-                EventRecordHandler.Events event = expectedEvents.get(i);
-                switch (event) {
-                    case EXCEPTION_CAUGHT:
-                        ch.pipeline().fireExceptionCaught(cause);
-                        break;
-                    case INBOUND_BufFER_UPDATED:
-                        ch.pipeline().fireInboundBufferUpdated();
-                        break;
-                    case READ_SUSPEND:
-                        ch.pipeline().fireChannelReadSuspended();
-                        break;
-                    case USER_EVENT:
-                        ch.pipeline().fireUserEventTriggered("");
-                        break;
-                }
-            }
-
-            while (events.size() < TOTAL_CNT + 2) {
-                System.out.println(events.size() + " <  " + (TOTAL_CNT + 2));
-                Thread.sleep(10);
-            }
-
-            ch.close().sync();
-
-            expectedEvents.addFirst(EventRecordHandler.Events.ACTIVE);
-            expectedEvents.addFirst(EventRecordHandler.Events.REGISTERED);
-            expectedEvents.addLast(EventRecordHandler.Events.INACTIVE);
-            expectedEvents.addLast(EventRecordHandler.Events.UNREGISTERED);
-
-            for (;;) {
-                EventRecordHandler.Events event = events.poll();
-                if (event == null) {
-                    Assert.assertTrue(expectedEvents.isEmpty());
-                    break;
-                }
-                Assert.assertEquals(expectedEvents.poll(), event);
-            }
-        } finally {
-            l.shutdown();
-            e1.shutdown();
-            e2.shutdown();
-            e3.shutdown();
-            e4.shutdown();
-            e5.shutdown();
-        }
-    }
-
-    private static LinkedList<EventRecordHandler.Events> events(int size) {
-        EventRecordHandler.Events[] events = { EventRecordHandler.Events.EXCEPTION_CAUGHT,
-                EventRecordHandler.Events.USER_EVENT, EventRecordHandler.Events.INBOUND_BufFER_UPDATED,
-                EventRecordHandler.Events.READ_SUSPEND};
-        Random random = new Random();
-        LinkedList<EventRecordHandler.Events> expectedEvents = new LinkedList<EventRecordHandler.Events>();
-        for (int i = 0; i < size; i++) {
-            expectedEvents.add(events[random.nextInt(events.length)]);
-        }
-        return expectedEvents;
     }
 
     private static class ThreadNameAuditor
@@ -902,96 +773,6 @@ public class LocalTransportThreadModelTest {
             //System.err.print("[" + Thread.currentThread().getName() + "] ");
             //cause.printStackTrace();
             super.exceptionCaught(ctx, cause);
-        }
-    }
-
-    private static class PrefixThreadFactory implements ThreadFactory {
-
-        private final String prefix;
-        private final AtomicInteger id = new AtomicInteger();
-
-        public PrefixThreadFactory(String prefix) {
-            this.prefix = prefix;
-        }
-
-        @Override
-        public Thread newThread(Runnable r) {
-            Thread t = new Thread(r);
-            t.setName(prefix + '-' + id.incrementAndGet());
-            t.setDaemon(true);
-            return t;
-        }
-    }
-
-    @ChannelHandler.Sharable
-    private static final class EventForwardHandler extends ChannelDuplexHandler {
-        @Override
-        public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-            ctx.flush(promise);
-        }
-
-        @Override
-        public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-            ctx.fireInboundBufferUpdated();
-        }
-    }
-
-    private static final class EventRecordHandler extends ChannelStateHandlerAdapter {
-        public enum Events {
-            EXCEPTION_CAUGHT,
-            USER_EVENT,
-            READ_SUSPEND,
-            INACTIVE,
-            ACTIVE,
-            UNREGISTERED,
-            REGISTERED,
-            INBOUND_BufFER_UPDATED
-        }
-
-        private final Queue<Events> events;
-
-        public EventRecordHandler(Queue<Events> events) {
-            this.events = events;
-        }
-
-        @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            events.add(Events.EXCEPTION_CAUGHT);
-        }
-
-        @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-            events.add(Events.USER_EVENT);
-        }
-
-        @Override
-        public void channelReadSuspended(ChannelHandlerContext ctx) throws Exception {
-            events.add(Events.READ_SUSPEND);
-        }
-
-        @Override
-        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-            events.add(Events.INACTIVE);
-        }
-
-        @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
-            events.add(Events.ACTIVE);
-        }
-
-        @Override
-        public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
-            events.add(Events.UNREGISTERED);
-        }
-
-        @Override
-        public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-            events.add(Events.REGISTERED);
-        }
-
-        @Override
-        public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-            events.add(Events.INBOUND_BufFER_UPDATED);
         }
     }
 }
