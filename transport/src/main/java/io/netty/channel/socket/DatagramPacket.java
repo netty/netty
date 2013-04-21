@@ -56,6 +56,18 @@ public final class DatagramPacket extends DefaultByteBufHolder {
     }
 
     @Override
+    public DatagramPacket retain() {
+        super.retain();
+        return this;
+    }
+
+    @Override
+    public DatagramPacket retain(int increment) {
+        super.retain(increment);
+        return this;
+    }
+
+    @Override
     public String toString() {
         if (refCnt() == 0) {
             return "DatagramPacket{remoteAddress=" + remoteAddress().toString() +

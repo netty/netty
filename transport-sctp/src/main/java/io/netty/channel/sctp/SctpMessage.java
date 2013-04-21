@@ -136,6 +136,18 @@ public final class SctpMessage extends DefaultByteBufHolder {
     }
 
     @Override
+    public SctpMessage retain() {
+        super.retain();
+        return this;
+    }
+
+    @Override
+    public SctpMessage retain(int increment) {
+        super.retain(increment);
+        return this;
+    }
+
+    @Override
     public String toString() {
         if (refCnt() == 0) {
             return "SctpFrame{" +
