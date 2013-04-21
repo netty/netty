@@ -59,4 +59,15 @@ public class PongWebSocketFrame extends WebSocketFrame {
         return new PongWebSocketFrame(isFinalFragment(), rsv(), data().copy());
     }
 
+    @Override
+    public PongWebSocketFrame retain() {
+        super.retain();
+        return this;
+    }
+
+    @Override
+    public PongWebSocketFrame retain(int increment) {
+        super.retain(increment);
+        return this;
+    }
 }
