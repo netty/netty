@@ -37,4 +37,15 @@ public final class UdtMessage extends DefaultByteBufHolder {
         return new UdtMessage(data().copy());
     }
 
+    @Override
+    public UdtMessage retain() {
+        super.retain();
+        return this;
+    }
+
+    @Override
+    public UdtMessage retain(int increment) {
+        super.retain(increment);
+        return this;
+    }
 }
