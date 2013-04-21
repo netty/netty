@@ -98,4 +98,16 @@ public class TextWebSocketFrame extends WebSocketFrame {
     public TextWebSocketFrame copy() {
         return new TextWebSocketFrame(isFinalFragment(), rsv(), data().copy());
     }
+
+    @Override
+    public TextWebSocketFrame retain() {
+        super.retain();
+        return this;
+    }
+
+    @Override
+    public TextWebSocketFrame retain(int increment) {
+        super.retain(increment);
+        return this;
+    }
 }
