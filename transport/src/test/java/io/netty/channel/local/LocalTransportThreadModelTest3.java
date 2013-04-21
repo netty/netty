@@ -227,7 +227,8 @@ public class LocalTransportThreadModelTest3 {
         EventType[] events;
         if (inbound) {
             events = new EventType[] {
-                    EventType.USER_EVENT, EventType.INBOUND_BUFFER_UPDATED, EventType.READ_SUSPEND, EventType.EXCEPTION_CAUGHT};
+                    EventType.USER_EVENT, EventType.INBOUND_BUFFER_UPDATED, EventType.READ_SUSPEND,
+                    EventType.EXCEPTION_CAUGHT};
         } else {
             events = new EventType[] {
                     EventType.READ, EventType.FLUSH, EventType.EXCEPTION_CAUGHT };
