@@ -65,8 +65,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     private final Map<String, DefaultChannelHandlerContext> name2ctx =
         new HashMap<String, DefaultChannelHandlerContext>(4);
-    private boolean firedChannelActive;
-    private boolean fireInboundBufferUpdatedOnActivation;
 
     final Map<EventExecutorGroup, EventExecutor> childExecutors =
             new IdentityHashMap<EventExecutorGroup, EventExecutor>();
@@ -814,7 +812,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelPipeline fireChannelActive() {
-        firedChannelActive = true;
         head.initHeadHandler();
         head.fireChannelActive();
 
@@ -822,10 +819,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             channel.read();
         }
 
-        if (fireInboundBufferUpdatedOnActivation) {
-            fireInboundBufferUpdatedOnActivation = false;
-            head.fireInboundBufferUpdated();
-        }
         return this;
     }
 
@@ -853,10 +846,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelPipeline fireInboundBufferUpdated() {
-        if (!firedChannelActive) {
-            fireInboundBufferUpdatedOnActivation = true;
-            return this;
-        }
         head.fireInboundBufferUpdated();
         return this;
     }
