@@ -32,7 +32,7 @@ public class JZlibTest {
         EmbeddedByteChannel chEncoder =
           new EmbeddedByteChannel(new JZlibEncoder(ZlibWrapper.ZLIB));
 
-        chEncoder.writeOutbound(data);
+        chEncoder.writeOutbound(data.copy());
         assertTrue(chEncoder.finish());
 
         byte[] deflatedData = chEncoder.readOutbound().array();
@@ -61,7 +61,7 @@ public class JZlibTest {
         EmbeddedByteChannel chEncoder =
           new EmbeddedByteChannel(new JZlibEncoder(ZlibWrapper.NONE));
 
-        chEncoder.writeOutbound(data);
+        chEncoder.writeOutbound(data.copy());
         assertTrue(chEncoder.finish());
 
         byte[] deflatedData = chEncoder.readOutbound().array();
@@ -90,7 +90,7 @@ public class JZlibTest {
         EmbeddedByteChannel chEncoder =
           new EmbeddedByteChannel(new JZlibEncoder(ZlibWrapper.GZIP));
 
-        chEncoder.writeOutbound(data);
+        chEncoder.writeOutbound(data.copy());
         assertTrue(chEncoder.finish());
 
         byte[] deflatedData = chEncoder.readOutbound().array();

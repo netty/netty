@@ -1413,7 +1413,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             outboundMessageBuffer().add(message);
         } else {
             ByteBuf buf = (ByteBuf) message;
-            outboundByteBuffer().writeBytes(buf, buf.readerIndex(), buf.readableBytes());
+            try {
+                outboundByteBuffer().writeBytes(buf, buf.readerIndex(), buf.readableBytes());
+            } finally {
+                buf.release();
+            }
         }
         invokeFlush0(promise);
     }

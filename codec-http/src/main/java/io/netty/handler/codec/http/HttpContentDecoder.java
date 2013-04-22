@@ -221,7 +221,8 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
     }
 
     private void decode(ByteBuf in, ByteBuf out) {
-        decoder.writeInbound(in);
+        // call retain as it will be release after is written
+        decoder.writeInbound(in.retain());
         fetchDecoderOutput(out);
     }
 
