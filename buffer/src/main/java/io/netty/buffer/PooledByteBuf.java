@@ -25,7 +25,7 @@ import java.util.Queue;
 
 abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
 
-    private final ResourceLeak leak = leakDetector.open(this);
+    private final ResourceLeak leak;
 
     protected PoolChunk<T> chunk;
     protected long handle;
@@ -39,6 +39,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
 
     protected PooledByteBuf(int maxCapacity) {
         super(maxCapacity);
+        leak = leakDetector.open(this);
     }
 
     void init(PoolChunk<T> chunk, long handle, int offset, int length, int maxLength) {

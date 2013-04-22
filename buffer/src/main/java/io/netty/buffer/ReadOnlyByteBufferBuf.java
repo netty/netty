@@ -31,7 +31,7 @@ import java.nio.channels.ScatteringByteChannel;
  * Read-only ByteBuf which wraps a read-only ByteBuffer.
  */
 class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
-    private final ResourceLeak leak = leakDetector.open(this);
+    private final ResourceLeak leak;
 
     protected final ByteBuffer buffer;
     private final ByteBufAllocator allocator;
@@ -46,6 +46,7 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
         this.allocator = allocator;
         this.buffer = buffer.slice().order(ByteOrder.BIG_ENDIAN);
         writerIndex(buffer.limit());
+        leak = leakDetector.open(this);
     }
 
     @Override

@@ -36,7 +36,7 @@ import java.util.Queue;
  */
 public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
-    private final ResourceLeak leak = leakDetector.open(this);
+    private final ResourceLeak leak;
     private final ByteBufAllocator alloc;
 
     private ByteBuffer buffer;
@@ -69,6 +69,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
         this.alloc = alloc;
         setByteBuffer(ByteBuffer.allocateDirect(initialCapacity));
+        leak = leakDetector.open(this);
     }
 
     /**
@@ -101,6 +102,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
         doNotFree = true;
         setByteBuffer(initialBuffer.slice().order(ByteOrder.BIG_ENDIAN));
         writerIndex(initialCapacity);
+        leak = leakDetector.open(this);
     }
 
     private void setByteBuffer(ByteBuffer buffer) {
