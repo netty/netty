@@ -82,7 +82,7 @@ public class HashedWheelTimer implements Timer {
             new ResourceLeakDetector<HashedWheelTimer>(
                     HashedWheelTimer.class, 1, Runtime.getRuntime().availableProcessors() * 4);
 
-    private final ResourceLeak leak = leakDetector.open(this);
+    private final ResourceLeak leak;
     private final Worker worker = new Worker();
     final Thread workerThread;
 
@@ -207,6 +207,7 @@ public class HashedWheelTimer implements Timer {
         }
 
         workerThread = threadFactory.newThread(worker);
+        leak = leakDetector.open(this);
     }
 
     @SuppressWarnings("unchecked")

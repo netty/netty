@@ -38,7 +38,7 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
 
     private static final boolean NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
 
-    private final ResourceLeak leak = leakDetector.open(this);
+    private final ResourceLeak leak;
     private final ByteBufAllocator alloc;
 
     private long memoryAddress;
@@ -72,6 +72,7 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
 
         this.alloc = alloc;
         setByteBuffer(ByteBuffer.allocateDirect(initialCapacity));
+        leak = leakDetector.open(this);
     }
 
     /**
@@ -104,6 +105,7 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
         doNotFree = true;
         setByteBuffer(initialBuffer.slice().order(ByteOrder.BIG_ENDIAN));
         writerIndex(initialCapacity);
+        leak = leakDetector.open(this);
     }
 
     private void setByteBuffer(ByteBuffer buffer) {

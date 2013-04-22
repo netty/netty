@@ -45,7 +45,7 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf
 
     private static final ByteBuffer[] EMPTY_NIOBUFFERS = new ByteBuffer[0];
 
-    private final ResourceLeak leak = leakDetector.open(this);
+    private final ResourceLeak leak;
     private final ByteBufAllocator alloc;
     private final boolean direct;
     private final List<Component> components = new ArrayList<Component>();
@@ -64,6 +64,7 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf
         this.alloc = alloc;
         this.direct = direct;
         this.maxNumComponents = maxNumComponents;
+        leak = leakDetector.open(this);
     }
 
     public DefaultCompositeByteBuf(ByteBufAllocator alloc, boolean direct, int maxNumComponents, ByteBuf... buffers) {
@@ -83,6 +84,7 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf
         addComponents0(0, buffers);
         consolidateIfNeeded();
         setIndex(0, capacity());
+        leak = leakDetector.open(this);
     }
 
     public DefaultCompositeByteBuf(
@@ -102,6 +104,7 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf
         addComponents0(0, buffers);
         consolidateIfNeeded();
         setIndex(0, capacity());
+        leak = leakDetector.open(this);
     }
 
     @Override
