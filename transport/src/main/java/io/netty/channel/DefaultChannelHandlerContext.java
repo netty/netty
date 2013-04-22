@@ -193,78 +193,87 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         outMsgBuf = null;
     }
 
-    void forwardBufferContent(final DefaultChannelHandlerContext forwardPrev,
-                              final DefaultChannelHandlerContext forwardNext) {
-        boolean flush = false;
-        boolean inboundBufferUpdated = false;
-        if (hasOutboundByteBuffer() && outboundByteBuffer().isReadable()) {
-            ByteBuf forwardPrevBuf;
-            if (forwardPrev.hasOutboundByteBuffer()) {
-                forwardPrevBuf = forwardPrev.outboundByteBuffer();
-            } else {
-                forwardPrevBuf = forwardPrev.nextOutboundByteBuffer();
-            }
-            forwardPrevBuf.writeBytes(outboundByteBuffer());
-            flush = true;
-        }
-        if (hasOutboundMessageBuffer() && !outboundMessageBuffer().isEmpty()) {
-            MessageBuf<Object> forwardPrevBuf;
-            if (forwardPrev.hasOutboundMessageBuffer()) {
-                forwardPrevBuf = forwardPrev.outboundMessageBuffer();
-            } else {
-                forwardPrevBuf = forwardPrev.nextOutboundMessageBuffer();
-            }
-            if (outboundMessageBuffer().drainTo(forwardPrevBuf) > 0) {
+    void forwardBufferContentAndRemove(
+            final DefaultChannelHandlerContext forwardPrev, final DefaultChannelHandlerContext forwardNext) {
+        try {
+            boolean flush = false;
+            boolean inboundBufferUpdated = false;
+            if (hasOutboundByteBuffer() && outboundByteBuffer().isReadable()) {
+                ByteBuf forwardPrevBuf;
+                if (forwardPrev.hasOutboundByteBuffer()) {
+                    forwardPrevBuf = forwardPrev.outboundByteBuffer();
+                } else {
+                    forwardPrevBuf = forwardPrev.nextOutboundByteBuffer();
+                }
+                forwardPrevBuf.writeBytes(outboundByteBuffer());
                 flush = true;
             }
-        }
-        if (hasInboundByteBuffer() && inboundByteBuffer().isReadable()) {
-            ByteBuf forwardNextBuf;
-            if (forwardNext.hasInboundByteBuffer()) {
-                forwardNextBuf = forwardNext.inboundByteBuffer();
-            } else {
-                forwardNextBuf = forwardNext.nextInboundByteBuffer();
+            if (hasOutboundMessageBuffer() && !outboundMessageBuffer().isEmpty()) {
+                MessageBuf<Object> forwardPrevBuf;
+                if (forwardPrev.hasOutboundMessageBuffer()) {
+                    forwardPrevBuf = forwardPrev.outboundMessageBuffer();
+                } else {
+                    forwardPrevBuf = forwardPrev.nextOutboundMessageBuffer();
+                }
+                if (outboundMessageBuffer().drainTo(forwardPrevBuf) > 0) {
+                    flush = true;
+                }
             }
-            forwardNextBuf.writeBytes(inboundByteBuffer());
-            inboundBufferUpdated = true;
-        }
-        if (hasInboundMessageBuffer() && !inboundMessageBuffer().isEmpty()) {
-            MessageBuf<Object> forwardNextBuf;
-            if (forwardNext.hasInboundMessageBuffer()) {
-                forwardNextBuf = forwardNext.inboundMessageBuffer();
-            } else {
-                forwardNextBuf = forwardNext.nextInboundMessageBuffer();
-            }
-            if (inboundMessageBuffer().drainTo(forwardNextBuf) > 0) {
+            if (hasInboundByteBuffer() && inboundByteBuffer().isReadable()) {
+                ByteBuf forwardNextBuf;
+                if (forwardNext.hasInboundByteBuffer()) {
+                    forwardNextBuf = forwardNext.inboundByteBuffer();
+                } else {
+                    forwardNextBuf = forwardNext.nextInboundByteBuffer();
+                }
+                forwardNextBuf.writeBytes(inboundByteBuffer());
                 inboundBufferUpdated = true;
             }
-        }
-        if (flush) {
-            EventExecutor executor = executor();
-            Thread currentThread = Thread.currentThread();
-            if (executor.inEventLoop(currentThread)) {
-                invokePrevFlush(newPromise(), currentThread, findContextOutboundInclusive(forwardPrev));
-            } else {
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        invokePrevFlush(newPromise(), Thread.currentThread(),
-                                findContextOutboundInclusive(forwardPrev));
-                    }
-                });
+            if (hasInboundMessageBuffer() && !inboundMessageBuffer().isEmpty()) {
+                MessageBuf<Object> forwardNextBuf;
+                if (forwardNext.hasInboundMessageBuffer()) {
+                    forwardNextBuf = forwardNext.inboundMessageBuffer();
+                } else {
+                    forwardNextBuf = forwardNext.nextInboundMessageBuffer();
+                }
+                if (inboundMessageBuffer().drainTo(forwardNextBuf) > 0) {
+                    inboundBufferUpdated = true;
+                }
             }
-        }
-        if (inboundBufferUpdated) {
-            EventExecutor executor = executor();
-            if (executor.inEventLoop()) {
-                fireInboundBufferUpdated0(findContextInboundInclusive(forwardNext));
-            } else {
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        fireInboundBufferUpdated0(findContextInboundInclusive(forwardNext));
-                    }
-                });
+            if (flush) {
+                EventExecutor executor = executor();
+                Thread currentThread = Thread.currentThread();
+                if (executor.inEventLoop(currentThread)) {
+                    invokePrevFlush(newPromise(), currentThread, findContextOutboundInclusive(forwardPrev));
+                } else {
+                    executor.execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            invokePrevFlush(newPromise(), Thread.currentThread(),
+                                    findContextOutboundInclusive(forwardPrev));
+                        }
+                    });
+                }
+            }
+            if (inboundBufferUpdated) {
+                EventExecutor executor = executor();
+                if (executor.inEventLoop()) {
+                    fireInboundBufferUpdated0(findContextInboundInclusive(forwardNext));
+                } else {
+                    executor.execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            fireInboundBufferUpdated0(findContextInboundInclusive(forwardNext));
+                        }
+                    });
+                }
+            }
+        } finally {
+            flags |= FLAG_REMOVED;
+
+            // Free all buffers before completing removal.
+            if (!channel.isRegistered()) {
+                freeHandlerBuffersAfterRemoval();
             }
         }
     }
@@ -389,15 +398,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
 
         return nextBufferHadEnoughRoom;
-    }
-
-    void setRemoved() {
-        flags |= FLAG_REMOVED;
-
-        // Free all buffers before completing removal.
-        if (!channel.isRegistered()) {
-            freeHandlerBuffersAfterRemoval();
-        }
     }
 
     private void freeHandlerBuffersAfterRemoval() {
