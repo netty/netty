@@ -247,7 +247,8 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     }
 
     private void encode(ByteBuf in, ByteBuf out) {
-        encoder.writeOutbound(in);
+        // call retain here as it will call release after its written to the channel
+        encoder.writeOutbound(in.retain());
         fetchEncoderOutput(out);
     }
 

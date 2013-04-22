@@ -149,7 +149,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
             }
 
             if (channel.parent() != null) {
-                channel.write(msg);
+                channel.write(msg.retain());
             }
 
             counter += actual.length;
