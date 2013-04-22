@@ -675,7 +675,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     doDisconnect();
                     promise.setSuccess();
                     if (wasActive && !isActive()) {
-                        pipeline.fireChannelInactive();
+                        invokeLater(new Runnable() {
+                            @Override
+                            public void run() {
+                                pipeline.fireChannelInactive();
+                            }
+                        });
                     }
                 } catch (Throwable t) {
                     promise.setFailure(t);
@@ -710,7 +715,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     flushFutureNotifier.notifyFlushFutures(closedChannelException);
 
                     if (wasActive && !isActive()) {
-                        pipeline.fireChannelInactive();
+                        invokeLater(new Runnable() {
+                            @Override
+                            public void run() {
+                                pipeline.fireChannelInactive();
+                            }
+                        });
                     }
 
                     deregister(voidFuture());
@@ -754,7 +764,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     if (registered) {
                         registered = false;
                         promise.setSuccess();
-                        pipeline.fireChannelUnregistered();
+                        invokeLater(new Runnable() {
+                            @Override
+                            public void run() {
+                                pipeline.fireChannelUnregistered();
+                            }
+                        });
                     } else {
                         // Some transports like local and AIO does not allow the deregistration of
                         // an open channel.  Their doDeregister() calls close().  Consequently,
@@ -785,8 +800,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             if (eventLoop().inEventLoop()) {
                 try {
                     doBeginRead();
-                } catch (Exception e) {
-                    pipeline().fireExceptionCaught(e);
+                } catch (final Exception e) {
+                    invokeLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            pipeline.fireExceptionCaught(e);
+                        }
+                    });
                     close(unsafe().voidFuture());
                 }
             } else {
@@ -849,10 +869,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         private void flush0() {
             if (!inFlushNow) { // Avoid re-entrance
                 try {
+                    // Flush immediately only when there's no pending flush.
+                    // If there's a pending flush operation, event loop will call flushNow() later,
+                    // and thus there's no need to call it now.
                     if (!isFlushPending()) {
                         flushNow();
-                    } else {
-                        // Event loop will call flushNow() later by itself.
                     }
                 } catch (Throwable t) {
                     flushFutureNotifier.notifyFlushFutures(t);
@@ -929,6 +950,21 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
             close(voidFuture());
+        }
+
+        private void invokeLater(Runnable task) {
+            // This method is used by outbound operation implementations to trigger an inbound event later.
+            // They do not trigger an inbound event immediately because an outbound operation might have been
+            // triggered by another inbound event handler method.  If fired immediately, the call stack
+            // will look like this for example:
+            //
+            //   handlerA.inboundBufferUpdated() - (1) an inbound handler method closes a connection.
+            //   -> handlerA.ctx.close()
+            //      -> channel.unsafe.close()
+            //         -> handlerA.channelInactive() - (2) another inbound handler method called while in (1) yet
+            //
+            // which means the execution of two inbound handler methods of the same handler overlap undesirably.
+            eventLoop().execute(task);
         }
     }
 

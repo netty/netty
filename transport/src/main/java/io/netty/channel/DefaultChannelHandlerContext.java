@@ -24,11 +24,14 @@ import io.netty.buffer.Unpooled;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
+import io.netty.util.concurrent.Future;
+import io.netty.util.internal.PlatformDependent;
 
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import static io.netty.channel.DefaultChannelPipeline.*;
@@ -309,17 +312,42 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     void initHeadHandler() {
         // Must be called for the head handler.
-        HeadHandler h = (HeadHandler) handler;
-        if (h.initialized) {
-            return;
+        EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            HeadHandler h = (HeadHandler) handler;
+            if (h.initialized) {
+                return;
+            }
+
+            h.init(this);
+            h.initialized = true;
+            outByteBuf = h.byteSink;
+            outMsgBuf = h.msgSink;
+        } else {
+            Future<?> f = executor.submit(new Runnable() {
+                @Override
+                public void run() {
+                    initHeadHandler();
+                }
+            });
+
+            boolean interrupted = false;
+            try {
+                while (!f.isDone()) {
+                    try {
+                        f.get();
+                    } catch (InterruptedException e) {
+                        interrupted = true;
+                    } catch (ExecutionException e) {
+                        PlatformDependent.throwException(e);
+                    }
+                }
+            } finally {
+                if (interrupted) {
+                    Thread.currentThread().interrupt();
+                }
+            }
         }
-
-        assert executor().inEventLoop();
-
-        h.init(this);
-        h.initialized = true;
-        outByteBuf = h.byteSink;
-        outMsgBuf = h.msgSink;
     }
 
     private boolean flushInboundBridge() {
@@ -401,8 +429,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     private void freeHandlerBuffersAfterRemoval() {
-        if (flags == FLAG_REMOVED) { // Removed, but not freed yet
-            flags |= FLAG_FREED;
+        int flags = this.flags;
+        if ((flags & FLAG_REMOVED) != 0 && (flags & FLAG_FREED) == 0) { // Removed, but not freed yet
+            this.flags |= FLAG_FREED;
 
             final ChannelHandler handler = handler();
 
@@ -691,7 +720,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     public ChannelHandlerContext fireChannelUnregistered() {
         final DefaultChannelHandlerContext next = findContextInbound();
         EventExecutor executor = next.executor();
-        if (prev != null && executor.inEventLoop()) {
+        if (executor.inEventLoop()) {
             next.invokeChannelUnregistered();
         } else {
             executor.execute(new Runnable() {
@@ -743,7 +772,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     public ChannelHandlerContext fireChannelInactive() {
         final DefaultChannelHandlerContext next = findContextInbound();
         EventExecutor executor = next.executor();
-        if (prev != null && executor.inEventLoop()) {
+        if (executor.inEventLoop()) {
             next.invokeChannelInactive();
         } else {
             executor.execute(new Runnable() {
@@ -778,7 +807,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void invokeExceptionCaught(final Throwable cause) {
         EventExecutor executor = executor();
-        if (prev != null && executor.inEventLoop()) {
+        if (executor.inEventLoop()) {
             invokeExceptionCaught0(cause);
         } else {
             try {
@@ -897,7 +926,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void invokeInboundBufferUpdated() {
         ChannelStateHandler handler = (ChannelStateHandler) handler();
-
         if (handler instanceof ChannelInboundHandler) {
             for (;;) {
                 try {
@@ -1424,7 +1452,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     void invokeFreeInboundBuffer() {
         EventExecutor executor = executor();
-        if (prev != null && executor.inEventLoop()) {
+        if (executor.inEventLoop()) {
             invokeFreeInboundBuffer0();
         } else {
             executor.execute(new Runnable() {
@@ -1517,11 +1545,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             return;
         }
 
-        if (handler() instanceof ChannelStateHandler) {
-            invokeExceptionCaught(cause);
-        } else {
-            findContextInbound().invokeExceptionCaught(cause);
-        }
+        invokeExceptionCaught(cause);
     }
 
     private static boolean inExceptionCaught(Throwable cause) {
