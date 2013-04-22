@@ -1467,15 +1467,14 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void invokeFreeInboundBuffer0() {
         ChannelHandler handler = handler();
-        if (handler instanceof ChannelInboundHandler) {
-            ChannelInboundHandler h = (ChannelInboundHandler) handler;
-            try {
-                h.freeInboundBuffer(this);
-            } catch (Throwable t) {
-                notifyHandlerException(t);
-            } finally {
-                freeInbound();
+        try {
+            if (handler instanceof ChannelInboundHandler) {
+                ((ChannelInboundHandler) handler).freeInboundBuffer(this);
             }
+        } catch (Throwable t) {
+            notifyHandlerException(t);
+        } finally {
+            freeInbound();
         }
 
         if (next != null) {
@@ -1519,15 +1518,14 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void invokeFreeOutboundBuffer0() {
         ChannelHandler handler = handler();
-        if (handler instanceof ChannelOutboundHandler) {
-            ChannelOutboundHandler h = (ChannelOutboundHandler) handler;
-            try {
-                h.freeOutboundBuffer(this);
-            } catch (Throwable t) {
-                notifyHandlerException(t);
-            } finally {
-                freeOutbound();
+        try {
+            if (handler instanceof ChannelOutboundHandler) {
+                ((ChannelOutboundHandler) handler).freeOutboundBuffer(this);
             }
+        } catch (Throwable t) {
+            notifyHandlerException(t);
+        } finally {
+            freeOutbound();
         }
 
         if (prev != null) {
