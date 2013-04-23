@@ -120,7 +120,7 @@ public final class NetUtil {
                 }
             } catch (SocketException e) {
                 //Nope. Can't do anything else, sorry!
-                logger.error("Failed to enumerate network interfaces", e);
+                logger.warn("Failed to enumerate network interfaces", e);
             }
         }
 
