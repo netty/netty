@@ -84,13 +84,7 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
 
     @Override
     protected int doReadBytes(ByteBuf buf) throws Exception {
-        int length = available();
-        if (length < 1) {
-            length = 1;
-        }
-        if (length > buf.writableBytes()) {
-            length = buf.writableBytes();
-        }
+        int length = Math.max(1, Math.min(available(), buf.maxWritableBytes()));
         return buf.writeBytes(is, length);
     }
 
