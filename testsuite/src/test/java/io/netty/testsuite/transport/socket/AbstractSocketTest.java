@@ -53,7 +53,7 @@ public abstract class AbstractSocketTest {
             sb = e.getKey().newInstance();
             cb = e.getValue().newInstance();
             addr = new InetSocketAddress(
-                    NetUtil.LOCALHOST, TestUtils.getFreePort());
+                    TestUtils.LOCALHOST, TestUtils.getFreePort());
             sb.localAddress(addr);
             cb.remoteAddress(addr);
 

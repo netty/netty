@@ -15,13 +15,20 @@
  */
 package io.netty.testsuite.util;
 
-import io.netty.util.NetUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
 import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.SocketException;
 import java.nio.channels.Channel;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -35,11 +42,131 @@ public final class TestUtils {
     private static final List<Integer> PORTS = new ArrayList<Integer>();
     private static Iterator<Integer> portIterator;
 
+    /**
+     * The logger being used by this class
+     */
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(TestUtils.class);
+
+    /**
+     * The {@link InetAddress} representing the host machine
+     * <p/>
+     * We cache this because some machines take almost forever to return from
+     * {@link InetAddress}.getLocalHost(). This may be due to incorrect
+     * configuration of the hosts and DNS client configuration files.
+     */
+    public static final InetAddress LOCALHOST;
+
+    /**
+     * The loopback {@link NetworkInterface} on the current machine
+     */
+    public static final NetworkInterface LOOPBACK_IF;
+
     static {
         for (int i = START_PORT; i < END_PORT; i ++) {
             PORTS.add(i);
         }
         Collections.shuffle(PORTS);
+    }
+
+    static {
+        //Start the process of discovering localhost
+        InetAddress localhost;
+        try {
+            localhost = InetAddress.getLocalHost();
+            validateHost(localhost);
+        } catch (IOException e0) {
+            // The default local host names did not work.  Try hard-coded IPv4 address.
+            try {
+                localhost = InetAddress.getByAddress(new byte[]{ 127, 0, 0, 1 });
+                validateHost(localhost);
+            } catch (IOException e1) {
+                // The hard-coded IPv4 address did not work.  Try hard coded IPv6 address.
+                try {
+                    localhost = InetAddress.getByAddress(new byte[]{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 });
+                    validateHost(localhost);
+                } catch (IOException e2) {
+                    // Log all exceptions we caught so far for easier diagnosis.
+                    logger.warn("Failed to resolve localhost with InetAddress.getLocalHost():", e0);
+                    logger.warn("Failed to resolve localhost with InetAddress.getByAddress(127.0.0.1):", e1);
+                    logger.warn("Failed to resolve localhost with InetAddress.getByAddress(::1)", e2);
+                    throw new Error("failed to resolve localhost; incorrect network configuration?");
+                }
+            }
+        }
+
+        LOCALHOST = localhost;
+
+        //Prepare to get the local NetworkInterface
+        NetworkInterface loopbackInterface;
+
+        try {
+            //Automatically get the loopback interface
+            loopbackInterface = NetworkInterface.getByInetAddress(LOCALHOST);
+        } catch (SocketException e) {
+            //No? Alright. There is a backup!
+            loopbackInterface = null;
+        }
+
+        //Check to see if a network interface was not found
+        if (loopbackInterface == null) {
+            try {
+                //Start iterating over all network interfaces
+                for (Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+                     interfaces.hasMoreElements();) {
+                    //Get the "next" interface
+                    NetworkInterface networkInterface = interfaces.nextElement();
+
+                    //Check to see if the interface is a loopback interface
+                    if (networkInterface.isLoopback()) {
+                        //Phew! The loopback interface was found.
+                        loopbackInterface = networkInterface;
+                        //No need to keep iterating
+                        break;
+                    }
+                }
+            } catch (SocketException e) {
+                //Nope. Can't do anything else, sorry!
+                logger.warn("Failed to enumerate network interfaces", e);
+            }
+        }
+
+        //Set the loopback interface constant
+        LOOPBACK_IF = loopbackInterface;
+    }
+
+    private static void validateHost(InetAddress host) throws IOException {
+        ServerSocket ss = null;
+        Socket s1 = null;
+        Socket s2 = null;
+        try {
+            ss = new ServerSocket();
+            ss.setReuseAddress(false);
+            ss.bind(new InetSocketAddress(host, 0));
+            s1 = new Socket(host, ss.getLocalPort());
+            s2 = ss.accept();
+        } finally {
+            if (s2 != null) {
+                try {
+                    s2.close();
+                } catch (IOException e) {
+                    // Ignore
+                }
+            }
+            if (s1 != null) {
+                try {
+                    s1.close();
+                } catch (IOException e) {
+                    // Ignore
+                }
+            }
+            if (ss != null) {
+                try {
+                    ss.close();
+                } catch (IOException e) {
+                    // Ignore
+                }
+            }
+        }
     }
 
     private static int nextCandidatePort() {
@@ -67,7 +194,7 @@ public final class TestUtils {
 
                 ss = new ServerSocket();
                 ss.setReuseAddress(false);
-                ss.bind(new InetSocketAddress(NetUtil.LOCALHOST, port));
+                ss.bind(new InetSocketAddress(LOCALHOST, port));
                 ss.close();
 
                 return port;
