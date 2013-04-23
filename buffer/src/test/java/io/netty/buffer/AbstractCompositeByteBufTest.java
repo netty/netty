@@ -31,8 +31,7 @@ import static org.junit.Assert.*;
  * An abstract test class for composite channel buffers
  */
 @SuppressWarnings("ZeroLengthArrayAllocation")
-public abstract class AbstractCompositeByteBufTest extends
-        AbstractByteBufTest {
+public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
 
     private final ByteOrder order;
 
@@ -473,22 +472,34 @@ public abstract class AbstractCompositeByteBufTest extends
         ByteBuf c2 = buffer().writeByte(2).retain();
         ByteBuf c3 = buffer().writeByte(3).retain(2);
 
-        CompositeByteBuf bufA = freeLater(compositeBuffer());
-        bufA.addComponents(c1, c2, c3);
+        CompositeByteBuf bufA = compositeBuffer();
+        bufA.addComponents(c1, c2, c3).writerIndex(3);
 
-        CompositeByteBuf bufB = freeLater(compositeBuffer());
-        bufB.addComponent(bufA);
+        CompositeByteBuf bufB = compositeBuffer();
+        bufB.addComponents(bufA);
 
-        // Ensure that bufA has been released.
-        assertThat(bufA.refCnt(), is(0));
+        // Ensure that bufA.refCnt() did not change.
+        assertThat(bufA.refCnt(), is(1));
 
         // Ensure that c[123]'s refCnt did not change.
-        // Internally, it's:
-        // 1) increased by 1 by addComponent(), and then
-        // 2) decreased by 1 by bufA.release() which is called by addComponent().
         assertThat(c1.refCnt(), is(1));
         assertThat(c2.refCnt(), is(2));
         assertThat(c3.refCnt(), is(3));
+
+        // This should decrease bufA.refCnt().
+        bufB.release();
+        assertThat(bufB.refCnt(), is(0));
+
+        // Ensure bufA.refCnt() changed.
+        assertThat(bufA.refCnt(), is(0));
+
+        // Ensure that c[123]'s refCnt also changed due to the deallocation of bufA.
+        assertThat(c1.refCnt(), is(0));
+        assertThat(c2.refCnt(), is(1));
+        assertThat(c3.refCnt(), is(2));
+
+        c3.release(2);
+        c2.release();
     }
 
     @Test
