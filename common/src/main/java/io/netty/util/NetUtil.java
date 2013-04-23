@@ -63,8 +63,7 @@ public final class NetUtil {
     /**
      * The logger being used by this class
      */
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(NetUtil.class);
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(NetUtil.class);
 
     static {
         //Start the process of discovering localhost
@@ -72,18 +71,22 @@ public final class NetUtil {
         try {
             localhost = InetAddress.getLocalHost();
             validateHost(localhost);
-        } catch (IOException e) {
+        } catch (IOException e0) {
             // The default local host names did not work.  Try hard-coded IPv4 address.
             try {
-                localhost = InetAddress.getByAddress(new byte[]{127, 0, 0, 1});
+                localhost = InetAddress.getByAddress(new byte[]{ 127, 0, 0, 1 });
                 validateHost(localhost);
             } catch (IOException e1) {
                 // The hard-coded IPv4 address did not work.  Try hard coded IPv6 address.
                 try {
-                    localhost = InetAddress.getByAddress(new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1});
+                    localhost = InetAddress.getByAddress(new byte[]{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 });
                     validateHost(localhost);
                 } catch (IOException e2) {
-                    throw new Error("Failed to resolve localhost - incorrect network configuration?", e2);
+                    // Log all exceptions we caught so far for easier diagnosis.
+                    logger.warn("Failed to resolve localhost with InetAddress.getLocalHost():", e0);
+                    logger.warn("Failed to resolve localhost with InetAddress.getByAddress(127.0.0.1):", e1);
+                    logger.warn("Failed to resolve localhost with InetAddress.getByAddress(::1)", e2);
+                    throw new Error("failed to resolve localhost; incorrect network configuration?");
                 }
             }
         }
