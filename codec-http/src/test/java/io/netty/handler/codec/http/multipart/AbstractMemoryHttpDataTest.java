@@ -69,7 +69,7 @@ public class AbstractMemoryHttpDataTest {
          * @param size    Expected data block size.
          */
         protected TestHttpData(String name, Charset charset, long size) {
-            super(name, charset, size);
+            super(name, charset, size, true);
         }
 
         @Override

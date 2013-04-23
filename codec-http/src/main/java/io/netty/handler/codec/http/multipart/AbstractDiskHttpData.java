@@ -38,8 +38,12 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
     private boolean isRenamed;
     private FileChannel fileChannel;
 
+    protected AbstractDiskHttpData(String name, Charset charset, long size, boolean checkBadName) {
+        super(name, charset, size, checkBadName);
+    }
+
     protected AbstractDiskHttpData(String name, Charset charset, long size) {
-        super(name, charset, size);
+        this(name, charset, size, false);
     }
 
     /**

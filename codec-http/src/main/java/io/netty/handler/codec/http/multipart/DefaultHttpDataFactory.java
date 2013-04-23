@@ -45,6 +45,11 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     private long minSize;
 
     /**
+     * Default should check the correctness with W3c rules on attribute names
+     */
+    private boolean checkBadName = true;
+
+    /**
      * Keep all HttpDatas until cleanAllHttpDatas() is called.
      */
     private final ConcurrentMap<HttpRequest, List<HttpData>> requestFileDeleteMap =
@@ -79,6 +84,26 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     }
 
     /**
+     * @return True if the current Factory is checking the correctness of the attribute names regarding W3c rules
+     * which say character are ASCII (less than 127) and no characters from "=,; \t\r\n\v\f:"
+     */
+    public boolean isCheckBadName() {
+        return checkBadName;
+    }
+
+    /**
+     * Note that it is still possible to check later on manually using
+     * {@link AbstractHttpData}.isValidHtml4Name(String name) method
+     *
+     * @param checkBadName True to check if names conform to HTML definition ASCII (less than 127)
+     * and no characters from "=,; \t\r\n\v\f:", and False to ignore this check.
+     *
+     */
+    public void setCheckBadName(boolean checkBadName) {
+        this.checkBadName = checkBadName;
+    }
+
+    /**
      * @return the associated list of Files for the request
      */
     private List<HttpData> getList(HttpRequest request) {
@@ -93,18 +118,18 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     @Override
     public Attribute createAttribute(HttpRequest request, String name) {
         if (useDisk) {
-            Attribute attribute = new DiskAttribute(name);
+            Attribute attribute = new DiskAttribute(name, checkBadName);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
             return attribute;
         }
         if (checkSize) {
-            Attribute attribute = new MixedAttribute(name, minSize);
+            Attribute attribute = new MixedAttribute(name, minSize, checkBadName);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
             return attribute;
         }
-        return new MemoryAttribute(name);
+        return new MemoryAttribute(name, checkBadName);
     }
 
     @Override
@@ -112,23 +137,23 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         if (useDisk) {
             Attribute attribute;
             try {
-                attribute = new DiskAttribute(name, value);
+                attribute = new DiskAttribute(name, value, checkBadName);
             } catch (IOException e) {
                 // revert to Mixed mode
-                attribute = new MixedAttribute(name, value, minSize);
+                attribute = new MixedAttribute(name, value, minSize, checkBadName);
             }
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
             return attribute;
         }
         if (checkSize) {
-            Attribute attribute = new MixedAttribute(name, value, minSize);
+            Attribute attribute = new MixedAttribute(name, value, minSize, checkBadName);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(attribute);
             return attribute;
         }
         try {
-            return new MemoryAttribute(name, value);
+            return new MemoryAttribute(name, value, checkBadName);
         } catch (IOException e) {
             throw new IllegalArgumentException(e);
         }
@@ -140,20 +165,20 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
             long size) {
         if (useDisk) {
             FileUpload fileUpload = new DiskFileUpload(name, filename, contentType,
-                    contentTransferEncoding, charset, size);
+                    contentTransferEncoding, charset, size, checkBadName);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(fileUpload);
             return fileUpload;
         }
         if (checkSize) {
             FileUpload fileUpload = new MixedFileUpload(name, filename, contentType,
-                    contentTransferEncoding, charset, size, minSize);
+                    contentTransferEncoding, charset, size, minSize, checkBadName);
             List<HttpData> fileToDelete = getList(request);
             fileToDelete.add(fileUpload);
             return fileUpload;
         }
         return new MemoryFileUpload(name, filename, contentType,
-                contentTransferEncoding, charset, size);
+                contentTransferEncoding, charset, size, checkBadName);
     }
 
     @Override

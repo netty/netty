@@ -43,7 +43,12 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
 
     public DiskFileUpload(String name, String filename, String contentType,
             String contentTransferEncoding, Charset charset, long size) {
-        super(name, charset, size);
+        this(name, filename, contentType, contentTransferEncoding, charset, size, false);
+    }
+
+    public DiskFileUpload(String name, String filename, String contentType,
+            String contentTransferEncoding, Charset charset, long size, boolean checkBadName) {
+        super(name, charset, size, checkBadName);
         setFilename(filename);
         setContentType(contentType);
         setContentTransferEncoding(contentTransferEncoding);
@@ -166,7 +171,7 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
     @Override
     public FileUpload copy() {
         DiskFileUpload upload = new DiskFileUpload(getName(),
-                getFilename(), getContentType(), getContentTransferEncoding(), getCharset(), size);
+                getFilename(), getContentType(), getContentTransferEncoding(), getCharset(), size, false);
         ByteBuf buf = data();
         if (buf != null) {
             try {

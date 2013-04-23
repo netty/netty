@@ -39,7 +39,11 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
     protected boolean isRenamed;
 
     protected AbstractMemoryHttpData(String name, Charset charset, long size) {
-        super(name, charset, size);
+        this(name, charset, size, false);
+    }
+
+    protected AbstractMemoryHttpData(String name, Charset charset, long size, boolean checkBadName) {
+        super(name, charset, size, checkBadName);
     }
 
     @Override

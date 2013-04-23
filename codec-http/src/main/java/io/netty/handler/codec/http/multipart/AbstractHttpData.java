@@ -35,19 +35,20 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
     protected boolean completed;
 
     protected AbstractHttpData(String name, Charset charset, long size) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
-        name = name.trim();
-        if (name.isEmpty()) {
-            throw new IllegalArgumentException("empty name");
-        }
+        this(name, charset, size, false);
+    }
 
+    /**
+     * Convenient method to check if an attribute name respects the W3C rules
+     * (character are ASCII (less than 127) and no characters from "=,; \t\r\n\v\f:")
+     * @param name the attribute name to check
+     * @return True if the name is conform with the W3C rules
+     */
+    public static boolean isValidHtml4Name(String name) {
         for (int i = 0; i < name.length(); i ++) {
             char c = name.charAt(i);
             if (c > 127) {
-                throw new IllegalArgumentException(
-                        "name contains non-ascii character: " + name);
+                return false;
             }
 
             // Check prohibited characters.
@@ -61,10 +62,24 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
             case '\n':
             case '\f':
             case 0x0b: // Vertical tab
-                throw new IllegalArgumentException(
-                        "name contains one of the following prohibited characters: " +
-                        "=,; \\t\\r\\n\\v\\f: " + name);
+                 return false;
             }
+        }
+        return true;
+    }
+
+    protected AbstractHttpData(String name, Charset charset, long size, boolean checkBadName) {
+        if (name == null) {
+            throw new NullPointerException("name");
+        }
+        name = name.trim();
+        if (name.isEmpty()) {
+            throw new IllegalArgumentException("empty name");
+        }
+        if (checkBadName && ! isValidHtml4Name(name)) {
+            throw new IllegalArgumentException(
+                    "name contains non-ascii character or one of the following prohibited characters: " +
+                            "=,; \\t\\r\\n\\v\\f: " + name);
         }
         this.name = name;
         if (charset != null) {
