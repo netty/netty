@@ -1348,7 +1348,7 @@ public abstract class AbstractByteBufTest {
         for (int i = 0; i < buffer.capacity(); i ++) {
             buffer.writeByte((byte) i);
         }
-        ByteBuf copy = copiedBuffer(buffer);
+        ByteBuf copy = freeLater(copiedBuffer(buffer));
 
         // Discard the first (CAPACITY / 2 - 1) bytes.
         buffer.setIndex(CAPACITY / 2 - 1, CAPACITY - 1);
