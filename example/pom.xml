@@ -62,6 +62,12 @@
     <dependency>
       <groupId>com.jcraft</groupId>
       <artifactId>jzlib</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.javassist</groupId>
+      <artifactId>javassist</artifactId>
+      <scope>runtime</scope>
     </dependency>
 
     <!-- see https://github.com/netty/netty/issues/874 -->
