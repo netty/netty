@@ -18,19 +18,28 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import io.netty.util.concurrent.DefaultPromise;
+import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Promise;
 import org.junit.Test;
 
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 public class SocketBufReleaseTest extends AbstractSocketTest {
+
+    private static final EventExecutor executor =
+            new DefaultEventExecutorGroup(1, new DefaultThreadFactory(SocketBufReleaseTest.class, true)).next();
 
     @Test
     public void testBufRelease() throws Throwable {
@@ -47,8 +56,13 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.connect().sync().channel();
 
+        // Ensure the server socket accepted the client connection *and* initialized pipeline successfully.
+        serverHandler.channelFuture.sync();
+
+        // and then close all sockets.
         sc.close().sync();
         cc.close().sync();
+
         serverHandler.check();
         clientHandler.check();
     }
@@ -58,6 +72,23 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         private final Random random = new Random();
         private final CountDownLatch latch = new CountDownLatch(1);
         private ByteBuf buf;
+        private final Promise<Channel> channelFuture = new DefaultPromise<Channel>(executor);
+
+        @Override
+        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+            channelFuture.setSuccess(ctx.channel());
+        }
+
+        @Override
+        public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            return super.newInboundBuffer(ctx);
+        }
+
+        @Override
+        public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+            super.freeInboundBuffer(ctx);
+        }
+
         @Override
         public void channelActive(final ChannelHandlerContext ctx) throws Exception {
             byte[] data = new byte[1024];

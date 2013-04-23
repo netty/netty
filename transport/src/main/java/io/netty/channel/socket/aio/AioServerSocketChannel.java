@@ -16,8 +16,10 @@
 package io.netty.channel.socket.aio;
 
 import io.netty.buffer.BufType;
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.aio.AbstractAioChannel;
@@ -181,11 +183,25 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
         @Override
         protected void completed0(AsynchronousSocketChannel ch, AioServerSocketChannel channel) {
             channel.acceptInProgress = false;
+
+            ChannelPipeline pipeline = channel.pipeline();
+            MessageBuf<Object> buffer = pipeline.inboundMessageBuffer();
+
+            if (buffer.refCnt() == 0) {
+                try {
+                    ch.close();
+                } catch (IOException e) {
+                    logger.warn(
+                            "Failed to close a socket which was accepted while its server socket is being closed",
+                            e);
+                }
+                return;
+            }
+
             // create the socket add it to the buffer and fire the event
-            channel.pipeline().inboundMessageBuffer().add(
-                    new AioSocketChannel(channel, null, ch));
-            channel.pipeline().fireInboundBufferUpdated();
-            channel.pipeline().fireChannelReadSuspended();
+            buffer.add(new AioSocketChannel(channel, null, ch));
+            pipeline.fireInboundBufferUpdated();
+            pipeline.fireChannelReadSuspended();
         }
 
         @Override
