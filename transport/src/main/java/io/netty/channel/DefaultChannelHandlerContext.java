@@ -461,6 +461,10 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         freeOutbound();
     }
 
+    private boolean isInboundFreed() {
+        return (flags & FLAG_FREED_INBOUND) != 0;
+    }
+
     private void freeInbound() {
         // Release the bridge feeder
         flags |= FLAG_FREED_INBOUND;
@@ -480,6 +484,10 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 logger.warn("inbound bridge not empty - bug?: {}", bridge.size());
             }
         }
+    }
+
+    private boolean isOutboundFreed() {
+        return (flags & FLAG_FREED_OUTBOUND) != 0;
     }
 
     private void freeOutbound() {
@@ -925,7 +933,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     private void invokeInboundBufferUpdated() {
-        if ((flags & FLAG_FREED_INBOUND) != 0) {
+        if (isInboundFreed()) {
             return;
         }
 
@@ -941,7 +949,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 } catch (Throwable t) {
                     notifyHandlerException(t);
                 } finally {
-                    if (handler instanceof ChannelInboundByteHandler && (flags & FLAG_FREED_INBOUND) == 0) {
+                    if (handler instanceof ChannelInboundByteHandler && !isInboundFreed()) {
                         try {
                             ((ChannelInboundByteHandler) handler).discardInboundReadBytes(this);
                         } catch (Throwable t) {
@@ -1291,7 +1299,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     private void invokeFlush0(ChannelPromise promise) {
-        if ((flags & FLAG_FREED_OUTBOUND) != 0) {
+        if (isOutboundFreed()) {
             promise.setFailure(new ChannelPipelineException(
                     "Unable to flush as outbound buffer of next handler was freed already"));
             return;
@@ -1313,7 +1321,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         } catch (Throwable t) {
             notifyHandlerException(t);
         } finally {
-            if (handler instanceof ChannelOutboundByteHandler && (flags & FLAG_FREED_OUTBOUND) == 0) {
+            if (handler instanceof ChannelOutboundByteHandler && !isOutboundFreed()) {
                 try {
                     ((ChannelOutboundByteHandler) handler).discardOutboundReadBytes(this);
                 } catch (Throwable t) {
@@ -1435,7 +1443,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             return;
         }
 
-        if ((flags & FLAG_FREED_OUTBOUND) != 0) {
+        if (isOutboundFreed()) {
             promise.setFailure(new ChannelPipelineException(
                     "Unable to write as outbound buffer of next handler was freed already"));
             return;
