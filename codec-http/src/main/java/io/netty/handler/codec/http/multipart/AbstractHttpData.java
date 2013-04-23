@@ -22,11 +22,15 @@ import io.netty.handler.codec.http.HttpConstants;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.regex.Pattern;
 
 /**
  * Abstract HttpData implementation
  */
 public abstract class AbstractHttpData extends AbstractReferenceCounted implements HttpData {
+
+    private static final Pattern STRIP_PATTERN = Pattern.compile("(?:^\\s+|\\s+$|\\n)");
+    private static final Pattern REPLACE_PATTERN = Pattern.compile("[\\r\\t]");
 
     protected final String name;
     protected long definedSize;
@@ -38,34 +42,14 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
         if (name == null) {
             throw new NullPointerException("name");
         }
-        name = name.trim();
+
+        name = REPLACE_PATTERN.matcher(name).replaceAll(" ");
+        name = STRIP_PATTERN.matcher(name).replaceAll("");
+
         if (name.isEmpty()) {
             throw new IllegalArgumentException("empty name");
         }
 
-        for (int i = 0; i < name.length(); i ++) {
-            char c = name.charAt(i);
-            if (c > 127) {
-                throw new IllegalArgumentException(
-                        "name contains non-ascii character: " + name);
-            }
-
-            // Check prohibited characters.
-            switch (c) {
-            case '=':
-            case ',':
-            case ';':
-            case ' ':
-            case '\t':
-            case '\r':
-            case '\n':
-            case '\f':
-            case 0x0b: // Vertical tab
-                throw new IllegalArgumentException(
-                        "name contains one of the following prohibited characters: " +
-                        "=,; \\t\\r\\n\\v\\f: " + name);
-            }
-        }
         this.name = name;
         if (charset != null) {
             setCharset(charset);
