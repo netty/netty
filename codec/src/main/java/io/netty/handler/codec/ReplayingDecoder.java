@@ -264,8 +264,8 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
 
     static final Signal REPLAY = new Signal(ReplayingDecoder.class.getName() + ".REPLAY");
 
-    private ByteBuf cumulation;
-    private ReplayingDecoderBuffer replayable;
+    private ChannelHandlerContext ctx;
+    private final ReplayingDecoderBuffer replayable = new ReplayingDecoderBuffer();
     private S state;
     private int checkpoint = -1;
     private boolean decodeWasNull;
@@ -288,7 +288,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
      * Stores the internal cumulative buffer's reader position.
      */
     protected void checkpoint() {
-        checkpoint = cumulation.readerIndex();
+        checkpoint = internalBuffer().readerIndex();
     }
 
     /**
@@ -334,18 +334,12 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
      * Use it only when you must use it at your own risk.
      */
     protected ByteBuf internalBuffer() {
-        return cumulation;
+        return ctx.inboundByteBuffer();
     }
 
     @Override
-    public final ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        cumulation = newInboundBuffer0(ctx);
-        replayable = new ReplayingDecoderBuffer(cumulation);
-        return cumulation;
-    }
-
-    protected ByteBuf newInboundBuffer0(ChannelHandlerContext ctx) throws Exception {
-        return super.newInboundBuffer(ctx);
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        this.ctx = ctx;
     }
 
     @Override
@@ -366,7 +360,8 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
         OutputMessageBuf out = OutputMessageBuf.get();
         try {
             replayable.terminate();
-            ByteBuf in = cumulation;
+            ByteBuf in = internalBuffer();
+            replayable.setCumulation(in);
             if (in.isReadable()) {
                 callDecode(ctx, in);
             }
@@ -391,7 +386,8 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
     @Override
     protected void callDecode(ChannelHandlerContext ctx, ByteBuf buf) {
         boolean wasNull = false;
-        ByteBuf in = cumulation;
+        ByteBuf in = internalBuffer();
+        replayable.setCumulation(in);
         OutputMessageBuf out = OutputMessageBuf.get();
         try {
             while (in.isReadable()) {

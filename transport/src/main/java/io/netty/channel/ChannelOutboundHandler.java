@@ -22,13 +22,22 @@ import io.netty.buffer.Buf;
  */
 interface ChannelOutboundHandler extends ChannelOperationHandler {
     /**
-     * Return the {@link Buf} which will be used for outbound data for the given {@link ChannelHandlerContext}.
+     * Returns a new buffer which will be used to transfer outbound data for the given {@link ChannelHandlerContext}.
+     * <p>
+     * Please note that this method can be called from any thread repeatatively, and thus you should neither perform
+     * stateful operation nor keep the reference of the created buffer as a member variable.  Get it always using
+     * {@link ChannelHandlerContext#outboundByteBuffer()} or {@link ChannelHandlerContext#outboundMessageBuffer()}.
+     * </p>
      */
     Buf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception;
 
     /**
      * Invoked when this handler is not allowed to send any outbound message anymore and thus it's safe to
      * deallocate its outbound buffer.
+     * <p>
+     * Please note that this method can be called from any thread repeatatively, and thus you should not perform
+     * stateful operation here.
+     * </p>
      */
     void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception;
 }
