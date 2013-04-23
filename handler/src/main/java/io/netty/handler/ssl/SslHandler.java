@@ -599,7 +599,7 @@ public class SslHandler
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         // Make sure the handshake future is notified when a connection has
         // been closed during handshake.
-        setHandshakeFailure(null);
+        setHandshakeFailure(new ClosedChannelException());
 
         try {
             inboundBufferUpdated(ctx);
@@ -921,7 +921,7 @@ public class SslHandler
         // is managing.
         engine.closeOutbound();
 
-        final boolean disconnected = cause == null || cause instanceof ClosedChannelException;
+        final boolean disconnected = cause instanceof ClosedChannelException;
         try {
             engine.closeInbound();
         } catch (SSLException e) {
