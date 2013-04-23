@@ -40,8 +40,7 @@ import java.util.Queue;
  * is recommended to use {@link Unpooled#wrappedBuffer(ByteBuf...)}
  * instead of calling the constructor explicitly.
  */
-public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf
-        implements CompositeByteBuf {
+public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf implements CompositeByteBuf {
 
     private static final ByteBuffer[] EMPTY_NIOBUFFERS = new ByteBuffer[0];
 
@@ -142,12 +141,6 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf
             throw new NullPointerException("buffer");
         }
 
-        if (buffer instanceof Iterable) {
-            @SuppressWarnings("unchecked")
-            Iterable<ByteBuf> composite = (Iterable<ByteBuf>) buffer;
-            return addComponents0(cIndex, composite);
-        }
-
         int readableBytes = buffer.readableBytes();
         if (readableBytes == 0) {
             return cIndex;
@@ -226,52 +219,21 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf
             throw new NullPointerException("buffers");
         }
 
-        if (buffers instanceof DefaultCompositeByteBuf) {
-            DefaultCompositeByteBuf compositeBuf = (DefaultCompositeByteBuf) buffers;
-            List<Component> list = compositeBuf.components;
-            ByteBuf[] array = new ByteBuf[list.size()];
-            for (int i = 0; i < array.length; i ++) {
-                array[i] = list.get(i).buf.retain();
-            }
-            compositeBuf.release();
-            return addComponents0(cIndex, array);
+        if (buffers instanceof ByteBuf) {
+            // If buffers also implements ByteBuf (e.g. CompositeByteBuf), it has to go to addComponent(ByteBuf).
+            return addComponent0(cIndex, (ByteBuf) buffers);
         }
 
-        if (buffers instanceof CompositeByteBuf) {
-            CompositeByteBuf compositeBuf = (CompositeByteBuf) buffers;
-            final int nComponents = compositeBuf.numComponents();
-            ByteBuf[] array = new ByteBuf[nComponents];
-            for (int i = 0; i < nComponents; i ++) {
-                array[i] = compositeBuf.component(i).retain();
+        if (!(buffers instanceof Collection)) {
+            List<ByteBuf> list = new ArrayList<ByteBuf>();
+            for (ByteBuf b: buffers) {
+                list.add(b);
             }
-            compositeBuf.release();
-            return addComponents0(cIndex, array);
+            buffers = list;
         }
 
-        if (buffers instanceof List) {
-            List<ByteBuf> list = (List<ByteBuf>) buffers;
-            ByteBuf[] array = new ByteBuf[list.size()];
-            for (int i = 0; i < array.length; i ++) {
-                array[i] = list.get(i);
-            }
-            return addComponents0(cIndex, array);
-        }
-
-        if (buffers instanceof Collection) {
-            Collection<ByteBuf> col = (Collection<ByteBuf>) buffers;
-            ByteBuf[] array = new ByteBuf[col.size()];
-            int i = 0;
-            for (ByteBuf b: col) {
-                array[i ++] = b;
-            }
-            return addComponents0(cIndex, array);
-        }
-
-        List<ByteBuf> list = new ArrayList<ByteBuf>();
-        for (ByteBuf b: buffers) {
-            list.add(b);
-        }
-        return addComponents0(cIndex, list.toArray(new ByteBuf[list.size()]));
+        Collection<ByteBuf> col = (Collection<ByteBuf>) buffers;
+        return addComponents0(cIndex, col.toArray(new ByteBuf[col.size()]));
     }
 
     /**
