@@ -22,6 +22,8 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannelConfig;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -38,6 +40,8 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
                              implements io.netty.channel.socket.ServerSocketChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioServerSocketChannel.class);
 
     private static ServerSocketChannel newSocket() {
         try {
@@ -106,11 +110,23 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     @Override
     protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
         SocketChannel ch = javaChannel().accept();
-        if (ch == null) {
-            return 0;
+
+        try {
+            if (ch != null) {
+                buf.add(new NioSocketChannel(this, null, ch));
+                return 1;
+            }
+        } catch (Throwable t) {
+            logger.warn("Failed to create a new channel from an accepted socket.", t);
+
+            try {
+                ch.close();
+            } catch (Throwable t2) {
+                logger.warn("Failed to close a socket.", t2);
+            }
         }
-        buf.add(new NioSocketChannel(this, null, ch));
-        return 1;
+
+        return 0;
     }
 
     // Unnecessary stuff
