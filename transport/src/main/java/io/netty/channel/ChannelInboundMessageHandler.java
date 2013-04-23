@@ -26,10 +26,6 @@ import io.netty.buffer.MessageBuf;
  * {@link ChannelHandlerUtil#addToNextInboundBuffer(ChannelHandlerContext, Object)}.
  */
 public interface ChannelInboundMessageHandler<I> extends ChannelInboundHandler {
-
-    /**
-     * Return the {@link MessageBuf} which will be used for inbound data to store.
-     */
     @Override
     MessageBuf<I> newInboundBuffer(ChannelHandlerContext ctx) throws Exception;
 }

@@ -38,9 +38,9 @@ final class ReplayingDecoderBuffer implements ByteBuf {
 
     private static final Signal REPLAY = ReplayingDecoder.REPLAY;
 
-    private final ByteBuf buffer;
-    private final SwappedByteBuf swapped;
+    private ByteBuf buffer;
     private boolean terminated;
+    private SwappedByteBuf swapped;
 
     static final ReplayingDecoderBuffer EMPTY_BUFFER = new ReplayingDecoderBuffer(Unpooled.EMPTY_BUFFER);
 
@@ -48,9 +48,14 @@ final class ReplayingDecoderBuffer implements ByteBuf {
         EMPTY_BUFFER.terminate();
     }
 
+    ReplayingDecoderBuffer() { }
+
     ReplayingDecoderBuffer(ByteBuf buffer) {
+        setCumulation(buffer);
+    }
+
+    void setCumulation(ByteBuf buffer) {
         this.buffer = buffer;
-        swapped = new SwappedByteBuf(this);
     }
 
     void terminate() {
@@ -396,6 +401,11 @@ final class ReplayingDecoderBuffer implements ByteBuf {
         }
         if (endianness == order()) {
             return this;
+        }
+
+        SwappedByteBuf swapped = this.swapped;
+        if (swapped == null) {
+            this.swapped = swapped = new SwappedByteBuf(this);
         }
         return swapped;
     }
