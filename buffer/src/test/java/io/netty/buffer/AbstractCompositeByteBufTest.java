@@ -24,13 +24,13 @@ import java.util.Collections;
 import java.util.List;
 
 import static io.netty.buffer.Unpooled.*;
+import static io.netty.util.internal.EmptyArrays.*;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
 /**
  * An abstract test class for composite channel buffers
  */
-@SuppressWarnings("ZeroLengthArrayAllocation")
 public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
 
     private final ByteOrder order;
@@ -418,7 +418,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     public void testEmptyBuffer() {
         ByteBuf b = freeLater(wrappedBuffer(new byte[]{1, 2}, new byte[]{3, 4}));
         b.readBytes(new byte[4]);
-        b.readBytes(new byte[0]);
+        b.readBytes(EMPTY_BYTES);
     }
 
     // Test for https://github.com/netty/netty/issues/1060

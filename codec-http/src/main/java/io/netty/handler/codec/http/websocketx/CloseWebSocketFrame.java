@@ -18,13 +18,12 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.EmptyArrays;
 
 /**
  * Web Socket Frame for closing the connection
  */
 public class CloseWebSocketFrame extends WebSocketFrame {
-
-    private static final byte[] EMTPY_REASON = new byte[0];
 
     /**
      * Creates a new empty close frame.
@@ -76,7 +75,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
     }
 
     private static ByteBuf newBinaryData(int statusCode, String reasonText) {
-        byte[] reasonBytes = EMTPY_REASON;
+        byte[] reasonBytes = EmptyArrays.EMPTY_BYTES;
         if (reasonText != null) {
             reasonBytes = reasonText.getBytes(CharsetUtil.UTF_8);
         }

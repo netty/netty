@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.ResourceLeak;
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -41,8 +42,6 @@ import java.util.Queue;
  * instead of calling the constructor explicitly.
  */
 public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf implements CompositeByteBuf {
-
-    private static final ByteBuffer[] EMPTY_NIOBUFFERS = new ByteBuffer[0];
 
     private final ResourceLeak leak;
     private final ByteBufAllocator alloc;
@@ -1049,7 +1048,7 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf imp
     public ByteBuffer[] nioBuffers(int index, int length) {
         checkIndex(index, length);
         if (length == 0) {
-            return EMPTY_NIOBUFFERS;
+            return EmptyArrays.EMPTY_BYTE_BUFFERS;
         }
 
         List<ByteBuffer> buffers = new ArrayList<ByteBuffer>(components.size());

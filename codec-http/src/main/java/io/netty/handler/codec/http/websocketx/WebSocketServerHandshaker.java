@@ -30,6 +30,7 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -43,8 +44,6 @@ import java.util.Set;
  */
 public abstract class WebSocketServerHandshaker {
     protected static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketServerHandshaker.class);
-
-    private static final String[] EMPTY_ARRAY = new String[0];
 
     private final String uri;
 
@@ -81,7 +80,7 @@ public abstract class WebSocketServerHandshaker {
             }
             this.subprotocols = subprotocolArray;
         } else {
-            this.subprotocols = EMPTY_ARRAY;
+            this.subprotocols = EmptyArrays.EMPTY_STRINGS;
         }
         this.maxFramePayloadLength = maxFramePayloadLength;
     }

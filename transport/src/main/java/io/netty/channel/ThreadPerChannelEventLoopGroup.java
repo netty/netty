@@ -18,6 +18,7 @@ package io.netty.channel;
 
 import io.netty.util.concurrent.AbstractEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ReadOnlyIterator;
 
@@ -34,9 +35,6 @@ import java.util.concurrent.TimeUnit;
  * An {@link EventLoopGroup} that creates one {@link EventLoop} per {@link Channel}.
  */
 public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup implements EventLoopGroup {
-
-    private static final Object[] NO_ARGS = new Object[0];
-    private static final StackTraceElement[] STACK_ELEMENTS = new StackTraceElement[0];
 
     private final Object[] childArgs;
     private final int maxChannels;
@@ -88,7 +86,7 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
         }
 
         if (args == null) {
-            childArgs = NO_ARGS;
+            childArgs = EmptyArrays.EMPTY_OBJECTS;
         } else {
             childArgs = args.clone();
         }
@@ -97,7 +95,7 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
         this.threadFactory = threadFactory;
 
         tooManyChannels = new ChannelException("too many channels (max: " + maxChannels + ')');
-        tooManyChannels.setStackTrace(STACK_ELEMENTS);
+        tooManyChannels.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
     }
 
     /**

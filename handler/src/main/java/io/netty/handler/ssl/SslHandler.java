@@ -35,6 +35,7 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.ImmediateExecutor;
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -162,6 +163,16 @@ public class SslHandler
     private static final Pattern IGNORABLE_ERROR_MESSAGE = Pattern.compile(
             "^.*(?:connection.*reset|connection.*closed|broken.*pipe).*$",
             Pattern.CASE_INSENSITIVE);
+
+    private static final SSLException SSLENGINE_CLOSED = new SSLException("SSLEngine closed already");
+    private static final SSLException HANDSHAKE_TIMED_OUT = new SSLException("handshake timed out");
+    private static final ClosedChannelException CHANNEL_CLOSED = new ClosedChannelException();
+
+    static {
+        SSLENGINE_CLOSED.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+        HANDSHAKE_TIMED_OUT.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+        CHANNEL_CLOSED.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+    }
 
     private volatile ChannelHandlerContext ctx;
     private final SSLEngine engine;
@@ -479,10 +490,9 @@ public class SslHandler
                     // Any further write attempts should be denied.
                     if (in.isReadable()) {
                         in.clear();
-                        SSLException e = new SSLException("SSLEngine already closed");
-                        promise.setFailure(e);
-                        ctx.fireExceptionCaught(e);
-                        flush0(ctx, bytesConsumed, e);
+                        promise.setFailure(SSLENGINE_CLOSED);
+                        ctx.fireExceptionCaught(SSLENGINE_CLOSED);
+                        flush0(ctx, bytesConsumed, SSLENGINE_CLOSED);
                         bytesConsumed = 0;
                     }
                     break;
@@ -597,9 +607,9 @@ public class SslHandler
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        // Make sure the handshake future is notified when a connection has
-        // been closed during handshake.
-        setHandshakeFailure(new ClosedChannelException());
+        // Make sure to release SSLEngine,
+        // and notify the handshake future if the connection has been closed during handshake.
+        setHandshakeFailure(CHANNEL_CLOSED);
 
         try {
             inboundBufferUpdated(ctx);
@@ -983,9 +993,8 @@ public class SslHandler
                         return;
                     }
 
-                    SSLException e = new SSLException("handshake timed out");
-                    if (handshakePromise.tryFailure(e)) {
-                        ctx.fireExceptionCaught(e);
+                    if (handshakePromise.tryFailure(HANDSHAKE_TIMED_OUT)) {
+                        ctx.fireExceptionCaught(HANDSHAKE_TIMED_OUT);
                         ctx.close();
                     }
                 }

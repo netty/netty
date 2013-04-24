@@ -32,6 +32,7 @@ import java.util.Random;
 import java.util.Set;
 
 import static io.netty.buffer.Unpooled.*;
+import static io.netty.util.internal.EmptyArrays.*;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
@@ -42,7 +43,6 @@ public abstract class AbstractByteBufTest {
 
     private static final int CAPACITY = 4096; // Must be even
     private static final int BLOCK_SIZE = 128;
-    private static final byte[] EMPTY_ARRAY = new byte[0];
 
     private static final Queue<ByteBuf> freeLaterQueue = new ArrayDeque<ByteBuf>();
 
@@ -235,12 +235,12 @@ public abstract class AbstractByteBufTest {
 
     @Test(expected = IndexOutOfBoundsException.class)
     public void getByteArrayBoundaryCheck1() {
-        buffer.getBytes(-1, EMPTY_ARRAY);
+        buffer.getBytes(-1, EMPTY_BYTES);
     }
 
     @Test(expected = IndexOutOfBoundsException.class)
     public void getByteArrayBoundaryCheck2() {
-        buffer.getBytes(-1, EMPTY_ARRAY, 0, 0);
+        buffer.getBytes(-1, EMPTY_BYTES, 0, 0);
     }
 
     @Test

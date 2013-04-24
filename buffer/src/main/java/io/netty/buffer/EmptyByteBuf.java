@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.InputStream;
@@ -32,7 +33,6 @@ import java.nio.charset.Charset;
  */
 public final class EmptyByteBuf implements ByteBuf {
 
-    private static final byte[] EMPTY_ARRAY = new byte[0];
     private static final ByteBuffer EMPTY_BYTE_BUFFER = ByteBuffer.allocateDirect(0);
     private static final long EMPTY_BYTE_BUFFER_ADDRESS;
 
@@ -767,7 +767,7 @@ public final class EmptyByteBuf implements ByteBuf {
 
     @Override
     public byte[] array() {
-        return EMPTY_ARRAY;
+        return EmptyArrays.EMPTY_BYTES;
     }
 
     @Override

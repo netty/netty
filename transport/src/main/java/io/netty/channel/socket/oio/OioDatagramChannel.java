@@ -27,6 +27,7 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.DefaultDatagramChannelConfig;
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -52,11 +53,9 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, true);
 
-    private static final byte[] EMPTY_DATA = new byte[0];
-
     private final MulticastSocket socket;
     private final DatagramChannelConfig config;
-    private final java.net.DatagramPacket tmpPacket = new java.net.DatagramPacket(EMPTY_DATA, 0);
+    private final java.net.DatagramPacket tmpPacket = new java.net.DatagramPacket(EmptyArrays.EMPTY_BYTES, 0);
 
     private static MulticastSocket newSocket() {
         try {

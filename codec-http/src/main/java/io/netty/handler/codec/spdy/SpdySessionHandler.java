@@ -24,6 +24,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPromise;
+import io.netty.util.internal.EmptyArrays;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -38,10 +39,8 @@ public class SpdySessionHandler
     private static final SpdyProtocolException STREAM_CLOSED = new SpdyProtocolException("Stream closed");
 
     static {
-        @SuppressWarnings("ZeroLengthArrayAllocation")
-        StackTraceElement[] emptyTrace = new StackTraceElement[0];
-        PROTOCOL_EXCEPTION.setStackTrace(emptyTrace);
-        STREAM_CLOSED.setStackTrace(emptyTrace);
+        PROTOCOL_EXCEPTION.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+        STREAM_CLOSED.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
     }
 
     private final SpdySession spdySession = new SpdySession();
