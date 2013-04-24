@@ -123,7 +123,8 @@ public final class NetUtil {
         // Create IPv6 loopback address.
         Inet6Address localhost6 = null;
         try {
-            localhost6 = (Inet6Address) InetAddress.getByAddress(new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1});
+            localhost6 = (Inet6Address) InetAddress.getByAddress(
+                    new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1});
         } catch (Exception e) {
             // We should not get here as long as the length of the address is correct.
             PlatformDependent.throwException(e);

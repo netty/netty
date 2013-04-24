@@ -49,7 +49,7 @@ public abstract class AbstractDatagramTest {
             sb = e.getKey().newInstance();
             cb = e.getValue().newInstance();
             addr = new InetSocketAddress(
-                    NetUtil.LOCALHOST, TestUtils.getFreePort());
+                    NetUtil.LOCALHOST4, TestUtils.getFreePort());
             sb.localAddress(addr);
             cb.localAddress(0).remoteAddress(addr);
 
