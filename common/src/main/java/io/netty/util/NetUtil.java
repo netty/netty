@@ -167,7 +167,7 @@ public final class NetUtil {
             String token;
             int tempInt;
             byte[] byteAddress = new byte[4];
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < 4; i ++) {
                 token = tokenizer.nextToken();
                 tempInt = Integer.parseInt(token);
                 byteAddress[i] = (byte) tempInt;
@@ -178,12 +178,10 @@ public final class NetUtil {
 
         if (isValidIpV6Address(ipAddressString)) {
             if (ipAddressString.charAt(0) == '[') {
-                ipAddressString = ipAddressString.substring(1, ipAddressString
-                        .length() - 1);
+                ipAddressString = ipAddressString.substring(1, ipAddressString.length() - 1);
             }
 
-            StringTokenizer tokenizer = new StringTokenizer(ipAddressString, ":.",
-                    true);
+            StringTokenizer tokenizer = new StringTokenizer(ipAddressString, ":.", true);
             ArrayList<String> hexStrings = new ArrayList<String>();
             ArrayList<String> decStrings = new ArrayList<String>();
             String token = "";
@@ -234,7 +232,7 @@ public final class NetUtil {
             // if we hit a double Colon add the appropriate hex strings
             if (doubleColonIndex != -1) {
                 int numberToInsert = hexStringsLength - hexStrings.size();
-                for (int i = 0; i < numberToInsert; i++) {
+                for (int i = 0; i < numberToInsert; i ++) {
                     hexStrings.add(doubleColonIndex, "0");
                 }
             }
@@ -242,14 +240,13 @@ public final class NetUtil {
             byte[] ipByteArray = new byte[16];
 
             // Finally convert these strings to bytes...
-            for (int i = 0; i < hexStrings.size(); i++) {
+            for (int i = 0; i < hexStrings.size(); i ++) {
                 convertToBytes(hexStrings.get(i), ipByteArray, i * 2);
             }
 
             // Now if there are any decimal values, we know where they go...
-            for (int i = 0; i < decStrings.size(); i++) {
-                ipByteArray[i + 12] = (byte) (Integer.parseInt(decStrings
-                        .get(i)) & 255);
+            for (int i = 0; i < decStrings.size(); i ++) {
+                ipByteArray[i + 12] = (byte) (Integer.parseInt(decStrings.get(i)) & 255);
             }
             return ipByteArray;
         }
@@ -259,8 +256,7 @@ public final class NetUtil {
     /**
      * Converts a 4 character hex word into a 2 byte word equivalent
      */
-    private static void convertToBytes(String hexWord, byte[] ipByteArray,
-                                       int byteIndex) {
+    private static void convertToBytes(String hexWord, byte[] ipByteArray, int byteIndex) {
 
         int hexWordLength = hexWord.length();
         int hexWordIndex = 0;
@@ -270,19 +266,19 @@ public final class NetUtil {
 
         // high order 4 bits of first byte
         if (hexWordLength > 3) {
-            charValue = getIntValue(hexWord.charAt(hexWordIndex++));
+            charValue = getIntValue(hexWord.charAt(hexWordIndex ++));
             ipByteArray[byteIndex] |= charValue << 4;
         }
 
         // low order 4 bits of the first byte
         if (hexWordLength > 2) {
-            charValue = getIntValue(hexWord.charAt(hexWordIndex++));
+            charValue = getIntValue(hexWord.charAt(hexWordIndex ++));
             ipByteArray[byteIndex] |= charValue;
         }
 
         // high order 4 bits of second byte
         if (hexWordLength > 1) {
-            charValue = getIntValue(hexWord.charAt(hexWordIndex++));
+            charValue = getIntValue(hexWord.charAt(hexWordIndex ++));
             ipByteArray[byteIndex + 1] |= charValue << 4;
         }
 
@@ -349,7 +345,7 @@ public final class NetUtil {
             return false;
         }
 
-        for (int i = 0; i < length; i++) {
+        for (int i = 0; i < length; i ++) {
             prevChar = c;
             c = ipAddress.charAt(i);
             switch (c) {
@@ -380,7 +376,7 @@ public final class NetUtil {
 
                 // case for the last 32-bits represented as IPv4 x:x:x:x:x:x:d.d.d.d
                 case '.':
-                    numberOfPeriods++;
+                    numberOfPeriods ++;
                     if (numberOfPeriods > 3) {
                         return false;
                     }
@@ -392,8 +388,8 @@ public final class NetUtil {
                     }
                     // a special case ::1:2:3:4:5:d.d.d.d allows 7 colons with an
                     // IPv4 ending, otherwise 7 :'s is bad
-                    if (numberOfColons == 7 && ipAddress.charAt(offset) != ':'
-                            && ipAddress.charAt(1 + offset) != ':') {
+                    if (numberOfColons == 7 && ipAddress.charAt(offset) != ':' &&
+                        ipAddress.charAt(1 + offset) != ':') {
                         return false;
                     }
                     word.delete(0, word.length());
@@ -407,7 +403,7 @@ public final class NetUtil {
                         return false;
                     }
                     // END FIX "IP6 mechanism syntax #ip6-bad1"
-                    numberOfColons++;
+                    numberOfColons ++;
                     if (numberOfColons > 7) {
                         return false;
                     }
@@ -426,7 +422,7 @@ public final class NetUtil {
                     if (numberOfColons == 0) {
                         return false;
                     }
-                    numberOfPercent++;
+                    numberOfPercent ++;
 
                     // validate that the stuff after the % is valid
                     if (i + 1 >= length) {
@@ -474,8 +470,8 @@ public final class NetUtil {
             // a : or a .
             // If we did not end in :: then this is invalid
             if (numberOfPercent == 0) {
-                if (word.length() == 0 && ipAddress.charAt(length - 1 - offset) == ':'
-                        && ipAddress.charAt(length - 2 - offset) != ':') {
+                if (word.length() == 0 && ipAddress.charAt(length - 1 - offset) == ':' &&
+                    ipAddress.charAt(length - 2 - offset) != ':') {
                     return false;
                 }
             }
@@ -489,7 +485,7 @@ public final class NetUtil {
         if (word.length() < 1 || word.length() > 3) {
             return false;
         }
-        for (int i = 0; i < word.length(); i++) {
+        for (int i = 0; i < word.length(); i ++) {
             c = word.charAt(i);
             if (!(c >= '0' && c <= '9')) {
                 return false;
@@ -502,8 +498,7 @@ public final class NetUtil {
     }
 
     static boolean isValidHexChar(char c) {
-        return c >= '0' && c <= '9' || c >= 'A' && c <= 'F'
-                || c >= 'a' && c <= 'f';
+        return c >= '0' && c <= '9' || c >= 'A' && c <= 'F' || c >= 'a' && c <= 'f';
     }
 
     /**
@@ -523,10 +518,10 @@ public final class NetUtil {
         }
         char c;
         StringBuilder word = new StringBuilder();
-        for (i = 0; i < length; i++) {
+        for (i = 0; i < length; i ++) {
             c = value.charAt(i);
             if (c == '.') {
-                periods++;
+                periods ++;
                 if (periods > 3) {
                     return false;
                 }
