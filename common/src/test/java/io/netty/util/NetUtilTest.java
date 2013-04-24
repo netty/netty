@@ -249,16 +249,6 @@ public class NetUtilTest {
     };
 
     @Test
-    public void testLocalhost() {
-        assertNotNull(NetUtil.LOCALHOST);
-    }
-
-    @Test
-    public void testLoopback() {
-        assertNotNull(NetUtil.LOOPBACK_IF);
-    }
-
-    @Test
     public void testIsValidIpV4Address() {
         for (String host : validIpV4Hosts.keySet()) {
             assertTrue(NetUtil.isValidIpV4Address(host));

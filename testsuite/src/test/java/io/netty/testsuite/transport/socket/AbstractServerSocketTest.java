@@ -46,7 +46,7 @@ public abstract class AbstractServerSocketTest {
         for (Factory<ServerBootstrap> e: COMBO) {
             sb = e.newInstance();
             addr = new InetSocketAddress(
-                    NetUtil.LOCALHOST, TestUtils.getFreePort());
+                    TestUtils.LOCALHOST, TestUtils.getFreePort());
             sb.localAddress(addr);
 
             logger.info(String.format(
