@@ -159,9 +159,9 @@ public class SslHandler
         InternalLoggerFactory.getInstance(SslHandler.class);
 
     private static final Pattern IGNORABLE_CLASS_IN_STACK = Pattern.compile(
-            "^.*(?:Socket|Datagram|Sctp)Channel.*$");
+            "^.*(?:Socket|Datagram|Sctp|Udt)Channel.*$");
     private static final Pattern IGNORABLE_ERROR_MESSAGE = Pattern.compile(
-            "^.*(?:connection.*(?:reset|closed|abort)|broken.*pipe).*$", Pattern.CASE_INSENSITIVE);
+            "^.*(?:connection.*(?:reset|closed|abort|broken)|broken.*pipe).*$", Pattern.CASE_INSENSITIVE);
 
     private static final SSLException SSLENGINE_CLOSED = new SSLException("SSLEngine closed already");
     private static final SSLException HANDSHAKE_TIMED_OUT = new SSLException("handshake timed out");
