@@ -22,7 +22,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedByteChannel;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -65,7 +64,6 @@ public class ReplayingDecoderTest {
     }
 
     @Test
-    @Ignore("needs a fix")
     public void testReplacement() throws Exception {
         EmbeddedByteChannel ch = new EmbeddedByteChannel(new BloatedLineDecoder());
 

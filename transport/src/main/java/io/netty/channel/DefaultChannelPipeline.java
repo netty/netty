@@ -442,25 +442,32 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         return ctx.handler();
     }
 
-    private void replace0(DefaultChannelHandlerContext ctx, String newName,
+    private void replace0(DefaultChannelHandlerContext oldCtx, String newName,
                           DefaultChannelHandlerContext newCtx) {
         checkMultiplicity(newCtx);
 
-        DefaultChannelHandlerContext prev = ctx.prev;
-        DefaultChannelHandlerContext next = ctx.next;
+        DefaultChannelHandlerContext prev = oldCtx.prev;
+        DefaultChannelHandlerContext next = oldCtx.next;
         newCtx.prev = prev;
         newCtx.next = next;
+
+        // Finish the replacement of oldCtx with newCtx in the linked list.
+        // Note that this doesn't mean events will be sent to the new handler immediately
+        // because we are currently at the event handler thread and no more than one handler methods can be invoked
+        // at the same time (we ensured that in replace().)
         prev.next = newCtx;
         next.prev = newCtx;
 
-        if (!ctx.name().equals(newName)) {
-            name2ctx.remove(ctx.name());
+        if (!oldCtx.name().equals(newName)) {
+            name2ctx.remove(oldCtx.name());
         }
         name2ctx.put(newName, newCtx);
 
-        // remove old and add new
-        callHandlerRemoved(ctx, newCtx, newCtx);
+        // Invoke newHandler.handlerAdded() first (i.e. before oldHandler.handlerRemoved() is invoked)
+        // because callHandlerRemoved() will trigger inboundBufferUpdated() or flush() on newHandler and those
+        // event handlers must be called after handlerAdded().
         callHandlerAdded(newCtx);
+        callHandlerRemoved(oldCtx, newCtx, newCtx);
     }
 
     private static void checkMultiplicity(ChannelHandlerContext ctx) {
