@@ -184,10 +184,9 @@ public class SslHandler extends FrameDecoder
     private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
 
     private static final Pattern IGNORABLE_CLASS_IN_STACK = Pattern.compile(
-            "^.*(Socket|DatagramChannel|SctpChannel).*$");
+            "^.*(?:Socket|Datagram|Sctp|Udt)Channel.*$");
     private static final Pattern IGNORABLE_ERROR_MESSAGE = Pattern.compile(
-            "^.*(?:connection.*reset|connection.*closed|broken.*pipe).*$",
-            Pattern.CASE_INSENSITIVE);
+            "^.*(?:connection.*(?:reset|closed|abort|broken)|broken.*pipe).*$", Pattern.CASE_INSENSITIVE);
 
     private static SslBufferPool defaultBufferPool;
 
