@@ -118,12 +118,11 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private void addFirst0(String name, DefaultChannelHandlerContext newCtx) {
+        checkMultiplicity(newCtx);
+
         DefaultChannelHandlerContext nextCtx = head.next;
         newCtx.prev = head;
         newCtx.next = nextCtx;
-
-        checkMultiplicity(newCtx);
-
         head.next = newCtx;
         nextCtx.prev = newCtx;
 
@@ -149,14 +148,12 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         return this;
     }
 
-    private void addLast0(
-            final String name, DefaultChannelHandlerContext newCtx) {
+    private void addLast0(final String name, DefaultChannelHandlerContext newCtx) {
+        checkMultiplicity(newCtx);
+
         DefaultChannelHandlerContext prev = tail.prev;
         newCtx.prev = prev;
         newCtx.next = tail;
-
-        checkMultiplicity(newCtx);
-
         prev.next = newCtx;
         tail.prev = newCtx;
 
@@ -183,14 +180,13 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private void addBefore0(final String name, DefaultChannelHandlerContext ctx, DefaultChannelHandlerContext newCtx) {
+        checkMultiplicity(newCtx);
 
         newCtx.prev = ctx.prev;
         newCtx.next = ctx;
-
-        checkMultiplicity(newCtx);
-
         ctx.prev.next = newCtx;
         ctx.prev = newCtx;
+
         name2ctx.put(name, newCtx);
 
         callHandlerAdded(newCtx);
@@ -217,12 +213,10 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     private void addAfter0(final String name, DefaultChannelHandlerContext ctx, DefaultChannelHandlerContext newCtx) {
         checkDuplicateName(name);
+        checkMultiplicity(newCtx);
 
         newCtx.prev = ctx;
         newCtx.next = ctx.next;
-
-        checkMultiplicity(newCtx);
-
         ctx.next.prev = newCtx;
         ctx.next = newCtx;
 
@@ -427,7 +421,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
             if (!newCtx.channel().isRegistered() || newCtx.executor().inEventLoop()) {
                 replace0(ctx, newName, newCtx);
-
                 return ctx.handler();
             } else {
                 future = newCtx.executor().submit(new Runnable() {
@@ -451,7 +444,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     private void replace0(DefaultChannelHandlerContext ctx, String newName,
                           DefaultChannelHandlerContext newCtx) {
-        boolean sameName = ctx.name().equals(newName);
         checkMultiplicity(newCtx);
 
         DefaultChannelHandlerContext prev = ctx.prev;
@@ -461,7 +453,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         prev.next = newCtx;
         next.prev = newCtx;
 
-        if (!sameName) {
+        if (!ctx.name().equals(newName)) {
             name2ctx.remove(ctx.name());
         }
         name2ctx.put(newName, newCtx);
