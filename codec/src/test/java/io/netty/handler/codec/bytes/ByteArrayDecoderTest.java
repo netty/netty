@@ -16,6 +16,7 @@
 package io.netty.handler.codec.bytes;
 
 import io.netty.channel.embedded.EmbeddedMessageChannel;
+import io.netty.util.internal.EmptyArrays;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -48,7 +49,7 @@ public class ByteArrayDecoderTest {
     @Test
     public void testDecodeEmpty() {
         ch.writeInbound(EMPTY_BUFFER);
-        assertThat((byte[]) ch.readInbound(), is(new byte[0]));
+        assertThat((byte[]) ch.readInbound(), is(EmptyArrays.EMPTY_BYTES));
     }
 
     @Test

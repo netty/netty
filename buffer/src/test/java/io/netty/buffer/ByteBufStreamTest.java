@@ -20,12 +20,12 @@ import org.junit.Test;
 import java.io.EOFException;
 import java.nio.charset.Charset;
 
+import static io.netty.util.internal.EmptyArrays.*;
 import static org.junit.Assert.*;
 
 /**
  * Tests channel buffer streams
  */
-@SuppressWarnings("ZeroLengthArrayAllocation")
 public class ByteBufStreamTest {
 
     @Test
@@ -56,7 +56,7 @@ public class ByteBufStreamTest {
         out.writeShort(49152);
         out.writeUTF("Hello, World!");
         out.writeBytes("The first line\r\r\n");
-        out.write(new byte[0]);
+        out.write(EMPTY_BYTES);
         out.write(new byte[] { 1, 2, 3, 4 });
         out.write(new byte[] { 1, 3, 3, 4 }, 0, 0);
         out.close();

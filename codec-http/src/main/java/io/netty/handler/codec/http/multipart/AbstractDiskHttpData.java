@@ -17,6 +17,7 @@ package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpConstants;
+import io.netty.util.internal.EmptyArrays;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -222,7 +223,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
     @Override
     public byte[] get() throws IOException {
         if (file == null) {
-            return new byte[0];
+            return EmptyArrays.EMPTY_BYTES;
         }
         return readFrom(file);
     }

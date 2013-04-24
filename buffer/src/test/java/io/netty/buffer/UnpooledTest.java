@@ -31,13 +31,16 @@ import java.util.Map.Entry;
 import java.util.Queue;
 
 import static io.netty.buffer.Unpooled.*;
+import static io.netty.util.internal.EmptyArrays.*;
 import static org.junit.Assert.*;
 
 /**
  * Tests channel buffers
  */
-@SuppressWarnings("ZeroLengthArrayAllocation")
 public class UnpooledTest {
+
+    private static final ByteBuf[] EMPTY_BYTE_BUFS = new ByteBuf[0];
+    private static final byte[][] EMPTY_BYTES_2D = new byte[0][];
 
     private static final Queue<ByteBuf> freeLaterQueue = new ArrayDeque<ByteBuf>();
 
@@ -82,7 +85,7 @@ public class UnpooledTest {
     @Test
     public void testHashCode() {
         Map<byte[], Integer> map = new LinkedHashMap<byte[], Integer>();
-        map.put(new byte[0], 1);
+        map.put(EMPTY_BYTES, 1);
         map.put(new byte[] { 1 }, 32);
         map.put(new byte[] { 2 }, 33);
         map.put(new byte[] { 0, 1 }, 962);
@@ -183,31 +186,31 @@ public class UnpooledTest {
 
     @Test
     public void shouldReturnEmptyBufferWhenLengthIsZero() {
-        assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[0]));
+        assertSame(EMPTY_BUFFER, wrappedBuffer(EMPTY_BYTES));
         assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[8], 0, 0));
         assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[8], 8, 0));
         assertSame(EMPTY_BUFFER, wrappedBuffer(ByteBuffer.allocateDirect(0)));
         assertSame(EMPTY_BUFFER, wrappedBuffer(EMPTY_BUFFER));
-        assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[0][]));
-        assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[][] { new byte[0] }));
-        assertSame(EMPTY_BUFFER, wrappedBuffer(new ByteBuffer[0]));
+        assertSame(EMPTY_BUFFER, wrappedBuffer(EMPTY_BYTES_2D));
+        assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[][] { EMPTY_BYTES }));
+        assertSame(EMPTY_BUFFER, wrappedBuffer(EMPTY_BYTE_BUFFERS));
         assertSame(EMPTY_BUFFER, wrappedBuffer(new ByteBuffer[] { ByteBuffer.allocate(0) }));
         assertSame(EMPTY_BUFFER, wrappedBuffer(ByteBuffer.allocate(0), ByteBuffer.allocate(0)));
-        assertSame(EMPTY_BUFFER, wrappedBuffer(new ByteBuf[0]));
+        assertSame(EMPTY_BUFFER, wrappedBuffer(EMPTY_BYTE_BUFS));
         assertSame(EMPTY_BUFFER, wrappedBuffer(new ByteBuf[] { buffer(0) }));
         assertSame(EMPTY_BUFFER, wrappedBuffer(buffer(0), buffer(0)));
 
-        assertSame(EMPTY_BUFFER, copiedBuffer(new byte[0]));
+        assertSame(EMPTY_BUFFER, copiedBuffer(EMPTY_BYTES));
         assertSame(EMPTY_BUFFER, copiedBuffer(new byte[8], 0, 0));
         assertSame(EMPTY_BUFFER, copiedBuffer(new byte[8], 8, 0));
         assertSame(EMPTY_BUFFER, copiedBuffer(ByteBuffer.allocateDirect(0)));
         assertSame(EMPTY_BUFFER, copiedBuffer(EMPTY_BUFFER));
-        assertSame(EMPTY_BUFFER, copiedBuffer(new byte[0][]));
-        assertSame(EMPTY_BUFFER, copiedBuffer(new byte[][] { new byte[0] }));
-        assertSame(EMPTY_BUFFER, copiedBuffer(new ByteBuffer[0]));
+        assertSame(EMPTY_BUFFER, copiedBuffer(EMPTY_BYTES_2D));
+        assertSame(EMPTY_BUFFER, copiedBuffer(new byte[][] { EMPTY_BYTES }));
+        assertSame(EMPTY_BUFFER, copiedBuffer(EMPTY_BYTE_BUFFERS));
         assertSame(EMPTY_BUFFER, copiedBuffer(new ByteBuffer[] { ByteBuffer.allocate(0) }));
         assertSame(EMPTY_BUFFER, copiedBuffer(ByteBuffer.allocate(0), ByteBuffer.allocate(0)));
-        assertSame(EMPTY_BUFFER, copiedBuffer(new ByteBuf[0]));
+        assertSame(EMPTY_BUFFER, copiedBuffer(EMPTY_BYTE_BUFS));
         assertSame(EMPTY_BUFFER, copiedBuffer(new ByteBuf[] { buffer(0) }));
         assertSame(EMPTY_BUFFER, copiedBuffer(buffer(0), buffer(0)));
     }
@@ -370,7 +373,7 @@ public class UnpooledTest {
         }
 
         try {
-            buf.setBytes(0, new byte[0], 0, 0);
+            buf.setBytes(0, EMPTY_BYTES, 0, 0);
             fail();
         } catch (UnsupportedOperationException e) {
             // Expected
@@ -443,7 +446,7 @@ public class UnpooledTest {
         assertFalse(buffer.isReadable());
 
         assertEquals(0, Unpooled.copyInt(null).capacity());
-        assertEquals(0, Unpooled.copyInt(new int[0]).capacity());
+        assertEquals(0, Unpooled.copyInt(EMPTY_INTS).capacity());
     }
 
     @Test
@@ -463,7 +466,7 @@ public class UnpooledTest {
         assertFalse(buffer.isReadable());
 
         assertEquals(0, Unpooled.copyShort((short[]) null).capacity());
-        assertEquals(0, Unpooled.copyShort(new short[0]).capacity());
+        assertEquals(0, Unpooled.copyShort(EMPTY_SHORTS).capacity());
     }
 
     @Test
@@ -475,7 +478,7 @@ public class UnpooledTest {
         assertFalse(buffer.isReadable());
 
         assertEquals(0, Unpooled.copyShort((int[]) null).capacity());
-        assertEquals(0, Unpooled.copyShort(new int[0]).capacity());
+        assertEquals(0, Unpooled.copyShort(EMPTY_INTS).capacity());
     }
 
     @Test
@@ -495,7 +498,7 @@ public class UnpooledTest {
         assertFalse(buffer.isReadable());
 
         assertEquals(0, Unpooled.copyMedium(null).capacity());
-        assertEquals(0, Unpooled.copyMedium(new int[0]).capacity());
+        assertEquals(0, Unpooled.copyMedium(EMPTY_INTS).capacity());
     }
 
     @Test
@@ -515,7 +518,7 @@ public class UnpooledTest {
         assertFalse(buffer.isReadable());
 
         assertEquals(0, Unpooled.copyLong(null).capacity());
-        assertEquals(0, Unpooled.copyLong(new long[0]).capacity());
+        assertEquals(0, Unpooled.copyLong(EMPTY_LONGS).capacity());
     }
 
     @Test
@@ -535,7 +538,7 @@ public class UnpooledTest {
         assertFalse(buffer.isReadable());
 
         assertEquals(0, Unpooled.copyFloat(null).capacity());
-        assertEquals(0, Unpooled.copyFloat(new float[0]).capacity());
+        assertEquals(0, Unpooled.copyFloat(EMPTY_FLOATS).capacity());
     }
 
     @Test
@@ -555,7 +558,7 @@ public class UnpooledTest {
         assertFalse(buffer.isReadable());
 
         assertEquals(0, Unpooled.copyDouble(null).capacity());
-        assertEquals(0, Unpooled.copyDouble(new double[0]).capacity());
+        assertEquals(0, Unpooled.copyDouble(EMPTY_DOUBLES).capacity());
     }
 
     @Test
@@ -567,7 +570,7 @@ public class UnpooledTest {
         assertFalse(buffer.isReadable());
 
         assertEquals(0, Unpooled.copyBoolean(null).capacity());
-        assertEquals(0, Unpooled.copyBoolean(new boolean[0]).capacity());
+        assertEquals(0, Unpooled.copyBoolean(EMPTY_BOOLEANS).capacity());
     }
 
     @Test
