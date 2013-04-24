@@ -21,6 +21,8 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
@@ -38,11 +40,18 @@ import java.util.StringTokenizer;
 public final class NetUtil {
 
     /**
-     * The {@link InetAddress} representing the host machine
-     * <p/>
-     * We cache this because some machines take almost forever to return from
-     * {@link InetAddress}.getLocalHost(). This may be due to incorrect
-     * configuration of the hosts and DNS client configuration files.
+     * The {@link Inet4Address} that represents the IPv4 loopback address '127.0.0.1'
+     */
+    public static final Inet4Address LOCALHOST4;
+
+    /**
+     * The {@link Inet6Address} that represents the IPv6 loopback address '::1'
+     */
+    public static final Inet6Address LOCALHOST6;
+
+    /**
+     * The {@link InetAddress} that represents the loopback address. If IPv6 stack is available, it will refer to
+     * {@link #LOCALHOST6}.  Otherwise, {@link #LOCALHOST4}.
      */
     public static final InetAddress LOCALHOST;
 
@@ -101,17 +110,30 @@ public final class NetUtil {
             }
         }
 
-        if (localhost == null) {
-            InetAddress localhost6 = null;
-            try {
-                localhost6 = InetAddress.getByAddress(new byte[]{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 });
-            } catch (Exception e) {
-                // We should not get here as long as the length of the address is correct.
-                PlatformDependent.throwException(e);
-            }
+        // Create IPv4 loopback address.
+        Inet4Address localhost4 = null;
+        try {
+            localhost4 = (Inet4Address) InetAddress.getByAddress(new byte[]{127, 0, 0, 1});
+        } catch (Exception e) {
+            // We should not get here as long as the length of the address is correct.
+            PlatformDependent.throwException(e);
+        }
+        LOCALHOST4 = localhost4;
 
+        // Create IPv6 loopback address.
+        Inet6Address localhost6 = null;
+        try {
+            localhost6 = (Inet6Address) InetAddress.getByAddress(new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1});
+        } catch (Exception e) {
+            // We should not get here as long as the length of the address is correct.
+            PlatformDependent.throwException(e);
+        }
+        LOCALHOST6 = localhost6;
+
+        // Try to determine the default loopback address if we couldn't yet.
+        if (localhost == null) {
             try {
-                if (NetworkInterface.getByInetAddress(localhost6) != null) {
+                if (NetworkInterface.getByInetAddress(LOCALHOST6) != null) {
                     logger.debug("Using hard-coded IPv6 localhost address: {}", localhost6);
                     localhost = localhost6;
                 }
@@ -119,14 +141,6 @@ public final class NetUtil {
                 // Ignore
             } finally {
                 if (localhost == null) {
-                    InetAddress localhost4 = null;
-                    try {
-                        localhost4 = InetAddress.getByAddress(new byte[]{ 127, 0, 0, 1 });
-                    } catch (Exception e) {
-                        // We should not get here as long as the length of the address is correct.
-                        PlatformDependent.throwException(e);
-                    }
-
                     logger.debug("Using hard-coded IPv4 localhost address: {}", localhost4);
                     localhost = localhost4;
                 }
