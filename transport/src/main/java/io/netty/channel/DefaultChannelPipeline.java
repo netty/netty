@@ -548,14 +548,13 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         // Notify the complete removal.
         try {
+            ctx.forwardBufferContentAndRemove(ctxPrev, ctxNext);
             handler.handlerRemoved(ctx);
         } catch (Throwable t) {
             fireExceptionCaught(new ChannelPipelineException(
                     ctx.handler().getClass().getName() +
                             ".afterRemove() has thrown an exception.", t));
         }
-
-        ctx.forwardBufferContentAndRemove(ctxPrev, ctxNext);
     }
 
     /**
