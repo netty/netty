@@ -557,8 +557,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             handler.handlerRemoved(ctx);
         } catch (Throwable t) {
             fireExceptionCaught(new ChannelPipelineException(
-                    ctx.handler().getClass().getName() +
-                            ".handlerRemoved() has thrown an exception.", t));
+                    ctx.handler().getClass().getName() + ".handlerRemoved() has thrown an exception.", t));
         }
     }
 
@@ -585,7 +584,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             PlatformDependent.throwException(ex.getCause());
         } catch (InterruptedException ex) {
             // Interrupt the calling thread (note that this method is not called from the event loop)
-
             Thread.currentThread().interrupt();
         }
     }
