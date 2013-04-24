@@ -20,7 +20,9 @@ import io.netty.buffer.ByteBufIndexFinder;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedByteChannel;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -44,7 +46,8 @@ public class ReplayingDecoderTest {
         // Truncated input
         ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 'A' }));
         assertNull(ch.readInbound());
-        ch.close();
+
+        ch.finish();
         assertNull(ch.readInbound());
     }
 
@@ -58,6 +61,30 @@ public class ReplayingDecoderTest {
             ByteBuf msg = in.readBytes(in.bytesBefore(ByteBufIndexFinder.LF));
             in.skipBytes(1);
             out.add(msg);
+        }
+    }
+
+    @Test
+    @Ignore("needs a fix")
+    public void testReplacement() throws Exception {
+        EmbeddedByteChannel ch = new EmbeddedByteChannel(new BloatedLineDecoder());
+
+        // "AB" should be forwarded to LineDecoder by BloatedLineDecoder.
+        ch.writeInbound(Unpooled.wrappedBuffer(new byte[]{'A', 'B'}));
+        assertNull(ch.readInbound());
+
+        // "C\n" should be appended to "AB" so that LineDecoder decodes it correctly.
+        ch.writeInbound(Unpooled.wrappedBuffer(new byte[]{'C', '\n'}));
+        assertEquals(Unpooled.wrappedBuffer(new byte[] { 'A', 'B', 'C' }), ch.readInbound());
+
+        ch.finish();
+        assertNull(ch.readInbound());
+    }
+
+    private static final class BloatedLineDecoder extends ChannelInboundByteHandlerAdapter {
+        @Override
+        protected void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+            ctx.pipeline().replace(this, "less-bloated", new LineDecoder());
         }
     }
 }
