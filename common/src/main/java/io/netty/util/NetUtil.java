@@ -15,17 +15,14 @@
  */
 package io.netty.util;
 
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
-import java.io.IOException;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Enumeration;
@@ -66,75 +63,84 @@ public final class NetUtil {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NetUtil.class);
 
     static {
-        //Start the process of discovering localhost
-        InetAddress localhost;
+        // Find the first loopback interface available.
+        NetworkInterface loopbackIface = null;
         try {
-            localhost = InetAddress.getLocalHost();
-            validateHost(localhost);
-        } catch (IOException e0) {
-            // The default local host names did not work.  Try hard-coded IPv4 address.
+            for (Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces();
+                 ifaces.hasMoreElements();) {
+
+                NetworkInterface iface = ifaces.nextElement();
+                if (iface.isLoopback()) {
+                    // Found
+                    loopbackIface = iface;
+                    break;
+                }
+            }
+            if (loopbackIface == null) {
+                logger.warn("Failed to find the loopback interface");
+            }
+        } catch (SocketException e) {
+            logger.warn("Failed to find the loopback interface", e);
+        }
+
+        LOOPBACK_IF = loopbackIface;
+
+        // Find the localhost address
+        InetAddress localhost = null;
+        if (LOOPBACK_IF != null) {
+            logger.debug("Loopback interface: {}", LOOPBACK_IF.getDisplayName());
+            for (Enumeration<InetAddress> addrs = LOOPBACK_IF.getInetAddresses();
+                 addrs.hasMoreElements();) {
+                InetAddress a = addrs.nextElement();
+                if (localhost == null) {
+                    logger.debug("Loopback address: {} (primary)", a);
+                    localhost = a;
+                } else {
+                    logger.debug("Loopback address: {}", a);
+                }
+            }
+        }
+
+        if (localhost == null) {
+            InetAddress localhost6 = null;
             try {
-                localhost = InetAddress.getByAddress(new byte[]{ 127, 0, 0, 1 });
-                validateHost(localhost);
-            } catch (IOException e1) {
-                // The hard-coded IPv4 address did not work.  Try hard coded IPv6 address.
-                try {
-                    localhost = InetAddress.getByAddress(new byte[]{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 });
-                    validateHost(localhost);
-                } catch (IOException e2) {
-                    // Log all exceptions we caught so far for easier diagnosis.
-                    logger.warn("Failed to resolve localhost with InetAddress.getLocalHost():", e0);
-                    logger.warn("Failed to resolve localhost with InetAddress.getByAddress(127.0.0.1):", e1);
-                    logger.warn("Failed to resolve localhost with InetAddress.getByAddress(::1)", e2);
-                    throw new Error("failed to resolve localhost; incorrect network configuration?");
+                localhost6 = InetAddress.getByAddress(new byte[]{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 });
+            } catch (Exception e) {
+                // We should not get here as long as the length of the address is correct.
+                PlatformDependent.throwException(e);
+            }
+
+            try {
+                if (NetworkInterface.getByInetAddress(localhost6) != null) {
+                    logger.debug("Using hard-coded IPv6 localhost address: {}", localhost6);
+                    localhost = localhost6;
+                }
+            } catch (Exception e) {
+                // Ignore
+            } finally {
+                if (localhost == null) {
+                    InetAddress localhost4 = null;
+                    try {
+                        localhost4 = InetAddress.getByAddress(new byte[]{ 127, 0, 0, 1 });
+                    } catch (Exception e) {
+                        // We should not get here as long as the length of the address is correct.
+                        PlatformDependent.throwException(e);
+                    }
+
+                    logger.debug("Using hard-coded IPv4 localhost address: {}", localhost4);
+                    localhost = localhost4;
                 }
             }
         }
 
         LOCALHOST = localhost;
 
-        //Prepare to get the local NetworkInterface
-        NetworkInterface loopbackInterface;
-
-        try {
-            //Automatically get the loopback interface
-            loopbackInterface = NetworkInterface.getByInetAddress(LOCALHOST);
-        } catch (SocketException e) {
-            //No? Alright. There is a backup!
-            loopbackInterface = null;
-        }
-
-        //Check to see if a network interface was not found
-        if (loopbackInterface == null) {
-            try {
-                //Start iterating over all network interfaces
-                for (Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-                     interfaces.hasMoreElements();) {
-                    //Get the "next" interface
-                    NetworkInterface networkInterface = interfaces.nextElement();
-
-                    //Check to see if the interface is a loopback interface
-                    if (networkInterface.isLoopback()) {
-                        //Phew! The loopback interface was found.
-                        loopbackInterface = networkInterface;
-                        //No need to keep iterating
-                        break;
-                    }
-                }
-            } catch (SocketException e) {
-                //Nope. Can't do anything else, sorry!
-                logger.warn("Failed to enumerate network interfaces", e);
-            }
-        }
-
-        //Set the loopback interface constant
-        LOOPBACK_IF = loopbackInterface;
-
         int somaxconn = 3072;
         BufferedReader in = null;
         try {
             in = new BufferedReader(new FileReader("/proc/sys/net/core/somaxconn"));
             somaxconn = Integer.parseInt(in.readLine());
+            logger.debug("/proc/sys/net/core/somaxconn: {}", somaxconn);
         } catch (Exception e) {
             // Failed to get SOMAXCONN
         } finally {
@@ -150,51 +156,14 @@ public final class NetUtil {
         SOMAXCONN = somaxconn;
     }
 
-    private static void validateHost(InetAddress host) throws IOException {
-        ServerSocket ss = null;
-        Socket s1 = null;
-        Socket s2 = null;
-        try {
-            ss = new ServerSocket();
-            ss.setReuseAddress(false);
-            ss.bind(new InetSocketAddress(host, 0));
-            s1 = new Socket(host, ss.getLocalPort());
-            s2 = ss.accept();
-        } finally {
-            if (s2 != null) {
-                try {
-                    s2.close();
-                } catch (IOException e) {
-                    // Ignore
-                }
-            }
-            if (s1 != null) {
-                try {
-                    s1.close();
-                } catch (IOException e) {
-                    // Ignore
-                }
-            }
-            if (ss != null) {
-                try {
-                    ss.close();
-                } catch (IOException e) {
-                    // Ignore
-                }
-            }
-        }
-    }
-
     /**
      * Creates an byte[] based on an ipAddressString. No error handling is
      * performed here.
      */
-    public static byte[] createByteArrayFromIpAddressString(
-            String ipAddressString) {
+    public static byte[] createByteArrayFromIpAddressString(String ipAddressString) {
 
         if (isValidIpV4Address(ipAddressString)) {
-            StringTokenizer tokenizer = new StringTokenizer(ipAddressString,
-                    ".");
+            StringTokenizer tokenizer = new StringTokenizer(ipAddressString, ".");
             String token;
             int tempInt;
             byte[] byteAddress = new byte[4];
