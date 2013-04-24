@@ -948,6 +948,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     }
                 } catch (Throwable t) {
                     notifyHandlerException(t);
+                    break;
                 } finally {
                     if (handler instanceof ChannelInboundByteHandler && !isInboundFreed()) {
                         try {
