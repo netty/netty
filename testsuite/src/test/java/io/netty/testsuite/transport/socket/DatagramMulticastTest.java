@@ -25,7 +25,6 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.oio.OioDatagramChannel;
 import io.netty.util.NetUtil;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
@@ -37,7 +36,6 @@ import static org.junit.Assert.*;
 public class DatagramMulticastTest extends AbstractDatagramTest {
 
     @Test
-    @Ignore("Ignore because it does give different behavior on different OS, need to investigate!")
     public void testMulticast() throws Throwable {
         run();
     }
