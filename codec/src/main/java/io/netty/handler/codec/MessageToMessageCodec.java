@@ -103,19 +103,9 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
     }
 
     @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        decoder.freeInboundBuffer(ctx);
-    }
-
-    @Override
     @SuppressWarnings("unchecked")
     public MessageBuf<OUTBOUND_IN> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return (MessageBuf<OUTBOUND_IN>) encoder.newOutboundBuffer(ctx);
-    }
-
-    @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        encoder.freeOutboundBuffer(ctx);
     }
 
     @Override

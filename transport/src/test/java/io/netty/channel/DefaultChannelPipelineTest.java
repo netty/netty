@@ -802,11 +802,6 @@ public class DefaultChannelPipelineTest {
         }
 
         @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            ctx.inboundMessageBuffer().release();
-        }
-
-        @Override
         public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
             updated = true;
         }
@@ -818,11 +813,6 @@ public class DefaultChannelPipelineTest {
         @Override
         public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return Unpooled.messageBuffer();
-        }
-
-        @Override
-        public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            ctx.outboundMessageBuffer().release();
         }
 
         @Override
@@ -849,11 +839,6 @@ public class DefaultChannelPipelineTest {
         }
 
         @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            ((ChannelInboundHandler) stateHandler()).freeInboundBuffer(ctx);
-        }
-
-        @Override
         public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return ((ChannelOutboundByteHandler) operationHandler()).newOutboundBuffer(ctx);
         }
@@ -861,11 +846,6 @@ public class DefaultChannelPipelineTest {
         @Override
         public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
             ((ChannelOutboundByteHandler) operationHandler()).discardOutboundReadBytes(ctx);
-        }
-
-        @Override
-        public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            ((ChannelOutboundHandler) operationHandler()).freeOutboundBuffer(ctx);
         }
     }
 
@@ -883,20 +863,8 @@ public class DefaultChannelPipelineTest {
 
         @SuppressWarnings("unchecked")
         @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            ((ChannelInboundHandler) stateHandler()).freeInboundBuffer(ctx);
-        }
-
-        @SuppressWarnings("unchecked")
-        @Override
         public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return ((ChannelOutboundMessageHandler<Object>) operationHandler()).newOutboundBuffer(ctx);
-        }
-
-        @SuppressWarnings("unchecked")
-        @Override
-        public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            ((ChannelOutboundHandler) operationHandler()).freeOutboundBuffer(ctx);
         }
     }
 

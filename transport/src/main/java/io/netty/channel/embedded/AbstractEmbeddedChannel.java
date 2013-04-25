@@ -52,8 +52,8 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
     private final ChannelConfig config = new DefaultChannelConfig(this);
     private final SocketAddress localAddress = new EmbeddedSocketAddress();
     private final SocketAddress remoteAddress = new EmbeddedSocketAddress();
-    private final MessageBuf<Object> lastInboundMessageBuffer = Unpooled.messageBuffer();
-    private final ByteBuf lastInboundByteBuffer = Unpooled.buffer();
+    private final MessageBuf<Object> lastInboundMessageBuffer = Unpooled.messageBuffer().retain(2);
+    private final ByteBuf lastInboundByteBuffer = Unpooled.buffer().retain(2);
     protected final Object lastOutboundBuffer;
     private Throwable lastException;
     private int state; // 0 = OPEN, 1 = ACTIVE, 2 = CLOSED
@@ -332,11 +332,6 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
         }
 
         @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            // Do NOT free the buffer.
-        }
-
-        @Override
         public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
             // Do nothing.
         }
@@ -358,11 +353,6 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
         @Override
         public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
             // nothing
-        }
-
-        @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            // Do NOT free the buffer.
         }
 
         @Override

@@ -90,11 +90,6 @@ public abstract class ChannelOutboundMessageHandlerAdapter<I>
     }
 
     @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        ctx.outboundMessageBuffer().release();
-    }
-
-    @Override
     public final void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         ChannelHandlerUtil.handleFlush(ctx, promise, isCloseOnFailedFlush(), this);
     }

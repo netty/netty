@@ -90,18 +90,8 @@ public class SpdySessionHandler
     }
 
     @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-         ctx.inboundMessageBuffer().release();
-    }
-
-    @Override
     public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return Unpooled.messageBuffer();
-    }
-
-    @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        ctx.outboundMessageBuffer().release();
     }
 
     @Override
@@ -459,7 +449,7 @@ public class SpdySessionHandler
                     msg instanceof SpdyHeadersFrame ||
                     msg instanceof SpdyWindowUpdateFrame) {
                 try {
-                    handleOutboundMessage(ctx, msg, promise);
+                    handleOutboundMessage(ctx, msg);
                 } catch (SpdyProtocolException e) {
                     if (e == PROTOCOL_EXCEPTION) {
                         // on the case of PROTOCOL_EXCEPTION faile the promise directly
@@ -475,8 +465,7 @@ public class SpdySessionHandler
         ctx.flush(promise);
     }
 
-    private void handleOutboundMessage(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
-            throws Exception {
+    private void handleOutboundMessage(ChannelHandlerContext ctx, Object msg) throws Exception {
 
         if (msg instanceof SpdyDataFrame) {
 

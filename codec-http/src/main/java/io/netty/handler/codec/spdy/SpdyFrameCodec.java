@@ -71,17 +71,7 @@ public final class SpdyFrameCodec
     }
 
     @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        decoder().freeInboundBuffer(ctx);
-    }
-
-    @Override
     public MessageBuf<SpdyDataOrControlFrame> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return encoder().newOutboundBuffer(ctx);
-    }
-
-    @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        encoder().freeOutboundBuffer(ctx);
     }
 }

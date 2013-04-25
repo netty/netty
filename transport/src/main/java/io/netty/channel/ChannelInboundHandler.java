@@ -30,14 +30,4 @@ interface ChannelInboundHandler extends ChannelStateHandler {
      * </p>
      */
     Buf newInboundBuffer(ChannelHandlerContext ctx) throws Exception;
-
-    /**
-     * Invoked when this handler is not going to receive any inbound message anymore and thus it's safe to
-     * deallocate its inbound buffer.
-     * <p>
-     * Please note that this method can be called from any thread repeatatively, and thus you should not perform
-     * stateful operation here.
-     * </p>
-     */
-    void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception;
 }

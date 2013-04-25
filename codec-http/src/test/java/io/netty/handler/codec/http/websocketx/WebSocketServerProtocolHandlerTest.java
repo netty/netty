@@ -146,11 +146,6 @@ public class WebSocketServerProtocolHandlerTest {
         }
 
         @Override
-        public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            ctx.outboundMessageBuffer().release();
-        }
-
-        @Override
         public void flush(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
             //NoOp
         }

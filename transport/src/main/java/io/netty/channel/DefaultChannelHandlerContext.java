@@ -433,24 +433,23 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private void freeHandlerBuffersAfterRemoval() {
         int flags = this.flags;
         if ((flags & FLAG_REMOVED) != 0 && (flags & FLAG_FREED) == 0) { // Removed, but not freed yet
-            final ChannelHandler handler = handler();
             try {
-                if (handler instanceof ChannelInboundHandler) {
-                    try {
-                        ((ChannelInboundHandler) handler).freeInboundBuffer(this);
-                    } catch (Exception e) {
-                        notifyHandlerException(e);
-                    }
-                }
-                if (handler instanceof ChannelOutboundHandler) {
-                    try {
-                        ((ChannelOutboundHandler) handler).freeOutboundBuffer(this);
-                    } catch (Exception e) {
-                        notifyHandlerException(e);
-                    }
-                }
+                freeBuffer(inByteBuf);
+                freeBuffer(inMsgBuf);
+                freeBuffer(outByteBuf);
+                freeBuffer(outMsgBuf);
             } finally {
                 free();
+            }
+        }
+    }
+
+    private void freeBuffer(Buf buf) {
+        if (buf != null) {
+            try {
+                buf.release();
+            } catch (Exception e) {
+                notifyHandlerException(e);
             }
         }
     }
@@ -1477,13 +1476,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     private void invokeFreeInboundBuffer0() {
-        ChannelHandler handler = handler();
         try {
-            if (handler instanceof ChannelInboundHandler) {
-                ((ChannelInboundHandler) handler).freeInboundBuffer(this);
-            }
-        } catch (Throwable t) {
-            notifyHandlerException(t);
+            freeBuffer(inByteBuf);
+            freeBuffer(inMsgBuf);
         } finally {
             freeInbound();
         }
@@ -1526,13 +1521,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     private void invokeFreeOutboundBuffer0() {
-        ChannelHandler handler = handler();
         try {
-            if (handler instanceof ChannelOutboundHandler) {
-                ((ChannelOutboundHandler) handler).freeOutboundBuffer(this);
-            }
-        } catch (Throwable t) {
-            notifyHandlerException(t);
+            freeBuffer(outByteBuf);
+            freeBuffer(outMsgBuf);
         } finally {
             freeOutbound();
         }
