@@ -42,11 +42,6 @@ public abstract class ChannelInboundByteHandlerAdapter
     }
 
     @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        ctx.inboundByteBuffer().release();
-    }
-
-    @Override
     public final void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
         inboundBufferUpdated(ctx, ctx.inboundByteBuffer());
     }

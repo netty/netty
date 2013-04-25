@@ -91,13 +91,20 @@ public class ChunkedWriteHandler
 
     @Override
     public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        this.ctx = ctx;
         return queue;
     }
 
     @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        queue.release();
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        this.ctx = ctx;
+    }
+
+    // This method should not need any synchronization as the ChunkedWriteHandler will not receive any new events
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        // Fail all promised that are queued. This is needed because otherwise we would never notify the
+        // ChannelFuture and the registered FutureListener. See #304
+        discard(ctx, new ChannelException(ChunkedWriteHandler.class.getSimpleName() + " removed from pipeline."));
     }
 
     private boolean isWritable() {
@@ -346,13 +353,5 @@ public class ChunkedWriteHandler
                 logger.warn("Failed to close a chunked input.", t);
             }
         }
-    }
-
-    // This method should not need any synchronization as the ChunkedWriteHandler will not receive any new events
-    @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        // Fail all promised that are queued. This is needed because otherwise we would never notify the
-        // ChannelFuture and the registered FutureListener. See #304
-        discard(ctx, new ChannelException(ChunkedWriteHandler.class.getSimpleName() + " removed from pipeline."));
     }
 }

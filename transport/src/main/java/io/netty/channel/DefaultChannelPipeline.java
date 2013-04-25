@@ -1012,12 +1012,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            byteSink.release();
-            msgSink.release();
-        }
-
-        @Override
         public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
             int byteSinkSize = byteSink.readableBytes();
             if (byteSinkSize != 0) {
@@ -1131,12 +1125,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public final Buf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
             throw new Error();
-        }
-
-        @Override
-        public final void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            msgSink.release();
-            byteSink.release();
         }
 
         @Override

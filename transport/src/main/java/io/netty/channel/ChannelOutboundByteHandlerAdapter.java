@@ -32,11 +32,6 @@ public abstract class ChannelOutboundByteHandlerAdapter
         ctx.outboundByteBuffer().discardSomeReadBytes();
     }
 
-    @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        ctx.outboundByteBuffer().release();
-    }
-
     /**
      * This method merely delegates the flush request to {@link #flush(ChannelHandlerContext, ByteBuf, ChannelPromise)}.
      */

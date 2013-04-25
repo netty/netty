@@ -18,7 +18,6 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -77,16 +76,6 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         @Override
         public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
             channelFuture.setSuccess(ctx.channel());
-        }
-
-        @Override
-        public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return super.newInboundBuffer(ctx);
-        }
-
-        @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            super.freeInboundBuffer(ctx);
         }
 
         @Override
