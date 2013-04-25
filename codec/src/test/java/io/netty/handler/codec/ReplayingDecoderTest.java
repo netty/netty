@@ -85,4 +85,20 @@ public class ReplayingDecoderTest {
             ctx.pipeline().replace(this, "less-bloated", new LineDecoder());
         }
     }
+
+    @Test
+    public void testSingleDecode() throws Exception {
+        LineDecoder decoder = new LineDecoder();
+        decoder.setSingleDecode(true);
+        EmbeddedByteChannel ch = new EmbeddedByteChannel(decoder);
+
+        // "C\n" should be appended to "AB" so that LineDecoder decodes it correctly.
+        ch.writeInbound(Unpooled.wrappedBuffer(new byte[]{'C', '\n' , 'B', '\n'}));
+        assertEquals(Unpooled.wrappedBuffer(new byte[] {'C' }), ch.readInbound());
+        assertNull("Must be null as it must only decode one frame", ch.readInbound());
+
+        ch.finish();
+        assertEquals(Unpooled.wrappedBuffer(new byte[] {'B' }), ch.readInbound());
+        assertNull(ch.readInbound());
+    }
 }

@@ -427,6 +427,9 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                            "if it returned a decoded message (caused by: " +
                            getClass() + ')');
                 }
+                if (isSingleDecode()) {
+                    break;
+                }
             }
         } catch (CodecException e) {
             throw e;
