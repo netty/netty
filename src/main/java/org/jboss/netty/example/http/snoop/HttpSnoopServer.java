@@ -15,11 +15,11 @@
  */
 package org.jboss.netty.example.http.snoop;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
-
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+
+import java.net.InetSocketAddress;
+import java.util.concurrent.Executors;
 
 /**
  * An HTTP server that sends back the content of the received HTTP request
@@ -39,6 +39,9 @@ public class HttpSnoopServer {
                 new NioServerSocketChannelFactory(
                         Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
+
+        // Enable TCP_NODELAY to handle pipelined requests without latency.
+        bootstrap.setOption("child.tcpNoDelay", true);
 
         // Set up the event pipeline factory.
         bootstrap.setPipelineFactory(new HttpSnoopServerPipelineFactory());
