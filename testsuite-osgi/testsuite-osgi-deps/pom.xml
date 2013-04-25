@@ -105,8 +105,27 @@
   </dependencies>
 
   <build>
-
     <plugins>
+      <!-- feature doesn't invoke maven-compile-plugin unless specified explicitly. -->
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>compile</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>test-compile</id>
+            <phase>test-compile</phase>
+            <goals>
+              <goal>testCompile</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
 
       <!-- produce karaf feature.xml -->
       <plugin>
