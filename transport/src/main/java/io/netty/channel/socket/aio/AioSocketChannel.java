@@ -382,7 +382,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         protected void completed0(T result, AioSocketChannel channel) {
             channel.writeInProgress = NO_WRITE_IN_PROGRESS;
 
-            ByteBuf buf = channel.unsafe().directOutboundContext().outboundByteBuffer();
+            ByteBuf buf = channel.unsafe().headContext().outboundByteBuffer();
             if (buf.refCnt() == 0) {
                 return;
             }
