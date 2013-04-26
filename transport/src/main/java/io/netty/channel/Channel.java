@@ -173,10 +173,9 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
      */
     interface Unsafe {
         /**
-         * Return the {@link ChannelHandlerContext} which is directly connected to the outbound of the
-         * underlying transport.
+         * Return the internal {@link ChannelHandlerContext} that is placed before all user handlers.
          */
-        ChannelHandlerContext directOutboundContext();
+        ChannelHandlerContext headContext();
 
         /**
          * Return a {@link VoidChannelPromise}. This method always return the same instance.
@@ -247,7 +246,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
         void beginRead();
 
         /**
-         * Flush out all data that was buffered in the buffer of the {@link #directOutboundContext()} and was not
+         * Flush out all data that was buffered in the buffer of the {@link #headContext()} and was not
          * flushed out yet. After that is done the {@link ChannelFuture} will get notified
          */
         void flush(ChannelPromise promise);
