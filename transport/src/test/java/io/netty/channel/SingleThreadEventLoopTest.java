@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.channel.local.LocalChannel;
+import io.netty.util.concurrent.EventExecutor;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -36,6 +37,11 @@ import static org.junit.Assert.*;
 
 public class SingleThreadEventLoopTest {
 
+    private static final Runnable NOOP = new Runnable() {
+        @Override
+        public void run() { }
+    };
+
     private SingleThreadEventLoopA loopA;
     private SingleThreadEventLoopB loopB;
 
@@ -47,11 +53,11 @@ public class SingleThreadEventLoopTest {
 
     @After
     public void stopEventLoop() {
-        if (!loopA.isShutdown()) {
-            loopA.shutdown();
+        if (!loopA.isShuttingDown()) {
+            loopA.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
         }
-        if (!loopB.isShutdown()) {
-            loopB.shutdown();
+        if (!loopB.isShuttingDown()) {
+            loopB.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
         }
 
         while (!loopA.isTerminated()) {
@@ -73,11 +79,14 @@ public class SingleThreadEventLoopTest {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     public void shutdownBeforeStart() throws Exception {
         loopA.shutdown();
+        assertRejection(loopA);
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     public void shutdownAfterStart() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
         loopA.execute(new Runnable() {
@@ -92,12 +101,22 @@ public class SingleThreadEventLoopTest {
 
         // Request the event loop thread to stop.
         loopA.shutdown();
+        assertRejection(loopA);
 
         assertTrue(loopA.isShutdown());
 
         // Wait until the event loop is terminated.
         while (!loopA.isTerminated()) {
             loopA.awaitTermination(1, TimeUnit.DAYS);
+        }
+    }
+
+    private static void assertRejection(EventExecutor loop) {
+        try {
+            loop.execute(NOOP);
+            fail("A task must be rejected after shutdown() is called.");
+        } catch (RejectedExecutionException e) {
+            // Expected
         }
     }
 
@@ -254,6 +273,7 @@ public class SingleThreadEventLoopTest {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     public void shutdownWithPendingTasks() throws Exception {
         final int NUM_TASKS = 3;
         final AtomicInteger ranTasks = new AtomicInteger();
@@ -298,12 +318,9 @@ public class SingleThreadEventLoopTest {
     }
 
     @Test(timeout = 10000)
-    public void testRegistrationAfterTermination() throws Exception {
+    @SuppressWarnings("deprecation")
+    public void testRegistrationAfterShutdown() throws Exception {
         loopA.shutdown();
-        while (!loopA.isTerminated()) {
-            loopA.awaitTermination(1, TimeUnit.DAYS);
-        }
-
         ChannelFuture f = loopA.register(new LocalChannel());
         f.awaitUninterruptibly();
         assertFalse(f.isSuccess());
@@ -311,12 +328,9 @@ public class SingleThreadEventLoopTest {
     }
 
     @Test(timeout = 10000)
-    public void testRegistrationAfterTermination2() throws Exception {
+    @SuppressWarnings("deprecation")
+    public void testRegistrationAfterShutdown2() throws Exception {
         loopA.shutdown();
-        while (!loopA.isTerminated()) {
-            loopA.awaitTermination(1, TimeUnit.DAYS);
-        }
-
         final CountDownLatch latch = new CountDownLatch(1);
         Channel ch = new LocalChannel();
         ChannelPromise promise = ch.newPromise();
@@ -336,26 +350,69 @@ public class SingleThreadEventLoopTest {
         assertFalse(latch.await(1, TimeUnit.SECONDS));
     }
 
+    @Test(timeout = 5000)
+    public void testGracefulShutdownQuietPeriod() throws Exception {
+        loopA.shutdownGracefully(1, Integer.MAX_VALUE, TimeUnit.SECONDS);
+        // Keep Scheduling tasks for another 2 seconds.
+        for (int i = 0; i < 20; i ++) {
+            Thread.sleep(100);
+            loopA.execute(NOOP);
+        }
+
+        long startTime = System.nanoTime();
+
+        assertThat(loopA.isShuttingDown(), is(true));
+        assertThat(loopA.isShutdown(), is(false));
+
+        while (!loopA.isTerminated()) {
+            loopA.awaitTermination(Integer.MAX_VALUE, TimeUnit.SECONDS);
+        }
+
+        assertTrue(System.nanoTime() - startTime >= TimeUnit.SECONDS.toNanos(1));
+    }
+
+    @Test(timeout = 5000)
+    public void testGracefulShutdownTimeout() throws Exception {
+        loopA.shutdownGracefully(2, 2, TimeUnit.SECONDS);
+        // Keep Scheduling tasks for another 3 seconds.
+        // Submitted tasks must be rejected after 2 second timeout.
+        for (int i = 0; i < 10; i ++) {
+            Thread.sleep(100);
+            loopA.execute(NOOP);
+        }
+
+        try {
+            for (int i = 0; i < 20; i ++) {
+                Thread.sleep(100);
+                loopA.execute(NOOP);
+            }
+            fail("shutdownGracefully() must reject a task after timeout.");
+        } catch (RejectedExecutionException e) {
+            // Expected
+        }
+
+        assertThat(loopA.isShuttingDown(), is(true));
+        assertThat(loopA.isShutdown(), is(true));
+    }
+
     private static class SingleThreadEventLoopA extends SingleThreadEventLoop {
 
         final AtomicInteger cleanedUp = new AtomicInteger();
 
         SingleThreadEventLoopA() {
-            super(null, Executors.defaultThreadFactory());
+            super(null, Executors.defaultThreadFactory(), true);
         }
 
         @Override
         protected void run() {
             for (;;) {
-                Runnable task;
-                try {
-                    task = takeTask();
+                Runnable task = takeTask();
+                if (task != null) {
                     task.run();
-                } catch (InterruptedException e) {
-                    // Waken up by interruptThread()
+                    updateLastExecutionTime();
                 }
 
-                if (isShutdown() && confirmShutdown()) {
+                if (confirmShutdown()) {
                     break;
                 }
             }
@@ -370,7 +427,7 @@ public class SingleThreadEventLoopTest {
     private static class SingleThreadEventLoopB extends SingleThreadEventLoop {
 
         SingleThreadEventLoopB() {
-            super(null, Executors.defaultThreadFactory());
+            super(null, Executors.defaultThreadFactory(), false);
         }
 
         @Override
@@ -384,7 +441,7 @@ public class SingleThreadEventLoopTest {
 
                 runAllTasks();
 
-                if (isShutdown() && confirmShutdown()) {
+                if (confirmShutdown()) {
                     break;
                 }
             }

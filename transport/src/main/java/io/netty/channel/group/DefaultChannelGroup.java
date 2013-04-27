@@ -21,21 +21,16 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.FileRegion;
 import io.netty.channel.ServerChannel;
-import io.netty.util.concurrent.AbstractEventExecutor;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.internal.PlatformDependent;
 
 import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -311,55 +306,5 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     public String toString() {
         return getClass().getSimpleName() +
                "(name: " + name() + ", size: " + size() + ')';
-    }
-
-    static final class ImmediateEventExecutor extends AbstractEventExecutor {
-
-        @Override
-        public EventExecutorGroup parent() {
-            return null;
-        }
-
-        @Override
-        public boolean inEventLoop() {
-            return true;
-        }
-
-        @Override
-        public boolean inEventLoop(Thread thread) {
-            return true;
-        }
-
-        @Override
-        public void shutdown() {
-        }
-
-        @Override
-        public boolean isShutdown() {
-            return false;
-        }
-
-        @Override
-        public boolean isTerminated() {
-            return false;
-        }
-
-        @Override
-        public boolean awaitTermination(long timeout, TimeUnit unit) {
-            return false;
-        }
-
-        @Override
-        public List<Runnable> shutdownNow() {
-            return Collections.emptyList();
-        }
-
-        @Override
-        public void execute(Runnable command) {
-            if (command == null) {
-                throw new NullPointerException("command");
-            }
-            command.run();
-        }
     }
 }

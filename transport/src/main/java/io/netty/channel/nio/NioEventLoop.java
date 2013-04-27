@@ -48,11 +48,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public final class NioEventLoop extends SingleThreadEventLoop {
 
-    /**
-     * Internal Netty logger.
-     */
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(NioEventLoop.class);
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioEventLoop.class);
 
     private static final int CLEANUP_INTERVAL = 256; // XXX Hard-coded value, but won't need customization.
 
@@ -109,9 +105,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     private int cancelledKeys;
     private boolean needsToSelectAgain;
 
-    NioEventLoop(
-            NioEventLoopGroup parent, ThreadFactory threadFactory, SelectorProvider selectorProvider) {
-        super(parent, threadFactory);
+    NioEventLoop(NioEventLoopGroup parent, ThreadFactory threadFactory, SelectorProvider selectorProvider) {
+        super(parent, threadFactory, false);
         if (selectorProvider == null) {
             throw new NullPointerException("selectorProvider");
         }
@@ -330,7 +325,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 final int ioRatio = this.ioRatio;
                 runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
 
-                if (isShutdown()) {
+                if (isShuttingDown()) {
                     closeAll();
                     if (confirmShutdown()) {
                         break;
@@ -438,7 +433,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 }
             }
             if ((readyOps & SelectionKey.OP_WRITE) != 0) {
-                processWritable(k, ch);
+                processWritable(ch);
             }
             if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
                 // remove OP_CONNECT as otherwise Selector.select(..) will always return without blocking
@@ -457,7 +452,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
-    private static void processWritable(SelectionKey k, AbstractNioChannel ch) {
+    private static void processWritable(AbstractNioChannel ch) {
         NioTask<SelectableChannel> task;
         for (;;) {
             task = ch.writableTasks.poll();

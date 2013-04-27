@@ -123,8 +123,8 @@ public final class UdtNetty {
 
         Thread.sleep(1000);
 
-        group1.shutdown();
-        group2.shutdown();
+        group1.shutdownGracefully();
+        group2.shutdownGracefully();
 
         Metrics.defaultRegistry().shutdown();
 

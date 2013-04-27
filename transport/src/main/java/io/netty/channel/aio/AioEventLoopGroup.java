@@ -73,6 +73,8 @@ public class AioEventLoopGroup extends MultithreadEventLoopGroup {
     }
 
     @Override
+    @Deprecated
+    @SuppressWarnings("deprecation")
     public void shutdown() {
         boolean interrupted = false;
 

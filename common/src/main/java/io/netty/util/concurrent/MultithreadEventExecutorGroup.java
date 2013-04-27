@@ -60,7 +60,19 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
             } finally {
                 if (!success) {
                     for (int j = 0; j < i; j ++) {
-                        children[j].shutdown();
+                        children[j].shutdownGracefully();
+                    }
+
+                    for (int j = 0; j < i; j ++) {
+                        EventExecutor e = children[j];
+                        try {
+                            while (!e.isTerminated()) {
+                                e.awaitTermination(Integer.MAX_VALUE, TimeUnit.SECONDS);
+                            }
+                        } catch (InterruptedException interrupted) {
+                            Thread.currentThread().interrupt();
+                            break;
+                        }
                     }
                 }
             }
@@ -107,14 +119,28 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
             ThreadFactory threadFactory, Object... args) throws Exception;
 
     @Override
-    public void shutdown() {
-        if (isShutdown()) {
-            return;
+    public void shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+        for (EventExecutor l: children) {
+            l.shutdownGracefully(quietPeriod, timeout, unit);
         }
+    }
 
+    @Override
+    @Deprecated
+    public void shutdown() {
         for (EventExecutor l: children) {
             l.shutdown();
         }
+    }
+
+    @Override
+    public boolean isShuttingDown() {
+        for (EventExecutor l: children) {
+            if (!l.isShuttingDown()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override

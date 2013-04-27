@@ -46,8 +46,8 @@ public class HttpSnoopServer {
             Channel ch = b.bind(port).sync().channel();
             ch.closeFuture().sync();
         } finally {
-            bossGroup.shutdown();
-            workerGroup.shutdown();
+            bossGroup.shutdownGracefully();
+            workerGroup.shutdownGracefully();
         }
     }
 

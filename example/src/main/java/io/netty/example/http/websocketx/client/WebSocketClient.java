@@ -119,7 +119,7 @@ public class WebSocketClient {
             // responds to the CloseWebSocketFrame.
             ch.closeFuture().sync();
         } finally {
-            group.shutdown();
+            group.shutdownGracefully();
         }
     }
 

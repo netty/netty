@@ -26,7 +26,7 @@ public class ThreadPerChannelEventLoop extends SingleThreadEventLoop {
     private Channel ch;
 
     public ThreadPerChannelEventLoop(ThreadPerChannelEventLoopGroup parent) {
-        super(parent, parent.threadFactory);
+        super(parent, parent.threadFactory, true);
         this.parent = parent;
     }
 
@@ -48,16 +48,14 @@ public class ThreadPerChannelEventLoop extends SingleThreadEventLoop {
     @Override
     protected void run() {
         for (;;) {
-            Runnable task;
-            try {
-                task = takeTask();
+            Runnable task = takeTask();
+            if (task != null) {
                 task.run();
-            } catch (InterruptedException e) {
-                // Waken up by interruptThread()
+                updateLastExecutionTime();
             }
 
             Channel ch = this.ch;
-            if (isShutdown()) {
+            if (isShuttingDown()) {
                 if (ch != null) {
                     ch.unsafe().close(ch.unsafe().voidFuture());
                 }

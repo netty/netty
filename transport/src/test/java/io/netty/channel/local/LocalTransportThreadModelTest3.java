@@ -82,7 +82,7 @@ public class LocalTransportThreadModelTest3 {
 
     @AfterClass
     public static void destroy() {
-        group.shutdown();
+        group.shutdownGracefully();
     }
 
     @Test(timeout = 60000)
@@ -214,12 +214,12 @@ public class LocalTransportThreadModelTest3 {
                 Assert.assertEquals(event, expectedEvents.poll());
             }
         } finally {
-            l.shutdown();
-            e1.shutdown();
-            e2.shutdown();
-            e3.shutdown();
-            e4.shutdown();
-            e5.shutdown();
+            l.shutdownGracefully();
+            e1.shutdownGracefully();
+            e2.shutdownGracefully();
+            e3.shutdownGracefully();
+            e4.shutdownGracefully();
+            e5.shutdownGracefully();
         }
     }
 

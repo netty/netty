@@ -59,7 +59,7 @@ final class AioEventLoop extends SingleThreadEventLoop {
     };
 
     AioEventLoop(AioEventLoopGroup parent, ThreadFactory threadFactory) {
-        super(parent, threadFactory);
+        super(parent, threadFactory, true);
     }
 
     @Override
@@ -75,15 +75,13 @@ final class AioEventLoop extends SingleThreadEventLoop {
     @Override
     protected void run() {
         for (;;) {
-            Runnable task;
-            try {
-                task = takeTask();
+            Runnable task = takeTask();
+            if (task != null) {
                 task.run();
-            } catch (InterruptedException e) {
-                // Waken up by interruptThread()
+                updateLastExecutionTime();
             }
 
-            if (isShutdown()) {
+            if (isShuttingDown()) {
                 closeAll();
                 if (confirmShutdown()) {
                     break;
