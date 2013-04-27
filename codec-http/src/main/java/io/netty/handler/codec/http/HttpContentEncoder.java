@@ -111,19 +111,28 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                 if (isFull) {
                     // Pass through the full response with empty content and continue waiting for the the next resp.
                     if (!((ByteBufHolder) res).data().isReadable()) {
+                        // Set the content length to 0.
+                        res.headers().remove(Names.TRANSFER_ENCODING);
+                        res.headers().set(Names.CONTENT_LENGTH, "0");
                         out.add(BufUtil.retain(res));
                         break;
                     }
                 }
 
                 // Prepare to encode the content.
-                Result result = beginEncode(res, acceptEncoding);
+                final Result result = beginEncode(res, acceptEncoding);
 
                 // If unable to encode, pass through.
                 if (result == null) {
                     if (isFull) {
+                        // As an unchunked response
+                        res.headers().remove(Names.TRANSFER_ENCODING);
+                        res.headers().set(Names.CONTENT_LENGTH, ((ByteBufHolder) res).data().readableBytes());
                         out.add(BufUtil.retain(res));
                     } else {
+                        // As a chunked response
+                        res.headers().remove(Names.CONTENT_LENGTH);
+                        res.headers().set(Names.TRANSFER_ENCODING, Values.CHUNKED);
                         out.add(res);
                         state = State.PASS_THROUGH;
                     }
@@ -193,6 +202,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     private HttpContent[] encodeContent(HttpContent c) {
         ByteBuf newContent = Unpooled.buffer();
         ByteBuf content = c.data();
+
         encode(content, newContent);
 
         if (c instanceof LastHttpContent) {
@@ -202,7 +212,12 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
             // Generate an additional chunk if the decoder produced
             // the last product on closure,
             if (lastProduct.isReadable()) {
-                return new HttpContent[] { new DefaultHttpContent(newContent), new DefaultLastHttpContent(lastProduct)};
+                if (newContent.isReadable()) {
+                    return new HttpContent[] {
+                            new DefaultHttpContent(newContent), new DefaultLastHttpContent(lastProduct)};
+                } else {
+                    return new HttpContent[] { new DefaultLastHttpContent(lastProduct) };
+                }
             } else {
                 return new HttpContent[] { new DefaultLastHttpContent(newContent) };
             }

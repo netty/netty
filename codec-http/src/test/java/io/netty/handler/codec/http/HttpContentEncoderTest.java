@@ -115,6 +115,53 @@ public class HttpContentEncoderTest {
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 
+    /**
+     * If the length of the content is unknown, {@link HttpContentEncoder} should not skip encoding even if the
+     * actual length is turned out to be 0.
+     */
+    @Test
+    public void testEmptySplitContent() throws Exception {
+        EmbeddedMessageChannel ch = new EmbeddedMessageChannel(new TestEncoder());
+        ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
+
+        ch.writeOutbound(new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK));
+        assertEncodedResponse(ch);
+
+        ch.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT);
+        HttpContent chunk = (HttpContent) ch.readOutbound();
+        assertThat(chunk.data().isReadable(), is(false));
+        assertThat(chunk, is(instanceOf(LastHttpContent.class)));
+        assertThat(ch.readOutbound(), is(nullValue()));
+    }
+
+    /**
+     * If the length of the content is 0 for sure, {@link HttpContentEncoder} should skip encoding.
+     */
+    @Test
+    public void testEmptyFullContent() throws Exception {
+        EmbeddedMessageChannel ch = new EmbeddedMessageChannel(new TestEncoder());
+        ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
+
+        FullHttpResponse res = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER);
+        ch.writeOutbound(res);
+
+        Object o = ch.readOutbound();
+        assertThat(o, is(instanceOf(FullHttpResponse.class)));
+
+        res = (FullHttpResponse) o;
+        assertThat(res.headers().get(Names.TRANSFER_ENCODING), is(nullValue()));
+
+        // Length must be set to 0.
+        assertThat(res.headers().get(Names.CONTENT_LENGTH), is("0"));
+        // Content encoding shouldn't be modified.
+        assertThat(res.headers().get(Names.CONTENT_ENCODING), is(nullValue()));
+        assertThat(res.data().readableBytes(), is(0));
+        assertThat(res.data().toString(CharsetUtil.US_ASCII), is(""));
+
+        assertThat(ch.readOutbound(), is(nullValue()));
+    }
+
     private static void assertEncodedResponse(EmbeddedMessageChannel ch) {
         Object o = ch.readOutbound();
         assertThat(o, is(instanceOf(HttpResponse.class)));
