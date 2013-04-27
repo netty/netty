@@ -31,15 +31,13 @@ final class DefaultEventExecutor extends SingleThreadEventExecutor {
     @Override
     protected void run() {
         for (;;) {
-            Runnable task;
-            try {
-                task = takeTask();
+            Runnable task = takeTask();
+            if (task != null) {
                 task.run();
-            } catch (InterruptedException e) {
-                // Waken up by interruptThread()
+                updateLastExecutionTime();
             }
 
-            if (isShutdown() && confirmShutdown()) {
+            if (confirmShutdown()) {
                 break;
             }
         }

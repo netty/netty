@@ -72,7 +72,7 @@ public class WorldClockClient {
                 System.out.format("%28s: %s%n", i1.next(), i2.next());
             }
         } finally {
-            group.shutdown();
+            group.shutdownGracefully();
         }
     }
 

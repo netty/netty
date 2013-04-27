@@ -55,7 +55,7 @@ public class DefaultChannnelGroupTest {
             allChannels.close().awaitUninterruptibly();
         }
 
-        bossGroup.shutdown();
-        workerGroup.shutdown();
+        bossGroup.shutdownGracefully();
+        workerGroup.shutdownGracefully();
     }
 }

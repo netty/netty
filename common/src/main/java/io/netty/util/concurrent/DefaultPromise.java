@@ -507,7 +507,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                     });
                 }
             } catch (Throwable t) {
-                logger.error("Failed to notify listener(s). Event loop terminated?", t);
+                logger.error("Failed to notify listener(s). Event loop shut down?", t);
             }
         }
     }
@@ -544,7 +544,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                 }
             });
         } catch (Throwable t) {
-            logger.error("Failed to notify a listener. Event loop terminated?", t);
+            logger.error("Failed to notify a listener. Event loop shut down?", t);
         }
     }
 
@@ -644,7 +644,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                     });
                 }
             } catch (Throwable t) {
-                logger.error("Failed to notify listener(s). Event loop terminated?", t);
+                logger.error("Failed to notify listener(s). Event loop shut down?", t);
             }
         }
     }

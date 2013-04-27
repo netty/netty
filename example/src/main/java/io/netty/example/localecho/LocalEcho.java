@@ -105,8 +105,8 @@ public class LocalEcho {
                 lastWriteFuture.awaitUninterruptibly();
             }
         } finally {
-            serverGroup.shutdown();
-            clientGroup.shutdown();
+            serverGroup.shutdownGracefully();
+            clientGroup.shutdownGracefully();
         }
     }
 

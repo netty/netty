@@ -23,8 +23,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.AbstractEventExecutor;
 
 import java.util.ArrayDeque;
-import java.util.Collections;
-import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 
@@ -52,13 +50,15 @@ final class EmbeddedEventLoop extends AbstractEventExecutor implements EventLoop
     }
 
     @Override
-    public void shutdown() {
-        // NOOP
-    }
+    public void shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) { }
 
     @Override
-    public List<Runnable> shutdownNow() {
-        return Collections.emptyList();
+    @Deprecated
+    public void shutdown() { }
+
+    @Override
+    public boolean isShuttingDown() {
+        return false;
     }
 
     @Override

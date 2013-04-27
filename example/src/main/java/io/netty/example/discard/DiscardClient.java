@@ -50,7 +50,7 @@ public class DiscardClient {
             // Wait until the connection is closed.
             f.channel().closeFuture().sync();
         } finally {
-            group.shutdown();
+            group.shutdownGracefully();
         }
     }
 

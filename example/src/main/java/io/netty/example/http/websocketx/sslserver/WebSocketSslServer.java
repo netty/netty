@@ -61,8 +61,8 @@ public class WebSocketSslServer {
             System.out.println("Open your browser and navigate to https://localhost:" + port + '/');
             ch.closeFuture().sync();
         } finally {
-            bossGroup.shutdown();
-            workerGroup.shutdown();
+            bossGroup.shutdownGracefully();
+            workerGroup.shutdownGracefully();
         }
     }
 

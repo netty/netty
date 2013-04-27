@@ -65,10 +65,10 @@ public class AppletDiscardServer extends JApplet {
     public void destroy() {
         super.destroy();
         if (bossGroup != null) {
-            bossGroup.shutdown();
+            bossGroup.shutdownGracefully();
         }
         if (workerGroup != null) {
-            workerGroup.shutdown();
+            workerGroup.shutdownGracefully();
         }
     }
 

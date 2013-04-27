@@ -76,7 +76,7 @@ public class SecureChatClient {
             }
         } finally {
             // The connection is closed automatically on shutdown.
-            group.shutdown();
+            group.shutdownGracefully();
         }
     }
 

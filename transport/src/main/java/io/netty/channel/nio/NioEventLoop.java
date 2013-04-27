@@ -330,7 +330,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 final int ioRatio = this.ioRatio;
                 runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
 
-                if (isShutdown()) {
+                if (isShuttingDown()) {
                     closeAll();
                     if (confirmShutdown()) {
                         break;
@@ -438,7 +438,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 }
             }
             if ((readyOps & SelectionKey.OP_WRITE) != 0) {
-                processWritable(k, ch);
+                processWritable(ch);
             }
             if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
                 // remove OP_CONNECT as otherwise Selector.select(..) will always return without blocking
@@ -457,7 +457,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
-    private static void processWritable(SelectionKey k, AbstractNioChannel ch) {
+    private static void processWritable(AbstractNioChannel ch) {
         NioTask<SelectableChannel> task;
         for (;;) {
             task = ch.writableTasks.poll();

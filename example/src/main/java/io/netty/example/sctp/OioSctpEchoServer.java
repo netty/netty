@@ -63,8 +63,8 @@ public class OioSctpEchoServer {
             f.channel().closeFuture().sync();
         } finally {
             // Shut down all event loops to terminate all threads.
-            bossGroup.shutdown();
-            workerGroup.shutdown();
+            bossGroup.shutdownGracefully();
+            workerGroup.shutdownGracefully();
         }
     }
 
