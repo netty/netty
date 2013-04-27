@@ -64,7 +64,7 @@ public class QuoteOfTheMomentClient {
                 System.err.println("QOTM request timed out.");
             }
         } finally {
-            group.shutdown();
+            group.shutdownGracefully();
         }
     }
 

@@ -56,7 +56,7 @@ public class FactorialClient {
             System.err.format(
                     "Factorial of %,d is: %,d", count, handler.getFactorial());
         } finally {
-            group.shutdown();
+            group.shutdownGracefully();
         }
     }
 

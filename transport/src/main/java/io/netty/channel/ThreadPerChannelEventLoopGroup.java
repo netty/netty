@@ -117,6 +117,17 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
     }
 
     @Override
+    public void shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+        for (EventLoop l: activeChildren) {
+            l.shutdownGracefully(quietPeriod, timeout, unit);
+        }
+        for (EventLoop l: idleChildren) {
+            l.shutdownGracefully(quietPeriod, timeout, unit);
+        }
+    }
+
+    @Override
+    @Deprecated
     public void shutdown() {
         for (EventLoop l: activeChildren) {
             l.shutdown();
@@ -124,6 +135,21 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
         for (EventLoop l: idleChildren) {
             l.shutdown();
         }
+    }
+
+    @Override
+    public boolean isShuttingDown() {
+        for (EventLoop l: activeChildren) {
+            if (!l.isShuttingDown()) {
+                return false;
+            }
+        }
+        for (EventLoop l: idleChildren) {
+            if (!l.isShuttingDown()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override

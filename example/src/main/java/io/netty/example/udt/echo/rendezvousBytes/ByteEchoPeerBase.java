@@ -67,7 +67,7 @@ public class ByteEchoPeerBase {
             final ChannelFuture future = bootstrap.connect(peerAddress, myAddress).sync();
             future.channel().closeFuture().sync();
         } finally {
-            connectGroup.shutdown();
+            connectGroup.shutdownGracefully();
         }
     }
 }

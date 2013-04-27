@@ -23,8 +23,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.util.concurrent.DefaultEventExecutorGroup;
-import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.string.StringDecoder;
@@ -33,6 +31,8 @@ import io.netty.handler.logging.ByteLoggingHandler;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.testsuite.util.BogusSslContextFactory;
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -56,7 +56,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
 
     @AfterClass
     public static void shutdownExecutor() {
-        executor.shutdown();
+        executor.shutdownGracefully();
     }
 
     @Test(timeout = 30000)

@@ -46,8 +46,8 @@ public class AutobahnServer {
             System.out.println("Web Socket Server started at port " + port);
             f.channel().closeFuture().sync();
         } finally {
-            bossGroup.shutdown();
-            workerGroup.shutdown();
+            bossGroup.shutdownGracefully();
+            workerGroup.shutdownGracefully();
         }
     }
 

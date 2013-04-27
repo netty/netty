@@ -70,7 +70,7 @@ public class OioSctpEchoClient {
             f.channel().closeFuture().sync();
         } finally {
             // Shut down the event loop to terminate all threads.
-            group.shutdown();
+            group.shutdownGracefully();
         }
     }
 

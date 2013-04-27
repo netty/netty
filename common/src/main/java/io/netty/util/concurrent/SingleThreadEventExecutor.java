@@ -19,7 +19,6 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -48,19 +47,14 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(SingleThreadEventExecutor.class);
 
-    /**
-     * Wait at least 2 seconds after shutdown() until there are no pending tasks anymore.
-     * @see #confirmShutdown()
-     */
-    private static final long SHUTDOWN_DELAY_NANOS = TimeUnit.SECONDS.toNanos(2);
-
     static final ThreadLocal<SingleThreadEventExecutor> CURRENT_EVENT_LOOP =
             new ThreadLocal<SingleThreadEventExecutor>();
 
     private static final int ST_NOT_STARTED = 1;
     private static final int ST_STARTED = 2;
-    private static final int ST_SHUTDOWN = 3;
-    private static final int ST_TERMINATED = 4;
+    private static final int ST_SHUTTING_DOWN = 3;
+    private static final int ST_SHUTDOWN = 4;
+    private static final int ST_TERMINATED = 5;
 
     private static final Runnable WAKEUP_TASK = new Runnable() {
         @Override
@@ -84,36 +78,50 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
     private final Object stateLock = new Object();
     private final Semaphore threadLock = new Semaphore(0);
     private final Set<Runnable> shutdownHooks = new LinkedHashSet<Runnable>();
+    private final boolean addTaskWakesUp;
+
+    private long lastExecutionTime;
     private volatile int state = ST_NOT_STARTED;
-    private long lastAccessTimeNanos;
+    private volatile long gracefulShutdownQuietPeriod;
+    private volatile long gracefulShutdownTimeout;
+    private long gracefulShutdownStartTime;
 
     /**
      * Create a new instance
      *
      * @param parent            the {@link EventExecutorGroup} which is the parent of this instance and belongs to it
      * @param threadFactory     the {@link ThreadFactory} which will be used for the used {@link Thread}
+     * @param addTaskWakesUp    {@code true} if and only if invocation of {@link #addTask(Runnable)} will wake up the
+     *                          executor thread
      */
-    protected SingleThreadEventExecutor(EventExecutorGroup parent, ThreadFactory threadFactory) {
+    protected SingleThreadEventExecutor(
+            EventExecutorGroup parent, ThreadFactory threadFactory, boolean addTaskWakesUp) {
+
         if (threadFactory == null) {
             throw new NullPointerException("threadFactory");
         }
 
         this.parent = parent;
+        this.addTaskWakesUp = addTaskWakesUp;
 
         thread = threadFactory.newThread(new Runnable() {
             @Override
             public void run() {
                 CURRENT_EVENT_LOOP.set(SingleThreadEventExecutor.this);
                 boolean success = false;
+                updateLastExecutionTime();
                 try {
                     SingleThreadEventExecutor.this.run();
                     success = true;
                 } catch (Throwable t) {
                     logger.warn("Unexpected exception from an event executor: ", t);
-                    shutdown();
                 } finally {
+                    if (state < ST_SHUTTING_DOWN) {
+                        state = ST_SHUTTING_DOWN;
+                    }
+
                     // Check if confirmShutdown() was called at the end of the loop.
-                    if (success && lastAccessTimeNanos == 0) {
+                    if (success && gracefulShutdownStartTime == 0) {
                         logger.error(
                                 "Buggy " + EventExecutor.class.getSimpleName() + " implementation; " +
                                 SingleThreadEventExecutor.class.getSimpleName() + ".confirmShutdown() must be called " +
@@ -187,11 +195,14 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
 
     /**
      * Take the next {@link Runnable} from the task queue and so will block if no task is currently present.
-     *
+     * <p>
      * Be aware that this method will throw an {@link UnsupportedOperationException} if the task queue, which was
      * created via {@link #newTaskQueue()}, does not implement {@link BlockingQueue}.
+     * </p>
+     *
+     * @return {@code null} if the executor thread has been interrupted or waken up.
      */
-    protected Runnable takeTask() throws InterruptedException {
+    protected Runnable takeTask() {
         assert inEventLoop();
         if (!(taskQueue instanceof BlockingQueue)) {
             throw new UnsupportedOperationException();
@@ -201,12 +212,25 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         for (;;) {
             ScheduledFutureTask<?> delayedTask = delayedTaskQueue.peek();
             if (delayedTask == null) {
-                return taskQueue.take();
+                Runnable task = null;
+                try {
+                    task = taskQueue.take();
+                    if (task == WAKEUP_TASK) {
+                        task = null;
+                    }
+                } catch (InterruptedException e) {
+                    // Ignore
+                }
+                return task;
             } else {
                 long delayNanos = delayedTask.delayNanos();
                 Runnable task;
                 if (delayNanos > 0) {
-                    task = taskQueue.poll(delayNanos, TimeUnit.NANOSECONDS);
+                    try {
+                        task = taskQueue.poll(delayNanos, TimeUnit.NANOSECONDS);
+                    } catch (InterruptedException e) {
+                        return null;
+                    }
                 } else {
                     task = taskQueue.poll();
                 }
@@ -278,7 +302,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         if (task == null) {
             throw new NullPointerException("task");
         }
-        if (isTerminated()) {
+        if (isShutdown()) {
             reject();
         }
         taskQueue.add(task);
@@ -315,6 +339,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
 
             task = pollTask();
             if (task == null) {
+                lastExecutionTime = nanoTime();
                 return true;
             }
         }
@@ -331,8 +356,9 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
             return false;
         }
 
-        final long deadline = System.nanoTime() + timeoutNanos;
+        final long deadline = nanoTime() + timeoutNanos;
         long runTasks = 0;
+        long lastExecutionTime;
         for (;;) {
             try {
                 task.run();
@@ -342,20 +368,23 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
 
             runTasks ++;
 
-            // Check timeout every 64 tasks because System.nanoTime() is relatively expensive.
+            // Check timeout every 64 tasks because nanoTime() is relatively expensive.
             // XXX: Hard-coded value - will make it configurable if it is really a problem.
             if ((runTasks & 0x3F) == 0) {
-                if (System.nanoTime() >= deadline) {
+                lastExecutionTime = nanoTime();
+                if (lastExecutionTime >= deadline) {
                     break;
                 }
             }
 
             task = pollTask();
             if (task == null) {
+                lastExecutionTime = nanoTime();
                 break;
             }
         }
 
+        this.lastExecutionTime = lastExecutionTime;
         return true;
     }
 
@@ -372,6 +401,17 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
     }
 
     /**
+     * Updates the internal timestamp that tells when a submitted task was executed most recently.
+     * {@link #runAllTasks()} and {@link #runAllTasks(long)} updates this timestamp automatically, and thus there's
+     * usually no need to call this method.  However, if you take the tasks manually using {@link #takeTask()} or
+     * {@link #pollTask()}, you have to call this method at the end of task execution loop for accurate quiet period
+     * checks.
+     */
+    protected void updateLastExecutionTime() {
+        lastExecutionTime = nanoTime();
+    }
+
+    /**
      *
      */
     protected abstract void run();
@@ -384,8 +424,8 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
     }
 
     protected void wakeup(boolean inEventLoop) {
-        if (!inEventLoop || state == ST_SHUTDOWN) {
-            addTask(WAKEUP_TASK);
+        if (!inEventLoop || state == ST_SHUTTING_DOWN) {
+            taskQueue.add(WAKEUP_TASK);
         }
     }
 
@@ -440,16 +480,74 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
             for (Runnable task: copy) {
                 try {
                     task.run();
-                    ran = true;
                 } catch (Throwable t) {
                     logger.warn("Shutdown hook raised an exception.", t);
+                } finally {
+                    ran = true;
                 }
             }
         }
+
+        if (ran) {
+            lastExecutionTime = nanoTime();
+        }
+
         return ran;
     }
 
     @Override
+    public void shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+        if (quietPeriod < 0) {
+            throw new IllegalArgumentException("quietPeriod: " + quietPeriod + " (expected >= 0)");
+        }
+        if (timeout < quietPeriod) {
+            throw new IllegalArgumentException(
+                    "timeout: " + timeout + " (expected >= quietPeriod (" + quietPeriod + "))");
+        }
+        if (unit == null) {
+            throw new NullPointerException("unit");
+        }
+
+        if (isShuttingDown()) {
+            return;
+        }
+
+        boolean inEventLoop = inEventLoop();
+        boolean wakeup = true;
+
+        synchronized (stateLock) {
+            if (isShuttingDown()) {
+                return;
+            }
+
+            gracefulShutdownQuietPeriod = unit.toNanos(quietPeriod);
+            gracefulShutdownTimeout = unit.toNanos(timeout);
+
+            if (inEventLoop) {
+                assert state == ST_STARTED;
+                state = ST_SHUTTING_DOWN;
+            } else {
+                switch (state) {
+                    case ST_NOT_STARTED:
+                        state = ST_SHUTTING_DOWN;
+                        thread.start();
+                        break;
+                    case ST_STARTED:
+                        state = ST_SHUTTING_DOWN;
+                        break;
+                    default:
+                        wakeup = false;
+                }
+            }
+        }
+
+        if (wakeup) {
+            wakeup(inEventLoop);
+        }
+    }
+
+    @Override
+    @Deprecated
     public void shutdown() {
         if (isShutdown()) {
             return;
@@ -458,19 +556,22 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         boolean inEventLoop = inEventLoop();
         boolean wakeup = true;
 
-        if (inEventLoop) {
-            synchronized (stateLock) {
-                assert state == ST_STARTED;
-                state = ST_SHUTDOWN;
+        synchronized (stateLock) {
+            if (isShutdown()) {
+                return;
             }
-        } else {
-            synchronized (stateLock) {
+
+            if (inEventLoop) {
+                assert state == ST_STARTED || state == ST_SHUTTING_DOWN;
+                state = ST_SHUTDOWN;
+            } else {
                 switch (state) {
                 case ST_NOT_STARTED:
                     state = ST_SHUTDOWN;
                     thread.start();
                     break;
                 case ST_STARTED:
+                case ST_SHUTTING_DOWN:
                     state = ST_SHUTDOWN;
                     break;
                 default:
@@ -485,9 +586,8 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
     }
 
     @Override
-    public List<Runnable> shutdownNow() {
-        shutdown();
-        return Collections.emptyList();
+    public boolean isShuttingDown() {
+        return state >= ST_SHUTTING_DOWN;
     }
 
     @Override
@@ -504,27 +604,38 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
      * Confirm that the shutdown if the instance should be done now!
      */
     protected boolean confirmShutdown() {
-        if (!isShutdown()) {
-            throw new IllegalStateException("must be invoked after shutdown()");
+        if (!isShuttingDown()) {
+            return false;
         }
+
         if (!inEventLoop()) {
             throw new IllegalStateException("must be invoked from an event loop");
         }
 
         cancelDelayedTasks();
 
+        if (gracefulShutdownStartTime == 0) {
+            gracefulShutdownStartTime = nanoTime();
+        }
+
         if (runAllTasks() || runShutdownHooks()) {
-            // There were tasks in the queue. Wait a little bit more until no tasks are queued for SHUTDOWN_DELAY_NANOS.
-            lastAccessTimeNanos = 0;
+            if (isShutdown()) {
+                // Executor shut down - no new tasks anymore.
+                return true;
+            }
+
+            // There were tasks in the queue. Wait a little bit more until no tasks are queued for the quiet period.
             wakeup(true);
             return false;
         }
 
-        if (lastAccessTimeNanos == 0 || System.nanoTime() - lastAccessTimeNanos < SHUTDOWN_DELAY_NANOS) {
-            if (lastAccessTimeNanos == 0) {
-                lastAccessTimeNanos = System.nanoTime();
-            }
+        final long nanoTime = nanoTime();
 
+        if (isShutdown() || nanoTime - gracefulShutdownStartTime > gracefulShutdownTimeout) {
+            return true;
+        }
+
+        if (nanoTime - lastExecutionTime <= gracefulShutdownQuietPeriod) {
             // Check if any tasks were added to the queue every 100ms.
             // TODO: Change the behavior of takeTask() so that it returns on timeout.
             wakeup(true);
@@ -537,7 +648,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
             return false;
         }
 
-        // No tasks were added for last SHUTDOWN_DELAY_NANOS - hopefully safe to shut down.
+        // No tasks were added for last quiet period - hopefully safe to shut down.
         // (Hopefully because we really cannot make a guarantee that there will be no execute() calls by a user.)
         return true;
     }
@@ -580,16 +691,19 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
             throw new NullPointerException("task");
         }
 
-        if (inEventLoop()) {
+        boolean inEventLoop = inEventLoop();
+        if (inEventLoop) {
             addTask(task);
-            wakeup(true);
         } else {
             startThread();
             addTask(task);
-            if (isTerminated() && removeTask(task)) {
+            if (isShutdown() && removeTask(task)) {
                 reject();
             }
-            wakeup(false);
+        }
+
+        if (!addTaskWakesUp) {
+            wakeup(inEventLoop);
         }
     }
 

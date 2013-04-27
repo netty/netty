@@ -21,8 +21,6 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Promise;
 
-import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 final class ImmediateEventExecutor extends AbstractEventExecutor {
@@ -43,7 +41,15 @@ final class ImmediateEventExecutor extends AbstractEventExecutor {
     }
 
     @Override
-    public void shutdown() {
+    public void shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) { }
+
+    @Override
+    @Deprecated
+    public void shutdown() { }
+
+    @Override
+    public boolean isShuttingDown() {
+        return false;
     }
 
     @Override
@@ -59,11 +65,6 @@ final class ImmediateEventExecutor extends AbstractEventExecutor {
     @Override
     public boolean awaitTermination(long timeout, TimeUnit unit) {
         return false;
-    }
-
-    @Override
-    public List<Runnable> shutdownNow() {
-        return Collections.emptyList();
     }
 
     @Override

@@ -57,8 +57,8 @@ public class ObjectEchoServer {
             // Bind and start to accept incoming connections.
             b.bind(port).sync().channel().closeFuture().sync();
         } finally {
-            bossGroup.shutdown();
-            workerGroup.shutdown();
+            bossGroup.shutdownGracefully();
+            workerGroup.shutdownGracefully();
         }
     }
 

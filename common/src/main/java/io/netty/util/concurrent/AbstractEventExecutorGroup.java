@@ -65,6 +65,22 @@ public abstract class AbstractEventExecutorGroup implements EventExecutorGroup {
     }
 
     @Override
+    public void shutdownGracefully() {
+        shutdownGracefully(2, 15, TimeUnit.SECONDS);
+    }
+
+    /**
+     * @deprecated {@link #shutdownGracefully(long, long, TimeUnit)} or {@link #shutdownGracefully()} instead.
+     */
+    @Override
+    @Deprecated
+    public abstract void shutdown();
+
+    /**
+     * @deprecated {@link #shutdownGracefully(long, long, TimeUnit)} or {@link #shutdownGracefully()} instead.
+     */
+    @Override
+    @Deprecated
     public List<Runnable> shutdownNow() {
         shutdown();
         return Collections.emptyList();
