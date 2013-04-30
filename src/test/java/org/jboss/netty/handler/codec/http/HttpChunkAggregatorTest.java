@@ -139,4 +139,31 @@ public class HttpChunkAggregatorTest {
         aggr.beforeAdd(ctx);
         aggr.setMaxCumulationBufferComponents(10);
     }
+
+    @Test
+    public void testAggregateTransferEncodingChunked() {
+        HttpChunkAggregator aggr = new HttpChunkAggregator(1024 * 1024);
+        DecoderEmbedder<HttpMessage> embedder = new DecoderEmbedder<HttpMessage>(aggr);
+        HttpMessage message = new DefaultHttpMessage(HttpVersion.HTTP_1_1);
+        HttpHeaders.setHeader(message, "X-Test", true);
+        HttpHeaders.setHeader(message, "Transfer-Encoding", "Chunked");
+        message.setChunked(true);
+        HttpChunk chunk1 = new DefaultHttpChunk(ChannelBuffers.copiedBuffer("test", CharsetUtil.US_ASCII));
+        HttpChunk chunk2 = new DefaultHttpChunk(ChannelBuffers.copiedBuffer("test2", CharsetUtil.US_ASCII));
+        HttpChunk chunk3 = new DefaultHttpChunk(ChannelBuffers.EMPTY_BUFFER);
+        assertFalse(embedder.offer(message));
+        assertFalse(embedder.offer(chunk1));
+        assertFalse(embedder.offer(chunk2));
+
+        // this should trigger a messageReceived event so return true
+        assertTrue(embedder.offer(chunk3));
+        assertTrue(embedder.finish());
+        HttpMessage aggratedMessage = embedder.poll();
+        assertNotNull(aggratedMessage);
+
+        assertEquals(chunk1.getContent().readableBytes() + chunk2.getContent().readableBytes(), HttpHeaders.getContentLength(aggratedMessage));
+        assertEquals(aggratedMessage.getHeader("X-Test"), Boolean.TRUE.toString());
+        checkContentBuffer(aggratedMessage);
+        assertNull(embedder.poll());
+    }
 }

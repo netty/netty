@@ -15,6 +15,7 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import java.util.Iterator;
 import java.util.List;
 
 final class HttpCodecUtil {
@@ -120,8 +121,21 @@ final class HttpCodecUtil {
 
     static void removeTransferEncodingChunked(HttpMessage m) {
         List<String> values = m.getHeaders(HttpHeaders.Names.TRANSFER_ENCODING);
-        values.remove(HttpHeaders.Values.CHUNKED);
-        m.setHeader(HttpHeaders.Names.TRANSFER_ENCODING, values);
+        if (values.isEmpty()) {
+            return;
+        }
+        Iterator<String> valuesIt = values.iterator();
+        while (valuesIt.hasNext()) {
+            String value = valuesIt.next();
+            if (value.equalsIgnoreCase(HttpHeaders.Values.CHUNKED)) {
+                valuesIt.remove();
+            }
+        }
+        if (values.isEmpty()) {
+            m.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
+        } else {
+            m.setHeader(HttpHeaders.Names.TRANSFER_ENCODING, values);
+        }
     }
 
     static boolean isContentLengthSet(HttpMessage m) {

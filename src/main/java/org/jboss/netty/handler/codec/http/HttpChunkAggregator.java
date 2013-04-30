@@ -135,11 +135,7 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler implements
             if (m.isChunked()) {
                 // A chunked message - remove 'Transfer-Encoding' header,
                 // initialize the cumulative buffer, and wait for incoming chunks.
-                List<String> encodings = m.getHeaders(HttpHeaders.Names.TRANSFER_ENCODING);
-                encodings.remove(HttpHeaders.Values.CHUNKED);
-                if (encodings.isEmpty()) {
-                    m.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
-                }
+                HttpCodecUtil.removeTransferEncodingChunked(m);
                 m.setChunked(false);
                 this.currentMessage = m;
             } else {
