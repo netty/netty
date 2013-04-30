@@ -620,7 +620,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             } catch (Throwable t) {
                 // Close the channel directly to avoid FD leak.
                 closeForcibly();
-                promise.setFailure(t);
+                if (!promise.tryFailure(t)) {
+                    logger.warn(
+                            "Tried to fail the registration promise, but it is complete already. " +
+                            "Swallowing the cause of the registration failure:", t);
+                }
                 closeFuture.setClosed();
             }
         }
