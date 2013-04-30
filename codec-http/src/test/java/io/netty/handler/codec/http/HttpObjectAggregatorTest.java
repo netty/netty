@@ -158,7 +158,8 @@ public class HttpObjectAggregatorTest {
         FullHttpRequest aggratedMessage = (FullHttpRequest) embedder.readInbound();
         assertNotNull(aggratedMessage);
 
-        assertEquals(chunk1.data().readableBytes() + chunk2.data().readableBytes(), HttpHeaders.getContentLength(aggratedMessage));
+        assertEquals(chunk1.data().readableBytes() + chunk2.data().readableBytes(),
+                HttpHeaders.getContentLength(aggratedMessage));
         assertEquals(aggratedMessage.headers().get("X-Test"), Boolean.TRUE.toString());
         checkContentBuffer(aggratedMessage);
         assertNull(embedder.readInbound());
