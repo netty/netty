@@ -29,7 +29,7 @@ import java.util.List;
 
 import static org.junit.Assert.*;
 
-public class HttpObjecctAggregatorTest {
+public class HttpObjectAggregatorTest {
 
     @Test
     public void testAggregate() {
