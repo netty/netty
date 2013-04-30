@@ -59,7 +59,7 @@ public class HttpObjecctAggregatorTest {
         assertNull(embedder.readInbound());
     }
 
-    private static void checkContentBuffer(DefaultFullHttpRequest aggregatedMessage) {
+    private static void checkContentBuffer(FullHttpRequest aggregatedMessage) {
         CompositeByteBuf buffer = (CompositeByteBuf) aggregatedMessage.data();
         assertEquals(2, buffer.numComponents());
         List<ByteBuf> buffers = buffer.decompose(0, buffer.capacity());
@@ -134,5 +134,33 @@ public class HttpObjecctAggregatorTest {
         EasyMock.replay(ctx);
         aggr.handlerAdded(ctx);
         aggr.setMaxCumulationBufferComponents(10);
+    }
+
+    @Test
+    public void testAggregateTransferEncodingChunked() {
+        HttpObjectAggregator aggr = new HttpObjectAggregator(1024 * 1024);
+        EmbeddedMessageChannel embedder = new EmbeddedMessageChannel(aggr);
+
+        HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
+                HttpMethod.GET, "http://localhost");
+        HttpHeaders.setHeader(message, "X-Test", true);
+        HttpHeaders.setHeader(message, "Transfer-Encoding", "Chunked");
+        HttpContent chunk1 = new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
+        HttpContent chunk2 = new DefaultHttpContent(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII));
+        HttpContent chunk3 = LastHttpContent.EMPTY_LAST_CONTENT;
+        assertFalse(embedder.writeInbound(message));
+        assertFalse(embedder.writeInbound(chunk1));
+        assertFalse(embedder.writeInbound(chunk2));
+
+        // this should trigger a messageReceived event so return true
+        assertTrue(embedder.writeInbound(chunk3));
+        assertTrue(embedder.finish());
+        FullHttpRequest aggratedMessage = (FullHttpRequest) embedder.readInbound();
+        assertNotNull(aggratedMessage);
+
+        assertEquals(chunk1.data().readableBytes() + chunk2.data().readableBytes(), HttpHeaders.getContentLength(aggratedMessage));
+        assertEquals(aggratedMessage.headers().get("X-Test"), Boolean.TRUE.toString());
+        checkContentBuffer(aggratedMessage);
+        assertNull(embedder.readInbound());
     }
 }
