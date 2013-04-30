@@ -1145,7 +1145,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
             return;
         }
         Iterator<String> valuesIt = values.iterator();
-        while(valuesIt.hasNext()) {
+        while (valuesIt.hasNext()) {
             String value = valuesIt.next();
             if (value.equalsIgnoreCase(Values.CHUNKED)) {
                 valuesIt.remove();
