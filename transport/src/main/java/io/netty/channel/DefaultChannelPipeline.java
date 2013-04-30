@@ -16,9 +16,9 @@
 package io.netty.channel;
 
 import io.netty.buffer.Buf;
+import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
-import io.netty.buffer.ReferenceCounted;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel.Unsafe;
 import io.netty.util.concurrent.EventExecutor;
@@ -1029,10 +1029,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
                     if (m == null) {
                         break;
                     }
-
-                    if (m instanceof ReferenceCounted) {
-                        ((ReferenceCounted) m).release();
-                    }
+                    BufUtil.release(m);
                     logger.debug(
                             "Discarded inbound message {} that reached at the tail of the pipeline. " +
                                     "Please check your pipeline configuration.", m);
@@ -1159,9 +1156,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
                     discardedMessages ++;
                 }
 
-                if (m instanceof ReferenceCounted) {
-                    ((ReferenceCounted) m).release();
-                }
+                BufUtil.release(m);
             }
 
             if (discardedMessages != 0) {
