@@ -25,14 +25,16 @@
   </parent>
 
   <artifactId>netty-testsuite-osgi-deps</artifactId>
-  <packaging>feature</packaging>
+  <packaging>bundle</packaging>
 
   <name>Netty/Testsuite/OSGi/Deps</name>
   <description>verify osgi compliance: all transitive dependencies must be osgi bundles</description>
 
   <dependencies>
+  
     <!-- MAIN -->
-    <!-- include all osgi bundle release modules -->
+    
+    <!-- Include all Netty OSGI bundle release modules. -->
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-buffer</artifactId>
@@ -94,7 +96,7 @@
 
     <!-- TEST -->
 
-    <!-- file/text conversion -->
+    <!-- File/text conversion utilities. -->
     <dependency>
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>
@@ -106,36 +108,23 @@
 
   <build>
     <plugins>
-      <!-- feature doesn't invoke maven-compile-plugin unless specified explicitly. -->
-      <plugin>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>compile</id>
-            <phase>compile</phase>
-            <goals>
-              <goal>compile</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>test-compile</id>
-            <phase>test-compile</phase>
-            <goals>
-              <goal>testCompile</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
 
-      <!-- produce karaf feature.xml -->
+      <!-- Produce Karaf feature.xml -->
       <plugin>
         <groupId>org.apache.karaf.tooling</groupId>
         <artifactId>karaf-maven-plugin</artifactId>
         <version>3.0.0.RC1</version>
         <extensions>true</extensions>
+        <executions>
+        	<execution>
+        		<goals>
+        			<goal>features-generate-descriptor</goal>
+        		</goals>
+        	</execution>
+        </executions>
       </plugin>
 
-      <!-- invoke integration tests -->
+      <!-- Invoke integration tests. -->
       <plugin>
         <artifactId>maven-failsafe-plugin</artifactId>
         <executions>
@@ -149,7 +138,7 @@
         </executions>
       </plugin>
 
-      <!-- do not deploy this artifact -->
+      <!-- Do not deploy this artifact. -->
       <plugin>
         <artifactId>maven-deploy-plugin</artifactId>
         <configuration>
@@ -189,4 +178,5 @@
       </plugins>
     </pluginManagement>
   </build>
+  
 </project>

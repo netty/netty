@@ -31,34 +31,15 @@
   <description>verify osgi compliance: run tests inside osgi framework</description>
 
   <properties>
-    <exam.version>3.0.0</exam.version>
-    <url.version>1.5.0</url.version>
+    <pax.exam.version>3.0.3</pax.exam.version>
+    <pax.url.version>1.5.2</pax.url.version>
   </properties>
 
   <dependencies>
 
     <!-- MAIN -->
 
-    <!-- logging via http://team.ops4j.org/wiki/display/paxlogging/Pax+Logging -->
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-    </dependency>
-
-    <!-- osgi scr annotations https://github.com/carrot-garden/carrot-osgi/tree/master/carrot-osgi-anno-scr/carrot-osgi-anno-scr-core -->
-    <dependency>
-      <groupId>com.carrotgarden.osgi</groupId>
-      <artifactId>carrot-osgi-anno-scr-core</artifactId>
-      <version>1.1.3</version>
-    </dependency>
-    <!-- osgi scr runtime http://felix.apache.org/site/apache-felix-service-component-runtime.html -->
-    <dependency>
-      <groupId>org.apache.felix</groupId>
-      <artifactId>org.apache.felix.scr</artifactId>
-      <version>1.6.2</version>
-    </dependency>
-
-    <!-- include all netty osgi bundle release modules -->
+    <!-- Include all Netty OSGI bundle release modules. -->
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-buffer</artifactId>
@@ -110,9 +91,36 @@
       <version>${project.version}</version>
     </dependency>
 
+    <!-- Logging via http://team.ops4j.org/wiki/display/paxlogging/Pax+Logging -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
+
+    <!-- OSGI Declarative Services runtime http://felix.apache.org/site/apache-felix-service-component-runtime.html -->
+    <dependency>
+      <groupId>org.apache.felix</groupId>
+      <artifactId>org.apache.felix.scr</artifactId>
+      <version>1.6.2</version>
+    </dependency>
+
+    <!-- OSGI specification. -->
+    <dependency>
+      <groupId>org.osgi</groupId>
+      <artifactId>org.osgi.core</artifactId>
+      <version>4.3.1</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.osgi</groupId>
+      <artifactId>org.osgi.compendium</artifactId>
+      <version>4.3.1</version>
+      <scope>provided</scope>
+    </dependency>
+
     <!-- TEST -->
 
-    <!-- transport udt tests and deps -->
+    <!-- Transport UDT tests and dependencies. -->
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-transport-udt</artifactId>
@@ -131,61 +139,53 @@
       <scope>test</scope>
     </dependency>
 
-    <!-- java 7 compatibility http://blog.osgi.org/2012/10/43-companion-code-for-java-7.html -->    
-    <dependency>
-      <groupId>org.osgi</groupId>
-      <artifactId>org.osgi.core</artifactId>
-      <version>4.3.1</version>
-      <scope>provided</scope>
-    </dependency>
-
-    <!-- pax exam environment -->
+    <!-- Pax Exam test environment. -->
     <dependency>
       <groupId>org.ops4j.pax.exam</groupId>
       <artifactId>pax-exam-container-native</artifactId>
-      <version>${exam.version}</version>
+      <version>${pax.exam.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.ops4j.pax.exam</groupId>
       <artifactId>pax-exam-junit4</artifactId>
-      <version>${exam.version}</version>
+      <version>${pax.exam.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.ops4j.pax.exam</groupId>
       <artifactId>pax-exam-invoker-junit</artifactId>
-      <version>${exam.version}</version>
+      <version>${pax.exam.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.ops4j.pax.exam</groupId>
       <artifactId>pax-exam-inject</artifactId>
-      <version>${exam.version}</version>
+      <version>${pax.exam.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.ops4j.pax.exam</groupId>
       <artifactId>pax-exam-extender-service</artifactId>
-      <version>${exam.version}</version>
+      <version>${pax.exam.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.ops4j.pax.exam</groupId>
       <artifactId>pax-exam-link-mvn</artifactId>
-      <version>${exam.version}</version>
+      <version>${pax.exam.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.ops4j.pax.url</groupId>
       <artifactId>pax-url-aether</artifactId>
-      <version>${url.version}</version>
+      <version>${pax.url.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.ops4j.pax.url</groupId>
       <artifactId>pax-url-wrap</artifactId>
-      <version>${url.version}</version>
+      <version>${pax.url.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -200,7 +200,7 @@
   <build>
     <plugins>
 
-      <!-- make dependency versions available for pax exam -->
+      <!-- Make dependency versions available for Pax Exam. -->
       <plugin>
         <groupId>org.apache.servicemix.tooling</groupId>
         <artifactId>depends-maven-plugin</artifactId>
@@ -216,25 +216,17 @@
         </executions>
       </plugin>
 
-      <!-- generate osgi scr component descriptors -->
+      <!-- Generate OSGI Declarative Services component descriptors. -->
       <plugin>
         <groupId>com.carrotgarden.maven</groupId>
         <artifactId>carrot-maven-scr-plugin</artifactId>
-        <version>1.1.5</version>
+        <version>3.0.3</version>
         <configuration>
           <targetDirectorySCR>OSGI-INF/service-component</targetDirectorySCR>
         </configuration>
         <executions>
           <execution>
-            <id>clean</id>
-            <phase>clean</phase>
-            <goals>
-              <goal>clean</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>generate</id>
-            <phase>process-classes</phase>
+            <phase>generate-test-sources</phase>
             <goals>
               <goal>generate</goal>
             </goals>
@@ -242,7 +234,7 @@
         </executions>
       </plugin>
 
-      <!-- include osgi scr component descriptors -->
+      <!-- Include OSGI Declarative Services component descriptors in the bundle. -->
       <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
@@ -261,7 +253,7 @@
         </configuration>
       </plugin>
 
-      <!-- invoke integration tests -->
+      <!-- Invoke integration tests. -->
       <plugin>
         <artifactId>maven-failsafe-plugin</artifactId>
         <executions>
@@ -275,7 +267,7 @@
         </executions>
       </plugin>
 
-      <!-- do not deploy this artifact -->
+      <!-- Do not deploy this artifact. -->
       <plugin>
         <artifactId>maven-deploy-plugin</artifactId>
         <configuration>
@@ -301,6 +293,19 @@
                     <versionRange>[0,)</versionRange>
                     <goals>
                       <goal>generate-depends-file</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <execute />
+                  </action>
+                </pluginExecution>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                  <groupId>org.apache.felix</groupId>
+                    <artifactId>maven-bundle-plugin</artifactId>
+                    <versionRange>[0,)</versionRange>
+                    <goals>
+                      <goal>manifest</goal>
                     </goals>
                   </pluginExecutionFilter>
                   <action>
