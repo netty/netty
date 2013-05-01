@@ -82,7 +82,6 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
     private final PoolArena<byte[]>[] heapArenas;
     private final PoolArena<ByteBuffer>[] directArenas;
-    private final UnpooledByteBufAllocator unpooledAllocator;
 
     final ThreadLocal<PoolThreadCache> threadCache = new ThreadLocal<PoolThreadCache>() {
         private final AtomicInteger index = new AtomicInteger();
@@ -151,8 +150,6 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         } else {
             directArenas = null;
         }
-
-        unpooledAllocator = new UnpooledByteBufAllocator(preferDirect);
     }
 
     @SuppressWarnings("unchecked")
@@ -208,7 +205,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         if (heapArena != null) {
             return heapArena.allocate(cache, initialCapacity, maxCapacity);
         } else {
-            return unpooledAllocator.newDirectBuffer(initialCapacity, maxCapacity);
+            return new UnpooledHeapByteBuf(this, initialCapacity, maxCapacity);
         }
     }
 
@@ -219,7 +216,11 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         if (directArena != null) {
             return directArena.allocate(cache, initialCapacity, maxCapacity);
         } else {
-            return unpooledAllocator.newDirectBuffer(initialCapacity, maxCapacity);
+            if (PlatformDependent.hasUnsafe()) {
+                return new UnpooledUnsafeDirectByteBuf(this, initialCapacity, maxCapacity);
+            } else {
+                return new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);
+            }
         }
     }
 
