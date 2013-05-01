@@ -135,13 +135,13 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
                                 break;
                             }
                         }
-                        synchronized (stateLock) {
-                            state = ST_TERMINATED;
-                        }
                     } finally {
                         try {
                             cleanup();
                         } finally {
+                            synchronized (stateLock) {
+                                state = ST_TERMINATED;
+                            }
                             threadLock.release();
                             if (!taskQueue.isEmpty()) {
                                 logger.warn(
