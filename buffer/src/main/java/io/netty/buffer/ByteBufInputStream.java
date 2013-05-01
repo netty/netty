@@ -34,8 +34,8 @@ import java.io.InputStream;
  * This stream implements {@link DataInput} for your convenience.
  * The endianness of the stream is not always big endian but depends on
  * the endianness of the underlying buffer.
+ *
  * @see ByteBufOutputStream
- * @apiviz.uses io.netty.buffer.ByteBuf
  */
 public class ByteBufInputStream extends InputStream implements DataInput {
 
@@ -103,7 +103,7 @@ public class ByteBufInputStream extends InputStream implements DataInput {
 
     @Override
     public int read() throws IOException {
-        if (!buffer.readable()) {
+        if (!buffer.isReadable()) {
             return -1;
         }
         return buffer.readByte() & 0xff;
@@ -143,7 +143,7 @@ public class ByteBufInputStream extends InputStream implements DataInput {
 
     @Override
     public byte readByte() throws IOException {
-        if (!buffer.readable()) {
+        if (!buffer.isReadable()) {
             throw new EOFException();
         }
         return buffer.readByte();
@@ -188,6 +188,9 @@ public class ByteBufInputStream extends InputStream implements DataInput {
         lineBuf.setLength(0);
         for (;;) {
             int b = read();
+            if (b == -1 && lineBuf.length() == 0) {
+                return null;
+            }
             if (b < 0 || b == '\n') {
                 break;
             }

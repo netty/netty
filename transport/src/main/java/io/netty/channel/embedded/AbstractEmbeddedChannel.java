@@ -22,18 +22,19 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelOutboundHandler;
+import io.netty.channel.ChannelInboundByteHandler;
+import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelStateHandlerAdapter;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
@@ -51,8 +52,8 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
     private final ChannelConfig config = new DefaultChannelConfig(this);
     private final SocketAddress localAddress = new EmbeddedSocketAddress();
     private final SocketAddress remoteAddress = new EmbeddedSocketAddress();
-    private final MessageBuf<Object> lastInboundMessageBuffer = Unpooled.messageBuffer();
-    private final ByteBuf lastInboundByteBuffer = Unpooled.buffer();
+    private final MessageBuf<Object> lastInboundMessageBuffer = Unpooled.messageBuffer().retain(2);
+    private final ByteBuf lastInboundByteBuffer = Unpooled.buffer().retain(2);
     protected final Object lastOutboundBuffer;
     private Throwable lastException;
     private int state; // 0 = OPEN, 1 = ACTIVE, 2 = CLOSED
@@ -80,8 +81,10 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
                 break;
             }
             nHandlers ++;
-            p.addLast(h);
-            if (h instanceof ChannelInboundHandler || h instanceof ChannelOutboundHandler) {
+            ChannelHandlerContext ctx = p.addLast(h).context(h);
+
+            if (ctx.hasInboundByteBuffer() || ctx.hasOutboundByteBuffer()
+                    || ctx.hasInboundMessageBuffer() || ctx.hasOutboundMessageBuffer()) {
                 hasBuffer = true;
             }
         }
@@ -133,7 +136,7 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
      * Return received data from this {@link Channel}
      */
     public Object readInbound() {
-        if (lastInboundByteBuffer.readable()) {
+        if (lastInboundByteBuffer.isReadable()) {
             try {
                 return lastInboundByteBuffer.readBytes(lastInboundByteBuffer.readableBytes());
             } finally {
@@ -175,14 +178,7 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
 
         lastException = null;
 
-        if (t instanceof RuntimeException) {
-            throw (RuntimeException) t;
-        }
-        if (t instanceof Error) {
-            throw (Error) t;
-        }
-
-        throw new ChannelException(t);
+        PlatformDependent.throwException(t);
     }
 
     protected final void ensureOpen() {
@@ -229,8 +225,8 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
     }
 
     @Override
-    protected void doDeregister() throws Exception {
-        // NOOP
+    protected Runnable doDeregister() throws Exception {
+        return null;
     }
 
     @Override
@@ -273,7 +269,7 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
         close();
         runPendingTasks();
         checkException();
-        return lastInboundByteBuffer().readable() || !lastInboundMessageBuffer().isEmpty() ||
+        return lastInboundByteBuffer().isReadable() || !lastInboundMessageBuffer().isEmpty() ||
                 hasReadableOutboundBuffer();
     }
 
@@ -289,7 +285,7 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
         pipeline().fireInboundBufferUpdated();
         runPendingTasks();
         checkException();
-        return lastInboundByteBuffer().readable() || !lastInboundMessageBuffer().isEmpty();
+        return lastInboundByteBuffer().isReadable() || !lastInboundMessageBuffer().isEmpty();
     }
 
     /**
@@ -300,7 +296,11 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
      */
     public boolean writeOutbound(Object data) {
         ensureOpen();
-        write(data);
+        ChannelFuture future = write(data);
+        assert future.isDone();
+        if (future.cause() != null) {
+            recordException(future.cause());
+        }
         runPendingTasks();
         checkException();
         return hasReadableOutboundBuffer();
@@ -324,15 +324,11 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
         }
     }
 
-    private final class LastInboundMessageHandler extends ChannelInboundHandlerAdapter {
+    private final class LastInboundMessageHandler extends ChannelStateHandlerAdapter
+            implements ChannelInboundMessageHandler<Object> {
         @Override
-        public Buf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return lastInboundMessageBuffer;
-        }
-
-        @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            // Do NOT free the buffer.
         }
 
         @Override
@@ -347,15 +343,16 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
         }
     }
 
-    private final class LastInboundByteHandler extends ChannelInboundHandlerAdapter {
+    private final class LastInboundByteHandler extends ChannelStateHandlerAdapter
+            implements ChannelInboundByteHandler {
         @Override
-        public Buf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return lastInboundByteBuffer;
         }
 
         @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            // Do NOT free the buffer.
+        public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+            // nothing
         }
 
         @Override

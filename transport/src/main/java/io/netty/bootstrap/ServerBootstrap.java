@@ -18,24 +18,20 @@ package io.netty.bootstrap;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelStateHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.AttributeKey;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.nio.channels.ClosedChannelException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -44,21 +40,28 @@ import java.util.Map.Entry;
  * {@link Bootstrap} sub-class which allows easy bootstrap of {@link ServerChannel}
  *
  */
-public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
+public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerChannel> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ServerBootstrap.class);
 
-    private final ChannelHandler acceptor = new ChannelInitializer<Channel>() {
-        @Override
-        public void initChannel(Channel ch) throws Exception {
-            ch.pipeline().addLast(new Acceptor());
-        }
-    };
-
     private final Map<ChannelOption<?>, Object> childOptions = new LinkedHashMap<ChannelOption<?>, Object>();
     private final Map<AttributeKey<?>, Object> childAttrs = new LinkedHashMap<AttributeKey<?>, Object>();
-    private EventLoopGroup childGroup;
-    private ChannelHandler childHandler;
+    private volatile EventLoopGroup childGroup;
+    private volatile ChannelHandler childHandler;
+
+    public ServerBootstrap() { }
+
+    private ServerBootstrap(ServerBootstrap bootstrap) {
+        super(bootstrap);
+        childGroup = bootstrap.childGroup;
+        childHandler = bootstrap.childHandler;
+        synchronized (bootstrap.childOptions) {
+            childOptions.putAll(bootstrap.childOptions);
+        }
+        synchronized (bootstrap.childAttrs) {
+            childAttrs.putAll(bootstrap.childAttrs);
+        }
+    }
 
     /**
      * Specify the {@link EventLoopGroup} which is used for the parent (acceptor) and the child (client).
@@ -86,21 +89,6 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
     }
 
     /**
-     * The {@link Class} which is used to create the {@link ServerChannel} from (for the acceptor).
-     */
-    @Override
-    public ServerBootstrap channel(Class<? extends Channel> channelClass) {
-        if (channelClass == null) {
-            throw new NullPointerException("channelClass");
-        }
-        if (!ServerChannel.class.isAssignableFrom(channelClass)) {
-            throw new IllegalArgumentException(
-                    "channelClass must be subtype of " + ServerChannel.class.getSimpleName() + '.');
-        }
-        return super.channel(channelClass);
-    }
-
-    /**
      * Allow to specify a {@link ChannelOption} which is used for the {@link Channel} instances once they get created
      * (after the acceptor accepted the {@link Channel}). Use a value of {@code null} to remove a previous set
      * {@link ChannelOption}.
@@ -110,9 +98,13 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
             throw new NullPointerException("childOption");
         }
         if (value == null) {
-            childOptions.remove(childOption);
+            synchronized (childOptions) {
+                childOptions.remove(childOption);
+            }
         } else {
-            childOptions.put(childOption, value);
+            synchronized (childOptions) {
+                childOptions.put(childOption, value);
+            }
         }
         return this;
     }
@@ -134,7 +126,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
     }
 
     /**
-     * Set the {@link ChannelHandler} which is used to server the request for the {@link Channel}'s.
+     * Set the {@link ChannelHandler} which is used to serve the request for the {@link Channel}'s.
      */
     public ServerBootstrap childHandler(ChannelHandler childHandler) {
         if (childHandler == null) {
@@ -145,57 +137,49 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
     }
 
     @Override
-    public ChannelFuture bind(ChannelPromise future) {
-        validate(future);
-        Channel channel = future.channel();
-        if (channel.isActive()) {
-            future.setFailure(new IllegalStateException("channel already bound: " + channel));
-            return future;
-        }
-        if (channel.isRegistered()) {
-            future.setFailure(new IllegalStateException("channel already registered: " + channel));
-            return future;
-        }
-        if (!channel.isOpen()) {
-            future.setFailure(new ClosedChannelException());
-            return future;
+    void init(Channel channel) throws Exception {
+        final Map<ChannelOption<?>, Object> options = options();
+        synchronized (options) {
+            channel.config().setOptions(options);
         }
 
-        try {
-            channel.config().setOptions(options());
-        } catch (Exception e) {
-            future.setFailure(e);
-            return future;
+        final Map<AttributeKey<?>, Object> attrs = attrs();
+        synchronized (attrs) {
+            for (Entry<AttributeKey<?>, Object> e: attrs.entrySet()) {
+                @SuppressWarnings("unchecked")
+                AttributeKey<Object> key = (AttributeKey<Object>) e.getKey();
+                channel.attr(key).set(e.getValue());
+            }
         }
 
-        for (Entry<AttributeKey<?>, Object> e: attrs().entrySet()) {
-            @SuppressWarnings("unchecked")
-            AttributeKey<Object> key = (AttributeKey<Object>) e.getKey();
-            channel.attr(key).set(e.getValue());
-        }
-
-        ChannelPipeline p = future.channel().pipeline();
+        ChannelPipeline p = channel.pipeline();
         if (handler() != null) {
             p.addLast(handler());
         }
-        p.addLast(acceptor);
 
-        ChannelFuture f = group().register(channel).awaitUninterruptibly();
-        if (!f.isSuccess()) {
-            future.setFailure(f.cause());
-            return future;
+        final EventLoopGroup currentChildGroup = childGroup;
+        final ChannelHandler currentChildHandler = childHandler;
+        final Entry<ChannelOption<?>, Object>[] currentChildOptions;
+        final Entry<AttributeKey<?>, Object>[] currentChildAttrs;
+        synchronized (childOptions) {
+            currentChildOptions = childOptions.entrySet().toArray(newOptionArray(childOptions.size()));
+        }
+        synchronized (childAttrs) {
+            currentChildAttrs = childAttrs.entrySet().toArray(newAttrArray(childAttrs.size()));
         }
 
-        if (!ensureOpen(future)) {
-            return future;
-        }
-
-        channel.bind(localAddress(), future).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
-
-        return future;
+        p.addLast(new ChannelInitializer<Channel>() {
+            @Override
+            public void initChannel(Channel ch) throws Exception {
+                ch.pipeline().addLast(new ServerBootstrapAcceptor(
+                        currentChildGroup, currentChildHandler, currentChildOptions, currentChildAttrs));
+            }
+        });
     }
 
     @Override
+    @Deprecated
+    @SuppressWarnings("deprecation")
     public void shutdown() {
         super.shutdown();
         if (childGroup != null) {
@@ -204,22 +188,45 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
     }
 
     @Override
-    protected void validate() {
+    public ServerBootstrap validate() {
         super.validate();
         if (childHandler == null) {
             throw new IllegalStateException("childHandler not set");
-        }
-        if (localAddress() == null) {
-            throw new IllegalStateException("localAddress not set");
         }
         if (childGroup == null) {
             logger.warn("childGroup is not set. Using parentGroup instead.");
             childGroup = group();
         }
+        return this;
     }
 
-    private class Acceptor
-            extends ChannelInboundHandlerAdapter implements ChannelInboundMessageHandler<Channel> {
+    @SuppressWarnings("unchecked")
+    private static Entry<ChannelOption<?>, Object>[] newOptionArray(int size) {
+        return new Entry[size];
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Entry<AttributeKey<?>, Object>[] newAttrArray(int size) {
+        return new Entry[size];
+    }
+
+    private static class ServerBootstrapAcceptor
+            extends ChannelStateHandlerAdapter implements ChannelInboundMessageHandler<Channel> {
+
+        private final EventLoopGroup childGroup;
+        private final ChannelHandler childHandler;
+        private final Entry<ChannelOption<?>, Object>[] childOptions;
+        private final Entry<AttributeKey<?>, Object>[] childAttrs;
+
+        @SuppressWarnings("unchecked")
+        ServerBootstrapAcceptor(
+                EventLoopGroup childGroup, ChannelHandler childHandler,
+                Entry<ChannelOption<?>, Object>[] childOptions, Entry<AttributeKey<?>, Object>[] childAttrs) {
+            this.childGroup = childGroup;
+            this.childHandler = childHandler;
+            this.childOptions = childOptions;
+            this.childAttrs = childAttrs;
+        }
 
         @Override
         public MessageBuf<Channel> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
@@ -238,7 +245,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
 
                 child.pipeline().addLast(childHandler);
 
-                for (Entry<ChannelOption<?>, Object> e: childOptions.entrySet()) {
+                for (Entry<ChannelOption<?>, Object> e: childOptions) {
                     try {
                         if (!child.config().setOption((ChannelOption<Object>) e.getKey(), e.getValue())) {
                             logger.warn("Unknown channel option: " + e);
@@ -248,7 +255,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
                     }
                 }
 
-                for (Entry<AttributeKey<?>, Object> e: childAttrs.entrySet()) {
+                for (Entry<AttributeKey<?>, Object> e: childAttrs) {
                     child.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
                 }
 
@@ -263,6 +270,12 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
     }
 
     @Override
+    @SuppressWarnings("CloneDoesntCallSuperClone")
+    public ServerBootstrap clone() {
+        return new ServerBootstrap(this);
+    }
+
+    @Override
     public String toString() {
         StringBuilder buf = new StringBuilder(super.toString());
         buf.setLength(buf.length() - 1);
@@ -272,15 +285,19 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
             buf.append(childGroup.getClass().getSimpleName());
             buf.append(", ");
         }
-        if (childOptions != null && !childOptions.isEmpty()) {
-            buf.append("childOptions: ");
-            buf.append(childOptions);
-            buf.append(", ");
+        synchronized (childOptions) {
+            if (!childOptions.isEmpty()) {
+                buf.append("childOptions: ");
+                buf.append(childOptions);
+                buf.append(", ");
+            }
         }
-        if (childAttrs != null && !childAttrs.isEmpty()) {
-            buf.append("childAttrs: ");
-            buf.append(childAttrs);
-            buf.append(", ");
+        synchronized (childAttrs) {
+            if (!childAttrs.isEmpty()) {
+                buf.append("childAttrs: ");
+                buf.append(childAttrs);
+                buf.append(", ");
+            }
         }
         if (childHandler != null) {
             buf.append("childHandler: ");
@@ -297,4 +314,3 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap> {
         return buf.toString();
     }
 }
-

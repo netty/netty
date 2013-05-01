@@ -23,7 +23,7 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.socket.nio.AbstractNioMessageChannel;
+import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.sctp.DefaultSctpServerChannelConfig;
 import io.netty.channel.sctp.SctpServerChannelConfig;
 
@@ -99,6 +99,11 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
     @Override
     public InetSocketAddress remoteAddress() {
         return null;
+    }
+
+    @Override
+    public InetSocketAddress localAddress() {
+        return (InetSocketAddress) super.localAddress();
     }
 
     @Override

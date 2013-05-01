@@ -15,13 +15,13 @@
  */
 package io.netty.handler.codec.http;
 
-import static org.junit.Assert.*;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.junit.Test;
 
 import java.nio.charset.Charset;
+
+import static org.junit.Assert.*;
 
 /**
  */
@@ -36,7 +36,6 @@ public class HttpRequestEncoderTest {
         String req = buffer.toString(Charset.forName("US-ASCII"));
         assertEquals("GET http://localhost/ HTTP/1.1\r\n", req);
     }
-
 
     @Test
     public void testUriWithPath() throws Exception {

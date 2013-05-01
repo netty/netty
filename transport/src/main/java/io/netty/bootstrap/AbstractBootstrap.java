@@ -19,6 +19,7 @@ package io.netty.bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
@@ -35,14 +36,34 @@ import java.util.Map;
  * {@link AbstractBootstrap} is a helper class that makes it easy to bootstrap a {@link Channel}. It support
  * method-chaining to provide an easy way to configure the {@link AbstractBootstrap}.
  *
+ * <p>When not used in a {@link ServerBootstrap} context, the {@link #bind()} methods are useful for connectionless
+ * transports such as datagram (UDP).</p>
  */
-public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
-    private EventLoopGroup group;
-    private ChannelFactory factory;
-    private SocketAddress localAddress;
+abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C extends Channel> implements Cloneable {
+
+    private volatile EventLoopGroup group;
+    private volatile ChannelFactory<? extends C> channelFactory;
+    private volatile SocketAddress localAddress;
     private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
     private final Map<AttributeKey<?>, Object> attrs = new LinkedHashMap<AttributeKey<?>, Object>();
-    private ChannelHandler handler;
+    private volatile ChannelHandler handler;
+
+    AbstractBootstrap() {
+        // Disallow extending from a different package.
+    }
+
+    AbstractBootstrap(AbstractBootstrap<B, C> bootstrap) {
+        group = bootstrap.group;
+        channelFactory = bootstrap.channelFactory;
+        handler = bootstrap.handler;
+        localAddress = bootstrap.localAddress;
+        synchronized (bootstrap.options) {
+            options.putAll(bootstrap.options);
+        }
+        synchronized (bootstrap.attrs) {
+            attrs.putAll(bootstrap.attrs);
+        }
+    }
 
     /**
      * The {@link EventLoopGroup} which is used to handle all the events for the to-be-creates
@@ -65,11 +86,11 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
      * You either use this or {@link #channelFactory(ChannelFactory)} if your
      * {@link Channel} implementation has no no-args constructor.
      */
-    public B channel(Class<? extends Channel> channelClass) {
+    public B channel(Class<? extends C> channelClass) {
         if (channelClass == null) {
             throw new NullPointerException("channelClass");
         }
-        return channelFactory(new BootstrapChannelFactory(channelClass));
+        return channelFactory(new BootstrapChannelFactory<C>(channelClass));
     }
 
     /**
@@ -80,15 +101,15 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
      * simplify your code.
      */
     @SuppressWarnings("unchecked")
-    public B channelFactory(ChannelFactory factory) {
-        if (factory == null) {
-            throw new NullPointerException("factory");
+    public B channelFactory(ChannelFactory<? extends C> channelFactory) {
+        if (channelFactory == null) {
+            throw new NullPointerException("channelFactory");
         }
-        if (this.factory != null) {
-            throw new IllegalStateException("factory set already");
+        if (this.channelFactory != null) {
+            throw new IllegalStateException("channelFactory set already");
         }
 
-        this.factory = factory;
+        this.channelFactory = channelFactory;
         return (B) this;
     }
 
@@ -105,22 +126,22 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
     /**
      * @see {@link #localAddress(SocketAddress)}
      */
-    public B localAddress(int port) {
-        return localAddress(new InetSocketAddress(port));
+    public B localAddress(int inetPort) {
+        return localAddress(new InetSocketAddress(inetPort));
     }
 
     /**
      * @see {@link #localAddress(SocketAddress)}
      */
-    public B localAddress(String host, int port) {
-        return localAddress(new InetSocketAddress(host, port));
+    public B localAddress(String inetHost, int inetPort) {
+        return localAddress(new InetSocketAddress(inetHost, inetPort));
     }
 
     /**
      * @see {@link #localAddress(SocketAddress)}
      */
-    public B localAddress(InetAddress host, int port) {
-        return localAddress(new InetSocketAddress(host, port));
+    public B localAddress(InetAddress inetHost, int inetPort) {
+        return localAddress(new InetSocketAddress(inetHost, inetPort));
     }
 
     /**
@@ -133,9 +154,13 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
             throw new NullPointerException("option");
         }
         if (value == null) {
-            options.remove(option);
+            synchronized (options) {
+                options.remove(option);
+            }
         } else {
-            options.put(option, value);
+            synchronized (options) {
+                options.put(option, value);
+            }
         }
         return (B) this;
     }
@@ -149,9 +174,13 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
             throw new NullPointerException("key");
         }
         if (value == null) {
-            attrs.remove(key);
+            synchronized (attrs) {
+                attrs.remove(key);
+            }
         } else {
-            attrs.put(key, value);
+            synchronized (attrs) {
+                attrs.put(key, value);
+            }
         }
 
         @SuppressWarnings("unchecked")
@@ -160,10 +189,13 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
     }
 
     /**
+     * @deprecated Use {@link EventLoopGroup#shutdown()} instead.
+     *
      * Shutdown the {@link AbstractBootstrap} and the {@link EventLoopGroup} which is
      * used by it. Only call this if you don't share the {@link EventLoopGroup}
      * between different {@link AbstractBootstrap}'s.
      */
+    @Deprecated
     public void shutdown() {
         if (group != null) {
             group.shutdown();
@@ -174,29 +206,138 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
      * Validate all the parameters. Sub-classes may override this, but should
      * call the super method in that case.
      */
-    protected void validate() {
+    @SuppressWarnings("unchecked")
+    public B validate() {
         if (group == null) {
             throw new IllegalStateException("group not set");
         }
-        if (factory == null) {
+        if (channelFactory == null) {
             throw new IllegalStateException("factory not set");
         }
+        return (B) this;
     }
 
-    protected final void validate(ChannelFuture future) {
-        if (future == null) {
-            throw new NullPointerException("future");
-        }
-        validate();
-    }
+    /**
+     * Returns a deep clone of this bootstrap which has the identical configuration.  This method is useful when making
+     * multiple {@link Channel}s with similar settings.  Please note that this method does not clone the
+     * {@link EventLoopGroup} deeply but shallowly, making the group a shared resource.
+     */
+    @Override
+    @SuppressWarnings("CloneDoesntDeclareCloneNotSupportedException")
+    public abstract B clone();
 
     /**
      * Create a new {@link Channel} and bind it.
      */
     public ChannelFuture bind() {
         validate();
-        Channel channel = factory().newChannel();
-        return bind(channel.newPromise());
+        SocketAddress localAddress = this.localAddress;
+        if (localAddress == null) {
+            throw new IllegalStateException("localAddress not set");
+        }
+        return doBind(localAddress);
+    }
+
+    /**
+     * Create a new {@link Channel} and bind it.
+     */
+    public ChannelFuture bind(int inetPort) {
+        return bind(new InetSocketAddress(inetPort));
+    }
+
+    /**
+     * Create a new {@link Channel} and bind it.
+     */
+    public ChannelFuture bind(String inetHost, int inetPort) {
+        return bind(new InetSocketAddress(inetHost, inetPort));
+    }
+
+    /**
+     * Create a new {@link Channel} and bind it.
+     */
+    public ChannelFuture bind(InetAddress inetHost, int inetPort) {
+        return bind(new InetSocketAddress(inetHost, inetPort));
+    }
+
+    /**
+     * Create a new {@link Channel} and bind it.
+     */
+    public ChannelFuture bind(SocketAddress localAddress) {
+        validate();
+        if (localAddress == null) {
+            throw new NullPointerException("localAddress");
+        }
+        return doBind(localAddress);
+    }
+
+    private ChannelFuture doBind(final SocketAddress localAddress) {
+        final ChannelFuture regPromise = initAndRegister();
+        final Channel channel = regPromise.channel();
+        final ChannelPromise promise = channel.newPromise();
+        if (regPromise.isDone()) {
+            doBind0(regPromise, channel, localAddress, promise);
+        } else {
+            regPromise.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    doBind0(future, channel, localAddress, promise);
+                }
+            });
+        }
+
+        return promise;
+    }
+
+    final ChannelFuture initAndRegister() {
+        final Channel channel = channelFactory().newChannel();
+        try {
+            init(channel);
+        } catch (Throwable t) {
+            channel.unsafe().closeForcibly();
+            return channel.newFailedFuture(t);
+        }
+
+        ChannelPromise regPromise = channel.newPromise();
+        group().register(channel, regPromise);
+        if (regPromise.cause() != null) {
+            if (channel.isRegistered()) {
+                channel.close();
+            } else {
+                channel.unsafe().closeForcibly();
+            }
+        }
+
+        // If we are here and the promise is not failed, it's one of the following cases:
+        // 1) If we attempted registration from the event loop, the registration has been completed at this point.
+        //    i.e. It's safe to attempt bind() or connect() now beause the channel has been registered.
+        // 2) If we attempted registration from the other thread, the registration request has been successfully
+        //    added to the event loop's task queue for later execution.
+        //    i.e. It's safe to attempt bind() or connect() now:
+        //         because bind() or connect() will be executed *after* the scheduled registration task is executed
+        //         because register(), bind(), and connect() are all bound to the same thread.
+
+        return regPromise;
+    }
+
+    abstract void init(Channel channel) throws Exception;
+
+    private static void doBind0(
+            final ChannelFuture regFuture, final Channel channel,
+            final SocketAddress localAddress, final ChannelPromise promise) {
+
+        // This method is invoked before channelRegistered() is triggered.  Give user handlers a chance to set up
+        // the pipeline in its channelRegistered() implementation.
+
+        channel.eventLoop().execute(new Runnable() {
+            @Override
+            public void run() {
+                if (regFuture.isSuccess()) {
+                    channel.bind(localAddress, promise).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+                } else {
+                    promise.setFailure(regFuture.cause());
+                }
+            }
+        });
     }
 
     /**
@@ -211,42 +352,27 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
         return (B) this;
     }
 
-    protected static boolean ensureOpen(ChannelPromise future) {
-        if (!future.channel().isOpen()) {
-            // Registration was successful but the channel was closed due to some failure in
-            // handler.
-            future.setFailure(new ChannelException("initialization failure"));
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * Bind the {@link Channel} of the given {@link ChannelFactory}.
-     */
-    public abstract ChannelFuture bind(ChannelPromise future);
-
-    protected final SocketAddress localAddress() {
+    final SocketAddress localAddress() {
         return localAddress;
     }
 
-    protected final ChannelFactory factory() {
-        return factory;
+    final ChannelFactory<? extends C> channelFactory() {
+        return channelFactory;
     }
 
-    protected final ChannelHandler handler() {
+    final ChannelHandler handler() {
         return handler;
     }
 
-    protected final EventLoopGroup group() {
+    final EventLoopGroup group() {
         return group;
     }
 
-    protected final Map<ChannelOption<?>, Object> options() {
+    final Map<ChannelOption<?>, Object> options() {
         return options;
     }
 
-    protected final Map<AttributeKey<?>, Object> attrs() {
+    final Map<AttributeKey<?>, Object> attrs() {
         return attrs;
     }
 
@@ -260,9 +386,9 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
             buf.append(group.getClass().getSimpleName());
             buf.append(", ");
         }
-        if (factory != null) {
-            buf.append("factory: ");
-            buf.append(factory);
+        if (channelFactory != null) {
+            buf.append("channelFactory: ");
+            buf.append(channelFactory);
             buf.append(", ");
         }
         if (localAddress != null) {
@@ -270,15 +396,19 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
             buf.append(localAddress);
             buf.append(", ");
         }
-        if (options != null && !options.isEmpty()) {
-            buf.append("options: ");
-            buf.append(options);
-            buf.append(", ");
+        synchronized (options) {
+            if (!options.isEmpty()) {
+                buf.append("options: ");
+                buf.append(options);
+                buf.append(", ");
+            }
         }
-        if (attrs != null && !attrs.isEmpty()) {
-            buf.append("attrs: ");
-            buf.append(attrs);
-            buf.append(", ");
+        synchronized (attrs) {
+            if (!attrs.isEmpty()) {
+                buf.append("attrs: ");
+                buf.append(attrs);
+                buf.append(", ");
+            }
         }
         if (handler != null) {
             buf.append("handler: ");
@@ -294,15 +424,15 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
         return buf.toString();
     }
 
-    private static final class BootstrapChannelFactory implements ChannelFactory {
-        private final Class<? extends Channel> clazz;
+    private static final class BootstrapChannelFactory<T extends Channel> implements ChannelFactory<T> {
+        private final Class<? extends T> clazz;
 
-        BootstrapChannelFactory(Class<? extends Channel> clazz) {
+        BootstrapChannelFactory(Class<? extends T> clazz) {
             this.clazz = clazz;
         }
 
         @Override
-        public Channel newChannel() {
+        public T newChannel() {
             try {
                 return clazz.newInstance();
             } catch (Throwable t) {
@@ -314,17 +444,5 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<?>> {
         public String toString() {
             return clazz.getSimpleName() + ".class";
         }
-    }
-
-    /**
-     * Factory that is responsible to create new {@link Channel}'s on {@link AbstractBootstrap#bind()}
-     * requests.
-     *
-     */
-    public interface ChannelFactory {
-        /**
-         * {@link Channel} to use in the {@link AbstractBootstrap}
-         */
-        Channel newChannel();
     }
 }

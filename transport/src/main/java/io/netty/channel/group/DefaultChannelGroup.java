@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,11 +15,14 @@
  */
 package io.netty.channel.group;
 
-import io.netty.buffer.ByteBuf;
+import io.netty.buffer.BufUtil;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.FileRegion;
 import io.netty.channel.ServerChannel;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.internal.PlatformDependent;
 
 import java.util.AbstractSet;
 import java.util.ArrayList;
@@ -27,21 +30,20 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * The default {@link ChannelGroup} implementation.
- * @apiviz.landmark
  */
 public class DefaultChannelGroup extends AbstractSet<Channel> implements ChannelGroup {
 
     private static final AtomicInteger nextId = new AtomicInteger();
-
+    private static final ImmediateEventExecutor DEFAULT_EXECUTOR = new ImmediateEventExecutor();
     private final String name;
-    private final ConcurrentMap<Integer, Channel> serverChannels = new ConcurrentHashMap<Integer, Channel>();
-    private final ConcurrentMap<Integer, Channel> nonServerChannels = new ConcurrentHashMap<Integer, Channel>();
+    private final EventExecutor executor;
+    private final ConcurrentMap<Integer, Channel> serverChannels = PlatformDependent.newConcurrentHashMap();
+    private final ConcurrentMap<Integer, Channel> nonServerChannels = PlatformDependent.newConcurrentHashMap();
     private final ChannelFutureListener remover = new ChannelFutureListener() {
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {
@@ -57,15 +59,33 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     }
 
     /**
+     * Creates a new group with a generated name amd the provided {@link EventExecutor} to notify the
+     * {@link ChannelGroupFuture}s.
+     */
+    public DefaultChannelGroup(EventExecutor executor) {
+        this("group-0x" + Integer.toHexString(nextId.incrementAndGet()), executor);
+    }
+
+    /**
      * Creates a new group with the specified {@code name}.  Please note that
      * different groups can have the same name, which means no duplicate check
      * is done against group names.
      */
     public DefaultChannelGroup(String name) {
+        this(name, DEFAULT_EXECUTOR);
+    }
+
+    /**
+     * Creates a new group with the specified {@code name} and {@link EventExecutor} to notify the
+     * {@link ChannelGroupFuture}s.  Please note that different groups can have the same name, which means no
+     * duplicate check is done against group names.
+     */
+    public DefaultChannelGroup(String name, EventExecutor executor) {
         if (name == null) {
             throw new NullPointerException("name");
         }
         this.name = name;
+        this.executor = executor;
     }
 
     @Override
@@ -187,7 +207,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             futures.put(c.id(), c.close());
         }
 
-        return new DefaultChannelGroupFuture(this, futures);
+        return new DefaultChannelGroupFuture(this, futures, executor);
     }
 
     @Override
@@ -202,24 +222,64 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             futures.put(c.id(), c.disconnect());
         }
 
-        return new DefaultChannelGroupFuture(this, futures);
+        return new DefaultChannelGroupFuture(this, futures, executor);
     }
 
     @Override
     public ChannelGroupFuture write(Object message) {
-        Map<Integer, ChannelFuture> futures =
-            new LinkedHashMap<Integer, ChannelFuture>(size());
-        if (message instanceof ByteBuf) {
-            ByteBuf buf = (ByteBuf) message;
-            for (Channel c: nonServerChannels.values()) {
-                futures.put(c.id(), c.write(buf.duplicate()));
-            }
-        } else {
-            for (Channel c: nonServerChannels.values()) {
-                futures.put(c.id(), c.write(message));
-            }
+        if (message == null) {
+            throw new NullPointerException("message");
         }
-        return new DefaultChannelGroupFuture(this, futures);
+
+        Map<Integer, ChannelFuture> futures = new LinkedHashMap<Integer, ChannelFuture>(size());
+        for (Channel c: nonServerChannels.values()) {
+            BufUtil.retain(message);
+            futures.put(c.id(), c.write(message));
+        }
+
+        BufUtil.release(message);
+        return new DefaultChannelGroupFuture(this, futures, executor);
+    }
+
+    @Override
+    public ChannelGroupFuture sendFile(FileRegion region) {
+        if (region == null) {
+            throw new NullPointerException("region");
+        }
+
+        Map<Integer, ChannelFuture> futures = new LinkedHashMap<Integer, ChannelFuture>(size());
+        for (Channel c: nonServerChannels.values()) {
+            BufUtil.retain(region);
+            futures.put(c.id(), c.sendFile(region));
+        }
+
+        BufUtil.release(region);
+        return new DefaultChannelGroupFuture(this, futures, executor);
+    }
+
+    @Override
+    public ChannelGroupFuture flush() {
+        Map<Integer, ChannelFuture> futures = new LinkedHashMap<Integer, ChannelFuture>(size());
+        for (Channel c: nonServerChannels.values()) {
+            futures.put(c.id(), c.flush());
+        }
+
+        return new DefaultChannelGroupFuture(this, futures, executor);
+    }
+
+    @Override
+    public ChannelGroupFuture deregister() {
+        Map<Integer, ChannelFuture> futures =
+                new LinkedHashMap<Integer, ChannelFuture>(size());
+
+        for (Channel c: serverChannels.values()) {
+            futures.put(c.id(), c.deregister());
+        }
+        for (Channel c: nonServerChannels.values()) {
+            futures.put(c.id(), c.deregister());
+        }
+
+        return new DefaultChannelGroupFuture(this, futures, executor);
     }
 
     @Override

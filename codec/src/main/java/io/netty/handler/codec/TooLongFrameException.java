@@ -18,8 +18,6 @@ package io.netty.handler.codec;
 /**
  * An {@link DecoderException} which is thrown when the length of the frame
  * decoded is greater than the allowed maximum.
- *
- * @apiviz.exclude
  */
 public class TooLongFrameException extends DecoderException {
 

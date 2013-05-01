@@ -33,7 +33,7 @@ import static io.netty.channel.ChannelOption.*;
 public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
                                               implements ServerSocketChannelConfig {
 
-    private final ServerSocket javaSocket;
+    protected final ServerSocket javaSocket;
     private volatile int backlog = NetUtil.SOMAXCONN;
 
     /**
@@ -161,5 +161,10 @@ public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
     @Override
     public ServerSocketChannelConfig setAutoRead(boolean autoRead) {
         return (ServerSocketChannelConfig) super.setAutoRead(autoRead);
+    }
+
+    @Override
+    public ServerSocketChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type) {
+        return (ServerSocketChannelConfig) super.setDefaultHandlerByteBufType(type);
     }
 }

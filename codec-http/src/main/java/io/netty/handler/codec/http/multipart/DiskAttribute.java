@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelException;
 import io.netty.handler.codec.http.HttpConstants;
 
 import java.io.IOException;
@@ -137,5 +138,32 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
     @Override
     protected String getPrefix() {
         return prefix;
+    }
+
+    @Override
+    public Attribute copy() {
+        DiskAttribute attr = new DiskAttribute(getName());
+        attr.setCharset(getCharset());
+        ByteBuf content = content();
+        if (content != null) {
+            try {
+                attr.setContent(content.copy());
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+        return attr;
+    }
+
+    @Override
+    public Attribute retain(int increment) {
+        super.retain(increment);
+        return this;
+    }
+
+    @Override
+    public Attribute retain() {
+        super.retain();
+        return this;
     }
 }

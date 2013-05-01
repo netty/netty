@@ -16,34 +16,35 @@
 package io.netty.handler.codec.socks;
 
 import io.netty.channel.embedded.EmbeddedByteChannel;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.*;
 
 public class SocksCmdResponseDecoderTest {
-    private static final Logger logger = LoggerFactory.getLogger(SocksCmdResponseDecoderTest.class);
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(SocksCmdResponseDecoderTest.class);
 
-    private static void testSocksCmdResponseDecoderWithDifferentParams(SocksMessage.CmdStatus cmdStatus, SocksMessage.AddressType addressType){
+    private static void testSocksCmdResponseDecoderWithDifferentParams(SocksCmdStatus cmdStatus,
+                                                                       SocksAddressType addressType) {
         logger.debug("Testing cmdStatus: " + cmdStatus + " addressType: " + addressType);
         SocksResponse msg = new SocksCmdResponse(cmdStatus, addressType);
         SocksCmdResponseDecoder decoder = new SocksCmdResponseDecoder();
         EmbeddedByteChannel embedder = new EmbeddedByteChannel(decoder);
         SocksCommonTestUtils.writeMessageIntoEmbedder(embedder, msg);
-        if (addressType == SocksMessage.AddressType.UNKNOWN){
+        if (addressType == SocksAddressType.UNKNOWN) {
             assertTrue(embedder.readInbound() instanceof UnknownSocksResponse);
         } else {
             msg = (SocksResponse) embedder.readInbound();
-            assertEquals(((SocksCmdResponse) msg).getCmdStatus(), cmdStatus);
+            assertEquals(((SocksCmdResponse) msg).cmdStatus(), cmdStatus);
         }
         assertNull(embedder.readInbound());
     }
 
     @Test
-    public void testSocksCmdResponseDecoder(){
-        for (SocksMessage.CmdStatus cmdStatus: SocksMessage.CmdStatus.values()){
-            for (SocksMessage.AddressType addressType: SocksMessage.AddressType.values()){
+    public void testSocksCmdResponseDecoder() {
+        for (SocksCmdStatus cmdStatus: SocksCmdStatus.values()) {
+            for (SocksAddressType addressType: SocksAddressType.values()) {
                 testSocksCmdResponseDecoderWithDifferentParams(cmdStatus, addressType);
             }
         }

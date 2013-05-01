@@ -24,7 +24,8 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 
 /**
- * Instances the appropriate handshake class to use for servers
+ * Auto-detects the version of the Web Socket protocol in use and creates a new proper
+ * {@link WebSocketServerHandshaker}.
  */
 public class WebSocketServerHandshakerFactory {
 
@@ -83,7 +84,7 @@ public class WebSocketServerHandshakerFactory {
      */
     public WebSocketServerHandshaker newHandshaker(HttpRequest req) {
 
-        String version = req.getHeader(Names.SEC_WEBSOCKET_VERSION);
+        String version = req.headers().get(Names.SEC_WEBSOCKET_VERSION);
         if (version != null) {
             if (version.equals(WebSocketVersion.V13.toHttpHeaderValue())) {
                 // Version 13 of the wire protocol - RFC 6455 (version 17 of the draft hybi specification).
@@ -115,9 +116,8 @@ public class WebSocketServerHandshakerFactory {
     public static void sendUnsupportedWebSocketVersionResponse(Channel channel) {
         HttpResponse res = new DefaultHttpResponse(
                 HttpVersion.HTTP_1_1,
-                HttpResponseStatus.SWITCHING_PROTOCOLS);
-        res.setStatus(HttpResponseStatus.UPGRADE_REQUIRED);
-        res.setHeader(Names.SEC_WEBSOCKET_VERSION, WebSocketVersion.V13.toHttpHeaderValue());
+                HttpResponseStatus.UPGRADE_REQUIRED);
+        res.headers().set(Names.SEC_WEBSOCKET_VERSION, WebSocketVersion.V13.toHttpHeaderValue());
         channel.write(res);
     }
 }

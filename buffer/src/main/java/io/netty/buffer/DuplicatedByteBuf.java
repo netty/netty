@@ -29,7 +29,7 @@ import java.nio.channels.ScatteringByteChannel;
  * parent.  It is recommended to use {@link ByteBuf#duplicate()} instead
  * of calling the constructor explicitly.
  */
-public class DuplicatedByteBuf extends AbstractByteBuf {
+public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     private final ByteBuf buffer;
 
@@ -92,27 +92,62 @@ public class DuplicatedByteBuf extends AbstractByteBuf {
     }
 
     @Override
+    public boolean hasMemoryAddress() {
+        return buffer.hasMemoryAddress();
+    }
+
+    @Override
+    public long memoryAddress() {
+        return buffer.memoryAddress();
+    }
+
+    @Override
     public byte getByte(int index) {
+        return _getByte(index);
+    }
+
+    @Override
+    protected byte _getByte(int index) {
         return buffer.getByte(index);
     }
 
     @Override
     public short getShort(int index) {
+        return _getShort(index);
+    }
+
+    @Override
+    protected short _getShort(int index) {
         return buffer.getShort(index);
     }
 
     @Override
     public int getUnsignedMedium(int index) {
+        return _getUnsignedMedium(index);
+    }
+
+    @Override
+    protected int _getUnsignedMedium(int index) {
         return buffer.getUnsignedMedium(index);
     }
 
     @Override
     public int getInt(int index) {
+        return _getInt(index);
+    }
+
+    @Override
+    protected int _getInt(int index) {
         return buffer.getInt(index);
     }
 
     @Override
     public long getLong(int index) {
+        return _getLong(index);
+    }
+
+    @Override
+    protected long _getLong(int index) {
         return buffer.getLong(index);
     }
 
@@ -146,32 +181,57 @@ public class DuplicatedByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf setByte(int index, int value) {
-        buffer.setByte(index, value);
+        _setByte(index, value);
         return this;
+    }
+
+    @Override
+    protected void _setByte(int index, int value) {
+        buffer.setByte(index, value);
     }
 
     @Override
     public ByteBuf setShort(int index, int value) {
-        buffer.setShort(index, value);
+        _setShort(index, value);
         return this;
+    }
+
+    @Override
+    protected void _setShort(int index, int value) {
+        buffer.setShort(index, value);
     }
 
     @Override
     public ByteBuf setMedium(int index, int value) {
-        buffer.setMedium(index, value);
+        _setMedium(index, value);
         return this;
+    }
+
+    @Override
+    protected void _setMedium(int index, int value) {
+        buffer.setMedium(index, value);
     }
 
     @Override
     public ByteBuf setInt(int index, int value) {
-        buffer.setInt(index, value);
+        _setInt(index, value);
         return this;
     }
 
     @Override
+    protected void _setInt(int index, int value) {
+        buffer.setInt(index, value);
+    }
+
+    @Override
     public ByteBuf setLong(int index, long value) {
-        buffer.setLong(index, value);
+        _setLong(index, value);
         return this;
+    }
+
+    @Override
+    protected void _setLong(int index, long value) {
+        buffer.setLong(index, value);
     }
 
     @Override
@@ -230,26 +290,6 @@ public class DuplicatedByteBuf extends AbstractByteBuf {
     @Override
     public ByteBuffer[] nioBuffers(int index, int length) {
         return buffer.nioBuffers(index, length);
-    }
-
-    @Override
-    public boolean isFreed() {
-        return buffer.isFreed();
-    }
-
-    @Override
-    public void free() {
-        throw new UnsupportedOperationException("derived");
-    }
-
-    @Override
-    public ByteBuf suspendIntermediaryDeallocations() {
-        throw new UnsupportedOperationException("derived");
-    }
-
-    @Override
-    public ByteBuf resumeIntermediaryDeallocations() {
-        throw new UnsupportedOperationException("derived");
     }
 }
 

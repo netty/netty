@@ -15,7 +15,6 @@
  */
 package io.netty.handler.stream;
 
-import static org.junit.Assert.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
@@ -24,7 +23,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.channel.embedded.EmbeddedMessageChannel;
 import io.netty.util.CharsetUtil;
-
+import org.junit.Test;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -32,7 +31,7 @@ import java.io.IOException;
 import java.nio.channels.Channels;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 public class ChunkedWriteHandlerTest {
     private static final byte[] BYTES = new byte[1024 * 64];
@@ -68,18 +67,19 @@ public class ChunkedWriteHandlerTest {
     public void testChunkedStream() {
         check(new ChunkedStream(new ByteArrayInputStream(BYTES)));
 
-        check(new ChunkedStream(new ByteArrayInputStream(BYTES)), new ChunkedStream(new ByteArrayInputStream(BYTES)), new ChunkedStream(new ByteArrayInputStream(BYTES)));
-
+        check(new ChunkedStream(new ByteArrayInputStream(BYTES)),
+                new ChunkedStream(new ByteArrayInputStream(BYTES)),
+                new ChunkedStream(new ByteArrayInputStream(BYTES)));
     }
 
     @Test
     public void testChunkedNioStream() {
         check(new ChunkedNioStream(Channels.newChannel(new ByteArrayInputStream(BYTES))));
 
-        check(new ChunkedNioStream(Channels.newChannel(new ByteArrayInputStream(BYTES))), new ChunkedNioStream(Channels.newChannel(new ByteArrayInputStream(BYTES))), new ChunkedNioStream(Channels.newChannel(new ByteArrayInputStream(BYTES))));
-
+        check(new ChunkedNioStream(Channels.newChannel(new ByteArrayInputStream(BYTES))),
+                new ChunkedNioStream(Channels.newChannel(new ByteArrayInputStream(BYTES))),
+                new ChunkedNioStream(Channels.newChannel(new ByteArrayInputStream(BYTES))));
     }
-
 
     @Test
     public void testChunkedFile() throws IOException {
@@ -96,7 +96,7 @@ public class ChunkedWriteHandlerTest {
     }
 
     // Test case which shows that there is not a bug like stated here:
-    // http://stackoverflow.com/questions/10409241/why-is-close-channelfuturelistener-not-notified/10426305#comment14126161_10426305
+    // http://stackoverflow.com/a/10426305
     @Test
     public void testListenerNotifiedWhenIsEnd() {
         ByteBuf buffer = Unpooled.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
@@ -146,7 +146,6 @@ public class ChunkedWriteHandlerTest {
 
         assertEquals(buffer, ch.readOutbound());
         assertNull(ch.readOutbound());
-
     }
 
     @Test
@@ -184,7 +183,6 @@ public class ChunkedWriteHandlerTest {
 
         assertEquals(0, ch.readOutbound());
         assertNull(ch.readOutbound());
-
     }
 
     private static void check(ChunkedInput<?>... inputs) {
@@ -203,7 +201,7 @@ public class ChunkedWriteHandlerTest {
             if (buffer == null) {
                 break;
             }
-            while (buffer.readable()) {
+            while (buffer.isReadable()) {
                 assertEquals(BYTES[i++], buffer.readByte());
                 read++;
                 if (i == BYTES.length) {

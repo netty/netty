@@ -17,115 +17,113 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.embedded.EmbeddedByteChannel;
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 
 public class SnappyFramedDecoderTest {
-    private final SnappyFramedDecoder decoder = new SnappyFramedDecoder();
+    private EmbeddedByteChannel channel;
+
+    @Before
+    public void initChannel() {
+        channel = new EmbeddedByteChannel(new SnappyFramedDecoder());
+    }
 
     @Test(expected = CompressionException.class)
     public void testReservedUnskippableChunkTypeCausesError() throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
-            0x03, 0x01, 0x00, 0x00
+            0x03, 0x01, 0x00, 0x00, 0x00
         });
 
-        decoder.decode(null, in, null);
+        channel.writeInbound(in);
     }
 
     @Test(expected = CompressionException.class)
     public void testInvalidStreamIdentifierLength() throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
-            -0x80, 0x05, 0x00, 'n', 'e', 't', 't', 'y'
+            -0x80, 0x05, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
         });
 
-        decoder.decode(null, in, null);
+        channel.writeInbound(in);
     }
 
     @Test(expected = CompressionException.class)
     public void testInvalidStreamIdentifierValue() throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
-            -0x80, 0x06, 0x00, 's', 'n', 'e', 't', 't', 'y'
+            -0x80, 0x06, 0x00, 0x00, 's', 'n', 'e', 't', 't', 'y'
         });
 
-        decoder.decode(null, in, null);
+        channel.writeInbound(in);
     }
 
     @Test(expected = CompressionException.class)
     public void testReservedSkippableBeforeStreamIdentifier() throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
-            -0x7f, 0x06, 0x00, 's', 'n', 'e', 't', 't', 'y'
+            -0x7f, 0x06, 0x00, 0x00, 's', 'n', 'e', 't', 't', 'y'
         });
 
-        decoder.decode(null, in, null);
+        channel.writeInbound(in);
     }
 
     @Test(expected = CompressionException.class)
     public void testUncompressedDataBeforeStreamIdentifier() throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
-            0x01, 0x05, 0x00, 'n', 'e', 't', 't', 'y'
+            0x01, 0x05, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
         });
 
-        decoder.decode(null, in, null);
+        channel.writeInbound(in);
     }
 
     @Test(expected = CompressionException.class)
     public void testCompressedDataBeforeStreamIdentifier() throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
-            0x00, 0x05, 0x00, 'n', 'e', 't', 't', 'y'
+            0x00, 0x05, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
         });
 
-        decoder.decode(null, in, null);
+        channel.writeInbound(in);
     }
 
     @Test
     public void testReservedSkippableSkipsInput() throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
-           -0x80, 0x06, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
-           -0x7f, 0x05, 0x00, 'n', 'e', 't', 't', 'y'
+           -0x80, 0x06, 0x00, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
+           -0x7f, 0x05, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
         });
 
-        ByteBuf out = Unpooled.unmodifiableBuffer(Unpooled.EMPTY_BUFFER);
+        channel.writeInbound(in);
+        assertNull(channel.readInbound());
 
-        decoder.decode(null, in, out);
-
-        assertEquals(17, in.readerIndex());
+        assertFalse(in.isReadable());
     }
 
     @Test
     public void testUncompressedDataAppendsToOut() throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
-           -0x80, 0x06, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
-           0x01, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
+           -0x80, 0x06, 0x00, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
+            0x01, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
         });
 
-        ByteBuf out = Unpooled.buffer(5);
+        channel.writeInbound(in);
 
-        decoder.decode(null, in, out);
-
-        byte[] expected = {
-            'n', 'e', 't', 't', 'y'
-        };
-        assertArrayEquals(expected, out.array());
+        ByteBuf expected = Unpooled.wrappedBuffer(new byte[] { 'n', 'e', 't', 't', 'y' });
+        assertEquals(expected, channel.readInbound());
     }
 
     @Test
     public void testCompressedDataDecodesAndAppendsToOut() throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
-           -0x80, 0x06, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
-           0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00,
-                 0x05, // preamble length
-                 0x04 << 2, // literal tag + length
-                 0x6e, 0x65, 0x74, 0x74, 0x79 // "netty"
+           -0x80, 0x06, 0x00, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
+            0x00, 0x0B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                  0x05, // preamble length
+                  0x04 << 2, // literal tag + length
+                  0x6e, 0x65, 0x74, 0x74, 0x79 // "netty"
         });
 
-        ByteBuf out = Unpooled.buffer(5);
+        channel.writeInbound(in);
 
-        decoder.decode(null, in, out);
-
-        byte[] expected = {
-            'n', 'e', 't', 't', 'y'
-        };
-        assertArrayEquals(expected, out.array());
+        ByteBuf expected = Unpooled.wrappedBuffer(new byte[] { 'n', 'e', 't', 't', 'y' });
+        assertEquals(expected, channel.readInbound());
     }
 }

@@ -15,25 +15,28 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import static io.netty.handler.codec.http.HttpHeaders.isKeepAlive;
-import static io.netty.handler.codec.http.HttpMethod.GET;
-import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.ssl.SslHandler;
 
+import static io.netty.handler.codec.http.HttpHeaders.*;
+import static io.netty.handler.codec.http.HttpMethod.*;
+import static io.netty.handler.codec.http.HttpResponseStatus.*;
+import static io.netty.handler.codec.http.HttpVersion.*;
+
 /**
  * Handles the HTTP handshake (the HTTP Upgrade request) for {@link WebSocketServerProtocolHandler}.
  */
-public class WebSocketServerProtocolHandshakeHandler extends ChannelInboundMessageHandlerAdapter<HttpRequest> {
+class WebSocketServerProtocolHandshakeHandler
+        extends ChannelInboundMessageHandlerAdapter<FullHttpRequest> {
 
     private final String websocketPath;
     private final String subprotocols;
@@ -47,9 +50,9 @@ public class WebSocketServerProtocolHandshakeHandler extends ChannelInboundMessa
     }
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx, HttpRequest req) throws Exception {
+    public void messageReceived(final ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
         if (req.getMethod() != GET) {
-            sendHttpResponse(ctx, req, new DefaultHttpResponse(HTTP_1_1, FORBIDDEN));
+            sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN));
             return;
         }
 
@@ -65,6 +68,9 @@ public class WebSocketServerProtocolHandshakeHandler extends ChannelInboundMessa
                 public void operationComplete(ChannelFuture future) throws Exception {
                     if (!future.isSuccess()) {
                         ctx.fireExceptionCaught(future.cause());
+                    } else {
+                        ctx.fireUserEventTriggered(
+                                WebSocketServerProtocolHandler.ServerHandshakeStateEvent.HANDSHAKE_COMPLETE);
                     }
                 }
             });
@@ -76,7 +82,7 @@ public class WebSocketServerProtocolHandshakeHandler extends ChannelInboundMessa
 
     private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
         ChannelFuture f = ctx.channel().write(res);
-        if (!isKeepAlive(req) || res.getStatus().getCode() != 200) {
+        if (!isKeepAlive(req) || res.getStatus().code() != 200) {
             f.addListener(ChannelFutureListener.CLOSE);
         }
     }
@@ -87,7 +93,7 @@ public class WebSocketServerProtocolHandshakeHandler extends ChannelInboundMessa
             // SSL in use so use Secure WebSockets
             protocol = "wss";
         }
-        return protocol + "://" + req.getHeader(HttpHeaders.Names.HOST) + path;
+        return protocol + "://" + req.headers().get(HttpHeaders.Names.HOST) + path;
     }
 
 }

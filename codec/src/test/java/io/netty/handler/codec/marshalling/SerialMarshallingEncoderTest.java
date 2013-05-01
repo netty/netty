@@ -18,7 +18,7 @@ package io.netty.handler.codec.marshalling;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 
-public class SerialMarshallingEncoderTest extends SerialCompatibleMarshallingEncoderTest{
+public class SerialMarshallingEncoderTest extends SerialCompatibleMarshallingEncoderTest {
 
     @Override
     protected ByteBuf truncate(ByteBuf buf) {

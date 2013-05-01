@@ -15,23 +15,23 @@
  */
 package io.netty.handler.codec;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.Signal;
-
+import io.netty.util.Signal;
 import org.junit.Test;
 
+import static org.junit.Assert.*;
+
 public class ReplayingDecoderBufferTest {
-    
+
     /**
      * See https://github.com/netty/netty/issues/445
      */
     @Test
     public void testGetUnsignedByte() {
-        ReplayingDecoderBuffer buffer = new ReplayingDecoderBuffer(Unpooled.copiedBuffer("TestBuffer", CharsetUtil.ISO_8859_1));
+        ReplayingDecoderBuffer buffer = new ReplayingDecoderBuffer(Unpooled.copiedBuffer("TestBuffer",
+                CharsetUtil.ISO_8859_1));
 
         boolean error;
         int i = 0;
@@ -53,7 +53,8 @@ public class ReplayingDecoderBufferTest {
      */
     @Test
     public void testGetByte() {
-        ReplayingDecoderBuffer buffer = new ReplayingDecoderBuffer(Unpooled.copiedBuffer("TestBuffer", CharsetUtil.ISO_8859_1));
+        ReplayingDecoderBuffer buffer = new ReplayingDecoderBuffer(Unpooled.copiedBuffer("TestBuffer",
+                CharsetUtil.ISO_8859_1));
 
         boolean error;
         int i = 0;
@@ -69,14 +70,14 @@ public class ReplayingDecoderBufferTest {
         assertTrue(error);
         assertEquals(10, i);
     }
-    
+
     /**
      * See https://github.com/netty/netty/issues/445
      */
     @Test
     public void testGetBoolean() {
         ByteBuf buf = Unpooled.buffer(10);
-        while(buf.writable()) {
+        while (buf.isWritable()) {
             buf.writeBoolean(true);
         }
         ReplayingDecoderBuffer buffer = new ReplayingDecoderBuffer(buf);

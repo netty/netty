@@ -18,17 +18,18 @@ package io.netty.handler.stream;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -63,11 +64,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  * {@link ChunkedInput#readChunk(Object)}, resulting in the indefinitely suspended
  * transfer.  To resume the transfer when a new chunk is available, you have to
  * call {@link #resumeTransfer()}.
- * @apiviz.landmark
- * @apiviz.has io.netty.handler.stream.ChunkedInput oneway - - reads from
  */
 public class ChunkedWriteHandler
-        extends ChannelHandlerAdapter implements ChannelOutboundMessageHandler<Object> {
+        extends ChannelDuplexHandler implements ChannelOutboundMessageHandler<Object> {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(ChunkedWriteHandler.class);
@@ -92,13 +91,20 @@ public class ChunkedWriteHandler
 
     @Override
     public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        this.ctx = ctx;
         return queue;
     }
 
     @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        queue.free();
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        this.ctx = ctx;
+    }
+
+    // This method should not need any synchronization as the ChunkedWriteHandler will not receive any new events
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        // Fail all promised that are queued. This is needed because otherwise we would never notify the
+        // ChannelFuture and the registered FutureListener. See #304
+        discard(ctx, new ChannelException(ChunkedWriteHandler.class.getSimpleName() + " removed from pipeline."));
     }
 
     private boolean isWritable() {
@@ -150,6 +156,11 @@ public class ChunkedWriteHandler
         if (isWritable() || !ctx.channel().isActive()) {
             doFlush(ctx);
         }
+    }
+
+    @Override
+    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+        ctx.fireInboundBufferUpdated();
     }
 
     @Override
@@ -305,7 +316,7 @@ public class ChunkedWriteHandler
                     });
                 }
             } else {
-                ctx.nextOutboundMessageBuffer().add(currentEvent);
+                ChannelHandlerUtil.addToNextOutboundBuffer(ctx, currentEvent);
                 this.currentEvent = null;
             }
 
@@ -342,21 +353,5 @@ public class ChunkedWriteHandler
                 logger.warn("Failed to close a chunked input.", t);
             }
         }
-    }
-
-    @Override
-    public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
-        // try to flush again a last time.
-        //
-        // See #304
-        doFlush(ctx);
-    }
-
-    // This method should not need any synchronization as the ChunkedWriteHandler will not receive any new events
-    @Override
-    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
-        // Fail all MessageEvent's that are left. This is needed because otherwise we would never notify the
-        // ChannelFuture and the registered FutureListener. See #304
-        discard(ctx, new ChannelException(ChunkedWriteHandler.class.getSimpleName() + " removed from pipeline."));
     }
 }

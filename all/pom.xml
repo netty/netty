@@ -20,11 +20,11 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.0.0.Beta1-SNAPSHOT</version>
+    <version>4.0.0.CR2-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty</artifactId>
-  <packaging>bundle</packaging>
+  <artifactId>netty-all</artifactId>
+  <packaging>jar</packaging>
 
   <name>Netty/All-in-One</name>
 
@@ -54,7 +54,78 @@
   </profiles>
 
   <dependencies>
-    <!-- The example depends on (almost) all modules either directly or transitively -->
+  
+    <!-- All release modules -->
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-buffer</artifactId>
+      <version>${project.version}</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec</artifactId>
+      <version>${project.version}</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-http</artifactId>
+      <version>${project.version}</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-socks</artifactId>
+      <version>${project.version}</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-common</artifactId>
+      <version>${project.version}</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-handler</artifactId>
+      <version>${project.version}</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-transport</artifactId>
+      <version>${project.version}</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-transport-rxtx</artifactId>
+      <version>${project.version}</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-transport-sctp</artifactId>
+      <version>${project.version}</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-transport-udt</artifactId>
+      <version>${project.version}</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-example</artifactId>
@@ -62,14 +133,7 @@
       <scope>compile</scope>
       <optional>true</optional>
     </dependency>
-    <!-- The only module netty-example does NOT depend on -->
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>netty-metrics-yammer</artifactId>
-      <version>${project.version}</version>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
+
     <!-- Add optional dependencies explicitly to avoid Javadoc warnings and errors. -->
     <dependency>
       <groupId>com.google.protobuf</groupId>
@@ -86,37 +150,16 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <scope>compile</scope>
       <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>commons-logging</groupId>
       <artifactId>commons-logging</artifactId>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>org.jboss.logging</groupId>
-      <artifactId>jboss-logging-spi</artifactId>
-      <scope>compile</scope>
       <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>org.osgi</groupId>
-      <artifactId>org.osgi.core</artifactId>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>org.osgi</groupId>
-      <artifactId>org.osgi.compendium</artifactId>
-      <scope>compile</scope>
       <optional>true</optional>
     </dependency>
   </dependencies>
@@ -149,6 +192,18 @@
               <includes>io/netty/**</includes>
               <includeGroupIds>${project.groupId}</includeGroupIds>
               <outputDirectory>${project.build.directory}/src</outputDirectory>
+            </configuration>
+          </execution>
+          <execution>
+            <id>unpack-jars</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>unpack-dependencies</goal>
+            </goals>
+            <configuration>
+              <includes>io/netty/**</includes>
+              <excludes>io/netty/example/**</excludes>
+              <outputDirectory>${project.build.outputDirectory}</outputDirectory>
             </configuration>
           </execution>
         </executions>
@@ -242,8 +297,6 @@
         </executions>
         <configuration>
           <skip>${quickbuild}</skip>
-          <inputEncoding>UTF-8</inputEncoding>
-          <outputEncoding>UTF-8</outputEncoding>
           <linkJavadoc>true</linkJavadoc>
           <destDir>${project.build.directory}/xref</destDir>
           <javadocDir>${project.build.directory}/api</javadocDir>
@@ -271,14 +324,7 @@
         <configuration>
           <skip>${quickbuild}</skip>
           <excludePackageNames>*.internal,*.example</excludePackageNames>
-          <doclet>org.jboss.apiviz.APIviz</doclet>
           <docfilessubdirs>true</docfilessubdirs>
-          <docletArtifact>
-            <groupId>org.jboss.apiviz</groupId>
-            <artifactId>apiviz</artifactId>
-            <version>1.3.2.GA</version>
-          </docletArtifact>
-          <useStandardDocletOptions>true</useStandardDocletOptions>
           <outputDirectory>${project.build.directory}/api</outputDirectory>
           <overview>${basedir}/src/javadoc/overview.html</overview>
           <doctitle>Netty API Reference (${project.version})</doctitle>
@@ -288,51 +334,19 @@
             -link http://docs.oracle.com/javase/7/docs/api/
             -link http://code.google.com/apis/protocolbuffers/docs/reference/java/
             -link http://docs.oracle.com/javaee/6/api/
-            -link http://www.osgi.org/javadoc/r4v43/core/
             -link http://www.slf4j.org/apidocs/
             -link http://commons.apache.org/logging/commons-logging-1.1.1/apidocs/
             -link http://logging.apache.org/log4j/1.2/apidocs/
-            -link http://metrics.codahale.com/maven/apidocs/
 
             -group "Low-level data representation" io.netty.buffer*
             -group "Central interface for all I/O operations" io.netty.channel*
             -group "Client &amp; Server bootstrapping utilities" io.netty.bootstrap*
             -group "Reusable I/O event interceptors" io.netty.handler*
-            -group "Miscellaneous" io.netty.logging*:io.netty.util*:io.netty.monitor:io.netty.monitor.spi
-            -group "Yammer monitoring support" io.netty.monitor.yammer*
-
-            -sourceclasspath ${project.build.outputDirectory}
-            -nopackagediagram
+            -group "Miscellaneous" io.netty.util*
           </additionalparam>
-          <encoding>UTF-8</encoding>
           <locale>en_US</locale>
         </configuration>
       </plugin>
-      
-      <plugin>
-        <groupId>org.apache.felix</groupId>
-        <artifactId>maven-bundle-plugin</artifactId>
-        <extensions>true</extensions>
-        <configuration>
-          <instructions>
-            <Import-Package>
-              com.sun.nio.sctp;resolution:=optional,
-              sun.misc;resolution:=optional,
-              sun.net.util;resolution:=optional,
-              !io.netty.*,
-              *
-            </Import-Package>
-            <Export-Package>
-              !io.netty.example.*,            
-              !io.netty.*.internal.*,            
-              io.netty.*
-            </Export-Package>
-            <Private-Package>
-              io.netty.*.internal.*
-            </Private-Package>
-          </instructions>
-        </configuration>
-      </plugin>      
     </plugins>
   </build>
 </project>

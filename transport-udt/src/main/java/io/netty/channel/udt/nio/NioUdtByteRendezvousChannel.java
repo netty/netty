@@ -21,7 +21,9 @@ import com.barchart.udt.TypeUDT;
  * Byte Channel Rendezvous for UDT Streams.
  */
 public class NioUdtByteRendezvousChannel extends NioUdtByteConnectorChannel {
+
     public NioUdtByteRendezvousChannel() {
         super(NioUdtProvider.newRendezvousChannelUDT(TypeUDT.STREAM));
     }
+
 }

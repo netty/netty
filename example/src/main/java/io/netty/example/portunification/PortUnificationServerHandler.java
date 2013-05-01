@@ -73,13 +73,8 @@ public class PortUnificationServerHandler extends ChannelInboundByteHandlerAdapt
                 // Unknown protocol; discard everything and close the connection.
                 in.clear();
                 ctx.close();
-                return;
             }
         }
-
-        // Forward the current read buffer as is to the new handlers.
-        ctx.nextInboundByteBuffer().writeBytes(in);
-        ctx.fireInboundBufferUpdated();
     }
 
     private boolean isSsl(ByteBuf buf) {

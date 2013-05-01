@@ -17,13 +17,13 @@ package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundByteHandler;
-import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelInboundByteHandlerAdapter;
+import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.http.HttpChunkAggregator;
-import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.ssl.SslHandler;
@@ -34,16 +34,17 @@ import javax.net.ssl.SSLEngine;
  * {@link ChannelInboundByteHandler} which is responsible to setup the {@link ChannelPipeline} either for
  * HTTP or SPDY. This offers an easy way for users to support both at the same time while not care to
  * much about the low-level details.
- *
  */
-public abstract class SpdyOrHttpChooser extends ChannelHandlerAdapter implements ChannelInboundByteHandler {
+public abstract class SpdyOrHttpChooser extends ChannelInboundByteHandlerAdapter {
+
+    // TODO: Replace with generic NPN handler
 
     public enum SelectedProtocol {
-        SpdyVersion2,
-        SpdyVersion3,
-        HttpVersion1_1,
-        HttpVersion1_0,
-        None
+        SPDY_2,
+        SPDY_3,
+        HTTP_1_1,
+        HTTP_1_0,
+        UNKNOWN
     }
 
     private final int maxSpdyContentLength;
@@ -56,14 +57,14 @@ public abstract class SpdyOrHttpChooser extends ChannelHandlerAdapter implements
 
     /**
      * Return the {@link SelectedProtocol} for the {@link SSLEngine}. If its not known yet implementations
-     * MUST return {@link SelectedProtocol#None}.
+     * MUST return {@link SelectedProtocol#UNKNOWN}.
      *
      */
     protected abstract SelectedProtocol getProtocol(SSLEngine engine);
 
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ctx.alloc().buffer();
+        return ChannelHandlerUtil.allocate(ctx);
     }
 
     @Override
@@ -72,14 +73,9 @@ public abstract class SpdyOrHttpChooser extends ChannelHandlerAdapter implements
     }
 
     @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        ctx.inboundByteBuffer().free();
-    }
-
-    @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+    public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         if (initPipeline(ctx)) {
-            ctx.nextInboundByteBuffer().writeBytes(ctx.inboundByteBuffer());
+            ctx.nextInboundByteBuffer().writeBytes(in);
 
             // When we reached here we can remove this handler as its now clear what protocol we want to use
             // from this point on.
@@ -97,19 +93,19 @@ public abstract class SpdyOrHttpChooser extends ChannelHandlerAdapter implements
             throw new IllegalStateException("SslHandler is needed for SPDY");
         }
 
-        SelectedProtocol protocol = getProtocol(handler.getEngine());
+        SelectedProtocol protocol = getProtocol(handler.engine());
         switch (protocol) {
-        case None:
+        case UNKNOWN:
             // Not done with choosing the protocol, so just return here for now,
             return false;
-        case SpdyVersion2:
+        case SPDY_2:
             addSpdyHandlers(ctx, 2);
             break;
-        case SpdyVersion3:
+        case SPDY_3:
             addSpdyHandlers(ctx, 3);
             break;
-        case HttpVersion1_0:
-        case HttpVersion1_1:
+        case HTTP_1_0:
+        case HTTP_1_1:
             addHttpHandlers(ctx);
             break;
         default:
@@ -139,26 +135,26 @@ public abstract class SpdyOrHttpChooser extends ChannelHandlerAdapter implements
         ChannelPipeline pipeline = ctx.pipeline();
         pipeline.addLast("httpRquestDecoder", new HttpRequestDecoder());
         pipeline.addLast("httpResponseEncoder", new HttpResponseEncoder());
-        pipeline.addLast("httpChunkAggregator", new HttpChunkAggregator(maxHttpContentLength));
+        pipeline.addLast("httpChunkAggregator", new HttpObjectAggregator(maxHttpContentLength));
         pipeline.addLast("httpRquestHandler", createHttpRequestHandlerForHttp());
     }
 
     /**
-     * Create the {@link ChannelInboundHandler} that is responsible for handling the {@link HttpRequest}'s
-     * when the {@link SelectedProtocol} was {@link SelectedProtocol#HttpVersion1_0} or
-     * {@link SelectedProtocol#HttpVersion1_1}
+     * Create the {@link ChannelInboundMessageHandler} that is responsible for handling the http requests
+     * when the {@link SelectedProtocol} was {@link SelectedProtocol#HTTP_1_0} or
+     * {@link SelectedProtocol#HTTP_1_1}
      */
-    protected abstract ChannelInboundHandler createHttpRequestHandlerForHttp();
+    protected abstract ChannelInboundMessageHandler<?> createHttpRequestHandlerForHttp();
 
     /**
-     * Create the {@link ChannelInboundHandler} that is responsible for handling the {@link HttpRequest}'s
-     * when the {@link SelectedProtocol} was {@link SelectedProtocol#SpdyVersion2} or
-     * {@link SelectedProtocol#SpdyVersion3}.
+     * Create the {@link ChannelInboundMessageHandler} that is responsible for handling the http responses
+     * when the {@link SelectedProtocol} was {@link SelectedProtocol#SPDY_2} or
+     * {@link SelectedProtocol#SPDY_3}.
      *
-     * Bye default this method will just delecate to {@link #createHttpRequestHandlerForHttp()}, but
+     * Bye default this getMethod will just delecate to {@link #createHttpRequestHandlerForHttp()}, but
      * sub-classes may override this to change the behaviour.
      */
-    protected ChannelInboundHandler createHttpRequestHandlerForSpdy() {
+    protected ChannelInboundMessageHandler<?> createHttpRequestHandlerForSpdy() {
         return createHttpRequestHandlerForHttp();
     }
 }

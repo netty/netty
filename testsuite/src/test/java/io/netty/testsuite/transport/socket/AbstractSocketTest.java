@@ -17,12 +17,11 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 import io.netty.testsuite.transport.socket.SocketTestPermutation.Factory;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.NetUtil;
-
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 
@@ -46,7 +45,7 @@ public abstract class AbstractSocketTest {
     protected volatile Bootstrap cb;
     protected volatile InetSocketAddress addr;
     protected volatile Factory<Bootstrap> currentBootstrap;
-    
+
     protected void run() throws Throwable {
         int i = 0;
         for (Entry<Factory<ServerBootstrap>, Factory<Bootstrap>> e: COMBO) {
@@ -66,9 +65,6 @@ public abstract class AbstractSocketTest {
                 m.invoke(this, sb, cb);
             } catch (InvocationTargetException ex) {
                 throw ex.getCause();
-            } finally {
-                sb.shutdown();
-                cb.shutdown();
             }
         }
     }

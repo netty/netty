@@ -16,22 +16,69 @@
 
 package io.netty.buffer;
 
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class PooledByteBufAllocator extends AbstractByteBufAllocator {
 
-    private static final int DEFAULT_NUM_HEAP_ARENA = Runtime.getRuntime().availableProcessors();
-    private static final int DEFAULT_NUM_DIRECT_ARENA = Runtime.getRuntime().availableProcessors();
-    private static final int DEFAULT_PAGE_SIZE = 8192;
-    private static final int DEFAULT_MAX_ORDER = 11; // 8192 << 11 = 16 MiB per chunk
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(PooledByteBufAllocator.class);
+
+    private static final int DEFAULT_NUM_HEAP_ARENA = Math.max(0, SystemPropertyUtil.getInt(
+            "io.netty.allocator.numHeapArenas", Runtime.getRuntime().availableProcessors()));
+    private static final int DEFAULT_NUM_DIRECT_ARENA = Math.max(0, SystemPropertyUtil.getInt(
+            "io.netty.allocator.numDirectArenas", Runtime.getRuntime().availableProcessors()));
+    private static final int DEFAULT_PAGE_SIZE;
+    private static final int DEFAULT_MAX_ORDER; // 8192 << 11 = 16 MiB per chunk
 
     private static final int MIN_PAGE_SIZE = 4096;
     private static final int MAX_CHUNK_SIZE = (int) (((long) Integer.MAX_VALUE + 1) / 2);
 
-    public static final PooledByteBufAllocator DEFAULT = new PooledByteBufAllocator();
+    static {
+        int defaultPageSize = SystemPropertyUtil.getInt("io.netty.allocator.pageSize", 8192);
+        Throwable pageSizeFallbackCause = null;
+        try {
+            validateAndCalculatePageShifts(defaultPageSize);
+        } catch (Throwable t) {
+            pageSizeFallbackCause = t;
+            defaultPageSize = 8192;
+        }
+        DEFAULT_PAGE_SIZE = defaultPageSize;
+
+        int defaultMaxOrder = SystemPropertyUtil.getInt("io.netty.allocator.maxOrder", 11);
+        Throwable maxOrderFallbackCause = null;
+        try {
+            validateAndCalculateChunkSize(DEFAULT_PAGE_SIZE, defaultMaxOrder);
+        } catch (Throwable t) {
+            maxOrderFallbackCause = t;
+            defaultMaxOrder = 11;
+        }
+        DEFAULT_MAX_ORDER = defaultMaxOrder;
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("io.netty.allocator.numHeapArenas: {}", DEFAULT_NUM_HEAP_ARENA);
+            logger.debug("io.netty.allocator.numDirectArenas: {}", DEFAULT_NUM_DIRECT_ARENA);
+            if (pageSizeFallbackCause == null) {
+                logger.debug("io.netty.allocator.pageSize: {}", DEFAULT_PAGE_SIZE);
+            } else {
+                logger.debug("io.netty.allocator.pageSize: {}", DEFAULT_PAGE_SIZE, pageSizeFallbackCause);
+            }
+            if (maxOrderFallbackCause == null) {
+                logger.debug("io.netty.allocator.maxOrder: {}", DEFAULT_MAX_ORDER);
+            } else {
+                logger.debug("io.netty.allocator.maxOrder: {}", DEFAULT_MAX_ORDER, maxOrderFallbackCause);
+            }
+            logger.debug("io.netty.allocator.chunkSize: {}", DEFAULT_PAGE_SIZE << DEFAULT_MAX_ORDER);
+        }
+    }
+
+    public static final PooledByteBufAllocator DEFAULT =
+            new PooledByteBufAllocator(PlatformDependent.directBufferPreferred());
 
     private final PoolArena<byte[]>[] heapArenas;
     private final PoolArena<ByteBuffer>[] directArenas;
@@ -40,8 +87,23 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         private final AtomicInteger index = new AtomicInteger();
         @Override
         protected PoolThreadCache initialValue() {
-            int idx = Math.abs(index.getAndIncrement() % heapArenas.length);
-            return new PoolThreadCache(heapArenas[idx], directArenas[idx]);
+            final int idx = index.getAndIncrement();
+            final PoolArena<byte[]> heapArena;
+            final PoolArena<ByteBuffer> directArena;
+
+            if (heapArenas != null) {
+                heapArena = heapArenas[Math.abs(idx % heapArenas.length)];
+            } else {
+                heapArena = null;
+            }
+
+            if (directArenas != null) {
+                directArena = directArenas[Math.abs(idx % directArenas.length)];
+            } else {
+                directArena = null;
+            }
+
+            return new PoolThreadCache(heapArena, directArena);
         }
     };
 
@@ -49,37 +111,44 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
         this(false);
     }
 
-    public PooledByteBufAllocator(boolean directByDefault) {
-        this(directByDefault, DEFAULT_NUM_HEAP_ARENA, DEFAULT_NUM_DIRECT_ARENA, DEFAULT_PAGE_SIZE, DEFAULT_MAX_ORDER);
+    public PooledByteBufAllocator(boolean preferDirect) {
+        this(preferDirect, DEFAULT_NUM_HEAP_ARENA, DEFAULT_NUM_DIRECT_ARENA, DEFAULT_PAGE_SIZE, DEFAULT_MAX_ORDER);
     }
 
     public PooledByteBufAllocator(int nHeapArena, int nDirectArena, int pageSize, int maxOrder) {
         this(false, nHeapArena, nDirectArena, pageSize, maxOrder);
     }
 
-    public PooledByteBufAllocator(
-            boolean directByDefault, int nHeapArena, int nDirectArena, int pageSize, int maxOrder) {
-        super(directByDefault);
+    public PooledByteBufAllocator(boolean preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder) {
+        super(preferDirect);
 
         final int chunkSize = validateAndCalculateChunkSize(pageSize, maxOrder);
 
-        if (nHeapArena <= 0) {
-            throw new IllegalArgumentException("nHeapArena: " + nHeapArena + " (expected: 1+)");
+        if (nHeapArena < 0) {
+            throw new IllegalArgumentException("nHeapArena: " + nHeapArena + " (expected: >= 0)");
         }
-        if (nDirectArena <= 0) {
-            throw new IllegalArgumentException("nDirectArea: " + nDirectArena + " (expected: 1+)");
+        if (nDirectArena < 0) {
+            throw new IllegalArgumentException("nDirectArea: " + nDirectArena + " (expected: >= 0)");
         }
 
         int pageShifts = validateAndCalculatePageShifts(pageSize);
 
-        heapArenas = newArenaArray(nHeapArena);
-        for (int i = 0; i < heapArenas.length; i ++) {
-            heapArenas[i] = new PoolArena.HeapArena(this, pageSize, maxOrder, pageShifts, chunkSize);
+        if (nHeapArena > 0) {
+            heapArenas = newArenaArray(nHeapArena);
+            for (int i = 0; i < heapArenas.length; i ++) {
+                heapArenas[i] = new PoolArena.HeapArena(this, pageSize, maxOrder, pageShifts, chunkSize);
+            }
+        } else {
+            heapArenas = null;
         }
 
-        directArenas = newArenaArray(nDirectArena);
-        for (int i = 0; i < directArenas.length; i ++) {
-            directArenas[i] = new PoolArena.DirectArena(this, pageSize, maxOrder, pageShifts, chunkSize);
+        if (nHeapArena > 0) {
+            directArenas = newArenaArray(nDirectArena);
+            for (int i = 0; i < directArenas.length; i ++) {
+                directArenas[i] = new PoolArena.DirectArena(this, pageSize, maxOrder, pageShifts, chunkSize);
+            }
+        } else {
+            directArenas = null;
         }
     }
 
@@ -132,18 +201,27 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
     @Override
     protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
         PoolThreadCache cache = threadCache.get();
-        return cache.heapArena.allocate(cache, initialCapacity, maxCapacity);
+        PoolArena<byte[]> heapArena = cache.heapArena;
+        if (heapArena != null) {
+            return heapArena.allocate(cache, initialCapacity, maxCapacity);
+        } else {
+            return new UnpooledHeapByteBuf(this, initialCapacity, maxCapacity);
+        }
     }
 
     @Override
     protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
         PoolThreadCache cache = threadCache.get();
-        return cache.directArena.allocate(cache, initialCapacity, maxCapacity);
-    }
-
-    @Override
-    public ByteBuf ioBuffer() {
-        return directBuffer(0);
+        PoolArena<ByteBuffer> directArena = cache.directArena;
+        if (directArena != null) {
+            return directArena.allocate(cache, initialCapacity, maxCapacity);
+        } else {
+            if (PlatformDependent.hasUnsafe()) {
+                return new UnpooledUnsafeDirectByteBuf(this, initialCapacity, maxCapacity);
+            } else {
+                return new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);
+            }
+        }
     }
 
     public String toString() {

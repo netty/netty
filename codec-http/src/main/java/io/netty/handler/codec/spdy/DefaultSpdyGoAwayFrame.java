@@ -48,7 +48,7 @@ public class DefaultSpdyGoAwayFrame implements SpdyGoAwayFrame {
      * Creates a new instance.
      *
      * @param lastGoodStreamId the Last-good-stream-ID of this frame
-     * @param status           the status of this frame
+     * @param status           the getStatus of this frame
      */
     public DefaultSpdyGoAwayFrame(int lastGoodStreamId, SpdySessionStatus status) {
         setLastGoodStreamId(lastGoodStreamId);
@@ -61,12 +61,13 @@ public class DefaultSpdyGoAwayFrame implements SpdyGoAwayFrame {
     }
 
     @Override
-    public void setLastGoodStreamId(int lastGoodStreamId) {
+    public SpdyGoAwayFrame setLastGoodStreamId(int lastGoodStreamId) {
         if (lastGoodStreamId < 0) {
             throw new IllegalArgumentException("Last-good-stream-ID"
                     + " cannot be negative: " + lastGoodStreamId);
         }
         this.lastGoodStreamId = lastGoodStreamId;
+        return this;
     }
 
     @Override
@@ -75,8 +76,9 @@ public class DefaultSpdyGoAwayFrame implements SpdyGoAwayFrame {
     }
 
     @Override
-    public void setStatus(SpdySessionStatus status) {
+    public SpdyGoAwayFrame setStatus(SpdySessionStatus status) {
         this.status = status;
+        return this;
     }
 
     @Override

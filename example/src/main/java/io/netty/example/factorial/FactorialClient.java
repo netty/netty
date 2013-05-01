@@ -17,7 +17,8 @@ package io.netty.example.factorial;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.socket.nio.NioEventLoopGroup;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
 /**
@@ -37,15 +38,15 @@ public class FactorialClient {
     }
 
     public void run() throws Exception {
-        Bootstrap b = new Bootstrap();
+        EventLoopGroup group = new NioEventLoopGroup();
         try {
-            b.group(new NioEventLoopGroup())
+            Bootstrap b = new Bootstrap();
+            b.group(group)
              .channel(NioSocketChannel.class)
-             .remoteAddress(host, port)
              .handler(new FactorialClientInitializer(count));
 
             // Make a new connection.
-            ChannelFuture f = b.connect().sync();
+            ChannelFuture f = b.connect(host, port).sync();
 
             // Get the handler instance to retrieve the answer.
             FactorialClientHandler handler =
@@ -55,7 +56,7 @@ public class FactorialClient {
             System.err.format(
                     "Factorial of %,d is: %,d", count, handler.getFactorial());
         } finally {
-            b.shutdown();
+            group.shutdownGracefully();
         }
     }
 

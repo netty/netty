@@ -18,7 +18,8 @@ package io.netty.example.telnet;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.socket.nio.NioEventLoopGroup;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
 import java.io.BufferedReader;
@@ -38,15 +39,15 @@ public class TelnetClient {
     }
 
     public void run() throws Exception {
-        Bootstrap b = new Bootstrap();
+        EventLoopGroup group = new NioEventLoopGroup();
         try {
-            b.group(new NioEventLoopGroup())
+            Bootstrap b = new Bootstrap();
+            b.group(group)
              .channel(NioSocketChannel.class)
-             .remoteAddress(host, port)
              .handler(new TelnetClientInitializer());
 
             // Start the connection attempt.
-            Channel ch = b.connect().sync().channel();
+            Channel ch = b.connect(host, port).sync().channel();
 
             // Read commands from the stdin.
             ChannelFuture lastWriteFuture = null;
@@ -73,7 +74,7 @@ public class TelnetClient {
                 lastWriteFuture.sync();
             }
         } finally {
-            b.shutdown();
+            group.shutdownGracefully();
         }
     }
 

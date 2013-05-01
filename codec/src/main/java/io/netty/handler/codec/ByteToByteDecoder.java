@@ -44,6 +44,28 @@ import io.netty.channel.ChannelInboundByteHandlerAdapter;
  */
 public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter {
 
+    private volatile boolean singleDecode;
+
+    /**
+     * If set then only one message is decoded on each {@link #inboundBufferUpdated(ChannelHandlerContext)} call.
+     * This may be useful if you need to do some protocol upgrade and want to make sure nothing is mixed up.
+     *
+     * Default is {@code false} as this has performance impacts.
+     */
+    public void setSingleDecode(boolean singleDecode) {
+        this.singleDecode = singleDecode;
+    }
+
+    /**
+     * If {@code true} then only one message is decoded on each
+     * {@link #inboundBufferUpdated(ChannelHandlerContext)} call.
+     *
+     * Default is {@code false} as this has performance impacts.
+     */
+    public boolean isSingleDecode() {
+        return singleDecode;
+    }
+
     @Override
     public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         callDecode(ctx, in, ctx.nextInboundByteBuffer());
@@ -53,26 +75,23 @@ public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         ByteBuf in = ctx.inboundByteBuffer();
         ByteBuf out = ctx.nextInboundByteBuffer();
-        if (!in.readable()) {
+        if (!in.isReadable()) {
             callDecode(ctx, in, out);
         }
 
         int oldOutSize = out.readableBytes();
         try {
             decodeLast(ctx, in, out);
+        } catch (CodecException e) {
+            throw e;
         } catch (Throwable t) {
-            if (t instanceof CodecException) {
-                ctx.fireExceptionCaught(t);
-            } else {
-                ctx.fireExceptionCaught(new DecoderException(t));
+            throw new DecoderException(t);
+        } finally {
+            if (out.readableBytes() > oldOutSize) {
+                ctx.fireInboundBufferUpdated();
             }
+            ctx.fireChannelInactive();
         }
-
-        if (out.readableBytes() > oldOutSize) {
-            ctx.fireInboundBufferUpdated();
-        }
-
-        ctx.fireChannelInactive();
     }
 
     /**
@@ -80,24 +99,22 @@ public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter
      */
     private void callDecode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) {
         int oldOutSize = out.readableBytes();
-        while (in.readable()) {
-            int oldInSize = in.readableBytes();
-            try {
-                decode(ctx, in, out);
-            } catch (Throwable t) {
-                if (t instanceof CodecException) {
-                    ctx.fireExceptionCaught(t);
-                } else {
-                    ctx.fireExceptionCaught(new DecoderException(t));
+        try {
+            while (in.isReadable()) {
+                int oldInSize = in.readableBytes();
+                    decode(ctx, in, out);
+                if (oldInSize == in.readableBytes() || isSingleDecode()) {
+                    break;
                 }
             }
-            if (oldInSize == in.readableBytes()) {
-                break;
+        } catch (CodecException e) {
+            throw e;
+        } catch (Throwable t) {
+            throw new DecoderException(t);
+        } finally {
+            if (out.readableBytes() > oldOutSize) {
+                ctx.fireInboundBufferUpdated();
             }
-        }
-
-        if (out.readableBytes() > oldOutSize) {
-            ctx.fireInboundBufferUpdated();
         }
     }
 

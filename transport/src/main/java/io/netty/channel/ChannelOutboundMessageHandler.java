@@ -15,11 +15,16 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
 
 /**
  * ChannelOutboundHandler implementation which operates on messages of a specific type
  * by pass them in a {@link MessageBuf} and consume then from there.
+ *
+ * If your {@link ChannelOutboundMessageHandler} handles messages of type {@link ByteBuf} or {@link Object}
+ * and you want to add a {@link ByteBuf} to the next buffer in the {@link ChannelPipeline} use
+ * {@link ChannelHandlerUtil#addToNextOutboundBuffer(ChannelHandlerContext, Object)}.
  *
  * @param <I>   the message type
  */

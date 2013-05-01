@@ -16,7 +16,9 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelHandlerUtil;
 
 /**
  * A decoder that splits the received {@link ByteBuf}s by the fixed number
@@ -67,13 +69,20 @@ public class FixedLengthFrameDecoder extends ByteToMessageDecoder {
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         if (allocateFullBuffer) {
-            return ctx.alloc().buffer(frameLength);
+            return ChannelHandlerUtil.allocate(ctx, frameLength);
         } else {
             return super.newInboundBuffer(ctx);
         }
     }
 
     @Override
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, MessageBuf<Object> out) throws Exception {
+        Object decoded = decode(ctx, in);
+        if (decoded != null) {
+            out.add(decoded);
+        }
+    }
+
     protected Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         if (in.readableBytes() < frameLength) {
             return null;

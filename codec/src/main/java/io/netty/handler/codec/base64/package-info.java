@@ -19,7 +19,5 @@
  * <a href="http://en.wikipedia.org/wiki/Base64">Base64</a>-encoded
  * {@link java.lang.String} or {@link io.netty.buffer.ByteBuf}
  * into a decoded {@link io.netty.buffer.ByteBuf} and vice versa.
- *
- * @apiviz.exclude OneToOne(Encoder|Decoder)$
  */
 package io.netty.handler.codec.base64;

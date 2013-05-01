@@ -19,13 +19,12 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-
-import java.net.InetSocketAddress;
 
 /**
  * Echoes back any received data from a client.
@@ -40,13 +39,13 @@ public class EchoServer {
 
     public void run() throws Exception {
         // Configure the server.
-        ServerBootstrap b = new ServerBootstrap();
+        EventLoopGroup bossGroup = new NioEventLoopGroup();
+        EventLoopGroup workerGroup = new NioEventLoopGroup();
         try {
-            b.group(new NioEventLoopGroup(), new NioEventLoopGroup())
+            ServerBootstrap b = new ServerBootstrap();
+            b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
              .option(ChannelOption.SO_BACKLOG, 100)
-             .localAddress(new InetSocketAddress(port))
-             .childOption(ChannelOption.TCP_NODELAY, true)
              .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new ChannelInitializer<SocketChannel>() {
                  @Override
@@ -58,13 +57,14 @@ public class EchoServer {
              });
 
             // Start the server.
-            ChannelFuture f = b.bind().sync();
+            ChannelFuture f = b.bind(port).sync();
 
             // Wait until the server socket is closed.
             f.channel().closeFuture().sync();
         } finally {
             // Shut down all event loops to terminate all threads.
-            b.shutdown();
+            bossGroup.shutdownGracefully();
+            workerGroup.shutdownGracefully();
         }
     }
 

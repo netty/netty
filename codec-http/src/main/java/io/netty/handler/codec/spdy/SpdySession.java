@@ -15,19 +15,19 @@
  */
 package io.netty.handler.codec.spdy;
 
+import io.netty.util.internal.PlatformDependent;
+
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 final class SpdySession {
 
-    private final Map<Integer, StreamState> activeStreams =
-        new ConcurrentHashMap<Integer, StreamState>();
+    private final Map<Integer, StreamState> activeStreams = PlatformDependent.newConcurrentHashMap();
 
     int numActiveStreams() {
         return activeStreams.size();

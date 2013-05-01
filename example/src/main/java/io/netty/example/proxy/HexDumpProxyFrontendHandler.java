@@ -22,6 +22,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
 public class HexDumpProxyFrontendHandler extends ChannelInboundByteHandlerAdapter {
@@ -38,25 +39,22 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundByteHandlerAdapte
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        // TODO: Suspend incoming traffic until connected to the remote host.
-        //       Currently, we just keep the inbound traffic in the client channel's outbound buffer.
         final Channel inboundChannel = ctx.channel();
 
         // Start the connection attempt.
         Bootstrap b = new Bootstrap();
         b.group(inboundChannel.eventLoop())
          .channel(NioSocketChannel.class)
-         .remoteAddress(remoteHost, remotePort)
-         .handler(new HexDumpProxyBackendHandler(inboundChannel));
-
-        ChannelFuture f = b.connect();
+         .handler(new HexDumpProxyBackendHandler(inboundChannel))
+         .option(ChannelOption.AUTO_READ, false);
+        ChannelFuture f = b.connect(remoteHost, remotePort);
         outboundChannel = f.channel();
         f.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.isSuccess()) {
-                    // Connection attempt succeeded:
-                    // TODO: Begin to accept incoming traffic.
+                    // connection complete start to read first data
+                    inboundChannel.read();
                 } else {
                     // Close the connection if the connection attempt has failed.
                     inboundChannel.close();
@@ -66,11 +64,21 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundByteHandlerAdapte
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+    public void inboundBufferUpdated(final ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         ByteBuf out = outboundChannel.outboundByteBuffer();
         out.writeBytes(in);
         if (outboundChannel.isActive()) {
-            outboundChannel.flush();
+            outboundChannel.flush().addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    if (future.isSuccess()) {
+                        // was able to flush out data, start to read the next chunk
+                        ctx.channel().read();
+                    } else {
+                        future.channel().close();
+                    }
+                }
+            });
         }
     }
 

@@ -15,12 +15,12 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.handler.codec.http.CookieEncoderUtil.*;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+
+import static io.netty.handler.codec.http.CookieEncoderUtil.*;
 
 /**
  * Encodes server-side {@link Cookie}s into HTTP header values.  This encoder can encode
@@ -32,9 +32,6 @@ import java.util.List;
  * </pre>
  *
  * @see CookieDecoder
- *
- * @apiviz.stereotype utility
- * @apiviz.has        io.netty.handler.codec.http.Cookie oneway - - encodes
  */
 public final class ServerCookieEncoder {
 

@@ -59,7 +59,7 @@ public final class SwappedByteBuf implements ByteBuf {
 
     @Override
     public ByteBuf unwrap() {
-        return buf;
+        return buf.unwrap();
     }
 
     @Override
@@ -137,13 +137,35 @@ public final class SwappedByteBuf implements ByteBuf {
     }
 
     @Override
-    public boolean readable() {
-        return buf.readable();
+    public boolean isReadable() {
+        return buf.isReadable();
     }
 
     @Override
+    @Deprecated
+    public boolean readable() {
+        return buf.isReadable();
+    }
+
+    @Override
+    public boolean isReadable(int size) {
+        return buf.isReadable(size);
+    }
+
+    @Override
+    public boolean isWritable() {
+        return buf.isWritable();
+    }
+
+    @Override
+    @Deprecated
     public boolean writable() {
-        return buf.writable();
+        return buf.isWritable();
+    }
+
+    @Override
+    public boolean isWritable(int size) {
+        return buf.isWritable(size);
     }
 
     @Override
@@ -189,14 +211,21 @@ public final class SwappedByteBuf implements ByteBuf {
     }
 
     @Override
-    public ByteBuf ensureWritableBytes(int writableBytes) {
-        buf.ensureWritableBytes(writableBytes);
+    public ByteBuf ensureWritable(int writableBytes) {
+        buf.ensureWritable(writableBytes);
         return this;
     }
 
     @Override
-    public int ensureWritableBytes(int minWritableBytes, boolean force) {
-        return buf.ensureWritableBytes(minWritableBytes, force);
+    @Deprecated
+    public ByteBuf ensureWritableBytes(int minWritableBytes) {
+        buf.ensureWritable(minWritableBytes);
+        return this;
+    }
+
+    @Override
+    public int ensureWritable(int minWritableBytes, boolean force) {
+        return buf.ensureWritable(minWritableBytes, force);
     }
 
     @Override
@@ -216,7 +245,7 @@ public final class SwappedByteBuf implements ByteBuf {
 
     @Override
     public short getShort(int index) {
-        return ByteBufUtil.swapShort(buf.getShort(index));
+        return BufUtil.swapShort(buf.getShort(index));
     }
 
     @Override
@@ -226,7 +255,7 @@ public final class SwappedByteBuf implements ByteBuf {
 
     @Override
     public int getMedium(int index) {
-        return ByteBufUtil.swapMedium(buf.getMedium(index));
+        return BufUtil.swapMedium(buf.getMedium(index));
     }
 
     @Override
@@ -236,7 +265,7 @@ public final class SwappedByteBuf implements ByteBuf {
 
     @Override
     public int getInt(int index) {
-        return ByteBufUtil.swapInt(buf.getInt(index));
+        return BufUtil.swapInt(buf.getInt(index));
     }
 
     @Override
@@ -246,7 +275,7 @@ public final class SwappedByteBuf implements ByteBuf {
 
     @Override
     public long getLong(int index) {
-        return ByteBufUtil.swapLong(buf.getLong(index));
+        return BufUtil.swapLong(buf.getLong(index));
     }
 
     @Override
@@ -325,25 +354,25 @@ public final class SwappedByteBuf implements ByteBuf {
 
     @Override
     public ByteBuf setShort(int index, int value) {
-        buf.setShort(index, ByteBufUtil.swapShort((short) value));
+        buf.setShort(index, BufUtil.swapShort((short) value));
         return this;
     }
 
     @Override
     public ByteBuf setMedium(int index, int value) {
-        buf.setMedium(index, ByteBufUtil.swapMedium(value));
+        buf.setMedium(index, BufUtil.swapMedium(value));
         return this;
     }
 
     @Override
     public ByteBuf setInt(int index, int value) {
-        buf.setInt(index, ByteBufUtil.swapInt(value));
+        buf.setInt(index, BufUtil.swapInt(value));
         return this;
     }
 
     @Override
     public ByteBuf setLong(int index, long value) {
-        buf.setLong(index, ByteBufUtil.swapLong(value));
+        buf.setLong(index, BufUtil.swapLong(value));
         return this;
     }
 
@@ -434,7 +463,7 @@ public final class SwappedByteBuf implements ByteBuf {
 
     @Override
     public short readShort() {
-        return ByteBufUtil.swapShort(buf.readShort());
+        return BufUtil.swapShort(buf.readShort());
     }
 
     @Override
@@ -444,7 +473,7 @@ public final class SwappedByteBuf implements ByteBuf {
 
     @Override
     public int readMedium() {
-        return ByteBufUtil.swapMedium(buf.readMedium());
+        return BufUtil.swapMedium(buf.readMedium());
     }
 
     @Override
@@ -454,7 +483,7 @@ public final class SwappedByteBuf implements ByteBuf {
 
     @Override
     public int readInt() {
-        return ByteBufUtil.swapInt(buf.readInt());
+        return BufUtil.swapInt(buf.readInt());
     }
 
     @Override
@@ -464,7 +493,7 @@ public final class SwappedByteBuf implements ByteBuf {
 
     @Override
     public long readLong() {
-        return ByteBufUtil.swapLong(buf.readLong());
+        return BufUtil.swapLong(buf.readLong());
     }
 
     @Override
@@ -559,25 +588,25 @@ public final class SwappedByteBuf implements ByteBuf {
 
     @Override
     public ByteBuf writeShort(int value) {
-        buf.writeShort(ByteBufUtil.swapShort((short) value));
+        buf.writeShort(BufUtil.swapShort((short) value));
         return this;
     }
 
     @Override
     public ByteBuf writeMedium(int value) {
-        buf.writeMedium(ByteBufUtil.swapMedium(value));
+        buf.writeMedium(BufUtil.swapMedium(value));
         return this;
     }
 
     @Override
     public ByteBuf writeInt(int value) {
-        buf.writeInt(ByteBufUtil.swapInt(value));
+        buf.writeInt(BufUtil.swapInt(value));
         return this;
     }
 
     @Override
     public ByteBuf writeLong(long value) {
-        buf.writeLong(ByteBufUtil.swapLong(value));
+        buf.writeLong(BufUtil.swapLong(value));
         return this;
     }
 
@@ -765,6 +794,16 @@ public final class SwappedByteBuf implements ByteBuf {
     }
 
     @Override
+    public boolean hasMemoryAddress() {
+        return buf.hasMemoryAddress();
+    }
+
+    @Override
+    public long memoryAddress() {
+        return buf.memoryAddress();
+    }
+
+    @Override
     public String toString(Charset charset) {
         return buf.toString(charset);
     }
@@ -787,13 +826,30 @@ public final class SwappedByteBuf implements ByteBuf {
     }
 
     @Override
-    public boolean isFreed() {
-        return buf.isFreed();
+    public int refCnt() {
+        return buf.refCnt();
     }
 
     @Override
-    public void free() {
-        buf.free();
+    public ByteBuf retain() {
+        buf.retain();
+        return this;
+    }
+
+    @Override
+    public ByteBuf retain(int increment) {
+        buf.retain(increment);
+        return this;
+    }
+
+    @Override
+    public boolean release() {
+        return buf.release();
+    }
+
+    @Override
+    public boolean release(int decrement) {
+        return buf.release(decrement);
     }
 
     @Override
@@ -807,14 +863,14 @@ public final class SwappedByteBuf implements ByteBuf {
             return true;
         }
         if (obj instanceof ByteBuf) {
-            return ByteBufUtil.equals(this, (ByteBuf) obj);
+            return BufUtil.equals(this, (ByteBuf) obj);
         }
         return false;
     }
 
     @Override
     public int compareTo(ByteBuf buffer) {
-        return ByteBufUtil.compare(this, buffer);
+        return BufUtil.compare(this, buffer);
     }
 
     @Override

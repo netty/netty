@@ -16,6 +16,7 @@
 package io.netty.handler.codec.socks;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 
@@ -33,8 +34,8 @@ public class SocksInitRequestDecoder extends ReplayingDecoder<SocksInitRequestDe
         return name;
     }
 
-    private final List<SocksMessage.AuthScheme> authSchemes = new ArrayList<SocksMessage.AuthScheme>();
-    private SocksMessage.ProtocolVersion version;
+    private final List<SocksAuthScheme> authSchemes = new ArrayList<SocksAuthScheme>();
+    private SocksProtocolVersion version;
     private byte authSchemeNum;
     private SocksRequest msg = SocksCommonUtils.UNKNOWN_SOCKS_REQUEST;
 
@@ -43,11 +44,11 @@ public class SocksInitRequestDecoder extends ReplayingDecoder<SocksInitRequestDe
     }
 
     @Override
-    public Object decode(ChannelHandlerContext ctx, ByteBuf byteBuf) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf, MessageBuf<Object> out) throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
-                version = SocksMessage.ProtocolVersion.fromByte(byteBuf.readByte());
-                if (version != SocksMessage.ProtocolVersion.SOCKS5) {
+                version = SocksProtocolVersion.fromByte(byteBuf.readByte());
+                if (version != SocksProtocolVersion.SOCKS5) {
                     break;
                 }
                 checkpoint(State.READ_AUTH_SCHEMES);
@@ -56,14 +57,14 @@ public class SocksInitRequestDecoder extends ReplayingDecoder<SocksInitRequestDe
                 authSchemes.clear();
                 authSchemeNum = byteBuf.readByte();
                 for (int i = 0; i < authSchemeNum; i++) {
-                    authSchemes.add(SocksMessage.AuthScheme.fromByte(byteBuf.readByte()));
+                    authSchemes.add(SocksAuthScheme.fromByte(byteBuf.readByte()));
                 }
                 msg = new SocksInitRequest(authSchemes);
                 break;
             }
         }
         ctx.pipeline().remove(this);
-        return msg;
+        out.add(msg);
     }
 
     enum State {

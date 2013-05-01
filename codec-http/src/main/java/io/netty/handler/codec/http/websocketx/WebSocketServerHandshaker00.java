@@ -19,20 +19,16 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelInboundByteHandler;
+import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.DefaultHttpResponse;
-import io.netty.handler.codec.http.HttpChunkAggregator;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpHeaders.Values;
-import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpRequestDecoder;
-import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 
 import java.util.regex.Pattern;
 
@@ -51,8 +47,6 @@ import static io.netty.handler.codec.http.HttpVersion.*;
  * </p>
  */
 public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
-
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketServerHandshaker00.class);
 
     private static final Pattern BEGINNING_DIGIT = Pattern.compile("[^0-9]");
     private static final Pattern BEGINNING_SPACE = Pattern.compile("[^ ]");
@@ -112,91 +106,68 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      *
      * 8jKS'y:G*Co,Wxa-
      * </pre>
-     *
-     * @param channel
-     *            Channel
-     * @param req
-     *            HTTP request
      */
     @Override
-    public ChannelFuture handshake(Channel channel, HttpRequest req, ChannelPromise promise) {
-
-        if (logger.isDebugEnabled()) {
-            logger.debug(String.format("Channel %s WS Version 00 server handshake", channel.id()));
-        }
+    protected FullHttpResponse newHandshakeResponse(FullHttpRequest req, HttpHeaders headers) {
 
         // Serve the WebSocket handshake request.
-        if (!Values.UPGRADE.equalsIgnoreCase(req.getHeader(CONNECTION))
-                || !WEBSOCKET.equalsIgnoreCase(req.getHeader(Names.UPGRADE))) {
+        if (!Values.UPGRADE.equalsIgnoreCase(req.headers().get(CONNECTION))
+                || !WEBSOCKET.equalsIgnoreCase(req.headers().get(Names.UPGRADE))) {
             throw new WebSocketHandshakeException("not a WebSocket handshake request: missing upgrade");
         }
 
         // Hixie 75 does not contain these headers while Hixie 76 does
-        boolean isHixie76 = req.containsHeader(SEC_WEBSOCKET_KEY1) && req.containsHeader(SEC_WEBSOCKET_KEY2);
+        boolean isHixie76 = req.headers().contains(SEC_WEBSOCKET_KEY1) && req.headers().contains(SEC_WEBSOCKET_KEY2);
 
         // Create the WebSocket handshake response.
-        HttpResponse res = new DefaultHttpResponse(HTTP_1_1, new HttpResponseStatus(101,
+        FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, new HttpResponseStatus(101,
                 isHixie76 ? "WebSocket Protocol Handshake" : "Web Socket Protocol Handshake"));
-        res.addHeader(Names.UPGRADE, WEBSOCKET);
-        res.addHeader(CONNECTION, Values.UPGRADE);
+        if (headers != null) {
+            res.headers().add(headers);
+        }
 
-        // Fill in the headers and contents depending on handshake method.
+        res.headers().add(Names.UPGRADE, WEBSOCKET);
+        res.headers().add(CONNECTION, Values.UPGRADE);
+
+        // Fill in the headers and contents depending on handshake getMethod.
         if (isHixie76) {
-            // New handshake method with a challenge:
-            res.addHeader(SEC_WEBSOCKET_ORIGIN, req.getHeader(ORIGIN));
-            res.addHeader(SEC_WEBSOCKET_LOCATION, getWebSocketUrl());
-            String subprotocols = req.getHeader(SEC_WEBSOCKET_PROTOCOL);
+            // New handshake getMethod with a challenge:
+            res.headers().add(SEC_WEBSOCKET_ORIGIN, req.headers().get(ORIGIN));
+            res.headers().add(SEC_WEBSOCKET_LOCATION, uri());
+            String subprotocols = req.headers().get(SEC_WEBSOCKET_PROTOCOL);
             if (subprotocols != null) {
                 String selectedSubprotocol = selectSubprotocol(subprotocols);
                 if (selectedSubprotocol == null) {
                     throw new WebSocketHandshakeException("Requested subprotocol(s) not supported: " + subprotocols);
                 } else {
-                    res.addHeader(SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
+                    res.headers().add(SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
                     setSelectedSubprotocol(selectedSubprotocol);
                 }
             }
 
             // Calculate the answer of the challenge.
-            String key1 = req.getHeader(SEC_WEBSOCKET_KEY1);
-            String key2 = req.getHeader(SEC_WEBSOCKET_KEY2);
+            String key1 = req.headers().get(SEC_WEBSOCKET_KEY1);
+            String key2 = req.headers().get(SEC_WEBSOCKET_KEY2);
             int a = (int) (Long.parseLong(BEGINNING_DIGIT.matcher(key1).replaceAll("")) /
                            BEGINNING_SPACE.matcher(key1).replaceAll("").length());
             int b = (int) (Long.parseLong(BEGINNING_DIGIT.matcher(key2).replaceAll("")) /
                            BEGINNING_SPACE.matcher(key2).replaceAll("").length());
-            long c = req.getContent().readLong();
+            long c = req.content().readLong();
             ByteBuf input = Unpooled.buffer(16);
             input.writeInt(a);
             input.writeInt(b);
             input.writeLong(c);
-            ByteBuf output = Unpooled.wrappedBuffer(WebSocketUtil.md5(input.array()));
-            res.setContent(output);
+            res.content().writeBytes(WebSocketUtil.md5(input.array()));
         } else {
-            // Old Hixie 75 handshake method with no challenge:
-            res.addHeader(WEBSOCKET_ORIGIN, req.getHeader(ORIGIN));
-            res.addHeader(WEBSOCKET_LOCATION, getWebSocketUrl());
-            String protocol = req.getHeader(WEBSOCKET_PROTOCOL);
+            // Old Hixie 75 handshake getMethod with no challenge:
+            res.headers().add(WEBSOCKET_ORIGIN, req.headers().get(ORIGIN));
+            res.headers().add(WEBSOCKET_LOCATION, uri());
+            String protocol = req.headers().get(WEBSOCKET_PROTOCOL);
             if (protocol != null) {
-                res.addHeader(WEBSOCKET_PROTOCOL, selectSubprotocol(protocol));
+                res.headers().add(WEBSOCKET_PROTOCOL, selectSubprotocol(protocol));
             }
         }
-
-        // Upgrade the connection and send the handshake response.
-        channel.write(res, promise);
-        promise.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                ChannelPipeline p = future.channel().pipeline();
-                if (p.get(HttpChunkAggregator.class) != null) {
-                    p.remove(HttpChunkAggregator.class);
-                }
-                p.get(HttpRequestDecoder.class).replace("wsdecoder",
-                        new WebSocket00FrameDecoder(getMaxFramePayloadLength()));
-
-                p.replace(HttpResponseEncoder.class, "wsencoder", new WebSocket00FrameEncoder());
-            }
-        });
-
-        return promise;
+        return res;
     }
 
     /**
@@ -210,5 +181,15 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
     @Override
     public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise promise) {
         return channel.write(frame, promise);
+    }
+
+    @Override
+    protected ChannelInboundByteHandler newWebsocketDecoder() {
+        return new WebSocket00FrameDecoder(maxFramePayloadLength());
+    }
+
+    @Override
+    protected ChannelOutboundMessageHandler<WebSocketFrame> newWebSocketEncoder() {
+        return new WebSocket00FrameEncoder();
     }
 }

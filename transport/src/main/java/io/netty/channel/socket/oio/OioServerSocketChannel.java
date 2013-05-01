@@ -19,11 +19,10 @@ import io.netty.buffer.BufType;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
-import io.netty.channel.socket.DefaultServerSocketChannelConfig;
+import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.ServerSocketChannelConfig;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -57,7 +56,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
 
     final ServerSocket socket;
     final Lock shutdownLock = new ReentrantLock();
-    private final ServerSocketChannelConfig config;
+    private final OioServerSocketChannelConfig config;
 
     /**
      * Create a new instance with an new {@link Socket}
@@ -106,9 +105,13 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
                 }
             }
         }
-
         this.socket = socket;
-        config = new DefaultServerSocketChannelConfig(this, socket);
+        config = new DefaultOioServerSocketChannelConfig(this, socket);
+    }
+
+    @Override
+    public InetSocketAddress localAddress() {
+        return (InetSocketAddress) super.localAddress();
     }
 
     @Override
@@ -117,7 +120,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    public ServerSocketChannelConfig config() {
+    public OioServerSocketChannelConfig config() {
         return config;
     }
 

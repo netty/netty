@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.0.0.Beta1-SNAPSHOT</version>
+  <version>4.0.0.CR2-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>http://netty.io/</url>
@@ -68,7 +68,21 @@
   </developers>
 
   <properties>
-    <jboss.marshalling.version>1.3.14.GA</jboss.marshalling.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <jboss.marshalling.version>1.3.17.GA</jboss.marshalling.version>
+    <test.jvm.argLine>
+      -server 
+      -Dio.netty.resourceLeakDetection
+      -dsa -da -ea:io.netty...
+      -XX:+AggressiveOpts
+      -XX:+TieredCompilation
+      -XX:+UseBiasedLocking
+      -XX:+UseFastAccessorMethods
+      -XX:+UseStringCache
+      -XX:+OptimizeStringConcat
+      -XX:+HeapDumpOnOutOfMemoryError
+    </test.jvm.argLine>
   </properties>
  
   <modules>
@@ -82,15 +96,25 @@
     <module>transport-sctp</module>
     <module>transport-udt</module>
     <module>handler</module>
-    <module>metrics-yammer</module>
     <module>example</module>
     <module>testsuite</module>
+    <module>testsuite-osgi</module>
+    <module>microbench</module>
     <module>all</module>
     <module>tarball</module>
   </modules>
 
   <dependencyManagement>
     <dependencies>
+      <!-- Byte code generator - completely optional -->
+      <dependency>
+        <groupId>org.javassist</groupId>
+        <artifactId>javassist</artifactId>
+        <version>3.17.1-GA</version>
+        <scope>compile</scope>
+        <optional>true</optional>
+      </dependency>
+
       <!-- JBoss Marshalling - completely optional -->
       <dependency>
         <groupId>org.jboss.marshalling</groupId>
@@ -103,7 +127,12 @@
       <dependency>
         <groupId>com.google.protobuf</groupId>
         <artifactId>protobuf-java</artifactId>
-        <version>2.4.1</version>
+        <version>2.5.0</version>
+      </dependency>
+      <dependency>
+        <groupId>com.jcraft</groupId>
+        <artifactId>jzlib</artifactId>
+          <version>1.1.2</version>
       </dependency>
 
       <dependency>
@@ -115,7 +144,7 @@
       <dependency>
         <groupId>com.barchart.udt</groupId>
         <artifactId>barchart-udt-bundle</artifactId>
-        <version>2.2.0</version>
+        <version>2.2.6</version>
       </dependency>
 
       <dependency>
@@ -125,30 +154,14 @@
       </dependency>
 
       <dependency>
-        <groupId>org.osgi</groupId>
-        <artifactId>org.osgi.core</artifactId>
-        <version>4.3.0</version>
-      </dependency>
-      <dependency>
-        <groupId>org.osgi</groupId>
-        <artifactId>org.osgi.compendium</artifactId>
-        <version>4.3.0</version>
-      </dependency>
-
-      <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
-        <version>1.6.5</version>
+        <version>1.7.4</version>
       </dependency>
       <dependency>
         <groupId>commons-logging</groupId>
         <artifactId>commons-logging</artifactId>
         <version>1.1.1</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.logging</groupId>
-        <artifactId>jboss-logging-spi</artifactId>
-        <version>2.1.2.GA</version>
       </dependency>
       <dependency>
         <groupId>log4j</groupId>
@@ -207,11 +220,18 @@
   </dependencyManagement>
 
   <dependencies>
+    <!-- Enable Javassist support for all test runs -->
+    <dependency>
+      <groupId>org.javassist</groupId>
+      <artifactId>javassist</artifactId>
+      <scope>test</scope>
+    </dependency>
+
     <!-- Testing frameworks and related dependencies -->
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.10</version>
+      <version>4.11</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -229,13 +249,13 @@
     <dependency>
       <groupId>org.jmock</groupId>
       <artifactId>jmock-junit4</artifactId>
-      <version>2.5.1</version>
+      <version>2.6.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
-      <version>1.0.9</version>
+      <version>1.0.10</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -244,7 +264,7 @@
     <plugins>
       <plugin>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>1.1</version>
+        <version>1.2</version>
         <executions>
           <execution>
             <id>enforce-tools</id>
@@ -259,7 +279,7 @@
                   <version>[1.7.0,)</version>
                 </requireJavaVersion>
                 <requireMavenVersion>
-                  <version>[3.0.2,)</version>
+                  <version>[3.0.5,)</version>
                 </requireMavenVersion>
               </rules>
             </configuration>
@@ -268,15 +288,25 @@
       </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>2.5.1</version>
+        <version>3.0</version>
         <configuration>
-          <encoding>UTF-8</encoding>
+          <compilerVersion>1.7</compilerVersion>
+          <fork>true</fork>
           <source>1.6</source>
           <target>1.6</target>
           <debug>true</debug>
           <optimize>true</optimize>
           <showDeprecation>true</showDeprecation>
           <showWarnings>true</showWarnings>
+          <compilerArgument>-Xlint:-options</compilerArgument>
+          <!-- XXX: maven-release-plugin complains - MRELEASE-715 -->
+          <!--
+          <compilerArguments>
+            <Xlint:-options />
+            <Xlint:unchecked />
+            <Xlint:deprecation />
+          </compilerArguments>
+          -->
         </configuration>
       </plugin>
       <plugin>
@@ -284,7 +314,7 @@
              be used even when compiling with java 1.7+ -->
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>animal-sniffer-maven-plugin</artifactId>
-        <version>1.8</version>
+        <version>1.9</version>
         <configuration>
           <signature>
             <groupId>org.codehaus.mojo.signature</groupId>
@@ -324,7 +354,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>2.9.1</version>
+        <version>2.10</version>
         <executions>
           <execution>
             <id>check-style</id>
@@ -338,6 +368,7 @@
               <failsOnError>true</failsOnError>
               <failOnViolation>true</failOnViolation>
               <configLocation>io/netty/checkstyle.xml</configLocation>
+              <includeTestSourceDirectory>true</includeTestSourceDirectory>
             </configuration>
           </execution>
         </executions>
@@ -345,13 +376,12 @@
           <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>netty-build</artifactId>
-            <version>13</version>
+            <version>19</version>
           </dependency>
         </dependencies>
       </plugin>
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.12</version>
         <configuration>
           <includes>
              <include>**/*Test*.java</include>
@@ -362,22 +392,19 @@
             <exclude>**/TestUtil*</exclude>
           </excludes>
           <runOrder>random</runOrder>
-          <argLine>
-            -server 
-            -dsa -da -ea:io.netty...
-            -XX:+AggressiveOpts
-            -XX:+TieredCompilation
-            -XX:+UseBiasedLocking
-            -XX:+UseFastAccessorMethods
-            -XX:+UseStringCache
-            -XX:+OptimizeStringConcat
-            -XX:+HeapDumpOnOutOfMemoryError
-          </argLine>
+          <argLine>${test.jvm.argLine}</argLine>
         </configuration>
       </plugin>
+      <!-- always produce osgi bundles -->
       <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <version>2.3.7</version>
+        <extensions>true</extensions>
+      </plugin>             
+       <plugin>
         <artifactId>maven-source-plugin</artifactId>
-        <version>2.1.2</version>
+        <version>2.2.1</version>
         <executions>
           <execution>
             <id>attach-sources</id>
@@ -389,11 +416,9 @@
       </plugin>
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>2.8.1</version>
+        <version>2.9</version>
         <configuration>
           <detectOfflineLinks>false</detectOfflineLinks>
-          <charset>UTF-8</charset>
-          <docencoding>UTF-8</docencoding>
           <breakiterator>true</breakiterator>
           <version>false</version>
           <author>false</author>
@@ -409,26 +434,37 @@
       </plugin>
       <plugin>
         <artifactId>maven-release-plugin</artifactId>
-        <version>2.3.2</version>
+        <version>2.4</version>
         <configuration>
           <useReleaseProfile>false</useReleaseProfile>
-          <arguments>-P release,sonatype-oss-release,full</arguments>
+          <arguments>-P release,sonatype-oss-release,full,no-osgi</arguments>
           <autoVersionSubmodules>true</autoVersionSubmodules>
+          <allowTimestampedSnapshots>false</allowTimestampedSnapshots>
           <tagNameFormat>netty-@{project.version}</tagNameFormat>
         </configuration>
       </plugin>
-       
+      
     </plugins>
 
     <pluginManagement>
       <plugins>
+        <!-- keep surefire and failsafe in sync -->
+        <plugin>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>2.14</version>
+        </plugin>
+        <!-- keep surefire and failsafe in sync -->
+        <plugin>
+          <artifactId>maven-failsafe-plugin</artifactId>
+          <version>2.14</version>
+        </plugin>
         <plugin>
           <artifactId>maven-clean-plugin</artifactId>
           <version>2.5</version>
         </plugin>
         <plugin>
           <artifactId>maven-resources-plugin</artifactId>
-          <version>2.5</version>
+          <version>2.6</version>
         </plugin>
         <plugin>
           <artifactId>maven-jar-plugin</artifactId>
@@ -436,11 +472,11 @@
         </plugin>
         <plugin>
           <artifactId>maven-dependency-plugin</artifactId>
-          <version>2.4</version>
+          <version>2.7</version>
         </plugin>
         <plugin>
           <artifactId>maven-assembly-plugin</artifactId>
-          <version>2.3</version>
+          <version>2.4</version>
         </plugin>
         <plugin>
           <artifactId>maven-jxr-plugin</artifactId>
@@ -468,11 +504,6 @@
           <artifactId>build-helper-maven-plugin</artifactId>
           <version>1.7</version>
         </plugin>               
-        <plugin>
-          <groupId>org.apache.felix</groupId>
-          <artifactId>maven-bundle-plugin</artifactId>
-          <version>2.3.7</version>
-        </plugin>             
 
         <!-- Workaround for the 'M2E plugin execution not covered' problem.
              See: http://wiki.eclipse.org/M2E_plugin_execution_not_covered -->

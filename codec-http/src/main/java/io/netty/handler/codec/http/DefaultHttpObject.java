@@ -19,7 +19,7 @@ import io.netty.handler.codec.DecoderResult;
 
 public class DefaultHttpObject implements HttpObject {
 
-    private DecoderResult decodeResult = DecoderResult.SUCCESS;
+    private DecoderResult decoderResult = DecoderResult.SUCCESS;
 
     protected DefaultHttpObject() {
         // Disallow direct instantiation
@@ -27,14 +27,14 @@ public class DefaultHttpObject implements HttpObject {
 
     @Override
     public DecoderResult getDecoderResult() {
-        return decodeResult;
+        return decoderResult;
     }
 
     @Override
-    public void setDecoderResult(DecoderResult result) {
-        if (result == null) {
-            throw new NullPointerException("result");
+    public void setDecoderResult(DecoderResult decoderResult) {
+        if (decoderResult == null) {
+            throw new NullPointerException("decoderResult");
         }
-        decodeResult = result;
+        this.decoderResult = decoderResult;
     }
 }

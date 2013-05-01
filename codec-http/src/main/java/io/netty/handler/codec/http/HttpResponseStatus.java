@@ -19,7 +19,6 @@ package io.netty.handler.codec.http;
  * The response code and its description of HTTP or its derived protocols, such as
  * <a href="http://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
  * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
- * @apiviz.exclude
  */
 public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
 
@@ -283,7 +282,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
 
     /**
      * Returns the {@link HttpResponseStatus} represented by the specified code.
-     * If the specified code is a standard HTTP status code, a cached instance
+     * If the specified code is a standard HTTP getStatus code, a cached instance
      * will be returned.  Otherwise, a new instance will be returned.
      */
     public static HttpResponseStatus valueOf(int code) {
@@ -445,22 +444,22 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     }
 
     /**
-     * Returns the code of this status.
+     * Returns the code of this getStatus.
      */
-    public int getCode() {
+    public int code() {
         return code;
     }
 
     /**
-     * Returns the reason phrase of this status.
+     * Returns the reason phrase of this getStatus.
      */
-    public String getReasonPhrase() {
+    public String reasonPhrase() {
         return reasonPhrase;
     }
 
     @Override
     public int hashCode() {
-        return getCode();
+        return code();
     }
 
     @Override
@@ -469,12 +468,12 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
             return false;
         }
 
-        return getCode() == ((HttpResponseStatus) o).getCode();
+        return code() == ((HttpResponseStatus) o).code();
     }
 
     @Override
     public int compareTo(HttpResponseStatus o) {
-        return getCode() - o.getCode();
+        return code() - o.code();
     }
 
     @Override

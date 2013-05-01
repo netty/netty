@@ -28,12 +28,12 @@ import java.net.IDN;
  * @see SocksCmdRequestDecoder
  */
 public final class SocksCmdRequest extends SocksRequest {
-    private final CmdType cmdType;
-    private final AddressType addressType;
+    private final SocksCmdType cmdType;
+    private final SocksAddressType addressType;
     private final String host;
     private final int port;
 
-    public SocksCmdRequest(CmdType cmdType, AddressType addressType, String host, int port) {
+    public SocksCmdRequest(SocksCmdType cmdType, SocksAddressType addressType, String host, int port) {
         super(SocksRequestType.CMD);
         if (cmdType == null) {
             throw new NullPointerException("cmdType");
@@ -73,47 +73,47 @@ public final class SocksCmdRequest extends SocksRequest {
     }
 
     /**
-     * Returns the {@link CmdType} of this {@link SocksCmdRequest}
+     * Returns the {@link SocksCmdType} of this {@link SocksCmdRequest}
      *
-     * @return The {@link CmdType} of this {@link SocksCmdRequest}
+     * @return The {@link SocksCmdType} of this {@link SocksCmdRequest}
      */
-    public CmdType getCmdType() {
+    public SocksCmdType cmdType() {
         return cmdType;
     }
 
     /**
-     * Returns the {@link AddressType} of this {@link SocksCmdRequest}
+     * Returns the {@link SocksAddressType} of this {@link SocksCmdRequest}
      *
-     * @return The {@link AddressType} of this {@link SocksCmdRequest}
+     * @return The {@link SocksAddressType} of this {@link SocksCmdRequest}
      */
-    public AddressType getAddressType() {
+    public SocksAddressType addressType() {
         return addressType;
     }
 
     /**
-     * Returns host that is used as a parameter in {@link CmdType}
+     * Returns host that is used as a parameter in {@link SocksCmdType}
      *
-     * @return host that is used as a parameter in {@link CmdType}
+     * @return host that is used as a parameter in {@link SocksCmdType}
      */
-    public String getHost() {
+    public String host() {
         return IDN.toUnicode(host);
     }
 
     /**
-     * Returns port that is used as a parameter in {@link CmdType}
+     * Returns port that is used as a parameter in {@link SocksCmdType}
      *
-     * @return port that is used as a parameter in {@link CmdType}
+     * @return port that is used as a parameter in {@link SocksCmdType}
      */
-    public int getPort() {
+    public int port() {
         return port;
     }
 
     @Override
     public void encodeAsByteBuf(ByteBuf byteBuf) {
-        byteBuf.writeByte(getProtocolVersion().getByteValue());
-        byteBuf.writeByte(cmdType.getByteValue());
+        byteBuf.writeByte(protocolVersion().byteValue());
+        byteBuf.writeByte(cmdType.byteValue());
         byteBuf.writeByte(0x00);
-        byteBuf.writeByte(addressType.getByteValue());
+        byteBuf.writeByte(addressType.byteValue());
         switch (addressType) {
             case IPv4: {
                 byteBuf.writeBytes(NetUtil.createByteArrayFromIpAddressString(host));

@@ -52,7 +52,7 @@ public interface SpdySettingsFrame extends SpdyControlFrame {
      * Sets the value of the setting ID.
      * The ID must be positive and cannot exceed 16777215.
      */
-    void setValue(int id, int value);
+    SpdySettingsFrame setValue(int id, int value);
 
     /**
      * Sets the value of the setting ID.
@@ -60,13 +60,13 @@ public interface SpdySettingsFrame extends SpdyControlFrame {
      * Sets if the setting is persisted (should only be set by the client).
      * The ID must be positive and cannot exceed 16777215.
      */
-    void setValue(int id, int value, boolean persistVal, boolean persisted);
+    SpdySettingsFrame setValue(int id, int value, boolean persistVal, boolean persisted);
 
     /**
      * Removes the value of the setting ID.
      * Removes all persistence information for the setting.
      */
-    void removeValue(int id);
+    SpdySettingsFrame removeValue(int id);
 
     /**
      * Returns {@code true} if this setting should be persisted.
@@ -79,7 +79,7 @@ public interface SpdySettingsFrame extends SpdyControlFrame {
      * Sets if this setting should be persisted.
      * Has no effect if the setting ID has no value.
      */
-    void setPersistValue(int id, boolean persistValue);
+    SpdySettingsFrame setPersistValue(int id, boolean persistValue);
 
     /**
      * Returns {@code true} if this setting is persisted.
@@ -92,7 +92,7 @@ public interface SpdySettingsFrame extends SpdyControlFrame {
      * Sets if this setting is persisted.
      * Has no effect if the setting ID has no value.
      */
-    void setPersisted(int id, boolean persisted);
+    SpdySettingsFrame setPersisted(int id, boolean persisted);
 
     /**
      * Returns {@code true} if previously persisted settings should be cleared.
@@ -102,5 +102,5 @@ public interface SpdySettingsFrame extends SpdyControlFrame {
     /**
      * Sets if previously persisted settings should be cleared.
      */
-    void setClearPreviouslyPersistedSettings(boolean clear);
+    SpdySettingsFrame setClearPreviouslyPersistedSettings(boolean clear);
 }

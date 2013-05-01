@@ -16,6 +16,7 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -93,16 +94,16 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
     }
 
     @Override
-    public Object decodeLast(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+    public void decodeLast(ChannelHandlerContext ctx, ByteBuf in, MessageBuf<Object> out) throws Exception {
         try {
-            return decode(ctx, in);
+            decode(ctx, in, out);
         } finally {
             headerBlockDecompressor.end();
         }
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, MessageBuf<Object> out) throws Exception {
         switch(state) {
         case READ_COMMON_HEADER:
             state = readCommonHeader(buffer);
@@ -121,19 +122,20 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
                     if (streamID == 0) {
                         state = State.FRAME_ERROR;
                         fireProtocolException(ctx, "Received invalid data frame");
-                        return null;
+                        return;
                     }
 
                     SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(streamID);
                     spdyDataFrame.setLast((flags & SPDY_DATA_FLAG_FIN) != 0);
                     state = State.READ_COMMON_HEADER;
-                    return spdyDataFrame;
+                    out.add(spdyDataFrame);
+                    return;
                 }
                 // There are no length 0 control frames
                 state = State.READ_COMMON_HEADER;
             }
 
-            return null;
+            return;
 
         case READ_CONTROL_FRAME:
             try {
@@ -141,18 +143,19 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
                 if (frame != null) {
                     state = State.READ_COMMON_HEADER;
                 }
-                return frame;
+                out.add(frame);
+                return;
             } catch (IllegalArgumentException e) {
                 state = State.FRAME_ERROR;
                 fireInvalidControlFrameException(ctx);
             }
-            return null;
+            return;
 
         case READ_SETTINGS_FRAME:
             if (spdySettingsFrame == null) {
                 // Validate frame length against number of entries
                 if (buffer.readableBytes() < 4) {
-                    return null;
+                    return;
                 }
                 int numEntries = getUnsignedInt(buffer, buffer.readerIndex());
                 buffer.skipBytes(4);
@@ -162,7 +165,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
                 if ((length & 0x07) != 0 || length >> 3 != numEntries) {
                     state = State.FRAME_ERROR;
                     fireInvalidControlFrameException(ctx);
-                    return null;
+                    return;
                 }
 
                 spdySettingsFrame = new DefaultSpdySettingsFrame();
@@ -196,7 +199,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
                     state = State.FRAME_ERROR;
                     spdySettingsFrame = null;
                     fireInvalidControlFrameException(ctx);
-                    return null;
+                    return;
                 }
 
                 if (!spdySettingsFrame.isSet(ID)) {
@@ -211,9 +214,10 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
                 state = State.READ_COMMON_HEADER;
                 Object frame = spdySettingsFrame;
                 spdySettingsFrame = null;
-                return frame;
+                out.add(frame);
+                return;
             }
-            return null;
+            return;
 
         case READ_HEADER_BLOCK_FRAME:
             try {
@@ -223,15 +227,16 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
                         state = State.READ_COMMON_HEADER;
                         Object frame = spdyHeaderBlock;
                         spdyHeaderBlock = null;
-                        return frame;
+                        out.add(frame);
+                        return;
                     }
                     state = State.READ_HEADER_BLOCK;
                 }
-                return null;
+                return;
             } catch (IllegalArgumentException e) {
                 state = State.FRAME_ERROR;
                 fireInvalidControlFrameException(ctx);
-                return null;
+                return;
             }
 
         case READ_HEADER_BLOCK:
@@ -245,7 +250,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
                 spdyHeaderBlock = null;
                 decompressed = null;
                 ctx.fireExceptionCaught(e);
-                return null;
+                return;
             }
 
             if (spdyHeaderBlock != null && spdyHeaderBlock.isInvalid()) {
@@ -255,22 +260,24 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
                 if (length == 0) {
                     state = State.READ_COMMON_HEADER;
                 }
-                return frame;
+                out.add(frame);
+                return;
             }
 
             if (length == 0) {
                 Object frame = spdyHeaderBlock;
                 spdyHeaderBlock = null;
                 state = State.READ_COMMON_HEADER;
-                return frame;
+                out.add(frame);
+                return;
             }
-            return null;
+            return;
 
         case READ_DATA_FRAME:
             if (streamID == 0) {
                 state = State.FRAME_ERROR;
                 fireProtocolException(ctx, "Received invalid data frame");
-                return null;
+                return;
             }
 
             // Generate data frames that do not exceed maxChunkSize
@@ -278,18 +285,20 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
 
             // Wait until entire frame is readable
             if (buffer.readableBytes() < dataLength) {
-                return null;
+                return;
             }
 
-            SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(streamID);
-            spdyDataFrame.setData(buffer.readBytes(dataLength));
+            ByteBuf data = ctx.alloc().buffer(dataLength);
+            data.writeBytes(buffer, dataLength);
+            SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(streamID, data);
             length -= dataLength;
 
             if (length == 0) {
                 spdyDataFrame.setLast((flags & SPDY_DATA_FLAG_FIN) != 0);
                 state = State.READ_COMMON_HEADER;
             }
-            return spdyDataFrame;
+            out.add(spdyDataFrame);
+            return;
 
         case DISCARD_FRAME:
             int numBytes = Math.min(buffer.readableBytes(), length);
@@ -298,11 +307,11 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
             if (length == 0) {
                 state = State.READ_COMMON_HEADER;
             }
-            return null;
+            return;
 
         case FRAME_ERROR:
             buffer.skipBytes(buffer.readableBytes());
-            return null;
+            return;
 
         default:
             throw new Error("Shouldn't reach here.");
@@ -612,7 +621,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
             String name = new String(nameBytes, "UTF-8");
 
             // Check for identically named headers
-            if (spdyHeaderBlock.containsHeader(name)) {
+            if (spdyHeaderBlock.headers().contains(name)) {
                 spdyHeaderBlock.setInvalid();
                 return;
             }
@@ -637,7 +646,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
                     spdyHeaderBlock.setInvalid();
                     return;
                 } else {
-                    spdyHeaderBlock.addHeader(name, "");
+                    spdyHeaderBlock.headers().add(name, "");
                     numHeaders --;
                     this.headerSize = headerSize;
                     continue;
@@ -675,7 +684,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
                 String value = new String(valueBytes, offset, index - offset, "UTF-8");
 
                 try {
-                    spdyHeaderBlock.addHeader(name, value);
+                    spdyHeaderBlock.headers().add(name, value);
                 } catch (IllegalArgumentException e) {
                     // Name contains NULL or non-ascii characters
                     spdyHeaderBlock.setInvalid();

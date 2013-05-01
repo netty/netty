@@ -75,13 +75,13 @@
  * type.
  * <pre>
  * // The composite type is compatible with the component type.
- * ChannelBuffer message = ChannelBuffers.wrappedBuffer(header, body);
+ * {@link ByteBuf} message = {@link Unpooled}.wrappedBuffer(header, body);
  *
  * // Therefore, you can even create a composite by mixing a composite and an
  * // ordinary buffer.
- * ChannelBuffer messageWithFooter = ChannelBuffers.wrappedBuffer(message, footer);
+ * {@link ByteBuf} messageWithFooter = {@link Unpooled}.wrappedBuffer(message, footer);
  *
- * // Because the composite is still a ChannelBuffer, you can access its content
+ * // Because the composite is still a {@link ByteBuf}, you can access its content
  * // easily, and the accessor method will behave just like it's a single buffer
  * // even if the region you want to access spans over multiple components.  The
  * // unsigned integer being read here is located across body and footer.
@@ -96,13 +96,11 @@
  * difficult and inconvenient to calculate the length precisely.  It is just
  * like when you build a {@link java.lang.String}. You often estimate the length
  * of the resulting string and let {@link java.lang.StringBuffer} expand itself
- * on demand.  Netty allows you to do the same via a <em>dynamic</em> buffer
- * which is created by the
- * {@link io.netty.buffer.Unpooled#dynamicBuffer()} method.
+ * on demand.
  * <pre>
  * // A new dynamic buffer is created.  Internally, the actual buffer is created
  * // lazily to avoid potentially wasted memory space.
- * ChannelBuffer b = ChannelBuffers.dynamicBuffer(4);
+ * {@link ByteBuf} b = {@link Unpooled}.buffer(4);
  *
  * // When the first write attempt is made, the internal buffer is created with
  * // the specified initial capacity (4).
@@ -126,9 +124,5 @@
  * easier for a JVM to optimize the buffer access.  More complicated buffer
  * implementation is used only for sliced or composite buffers, and it performs
  * as well as {@link java.nio.ByteBuffer}.
- *
- * @apiviz.landmark
- * @apiviz.exclude ^java\.lang\.
- * @apiviz.exclude ^java\.io\.[^\.]+Stream$
  */
 package io.netty.buffer;

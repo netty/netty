@@ -17,18 +17,27 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundByteHandler;
+import io.netty.channel.ChannelOutboundMessageHandler;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpClientCodec;
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpRequestEncoder;
+import io.netty.handler.codec.http.HttpResponseDecoder;
 
 import java.net.URI;
-import java.util.Map;
 
 /**
  * Base class for web socket client handshake implementations
  */
 public abstract class WebSocketClientHandshaker {
 
-    private final URI webSocketUrl;
+    private final URI uri;
 
     private final WebSocketVersion version;
 
@@ -38,14 +47,14 @@ public abstract class WebSocketClientHandshaker {
 
     private String actualSubprotocol;
 
-    protected final Map<String, String> customHeaders;
+    protected final HttpHeaders customHeaders;
 
     private final int maxFramePayloadLength;
 
     /**
      * Base constructor
      *
-     * @param webSocketUrl
+     * @param uri
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
      * @param version
@@ -57,9 +66,9 @@ public abstract class WebSocketClientHandshaker {
      * @param maxFramePayloadLength
      *            Maximum length of a frame's payload
      */
-    protected WebSocketClientHandshaker(URI webSocketUrl, WebSocketVersion version, String subprotocol,
-                                        Map<String, String> customHeaders, int maxFramePayloadLength) {
-        this.webSocketUrl = webSocketUrl;
+    protected WebSocketClientHandshaker(URI uri, WebSocketVersion version, String subprotocol,
+                                        HttpHeaders customHeaders, int maxFramePayloadLength) {
+        this.uri = uri;
         this.version = version;
         expectedSubprotocol = subprotocol;
         this.customHeaders = customHeaders;
@@ -69,21 +78,21 @@ public abstract class WebSocketClientHandshaker {
     /**
      * Returns the URI to the web socket. e.g. "ws://myhost.com/path"
      */
-    public URI getWebSocketUrl() {
-        return webSocketUrl;
+    public URI uri() {
+        return uri;
     }
 
     /**
      * Version of the web socket specification that is being used
      */
-    public WebSocketVersion getVersion() {
+    public WebSocketVersion version() {
         return version;
     }
 
     /**
      * Returns the max length for any frame's payload
      */
-    public int getMaxFramePayloadLength() {
+    public int maxFramePayloadLength() {
         return maxFramePayloadLength;
     }
 
@@ -94,14 +103,14 @@ public abstract class WebSocketClientHandshaker {
         return handshakeComplete;
     }
 
-    protected void setHandshakeComplete() {
+    private void setHandshakeComplete() {
         handshakeComplete = true;
     }
 
     /**
      * Returns the CSV of requested subprotocol(s) sent to the server as specified in the constructor
      */
-    public String getExpectedSubprotocol() {
+    public String expectedSubprotocol() {
         return expectedSubprotocol;
     }
 
@@ -109,11 +118,11 @@ public abstract class WebSocketClientHandshaker {
      * Returns the subprotocol response sent by the server. Only available after end of handshake.
      * Null if no subprotocol was requested or confirmed by the server.
      */
-    public String getActualSubprotocol() {
+    public String actualSubprotocol() {
         return actualSubprotocol;
     }
 
-    protected void setActualSubprotocol(String actualSubprotocol) {
+    private void setActualSubprotocol(String actualSubprotocol) {
         this.actualSubprotocol = actualSubprotocol;
     }
 
@@ -138,7 +147,49 @@ public abstract class WebSocketClientHandshaker {
      * @param promise
      *            the {@link ChannelPromise} to be notified when the opening handshake is sent
      */
-    public abstract ChannelFuture handshake(Channel channel, ChannelPromise promise);
+    public final ChannelFuture handshake(Channel channel, final ChannelPromise promise) {
+        FullHttpRequest request =  newHandshakeRequest();
+        HttpResponseDecoder decoder = channel.pipeline().get(HttpResponseDecoder.class);
+        if (decoder == null) {
+            HttpClientCodec codec = channel.pipeline().get(HttpClientCodec.class);
+            if (codec == null) {
+               promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
+                       "a HttpResponseDecoder or HttpClientCodec"));
+               return promise;
+            }
+            codec.setSingleDecode(true);
+        } else {
+            decoder.setSingleDecode(true);
+        }
+        channel.write(request).addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) {
+                if (future.isSuccess()) {
+                    ChannelPipeline p = future.channel().pipeline();
+                    ChannelHandlerContext ctx = p.context(HttpRequestEncoder.class);
+                    if (ctx == null) {
+                        ctx = p.context(HttpClientCodec.class);
+                    }
+                    if (ctx == null) {
+                        promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
+                                "a HttpRequestEncoder or HttpClientCodec"));
+                        return;
+                    }
+                    p.addAfter(ctx.name(), "ws-encoder", newWebSocketEncoder());
+
+                    promise.setSuccess();
+                } else {
+                    promise.setFailure(future.cause());
+                }
+            }
+        });
+        return promise;
+    }
+
+    /**
+     * Returns a new {@link FullHttpRequest) which will be used for the handshake.
+     */
+    protected abstract FullHttpRequest newHandshakeRequest();
 
     /**
      * Validates and finishes the opening handshake initiated by {@link #handshake}}.
@@ -148,5 +199,42 @@ public abstract class WebSocketClientHandshaker {
      * @param response
      *            HTTP response containing the closing handshake details
      */
-    public abstract void finishHandshake(Channel channel, HttpResponse response);
+    public final void finishHandshake(Channel channel, FullHttpResponse response) {
+        verify(response);
+        setActualSubprotocol(response.headers().get(HttpHeaders.Names.SEC_WEBSOCKET_PROTOCOL));
+        setHandshakeComplete();
+
+        ChannelPipeline p = channel.pipeline();
+        ChannelHandlerContext ctx = p.context(HttpResponseDecoder.class);
+        if (ctx == null) {
+            ctx = p.context(HttpClientCodec.class);
+            if (ctx == null) {
+                throw new IllegalStateException("ChannelPipeline does not contain " +
+                        "a HttpRequestEncoder or HttpClientCodec");
+            }
+            p.replace(ctx.name(), "ws-decoder", newWebsocketDecoder());
+        } else {
+            if (p.get(HttpRequestEncoder.class) != null) {
+                p.remove(HttpRequestEncoder.class);
+            }
+            p.replace(ctx.name(),
+                    "ws-decoder", newWebsocketDecoder());
+        }
+    }
+
+    /**
+     * Verfiy the {@link FullHttpResponse} and throws a {@link WebSocketHandshakeException} if something is wrong.
+     */
+    protected abstract void verify(FullHttpResponse response);
+
+    /**
+     * Returns the decoder to use after handshake is complete.
+     */
+    protected abstract ChannelInboundByteHandler newWebsocketDecoder();
+
+    /**
+     * Returns the encoder to use after the handshake is complete.
+     */
+    protected abstract ChannelOutboundMessageHandler<WebSocketFrame> newWebSocketEncoder();
+
 }

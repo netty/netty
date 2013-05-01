@@ -18,9 +18,10 @@ package io.netty.channel;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.EventExecutorGroup;
 import org.junit.Test;
-
-import java.net.InetSocketAddress;
 
 import static org.junit.Assert.*;
 
@@ -37,7 +38,7 @@ public abstract class AbstractEventLoopTest {
 
         ServerBootstrap bootstrap = new ServerBootstrap();
         ChannelFuture future = bootstrap.channel(newChannel()).group(group)
-                .localAddress(new InetSocketAddress(0)).childHandler(new ChannelInitializer<SocketChannel>() {
+                .childHandler(new ChannelInitializer<SocketChannel>() {
 
                     @Override
                     public void initChannel(SocketChannel ch) throws Exception {
@@ -47,10 +48,9 @@ public abstract class AbstractEventLoopTest {
                     public void initChannel(ServerSocketChannel ch) throws Exception {
                         ch.pipeline().addLast(new TestChannelHandler());
                         ch.pipeline().addLast(eventExecutorGroup, new TestChannelHandler2());
-
                     }
                 })
-                .bind().awaitUninterruptibly();
+                .bind(0).awaitUninterruptibly();
 
         EventExecutor executor = future.channel().pipeline().context(TestChannelHandler2.class).executor();
         EventExecutor executor1 = future.channel().pipeline().context(TestChannelHandler.class).executor();
@@ -61,12 +61,27 @@ public abstract class AbstractEventLoopTest {
         assertSame(executor, future.channel().pipeline().context(TestChannelHandler2.class).executor());
     }
 
-    private static final class TestChannelHandler extends ChannelHandlerAdapter {
+    private static final class TestChannelHandler extends ChannelDuplexHandler {
+        @Override
+        public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            ctx.flush(promise);
+        }
 
+        @Override
+        public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+            ctx.fireInboundBufferUpdated();
+        }
     }
 
-    private static final class TestChannelHandler2 extends ChannelHandlerAdapter {
+    private static final class TestChannelHandler2 extends ChannelDuplexHandler {
+        @Override
+        public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            ctx.flush(promise);
+        }
 
+        @Override
+        public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+        }
     }
 
     protected abstract EventLoopGroup newEventLoopGroup();

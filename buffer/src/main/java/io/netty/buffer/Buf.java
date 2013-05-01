@@ -18,9 +18,41 @@ package io.netty.buffer;
 /**
  * A buffer to operate on
  */
-public interface Buf extends Freeable {
+public interface Buf extends ReferenceCounted {
     /**
      * The BufType which will be handled by the Buf implementation
      */
     BufType type();
+
+    /**
+     * Returns the maximum allowed capacity of this buffer.
+     */
+    int maxCapacity();
+
+    /**
+     * Returns {@code true} if and only if this buffer contains at least one readable element.
+     */
+    boolean isReadable();
+
+    /**
+     * Returns {@code true} if and only if this buffer contains equal to or more than the specified number of elements.
+     */
+    boolean isReadable(int size);
+
+    /**
+     * Returns {@code true} if and only if this buffer has enough room to allow writing one element.
+     */
+    boolean isWritable();
+
+    /**
+     * Returns {@code true} if and only if this buffer has enough room to allow writing the specified number of
+     * elements.
+     */
+    boolean isWritable(int size);
+
+    @Override
+    Buf retain();
+
+    @Override
+    Buf retain(int increment);
 }

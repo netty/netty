@@ -29,15 +29,15 @@ public interface SpdyGoAwayFrame extends SpdyControlFrame {
      * Sets the Last-good-stream-ID of this frame.  The Last-good-stream-ID
      * cannot be negative.
      */
-    void setLastGoodStreamId(int lastGoodStreamId);
+    SpdyGoAwayFrame setLastGoodStreamId(int lastGoodStreamId);
 
     /**
-     * Returns the status of this frame.
+     * Returns the getStatus of this frame.
      */
     SpdySessionStatus getStatus();
 
     /**
-     * Sets the status of this frame.
+     * Sets the getStatus of this frame.
      */
-    void setStatus(SpdySessionStatus status);
+    SpdyGoAwayFrame setStatus(SpdySessionStatus status);
 }

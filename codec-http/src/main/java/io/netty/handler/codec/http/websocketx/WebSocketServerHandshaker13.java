@@ -15,21 +15,14 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.DefaultHttpResponse;
-import io.netty.handler.codec.http.HttpChunkAggregator;
+import io.netty.channel.ChannelInboundByteHandler;
+import io.netty.channel.ChannelOutboundMessageHandler;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpHeaders.Names;
-import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpRequestDecoder;
-import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.CharsetUtil;
 
 import static io.netty.handler.codec.http.HttpHeaders.Values.*;
@@ -42,8 +35,6 @@ import static io.netty.handler.codec.http.HttpVersion.*;
  * </p>
  */
 public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
-
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketServerHandshaker13.class);
 
     public static final String WEBSOCKET_13_ACCEPT_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
@@ -102,22 +93,15 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
      * Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
      * Sec-WebSocket-Protocol: chat
      * </pre>
-     *
-     * @param channel
-     *            Channel
-     * @param req
-     *            HTTP request
      */
     @Override
-    public ChannelFuture handshake(Channel channel, HttpRequest req, ChannelPromise promise) {
-
-        if (logger.isDebugEnabled()) {
-            logger.debug(String.format("Channel %s WS Version 13 server handshake", channel.id()));
+    protected FullHttpResponse newHandshakeResponse(FullHttpRequest req, HttpHeaders headers) {
+        FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
+        if (headers != null) {
+            res.headers().add(headers);
         }
 
-        HttpResponse res = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
-
-        String key = req.getHeader(Names.SEC_WEBSOCKET_KEY);
+        String key = req.headers().get(Names.SEC_WEBSOCKET_KEY);
         if (key == null) {
             throw new WebSocketHandshakeException("not a WebSocket request: missing key");
         }
@@ -129,53 +113,30 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
             logger.debug(String.format("WS Version 13 Server Handshake key: %s. Response: %s.", key, accept));
         }
 
-        res.setStatus(HttpResponseStatus.SWITCHING_PROTOCOLS);
-        res.addHeader(Names.UPGRADE, WEBSOCKET.toLowerCase());
-        res.addHeader(Names.CONNECTION, Names.UPGRADE);
-        res.addHeader(Names.SEC_WEBSOCKET_ACCEPT, accept);
-        String subprotocols = req.getHeader(Names.SEC_WEBSOCKET_PROTOCOL);
+        res.headers().add(Names.UPGRADE, WEBSOCKET.toLowerCase());
+        res.headers().add(Names.CONNECTION, Names.UPGRADE);
+        res.headers().add(Names.SEC_WEBSOCKET_ACCEPT, accept);
+        String subprotocols = req.headers().get(Names.SEC_WEBSOCKET_PROTOCOL);
         if (subprotocols != null) {
             String selectedSubprotocol = selectSubprotocol(subprotocols);
             if (selectedSubprotocol == null) {
                 throw new WebSocketHandshakeException(
                         "Requested subprotocol(s) not supported: " + subprotocols);
             } else {
-                res.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
+                res.headers().add(Names.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
                 setSelectedSubprotocol(selectedSubprotocol);
             }
         }
-
-        channel.write(res, promise);
-
-        // Upgrade the connection and send the handshake response.
-        promise.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                ChannelPipeline p = future.channel().pipeline();
-                if (p.get(HttpChunkAggregator.class) != null) {
-                    p.remove(HttpChunkAggregator.class);
-                }
-
-                p.get(HttpRequestDecoder.class).replace("wsdecoder",
-                        new WebSocket13FrameDecoder(true, allowExtensions, getMaxFramePayloadLength()));
-                p.replace(HttpResponseEncoder.class, "wsencoder", new WebSocket13FrameEncoder(false));
-            }
-        });
-
-        return promise;
+        return res;
     }
 
-    /**
-     * Echo back the closing frame and close the connection
-     *
-     * @param channel
-     *            Channel
-     * @param frame
-     *            Web Socket frame that was received
-     */
     @Override
-    public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise promise) {
-        promise.addListener(ChannelFutureListener.CLOSE);
-        return channel.write(frame, promise);
+    protected ChannelInboundByteHandler newWebsocketDecoder() {
+        return new WebSocket13FrameDecoder(true, allowExtensions, maxFramePayloadLength());
+    }
+
+    @Override
+    protected ChannelOutboundMessageHandler<WebSocketFrame> newWebSocketEncoder() {
+        return new WebSocket13FrameEncoder(false);
     }
 }

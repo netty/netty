@@ -16,16 +16,22 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.buffer.BufType;
+import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.MessageBuf;
+import io.netty.channel.AddressedEnvelope;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -44,8 +50,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Provides an NIO based {@link io.netty.channel.socket.DatagramChannel} which can be used
- * to send and receive {@link DatagramPacket}'s.
+ * An NIO datagram {@link Channel} that sends and receives an
+ * {@link AddressedEnvelope AddressedEnvelope<ByteBuf, SocketAddress>}.
+ *
+ * @see AddressedEnvelope
+ * @see DatagramPacket
  */
 public final class NioDatagramChannel
         extends AbstractNioMessageChannel implements io.netty.channel.socket.DatagramChannel {
@@ -191,40 +200,55 @@ public final class NioDatagramChannel
     @Override
     protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
         DatagramChannel ch = javaChannel();
-        ByteBuf buffer = alloc().directBuffer(config().getReceivePacketSize());
+        ByteBuf data = alloc().directBuffer(config().getReceivePacketSize());
         boolean free = true;
         try {
-            ByteBuffer data = buffer.nioBuffer(buffer.writerIndex(), buffer.writableBytes());
+            ByteBuffer nioData = data.nioBuffer(data.writerIndex(), data.writableBytes());
 
-            InetSocketAddress remoteAddress = (InetSocketAddress) ch.receive(data);
+            InetSocketAddress remoteAddress = (InetSocketAddress) ch.receive(nioData);
             if (remoteAddress == null) {
                 return 0;
             }
-            buf.add(new DatagramPacket(buffer.writerIndex(buffer.writerIndex() + data.remaining()), remoteAddress));
+
+            data.writerIndex(data.writerIndex() + nioData.position());
+            buf.add(new DatagramPacket(data, localAddress(), remoteAddress));
             free = false;
             return 1;
         } catch (Throwable cause) {
-            if (cause instanceof Error) {
-                throw (Error) cause;
-            }
-            if (cause instanceof RuntimeException) {
-                throw (RuntimeException) cause;
-            }
-            if (cause instanceof Exception) {
-                throw (Exception) cause;
-            }
-            throw new ChannelException(cause);
+            PlatformDependent.throwException(cause);
+            return -1;
         }  finally {
             if (free) {
-                buffer.free();
+                data.release();
             }
         }
     }
 
     @Override
     protected int doWriteMessages(MessageBuf<Object> buf, boolean lastSpin) throws Exception {
-        DatagramPacket packet = (DatagramPacket) buf.peek();
-        ByteBuf data = packet.data();
+        final Object o = buf.peek();
+        final Object m;
+        final ByteBuf data;
+        final SocketAddress remoteAddress;
+        if (o instanceof AddressedEnvelope) {
+            @SuppressWarnings("unchecked")
+            AddressedEnvelope<Object, SocketAddress> envelope = (AddressedEnvelope<Object, SocketAddress>) o;
+            remoteAddress = envelope.recipient();
+            m = envelope.content();
+        } else {
+            m = o;
+            remoteAddress = null;
+        }
+
+        if (m instanceof ByteBufHolder) {
+            data = ((ByteBufHolder) m).content();
+        } else if (m instanceof ByteBuf) {
+            data = (ByteBuf) m;
+        } else {
+            BufUtil.release(buf.remove());
+            throw new ChannelException("unsupported message type: " + StringUtil.simpleClassName(o));
+        }
+
         int dataLen = data.readableBytes();
         ByteBuffer nioData;
         if (data.nioBufferCount() == 1) {
@@ -235,7 +259,12 @@ public final class NioDatagramChannel
             nioData.flip();
         }
 
-        final int writtenBytes = javaChannel().send(nioData, packet.remoteAddress());
+        final int writtenBytes;
+        if (remoteAddress != null) {
+            writtenBytes = javaChannel().send(nioData, remoteAddress);
+        } else {
+            writtenBytes = javaChannel().write(nioData);
+        }
 
         final SelectionKey key = selectionKey();
         final int interestOps = key.interestOps();
@@ -253,11 +282,8 @@ public final class NioDatagramChannel
             return 0;
         }
 
-        // Wrote a packet.
-        buf.remove();
-
-        // packet was written free up buffer
-        packet.free();
+        // Wrote a packet - free the message.
+        BufUtil.release(buf.remove());
 
         if (buf.isEmpty()) {
             // Wrote the outbound buffer completely - clear OP_WRITE.
@@ -266,6 +292,16 @@ public final class NioDatagramChannel
             }
         }
         return 1;
+    }
+
+    @Override
+    public InetSocketAddress localAddress() {
+        return (InetSocketAddress) super.localAddress();
+    }
+
+    @Override
+    public InetSocketAddress remoteAddress() {
+        return (InetSocketAddress) super.remoteAddress();
     }
 
     @Override

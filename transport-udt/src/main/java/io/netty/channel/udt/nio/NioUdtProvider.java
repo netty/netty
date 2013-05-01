@@ -15,16 +15,6 @@
  */
 package io.netty.channel.udt.nio;
 
-import io.netty.bootstrap.AbstractBootstrap.ChannelFactory;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelException;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
-import io.netty.channel.udt.UdtChannel;
-
-import java.io.IOException;
-import java.nio.channels.spi.SelectorProvider;
-
 import com.barchart.udt.SocketUDT;
 import com.barchart.udt.TypeUDT;
 import com.barchart.udt.nio.ChannelUDT;
@@ -33,6 +23,14 @@ import com.barchart.udt.nio.RendezvousChannelUDT;
 import com.barchart.udt.nio.SelectorProviderUDT;
 import com.barchart.udt.nio.ServerSocketChannelUDT;
 import com.barchart.udt.nio.SocketChannelUDT;
+import io.netty.bootstrap.ChannelFactory;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelException;
+import io.netty.channel.udt.UdtServerChannel;
+import io.netty.channel.udt.UdtChannel;
+
+import java.io.IOException;
+import java.nio.channels.spi.SelectorProvider;
 
 /**
  * UDT NIO components provider:
@@ -41,23 +39,20 @@ import com.barchart.udt.nio.SocketChannelUDT;
  * <p>
  * Provides {@link SelectorProvider} for UDT channels.
  */
-public final class NioUdtProvider implements ChannelFactory {
-
-    private static final InternalLogger logger = InternalLoggerFactory
-            .getInstance(NioUdtProvider.class);
+public final class NioUdtProvider<T extends UdtChannel> implements ChannelFactory<T> {
 
     /**
      * {@link ChannelFactory} for UDT Byte Acceptor. See {@link TypeUDT#STREAM}
      * and {@link KindUDT#ACCEPTOR}.
      */
-    public static final ChannelFactory BYTE_ACCEPTOR = new NioUdtProvider(
+    public static final ChannelFactory<UdtServerChannel> BYTE_ACCEPTOR = new NioUdtProvider<UdtServerChannel>(
             TypeUDT.STREAM, KindUDT.ACCEPTOR);
 
     /**
      * {@link ChannelFactory} for UDT Byte Connector. See {@link TypeUDT#STREAM}
      * and {@link KindUDT#CONNECTOR}.
      */
-    public static final ChannelFactory BYTE_CONNECTOR = new NioUdtProvider(
+    public static final ChannelFactory<UdtChannel> BYTE_CONNECTOR = new NioUdtProvider<UdtChannel>(
             TypeUDT.STREAM, KindUDT.CONNECTOR);
 
     /**
@@ -70,21 +65,21 @@ public final class NioUdtProvider implements ChannelFactory {
      * {@link ChannelFactory} for UDT Byte Rendezvous. See
      * {@link TypeUDT#STREAM} and {@link KindUDT#RENDEZVOUS}.
      */
-    public static final ChannelFactory BYTE_RENDEZVOUS = new NioUdtProvider(
+    public static final ChannelFactory<UdtChannel> BYTE_RENDEZVOUS = new NioUdtProvider<UdtChannel>(
             TypeUDT.STREAM, KindUDT.RENDEZVOUS);
 
     /**
      * {@link ChannelFactory} for UDT Message Acceptor. See
      * {@link TypeUDT#DATAGRAM} and {@link KindUDT#ACCEPTOR}.
      */
-    public static final ChannelFactory MESSAGE_ACCEPTOR = new NioUdtProvider(
+    public static final ChannelFactory<UdtServerChannel> MESSAGE_ACCEPTOR = new NioUdtProvider<UdtServerChannel>(
             TypeUDT.DATAGRAM, KindUDT.ACCEPTOR);
 
     /**
      * {@link ChannelFactory} for UDT Message Connector. See
      * {@link TypeUDT#DATAGRAM} and {@link KindUDT#CONNECTOR}.
      */
-    public static final ChannelFactory MESSAGE_CONNECTOR = new NioUdtProvider(
+    public static final ChannelFactory<UdtChannel> MESSAGE_CONNECTOR = new NioUdtProvider<UdtChannel>(
             TypeUDT.DATAGRAM, KindUDT.CONNECTOR);
 
     /**
@@ -97,7 +92,7 @@ public final class NioUdtProvider implements ChannelFactory {
      * {@link ChannelFactory} for UDT Message Rendezvous. See
      * {@link TypeUDT#DATAGRAM} and {@link KindUDT#RENDEZVOUS}.
      */
-    public static final ChannelFactory MESSAGE_RENDEZVOUS = new NioUdtProvider(
+    public static final ChannelFactory<UdtChannel> MESSAGE_RENDEZVOUS = new NioUdtProvider<UdtChannel>(
             TypeUDT.DATAGRAM, KindUDT.RENDEZVOUS);
 
     /**
@@ -202,33 +197,34 @@ public final class NioUdtProvider implements ChannelFactory {
      * Produce new {@link UdtChannel} based on factory {@link #kind()} and
      * {@link #type()}
      */
+    @SuppressWarnings("unchecked")
     @Override
-    public UdtChannel newChannel() {
+    public T newChannel() {
         switch (kind) {
         case ACCEPTOR:
             switch (type) {
             case DATAGRAM:
-                return new NioUdtMessageAcceptorChannel();
+                return (T) new NioUdtMessageAcceptorChannel();
             case STREAM:
-                return new NioUdtByteAcceptorChannel();
+                return (T) new NioUdtByteAcceptorChannel();
             default:
                 throw new IllegalStateException("wrong type=" + type);
             }
         case CONNECTOR:
             switch (type) {
             case DATAGRAM:
-                return new NioUdtMessageConnectorChannel();
+                return (T) new NioUdtMessageConnectorChannel();
             case STREAM:
-                return new NioUdtByteConnectorChannel();
+                return (T) new NioUdtByteConnectorChannel();
             default:
                 throw new IllegalStateException("wrong type=" + type);
             }
         case RENDEZVOUS:
             switch (type) {
             case DATAGRAM:
-                return new NioUdtMessageRendezvousChannel();
+                return (T) new NioUdtMessageRendezvousChannel();
             case STREAM:
-                return new NioUdtByteRendezvousChannel();
+                return (T) new NioUdtByteRendezvousChannel();
             default:
                 throw new IllegalStateException("wrong type=" + type);
             }

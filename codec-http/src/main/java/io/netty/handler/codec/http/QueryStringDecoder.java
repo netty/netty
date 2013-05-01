@@ -52,9 +52,6 @@ import java.util.Map;
  * integer parameter.
  *
  * @see QueryStringEncoder
- *
- * @apiviz.stereotype utility
- * @apiviz.has        io.netty.handler.codec.http.HttpRequest oneway - - decodes
  */
 public class QueryStringDecoder {
 
@@ -106,7 +103,7 @@ public class QueryStringDecoder {
      */
     public QueryStringDecoder(String uri, Charset charset, boolean hasPath, int maxParams) {
         if (uri == null) {
-            throw new NullPointerException("uri");
+            throw new NullPointerException("getUri");
         }
         if (charset == null) {
             throw new NullPointerException("charset");
@@ -145,7 +142,7 @@ public class QueryStringDecoder {
      */
     public QueryStringDecoder(URI uri, Charset charset, int maxParams) {
         if (uri == null) {
-            throw new NullPointerException("uri");
+            throw new NullPointerException("getUri");
         }
         if (charset == null) {
             throw new NullPointerException("charset");
@@ -174,7 +171,7 @@ public class QueryStringDecoder {
     /**
      * Returns the decoded path string of the URI.
      */
-    public String getPath() {
+    public String path() {
         if (path == null) {
             if (!hasPath) {
                 return path = "";
@@ -193,10 +190,10 @@ public class QueryStringDecoder {
     /**
      * Returns the decoded key-value parameter pairs of the URI.
      */
-    public Map<String, List<String>> getParameters() {
+    public Map<String, List<String>> parameters() {
         if (params == null) {
             if (hasPath) {
-                int pathLength = getPath().length();
+                int pathLength = path().length();
                 if (uri.length() == pathLength) {
                     return Collections.emptyMap();
                 }

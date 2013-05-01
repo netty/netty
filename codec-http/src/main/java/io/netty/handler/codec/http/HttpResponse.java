@@ -39,9 +39,10 @@ public interface HttpResponse extends HttpMessage {
     HttpResponseStatus getStatus();
 
     /**
-     * Sets the status of this {@link HttpResponse}
-     *
-     * @param status The {@link HttpResponseStatus} to use
+     * Set the status of this {@link HttpResponse}.
      */
-    void setStatus(HttpResponseStatus status);
+    HttpResponse setStatus(HttpResponseStatus status);
+
+    @Override
+    HttpResponse setProtocolVersion(HttpVersion version);
 }

@@ -15,16 +15,20 @@
  */
 package io.netty.handler.codec.spdy;
 
-import io.netty.channel.CombinedChannelHandler;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundByteHandler;
+import io.netty.channel.ChannelOutboundMessageHandler;
+import io.netty.channel.CombinedChannelDuplexHandler;
 
 
 /**
  * A combination of {@link SpdyFrameDecoder} and {@link SpdyFrameEncoder}.
- *
- * @apiviz.has io.netty.handler.codec.spdy.SpdyFrameDecoder
- * @apiviz.has io.netty.handler.codec.spdy.SpdyFrameEncoder
  */
-public class SpdyFrameCodec extends CombinedChannelHandler {
+public final class SpdyFrameCodec
+        extends CombinedChannelDuplexHandler
+        implements ChannelInboundByteHandler, ChannelOutboundMessageHandler<SpdyDataOrControlFrame> {
 
     /**
      * Creates a new instance with the specified {@code version} and
@@ -46,5 +50,28 @@ public class SpdyFrameCodec extends CombinedChannelHandler {
         super(
                 new SpdyFrameDecoder(version, maxChunkSize, maxHeaderSize),
                 new SpdyFrameEncoder(version, compressionLevel, windowBits, memLevel));
+    }
+
+    private SpdyFrameDecoder decoder() {
+        return (SpdyFrameDecoder) stateHandler();
+    }
+
+    private SpdyFrameEncoder encoder() {
+        return (SpdyFrameEncoder) operationHandler();
+    }
+
+    @Override
+    public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return decoder().newInboundBuffer(ctx);
+    }
+
+    @Override
+    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+        decoder().discardInboundReadBytes(ctx);
+    }
+
+    @Override
+    public MessageBuf<SpdyDataOrControlFrame> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+        return encoder().newOutboundBuffer(ctx);
     }
 }

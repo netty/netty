@@ -48,7 +48,7 @@ import io.netty.handler.codec.http.HttpRequest;
  * </tr>
  * </table>
  */
-public class RtspRequestDecoder extends RtspMessageDecoder {
+public class RtspRequestDecoder extends RtspObjectDecoder {
 
     /**
      * Creates a new instance with the default

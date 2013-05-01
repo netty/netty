@@ -31,8 +31,6 @@ import java.io.StreamCorruptedException;
  * compatible with the standard {@link ObjectOutputStream}.  Please use
  * {@link ObjectEncoder} or {@link ObjectEncoderOutputStream} to ensure the
  * interoperability with this decoder.
- * @apiviz.landmark
- * @apiviz.has io.netty.handler.codec.serialization.ObjectDecoderInputStream - - - compatible with
  */
 public class ObjectDecoder extends LengthFieldBasedFrameDecoder {
 

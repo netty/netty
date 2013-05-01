@@ -18,14 +18,13 @@ package io.netty.example.sctp;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.oio.OioEventLoopGroup;
 import io.netty.channel.sctp.SctpChannel;
-import io.netty.channel.socket.oio.OioEventLoopGroup;
+import io.netty.channel.sctp.SctpChannelOption;
 import io.netty.channel.sctp.oio.OioSctpChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-
-import java.net.InetSocketAddress;
 
 /**
  * Sends one message when a connection is open and echoes back any received
@@ -49,12 +48,12 @@ public class OioSctpEchoClient {
 
     public void run() throws Exception {
         // Configure the client.
-        Bootstrap b = new Bootstrap();
+        EventLoopGroup group = new OioEventLoopGroup();
         try {
-            b.group(new OioEventLoopGroup())
+            Bootstrap b = new Bootstrap();
+            b.group(group)
              .channel(OioSctpChannel.class)
-             .option(ChannelOption.SCTP_NODELAY, true)
-             .remoteAddress(new InetSocketAddress(host, port))
+             .option(SctpChannelOption.SCTP_NODELAY, true)
              .handler(new ChannelInitializer<SctpChannel>() {
                  @Override
                  public void initChannel(SctpChannel ch) throws Exception {
@@ -65,13 +64,13 @@ public class OioSctpEchoClient {
              });
 
             // Start the client.
-            ChannelFuture f = b.connect().sync();
+            ChannelFuture f = b.connect(host, port).sync();
 
             // Wait until the connection is closed.
             f.channel().closeFuture().sync();
         } finally {
             // Shut down the event loop to terminate all threads.
-            b.shutdown();
+            group.shutdownGracefully();
         }
     }
 

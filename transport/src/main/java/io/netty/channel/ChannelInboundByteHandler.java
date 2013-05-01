@@ -22,6 +22,13 @@ import io.netty.buffer.ByteBuf;
  *
  */
 public interface ChannelInboundByteHandler extends ChannelInboundHandler {
+    /**
+     * {@inheritDoc}
+     * <p>
+     * An implementation should respect the {@link ChannelConfig#getDefaultHandlerByteBufType()} setting unless
+     * there's a good reason to ignore it.  If in doubt, use {@link ChannelHandlerUtil#allocate(ChannelHandlerContext)}.
+     * </p>
+     */
     @Override
     ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception;
 

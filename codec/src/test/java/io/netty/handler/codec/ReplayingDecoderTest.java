@@ -15,14 +15,16 @@
  */
 package io.netty.handler.codec;
 
-import static org.junit.Assert.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufIndexFinder;
+import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedByteChannel;
-
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 public class ReplayingDecoderTest {
 
@@ -43,7 +45,8 @@ public class ReplayingDecoderTest {
         // Truncated input
         ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 'A' }));
         assertNull(ch.readInbound());
-        ch.close();
+
+        ch.finish();
         assertNull(ch.readInbound());
     }
 
@@ -53,10 +56,49 @@ public class ReplayingDecoderTest {
         }
 
         @Override
-        public ByteBuf decode(ChannelHandlerContext ctx, ByteBuf in) {
+        protected void decode(ChannelHandlerContext ctx, ByteBuf in, MessageBuf<Object> out) {
             ByteBuf msg = in.readBytes(in.bytesBefore(ByteBufIndexFinder.LF));
             in.skipBytes(1);
-            return msg;
+            out.add(msg);
         }
+    }
+
+    @Test
+    public void testReplacement() throws Exception {
+        EmbeddedByteChannel ch = new EmbeddedByteChannel(new BloatedLineDecoder());
+
+        // "AB" should be forwarded to LineDecoder by BloatedLineDecoder.
+        ch.writeInbound(Unpooled.wrappedBuffer(new byte[]{'A', 'B'}));
+        assertNull(ch.readInbound());
+
+        // "C\n" should be appended to "AB" so that LineDecoder decodes it correctly.
+        ch.writeInbound(Unpooled.wrappedBuffer(new byte[]{'C', '\n'}));
+        assertEquals(Unpooled.wrappedBuffer(new byte[] { 'A', 'B', 'C' }), ch.readInbound());
+
+        ch.finish();
+        assertNull(ch.readInbound());
+    }
+
+    private static final class BloatedLineDecoder extends ChannelInboundByteHandlerAdapter {
+        @Override
+        protected void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+            ctx.pipeline().replace(this, "less-bloated", new LineDecoder());
+        }
+    }
+
+    @Test
+    public void testSingleDecode() throws Exception {
+        LineDecoder decoder = new LineDecoder();
+        decoder.setSingleDecode(true);
+        EmbeddedByteChannel ch = new EmbeddedByteChannel(decoder);
+
+        // "C\n" should be appended to "AB" so that LineDecoder decodes it correctly.
+        ch.writeInbound(Unpooled.wrappedBuffer(new byte[]{'C', '\n' , 'B', '\n'}));
+        assertEquals(Unpooled.wrappedBuffer(new byte[] {'C' }), ch.readInbound());
+        assertNull("Must be null as it must only decode one frame", ch.readInbound());
+
+        ch.finish();
+        assertEquals(Unpooled.wrappedBuffer(new byte[] {'B' }), ch.readInbound());
+        assertNull(ch.readInbound());
     }
 }

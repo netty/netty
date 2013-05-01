@@ -18,19 +18,5 @@
  * The core channel API which is asynchronous and event-driven abstraction of
  * various transports such as a
  * <a href="http://en.wikipedia.org/wiki/New_I/O#Channels">NIO Channel</a>.
- *
- * @apiviz.landmark
- * @apiviz.exclude ^java
- * @apiviz.exclude ^io\.netty\.channel\.[^\.]+\.
- * @apiviz.exclude ^io\.netty\.(bootstrap|handler|util)\.
- * @apiviz.exclude \.(Abstract|Default|Static).*$
- * @apiviz.exclude \.(Downstream|Upstream).*Event$
- * @apiviz.exclude \.[A-Za-z]+ChannelFuture$
- * @apiviz.exclude \.ChannelPipelineFactory$
- * @apiviz.exclude \.ChannelHandlerContext$
- * @apiviz.exclude \.ChannelSink$
- * @apiviz.exclude \.ChannelLocal$
- * @apiviz.exclude \.[^\.]+ReceiveBufferSizePredictor(Factory)?$
- * @apiviz.exclude \.FileRegion$
  */
 package io.netty.channel;

@@ -18,9 +18,8 @@ package io.netty.handler.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelPipeline;
-import io.netty.util.internal.Signal;
+import io.netty.util.Signal;
 
 /**
  * A specialized variation of {@link ByteToMessageDecoder} which enables implementation
@@ -248,7 +247,7 @@ import io.netty.util.internal.Signal;
  *         // Remove the first decoder (me)
  *         ctx.pipeline().remove(this);
  *
- *         if (buf.readable()) {
+ *         if (buf.isReadable()) {
  *             // Hand off the remaining data to the second decoder
  *             return new Object[] { firstMessage, buf.readBytes(<b>super.actualReadableBytes()</b>) };
  *         } else {
@@ -260,18 +259,16 @@ import io.netty.util.internal.Signal;
  * @param <S>
  *        the state type which is usually an {@link Enum}; use {@link Void} if state management is
  *        unused
- *
- * @apiviz.landmark
- * @apiviz.has io.netty.handler.codec.UnreplayableOperationException oneway - - throws
  */
 public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
 
     static final Signal REPLAY = new Signal(ReplayingDecoder.class.getName() + ".REPLAY");
 
-    private ByteBuf cumulation;
-    private ReplayingDecoderBuffer replayable;
+    private ChannelHandlerContext ctx;
+    private final ReplayingDecoderBuffer replayable = new ReplayingDecoderBuffer();
     private S state;
     private int checkpoint = -1;
+    private boolean decodeWasNull;
 
     /**
      * Creates a new instance with no initial state (i.e: {@code null}).
@@ -291,7 +288,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
      * Stores the internal cumulative buffer's reader position.
      */
     protected void checkpoint() {
-        checkpoint = cumulation.readerIndex();
+        checkpoint = internalBuffer().readerIndex();
     }
 
     /**
@@ -337,64 +334,70 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
      * Use it only when you must use it at your own risk.
      */
     protected ByteBuf internalBuffer() {
-        return cumulation;
+        return ctx.inboundByteBuffer();
     }
 
     @Override
-    public ByteBuf newInboundBuffer(
-            ChannelHandlerContext ctx) throws Exception {
-        cumulation = ctx.alloc().buffer();
-        replayable = new ReplayingDecoderBuffer(cumulation);
-        return cumulation;
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        this.ctx = ctx;
     }
 
     @Override
-    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
+    public final void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
         ByteBuf in = ctx.inboundByteBuffer();
         final int oldReaderIndex = in.readerIndex();
-        super.discardInboundReadBytes(ctx);
+        discardInboundReadBytes0(ctx);
         final int newReaderIndex = in.readerIndex();
         checkpoint -= oldReaderIndex - newReaderIndex;
     }
 
-    @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        replayable.terminate();
-        ByteBuf in = cumulation;
-        if (in.readable()) {
-            callDecode(ctx);
-        }
-
-        try {
-            if (ChannelHandlerUtil.unfoldAndAdd(ctx, decodeLast(ctx, replayable), true)) {
-                ctx.fireInboundBufferUpdated();
-            }
-        } catch (Signal replay) {
-            // Ignore
-            replay.expect(REPLAY);
-        } catch (Throwable t) {
-            if (t instanceof CodecException) {
-                ctx.fireExceptionCaught(t);
-            } else {
-                ctx.fireExceptionCaught(new DecoderException(t));
-            }
-        }
-
-        ctx.fireChannelInactive();
+    protected void discardInboundReadBytes0(ChannelHandlerContext ctx) throws Exception {
+        super.discardInboundReadBytes(ctx);
     }
 
     @Override
-    protected void callDecode(ChannelHandlerContext ctx) {
-        ByteBuf in = cumulation;
-        boolean decoded = false;
-        while (in.readable()) {
-            try {
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        OutputMessageBuf out = OutputMessageBuf.get();
+        try {
+            replayable.terminate();
+            ByteBuf in = internalBuffer();
+            replayable.setCumulation(in);
+            if (in.isReadable()) {
+                callDecode(ctx, in);
+            }
+
+            decodeLast(ctx, replayable, out);
+        } catch (Signal replay) {
+            // Ignore
+            replay.expect(REPLAY);
+        } catch (CodecException e) {
+            throw e;
+        } catch (Throwable cause) {
+            throw new DecoderException(cause);
+        } finally {
+            if (out.drainToNextInbound(ctx)) {
+                ctx.fireInboundBufferUpdated();
+            }
+
+            ctx.fireChannelInactive();
+        }
+    }
+
+    @Override
+    protected void callDecode(ChannelHandlerContext ctx, ByteBuf buf) {
+        boolean wasNull = false;
+        ByteBuf in = internalBuffer();
+        replayable.setCumulation(in);
+        OutputMessageBuf out = OutputMessageBuf.get();
+        try {
+            while (in.isReadable()) {
                 int oldReaderIndex = checkpoint = in.readerIndex();
-                Object result = null;
+                int outSize = out.size();
                 S oldState = state;
                 try {
-                    result = decode(ctx, replayable);
-                    if (result == null) {
+                    decode(ctx, replayable, out);
+                    if (outSize == out.size()) {
+                        wasNull = true;
                         if (oldReaderIndex == in.readerIndex() && oldState == state) {
                             throw new IllegalStateException(
                                     "null cannot be returned if no data is consumed and state didn't change.");
@@ -414,41 +417,45 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                         // Called by cleanup() - no need to maintain the readerIndex
                         // anymore because the buffer has been released already.
                     }
-                }
-
-                if (result == null) {
-                    // Seems like more data is required.
-                    // Let us wait for the next notification.
                     break;
                 }
+                wasNull = false;
 
                 if (oldReaderIndex == in.readerIndex() && oldState == state) {
                     throw new IllegalStateException(
-                            "decode() method must consume at least one byte " +
-                            "if it returned a decoded message (caused by: " +
-                            getClass() + ')');
+                           "decode() method must consume at least one byte " +
+                           "if it returned a decoded message (caused by: " +
+                           getClass() + ')');
                 }
-
-                // A successful decode
-                if (ChannelHandlerUtil.unfoldAndAdd(ctx, result, true)) {
-                    decoded = true;
+                if (isSingleDecode()) {
+                    break;
                 }
-            } catch (Throwable t) {
-                if (decoded) {
-                    decoded = false;
-                    ctx.fireInboundBufferUpdated();
-                }
-
-                if (t instanceof CodecException) {
-                    ctx.fireExceptionCaught(t);
-                } else {
-                    ctx.fireExceptionCaught(new DecoderException(t));
+            }
+        } catch (CodecException e) {
+            throw e;
+        } catch (Throwable cause) {
+            throw new DecoderException(cause);
+        } finally {
+            if (out.drainToNextInbound(ctx)) {
+                decodeWasNull = false;
+                ctx.fireInboundBufferUpdated();
+            } else {
+                if (wasNull) {
+                    decodeWasNull = true;
                 }
             }
         }
+    }
 
-        if (decoded) {
-            ctx.fireInboundBufferUpdated();
+    @Override
+    public void channelReadSuspended(ChannelHandlerContext ctx) throws Exception {
+        if (decodeWasNull) {
+            decodeWasNull = false;
+            if (!ctx.channel().config().isAutoRead()) {
+                ctx.read();
+            }
         }
+
+        super.channelReadSuspended(ctx);
     }
 }

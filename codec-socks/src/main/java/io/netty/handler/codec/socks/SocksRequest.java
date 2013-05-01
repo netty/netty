@@ -25,14 +25,14 @@ package io.netty.handler.codec.socks;
  * @see UnknownSocksRequest
  */
 public abstract class SocksRequest extends SocksMessage {
-    private final SocksRequestType socksRequestType;
+    private final SocksRequestType requestType;
 
-    protected SocksRequest(SocksRequestType socksRequestType) {
-        super(MessageType.REQUEST);
-        if (socksRequestType == null) {
-            throw new NullPointerException("socksRequestType");
+    protected SocksRequest(SocksRequestType requestType) {
+        super(SocksMessageType.REQUEST);
+        if (requestType == null) {
+            throw new NullPointerException("requestType");
         }
-        this.socksRequestType = socksRequestType;
+        this.requestType = requestType;
     }
 
     /**
@@ -40,17 +40,7 @@ public abstract class SocksRequest extends SocksMessage {
      *
      * @return socks request type
      */
-    public SocksRequestType getSocksRequestType() {
-        return socksRequestType;
-    }
-
-    /**
-     * Type of socks request
-     */
-    public enum SocksRequestType {
-        INIT,
-        AUTH,
-        CMD,
-        UNKNOWN
+    public SocksRequestType requestType() {
+        return requestType;
     }
 }

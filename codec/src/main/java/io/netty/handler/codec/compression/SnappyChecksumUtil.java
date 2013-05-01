@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 
 import java.util.zip.CRC32;
 
-public final class SnappyChecksumUtil {
+final class SnappyChecksumUtil {
     /**
      * Computes the CRC32 checksum of the supplied data, performs the "mask" operation
      * on the computed checksum, and then compares the resulting masked checksum to the
@@ -29,7 +29,7 @@ public final class SnappyChecksumUtil {
      * @param checksum The checksum decoded from the stream to compare against
      * @throws CompressionException If the calculated and supplied checksums do not match
      */
-    public static void validateChecksum(ByteBuf slice, int checksum) {
+    static void validateChecksum(ByteBuf slice, int checksum) {
         if (calculateChecksum(slice) != checksum) {
             throw new CompressionException("Uncompressed data did not match checksum");
         }
@@ -41,18 +41,14 @@ public final class SnappyChecksumUtil {
      *
      * @param slice The input data to calculate the CRC32 checksum of
      */
-    public static int calculateChecksum(ByteBuf slice) {
+    static int calculateChecksum(ByteBuf slice) {
         CRC32 crc32 = new CRC32();
         try {
-            if (slice.hasArray()) {
-                crc32.update(slice.array());
-            } else {
-                byte[] array = new byte[slice.readableBytes()];
-                slice.markReaderIndex();
-                slice.readBytes(array);
-                slice.resetReaderIndex();
-                crc32.update(array);
-            }
+            byte[] array = new byte[slice.readableBytes()];
+            slice.markReaderIndex();
+            slice.readBytes(array);
+            slice.resetReaderIndex();
+            crc32.update(array);
 
             return maskChecksum((int) crc32.getValue());
         } finally {

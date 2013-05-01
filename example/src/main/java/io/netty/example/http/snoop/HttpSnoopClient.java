@@ -17,7 +17,8 @@ package io.netty.example.http.snoop;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.socket.nio.NioEventLoopGroup;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.ClientCookieEncoder;
 import io.netty.handler.codec.http.DefaultCookie;
@@ -27,7 +28,6 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
 
-import java.net.InetSocketAddress;
 import java.net.URI;
 
 /**
@@ -62,25 +62,25 @@ public class HttpSnoopClient {
         boolean ssl = "https".equalsIgnoreCase(scheme);
 
         // Configure the client.
-        Bootstrap b = new Bootstrap();
+        EventLoopGroup group = new NioEventLoopGroup();
         try {
-            b.group(new NioEventLoopGroup())
+            Bootstrap b = new Bootstrap();
+            b.group(group)
              .channel(NioSocketChannel.class)
-             .handler(new HttpSnoopClientInitializer(ssl))
-             .remoteAddress(new InetSocketAddress(host, port));
+             .handler(new HttpSnoopClientInitializer(ssl));
 
             // Make the connection attempt.
-            Channel ch = b.connect().sync().channel();
+            Channel ch = b.connect(host, port).sync().channel();
 
             // Prepare the HTTP request.
             HttpRequest request = new DefaultHttpRequest(
                     HttpVersion.HTTP_1_1, HttpMethod.GET, uri.getRawPath());
-            request.setHeader(HttpHeaders.Names.HOST, host);
-            request.setHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
-            request.setHeader(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);
+            request.headers().set(HttpHeaders.Names.HOST, host);
+            request.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
+            request.headers().set(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);
 
             // Set some example cookies.
-            request.setHeader(
+            request.headers().set(
                     HttpHeaders.Names.COOKIE,
                     ClientCookieEncoder.encode(
                             new DefaultCookie("my-cookie", "foo"),
@@ -93,7 +93,7 @@ public class HttpSnoopClient {
             ch.closeFuture().sync();
         } finally {
             // Shut down executor threads to exit.
-            b.shutdown();
+            group.shutdownGracefully();
         }
     }
 

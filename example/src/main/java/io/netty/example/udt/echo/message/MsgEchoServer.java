@@ -19,17 +19,15 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.socket.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.udt.UdtChannel;
+import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.example.udt.util.UtilThreadFactory;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.channel.udt.UdtChannel;
-import io.netty.channel.udt.nio.NioUdtProvider;
 
 import java.util.concurrent.ThreadFactory;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.logging.Logger;
 
 /**
  * UDT Message Flow Server
@@ -38,8 +36,7 @@ import org.slf4j.LoggerFactory;
  */
 public class MsgEchoServer {
 
-    private static final Logger log = LoggerFactory
-            .getLogger(MsgEchoServer.class);
+    private static final Logger log = Logger.getLogger(MsgEchoServer.class.getName());
 
     private final int port;
 
@@ -55,12 +52,11 @@ public class MsgEchoServer {
         final NioEventLoopGroup connectGroup = new NioEventLoopGroup(1,
                 connectFactory, NioUdtProvider.MESSAGE_PROVIDER);
         // Configure the server.
-        final ServerBootstrap boot = new ServerBootstrap();
         try {
+            final ServerBootstrap boot = new ServerBootstrap();
             boot.group(acceptGroup, connectGroup)
                     .channelFactory(NioUdtProvider.MESSAGE_ACCEPTOR)
                     .option(ChannelOption.SO_BACKLOG, 10)
-                    .localAddress("localhost", port)
                     .handler(new LoggingHandler(LogLevel.INFO))
                     .childHandler(new ChannelInitializer<UdtChannel>() {
                         @Override
@@ -72,12 +68,13 @@ public class MsgEchoServer {
                         }
                     });
             // Start the server.
-            final ChannelFuture future = boot.bind().sync();
+            final ChannelFuture future = boot.bind(port).sync();
             // Wait until the server socket is closed.
             future.channel().closeFuture().sync();
         } finally {
             // Shut down all event loops to terminate all threads.
-            boot.shutdown();
+            acceptGroup.shutdownGracefully();
+            connectGroup.shutdownGracefully();
         }
     }
 

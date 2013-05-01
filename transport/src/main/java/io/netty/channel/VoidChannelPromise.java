@@ -15,9 +15,13 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.AbstractFuture;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
+
 import java.util.concurrent.TimeUnit;
 
-final class VoidChannelPromise implements ChannelFuture.Unsafe, ChannelPromise {
+final class VoidChannelPromise extends AbstractFuture<Void> implements ChannelFuture.Unsafe, ChannelPromise {
 
     private final Channel channel;
 
@@ -34,25 +38,25 @@ final class VoidChannelPromise implements ChannelFuture.Unsafe, ChannelPromise {
     }
 
     @Override
-    public ChannelPromise addListener(final ChannelFutureListener listener) {
+    public ChannelPromise addListener(GenericFutureListener<? extends Future<Void>> listener) {
         fail();
         return this;
     }
 
     @Override
-    public ChannelPromise addListeners(final ChannelFutureListener... listeners) {
+    public ChannelPromise addListeners(GenericFutureListener<? extends Future<Void>>... listeners) {
         fail();
         return this;
     }
 
     @Override
-    public ChannelPromise removeListener(ChannelFutureListener listener) {
+    public ChannelPromise removeListener(GenericFutureListener<? extends Future<Void>> listener) {
         // NOOP
         return this;
     }
 
     @Override
-    public ChannelPromise removeListeners(ChannelFutureListener... listeners) {
+    public ChannelPromise removeListeners(GenericFutureListener<? extends Future<Void>>... listeners) {
         // NOOP
         return this;
     }
@@ -127,11 +131,13 @@ final class VoidChannelPromise implements ChannelFuture.Unsafe, ChannelPromise {
         return this;
     }
     @Override
-    public void setFailure(Throwable cause) {
+    public ChannelPromise setFailure(Throwable cause) {
+        return this;
     }
 
     @Override
-    public void setSuccess() {
+    public ChannelPromise setSuccess() {
+        return this;
     }
 
     @Override
@@ -146,5 +152,20 @@ final class VoidChannelPromise implements ChannelFuture.Unsafe, ChannelPromise {
 
     private static void fail() {
         throw new IllegalStateException("void future");
+    }
+
+    @Override
+    public ChannelPromise setSuccess(Void result) {
+        return this;
+    }
+
+    @Override
+    public boolean trySuccess(Void result) {
+        return false;
+    }
+
+    @Override
+    public Void getNow() {
+        return null;
     }
 }

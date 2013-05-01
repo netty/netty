@@ -18,12 +18,14 @@ package io.netty.example.socksproxy;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
-import io.netty.handler.codec.socks.SocksCmdRequestDecoder;
-import io.netty.handler.codec.socks.SocksInitResponse;
-import io.netty.handler.codec.socks.SocksMessage;
-import io.netty.handler.codec.socks.SocksRequest;
 import io.netty.handler.codec.socks.SocksAuthResponse;
+import io.netty.handler.codec.socks.SocksAuthScheme;
+import io.netty.handler.codec.socks.SocksAuthStatus;
 import io.netty.handler.codec.socks.SocksCmdRequest;
+import io.netty.handler.codec.socks.SocksCmdRequestDecoder;
+import io.netty.handler.codec.socks.SocksCmdType;
+import io.netty.handler.codec.socks.SocksInitResponse;
+import io.netty.handler.codec.socks.SocksRequest;
 
 
 @ChannelHandler.Sharable
@@ -34,28 +36,24 @@ public final class SocksServerHandler extends ChannelInboundMessageHandlerAdapte
         return name;
     }
 
-    public SocksServerHandler() {
-        super(SocksRequest.class);
-    }
-
     @Override
     public void messageReceived(ChannelHandlerContext ctx, SocksRequest socksRequest) throws Exception {
-        switch (socksRequest.getSocksRequestType()) {
+        switch (socksRequest.requestType()) {
             case INIT: {
 //                auth support example
 //                ctx.pipeline().addFirst("socksAuthRequestDecoder",new SocksAuthRequestDecoder());
-//                ctx.write(new SocksInitResponse(SocksMessage.AuthScheme.AUTH_PASSWORD));
+//                ctx.write(new SocksInitResponse(SocksMessage.SocksAuthScheme.AUTH_PASSWORD));
                 ctx.pipeline().addFirst(SocksCmdRequestDecoder.getName(), new SocksCmdRequestDecoder());
-                ctx.write(new SocksInitResponse(SocksMessage.AuthScheme.NO_AUTH));
+                ctx.write(new SocksInitResponse(SocksAuthScheme.NO_AUTH));
                 break;
             }
             case AUTH:
                 ctx.pipeline().addFirst(SocksCmdRequestDecoder.getName(), new SocksCmdRequestDecoder());
-                ctx.write(new SocksAuthResponse(SocksMessage.AuthStatus.SUCCESS));
+                ctx.write(new SocksAuthResponse(SocksAuthStatus.SUCCESS));
                 break;
             case CMD:
                 SocksCmdRequest req = (SocksCmdRequest) socksRequest;
-                if (req.getCmdType() == SocksMessage.CmdType.CONNECT) {
+                if (req.cmdType() == SocksCmdType.CONNECT) {
                     ctx.pipeline().addLast(SocksServerConnectHandler.getName(), new SocksServerConnectHandler());
                     ctx.pipeline().remove(this);
                     ctx.nextInboundMessageBuffer().add(socksRequest);

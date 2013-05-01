@@ -108,7 +108,7 @@ import java.nio.charset.UnsupportedCharsetException;
  * <pre>
  * // Fills the writable bytes of a buffer with random integers.
  * {@link ByteBuf} buffer = ...;
- * while (buffer.writableBytes() >= 4) {
+ * while (buffer.maxWritableBytes() >= 4) {
  *     buffer.writeInt(random.nextInt());
  * }
  * </pre>
@@ -214,7 +214,7 @@ import java.nio.charset.UnsupportedCharsetException;
  *
  * If a {@link ByteBuf} can be converted into an NIO {@link ByteBuffer} which shares its
  * content (i.e. view buffer), you can get it via the {@link #nioBuffer()} method.  To determine
- * if a buffer can be converted into an NIO buffer, use {@link #nioBuffer()}.
+ * if a buffer can be converted into an NIO buffer, use {@link #nioBufferCount()}.
  *
  * <h4>Strings</h4>
  *
@@ -226,7 +226,6 @@ import java.nio.charset.UnsupportedCharsetException;
  *
  * Please refer to {@link ByteBufInputStream} and
  * {@link ByteBufOutputStream}.
- * @apiviz.landmark
  */
 public interface ByteBuf extends Buf, Comparable<ByteBuf> {
 
@@ -246,9 +245,10 @@ public interface ByteBuf extends Buf, Comparable<ByteBuf> {
     /**
      * Returns the maximum allowed capacity of this buffer.  If a user attempts to increase the
      * capacity of this buffer beyond the maximum capacity using {@link #capacity(int)} or
-     * {@link #ensureWritableBytes(int)}, those methods will raise an
+     * {@link #ensureWritable(int)}, those methods will raise an
      * {@link IllegalArgumentException}.
      */
+    @Override
     int maxCapacity();
 
     /**
@@ -391,6 +391,13 @@ public interface ByteBuf extends Buf, Comparable<ByteBuf> {
      * if and only if {@code (this.writerIndex - this.readerIndex)} is greater
      * than {@code 0}.
      */
+    @Override
+    boolean isReadable();
+
+    /**
+     * @deprecated Use {@link #isReadable()} or {@link #isReadable(int)} instead.
+     */
+    @Deprecated
     boolean readable();
 
     /**
@@ -398,6 +405,13 @@ public interface ByteBuf extends Buf, Comparable<ByteBuf> {
      * if and only if {@code (this.capacity - this.writerIndex)} is greater
      * than {@code 0}.
      */
+    @Override
+    boolean isWritable();
+
+    /**
+     * @deprecated Use {@link #isWritable()} or {@link #isWritable(int)} instead.
+     */
+    @Deprecated
     boolean writable();
 
     /**
@@ -476,11 +490,17 @@ public interface ByteBuf extends Buf, Comparable<ByteBuf> {
      * @throws IndexOutOfBoundsException
      *         if {@link #writerIndex()} + {@code minWritableBytes} > {@link #maxCapacity()}
      */
+    ByteBuf ensureWritable(int minWritableBytes);
+
+    /**
+     * @deprecated Use {@link #ensureWritable(int)} instead.
+     */
+    @Deprecated
     ByteBuf ensureWritableBytes(int minWritableBytes);
 
     /**
      * Tries to make sure the number of {@linkplain #writableBytes() the writable bytes}
-     * is equal to or greater than the specified value.  Unlike {@link #ensureWritableBytes(int)},
+     * is equal to or greater than the specified value.  Unlike {@link #ensureWritable(int)},
      * this method does not raise an exception but returns a code.
      *
      * @param minWritableBytes
@@ -497,7 +517,7 @@ public interface ByteBuf extends Buf, Comparable<ByteBuf> {
      *         {@code 3} if the buffer does not have enough bytes, but its capacity has been
      *                   increased to its maximum.
      */
-    int ensureWritableBytes(int minWritableBytes, boolean force);
+    int ensureWritable(int minWritableBytes, boolean force);
 
     /**
      * Gets a boolean at the specified absolute (@code index) in this buffer.
@@ -1816,6 +1836,20 @@ public interface ByteBuf extends Buf, Comparable<ByteBuf> {
     int arrayOffset();
 
     /**
+     * Returns {@code true} if and only if this buffer has a reference to the low-level memory address that points
+     * to the backing data.
+     */
+    boolean hasMemoryAddress();
+
+    /**
+     * Returns the low-level memory address that point to the first byte of ths backing data.
+     *
+     * @throws UnsupportedOperationException
+     *         if this buffer does not support accessing the low-level memory address
+     */
+    long memoryAddress();
+
+    /**
      * Decodes this buffer's readable bytes into a string with the specified
      * character set name.  This method is identical to
      * {@code buf.toString(buf.readerIndex(), buf.readableBytes(), charsetName)}.
@@ -1894,18 +1928,9 @@ public interface ByteBuf extends Buf, Comparable<ByteBuf> {
     @Override
     String toString();
 
-    /**
-     * Deallocates the internal memory block of this buffer or returns it to the allocator or pool it came from.
-     * The result of accessing a released buffer is unspecified and can even cause JVM crash.
-     *
-     * @throws UnsupportedOperationException if this buffer is derived
-     */
     @Override
-    void free();
+    ByteBuf retain(int increment);
 
-    /**
-     * Returns {@code true} if and only if this buffer has been deallocated by {@link #free()}.
-     */
     @Override
-    boolean isFreed();
+    ByteBuf retain();
 }

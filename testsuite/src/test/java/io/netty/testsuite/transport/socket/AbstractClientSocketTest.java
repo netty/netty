@@ -16,19 +16,18 @@
 package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 import io.netty.testsuite.transport.socket.SocketTestPermutation.Factory;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.NetUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.junit.Rule;
+import org.junit.rules.TestName;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.util.List;
-
-import org.junit.Rule;
-import org.junit.rules.TestName;
 
 public abstract class AbstractClientSocketTest {
 
@@ -46,8 +45,7 @@ public abstract class AbstractClientSocketTest {
         int i = 0;
         for (Factory<Bootstrap> e: COMBO) {
             cb = e.newInstance();
-            addr = new InetSocketAddress(
-                    NetUtil.LOCALHOST, TestUtils.getFreePort());
+            addr = new InetSocketAddress(NetUtil.LOCALHOST, TestUtils.getFreePort());
             cb.remoteAddress(addr);
 
             logger.info(String.format(
@@ -58,8 +56,6 @@ public abstract class AbstractClientSocketTest {
                 m.invoke(this, cb);
             } catch (InvocationTargetException ex) {
                 throw ex.getCause();
-            } finally {
-                cb.shutdown();
             }
         }
     }

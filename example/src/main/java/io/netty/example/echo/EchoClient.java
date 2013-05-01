@@ -19,13 +19,12 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-
-import java.net.InetSocketAddress;
 
 /**
  * Sends one message when a connection is open and echoes back any received
@@ -47,12 +46,12 @@ public class EchoClient {
 
     public void run() throws Exception {
         // Configure the client.
-        Bootstrap b = new Bootstrap();
+        EventLoopGroup group = new NioEventLoopGroup();
         try {
-            b.group(new NioEventLoopGroup())
+            Bootstrap b = new Bootstrap();
+            b.group(group)
              .channel(NioSocketChannel.class)
              .option(ChannelOption.TCP_NODELAY, true)
-             .remoteAddress(new InetSocketAddress(host, port))
              .handler(new ChannelInitializer<SocketChannel>() {
                  @Override
                  public void initChannel(SocketChannel ch) throws Exception {
@@ -63,13 +62,13 @@ public class EchoClient {
              });
 
             // Start the client.
-            ChannelFuture f = b.connect().sync();
+            ChannelFuture f = b.connect(host, port).sync();
 
             // Wait until the connection is closed.
             f.channel().closeFuture().sync();
         } finally {
             // Shut down the event loop to terminate all threads.
-            b.shutdown();
+            group.shutdownGracefully();
         }
     }
 

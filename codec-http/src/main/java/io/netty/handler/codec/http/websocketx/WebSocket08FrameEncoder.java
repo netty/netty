@@ -58,8 +58,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteBuffer;
 
@@ -90,17 +90,15 @@ public class WebSocket08FrameEncoder extends MessageToByteEncoder<WebSocketFrame
      *            false.
      */
     public WebSocket08FrameEncoder(boolean maskPayload) {
-        super(WebSocketFrame.class);
         this.maskPayload = maskPayload;
     }
 
     @Override
-    public void encode(
-            ChannelHandlerContext ctx, WebSocketFrame msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, ByteBuf out) throws Exception {
 
         byte[] mask;
 
-        ByteBuf data = msg.getBinaryData();
+        ByteBuf data = msg.content();
         if (data == null) {
             data = Unpooled.EMPTY_BUFFER;
         }
@@ -132,7 +130,7 @@ public class WebSocket08FrameEncoder extends MessageToByteEncoder<WebSocketFrame
         if (msg.isFinalFragment()) {
             b0 |= 1 << 7;
         }
-        b0 |= msg.getRsv() % 8 << 4;
+        b0 |= msg.rsv() % 8 << 4;
         b0 |= opcode % 128;
 
         if (opcode == OPCODE_PING && length > 125) {
@@ -142,18 +140,18 @@ public class WebSocket08FrameEncoder extends MessageToByteEncoder<WebSocketFrame
 
         int maskLength = maskPayload ? 4 : 0;
         if (length <= 125) {
-            out.ensureWritableBytes(2 + maskLength + length);
+            out.ensureWritable(2 + maskLength + length);
             out.writeByte(b0);
             byte b = (byte) (maskPayload ? 0x80 | (byte) length : (byte) length);
             out.writeByte(b);
         } else if (length <= 0xFFFF) {
-            out.ensureWritableBytes(4 + maskLength + length);
+            out.ensureWritable(4 + maskLength + length);
             out.writeByte(b0);
             out.writeByte(maskPayload ? 0xFE : 126);
             out.writeByte(length >>> 8 & 0xFF);
             out.writeByte(length & 0xFF);
         } else {
-            out.ensureWritableBytes(10 + maskLength + length);
+            out.ensureWritable(10 + maskLength + length);
             out.writeByte(b0);
             out.writeByte(maskPayload ? 0xFF : 127);
             out.writeLong(length);

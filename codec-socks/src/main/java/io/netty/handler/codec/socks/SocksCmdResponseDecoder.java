@@ -16,6 +16,7 @@
 package io.netty.handler.codec.socks;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.util.CharsetUtil;
@@ -31,10 +32,10 @@ public class SocksCmdResponseDecoder extends ReplayingDecoder<SocksCmdResponseDe
         return name;
     }
 
-    private SocksMessage.ProtocolVersion version;
+    private SocksProtocolVersion version;
     private int fieldLength;
-    private SocksMessage.CmdStatus cmdStatus;
-    private SocksMessage.AddressType addressType;
+    private SocksCmdStatus cmdStatus;
+    private SocksAddressType addressType;
     private byte reserved;
     private String host;
     private int port;
@@ -45,20 +46,19 @@ public class SocksCmdResponseDecoder extends ReplayingDecoder<SocksCmdResponseDe
     }
 
     @Override
-    public Object decode(ChannelHandlerContext ctx, ByteBuf byteBuf) throws Exception {
-
+    protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf, MessageBuf<Object> out) throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
-                version = SocksMessage.ProtocolVersion.fromByte(byteBuf.readByte());
-                if (version != SocksMessage.ProtocolVersion.SOCKS5) {
+                version = SocksProtocolVersion.fromByte(byteBuf.readByte());
+                if (version != SocksProtocolVersion.SOCKS5) {
                     break;
                 }
                 checkpoint(State.READ_CMD_HEADER);
             }
             case READ_CMD_HEADER: {
-                cmdStatus = SocksMessage.CmdStatus.fromByte(byteBuf.readByte());
+                cmdStatus = SocksCmdStatus.fromByte(byteBuf.readByte());
                 reserved = byteBuf.readByte();
-                addressType = SocksMessage.AddressType.fromByte(byteBuf.readByte());
+                addressType = SocksAddressType.fromByte(byteBuf.readByte());
                 checkpoint(State.READ_CMD_ADDRESS);
             }
             case READ_CMD_ADDRESS: {
@@ -88,10 +88,10 @@ public class SocksCmdResponseDecoder extends ReplayingDecoder<SocksCmdResponseDe
             }
         }
         ctx.pipeline().remove(this);
-        return msg;
+        out.add(msg);
     }
 
-    public enum State {
+    enum State {
         CHECK_PROTOCOL_VERSION,
         READ_CMD_HEADER,
         READ_CMD_ADDRESS

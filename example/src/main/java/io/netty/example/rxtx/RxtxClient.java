@@ -16,14 +16,16 @@
 package io.netty.example.rxtx;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.BufType;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.socket.oio.OioEventLoopGroup;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.oio.OioEventLoopGroup;
+import io.netty.channel.rxtx.RxtxChannel;
+import io.netty.channel.rxtx.RxtxDeviceAddress;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
-import io.netty.channel.rxtx.RxtxChannel;
-import io.netty.channel.rxtx.RxtxDeviceAddress;
 
 /**
  * Sends one message to a serial device
@@ -31,28 +33,28 @@ import io.netty.channel.rxtx.RxtxDeviceAddress;
 public final class RxtxClient {
 
     public static void main(String[] args) throws Exception {
-        Bootstrap b = new Bootstrap();
+        EventLoopGroup group = new OioEventLoopGroup();
         try {
-            b.group(new OioEventLoopGroup())
+            Bootstrap b = new Bootstrap();
+            b.group(group)
              .channel(RxtxChannel.class)
-             .remoteAddress(new RxtxDeviceAddress("/dev/ttyUSB0"))
              .handler(new ChannelInitializer<RxtxChannel>() {
                  @Override
                  public void initChannel(RxtxChannel ch) throws Exception {
                      ch.pipeline().addLast(
                          new LineBasedFrameDecoder(32768),
-                         new StringEncoder(),
+                         new StringEncoder(BufType.BYTE),
                          new StringDecoder(),
                          new RxtxClientHandler()
                      );
                  }
              });
 
-            ChannelFuture f = b.connect().sync();
+            ChannelFuture f = b.connect(new RxtxDeviceAddress("/dev/ttyUSB0")).sync();
 
             f.channel().closeFuture().sync();
         } finally {
-            b.shutdown();
+            group.shutdownGracefully();
         }
     }
 

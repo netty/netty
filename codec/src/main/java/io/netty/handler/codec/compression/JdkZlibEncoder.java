@@ -30,8 +30,6 @@ import java.util.zip.Deflater;
 
 /**
  * Compresses a {@link ByteBuf} using the deflate algorithm.
- * @apiviz.landmark
- * @apiviz.has org.jboss.netty.handler.codec.compression.ZlibWrapper
  */
 public class JdkZlibEncoder extends ZlibEncoder {
 
@@ -189,7 +187,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
         uncompressed.readBytes(inAry);
 
         int sizeEstimate = (int) Math.ceil(inAry.length * 1.001) + 12;
-        out.ensureWritableBytes(sizeEstimate);
+        out.ensureWritable(sizeEstimate);
 
         synchronized (deflater) {
             if (gzip) {
@@ -264,7 +262,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
     }
 }

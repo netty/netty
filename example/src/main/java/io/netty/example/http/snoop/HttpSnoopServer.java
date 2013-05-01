@@ -17,10 +17,9 @@ package io.netty.example.http.snoop;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.socket.nio.NioEventLoopGroup;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-
-import java.net.InetSocketAddress;
 
 /**
  * An HTTP server that sends back the content of the received HTTP request
@@ -36,18 +35,19 @@ public class HttpSnoopServer {
 
     public void run() throws Exception {
         // Configure the server.
-        ServerBootstrap b = new ServerBootstrap();
-
+        EventLoopGroup bossGroup = new NioEventLoopGroup();
+        EventLoopGroup workerGroup = new NioEventLoopGroup();
         try {
-            b.group(new NioEventLoopGroup(), new NioEventLoopGroup())
+            ServerBootstrap b = new ServerBootstrap();
+            b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
-             .childHandler(new HttpSnoopServerInitializer())
-             .localAddress(new InetSocketAddress(port));
+             .childHandler(new HttpSnoopServerInitializer());
 
-            Channel ch = b.bind().sync().channel();
+            Channel ch = b.bind(port).sync().channel();
             ch.closeFuture().sync();
         } finally {
-            b.shutdown();
+            bossGroup.shutdownGracefully();
+            workerGroup.shutdownGracefully();
         }
     }
 

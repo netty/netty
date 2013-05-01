@@ -15,17 +15,20 @@
  */
 package io.netty.channel.sctp;
 
+
 import com.sun.nio.sctp.SctpChannel;
 import com.sun.nio.sctp.SctpStandardSocketOptions;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
 import java.util.Map;
 
-import static io.netty.channel.ChannelOption.*;
+import static io.netty.channel.sctp.SctpChannelOption.*;
 
 /**
  * The default {@link SctpChannelConfig} implementation for SCTP.
@@ -40,6 +43,15 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
             throw new NullPointerException("javaChannel");
         }
         this.javaChannel = javaChannel;
+
+        // Enable TCP_NODELAY by default if possible.
+        if (PlatformDependent.canEnableTcpNoDelayByDefault()) {
+            try {
+                setSctpNoDelay(true);
+            } catch (Exception e) {
+                // Ignore.
+            }
+        }
     }
 
     @Override
@@ -177,5 +189,10 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
     @Override
     public SctpChannelConfig setAutoRead(boolean autoRead) {
         return (SctpChannelConfig) super.setAutoRead(autoRead);
+    }
+
+    @Override
+    public SctpChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type) {
+        return (SctpChannelConfig) super.setDefaultHandlerByteBufType(type);
     }
 }

@@ -15,6 +15,9 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.internal.PlatformDependent;
+
 /**
  * The {@link CompleteChannelFuture} which is failed already.  It is
  * recommended to use {@link Channel#newFailedFuture(Throwable)}
@@ -30,8 +33,8 @@ final class FailedChannelFuture extends CompleteChannelFuture {
      * @param channel the {@link Channel} associated with this future
      * @param cause   the cause of failure
      */
-    public FailedChannelFuture(Channel channel, Throwable cause) {
-        super(channel);
+    public FailedChannelFuture(Channel channel, EventExecutor executor, Throwable cause) {
+        super(channel, executor);
         if (cause == null) {
             throw new NullPointerException("cause");
         }
@@ -50,23 +53,13 @@ final class FailedChannelFuture extends CompleteChannelFuture {
 
     @Override
     public ChannelFuture sync() {
-        return rethrow();
+        PlatformDependent.throwException(cause);
+        return this;
     }
 
     @Override
     public ChannelFuture syncUninterruptibly() {
-        return rethrow();
-    }
-
-    private ChannelFuture rethrow() {
-        if (cause instanceof RuntimeException) {
-            throw (RuntimeException) cause;
-        }
-
-        if (cause instanceof Error) {
-            throw (Error) cause;
-        }
-
-        throw new ChannelException(cause);
+        PlatformDependent.throwException(cause);
+        return this;
     }
 }

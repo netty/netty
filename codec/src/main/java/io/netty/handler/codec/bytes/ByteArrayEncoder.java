@@ -16,13 +16,13 @@
 package io.netty.handler.codec.bytes;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
-import io.netty.handler.codec.MessageToMessageEncoder;
 
 /**
  * Encodes the requested array of bytes into a {@link ByteBuf}.
@@ -48,22 +48,24 @@ import io.netty.handler.codec.MessageToMessageEncoder;
  * }
  * </pre>
  */
-public class ByteArrayEncoder extends MessageToMessageEncoder<byte[]> {
-
-    public ByteArrayEncoder() {
-        super(byte[].class);
-    }
+@Sharable
+public class ByteArrayEncoder extends ChannelOutboundMessageHandlerAdapter<byte[]> {
 
     @Override
-    public MessageBuf<byte[]> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return Unpooled.messageBuffer();
-    }
-
-    @Override
-    protected ByteBuf encode(ChannelHandlerContext ctx, byte[] msg) throws Exception {
+    public void flush(ChannelHandlerContext ctx, byte[] msg) throws Exception {
         if (msg.length == 0) {
-            return null;
+            return;
         }
-        return Unpooled.wrappedBuffer(msg);
+
+        switch (ctx.nextOutboundBufferType()) {
+            case BYTE:
+                ctx.nextOutboundByteBuffer().writeBytes(msg);
+                break;
+            case MESSAGE:
+                ctx.nextOutboundMessageBuffer().add(Unpooled.wrappedBuffer(msg));
+                break;
+            default:
+                throw new Error();
+        }
     }
 }

@@ -24,9 +24,6 @@ import java.net.Socket;
 
 /**
  * A TCP/IP socket {@link Channel}.
- *
- * @apiviz.landmark
- * @apiviz.composedOf io.netty.channel.socket.SocketChannelConfig
  */
 public interface SocketChannel extends Channel {
     @Override

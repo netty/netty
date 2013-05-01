@@ -16,9 +16,11 @@
 package io.netty.channel.socket;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.util.internal.PlatformDependent;
 
 import java.net.Socket;
 import java.net.SocketException;
@@ -32,7 +34,7 @@ import static io.netty.channel.ChannelOption.*;
 public class DefaultSocketChannelConfig extends DefaultChannelConfig
                                         implements SocketChannelConfig {
 
-    private final Socket javaSocket;
+    protected final Socket javaSocket;
     private volatile boolean allowHalfClosure;
 
     /**
@@ -44,6 +46,15 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
             throw new NullPointerException("javaSocket");
         }
         this.javaSocket = javaSocket;
+
+        // Enable TCP_NODELAY by default if possible.
+        if (PlatformDependent.canEnableTcpNoDelayByDefault()) {
+            try {
+                setTcpNoDelay(true);
+            } catch (Exception e) {
+                // Ignore.
+            }
+        }
     }
 
     @Override
@@ -285,5 +296,10 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public SocketChannelConfig setAutoRead(boolean autoRead) {
         return (SocketChannelConfig) super.setAutoRead(autoRead);
+    }
+
+    @Override
+    public SocketChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type) {
+        return (SocketChannelConfig) super.setDefaultHandlerByteBufType(type);
     }
 }

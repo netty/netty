@@ -15,58 +15,61 @@
  */
 package io.netty.example.http.upload;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
-import io.netty.handler.codec.http.HttpChunk;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponse;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
+
+import java.util.logging.Logger;
 
 /**
  * Handler that just dumps the contents of the response from the server
  */
 public class HttpUploadClientHandler extends ChannelInboundMessageHandlerAdapter<Object> {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(HttpUploadClientHandler.class);
+    private static final Logger logger = Logger.getLogger(HttpUploadClientHandler.class.getName());
 
     private boolean readingChunks;
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (!readingChunks) {
+        if (msg instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) msg;
 
             logger.info("STATUS: " + response.getStatus());
             logger.info("VERSION: " + response.getProtocolVersion());
 
-            if (!response.getHeaderNames().isEmpty()) {
-                for (String name : response.getHeaderNames()) {
-                    for (String value : response.getHeaders(name)) {
+            if (!response.headers().isEmpty()) {
+                for (String name : response.headers().names()) {
+                    for (String value : response.headers().getAll(name)) {
                         logger.info("HEADER: " + name + " = " + value);
                     }
                 }
             }
 
-            if (response.getStatus().getCode() == 200 && response.getTransferEncoding().isMultiple()) {
+            if (response.getStatus().code() == 200 && HttpHeaders.isTransferEncodingChunked(response)) {
                 readingChunks = true;
                 logger.info("CHUNKED CONTENT {");
             } else {
-                ByteBuf content = response.getContent();
-                if (content.readable()) {
-                    logger.info("CONTENT {");
-                    logger.info(content.toString(CharsetUtil.UTF_8));
+                logger.info("CONTENT {");
+            }
+        }
+        if (msg instanceof HttpContent) {
+            HttpContent chunk = (HttpContent) msg;
+            logger.info(chunk.content().toString(CharsetUtil.UTF_8));
+
+            if (chunk instanceof LastHttpContent) {
+                if (readingChunks) {
+                    logger.info("} END OF CHUNKED CONTENT");
+                } else {
                     logger.info("} END OF CONTENT");
                 }
-            }
-        } else {
-            HttpChunk chunk = (HttpChunk) msg;
-            if (chunk.isLast()) {
                 readingChunks = false;
-                logger.info("} END OF CHUNKED CONTENT");
             } else {
-                logger.info(chunk.getContent().toString(CharsetUtil.UTF_8));
+                logger.info(chunk.content().toString(CharsetUtil.UTF_8));
             }
         }
     }

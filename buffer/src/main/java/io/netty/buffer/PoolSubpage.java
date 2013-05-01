@@ -24,6 +24,9 @@ final class PoolSubpage<T> {
     final int pageSize;
     final long[] bitmap;
 
+    PoolSubpage<T> prev;
+    PoolSubpage<T> next;
+
     boolean doNotDestroy;
     int elemSize;
     int maxNumElems;
@@ -33,6 +36,16 @@ final class PoolSubpage<T> {
 
     // TODO: Test if adding padding helps under contention
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
+
+    /** Special constructor that creates a linked list head */
+    PoolSubpage(int pageSize) {
+        chunk = null;
+        memoryMapIdx = -1;
+        runOffset = -1;
+        elemSize = -1;
+        this.pageSize = pageSize;
+        bitmap = null;
+    }
 
     PoolSubpage(PoolChunk<T> chunk, int memoryMapIdx, int runOffset, int pageSize, int elemSize) {
         this.chunk = chunk;
@@ -46,20 +59,20 @@ final class PoolSubpage<T> {
     void init(int elemSize) {
         doNotDestroy = true;
         this.elemSize = elemSize;
-        if (elemSize == 0) {
-            return;
+        if (elemSize != 0) {
+            maxNumElems = numAvail = pageSize / elemSize;
+            nextAvail = 0;
+            bitmapLength = maxNumElems >>> 6;
+            if ((maxNumElems & 63) != 0) {
+                bitmapLength ++;
+            }
+
+            for (int i = 0; i < bitmapLength; i ++) {
+                bitmap[i] = 0;
+            }
         }
 
-        maxNumElems = numAvail = pageSize / elemSize;
-        nextAvail = 0;
-        bitmapLength = maxNumElems >>> 6;
-        if ((maxNumElems & 63) != 0) {
-            bitmapLength ++;
-        }
-
-        for (int i = 0; i < bitmapLength; i ++) {
-            bitmap[i] = 0;
-        }
+        addToPool();
     }
 
     /**
@@ -81,6 +94,7 @@ final class PoolSubpage<T> {
         bitmap[q] |= 1L << r;
 
         if (-- numAvail == 0) {
+            removeFromPool();
             nextAvail = -1;
         } else {
             nextAvail = findNextAvailable();
@@ -105,7 +119,7 @@ final class PoolSubpage<T> {
 
         if (numAvail ++ == 0) {
             nextAvail = bitmapIdx;
-            chunk.arena.addSubpage(this);
+            addToPool();
             return true;
         }
 
@@ -113,8 +127,26 @@ final class PoolSubpage<T> {
             return true;
         } else {
             doNotDestroy = false;
+            removeFromPool();
             return false;
         }
+    }
+
+    private void addToPool() {
+        PoolSubpage<T> head = chunk.arena.findSubpagePoolHead(elemSize);
+        assert prev == null && next == null;
+        prev = head;
+        next = head.next;
+        next.prev = this;
+        head.next = this;
+    }
+
+    private void removeFromPool() {
+        assert prev != null && next != null;
+        prev.next = next;
+        next.prev = prev;
+        next = null;
+        prev = null;
     }
 
     private int findNextAvailable() {

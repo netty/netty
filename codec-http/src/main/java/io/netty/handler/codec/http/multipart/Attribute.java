@@ -30,4 +30,13 @@ public interface Attribute extends HttpData {
      * Sets the value of this HttpData.
      */
     void setValue(String value) throws IOException;
+
+    @Override
+    Attribute copy();
+
+    @Override
+    Attribute retain();
+
+    @Override
+    Attribute retain(int increment);
 }

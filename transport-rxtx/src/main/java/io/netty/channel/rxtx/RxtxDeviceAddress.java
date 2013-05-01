@@ -25,21 +25,21 @@ public class RxtxDeviceAddress extends SocketAddress {
 
     private static final long serialVersionUID = -2907820090993709523L;
 
-    private final String deviceAddress;
+    private final String value;
 
     /**
      * Creates a RxtxDeviceAddress representing the address of the serial port.
      *
-     * @param deviceAddress the address of the device (e.g. COM1, /dev/ttyUSB0, ...)
+     * @param value the address of the device (e.g. COM1, /dev/ttyUSB0, ...)
      */
-    public RxtxDeviceAddress(String deviceAddress) {
-        this.deviceAddress = deviceAddress;
+    public RxtxDeviceAddress(String value) {
+        this.value = value;
     }
 
     /**
      * @return The serial port address of the device (e.g. COM1, /dev/ttyUSB0, ...)
      */
-    public String getDeviceAddress() {
-        return deviceAddress;
+    public String value() {
+        return value;
     }
 }

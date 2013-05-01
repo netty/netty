@@ -15,49 +15,36 @@
  */
 package io.netty.channel.socket.oio;
 
-import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
-import io.netty.channel.FileRegion;
-import io.netty.channel.socket.DefaultSocketChannelConfig;
+import io.netty.channel.oio.OioByteStreamChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.SocketChannelConfig;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
-import java.nio.channels.Channels;
-import java.nio.channels.NotYetConnectedException;
-import java.nio.channels.WritableByteChannel;
 
 /**
  * A {@link SocketChannel} which is using Old-Blocking-IO
  */
-public class OioSocketChannel extends AbstractOioByteChannel
+public class OioSocketChannel extends OioByteStreamChannel
                               implements SocketChannel {
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(OioSocketChannel.class);
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.BYTE, false);
-
     private final Socket socket;
-    private final SocketChannelConfig config;
-    private InputStream is;
-    private OutputStream os;
-    private WritableByteChannel outChannel;
+    private final OioSocketChannelConfig config;
 
     /**
      * Create a new instance with an new {@link Socket}
@@ -86,13 +73,12 @@ public class OioSocketChannel extends AbstractOioByteChannel
     public OioSocketChannel(Channel parent, Integer id, Socket socket) {
         super(parent, id);
         this.socket = socket;
-        config = new DefaultSocketChannelConfig(this, socket);
+        config = new DefaultOioSocketChannelConfig(this, socket);
 
         boolean success = false;
         try {
             if (socket.isConnected()) {
-                is = socket.getInputStream();
-                os = socket.getOutputStream();
+                activate(socket.getInputStream(), socket.getOutputStream());
             }
             socket.setSoTimeout(SO_TIMEOUT);
             success = true;
@@ -115,12 +101,7 @@ public class OioSocketChannel extends AbstractOioByteChannel
     }
 
     @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
-    }
-
-    @Override
-    public SocketChannelConfig config() {
+    public OioSocketChannelConfig config() {
         return config;
     }
 
@@ -147,6 +128,18 @@ public class OioSocketChannel extends AbstractOioByteChannel
     @Override
     public ChannelFuture shutdownOutput() {
         return shutdownOutput(newPromise());
+    }
+
+    @Override
+    protected int doReadBytes(ByteBuf buf) throws Exception {
+        if (socket.isClosed()) {
+            return -1;
+        }
+        try {
+            return super.doReadBytes(buf);
+        } catch (SocketTimeoutException e) {
+            return 0;
+        }
     }
 
     @Override
@@ -205,9 +198,12 @@ public class OioSocketChannel extends AbstractOioByteChannel
         boolean success = false;
         try {
             socket.connect(remoteAddress, config().getConnectTimeoutMillis());
-            is = socket.getInputStream();
-            os = socket.getOutputStream();
+            activate(socket.getInputStream(), socket.getOutputStream());
             success = true;
+        } catch (SocketTimeoutException e) {
+            ConnectTimeoutException cause = new ConnectTimeoutException("connection timed out: " + remoteAddress);
+            cause.setStackTrace(e.getStackTrace());
+            throw cause;
         } finally {
             if (!success) {
                 doClose();
@@ -226,60 +222,15 @@ public class OioSocketChannel extends AbstractOioByteChannel
     }
 
     @Override
-    protected int available() {
-        try {
-            return is.available();
-        } catch (IOException e) {
-            return 0;
-        }
-    }
-
-    @Override
-    protected int doReadBytes(ByteBuf buf) throws Exception {
-        if (socket.isClosed()) {
-            return -1;
-        }
-
-        try {
-            return buf.writeBytes(is, buf.writableBytes());
-        } catch (SocketTimeoutException e) {
-            return 0;
-        }
-    }
-
-    @Override
-    protected void doWriteBytes(ByteBuf buf) throws Exception {
-        OutputStream os = this.os;
-        if (os == null) {
-            throw new NotYetConnectedException();
-        }
-        buf.readBytes(os, buf.readableBytes());
-    }
-
-    @Override
-    protected void doFlushFileRegion(FileRegion region, ChannelPromise promise) throws Exception {
-        OutputStream os = this.os;
-        if (os == null) {
-            throw new NotYetConnectedException();
-        }
-        if (outChannel == null) {
-            outChannel = Channels.newChannel(os);
-        }
-        long written = 0;
-
-        for (;;) {
-            long localWritten = region.transferTo(outChannel, written);
-            if (localWritten == -1) {
-                checkEOF(region, written);
-                region.close();
-                promise.setSuccess();
-                return;
+    protected boolean checkInputShutdown() {
+        if (isInputShutdown()) {
+            try {
+                Thread.sleep(config().getSoTimeout());
+            } catch (Throwable e) {
+                // ignore
             }
-            written += localWritten;
-            if (written >= region.count()) {
-                promise.setSuccess();
-                return;
-            }
+            return true;
         }
+        return false;
     }
 }

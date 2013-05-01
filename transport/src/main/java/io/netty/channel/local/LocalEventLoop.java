@@ -16,29 +16,25 @@
 package io.netty.channel.local;
 
 import io.netty.channel.SingleThreadEventLoop;
-import io.netty.channel.ChannelTaskScheduler;
 
 import java.util.concurrent.ThreadFactory;
 
 final class LocalEventLoop extends SingleThreadEventLoop {
 
-    LocalEventLoop(
-            LocalEventLoopGroup parent, ThreadFactory threadFactory, ChannelTaskScheduler scheduler) {
-        super(parent, threadFactory, scheduler);
+    LocalEventLoop(LocalEventLoopGroup parent, ThreadFactory threadFactory) {
+        super(parent, threadFactory, true);
     }
 
     @Override
     protected void run() {
         for (;;) {
-            Runnable task;
-            try {
-                task = takeTask();
+            Runnable task = takeTask();
+            if (task != null) {
                 task.run();
-            } catch (InterruptedException e) {
-                // Waken up by interruptThread()
+                updateLastExecutionTime();
             }
 
-            if (isShutdown() && confirmShutdown()) {
+            if (confirmShutdown()) {
                 break;
             }
         }

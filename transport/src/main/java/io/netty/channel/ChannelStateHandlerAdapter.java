@@ -23,73 +23,7 @@ package io.netty.channel;
  * This implementation just forward the operation to the next {@link ChannelHandler} in the
  * {@link ChannelPipeline}. Sub-classes may override a method implementation to change this.
  */
-public class ChannelStateHandlerAdapter implements ChannelStateHandler {
-
-    // Not using volatile because it's used only for a sanity check.
-    boolean added;
-
-    /**
-     * Return {@code true} if the implementation is {@link Sharable} and so can be added
-     * to different {@link ChannelPipeline}s.
-     */
-    final boolean isSharable() {
-        return getClass().isAnnotationPresent(Sharable.class);
-    }
-    /**
-     * Do nothing by default, sub-classes may override this method.
-     */
-    @Override
-    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
-        // NOOP
-    }
-
-    /**
-     * Do nothing by default, sub-classes may override this method.
-     */
-    @Override
-    public void afterAdd(ChannelHandlerContext ctx) throws Exception {
-        // NOOP
-    }
-
-    /**
-     * Do nothing by default, sub-classes may override this method.
-     */
-    @Override
-    public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
-        // NOOP
-    }
-
-    /**
-     * Do nothing by default, sub-classes may override this method.
-     */
-    @Override
-    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
-        // NOOP
-    }
-
-    /**
-     * Calls {@link ChannelHandlerContext#fireExceptionCaught(Throwable)} to forward
-     * to the next {@link ChannelHandler} in the {@link ChannelPipeline}.
-     *
-     * Sub-classes may override this method to change behavior.
-     */
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
-            throws Exception {
-        ctx.fireExceptionCaught(cause);
-    }
-
-    /**
-     * Calls {@link ChannelHandlerContext#fireUserEventTriggered(Object)} to forward
-     * to the next {@link ChannelHandler} in the {@link ChannelPipeline}.
-     *
-     * Sub-classes may override this method to change behavior.
-     */
-    @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt)
-            throws Exception {
-        ctx.fireUserEventTriggered(evt);
-    }
+public abstract class ChannelStateHandlerAdapter extends ChannelHandlerAdapter implements ChannelStateHandler {
 
     /**
      * Calls {@link ChannelHandlerContext#fireChannelRegistered()} to forward
@@ -134,28 +68,26 @@ public class ChannelStateHandlerAdapter implements ChannelStateHandler {
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         ctx.fireChannelInactive();
     }
-
     /**
-     * Calls {@link ChannelHandlerContext#fireInboundBufferUpdated()} to forward
-     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
+     * Calls {@link ChannelHandlerContext#fireChannelReadSuspended()} to forward
+     * to the next {@link ChannelHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
-     *
-     * Be aware that if your class also implement {@link ChannelInboundHandler} it need to {@code @Override} this
-     * method and provide some proper implementation. Fail to do so, will result in an {@link IllegalStateException}!
      */
     @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-        if (this instanceof ChannelInboundHandler) {
-            throw new IllegalStateException(
-                    "inboundBufferUpdated(...) must be overridden by " + getClass().getName() +
-                    ", which implements " + ChannelInboundHandler.class.getSimpleName());
-        }
-        ctx.fireInboundBufferUpdated();
+    public void channelReadSuspended(ChannelHandlerContext ctx) throws Exception {
+        ctx.fireChannelReadSuspended();
     }
 
+    /**
+     * Calls {@link ChannelHandlerContext#fireUserEventTriggered(Object)} to forward
+     * to the next {@link ChannelHandler} in the {@link ChannelPipeline}.
+     *
+     * Sub-classes may override this method to change behavior.
+     */
     @Override
-    public void channelReadSuspended(ChannelHandlerContext ctx) throws Exception {
-        ctx.fireInboundBufferSuspended();
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt)
+            throws Exception {
+        ctx.fireUserEventTriggered(evt);
     }
 }

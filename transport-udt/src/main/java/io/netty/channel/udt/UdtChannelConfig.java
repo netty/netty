@@ -15,13 +15,12 @@
  */
 package io.netty.channel.udt;
 
+import com.barchart.udt.OptionUDT;
+import com.barchart.udt.TypeUDT;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
-
-import com.barchart.udt.OptionUDT;
-import com.barchart.udt.TypeUDT;
-import com.barchart.udt.nio.KindUDT;
 
 /**
  * A {@link ChannelConfig} for a {@link UdtChannel}.
@@ -34,31 +33,34 @@ import com.barchart.udt.nio.KindUDT;
  * <tr>
  * <th>Name</th>
  * <th>Associated setter method</th>
+ * </tr><tr>
+ * <td>{@link ChannelOption#SO_REUSEADDR}</td><td>{@link #setReuseAddress(boolean)}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#SO_RCVBUF}</td><td>{@link #setReceiveBufferSize(int)}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#SO_SNDBUF}</td><td>{@link #setSendBufferSize(int)}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#SO_REUSEADDR}</td><td>{@link #setReuseAddress(boolean)}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#SO_LINGER}</td><td>{@link #setSoLinger(int)}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#SO_RCVBUF}</td><td>{@link #setReceiveBufferSize(int)}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#SO_SNDBUF}</td><td>{@link #setSendBufferSize(int)}</td>
+ * </tr><tr>
+ * <td>{@link UdtChannelOption#PROTOCOL_RECEIVE_BUFFER_SIZE}</td>
+ * <td>{@link #setProtocolReceiveBufferSize(int)}</td>
+ * </tr><tr>
+ * <td>{@link UdtChannelOption#PROTOCOL_SEND_BUFFER_SIZE}</td>
+ * <td>{@link #setProtocolSendBufferSize(int)}</td>
+ * </tr><tr>
+ * <td>{@link UdtChannelOption#SYSTEM_RECEIVE_BUFFER_SIZE}</td>
+ * <td>{@link #setSystemReceiveBufferSize(int)}</td>
+ * </tr><tr>
+ * <td>{@link UdtChannelOption#SYSTEM_SEND_BUFFER_SIZE}</td>
+ * <td>{@link #setSystemSendBufferSize(int)}</td>
+
  * </tr>
- * <tr>
- * <td>{@code "reuseAddress"}</td>
- * <td>{@link #setReuseAddress(boolean)}</td>
- * </tr>
- * <tr>
- * <td>{@code "soLinger"}</td>
- * <td>{@link #setSoLinger(int)}</td>
- * </tr>
- * <tr>
- * <td>{@code "receiveBufferSize"}</td>
- * <td>{@link #setReceiveBufferSize(int)}</td>
- * </tr>
- * <tr>
- * <td>{@code "sendBufferSize"}</td>
- * <td>{@link #setSendBufferSize(int)}</td>
- * </tr>
- * <tr>
- * <td>{@code "protocolReceiveBuferSize"}</td>
- * <td>{@link #setProtocolBufferSize(int)}</td>
- * <tr>
- * <tr>
- * <td>{@code "systemReceiveBufferSize"}</td>
- * <td>{@link #setSystemBufferSize(int)}</td>
- * <tr>
  * </table>
  * <p>
  * Note that {@link TypeUDT#DATAGRAM} message oriented channels treat
@@ -67,35 +69,6 @@ import com.barchart.udt.nio.KindUDT;
  * {@link ChannelException} will be thrown.
  */
 public interface UdtChannelConfig extends ChannelConfig {
-
-    /**
-     * See {@link OptionUDT#Protocol_Receive_Buffer_Size}.
-     */
-    ChannelOption<Integer> PROTOCOL_RECEIVE_BUFFER_SIZE = new ChannelOption<Integer>(
-            "PROTOCOL_RECEIVE_BUFFER_SIZE");
-
-    /**
-     * See {@link OptionUDT#Protocol_Send_Buffer_Size}.
-     */
-    ChannelOption<Integer> PROTOCOL_SEND_BUFFER_SIZE = new ChannelOption<Integer>(
-            "PROTOCOL_SEND_BUFFER_SIZE");
-
-    /**
-     * See {@link OptionUDT#System_Receive_Buffer_Size}.
-     */
-    ChannelOption<Integer> SYSTEM_RECEIVE_BUFFER_SIZE = new ChannelOption<Integer>(
-            "SYSTEM_RECEIVE_BUFFER_SIZE");
-
-    /**
-     * See {@link OptionUDT#System_Send_Buffer_Size}.
-     */
-    ChannelOption<Integer> SYSTEM_SEND_BUFFER_SIZE = new ChannelOption<Integer>(
-            "SYSTEM_SEND_BUFFER_SIZE");
-
-    /**
-     * Gets {@link KindUDT#ACCEPTOR} channel backlog.
-     */
-    int getBacklog();
 
     /**
      * Gets {@link OptionUDT#Protocol_Receive_Buffer_Size}
@@ -137,10 +110,17 @@ public interface UdtChannelConfig extends ChannelConfig {
      */
     boolean isReuseAddress();
 
-    /**
-     * Sets {@link KindUDT#ACCEPTOR} channel backlog.
-     */
-    UdtChannelConfig setBacklog(int backlog);
+    @Override
+    UdtChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
+
+    @Override
+    UdtChannelConfig setWriteSpinCount(int writeSpinCount);
+
+    @Override
+    UdtChannelConfig setAllocator(ByteBufAllocator allocator);
+
+    @Override
+    UdtChannelConfig setAutoRead(boolean autoRead);
 
     /**
      * Sets {@link OptionUDT#Protocol_Receive_Buffer_Size}
@@ -182,4 +162,6 @@ public interface UdtChannelConfig extends ChannelConfig {
      */
     UdtChannelConfig setSystemSendBufferSize(int size);
 
+    @Override
+    UdtChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type);
 }

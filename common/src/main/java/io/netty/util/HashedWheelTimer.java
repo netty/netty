@@ -15,14 +15,9 @@
  */
 package io.netty.util;
 
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
-import io.netty.monitor.EventRateMonitor;
-import io.netty.monitor.MonitorName;
-import io.netty.monitor.MonitorRegistry;
-import io.netty.monitor.ValueDistributionMonitor;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SharedResourceMisuseDetector;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -30,7 +25,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -82,30 +76,26 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class HashedWheelTimer implements Timer {
 
     static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(HashedWheelTimer.class);
+            InternalLoggerFactory.getInstance(HashedWheelTimer.class);
 
-    private static final SharedResourceMisuseDetector misuseDetector =
-        new SharedResourceMisuseDetector(HashedWheelTimer.class);
+    private static final ResourceLeakDetector<HashedWheelTimer> leakDetector =
+            new ResourceLeakDetector<HashedWheelTimer>(
+                    HashedWheelTimer.class, 1, Runtime.getRuntime().availableProcessors() * 4);
 
-    private static final MonitorName TIMEOUT_EXPIRATION_TIME_DEVIATION_MN = new MonitorName(HashedWheelTimer.class,
-            "timeout-expiration-time-deviation");
-    private static final MonitorName TIMEOUTS_PER_SECOND_MN = new MonitorName(HashedWheelTimer.class,
-            "timeouts-per-second");
-
+    private final ResourceLeak leak;
     private final Worker worker = new Worker();
     final Thread workerThread;
+
+    public static final int WORKER_STATE_INIT = 0;
+    public static final int WORKER_STATE_STARTED = 1;
+    public static final int WORKER_STATE_SHUTDOWN = 2;
     final AtomicInteger workerState = new AtomicInteger(); // 0 - init, 1 - started, 2 - shut down
 
-    private final long roundDuration;
     final long tickDuration;
     final Set<HashedWheelTimeout>[] wheel;
     final int mask;
     final ReadWriteLock lock = new ReentrantReadWriteLock();
     volatile int wheelCursor;
-
-    // Monitoring this instance
-    final ValueDistributionMonitor timeoutExpirationTimeDeviation;
-    final EventRateMonitor timeoutsPerSecond;
 
     /**
      * Creates a new timer with the default thread factory
@@ -188,96 +178,12 @@ public class HashedWheelTimer implements Timer {
     public HashedWheelTimer(
             ThreadFactory threadFactory,
             long tickDuration, TimeUnit unit, int ticksPerWheel) {
-        this(threadFactory, tickDuration, unit, ticksPerWheel, MonitorRegistry.NOOP);
-    }
-
-    /**
-     * Creates a new timer with {@link io.netty.monitor monitoring support}
-     * enabled. The new timer instance will monitor
-     * <ul>
-     * <li>
-     * the distribution of deviation between scheduled and actual
-     * {@link Timeout timeout} execution, i.e. how accurate this timer is; and
-     * </li>
-     * <li>
-     * the rate of {@link Timeout timeout} executions per second.
-     * </li>
-     * </ul>
-     *
-     * @param threadFactory   a {@link ThreadFactory} that creates a
-     *                        background {@link Thread} which is dedicated to
-     *                        {@link TimerTask} execution.
-     * @param tickDuration    the duration between tick
-     * @param unit            the time unit of the {@code tickDuration}
-     * @param ticksPerWheel   the size of the wheel
-     * @param monitorRegistry the {@link MonitorRegistry} to use
-     * @throws NullPointerException
-     *                        if either of {@code threadFactory} and {@code unit}
-     *                        is {@code null}
-     * @throws IllegalArgumentException
-     *                        if either of {@code tickDuration} and {@code ticksPerWheel} is <= 0
-     */
-    public HashedWheelTimer(ThreadFactory threadFactory, long tickDuration, TimeUnit unit, int ticksPerWheel,
-            MonitorRegistry monitorRegistry) {
-        this(threadFactory, tickDuration, unit, ticksPerWheel, monitorRegistry,
-             TIMEOUT_EXPIRATION_TIME_DEVIATION_MN, TIMEOUTS_PER_SECOND_MN);
-    }
-
-    /**
-     * Creates a new timer with {@link io.netty.monitor monitoring support}
-     * enabled. The new timer instance will monitor
-     * <ul>
-     * <li>
-     * the distribution of deviation between scheduled and actual
-     * {@link Timeout timeout} execution, i.e. how accurate this timer is; and
-     * </li>
-     * <li>
-     * the rate of {@link Timeout timeout} executions per second.
-     * </li>
-     * </ul>
-     *
-     * @param threadFactory   a {@link ThreadFactory} that creates a
-     *                        background {@link Thread} which is dedicated to
-     *                        {@link TimerTask} execution.
-     * @param tickDuration    the duration between tick
-     * @param unit            the time unit of the {@code tickDuration}
-     * @param ticksPerWheel   the size of the wheel
-     * @param monitorRegistry the {@link MonitorRegistry} to use
-     * @param timeoutExpirationTimeDeviationMonitorName
-     *                        the {@link MonitorName name} to use for the
-     *                        {@code Monitor} that tracks the distribution of
-     *                        deviation between scheduled and actual timeout
-     *                        execution
-     * @param timeoutsPerSecondMonitorName
-     *                        the {@link MonitorName name} to use for the
-     *                        {@code Monitor} that tracks the rate of timeout
-     *                        executions per second
-     * @throws NullPointerException
-     *                        if either of {@code threadFactory}, {@code unit},
-     *                        {@code monitorRegistry},
-     *                        {@code timeoutExpirationTimeDeviationMonitorName} and
-     *                        {@code timeoutsPerSecondMonitorName} is {@code null}
-     * @throws IllegalArgumentException
-     *                        if either of {@code tickDuration} and {@code ticksPerWheel} is <= 0
-     */
-    public HashedWheelTimer(ThreadFactory threadFactory, long tickDuration, TimeUnit unit, int ticksPerWheel,
-            MonitorRegistry monitorRegistry, MonitorName timeoutExpirationTimeDeviationMonitorName,
-            MonitorName timeoutsPerSecondMonitorName) {
 
         if (threadFactory == null) {
             throw new NullPointerException("threadFactory");
         }
         if (unit == null) {
             throw new NullPointerException("unit");
-        }
-        if (monitorRegistry == null) {
-            throw new NullPointerException("monitorRegistry");
-        }
-        if (timeoutExpirationTimeDeviationMonitorName == null) {
-            throw new NullPointerException("timeoutExpirationTimeDeviationMonitorName");
-        }
-        if (timeoutsPerSecondMonitorName == null) {
-            throw new NullPointerException("timeoutsPerSecondMonitorName");
         }
         if (tickDuration <= 0) {
             throw new IllegalArgumentException("tickDuration must be greater than 0: " + tickDuration);
@@ -290,25 +196,18 @@ public class HashedWheelTimer implements Timer {
         wheel = createWheel(ticksPerWheel);
         mask = wheel.length - 1;
 
-        // Convert tickDuration to milliseconds.
-        this.tickDuration = tickDuration = unit.toMillis(tickDuration);
+        // Convert tickDuration to nanos.
+        this.tickDuration = unit.toNanos(tickDuration);
 
         // Prevent overflow.
-        if (tickDuration == Long.MAX_VALUE || tickDuration >= Long.MAX_VALUE / wheel.length) {
-            throw new IllegalArgumentException("tickDuration is too long: " + tickDuration + ' ' + unit);
+        if (this.tickDuration >= Long.MAX_VALUE / wheel.length) {
+            throw new IllegalArgumentException(String.format(
+                    "tickDuration: %d (expected: 0 < tickDuration in nanos < %d",
+                    tickDuration, Long.MAX_VALUE / wheel.length));
         }
 
-        roundDuration = tickDuration * wheel.length;
-
         workerThread = threadFactory.newThread(worker);
-
-        timeoutExpirationTimeDeviation =
-                monitorRegistry.newValueDistributionMonitor(timeoutExpirationTimeDeviationMonitorName);
-        timeoutsPerSecond =
-                monitorRegistry.newEventRateMonitor(timeoutsPerSecondMonitorName, TimeUnit.SECONDS);
-
-        // Misuse check
-        misuseDetector.increase();
+        leak = leakDetector.open(this);
     }
 
     @SuppressWarnings("unchecked")
@@ -326,7 +225,7 @@ public class HashedWheelTimer implements Timer {
         Set<HashedWheelTimeout>[] wheel = new Set[ticksPerWheel];
         for (int i = 0; i < wheel.length; i ++) {
             wheel[i] = Collections.newSetFromMap(
-                    new ConcurrentHashMap<HashedWheelTimeout, Boolean>(16, 0.95f, 4));
+                    PlatformDependent.<HashedWheelTimeout, Boolean>newConcurrentHashMap());
         }
         return wheel;
     }
@@ -348,17 +247,17 @@ public class HashedWheelTimer implements Timer {
      */
     public void start() {
         switch (workerState.get()) {
-        case 0:
-            if (workerState.compareAndSet(0, 1)) {
-                workerThread.start();
-            }
-            break;
-        case 1:
-            break;
-        case 2:
-            throw new IllegalStateException("cannot be started once stopped");
-        default:
-            throw new Error();
+            case WORKER_STATE_INIT:
+                if (workerState.compareAndSet(WORKER_STATE_INIT, WORKER_STATE_STARTED)) {
+                    workerThread.start();
+                }
+                break;
+            case WORKER_STATE_STARTED:
+                break;
+            case WORKER_STATE_SHUTDOWN:
+                throw new IllegalStateException("cannot be started once stopped");
+            default:
+                throw new Error("Invalid WorkerState");
         }
     }
 
@@ -367,13 +266,13 @@ public class HashedWheelTimer implements Timer {
         if (Thread.currentThread() == workerThread) {
             throw new IllegalStateException(
                     HashedWheelTimer.class.getSimpleName() +
-                    ".stop() cannot be called from " +
-                    TimerTask.class.getSimpleName());
+                            ".stop() cannot be called from " +
+                            TimerTask.class.getSimpleName());
         }
 
-        if (!workerState.compareAndSet(1, 2)) {
+        if (!workerState.compareAndSet(WORKER_STATE_STARTED, WORKER_STATE_SHUTDOWN)) {
             // workerState can be 0 or 2 at this moment - let it always be 2.
-            workerState.set(2);
+            workerState.set(WORKER_STATE_SHUTDOWN);
             return Collections.emptySet();
         }
 
@@ -391,7 +290,7 @@ public class HashedWheelTimer implements Timer {
             Thread.currentThread().interrupt();
         }
 
-        misuseDetector.decrease();
+        leak.close();
 
         Set<Timeout> unprocessedTimeouts = new HashSet<Timeout>();
         for (Set<HashedWheelTimeout> bucket: wheel) {
@@ -404,7 +303,7 @@ public class HashedWheelTimer implements Timer {
 
     @Override
     public Timeout newTimeout(TimerTask task, long delay, TimeUnit unit) {
-        final long currentTime = System.currentTimeMillis();
+        final long currentTime = System.nanoTime();
 
         if (task == null) {
             throw new NullPointerException("task");
@@ -415,35 +314,37 @@ public class HashedWheelTimer implements Timer {
 
         start();
 
-        delay = unit.toMillis(delay);
-        HashedWheelTimeout timeout = new HashedWheelTimeout(task, currentTime + delay);
-        scheduleTimeout(timeout, delay);
+        long delayInNanos = unit.toNanos(delay);
+        HashedWheelTimeout timeout = new HashedWheelTimeout(task, currentTime + delayInNanos);
+        scheduleTimeout(timeout, delayInNanos);
         return timeout;
     }
 
     void scheduleTimeout(HashedWheelTimeout timeout, long delay) {
-        // delay must be equal to or greater than tickDuration so that the
-        // worker thread never misses the timeout.
-        if (delay < tickDuration) {
-            delay = tickDuration;
-        }
-
         // Prepare the required parameters to schedule the timeout object.
-        final long lastRoundDelay = delay % roundDuration;
-        final long lastTickDelay = delay % tickDuration;
-        final long relativeIndex =
-            lastRoundDelay / tickDuration + (lastTickDelay != 0? 1 : 0);
-
-        final long remainingRounds =
-            delay / roundDuration - (delay % roundDuration == 0? 1 : 0);
+        long relativeIndex = (delay + tickDuration - 1) / tickDuration;
+        // if the previous line had an overflow going on, then we’ll just schedule this timeout
+        // one tick early; that shouldn’t matter since we’re talking 270 years here
+        if (relativeIndex < 0) {
+            relativeIndex = delay / tickDuration;
+        }
+        if (relativeIndex == 0) {
+            relativeIndex = 1;
+        }
+        if ((relativeIndex & mask) == 0) {
+            relativeIndex--;
+        }
+        final long remainingRounds = relativeIndex / wheel.length;
 
         // Add the timeout to the wheel.
         lock.readLock().lock();
         try {
-            int stopIndex = (int) (wheelCursor + relativeIndex & mask);
+            if (workerState.get() == WORKER_STATE_SHUTDOWN) {
+                throw new IllegalStateException("Cannot enqueue after shutdown");
+            }
+            final int stopIndex = (int) (wheelCursor + relativeIndex & mask);
             timeout.stopIndex = stopIndex;
             timeout.remainingRounds = remainingRounds;
-
             wheel[stopIndex].add(timeout);
         } finally {
             lock.readLock().unlock();
@@ -461,12 +362,12 @@ public class HashedWheelTimer implements Timer {
         @Override
         public void run() {
             List<HashedWheelTimeout> expiredTimeouts =
-                new ArrayList<HashedWheelTimeout>();
+                    new ArrayList<HashedWheelTimeout>();
 
-            startTime = System.currentTimeMillis();
+            startTime = System.nanoTime();
             tick = 1;
 
-            while (workerState.get() == 1) {
+            while (workerState.get() == WORKER_STATE_STARTED) {
                 final long deadline = waitForNextTick();
                 if (deadline > 0) {
                     fetchExpiredTimeouts(expiredTimeouts, deadline);
@@ -536,12 +437,27 @@ public class HashedWheelTimer implements Timer {
             expiredTimeouts.clear();
         }
 
+        /**
+         * calculate goal nanoTime from startTime and current tick number,
+         * then wait until that goal has been reached.
+         * @return Long.MIN_VALUE if received a shutdown request,
+         * current time otherwise (with Long.MIN_VALUE changed by +1)
+         */
         private long waitForNextTick() {
             long deadline = startTime + tickDuration * tick;
 
             for (;;) {
-                final long currentTime = System.currentTimeMillis();
-                long sleepTime = tickDuration * tick - (currentTime - startTime);
+                final long currentTime = System.nanoTime();
+                long sleepTimeMs = (deadline - currentTime + 999999) / 1000000;
+
+                if (sleepTimeMs <= 0) {
+                    tick += 1;
+                    if (currentTime == Long.MIN_VALUE) {
+                        return -Long.MAX_VALUE;
+                    } else {
+                        return currentTime;
+                    }
+                }
 
                 // Check if we run on windows, as if thats the case we will need
                 // to round the sleepTime as workaround for a bug that only affect
@@ -549,25 +465,17 @@ public class HashedWheelTimer implements Timer {
                 //
                 // See https://github.com/netty/netty/issues/356
                 if (PlatformDependent.isWindows()) {
-                    sleepTime = sleepTime / 10 * 10;
-                }
-
-                if (sleepTime <= 0) {
-                    break;
+                    sleepTimeMs = sleepTimeMs / 10 * 10;
                 }
 
                 try {
-                    Thread.sleep(sleepTime);
+                    Thread.sleep(sleepTimeMs);
                 } catch (InterruptedException e) {
-                    if (workerState.get() != 1) {
-                        return -1;
+                    if (workerState.get() == WORKER_STATE_SHUTDOWN) {
+                        return Long.MIN_VALUE;
                     }
                 }
             }
-
-            // Increase the tick.
-            tick ++;
-            return deadline;
         }
     }
 
@@ -624,21 +532,17 @@ public class HashedWheelTimer implements Timer {
             }
 
             try {
-                timeoutsPerSecond.event();
-                timeoutExpirationTimeDeviation.update(System.currentTimeMillis() - deadline);
                 task.run(this);
             } catch (Throwable t) {
                 if (logger.isWarnEnabled()) {
-                    logger.warn(
-                            "An exception was thrown by " +
-                            TimerTask.class.getSimpleName() + '.', t);
+                    logger.warn("An exception was thrown by " + TimerTask.class.getSimpleName() + '.', t);
                 }
             }
         }
 
         @Override
         public String toString() {
-            long currentTime = System.currentTimeMillis();
+            final long currentTime = System.nanoTime();
             long remaining = deadline - currentTime;
 
             StringBuilder buf = new StringBuilder(192);

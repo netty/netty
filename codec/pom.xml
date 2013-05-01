@@ -20,11 +20,11 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.0.0.Beta1-SNAPSHOT</version>
+    <version>4.0.0.CR2-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-codec</artifactId>
-  <packaging>jar</packaging>
+  <packaging>bundle</packaging>
 
   <name>Netty/Codec</name>
 
@@ -42,6 +42,11 @@
     <dependency>
       <groupId>org.jboss.marshalling</groupId>
       <artifactId>jboss-marshalling</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.jcraft</groupId>
+      <artifactId>jzlib</artifactId>
       <optional>true</optional>
     </dependency>
     

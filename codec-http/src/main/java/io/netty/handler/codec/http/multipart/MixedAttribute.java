@@ -199,4 +199,40 @@ public class MixedAttribute implements Attribute {
         return attribute.getFile();
     }
 
+    @Override
+    public Attribute copy() {
+        return attribute.copy();
+    }
+
+    @Override
+    public ByteBuf content() {
+        return attribute.content();
+    }
+
+    @Override
+    public int refCnt() {
+        return attribute.refCnt();
+    }
+
+    @Override
+    public Attribute retain() {
+        attribute.retain();
+        return this;
+    }
+
+    @Override
+    public Attribute retain(int increment) {
+        attribute.retain(increment);
+        return this;
+    }
+
+    @Override
+    public boolean release() {
+        return attribute.release();
+    }
+
+    @Override
+    public boolean release(int decrement) {
+        return attribute.release(decrement);
+    }
 }

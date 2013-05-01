@@ -16,6 +16,7 @@
 package io.netty.handler.codec.socks;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 
@@ -30,8 +31,8 @@ public class SocksInitResponseDecoder extends ReplayingDecoder<SocksInitResponse
         return name;
     }
 
-    private SocksMessage.ProtocolVersion version;
-    private SocksMessage.AuthScheme authScheme;
+    private SocksProtocolVersion version;
+    private SocksAuthScheme authScheme;
 
     private SocksResponse msg = SocksCommonUtils.UNKNOWN_SOCKS_RESPONSE;
 
@@ -40,26 +41,26 @@ public class SocksInitResponseDecoder extends ReplayingDecoder<SocksInitResponse
     }
 
     @Override
-    public SocksResponse decode(ChannelHandlerContext ctx, ByteBuf byteBuf) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf, MessageBuf<Object> out) throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
-                version = SocksMessage.ProtocolVersion.fromByte(byteBuf.readByte());
-                if (version != SocksMessage.ProtocolVersion.SOCKS5) {
+                version = SocksProtocolVersion.fromByte(byteBuf.readByte());
+                if (version != SocksProtocolVersion.SOCKS5) {
                     break;
                 }
                 checkpoint(State.READ_PREFFERED_AUTH_TYPE);
             }
             case READ_PREFFERED_AUTH_TYPE: {
-                authScheme = SocksMessage.AuthScheme.fromByte(byteBuf.readByte());
+                authScheme = SocksAuthScheme.fromByte(byteBuf.readByte());
                 msg = new SocksInitResponse(authScheme);
                 break;
             }
         }
         ctx.pipeline().remove(this);
-        return msg;
+        out.add(msg);
     }
 
-    public enum State {
+    enum State {
         CHECK_PROTOCOL_VERSION,
         READ_PREFFERED_AUTH_TYPE
     }

@@ -15,14 +15,19 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.MessageToMessageDecoder;
 
+import java.util.Collections;
+
 /**
- * Decodes the content of the received {@link HttpRequest} and {@link HttpChunk}.
+ * Decodes the content of the received {@link HttpRequest} and {@link HttpContent}.
  * The original content is replaced with the new content decoded by the
  * {@link EmbeddedByteChannel}, which is created by {@link #newContentDecoder(String)}.
  * Once decoding is finished, the value of the <tt>'Content-Encoding'</tt>
@@ -36,99 +41,137 @@ import io.netty.handler.codec.MessageToMessageDecoder;
  * and implement {@link #newContentDecoder(String)} properly to make this class
  * functional.  For example, refer to the source code of {@link HttpContentDecompressor}.
  * <p>
- * This handler must be placed after {@link HttpMessageDecoder} in the pipeline
- * so that this handler can intercept HTTP requests after {@link HttpMessageDecoder}
+ * This handler must be placed after {@link HttpObjectDecoder} in the pipeline
+ * so that this handler can intercept HTTP requests after {@link HttpObjectDecoder}
  * converts {@link ByteBuf}s into HTTP requests.
  */
-public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object> {
+public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObject> {
 
     private EmbeddedByteChannel decoder;
-
-    /**
-     * Creates a new instance.
-     */
-    protected HttpContentDecoder() {
-        super(HttpObject.class);
-    }
+    private HttpMessage message;
+    private boolean decodeStarted;
+    private boolean continueResponse;
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().getCode() == 100) {
-            // 100-continue response must be passed through.
-            return msg;
-        }
-        if (msg instanceof HttpMessage) {
-            HttpMessage m = (HttpMessage) msg;
+    protected void decode(ChannelHandlerContext ctx, HttpObject msg, MessageBuf<Object> out) throws Exception {
+        if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().code() == 100) {
 
-            cleanup();
-
-            // Determine the content encoding.
-            String contentEncoding = m.getHeader(HttpHeaders.Names.CONTENT_ENCODING);
-            if (contentEncoding != null) {
-                contentEncoding = contentEncoding.trim();
-            } else {
-                contentEncoding = HttpHeaders.Values.IDENTITY;
+            if (!(msg instanceof LastHttpContent)) {
+                continueResponse = true;
             }
+            // 100-continue response must be passed through.
+            out.add(BufUtil.retain(msg));
+            return;
+        }
 
-            boolean hasContent =
-                    m.getTransferEncoding().isMultiple() || m.getContent().readable();
-            if (hasContent && (decoder = newContentDecoder(contentEncoding)) != null) {
-                // Decode the content and remove or replace the existing headers
-                // so that the message looks like a decoded message.
-                String targetContentEncoding = getTargetContentEncoding(contentEncoding);
-                if (HttpHeaders.Values.IDENTITY.equals(targetContentEncoding)) {
-                    // Do NOT set the 'Content-Encoding' header if the target encoding is 'identity'
-                    // as per: http://tools.ietf.org/html/rfc2616#section-14.11
-                    m.removeHeader(HttpHeaders.Names.CONTENT_ENCODING);
+        if (continueResponse) {
+            if (msg instanceof LastHttpContent) {
+                continueResponse = false;
+            }
+            // 100-continue response must be passed through.
+            out.add(BufUtil.retain(msg));
+            return;
+        }
+
+        if (msg instanceof HttpMessage) {
+            assert message == null;
+            message = (HttpMessage) msg;
+            decodeStarted = false;
+            cleanup();
+        }
+
+        if (msg instanceof HttpContent) {
+            final HttpContent c = (HttpContent) msg;
+
+            if (!decodeStarted) {
+                decodeStarted = true;
+                HttpMessage message = this.message;
+                HttpHeaders headers = message.headers();
+                this.message = null;
+
+                // Determine the content encoding.
+                String contentEncoding = headers.get(HttpHeaders.Names.CONTENT_ENCODING);
+                if (contentEncoding != null) {
+                    contentEncoding = contentEncoding.trim();
                 } else {
-                    m.setHeader(HttpHeaders.Names.CONTENT_ENCODING, targetContentEncoding);
+                    contentEncoding = HttpHeaders.Values.IDENTITY;
                 }
 
-                if (m.getTransferEncoding().isSingle()) {
-                    ByteBuf content = m.getContent();
-                    // Decode the content
-                    ByteBuf newContent = Unpooled.buffer();
-                    decode(content, newContent);
-                    finishDecode(newContent);
+                if ((decoder = newContentDecoder(contentEncoding)) != null) {
+                    // Decode the content and remove or replace the existing headers
+                    // so that the message looks like a decoded message.
+                    String targetContentEncoding = getTargetContentEncoding(contentEncoding);
+                    if (HttpHeaders.Values.IDENTITY.equals(targetContentEncoding)) {
+                        // Do NOT set the 'Content-Encoding' header if the target encoding is 'identity'
+                        // as per: http://tools.ietf.org/html/rfc2616#section-14.11
+                        headers.remove(HttpHeaders.Names.CONTENT_ENCODING);
+                    } else {
+                        headers.set(HttpHeaders.Names.CONTENT_ENCODING, targetContentEncoding);
+                    }
+
+                    Object[] decoded = decodeContent(message, c);
 
                     // Replace the content.
-                    m.setContent(newContent);
-                    if (m.containsHeader(HttpHeaders.Names.CONTENT_LENGTH)) {
-                        m.setHeader(
+                    if (headers.contains(HttpHeaders.Names.CONTENT_LENGTH)) {
+                        headers.set(
                                 HttpHeaders.Names.CONTENT_LENGTH,
-                                Integer.toString(newContent.readableBytes()));
+                                Integer.toString(((ByteBufHolder) decoded[1]).content().readableBytes()));
                     }
+
+                    Collections.addAll(out, decoded);
+                    return;
                 }
+
+                if (c instanceof LastHttpContent) {
+                    decodeStarted = false;
+                }
+                out.add(message);
+                out.add(c.retain());
+                return;
             }
-        } else if (msg instanceof HttpChunk) {
-            HttpChunk c = (HttpChunk) msg;
-            ByteBuf content = c.getContent();
 
-            // Decode the chunk if necessary.
             if (decoder != null) {
-                if (!c.isLast()) {
-                    ByteBuf newContent = Unpooled.buffer();
-                    decode(content, newContent);
-                    if (newContent.readable()) {
-                        c.setContent(newContent);
-                    } else {
-                        return null;
-                    }
-                } else {
-                    ByteBuf lastProduct = Unpooled.buffer();
-                    finishDecode(lastProduct);
+                Collections.addAll(out, decodeContent(null, c));
+            } else {
+                if (c instanceof LastHttpContent) {
+                    decodeStarted = false;
+                }
+                out.add(c.retain());
+            }
+        }
+    }
 
-                    // Generate an additional chunk if the decoder produced
-                    // the last product on closure,
-                    if (lastProduct.readable()) {
-                        return new Object[] { new DefaultHttpChunk(lastProduct), c };
-                    }
+    private Object[] decodeContent(HttpMessage header, HttpContent c) {
+        ByteBuf newContent = Unpooled.buffer();
+        ByteBuf content = c.content();
+        decode(content, newContent);
+
+        if (c instanceof LastHttpContent) {
+            ByteBuf lastProduct = Unpooled.buffer();
+            finishDecode(lastProduct);
+
+            // Generate an additional chunk if the decoder produced
+            // the last product on closure,
+            if (lastProduct.isReadable()) {
+                if (header == null) {
+                    return new Object[] { new DefaultHttpContent(newContent), new DefaultLastHttpContent(lastProduct)};
+                } else {
+                    return new Object[] { header,  new DefaultHttpContent(newContent),
+                            new DefaultLastHttpContent(lastProduct)};
+                }
+            } else {
+                if (header == null) {
+                    return new Object[] { new DefaultLastHttpContent(newContent) };
+                } else {
+                    return new Object[] { header, new DefaultLastHttpContent(newContent) };
                 }
             }
         }
-
-        // Because HttpMessage and HttpChunk is a mutable object, we can simply forward it.
-        return msg;
+        if (header == null) {
+            return new Object[] { new DefaultHttpContent(newContent) };
+        } else {
+            return new Object[] { header, new DefaultHttpContent(newContent) };
+        }
     }
 
     /**
@@ -144,7 +187,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
 
     /**
      * Returns the expected content encoding of the decoded content.
-     * This method returns {@code "identity"} by default, which is the case for
+     * This getMethod returns {@code "identity"} by default, which is the case for
      * most decoders.
      *
      * @param contentEncoding the value of the {@code "Content-Encoding"} header
@@ -156,9 +199,9 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
     }
 
     @Override
-    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         cleanup();
-        super.afterRemove(ctx);
+        super.handlerRemoved(ctx);
     }
 
     @Override
@@ -175,7 +218,8 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
     }
 
     private void decode(ByteBuf in, ByteBuf out) {
-        decoder.writeInbound(in);
+        // call retain as it will be release after is written
+        decoder.writeInbound(in.retain());
         fetchDecoderOutput(out);
     }
 
@@ -183,6 +227,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
         if (decoder.finish()) {
             fetchDecoderOutput(out);
         }
+        decodeStarted = false;
         decoder = null;
     }
 

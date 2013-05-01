@@ -17,6 +17,8 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
 
 /**
  * Provides common methods between {@link Channel} and {@link ChannelHandlerContext}.
@@ -34,20 +36,25 @@ interface ChannelPropertyAccess {
     ByteBufAllocator alloc();
 
     /**
-     * Create a new {@link ChannelPromise}
+     * Return a new {@link ChannelPromise}.
      */
     ChannelPromise newPromise();
 
     /**
+     * Return an new {@link ChannelProgressivePromise}
+     */
+    ChannelProgressivePromise newProgressivePromise();
+
+    /**
      * Create a new {@link ChannelFuture} which is marked as successes already. So {@link ChannelFuture#isSuccess()}
-     * will return {@code true}. All {@link ChannelFutureListener} added to it will be notified directly. Also
+     * will return {@code true}. All {@link FutureListener} added to it will be notified directly. Also
      * every call of blocking methods will just return without blocking.
      */
     ChannelFuture newSucceededFuture();
 
     /**
-     * Create a new {@link ChannelFuture} which is marked as fakued already. So {@link ChannelFuture#isSuccess()}
-     * will return {@code false}. All {@link ChannelFutureListener} added to it will be notified directly. Also
+     * Create a new {@link ChannelFuture} which is marked as fakued already. So {@link Future#isSuccess()}
+     * will return {@code false}. All {@link FutureListener} added to it will be notified directly. Also
      * every call of blocking methods will just return without blocking.
      */
     ChannelFuture newFailedFuture(Throwable cause);

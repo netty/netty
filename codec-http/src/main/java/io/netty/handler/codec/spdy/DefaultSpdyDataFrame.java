@@ -16,17 +16,17 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.util.internal.StringUtil;
 
 /**
  * The default {@link SpdyDataFrame} implementation.
  */
-public class DefaultSpdyDataFrame implements SpdyDataFrame {
+public class DefaultSpdyDataFrame extends DefaultByteBufHolder implements SpdyDataFrame {
 
     private int streamId;
     private boolean last;
-    private ByteBuf data = Unpooled.EMPTY_BUFFER;
 
     /**
      * Creates a new instance.
@@ -34,7 +34,26 @@ public class DefaultSpdyDataFrame implements SpdyDataFrame {
      * @param streamId the Stream-ID of this frame
      */
     public DefaultSpdyDataFrame(int streamId) {
+        this(streamId, Unpooled.buffer(0));
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param streamId  the Stream-ID of this frame
+     * @param data      the payload of the frame. Can not exceed {@link SpdyCodecUtil#SPDY_MAX_LENGTH}
+     */
+    public DefaultSpdyDataFrame(int streamId, ByteBuf data) {
+        super(validate(data));
         setStreamId(streamId);
+    }
+
+    private static ByteBuf validate(ByteBuf data) {
+        if (data.readableBytes() > SpdyCodecUtil.SPDY_MAX_LENGTH) {
+            throw new IllegalArgumentException("data payload cannot exceed "
+                    + SpdyCodecUtil.SPDY_MAX_LENGTH + " bytes");
+        }
+        return data;
     }
 
     @Override
@@ -43,12 +62,13 @@ public class DefaultSpdyDataFrame implements SpdyDataFrame {
     }
 
     @Override
-    public void setStreamId(int streamId) {
+    public SpdyDataFrame setStreamId(int streamId) {
         if (streamId <= 0) {
             throw new IllegalArgumentException(
                     "Stream-ID must be positive: " + streamId);
         }
         this.streamId = streamId;
+        return this;
     }
 
     @Override
@@ -57,25 +77,28 @@ public class DefaultSpdyDataFrame implements SpdyDataFrame {
     }
 
     @Override
-    public void setLast(boolean last) {
+    public SpdyDataFrame setLast(boolean last) {
         this.last = last;
+        return this;
     }
 
     @Override
-    public ByteBuf getData() {
-        return data;
+    public DefaultSpdyDataFrame copy() {
+        DefaultSpdyDataFrame frame = new DefaultSpdyDataFrame(getStreamId(), content().copy());
+        frame.setLast(isLast());
+        return frame;
     }
 
     @Override
-    public void setData(ByteBuf data) {
-        if (data == null) {
-            data = Unpooled.EMPTY_BUFFER;
-        }
-        if (data.readableBytes() > SpdyCodecUtil.SPDY_MAX_LENGTH) {
-            throw new IllegalArgumentException("data payload cannot exceed "
-                    + SpdyCodecUtil.SPDY_MAX_LENGTH + " bytes");
-        }
-        this.data = data;
+    public SpdyDataFrame retain() {
+        super.retain();
+        return this;
+    }
+
+    @Override
+    public SpdyDataFrame retain(int increment) {
+        super.retain(increment);
+        return this;
     }
 
     @Override
@@ -90,7 +113,11 @@ public class DefaultSpdyDataFrame implements SpdyDataFrame {
         buf.append(streamId);
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Size = ");
-        buf.append(data.readableBytes());
+        if (refCnt() == 0) {
+            buf.append("(freed)");
+        } else {
+            buf.append(content().readableBytes());
+        }
         return buf.toString();
     }
 }

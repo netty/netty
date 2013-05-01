@@ -49,7 +49,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
  * </tr>
  * </table>
  */
-public class RtspResponseDecoder extends RtspMessageDecoder {
+public class RtspResponseDecoder extends RtspObjectDecoder {
 
     private static final HttpResponseStatus UNKNOWN_STATUS = new HttpResponseStatus(999, "Unknown");
 

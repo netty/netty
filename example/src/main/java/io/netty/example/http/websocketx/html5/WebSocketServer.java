@@ -18,15 +18,14 @@ package io.netty.example.http.websocketx.html5;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.http.HttpChunkAggregator;
+import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
-
-import java.net.InetSocketAddress;
 
 /**
  * A WebSocket Server that respondes to requests at:
@@ -45,7 +44,7 @@ import java.net.InetSocketAddress;
  * </pre>
  *
  * The html page is very simple were you simply enter some text and the server
- * will echo the same text back, but in uppercase. You, also see status messages
+ * will echo the same text back, but in uppercase. You, also see getStatus messages
  * in the "Response From Server" area when client has connected, disconnected
  * etc.
  *
@@ -59,29 +58,31 @@ public class WebSocketServer {
     }
 
     public void run() throws Exception {
-        final ServerBootstrap sb = new ServerBootstrap();
+        EventLoopGroup bossGroup = new NioEventLoopGroup();
+        EventLoopGroup workerGroup = new NioEventLoopGroup();
         try {
-            sb.group(new NioEventLoopGroup(), new NioEventLoopGroup())
+            final ServerBootstrap sb = new ServerBootstrap();
+            sb.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
-             .localAddress(new InetSocketAddress(port))
              .childHandler(new ChannelInitializer<SocketChannel>() {
                 @Override
                 public void initChannel(final SocketChannel ch) throws Exception {
                     ch.pipeline().addLast(
                         new HttpRequestDecoder(),
-                        new HttpChunkAggregator(65536),
+                        new HttpObjectAggregator(65536),
                         new HttpResponseEncoder(),
                         new WebSocketServerProtocolHandler("/websocket"),
                         new CustomTextFrameHandler());
                 }
             });
 
-            final Channel ch = sb.bind().sync().channel();
+            final Channel ch = sb.bind(port).sync().channel();
             System.out.println("Web socket server started at port " + port);
 
             ch.closeFuture().sync();
         } finally {
-            sb.shutdown();
+            bossGroup.shutdownGracefully();
+            workerGroup.shutdownGracefully();
         }
     }
 

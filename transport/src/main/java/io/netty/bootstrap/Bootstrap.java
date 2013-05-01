@@ -21,25 +21,35 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.AttributeKey;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.channels.ClosedChannelException;
+import java.util.Map;
 import java.util.Map.Entry;
 
 /**
  * A {@link Bootstrap} that makes it easy to bootstrap a {@link Channel} to use
  * for clients.
  *
+ * <p>The {@link #bind()} methods are useful in combination with connectionless transports such as datagram (UDP).
+ * For regular TCP connections, please use the provided {@link #connect()} methods.</p>
  */
-public class Bootstrap extends AbstractBootstrap<Bootstrap> {
+public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Bootstrap.class);
-    private SocketAddress remoteAddress;
+
+    private volatile SocketAddress remoteAddress;
+
+    public Bootstrap() { }
+
+    private Bootstrap(Bootstrap bootstrap) {
+        super(bootstrap);
+        remoteAddress = bootstrap.remoteAddress;
+    }
 
     /**
      * The {@link SocketAddress} to connect to once the {@link #connect()} method
@@ -53,38 +63,17 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap> {
     /**
      * @see {@link #remoteAddress(SocketAddress)}
      */
-    public Bootstrap remoteAddress(String host, int port) {
-        remoteAddress = new InetSocketAddress(host, port);
+    public Bootstrap remoteAddress(String inetHost, int inetPort) {
+        remoteAddress = new InetSocketAddress(inetHost, inetPort);
         return this;
     }
 
     /**
      * @see {@link #remoteAddress(SocketAddress)}
      */
-    public Bootstrap remoteAddress(InetAddress host, int port) {
-        remoteAddress = new InetSocketAddress(host, port);
+    public Bootstrap remoteAddress(InetAddress inetHost, int inetPort) {
+        remoteAddress = new InetSocketAddress(inetHost, inetPort);
         return this;
-    }
-
-    @Override
-    public ChannelFuture bind(ChannelPromise future) {
-        validate(future);
-        if (localAddress() == null) {
-            throw new IllegalStateException("localAddress not set");
-        }
-
-        try {
-            init(future.channel());
-        } catch (Throwable t) {
-            future.setFailure(t);
-            return future;
-        }
-
-        if (!ensureOpen(future)) {
-            return future;
-        }
-
-        return future.channel().bind(localAddress(), future).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
     }
 
     /**
@@ -92,92 +81,139 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap> {
      */
     public ChannelFuture connect() {
         validate();
-        Channel channel = factory().newChannel();
-        return connect(channel.newPromise());
+        SocketAddress remoteAddress = this.remoteAddress;
+        if (remoteAddress == null) {
+            throw new IllegalStateException("remoteAddress not set");
+        }
+
+        return doConnect(remoteAddress, localAddress());
+    }
+
+    /**
+     * Connect a {@link Channel} to the remote peer.
+     */
+    public ChannelFuture connect(String inetHost, int inetPort) {
+        return connect(new InetSocketAddress(inetHost, inetPort));
+    }
+
+    /**
+     * Connect a {@link Channel} to the remote peer.
+     */
+    public ChannelFuture connect(InetAddress inetHost, int inetPort) {
+        return connect(new InetSocketAddress(inetHost, inetPort));
+    }
+
+    /**
+     * Connect a {@link Channel} to the remote peer.
+     */
+    public ChannelFuture connect(SocketAddress remoteAddress) {
+        if (remoteAddress == null) {
+            throw new NullPointerException("remoteAddress");
+        }
+
+        validate();
+        return doConnect(remoteAddress, localAddress());
+    }
+
+    /**
+     * Connect a {@link Channel} to the remote peer.
+     */
+    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
+        if (remoteAddress == null) {
+            throw new NullPointerException("remoteAddress");
+        }
+        validate();
+        return doConnect(remoteAddress, localAddress);
     }
 
     /**
      * @see {@link #connect()}
      */
-    public ChannelFuture connect(ChannelPromise future) {
-        validate(future);
-        if (remoteAddress == null) {
-            throw new IllegalStateException("remoteAddress not set");
+    private ChannelFuture doConnect(final SocketAddress remoteAddress, final SocketAddress localAddress) {
+        final ChannelFuture regFuture = initAndRegister();
+        final Channel channel = regFuture.channel();
+        if (regFuture.cause() != null) {
+            return regFuture;
         }
 
-        try {
-            init(future.channel());
-        } catch (Throwable t) {
-            future.setFailure(t);
-            return future;
-        }
-
-        if (!ensureOpen(future)) {
-            return future;
-        }
-
-        if (localAddress() == null) {
-            future.channel().connect(remoteAddress, future);
+        final ChannelPromise promise = channel.newPromise();
+        if (regFuture.isDone()) {
+            doConnect0(regFuture, channel, remoteAddress, localAddress, promise);
         } else {
-            future.channel().connect(remoteAddress, localAddress(), future);
+            regFuture.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    doConnect0(regFuture, channel, remoteAddress, localAddress, promise);
+                }
+            });
         }
-        return future.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+
+        return promise;
     }
 
-    @SuppressWarnings("unchecked")
-    private void init(Channel channel) throws Exception {
-        if (channel.isActive()) {
-            throw new IllegalStateException("channel already active:: " + channel);
-        }
-        if (channel.isRegistered()) {
-            throw new IllegalStateException("channel already registered: " + channel);
-        }
-        if (!channel.isOpen()) {
-            throw new ClosedChannelException();
-        }
+    private static void doConnect0(
+            final ChannelFuture regFuture, final Channel channel,
+            final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
 
-        ChannelPipeline p = channel.pipeline();
-        p.addLast(handler());
-
-        for (Entry<ChannelOption<?>, Object> e: options().entrySet()) {
-            try {
-                if (!channel.config().setOption((ChannelOption<Object>) e.getKey(), e.getValue())) {
-                    logger.warn("Unknown channel option: " + e);
+        // This method is invoked before channelRegistered() is triggered.  Give user handlers a chance to set up
+        // the pipeline in its channelRegistered() implementation.
+        channel.eventLoop().execute(new Runnable() {
+            @Override
+            public void run() {
+                if (regFuture.isSuccess()) {
+                    if (localAddress == null) {
+                        channel.connect(remoteAddress, promise);
+                    } else {
+                        channel.connect(remoteAddress, localAddress, promise);
+                    }
+                    promise.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+                } else {
+                    promise.setFailure(regFuture.cause());
                 }
-            } catch (Throwable t) {
-                logger.warn("Failed to set a channel option: " + channel, t);
             }
-        }
-
-        for (Entry<AttributeKey<?>, Object> e: attrs().entrySet()) {
-            channel.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
-        }
-
-        group().register(channel).syncUninterruptibly();
+        });
     }
 
     @Override
-    protected void validate() {
+    @SuppressWarnings("unchecked")
+    void init(Channel channel) throws Exception {
+        ChannelPipeline p = channel.pipeline();
+        p.addLast(handler());
+
+        final Map<ChannelOption<?>, Object> options = options();
+        synchronized (options) {
+            for (Entry<ChannelOption<?>, Object> e: options.entrySet()) {
+                try {
+                    if (!channel.config().setOption((ChannelOption<Object>) e.getKey(), e.getValue())) {
+                        logger.warn("Unknown channel option: " + e);
+                    }
+                } catch (Throwable t) {
+                    logger.warn("Failed to set a channel option: " + channel, t);
+                }
+            }
+        }
+
+        final Map<AttributeKey<?>, Object> attrs = attrs();
+        synchronized (attrs) {
+            for (Entry<AttributeKey<?>, Object> e: attrs.entrySet()) {
+                channel.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
+            }
+        }
+    }
+
+    @Override
+    public Bootstrap validate() {
         super.validate();
         if (handler() == null) {
             throw new IllegalStateException("handler not set");
         }
+        return this;
     }
 
-    /**
-     * Create a new {@link Bootstrap} which has the identical configuration with this {@link Bootstrap}.
-     * This method is useful when you make multiple connections with similar settings.
-     *
-     * Be aware that if you call {@link #shutdown()} on one of them it will shutdown shared resources.
-     */
-    public Bootstrap duplicate() {
-        validate();
-        Bootstrap b = new Bootstrap()
-                .group(group()).channelFactory(factory()).handler(handler())
-                .localAddress(localAddress()).remoteAddress(remoteAddress);
-        b.options().putAll(options());
-        b.attrs().putAll(attrs());
-        return b;
+    @Override
+    @SuppressWarnings("CloneDoesntCallSuperClone")
+    public Bootstrap clone() {
+        return new Bootstrap(this);
     }
 
     @Override

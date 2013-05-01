@@ -67,7 +67,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         int read = inputStream.read(bytes);
         int written = 0;
         while (read > 0) {
-            buffer.writeBytes(bytes);
+            buffer.writeBytes(bytes, 0, read);
             written += read;
             read = inputStream.read(bytes);
         }
@@ -138,7 +138,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
     @Override
     public byte[] get() {
         if (byteBuf == null) {
-            return new byte[0];
+            return EMPTY_BUFFER.array();
         }
         byte[] array = new byte[byteBuf.readableBytes()];
         byteBuf.getBytes(byteBuf.readerIndex(), array);

@@ -22,7 +22,7 @@ import io.netty.handler.codec.TooLongFrameException;
 
 /**
  * Decodes {@link ByteBuf}s into {@link HttpResponse}s and
- * {@link HttpChunk}s.
+ * {@link HttpContent}s.
  *
  * <h3>Parameters that prevents excessive memory consumption</h3>
  * <table border="1">
@@ -45,10 +45,10 @@ import io.netty.handler.codec.TooLongFrameException;
  * <td>The maximum length of the content or each chunk.  If the content length
  *     exceeds this value, the transfer encoding of the decoded response will be
  *     converted to 'chunked' and the content will be split into multiple
- *     {@link HttpChunk}s.  If the transfer encoding of the HTTP response is
+ *     {@link HttpContent}s.  If the transfer encoding of the HTTP response is
  *     'chunked' already, each chunk will be split into smaller chunks if the
  *     length of the chunk exceeds this value.  If you prefer not to handle
- *     {@link HttpChunk}s in your handler, insert {@link HttpChunkAggregator}
+ *     {@link HttpContent}s in your handler, insert {@link HttpObjectAggregator}
  *     after this decoder in the {@link ChannelPipeline}.</td>
  * </tr>
  * </table>
@@ -81,7 +81,7 @@ import io.netty.handler.codec.TooLongFrameException;
  * <tt>CONNECT</tt> request.
  * </p>
  */
-public class HttpResponseDecoder extends HttpMessageDecoder {
+public class HttpResponseDecoder extends HttpObjectDecoder {
 
     private static final HttpResponseStatus UNKNOWN_STATUS = new HttpResponseStatus(999, "Unknown");
 
@@ -98,7 +98,7 @@ public class HttpResponseDecoder extends HttpMessageDecoder {
      */
     public HttpResponseDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
-        super(maxInitialLineLength, maxHeaderSize, maxChunkSize);
+        super(maxInitialLineLength, maxHeaderSize, maxChunkSize, true);
     }
 
     @Override

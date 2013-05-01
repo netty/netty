@@ -18,20 +18,17 @@ package io.netty.example.udt.echo.bytes;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.socket.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.udt.UdtChannel;
+import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.example.udt.util.UtilConsoleReporter;
 import io.netty.example.udt.util.UtilThreadFactory;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.channel.udt.UdtChannel;
-import io.netty.channel.udt.nio.NioUdtProvider;
 
-import java.net.InetSocketAddress;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.logging.Logger;
 
 /**
  * UDT Byte Stream Client
@@ -43,8 +40,7 @@ import org.slf4j.LoggerFactory;
  */
 public class ByteEchoClient {
 
-    private static final Logger log = LoggerFactory
-            .getLogger(ByteEchoClient.class);
+    private static final Logger log = Logger.getLogger(ByteEchoClient.class.getName());
 
     private final String host;
     private final int port;
@@ -59,15 +55,13 @@ public class ByteEchoClient {
 
     public void run() throws Exception {
         // Configure the client.
-        final Bootstrap boot = new Bootstrap();
         final ThreadFactory connectFactory = new UtilThreadFactory("connect");
         final NioEventLoopGroup connectGroup = new NioEventLoopGroup(1,
                 connectFactory, NioUdtProvider.BYTE_PROVIDER);
         try {
+            final Bootstrap boot = new Bootstrap();
             boot.group(connectGroup)
                     .channelFactory(NioUdtProvider.BYTE_CONNECTOR)
-                    .localAddress("localhost", 0)
-                    .remoteAddress(new InetSocketAddress(host, port))
                     .handler(new ChannelInitializer<UdtChannel>() {
                         @Override
                         public void initChannel(final UdtChannel ch)
@@ -78,12 +72,12 @@ public class ByteEchoClient {
                         }
                     });
             // Start the client.
-            final ChannelFuture f = boot.connect().sync();
+            final ChannelFuture f = boot.connect(host, port).sync();
             // Wait until the connection is closed.
             f.channel().closeFuture().sync();
         } finally {
             // Shut down the event loop to terminate all threads.
-            boot.shutdown();
+            connectGroup.shutdownGracefully();
         }
     }
 

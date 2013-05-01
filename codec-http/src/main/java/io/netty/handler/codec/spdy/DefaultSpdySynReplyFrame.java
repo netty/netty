@@ -41,12 +41,13 @@ public class DefaultSpdySynReplyFrame extends DefaultSpdyHeaderBlock
     }
 
     @Override
-    public void setStreamId(int streamId) {
+    public SpdySynReplyFrame setStreamId(int streamId) {
         if (streamId <= 0) {
             throw new IllegalArgumentException(
                     "Stream-ID must be positive: " + streamId);
         }
         this.streamId = streamId;
+        return this;
     }
 
     @Override
@@ -55,8 +56,15 @@ public class DefaultSpdySynReplyFrame extends DefaultSpdyHeaderBlock
     }
 
     @Override
-    public void setLast(boolean last) {
+    public SpdySynReplyFrame setLast(boolean last) {
         this.last = last;
+        return this;
+    }
+
+    @Override
+    public SpdySynReplyFrame setInvalid() {
+        super.setInvalid();
+        return this;
     }
 
     @Override

@@ -28,6 +28,9 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
     /**
      * Add the given {@link ByteBuf}.
      *
+     * Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuf}.
+     * If you need to have it increased you need to handle it by your own.
+     *
      * @param buffer    the {@link ByteBuf} to add
      * @return self     this instance
      */
@@ -36,19 +39,25 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
     /**
      * Add the given {@link ByteBuf} on the specific index.
      *
+     * Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuf}.
+     * If you need to have it increased you need to handle it by your own.
+     *
      * @param cIndex
      *          the index on which the {@link ByteBuf} will be added
      * @param buffer
      *          the {@link ByteBuf} to add
      * @return self
      *          this instance
-     * @throws {@link IndexOutOfBoundsException}
+     * @throws IndexOutOfBoundsException
      *          if the index is invalid
      */
     CompositeByteBuf addComponent(int cIndex, ByteBuf buffer);
 
     /**
      * Add the given {@link ByteBuf}s.
+     *
+     * Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuf}.
+     * If you need to have it increased you need to handle it by your own.
      *
      * @param buffers   the {@link ByteBuf}s to add
      * @return self     this instance
@@ -58,6 +67,9 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
     /**
      * Add the given {@link ByteBuf}s.
      *
+     * Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuf}.
+     * If you need to have it increased you need to handle it by your own.
+     *
      * @param buffers   the {@link ByteBuf}s to add
      * @return self     this instance
      */
@@ -66,13 +78,16 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
     /**
      * Add the given {@link ByteBuf}s on the specific index
      *
+     * Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuf}.
+     * If you need to have it increased you need to handle it by your own.
+     *
      * @param cIndex
      *          the index on which the {@link ByteBuf} will be added.
      * @param buffers
      *          the {@link ByteBuf}s to add
      * @return self
      *          this instance
-     * @throws {@link IndexOutOfBoundsException}
+     * @throws IndexOutOfBoundsException
      *          if the index is invalid
      *
      */
@@ -81,13 +96,16 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
     /**
      * Add the given {@link ByteBuf}s on the specific index
      *
+     * Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuf}.
+     * If you need to have it increased you need to handle it by your own.
+     *
      * @param cIndex
      *          the index on which the {@link ByteBuf} will be added.
      * @param buffers
      *          the {@link ByteBuf}s to add
      * @return self
      *          this instance
-     * @throws {@link IndexOutOfBoundsException}
+     * @throws IndexOutOfBoundsException
      *          if the index is invalid
      */
     CompositeByteBuf addComponents(int cIndex, Iterable<ByteBuf> buffers);
@@ -99,7 +117,7 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
      *          the index on from which the {@link ByteBuf} will be remove
      * @return self
      *          this instance
-     * @throws {@link IndexOutOfBoundsException}
+     * @throws IndexOutOfBoundsException
      *          if the index is invalid
      */
     CompositeByteBuf removeComponent(int cIndex);
@@ -113,7 +131,7 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
      *          the number of components to remove
      * @return self
      *          this instance
-     * @throws {@link IndexOutOfBoundsException}
+     * @throws IndexOutOfBoundsException
      *          if the index is invalid
      */
     CompositeByteBuf removeComponents(int cIndex, int numComponents);
@@ -135,7 +153,7 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
      *          the index for which the {@link ByteBuf} should be returned
      * @return buf
      *          the {@link ByteBuf} on the specified index
-     * @throws {@link IndexOutOfBoundsException}
+     * @throws IndexOutOfBoundsException
      *          if the index is invalid
      */
     ByteBuf component(int cIndex);
@@ -147,7 +165,7 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
      *          the offset for which the {@link ByteBuf} should be returned
      * @return buf
      *          the {@link ByteBuf} on the specified index
-     * @throws {@link IndexOutOfBoundsException}
+     * @throws IndexOutOfBoundsException
      *          if the offset is invalid
      */
     ByteBuf componentAtOffset(int offset);
@@ -175,7 +193,7 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
      *          the number of components to compose
      * @return self
      *          this instance
-     * @throws {@link IndexOutOfBoundsException}
+     * @throws IndexOutOfBoundsException
      *          if the offset is invalid
      */
     CompositeByteBuf consolidate(int cIndex, int numComponents);
@@ -226,7 +244,7 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
     CompositeByteBuf discardSomeReadBytes();
 
     @Override
-    CompositeByteBuf ensureWritableBytes(int minWritableBytes);
+    CompositeByteBuf ensureWritable(int minWritableBytes);
 
     @Override
     CompositeByteBuf getBytes(int index, ByteBuf dst);
@@ -374,4 +392,10 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
 
     @Override
     CompositeByteBuf resumeIntermediaryDeallocations();
+
+    @Override
+    CompositeByteBuf retain(int increment);
+
+    @Override
+    CompositeByteBuf retain();
 }

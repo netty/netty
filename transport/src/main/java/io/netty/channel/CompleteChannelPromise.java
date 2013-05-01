@@ -16,14 +16,18 @@
 package io.netty.channel;
 
 
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
+
 abstract class CompleteChannelPromise extends CompleteChannelFuture implements ChannelPromise {
 
-    protected CompleteChannelPromise(Channel channel) {
-        super(channel);
+    protected CompleteChannelPromise(Channel channel, EventExecutor executor) {
+        super(channel, executor);
     }
 
     @Override
-    public void setFailure(Throwable cause) {
+    public ChannelPromise setFailure(Throwable cause) {
         throw new IllegalStateException();
     }
 
@@ -33,7 +37,7 @@ abstract class CompleteChannelPromise extends CompleteChannelFuture implements C
     }
 
     @Override
-    public void setSuccess() {
+    public ChannelPromise setSuccess() {
         throw new IllegalStateException();
     }
 
@@ -43,23 +47,13 @@ abstract class CompleteChannelPromise extends CompleteChannelFuture implements C
     }
 
     @Override
-    public ChannelPromise addListener(final ChannelFutureListener listener) {
-        return (ChannelPromise) super.addListener(listener);
+    public boolean trySuccess(Void result) {
+        return false;
     }
 
     @Override
-    public ChannelPromise addListeners(ChannelFutureListener... listeners) {
-        return (ChannelPromise) super.addListeners(listeners);
-    }
-
-    @Override
-    public ChannelPromise removeListener(ChannelFutureListener listener) {
-        return (ChannelPromise) super.removeListener(listener);
-    }
-
-    @Override
-    public ChannelPromise removeListeners(ChannelFutureListener... listeners) {
-        return (ChannelPromise) super.removeListeners(listeners);
+    public ChannelPromise setSuccess(Void result) {
+        throw new IllegalStateException();
     }
 
     @Override
@@ -70,5 +64,35 @@ abstract class CompleteChannelPromise extends CompleteChannelFuture implements C
     @Override
     public ChannelPromise awaitUninterruptibly() {
         return (ChannelPromise) super.awaitUninterruptibly();
+    }
+
+    @Override
+    public ChannelPromise addListener(GenericFutureListener<? extends Future<Void>> listener) {
+        return (ChannelPromise) super.addListener(listener);
+    }
+
+    @Override
+    public ChannelPromise addListeners(GenericFutureListener<? extends Future<Void>>... listeners) {
+        return (ChannelPromise) super.addListeners(listeners);
+    }
+
+    @Override
+    public ChannelPromise removeListener(GenericFutureListener<? extends Future<Void>> listener) {
+        return (ChannelPromise) super.removeListener(listener);
+    }
+
+    @Override
+    public ChannelPromise removeListeners(GenericFutureListener<? extends Future<Void>>... listeners) {
+        return (ChannelPromise) super.removeListeners(listeners);
+    }
+
+    @Override
+    public ChannelPromise sync() throws InterruptedException {
+        return this;
+    }
+
+    @Override
+    public ChannelPromise syncUninterruptibly() {
+        return this;
     }
 }

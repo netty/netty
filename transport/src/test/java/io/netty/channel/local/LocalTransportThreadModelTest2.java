@@ -43,7 +43,6 @@ public class LocalTransportThreadModelTest2 {
         serverBootstrap
                 .group(new LocalEventLoopGroup(), new LocalEventLoopGroup())
                 .channel(LocalServerChannel.class)
-                .localAddress(new LocalAddress(LOCAL_CHANNEL))
                 .childHandler(serverHandler);
 
         Bootstrap clientBootstrap = new Bootstrap();
@@ -53,7 +52,7 @@ public class LocalTransportThreadModelTest2 {
                 .channel(LocalChannel.class)
                 .remoteAddress(new LocalAddress(LOCAL_CHANNEL)).handler(clientHandler);
 
-        serverBootstrap.bind().sync();
+        serverBootstrap.bind(new LocalAddress(LOCAL_CHANNEL)).sync();
 
         int count = 100;
         for (int i = 1; i < count + 1; i ++) {
@@ -111,18 +110,6 @@ public class LocalTransportThreadModelTest2 {
 
         // Wait until the connection is closed or the connection attempt fails.
         localChannel.closeFuture().awaitUninterruptibly();
-
-        MessageBuf<Object> inboundMessageBuffer = localChannel.pipeline().inboundMessageBuffer();
-        if (!inboundMessageBuffer.isEmpty()) {
-            // sometimes we close the pipeline before everything on it has been notified/received.
-            // we want these messages, since they are in our queue.
-            Iterator<Object> iterator = inboundMessageBuffer.iterator();
-            while (iterator.hasNext()) {
-                Object next = iterator.next();
-                System.err.println("DEFERRED on close: " + next);
-                iterator.remove();
-            }
-        }
     }
 
     @Sharable
@@ -135,7 +122,6 @@ public class LocalTransportThreadModelTest2 {
 
         public LocalHander(String name) {
             this.name = name;
-
         }
 
         @Override

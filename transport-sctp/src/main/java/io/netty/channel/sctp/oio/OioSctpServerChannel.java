@@ -23,11 +23,11 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.sctp.DefaultSctpServerChannelConfig;
 import io.netty.channel.sctp.SctpServerChannelConfig;
-import io.netty.channel.socket.oio.AbstractOioMessageChannel;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -129,6 +129,11 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
     @Override
     public InetSocketAddress remoteAddress() {
         return null;
+    }
+
+    @Override
+    public InetSocketAddress localAddress() {
+        return (InetSocketAddress) super.localAddress();
     }
 
     @Override

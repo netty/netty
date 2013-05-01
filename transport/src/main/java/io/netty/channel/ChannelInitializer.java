@@ -18,8 +18,8 @@ package io.netty.channel;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 /**
  * A special {@link ChannelStateHandler} which offers an easy way to initialize a {@link Channel} once it was
@@ -56,9 +56,9 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelState
      * will be removed from the {@link ChannelPipeline} of the {@link Channel}.
      *
      * @param ch            the {@link Channel} which was registered.
-     * @throws Exception    is thrown if an error accours. In that case the {@link Channel} will be closed.
+     * @throws Exception    is thrown if an error occours. In that case the {@link Channel} will be closed.
      */
-    public abstract void initChannel(C ch) throws Exception;
+    protected abstract void initChannel(C ch) throws Exception;
 
     @SuppressWarnings("unchecked")
     @Override
@@ -82,5 +82,10 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelState
                 ctx.close();
             }
         }
+    }
+
+    @Override
+    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+        ctx.fireInboundBufferUpdated();
     }
 }

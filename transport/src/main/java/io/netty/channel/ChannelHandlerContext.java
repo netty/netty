@@ -16,14 +16,15 @@
 package io.netty.channel;
 
 
+import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.AttributeMap;
+import io.netty.util.concurrent.EventExecutor;
 
 import java.nio.channels.Channels;
-import java.util.Set;
 
 /**
  * Enables a {@link ChannelHandler} to interact with its {@link ChannelPipeline}
@@ -47,7 +48,7 @@ import java.util.Set;
  * You can keep the {@link ChannelHandlerContext} for later use, such as
  * triggering an event outside the handler methods, even from a different thread.
  * <pre>
- * public class MyHandler extends {@link ChannelHandlerAdapter} {
+ * public class MyHandler extends {@link ChannelDuplexHandler} {
  *
  *     <b>private {@link ChannelHandlerContext} ctx;</b>
  *
@@ -123,7 +124,6 @@ import java.util.Set;
  * {@link ChannelPipeline} to find out more about inbound and outbound operations,
  * what fundamental differences they have, how they flow in a  pipeline,  and how to handle
  * the operation in your application.
- * @apiviz.owns io.netty.channel.ChannelHandler
  */
 public interface ChannelHandlerContext
          extends AttributeMap, ChannelPropertyAccess,
@@ -154,12 +154,6 @@ public interface ChannelHandlerContext
     ChannelHandler handler();
 
     /**
-     * Return an unmodifiable {@link Set} that contains all the {@link ChannelHandlerType}s which are handled by this
-     * context and the {@link ChannelHandler} it belongs to.
-     */
-    Set<ChannelHandlerType> types();
-
-    /**
      * Return {@code true} if the {@link ChannelHandlerContext} has an {@link ByteBuf} bound for inbound
      * which can be used.
      */
@@ -174,7 +168,10 @@ public interface ChannelHandlerContext
     /**
      * Return the bound {@link ByteBuf} for inbound data if {@link #hasInboundByteBuffer()} returned
      * {@code true}. If {@link #hasInboundByteBuffer()} returned {@code false} it will throw a
-     * {@link UnsupportedOperationException}
+     * {@link UnsupportedOperationException}.
+     * <p/>
+     * This method can only be called from within the event-loop, otherwise it will throw an
+     * {@link IllegalStateException}.
      */
     ByteBuf inboundByteBuffer();
 
@@ -182,6 +179,9 @@ public interface ChannelHandlerContext
      * Return the bound {@link MessageBuf} for inbound data if {@link #hasInboundMessageBuffer()} returned
      * {@code true}. If {@link #hasInboundMessageBuffer()} returned {@code false} it will throw a
      * {@link UnsupportedOperationException}.
+     * <p/>
+     * This method can only be called from within the event-loop, otherwise it will throw an
+     * {@link IllegalStateException}.
      */
     <T> MessageBuf<T> inboundMessageBuffer();
 
@@ -202,131 +202,73 @@ public interface ChannelHandlerContext
      * Return the bound {@link ByteBuf} for outbound data if {@link #hasOutboundByteBuffer()} returned
      * {@code true}. If {@link #hasOutboundByteBuffer()} returned {@code false} it will throw
      * a {@link UnsupportedOperationException}.
+     * <p/>
+     * This method can only be called from within the event-loop, otherwise it will throw an
+     * {@link IllegalStateException}.
      */
     ByteBuf outboundByteBuffer();
 
     /**
      * Return the bound {@link MessageBuf} for outbound data if {@link #hasOutboundMessageBuffer()} returned
      * {@code true}. If {@link #hasOutboundMessageBuffer()} returned {@code false} it will throw a
-     * {@link UnsupportedOperationException}
+     * {@link UnsupportedOperationException}.
+     * <p/>
+     * This method can only be called from within the event-loop, otherwise it will throw an
+     * {@link IllegalStateException}.
      */
     <T> MessageBuf<T> outboundMessageBuffer();
 
     /**
-     * Replaces the inbound byte buffer with the given buffer.  This returns the
-     * old buffer, so any readable bytes can be handled appropriately by the caller.
-     * <p>
-     * Be cautious with caching {@link #inboundByteBuffer()} as it may change as a result of this
-     * method.  For example, instead of extending {@link io.netty.handler.codec.ByteToMessageDecoder},
-     * extend what that class does (currently, {@link ChannelInboundHandlerAdapter} and
-     * {@link ChannelInboundByteHandler}.  In other words, implementing your own
-     * {@link ChannelInboundHandlerAdapter#inboundBufferUpdated}/{@link ChannelStateHandler#inboundBufferUpdated}
-     * will help guarantee a replaced buffer won't be missed.</p>
-     *
-     * @param newInboundByteBuf the new inbound byte buffer
-     * @return the old buffer.
-     * @throws NullPointerException if the argument is {@code null}.
-     */
-    ByteBuf replaceInboundByteBuffer(ByteBuf newInboundByteBuf);
-
-    /**
-     * Replaces the inbound message buffer with the given buffer.  This returns the
-     * old buffer, so any pending messages can be handled appropriately by the caller.
-     * <p>
-     * Be cautious with caching {@link #inboundMessageBuffer()} as it may change as a result of this
-     * method.  For example, instead of extending {@link io.netty.handler.codec.MessageToMessageDecoder},
-     * extend what that class does (currently, {@link ChannelInboundHandlerAdapter} and
-     * {@link ChannelInboundMessageHandler}.  In other words, implementing your own
-     * {@link ChannelInboundHandlerAdapter#inboundBufferUpdated}/{@link ChannelStateHandler#inboundBufferUpdated}
-     * will help guarantee a replaced buffer won't be missed.</p>
-     *
-     * @param newInboundMsgBuf the new inbound message buffer
-     * @return the old buffer.
-     * @throws NullPointerException if the argument is {@code null}.
-     */
-    <T> MessageBuf<T> replaceInboundMessageBuffer(MessageBuf<T> newInboundMsgBuf);
-
-    /**
-     * Replaces the outbound byte buffer with the given buffer.  This returns the
-     * old buffer, so any readable bytes can be handled appropriately by the caller.
-     * <p>
-     * Be cautious with caching {@link #outboundByteBuffer()} as it may change as a result of this
-     * method.  For example, instead of extending {@link io.netty.handler.codec.ByteToByteEncoder},
-     * extend what that class does (currently, {@link ChannelOutboundByteHandlerAdapter}).
-     * In other words, implementing your own
-     * {@link ChannelOutboundHandlerAdapter#flush}/{@link ChannelOperationHandler#flush}
-     * will help guarantee a replaced buffer won't be missed.</p>
-     *
-     * @param newOutboundByteBuf the new inbound byte buffer
-     * @return the old buffer.
-     * @throws NullPointerException if the argument is {@code null}.
-     */
-    ByteBuf replaceOutboundByteBuffer(ByteBuf newOutboundByteBuf);
-
-    /**
-     * Replaces the outbound message buffer with the given buffer.  This returns the
-     * old buffer, so any pending messages can be handled appropriately by the caller.
-     * <p>
-     * Be cautious with caching {@link #outboundMessageBuffer()} as it may change as a result of this
-     * method.  For example, instead of extending {@link io.netty.handler.codec.MessageToByteEncoder}
-     * or {@link io.netty.handler.codec.MessageToMessageEncoder}, extend what these classes do (currently,
-     * {@link ChannelOutboundMessageHandlerAdapter}.  In other words, implementing your own
-     * {@link ChannelOutboundHandlerAdapter#flush}/{@link ChannelOperationHandler#flush}
-     * will help guarantee a replaced buffer won't be missed.</p>
-     *
-     * @param newOutboundMsgBuf the new inbound message buffer
-     * @return the old buffer.
-     * @throws NullPointerException if the argument is {@code null}.
-     */
-    <T> MessageBuf<T> replaceOutboundMessageBuffer(MessageBuf<T> newOutboundMsgBuf);
-
-    /**
-     * Return {@code true} if the next {@link ChannelHandlerContext} has a {@link ByteBuf} for handling
-     * inbound data.
-     */
-    boolean hasNextInboundByteBuffer();
-
-    /**
-     * Return {@code true} if the next {@link ChannelHandlerContext} has a {@link MessageBuf} for handling
-     * inbound data.
-     */
-    boolean hasNextInboundMessageBuffer();
-
-    /**
-     * Return the {@link ByteBuf} of the next {@link ChannelHandlerContext} if {@link #hasNextInboundByteBuffer()}
-     * returned {@code true}, otherwise a {@link UnsupportedOperationException} is thrown.
+     * Return the {@link ByteBuf} of the next {@link ChannelInboundByteHandler} in the pipeline.
      */
     ByteBuf nextInboundByteBuffer();
 
     /**
-     * Return the {@link MessageBuf} of the next {@link ChannelHandlerContext} if
-     * {@link #hasNextInboundMessageBuffer()} returned {@code true}, otherwise a
-     * {@link UnsupportedOperationException} is thrown.
+     * Return the {@link MessageBuf} of the next {@link ChannelInboundMessageHandler} in the pipeline.
      */
     MessageBuf<Object> nextInboundMessageBuffer();
 
     /**
-     * Return {@code true} if the next {@link ChannelHandlerContext} has a {@link ByteBuf} for handling outbound
-     * data.
-     */
-    boolean hasNextOutboundByteBuffer();
-
-    /**
-     * Return {@code true} if the next {@link ChannelHandlerContext} has a {@link MessageBuf} for handling
-     * outbound data.
-     */
-    boolean hasNextOutboundMessageBuffer();
-
-    /**
-     * Return the {@link ByteBuf} of the next {@link ChannelHandlerContext} if {@link #hasNextOutboundByteBuffer()}
-     * returned {@code true}, otherwise a {@link UnsupportedOperationException} is thrown.
+     * Return the {@link ByteBuf} of the next {@link ChannelOutboundByteHandler} in the pipeline.
      */
     ByteBuf nextOutboundByteBuffer();
 
     /**
-     * Return the {@link MessageBuf} of the next {@link ChannelHandlerContext} if
-     * {@link #hasNextOutboundMessageBuffer()} returned {@code true}, otherwise a
-     * {@link UnsupportedOperationException} is thrown.
+     * Return the {@link MessageBuf} of the next {@link ChannelOutboundMessageHandler} in the pipeline.
      */
     MessageBuf<Object> nextOutboundMessageBuffer();
+
+    /**
+     * Return the {@link BufType} of the next {@link ChannelInboundHandler} in the pipeline.
+     */
+    BufType nextInboundBufferType();
+
+    /**
+     * Return the {@link BufType} of the next {@link ChannelOutboundHandler} in the pipeline.
+     */
+    BufType nextOutboundBufferType();
+
+    @Override
+    ChannelHandlerContext fireChannelRegistered();
+
+    @Override
+    ChannelHandlerContext fireChannelUnregistered();
+
+    @Override
+    ChannelHandlerContext fireChannelActive();
+
+    @Override
+    ChannelHandlerContext fireChannelInactive();
+
+    @Override
+    ChannelHandlerContext fireExceptionCaught(Throwable cause);
+
+    @Override
+    ChannelHandlerContext fireUserEventTriggered(Object event);
+
+    @Override
+    ChannelHandlerContext fireInboundBufferUpdated();
+
+    @Override
+    ChannelHandlerContext fireChannelReadSuspended();
 }

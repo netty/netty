@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.sctp.SctpChannel;
@@ -35,12 +36,12 @@ import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 public class SctpEchoTest extends AbstractSctpTest {
 
     private static final Random random = new Random();
-    static final byte[] data = new byte[4096];//could not test ultra jumbo frames
+    static final byte[] data = new byte[4096]; //could not test ultra jumbo frames
 
     static {
         random.nextBytes(data);
@@ -94,7 +95,7 @@ public class SctpEchoTest extends AbstractSctpTest {
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.connect().sync().channel();
 
-        for (int i = 0; i < data.length; ) {
+        for (int i = 0; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
             cc.write(Unpooled.wrappedBuffer(data, i, length));
             i += length;
@@ -160,7 +161,7 @@ public class SctpEchoTest extends AbstractSctpTest {
 
         @Override
         public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return Unpooled.buffer(0, maxInboundBufferSize);
+            return ChannelHandlerUtil.allocate(ctx, 0, maxInboundBufferSize);
         }
 
         @Override

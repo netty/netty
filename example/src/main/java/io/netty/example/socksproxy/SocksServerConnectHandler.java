@@ -26,8 +26,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.socks.SocksCmdRequest;
 import io.netty.handler.codec.socks.SocksCmdResponse;
-import io.netty.handler.codec.socks.SocksMessage;
-
+import io.netty.handler.codec.socks.SocksCmdStatus;
 
 @ChannelHandler.Sharable
 public final class SocksServerConnectHandler extends ChannelInboundMessageHandlerAdapter<SocksCmdRequest> {
@@ -37,19 +36,14 @@ public final class SocksServerConnectHandler extends ChannelInboundMessageHandle
         return name;
     }
 
-    private final Bootstrap b;
-
-    public SocksServerConnectHandler() {
-        super(SocksCmdRequest.class);
-        b = new Bootstrap();
-    }
+    private final Bootstrap b = new Bootstrap();
 
     @Override
     public void messageReceived(final ChannelHandlerContext ctx, final SocksCmdRequest request) throws Exception {
         CallbackNotifier cb = new CallbackNotifier() {
             @Override
             public void onSuccess(final ChannelHandlerContext outboundCtx) {
-                ctx.channel().write(new SocksCmdResponse(SocksMessage.CmdStatus.SUCCESS, request.getAddressType()))
+                ctx.channel().write(new SocksCmdResponse(SocksCmdStatus.SUCCESS, request.addressType()))
                              .addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture channelFuture) throws Exception {
@@ -62,7 +56,7 @@ public final class SocksServerConnectHandler extends ChannelInboundMessageHandle
 
             @Override
             public void onFailure(ChannelHandlerContext outboundCtx, Throwable cause) {
-                ctx.channel().write(new SocksCmdResponse(SocksMessage.CmdStatus.FAILURE, request.getAddressType()));
+                ctx.channel().write(new SocksCmdResponse(SocksCmdStatus.FAILURE, request.addressType()));
                 SocksServerUtils.closeOnFlush(ctx.channel());
             }
         };
@@ -72,9 +66,9 @@ public final class SocksServerConnectHandler extends ChannelInboundMessageHandle
                 .channel(NioSocketChannel.class)
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
                 .option(ChannelOption.SO_KEEPALIVE, true)
-                .handler(new DirectClientInitializer(cb))
-                .remoteAddress(request.getHost(), request.getPort());
-        b.connect();
+                .handler(new DirectClientInitializer(cb));
+
+        b.connect(request.host(), request.port());
     }
 
     @Override

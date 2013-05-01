@@ -17,7 +17,8 @@ package io.netty.example.http.upload;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.socket.nio.NioEventLoopGroup;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 /**
@@ -33,18 +34,21 @@ public class HttpUploadServer {
     }
 
     public void run() throws Exception {
-        ServerBootstrap b = new ServerBootstrap();
+        EventLoopGroup bossGroup = new NioEventLoopGroup();
+        EventLoopGroup workerGroup = new NioEventLoopGroup();
         try {
-            b.group(new NioEventLoopGroup(), new NioEventLoopGroup()).channel(NioServerSocketChannel.class)
-                    .localAddress(port).childHandler(new HttpUploadServerInitializer());
+            ServerBootstrap b = new ServerBootstrap();
+            b.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class)
+                    .childHandler(new HttpUploadServerInitializer());
 
-            Channel ch = b.bind().sync().channel();
+            Channel ch = b.bind(port).sync().channel();
             System.out.println("HTTP Upload Server at port " + port + '.');
             System.out.println("Open your browser and navigate to http://localhost:" + port + '/');
 
             ch.closeFuture().sync();
         } finally {
-            b.shutdown();
+            bossGroup.shutdownGracefully();
+            workerGroup.shutdownGracefully();
         }
     }
 

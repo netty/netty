@@ -18,10 +18,11 @@ package io.netty.handler.codec.base64;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelHandlerUtil;
+import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
-import io.netty.handler.codec.MessageToMessageEncoder;
 
 /**
  * Encodes a {@link ByteBuf} into a Base64-encoded {@link ByteBuf}.
@@ -36,11 +37,9 @@ import io.netty.handler.codec.MessageToMessageEncoder;
  * // Encoder
  * pipeline.addLast("base64Encoder", new {@link Base64Encoder}());
  * </pre>
- * @apiviz.landmark
- * @apiviz.uses io.netty.handler.codec.base64.Base64
  */
 @Sharable
-public class Base64Encoder extends MessageToMessageEncoder<ByteBuf> {
+public class Base64Encoder extends ChannelOutboundMessageHandlerAdapter<ByteBuf> {
 
     private final boolean breakLines;
     private final Base64Dialect dialect;
@@ -54,8 +53,6 @@ public class Base64Encoder extends MessageToMessageEncoder<ByteBuf> {
     }
 
     public Base64Encoder(boolean breakLines, Base64Dialect dialect) {
-        super(ByteBuf.class);
-
         if (dialect == null) {
             throw new NullPointerException("dialect");
         }
@@ -65,8 +62,9 @@ public class Base64Encoder extends MessageToMessageEncoder<ByteBuf> {
     }
 
     @Override
-    protected Object encode(ChannelHandlerContext ctx,
+    public void flush(ChannelHandlerContext ctx,
             ByteBuf msg) throws Exception {
-        return Base64.encode(msg, msg.readerIndex(), msg.readableBytes(), breakLines, dialect);
+        ByteBuf buf = Base64.encode(msg, msg.readerIndex(), msg.readableBytes(), breakLines, dialect);
+        ChannelHandlerUtil.addToNextOutboundBuffer(ctx, buf);
     }
 }

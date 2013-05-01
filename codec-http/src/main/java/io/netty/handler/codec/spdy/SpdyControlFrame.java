@@ -18,6 +18,6 @@ package io.netty.handler.codec.spdy;
 /**
  * A SPDY Protocol Control Frame
  */
-public interface SpdyControlFrame {
+public interface SpdyControlFrame extends SpdyDataOrControlFrame {
     // Tag interface
 }

@@ -39,7 +39,7 @@ public class DefaultSpdyRstStreamFrame implements SpdyRstStreamFrame {
      * Creates a new instance.
      *
      * @param streamId the Stream-ID of this frame
-     * @param status   the status of this frame
+     * @param status   the getStatus of this frame
      */
     public DefaultSpdyRstStreamFrame(int streamId, SpdyStreamStatus status) {
         setStreamId(streamId);
@@ -52,12 +52,13 @@ public class DefaultSpdyRstStreamFrame implements SpdyRstStreamFrame {
     }
 
     @Override
-    public void setStreamId(int streamId) {
+    public SpdyRstStreamFrame setStreamId(int streamId) {
         if (streamId <= 0) {
             throw new IllegalArgumentException(
                     "Stream-ID must be positive: " + streamId);
         }
         this.streamId = streamId;
+        return this;
     }
 
     @Override
@@ -66,8 +67,9 @@ public class DefaultSpdyRstStreamFrame implements SpdyRstStreamFrame {
     }
 
     @Override
-    public void setStatus(SpdyStreamStatus status) {
+    public SpdyRstStreamFrame setStatus(SpdyStreamStatus status) {
         this.status = status;
+        return this;
     }
 
     @Override

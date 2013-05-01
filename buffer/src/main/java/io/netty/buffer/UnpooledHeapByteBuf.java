@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.internal.PlatformDependent;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -27,7 +29,7 @@ import java.nio.channels.ScatteringByteChannel;
 /**
  * Big endian Java heap buffer implementation.
  */
-final class UnpooledHeapByteBuf extends AbstractByteBuf {
+public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     private final ByteBufAllocator alloc;
     private byte[] array;
@@ -39,7 +41,7 @@ final class UnpooledHeapByteBuf extends AbstractByteBuf {
      * @param initialCapacity the initial capacity of the underlying byte array
      * @param maxCapacity the max capacity of the underlying byte array
      */
-    public UnpooledHeapByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
+    protected UnpooledHeapByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
         this(alloc, new byte[initialCapacity], 0, 0, maxCapacity);
     }
 
@@ -49,7 +51,7 @@ final class UnpooledHeapByteBuf extends AbstractByteBuf {
      * @param initialArray the initial underlying byte array
      * @param maxCapacity the max capacity of the underlying byte array
      */
-    public UnpooledHeapByteBuf(ByteBufAllocator alloc, byte[] initialArray, int maxCapacity) {
+    protected UnpooledHeapByteBuf(ByteBufAllocator alloc, byte[] initialArray, int maxCapacity) {
         this(alloc, initialArray, 0, initialArray.length, maxCapacity);
     }
 
@@ -96,13 +98,13 @@ final class UnpooledHeapByteBuf extends AbstractByteBuf {
 
     @Override
     public int capacity() {
-        checkUnfreed();
+        ensureAccessible();
         return array.length;
     }
 
     @Override
     public ByteBuf capacity(int newCapacity) {
-        checkUnfreed();
+        ensureAccessible();
         if (newCapacity < 0 || newCapacity > maxCapacity()) {
             throw new IllegalArgumentException("newCapacity: " + newCapacity);
         }
@@ -136,7 +138,7 @@ final class UnpooledHeapByteBuf extends AbstractByteBuf {
 
     @Override
     public byte[] array() {
-        checkUnfreed();
+        ensureAccessible();
         return array;
     }
 
@@ -146,15 +148,21 @@ final class UnpooledHeapByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public byte getByte(int index) {
-        checkUnfreed();
-        return array[index];
+    public boolean hasMemoryAddress() {
+        return false;
+    }
+
+    @Override
+    public long memoryAddress() {
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
-        checkUnfreed();
-        if (dst.hasArray()) {
+        checkDstIndex(index, length, dstIndex, dst.capacity());
+        if (dst.hasMemoryAddress()) {
+            PlatformDependent.copyMemory(array, index, dst.memoryAddress() + dstIndex, length);
+        } else if (dst.hasArray()) {
             getBytes(index, dst.array(), dst.arrayOffset() + dstIndex, length);
         } else {
             dst.setBytes(dstIndex, array, index, length);
@@ -164,42 +172,37 @@ final class UnpooledHeapByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
-        checkUnfreed();
+        checkDstIndex(index, length, dstIndex, dst.length);
         System.arraycopy(array, index, dst, dstIndex, length);
         return this;
     }
 
     @Override
     public ByteBuf getBytes(int index, ByteBuffer dst) {
-        checkUnfreed();
+        ensureAccessible();
         dst.put(array, index, Math.min(capacity() - index, dst.remaining()));
         return this;
     }
 
     @Override
     public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
-        checkUnfreed();
+        ensureAccessible();
         out.write(array, index, length);
         return this;
     }
 
     @Override
     public int getBytes(int index, GatheringByteChannel out, int length) throws IOException {
-        checkUnfreed();
+        ensureAccessible();
         return out.write((ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length));
     }
 
     @Override
-    public ByteBuf setByte(int index, int value) {
-        checkUnfreed();
-        array[index] = (byte) value;
-        return this;
-    }
-
-    @Override
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
-        checkUnfreed();
-        if (src.hasArray()) {
+        checkSrcIndex(index, length, srcIndex, src.capacity());
+        if (src.hasMemoryAddress()) {
+            PlatformDependent.copyMemory(src.memoryAddress() + srcIndex, array, index, length);
+        } else  if (src.hasArray()) {
             setBytes(index, src.array(), src.arrayOffset() + srcIndex, length);
         } else {
             src.getBytes(srcIndex, array, index, length);
@@ -209,27 +212,27 @@ final class UnpooledHeapByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
-        checkUnfreed();
+        checkSrcIndex(index, length, srcIndex, src.length);
         System.arraycopy(src, srcIndex, array, index, length);
         return this;
     }
 
     @Override
     public ByteBuf setBytes(int index, ByteBuffer src) {
-        checkUnfreed();
+        ensureAccessible();
         src.get(array, index, src.remaining());
         return this;
     }
 
     @Override
     public int setBytes(int index, InputStream in, int length) throws IOException {
-        checkUnfreed();
+        ensureAccessible();
         return in.read(array, index, length);
     }
 
     @Override
     public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
-        checkUnfreed();
+        ensureAccessible();
         try {
             return in.read((ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length));
         } catch (ClosedChannelException e) {
@@ -244,7 +247,7 @@ final class UnpooledHeapByteBuf extends AbstractByteBuf {
 
     @Override
     public ByteBuffer nioBuffer(int index, int length) {
-        checkUnfreed();
+        ensureAccessible();
         return ByteBuffer.wrap(array, index, length);
     }
 
@@ -254,14 +257,35 @@ final class UnpooledHeapByteBuf extends AbstractByteBuf {
     }
 
     @Override
+    public byte getByte(int index) {
+        ensureAccessible();
+        return _getByte(index);
+    }
+
+    @Override
+    protected byte _getByte(int index) {
+        return array[index];
+    }
+
+    @Override
     public short getShort(int index) {
-        checkUnfreed();
+        ensureAccessible();
+        return _getShort(index);
+    }
+
+    @Override
+    protected short _getShort(int index) {
         return (short) (array[index] << 8 | array[index + 1] & 0xFF);
     }
 
     @Override
     public int getUnsignedMedium(int index) {
-        checkUnfreed();
+        ensureAccessible();
+        return _getUnsignedMedium(index);
+    }
+
+    @Override
+    protected int _getUnsignedMedium(int index) {
         return  (array[index]     & 0xff) << 16 |
                 (array[index + 1] & 0xff) <<  8 |
                  array[index + 2] & 0xff;
@@ -269,7 +293,12 @@ final class UnpooledHeapByteBuf extends AbstractByteBuf {
 
     @Override
     public int getInt(int index) {
-        checkUnfreed();
+        ensureAccessible();
+        return _getInt(index);
+    }
+
+    @Override
+    protected int _getInt(int index) {
         return  (array[index]     & 0xff) << 24 |
                 (array[index + 1] & 0xff) << 16 |
                 (array[index + 2] & 0xff) <<  8 |
@@ -278,7 +307,12 @@ final class UnpooledHeapByteBuf extends AbstractByteBuf {
 
     @Override
     public long getLong(int index) {
-        checkUnfreed();
+        ensureAccessible();
+        return _getLong(index);
+    }
+
+    @Override
+    protected long _getLong(int index) {
         return  ((long) array[index]     & 0xff) << 56 |
                 ((long) array[index + 1] & 0xff) << 48 |
                 ((long) array[index + 2] & 0xff) << 40 |
@@ -290,35 +324,68 @@ final class UnpooledHeapByteBuf extends AbstractByteBuf {
     }
 
     @Override
+    public ByteBuf setByte(int index, int value) {
+        ensureAccessible();
+        _setByte(index, value);
+        return this;
+    }
+
+    @Override
+    protected void _setByte(int index, int value) {
+        array[index] = (byte) value;
+    }
+
+    @Override
     public ByteBuf setShort(int index, int value) {
-        checkUnfreed();
+        ensureAccessible();
+        _setShort(index, value);
+        return this;
+    }
+
+    @Override
+    protected void _setShort(int index, int value) {
         array[index]     = (byte) (value >>> 8);
         array[index + 1] = (byte) value;
-        return this;
     }
 
     @Override
     public ByteBuf setMedium(int index, int   value) {
-        checkUnfreed();
+        ensureAccessible();
+        _setMedium(index, value);
+        return this;
+    }
+
+    @Override
+    protected void _setMedium(int index, int value) {
         array[index]     = (byte) (value >>> 16);
         array[index + 1] = (byte) (value >>> 8);
         array[index + 2] = (byte) value;
-        return this;
     }
 
     @Override
     public ByteBuf setInt(int index, int   value) {
-        checkUnfreed();
-        array[index]     = (byte) (value >>> 24);
-        array[index + 1] = (byte) (value >>> 16);
-        array[index + 2] = (byte) (value >>> 8);
-        array[index + 3] = (byte) value;
+        ensureAccessible();
+        _setInt(index, value);
         return this;
     }
 
     @Override
+    protected void _setInt(int index, int value) {
+        array[index]     = (byte) (value >>> 24);
+        array[index + 1] = (byte) (value >>> 16);
+        array[index + 2] = (byte) (value >>> 8);
+        array[index + 3] = (byte) value;
+    }
+
+    @Override
     public ByteBuf setLong(int index, long  value) {
-        checkUnfreed();
+        ensureAccessible();
+        _setLong(index, value);
+        return this;
+    }
+
+    @Override
+    protected void _setLong(int index, long value) {
         array[index]     = (byte) (value >>> 56);
         array[index + 1] = (byte) (value >>> 48);
         array[index + 2] = (byte) (value >>> 40);
@@ -327,17 +394,11 @@ final class UnpooledHeapByteBuf extends AbstractByteBuf {
         array[index + 5] = (byte) (value >>> 16);
         array[index + 6] = (byte) (value >>> 8);
         array[index + 7] = (byte) value;
-        return this;
     }
 
     @Override
     public ByteBuf copy(int index, int length) {
-        checkUnfreed();
-        if (index < 0 || length < 0 || index + length > array.length) {
-            throw new IndexOutOfBoundsException("Too many bytes to copy - Need "
-                    + (index + length) + ", maximum is " + array.length);
-        }
-
+        checkIndex(index, length);
         byte[] copiedArray = new byte[length];
         System.arraycopy(array, index, copiedArray, 0, length);
         return new UnpooledHeapByteBuf(alloc(), copiedArray, maxCapacity());
@@ -352,12 +413,7 @@ final class UnpooledHeapByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public boolean isFreed() {
-        return array == null;
-    }
-
-    @Override
-    public void free() {
+    protected void deallocate() {
         array = null;
     }
 

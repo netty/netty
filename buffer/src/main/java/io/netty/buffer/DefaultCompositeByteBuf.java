@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.ResourceLeak;
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -39,10 +41,9 @@ import java.util.Queue;
  * is recommended to use {@link Unpooled#wrappedBuffer(ByteBuf...)}
  * instead of calling the constructor explicitly.
  */
-public class DefaultCompositeByteBuf extends AbstractByteBuf implements CompositeByteBuf {
+public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf implements CompositeByteBuf {
 
-    private static final ByteBuffer[] EMPTY_NIOBUFFERS = new ByteBuffer[0];
-
+    private final ResourceLeak leak;
     private final ByteBufAllocator alloc;
     private final boolean direct;
     private final List<Component> components = new ArrayList<Component>();
@@ -61,6 +62,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         this.alloc = alloc;
         this.direct = direct;
         this.maxNumComponents = maxNumComponents;
+        leak = leakDetector.open(this);
     }
 
     public DefaultCompositeByteBuf(ByteBufAllocator alloc, boolean direct, int maxNumComponents, ByteBuf... buffers) {
@@ -80,6 +82,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         addComponents0(0, buffers);
         consolidateIfNeeded();
         setIndex(0, capacity());
+        leak = leakDetector.open(this);
     }
 
     public DefaultCompositeByteBuf(
@@ -99,11 +102,12 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         addComponents0(0, buffers);
         consolidateIfNeeded();
         setIndex(0, capacity());
+        leak = leakDetector.open(this);
     }
 
     @Override
     public CompositeByteBuf addComponent(ByteBuf buffer) {
-        addComponent0(components.size(), buffer, false);
+        addComponent0(components.size(), buffer);
         consolidateIfNeeded();
         return this;
     }
@@ -124,22 +128,16 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
     @Override
     public CompositeByteBuf addComponent(int cIndex, ByteBuf buffer) {
-        addComponent0(cIndex, buffer, false);
+        addComponent0(cIndex, buffer);
         consolidateIfNeeded();
         return this;
     }
 
-    private int addComponent0(int cIndex, ByteBuf buffer, boolean addedBySelf) {
+    private int addComponent0(int cIndex, ByteBuf buffer) {
         checkComponentIndex(cIndex);
 
         if (buffer == null) {
             throw new NullPointerException("buffer");
-        }
-
-        if (buffer instanceof Iterable) {
-            @SuppressWarnings("unchecked")
-            Iterable<ByteBuf> composite = (Iterable<ByteBuf>) buffer;
-            return addComponents0(cIndex, composite);
         }
 
         int readableBytes = buffer.readableBytes();
@@ -148,7 +146,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         }
 
         // No need to consolidate - just add a component to the list.
-        Component c = new Component(buffer.order(ByteOrder.BIG_ENDIAN).slice(), addedBySelf);
+        Component c = new Component(buffer.order(ByteOrder.BIG_ENDIAN).slice());
         if (cIndex == components.size()) {
             components.add(c);
             if (cIndex == 0) {
@@ -195,12 +193,14 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             if (b == null) {
                 break;
             }
-            if (b.readable()) {
-                cIndex = addComponent0(cIndex, b, false) + 1;
+            if (b.isReadable()) {
+                cIndex = addComponent0(cIndex, b) + 1;
                 int size = components.size();
                 if (cIndex > size) {
                     cIndex = size;
                 }
+            } else {
+                b.release();
             }
         }
         return cIndex;
@@ -218,39 +218,21 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             throw new NullPointerException("buffers");
         }
 
-        if (buffers instanceof DefaultCompositeByteBuf) {
-            List<Component> list = ((DefaultCompositeByteBuf) buffers).components;
-            ByteBuf[] array = new ByteBuf[list.size()];
-            for (int i = 0; i < array.length; i ++) {
-                array[i] = list.get(i).buf;
-            }
-            return addComponents0(cIndex, array);
+        if (buffers instanceof ByteBuf) {
+            // If buffers also implements ByteBuf (e.g. CompositeByteBuf), it has to go to addComponent(ByteBuf).
+            return addComponent0(cIndex, (ByteBuf) buffers);
         }
 
-        if (buffers instanceof List) {
-            List<ByteBuf> list = (List<ByteBuf>) buffers;
-            ByteBuf[] array = new ByteBuf[list.size()];
-            for (int i = 0; i < array.length; i ++) {
-                array[i] = list.get(i);
+        if (!(buffers instanceof Collection)) {
+            List<ByteBuf> list = new ArrayList<ByteBuf>();
+            for (ByteBuf b: buffers) {
+                list.add(b);
             }
-            return addComponents0(cIndex, array);
+            buffers = list;
         }
 
-        if (buffers instanceof Collection) {
-            Collection<ByteBuf> col = (Collection<ByteBuf>) buffers;
-            ByteBuf[] array = new ByteBuf[col.size()];
-            int i = 0;
-            for (ByteBuf b: col) {
-                array[i ++] = b;
-            }
-            return addComponents0(cIndex, array);
-        }
-
-        List<ByteBuf> list = new ArrayList<ByteBuf>();
-        for (ByteBuf b: buffers) {
-            list.add(b);
-        }
-        return addComponents0(cIndex, list.toArray(new ByteBuf[list.size()]));
+        Collection<ByteBuf> col = (Collection<ByteBuf>) buffers;
+        return addComponents0(cIndex, col.toArray(new ByteBuf[col.size()]));
     }
 
     /**
@@ -274,7 +256,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
                 consolidated.writeBytes(b);
                 c.freeIfNecessary();
             }
-            Component c = new Component(consolidated, true);
+            Component c = new Component(consolidated);
             c.endOffset = c.length;
             components.clear();
             components.add(c);
@@ -301,7 +283,6 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     }
 
     private void updateComponentOffsets(int cIndex) {
-
         Component c = components.get(cIndex);
         lastAccessed = c;
         lastAccessedId = cIndex;
@@ -323,7 +304,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     @Override
     public CompositeByteBuf removeComponent(int cIndex) {
         checkComponentIndex(cIndex);
-        components.remove(cIndex);
+        components.remove(cIndex).freeIfNecessary();
         updateComponentOffsets(cIndex);
         return this;
     }
@@ -331,7 +312,13 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     @Override
     public CompositeByteBuf removeComponents(int cIndex, int numComponents) {
         checkComponentIndex(cIndex, numComponents);
-        components.subList(cIndex, cIndex + numComponents).clear();
+
+        List<Component> toRemove = components.subList(cIndex, cIndex + numComponents);
+        for (Component c: toRemove) {
+            c.freeIfNecessary();
+        }
+        toRemove.clear();
+
         updateComponentOffsets(cIndex);
         return this;
     }
@@ -348,13 +335,9 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
     @Override
     public List<ByteBuf> decompose(int offset, int length) {
+        checkIndex(offset, length);
         if (length == 0) {
             return Collections.emptyList();
-        }
-
-        if (offset + length > capacity()) {
-            throw new IndexOutOfBoundsException("Too many bytes to decompose - Need "
-                    + (offset + length) + ", capacity is " + capacity());
         }
 
         int componentId = toComponentIndex(offset);
@@ -426,6 +409,22 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     }
 
     @Override
+    public boolean hasMemoryAddress() {
+        if (components.size() == 1) {
+            return components.get(0).buf.hasMemoryAddress();
+        }
+        return false;
+    }
+
+    @Override
+    public long memoryAddress() {
+        if (components.size() == 1) {
+            return components.get(0).buf.memoryAddress();
+        }
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public int capacity() {
         if (components.isEmpty()) {
             return 0;
@@ -448,13 +447,13 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             if (nComponents < maxNumComponents) {
                 padding = allocBuffer(paddingLength);
                 padding.setIndex(0, paddingLength);
-                addComponent0(0, padding, true);
+                addComponent0(components.size(), padding);
             } else {
                 padding = allocBuffer(paddingLength);
                 padding.setIndex(0, paddingLength);
                 // FIXME: No need to create a padding buffer and consolidate.
                 // Just create a big single buffer and put the current content there.
-                addComponent0(components.size(), padding, true);
+                addComponent0(components.size(), padding);
                 consolidateIfNeeded();
             }
         } else if (newCapacity < oldCapacity) {
@@ -468,7 +467,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
                 }
 
                 // Replace the last component with the trimmed slice.
-                Component newC = new Component(c.buf.slice(0, c.length - bytesToTrim), c.allocatedBySelf);
+                Component newC = new Component(c.buf.slice(0, c.length - bytesToTrim));
                 newC.offset = c.offset;
                 newC.endOffset = newC.offset + newC.length;
                 i.set(newC);
@@ -507,10 +506,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     @Override
     public int toComponentIndex(int offset) {
         assert !freed;
-        if (offset < 0 || offset >= capacity()) {
-            throw new IndexOutOfBoundsException(String.format(
-                    "offset: %d (expected: >= 0 && < capacity(%d))", offset, capacity()));
-        }
+        checkIndex(offset);
 
         Component c = lastAccessed;
         if (c == null) {
@@ -553,73 +549,71 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
     @Override
     public byte getByte(int index) {
+        return _getByte(index);
+    }
+
+    @Override
+    protected byte _getByte(int index) {
         Component c = findComponent(index);
         return c.buf.getByte(index - c.offset);
     }
 
     @Override
-    public short getShort(int index) {
+    protected short _getShort(int index) {
         Component c = findComponent(index);
         if (index + 2 <= c.endOffset) {
             return c.buf.getShort(index - c.offset);
         } else if (order() == ByteOrder.BIG_ENDIAN) {
-            return (short) ((getByte(index) & 0xff) << 8 | getByte(index + 1) & 0xff);
+            return (short) ((_getByte(index) & 0xff) << 8 | _getByte(index + 1) & 0xff);
         } else {
-            return (short) (getByte(index) & 0xff | (getByte(index + 1) & 0xff) << 8);
+            return (short) (_getByte(index) & 0xff | (_getByte(index + 1) & 0xff) << 8);
         }
     }
 
     @Override
-    public int getUnsignedMedium(int index) {
+    protected int _getUnsignedMedium(int index) {
         Component c = findComponent(index);
         if (index + 3 <= c.endOffset) {
             return c.buf.getUnsignedMedium(index - c.offset);
         } else if (order() == ByteOrder.BIG_ENDIAN) {
-            return (getShort(index) & 0xffff) << 8 | getByte(index + 2) & 0xff;
+            return (_getShort(index) & 0xffff) << 8 | _getByte(index + 2) & 0xff;
         } else {
-            return getShort(index) & 0xFFFF | (getByte(index + 2) & 0xFF) << 16;
+            return _getShort(index) & 0xFFFF | (_getByte(index + 2) & 0xFF) << 16;
         }
     }
 
     @Override
-    public int getInt(int index) {
+    protected int _getInt(int index) {
         Component c = findComponent(index);
         if (index + 4 <= c.endOffset) {
             return c.buf.getInt(index - c.offset);
         } else if (order() == ByteOrder.BIG_ENDIAN) {
-            return (getShort(index) & 0xffff) << 16 | getShort(index + 2) & 0xffff;
+            return (_getShort(index) & 0xffff) << 16 | _getShort(index + 2) & 0xffff;
         } else {
-            return getShort(index) & 0xFFFF | (getShort(index + 2) & 0xFFFF) << 16;
+            return _getShort(index) & 0xFFFF | (_getShort(index + 2) & 0xFFFF) << 16;
         }
     }
 
     @Override
-    public long getLong(int index) {
+    protected long _getLong(int index) {
         Component c = findComponent(index);
         if (index + 8 <= c.endOffset) {
             return c.buf.getLong(index - c.offset);
         } else if (order() == ByteOrder.BIG_ENDIAN) {
-            return (getInt(index) & 0xffffffffL) << 32 | getInt(index + 4) & 0xffffffffL;
+            return (_getInt(index) & 0xffffffffL) << 32 | _getInt(index + 4) & 0xffffffffL;
         } else {
-            return getInt(index) & 0xFFFFFFFFL | (getInt(index + 4) & 0xFFFFFFFFL) << 32;
+            return _getInt(index) & 0xFFFFFFFFL | (_getInt(index + 4) & 0xFFFFFFFFL) << 32;
         }
     }
 
     @Override
     public CompositeByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
-        if (index > capacity() - length || dstIndex > dst.length - length) {
-            throw new IndexOutOfBoundsException("Too many bytes to read - Needs "
-                    + (index + length) + ", maximum is " + capacity() + " or "
-                    + dst.length);
-        }
-        if (index < 0) {
-            throw new IndexOutOfBoundsException("index must be >= 0");
-        }
+        checkDstIndex(index, length, dstIndex, dst.length);
         if (length == 0) {
             return this;
         }
-        int i = toComponentIndex(index);
 
+        int i = toComponentIndex(index);
         while (length > 0) {
             Component c = components.get(i);
             ByteBuf s = c.buf;
@@ -639,16 +633,11 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         int limit = dst.limit();
         int length = dst.remaining();
 
-        if (index > capacity() - length) {
-            throw new IndexOutOfBoundsException("Too many bytes to be read - Needs "
-                    + (index + length) + ", maximum is " + capacity());
-        }
-        if (index < 0) {
-            throw new IndexOutOfBoundsException("index must be >= 0");
-        }
+        checkIndex(index, length);
         if (length == 0) {
             return this;
         }
+
         int i = toComponentIndex(index);
         try {
             while (length > 0) {
@@ -670,17 +659,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
     @Override
     public CompositeByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
-        if (index > capacity() - length || dstIndex > dst.capacity() - length) {
-            throw new IndexOutOfBoundsException("Too many bytes to be read - Needs "
-                    + (index + length) + " or " + (dstIndex + length) + ", maximum is "
-                    + capacity() + " or " + dst.capacity());
-        }
-        if (index < 0) {
-            throw new IndexOutOfBoundsException("index must be >= 0");
-        }
-        if (length == 0) {
-            return this;
-        }
+        checkDstIndex(index, length, dstIndex, dst.capacity());
         int i = toComponentIndex(index);
         while (length > 0) {
             Component c = components.get(i);
@@ -714,15 +693,8 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     }
 
     @Override
-    public CompositeByteBuf getBytes(int index, OutputStream out, int length)
-            throws IOException {
-        if (index > capacity() - length) {
-            throw new IndexOutOfBoundsException("Too many bytes to be read - needs "
-                    + (index + length) + ", maximum of " + capacity());
-        }
-        if (index < 0) {
-            throw new IndexOutOfBoundsException("index must be >= 0");
-        }
+    public CompositeByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
+        checkIndex(index, length);
         if (length == 0) {
             return this;
         }
@@ -749,75 +721,91 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     }
 
     @Override
+    protected void _setByte(int index, int value) {
+        setByte(index, value);
+    }
+
+    @Override
     public CompositeByteBuf setShort(int index, int value) {
+        return (CompositeByteBuf) super.setShort(index, value);
+    }
+
+    @Override
+    protected void _setShort(int index, int value) {
         Component c = findComponent(index);
         if (index + 2 <= c.endOffset) {
             c.buf.setShort(index - c.offset, value);
         } else if (order() == ByteOrder.BIG_ENDIAN) {
-            setByte(index, (byte) (value >>> 8));
-            setByte(index + 1, (byte) value);
+            _setByte(index, (byte) (value >>> 8));
+            _setByte(index + 1, (byte) value);
         } else {
-            setByte(index    , (byte) value);
-            setByte(index + 1, (byte) (value >>> 8));
+            _setByte(index, (byte) value);
+            _setByte(index + 1, (byte) (value >>> 8));
         }
-        return this;
     }
 
     @Override
     public CompositeByteBuf setMedium(int index, int value) {
+        return (CompositeByteBuf) super.setMedium(index, value);
+    }
+
+    @Override
+    protected void _setMedium(int index, int value) {
         Component c = findComponent(index);
         if (index + 3 <= c.endOffset) {
             c.buf.setMedium(index - c.offset, value);
         } else if (order() == ByteOrder.BIG_ENDIAN) {
-            setShort(index, (short) (value >> 8));
-            setByte(index + 2, (byte) value);
+            _setShort(index, (short) (value >> 8));
+            _setByte(index + 2, (byte) value);
         } else {
-            setShort(index    , (short) value);
-            setByte(index + 2, (byte) (value >>> 16));
+            _setShort(index, (short) value);
+            _setByte(index + 2, (byte) (value >>> 16));
         }
-        return this;
     }
 
     @Override
     public CompositeByteBuf setInt(int index, int value) {
+        return (CompositeByteBuf) super.setInt(index, value);
+    }
+
+    @Override
+    protected void _setInt(int index, int value) {
         Component c = findComponent(index);
         if (index + 4 <= c.endOffset) {
             c.buf.setInt(index - c.offset, value);
         } else if (order() == ByteOrder.BIG_ENDIAN) {
-            setShort(index, (short) (value >>> 16));
-            setShort(index + 2, (short) value);
+            _setShort(index, (short) (value >>> 16));
+            _setShort(index + 2, (short) value);
         } else {
-            setShort(index    , (short) value);
-            setShort(index + 2, (short) (value >>> 16));
+            _setShort(index, (short) value);
+            _setShort(index + 2, (short) (value >>> 16));
         }
-        return this;
     }
 
     @Override
     public CompositeByteBuf setLong(int index, long value) {
+        return (CompositeByteBuf) super.setLong(index, value);
+    }
+
+    @Override
+    protected void _setLong(int index, long value) {
         Component c = findComponent(index);
         if (index + 8 <= c.endOffset) {
             c.buf.setLong(index - c.offset, value);
         } else if (order() == ByteOrder.BIG_ENDIAN) {
-            setInt(index, (int) (value >>> 32));
-            setInt(index + 4, (int) value);
+            _setInt(index, (int) (value >>> 32));
+            _setInt(index + 4, (int) value);
         } else {
-            setInt(index    , (int) value);
-            setInt(index + 4, (int) (value >>> 32));
+            _setInt(index, (int) value);
+            _setInt(index + 4, (int) (value >>> 32));
         }
-        return this;
     }
 
     @Override
     public CompositeByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
-        int componentId = toComponentIndex(index);
-        if (index > capacity() - length || srcIndex > src.length - length) {
-            throw new IndexOutOfBoundsException("Too many bytes to read - needs "
-                    + (index + length) + " or " + (srcIndex + length) + ", maximum is "
-                    + capacity() + " or " + src.length);
-        }
+        checkSrcIndex(index, length, srcIndex, src.length);
 
-        int i = componentId;
+        int i = toComponentIndex(index);
         while (length > 0) {
             Component c = components.get(i);
             ByteBuf s = c.buf;
@@ -834,15 +822,11 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
     @Override
     public CompositeByteBuf setBytes(int index, ByteBuffer src) {
-        int componentId = toComponentIndex(index);
         int limit = src.limit();
         int length = src.remaining();
-        if (index > capacity() - length) {
-            throw new IndexOutOfBoundsException("Too many bytes to be written - Needs "
-                    + (index + length) + ", maximum is " + capacity());
-        }
 
-        int i = componentId;
+        checkIndex(index, length);
+        int i = toComponentIndex(index);
         try {
             while (length > 0) {
                 Component c = components.get(i);
@@ -863,14 +847,9 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
     @Override
     public CompositeByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
-        int componentId = toComponentIndex(index);
-        if (index > capacity() - length || srcIndex > src.capacity() - length) {
-            throw new IndexOutOfBoundsException("Too many bytes to be written - Needs "
-                    + (index + length) + " or " + (srcIndex + length) + ", maximum is "
-                    + capacity() + " or " + src.capacity());
-        }
+        checkSrcIndex(index, length, srcIndex, src.capacity());
 
-        int i = componentId;
+        int i = toComponentIndex(index);
         while (length > 0) {
             Component c = components.get(i);
             ByteBuf s = c.buf;
@@ -886,15 +865,10 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     }
 
     @Override
-    public int setBytes(int index, InputStream in, int length)
-            throws IOException {
-        int componentId = toComponentIndex(index);
-        if (index > capacity() - length) {
-            throw new IndexOutOfBoundsException("Too many bytes to write - Needs "
-                    + (index + length) + ", maximum is " + capacity());
-        }
+    public int setBytes(int index, InputStream in, int length) throws IOException {
+        checkIndex(index, length);
 
-        int i = componentId;
+        int i = toComponentIndex(index);
         int readBytes = 0;
 
         do {
@@ -927,15 +901,10 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     }
 
     @Override
-    public int setBytes(int index, ScatteringByteChannel in, int length)
-            throws IOException {
-        int componentId = toComponentIndex(index);
-        if (index > capacity() - length) {
-            throw new IndexOutOfBoundsException("Too many bytes to write - Needs "
-                    + (index + length) + ", maximum is " + capacity());
-        }
+    public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
+        checkIndex(index, length);
 
-        int i = componentId;
+        int i = toComponentIndex(index);
         int readBytes = 0;
         do {
             Component c = components.get(i);
@@ -973,14 +942,9 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
     @Override
     public ByteBuf copy(int index, int length) {
-        int componentId = toComponentIndex(index);
-        if (index > capacity() - length) {
-            throw new IndexOutOfBoundsException("Too many bytes to copy - Needs "
-                    + (index + length) + ", maximum is " + capacity());
-        }
-
+        checkIndex(index, length);
         ByteBuf dst = Unpooled.buffer(length);
-        copyTo(index, length, componentId, dst);
+        copyTo(index, length, toComponentIndex(index), dst);
         return dst;
     }
 
@@ -1016,10 +980,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
     private Component findComponent(int offset) {
         assert !freed;
-        if (offset < 0 || offset >= capacity()) {
-            throw new IndexOutOfBoundsException(String.format(
-                    "offset: %d (expected: >= 0 && < capacity(%d))", offset, capacity()));
-        }
+        checkIndex(offset);
 
         Component c = lastAccessed;
         if (c == null) {
@@ -1085,27 +1046,28 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
 
     @Override
     public ByteBuffer[] nioBuffers(int index, int length) {
-        if (index + length > capacity()) {
-            throw new IndexOutOfBoundsException("Too many bytes to convert - Needs"
-                    + (index + length) + ", maximum is " + capacity());
-        }
-        if (index < 0) {
-            throw new IndexOutOfBoundsException("index must be >= 0");
-        }
+        checkIndex(index, length);
         if (length == 0) {
-            return EMPTY_NIOBUFFERS;
+            return EmptyArrays.EMPTY_BYTE_BUFFERS;
         }
-        int componentId = toComponentIndex(index);
 
         List<ByteBuffer> buffers = new ArrayList<ByteBuffer>(components.size());
-
-        int i = componentId;
+        int i = toComponentIndex(index);
         while (length > 0) {
             Component c = components.get(i);
             ByteBuf s = c.buf;
             int adjustment = c.offset;
             int localLength = Math.min(length, s.capacity() - (index - adjustment));
-            buffers.add(s.nioBuffer(index - adjustment, localLength));
+            switch (s.nioBufferCount()) {
+                case 0:
+                    throw new UnsupportedOperationException();
+                case 1:
+                    buffers.add(s.nioBuffer(index - adjustment, localLength));
+                    break;
+                default:
+                    Collections.addAll(buffers, s.nioBuffers(index - adjustment, localLength));
+            }
+
             index += localLength;
             length -= localLength;
             i ++;
@@ -1142,7 +1104,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         }
 
         components.clear();
-        components.add(new Component(consolidated, true));
+        components.add(new Component(consolidated));
         updateComponentOffsets(0);
         return this;
     }
@@ -1167,7 +1129,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         }
 
         components.subList(cIndex + 1, endCIndex).clear();
-        components.set(cIndex, new Component(consolidated, true));
+        components.set(cIndex, new Component(consolidated));
         updateComponentOffsets(cIndex);
         return this;
     }
@@ -1241,7 +1203,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
             // new slice would be empty, so remove instead
             components.remove(0);
         } else {
-            Component newC = new Component(c.buf.slice(adjustment, c.length - adjustment), c.allocatedBySelf);
+            Component newC = new Component(c.buf.slice(adjustment, c.length - adjustment));
             components.set(0, newC);
         }
 
@@ -1269,29 +1231,18 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     private final class Component {
         final ByteBuf buf;
         final int length;
-        final boolean allocatedBySelf;
         int offset;
         int endOffset;
 
-        Component(ByteBuf buf, boolean allocatedBySelf) {
+        Component(ByteBuf buf) {
             this.buf = buf;
             length = buf.readableBytes();
-            this.allocatedBySelf = allocatedBySelf;
         }
 
         void freeIfNecessary() {
-            if (!allocatedBySelf) {
-                return;
-            }
-
             // Unwrap so that we can free slices, too.
-            ByteBuf buf;
-            for (buf = this.buf; buf.unwrap() != null; buf = buf.unwrap()) {
-                continue;
-            }
-
             if (suspendedDeallocations == null) {
-                buf.free(); // We should not get a NPE here. If so, it must be a bug.
+                buf.release(); // We should not get a NPE here. If so, it must be a bug.
             } else {
                 suspendedDeallocations.add(buf);
             }
@@ -1339,8 +1290,8 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     }
 
     @Override
-    public CompositeByteBuf ensureWritableBytes(int minWritableBytes) {
-        return (CompositeByteBuf) super.ensureWritableBytes(minWritableBytes);
+    public CompositeByteBuf ensureWritable(int minWritableBytes) {
+        return (CompositeByteBuf) super.ensureWritable(minWritableBytes);
     }
 
     @Override
@@ -1519,6 +1470,16 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     }
 
     @Override
+    public CompositeByteBuf retain(int increment) {
+        return (CompositeByteBuf) super.retain(increment);
+    }
+
+    @Override
+    public CompositeByteBuf retain() {
+        return (CompositeByteBuf) super.retain();
+    }
+
+    @Override
     public ByteBuffer[] nioBuffers() {
         return nioBuffers(readerIndex(), readableBytes());
     }
@@ -1529,12 +1490,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
     }
 
     @Override
-    public boolean isFreed() {
-        return freed;
-    }
-
-    @Override
-    public void free() {
+    protected void deallocate() {
         if (freed) {
             return;
         }
@@ -1544,10 +1500,13 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         for (Component c: components) {
             c.freeIfNecessary();
         }
+
+        leak.close();
     }
 
     @Override
     public CompositeByteBuf suspendIntermediaryDeallocations() {
+        ensureAccessible();
         if (suspendedDeallocations == null) {
             suspendedDeallocations = new ArrayDeque<ByteBuf>(2);
         }
@@ -1564,7 +1523,7 @@ public class DefaultCompositeByteBuf extends AbstractByteBuf implements Composit
         this.suspendedDeallocations = null;
 
         for (ByteBuf buf: suspendedDeallocations) {
-            buf.free();
+            buf.release();
         }
         return this;
     }

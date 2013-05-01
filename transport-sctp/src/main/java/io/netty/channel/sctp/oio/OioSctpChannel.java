@@ -27,14 +27,15 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.sctp.SctpServerChannel;
-import io.netty.channel.socket.oio.AbstractOioMessageChannel;
+import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.sctp.DefaultSctpChannelConfig;
 import io.netty.channel.sctp.SctpChannelConfig;
 import io.netty.channel.sctp.SctpMessage;
 import io.netty.channel.sctp.SctpNotificationHandler;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.channel.sctp.SctpServerChannel;
+import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -135,6 +136,16 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     }
 
     @Override
+    public InetSocketAddress localAddress() {
+        return (InetSocketAddress) super.localAddress();
+    }
+
+    @Override
+    public InetSocketAddress remoteAddress() {
+        return (InetSocketAddress) super.remoteAddress();
+    }
+
+    @Override
     public SctpServerChannel parent() {
         return (SctpServerChannel) super.parent();
     }
@@ -187,19 +198,10 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                     free = false;
                     readMessages ++;
                 } catch (Throwable cause) {
-                    if (cause instanceof Error) {
-                        throw (Error) cause;
-                    }
-                    if (cause instanceof RuntimeException) {
-                        throw (RuntimeException) cause;
-                    }
-                    if (cause instanceof Exception) {
-                        throw (Exception) cause;
-                    }
-                    throw new ChannelException(cause);
+                    PlatformDependent.throwException(cause);
                 }  finally {
                     if (free) {
-                        buffer.free();
+                        buffer.release();
                     }
                 }
             }
@@ -224,7 +226,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                     return;
                 }
                 try {
-                    ByteBuf data = packet.data();
+                    ByteBuf data = packet.content();
                     int dataLen = data.readableBytes();
                     ByteBuffer nioData;
 
@@ -242,7 +244,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
 
                     ch.send(nioData, mi);
                 } finally {
-                    packet.free();
+                    packet.release();
                 }
             }
             writableKeys.clear();

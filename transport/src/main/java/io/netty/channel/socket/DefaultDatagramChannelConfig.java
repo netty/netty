@@ -16,12 +16,13 @@
 package io.netty.channel.socket;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.DatagramSocket;
@@ -125,6 +126,8 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
             setTimeToLive((Integer) value);
         } else if (option == IP_TOS) {
             setTrafficClass((Integer) value);
+        } else if (option == UDP_RECEIVE_PACKET_SIZE) {
+            setReceivePacketSize((Integer) value);
         } else {
             return super.setOption(option, value);
         }
@@ -381,5 +384,10 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
     @Override
     public DatagramChannelConfig setAutoRead(boolean autoRead) {
         return (DatagramChannelConfig) super.setAutoRead(autoRead);
+    }
+
+    @Override
+    public DatagramChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type) {
+        return (DatagramChannelConfig) super.setDefaultHandlerByteBufType(type);
     }
 }

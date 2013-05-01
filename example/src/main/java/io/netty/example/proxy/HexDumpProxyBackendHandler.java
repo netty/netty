@@ -17,6 +17,8 @@ package io.netty.example.proxy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 
@@ -30,14 +32,24 @@ public class HexDumpProxyBackendHandler extends ChannelInboundByteHandlerAdapter
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        ctx.read();
         ctx.flush();
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+    public void inboundBufferUpdated(final ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         ByteBuf out = inboundChannel.outboundByteBuffer();
         out.writeBytes(in);
-        inboundChannel.flush();
+        inboundChannel.flush().addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                if (future.isSuccess()) {
+                    ctx.channel().read();
+                } else {
+                    future.channel().close();
+                }
+            }
+        });
     }
 
     @Override

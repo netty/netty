@@ -17,14 +17,15 @@ package io.netty.example.http.upload;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.socket.nio.NioEventLoopGroup;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.ClientCookieEncoder;
 import io.netty.handler.codec.http.DefaultCookie;
-import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.QueryStringEncoder;
 import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
@@ -34,24 +35,23 @@ import io.netty.handler.codec.http.multipart.HttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder.ErrorDataEncoderException;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
-import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * This class is meant to be run against {@link HttpUploadServer}.
  */
 public class HttpUploadClient {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(HttpUploadClient.class);
+    private static final Logger logger = Logger.getLogger(HttpUploadClient.class.getName());
 
     private final String baseUri;
     private final String filePath;
@@ -76,7 +76,7 @@ public class HttpUploadClient {
         try {
             uriSimple = new URI(postSimple);
         } catch (URISyntaxException e) {
-            logger.error("Invalid URI syntax" + e.getCause());
+            logger.log(Level.WARNING, "Invalid URI syntax", e);
             return;
         }
         String scheme = uriSimple.getScheme() == null ? "http" : uriSimple.getScheme();
@@ -91,7 +91,7 @@ public class HttpUploadClient {
         }
 
         if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
-            logger.error("Only HTTP(S) is supported.");
+            logger.log(Level.WARNING, "Only HTTP(S) is supported.");
             return;
         }
 
@@ -101,18 +101,17 @@ public class HttpUploadClient {
         try {
             uriFile = new URI(postFile);
         } catch (URISyntaxException e) {
-            logger.error("Error: " + e.getMessage());
+            logger.log(Level.WARNING, "Error: ", e);
             return;
         }
         File file = new File(filePath);
         if (!file.canRead()) {
-            logger.error("A correct path is needed");
+            logger.log(Level.WARNING, "A correct path is needed");
             return;
         }
 
         // Configure the client.
-        Bootstrap b = new Bootstrap();
-        b.group(new NioEventLoopGroup()).channel(NioSocketChannel.class).handler(new HttpUploadClientIntializer(ssl));
+        EventLoopGroup group = new NioEventLoopGroup();
 
         // setup the factory: here using a mixed memory/disk based on size threshold
         HttpDataFactory factory = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE); // Disk if MINSIZE exceed
@@ -122,28 +121,33 @@ public class HttpUploadClient {
         DiskAttribute.deleteOnExitTemporaryFile = true; // should delete file on exit (in normal exit)
         DiskAttribute.baseDirectory = null; // system temp directory
 
-        // Simple Get form: no factory used (not usable)
-        List<Entry<String, String>> headers = formGet(b, host, port, get, uriSimple);
-        if (headers == null) {
+        try {
+            Bootstrap b = new Bootstrap();
+            b.group(group).channel(NioSocketChannel.class).handler(new HttpUploadClientIntializer(ssl));
+
+            // Simple Get form: no factory used (not usable)
+            List<Entry<String, String>> headers = formGet(b, host, port, get, uriSimple);
+            if (headers == null) {
+                factory.cleanAllHttpDatas();
+                return;
+            }
+
+            // Simple Post form: factory used for big attributes
+            List<InterfaceHttpData> bodylist = formPost(b, host, port, uriSimple, file, factory, headers);
+            if (bodylist == null) {
+                factory.cleanAllHttpDatas();
+                return;
+            }
+
+            // Multipart Post form: factory used
+            formPostMultipart(b, host, port, uriFile, factory, headers, bodylist);
+        } finally {
+            // Shut down executor threads to exit.
+            group.shutdownGracefully();
+
+            // Really clean all temporary files if they still exist
             factory.cleanAllHttpDatas();
-            return;
         }
-
-        // Simple Post form: factory used for big attributes
-        List<InterfaceHttpData> bodylist = formPost(b, host, port, uriSimple, file, factory, headers);
-        if (bodylist == null) {
-            factory.cleanAllHttpDatas();
-            return;
-        }
-
-        // Multipart Post form: factory used
-        formPostMultipart(b, host, port, uriFile, factory, headers, bodylist);
-
-        // Shut down executor threads to exit.
-        b.shutdown();
-
-        // Really clean all temporary files if they still exist
-        factory.cleanAllHttpDatas();
     }
 
     /**
@@ -156,8 +160,7 @@ public class HttpUploadClient {
             URI uriSimple) throws Exception {
         // Start the connection attempt.
         // No use of HttpPostRequestEncoder since not a POST
-        bootstrap.remoteAddress(new InetSocketAddress(host, port));
-        Channel channel = bootstrap.connect().sync().channel();
+        Channel channel = bootstrap.connect(host, port).sync().channel();
 
         // Prepare the HTTP request.
         QueryStringEncoder encoder = new QueryStringEncoder(get);
@@ -174,37 +177,35 @@ public class HttpUploadClient {
         try {
             uriGet = new URI(encoder.toString());
         } catch (URISyntaxException e) {
-            logger.error("Error: " + e.getMessage());
+            logger.log(Level.WARNING, "Error: ", e);
             return null;
         }
 
-        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, uriGet.toASCIIString());
-        request.setHeader(HttpHeaders.Names.HOST, host);
-        request.setHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
-        request.setHeader(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP + ','
+        FullHttpRequest request =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, uriGet.toASCIIString());
+        HttpHeaders headers = request.headers();
+        headers.set(HttpHeaders.Names.HOST, host);
+        headers.set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
+        headers.set(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP + ','
                 + HttpHeaders.Values.DEFLATE);
 
-        request.setHeader(HttpHeaders.Names.ACCEPT_CHARSET, "ISO-8859-1,utf-8;q=0.7,*;q=0.7");
-        request.setHeader(HttpHeaders.Names.ACCEPT_LANGUAGE, "fr");
-        request.setHeader(HttpHeaders.Names.REFERER, uriSimple.toString());
-        request.setHeader(HttpHeaders.Names.USER_AGENT, "Netty Simple Http Client side");
-        request.setHeader(HttpHeaders.Names.ACCEPT, "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        headers.set(HttpHeaders.Names.ACCEPT_CHARSET, "ISO-8859-1,utf-8;q=0.7,*;q=0.7");
+        headers.set(HttpHeaders.Names.ACCEPT_LANGUAGE, "fr");
+        headers.set(HttpHeaders.Names.REFERER, uriSimple.toString());
+        headers.set(HttpHeaders.Names.USER_AGENT, "Netty Simple Http Client side");
+        headers.set(HttpHeaders.Names.ACCEPT, "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
 
-        // connection will not close but needed
-        // request.setHeader("Connection","keep-alive");
-        // request.setHeader("Keep-Alive","300");
-
-        request.setHeader(HttpHeaders.Names.COOKIE, ClientCookieEncoder.encode(new DefaultCookie("my-cookie", "foo"),
+        headers.set(HttpHeaders.Names.COOKIE, ClientCookieEncoder.encode(new DefaultCookie("my-cookie", "foo"),
                 new DefaultCookie("another-cookie", "bar")));
 
         // send request
-        List<Entry<String, String>> headers = request.getHeaders();
-        channel.write(request);
+        List<Entry<String, String>> entries = headers.entries();
+        channel.write(request).sync();
 
         // Wait for the server to close the connection.
         channel.closeFuture().sync();
 
-        return headers;
+        return entries;
     }
 
     /**
@@ -216,11 +217,11 @@ public class HttpUploadClient {
             File file, HttpDataFactory factory, List<Entry<String, String>> headers) throws Exception {
 
         // Start the connection attempt
-        bootstrap.remoteAddress(new InetSocketAddress(host, port));
-        Channel channel = bootstrap.connect().sync().channel();
+        Channel channel = bootstrap.connect(host, port).sync().channel();
 
         // Prepare the HTTP request.
-        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uriSimple.toASCIIString());
+        FullHttpRequest request =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uriSimple.toASCIIString());
 
         // Use the PostBody encoder
         HttpPostRequestEncoder bodyRequestEncoder = null;
@@ -230,13 +231,13 @@ public class HttpUploadClient {
             // should not be since args are not null
             e.printStackTrace();
         } catch (ErrorDataEncoderException e) {
-            // test if method is a POST method
+            // test if getMethod is a POST getMethod
             e.printStackTrace();
         }
 
         // it is legal to add directly header or cookie into the request until finalize
         for (Entry<String, String> entry : headers) {
-            request.setHeader(entry.getKey(), entry.getValue());
+            request.headers().set(entry.getKey(), entry.getValue());
         }
 
         // add Form attribute
@@ -300,11 +301,11 @@ public class HttpUploadClient {
             throws Exception {
 
         // Start the connection attempt
-        bootstrap.remoteAddress(new InetSocketAddress(host, port));
-        Channel channel = bootstrap.connect().sync().channel();
+        Channel channel = bootstrap.connect(host, port).sync().channel();
 
         // Prepare the HTTP request.
-        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uriFile.toASCIIString());
+        FullHttpRequest request =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uriFile.toASCIIString());
 
         // Use the PostBody encoder
         HttpPostRequestEncoder bodyRequestEncoder = null;
@@ -314,13 +315,13 @@ public class HttpUploadClient {
             // should not be since no null args
             e.printStackTrace();
         } catch (ErrorDataEncoderException e) {
-            // test if method is a POST method
+            // test if getMethod is a POST getMethod
             e.printStackTrace();
         }
 
         // it is legal to add directly header or cookie into the request until finalize
         for (Entry<String, String> entry : headers) {
-            request.setHeader(entry.getKey(), entry.getValue());
+            request.headers().set(entry.getKey(), entry.getValue());
         }
 
         // add Form attribute from previous request in formpost()

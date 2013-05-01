@@ -17,7 +17,7 @@ package io.netty.handler.timeout;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelStateHandlerAdapter;
@@ -41,7 +41,7 @@ import java.util.concurrent.TimeUnit;
  * }
  *
  * // Handler should handle the {@link ReadTimeoutException}.
- * public class MyHandler extends {@link ChannelHandlerAdapter} {
+ * public class MyHandler extends {@link ChannelDuplexHandler} {
  *     {@code @Override}
  *     public void exceptionCaught({@link ChannelHandlerContext} ctx, {@link Throwable} cause)
  *             throws {@link Exception} {
@@ -60,9 +60,6 @@ import java.util.concurrent.TimeUnit;
  * </pre>
  * @see WriteTimeoutHandler
  * @see IdleStateHandler
- *
- * @apiviz.landmark
- * @apiviz.has io.netty.handler.timeout.TimeoutException oneway - - raises
  */
 public class ReadTimeoutHandler extends ChannelStateHandlerAdapter {
 
@@ -106,7 +103,7 @@ public class ReadTimeoutHandler extends ChannelStateHandlerAdapter {
     }
 
     @Override
-    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         if (ctx.channel().isActive() && ctx.channel().isRegistered()) {
             // channelActvie() event has been fired already, which means this.channelActive() will
             // not be invoked. We have to initialize here instead.
@@ -118,7 +115,7 @@ public class ReadTimeoutHandler extends ChannelStateHandlerAdapter {
     }
 
     @Override
-    public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         destroy();
     }
 

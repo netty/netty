@@ -19,13 +19,13 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
 import java.net.SocketOption;
 import java.net.StandardSocketOptions;
 import java.nio.channels.NetworkChannel;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.channel.ChannelOption.*;
@@ -40,7 +40,7 @@ final class DefaultAioSocketChannelConfig extends DefaultChannelConfig
     private volatile boolean allowHalfClosure;
     private volatile long readTimeoutInMillis;
     private volatile long writeTimeoutInMillis;
-    private Map<SocketOption<?>, Object> options = new ConcurrentHashMap<SocketOption<?>, Object>();
+    private Map<SocketOption<?>, Object> options = PlatformDependent.newConcurrentHashMap();
     private static final int DEFAULT_RCV_BUF_SIZE = 32 * 1024;
     private static final int DEFAULT_SND_BUF_SIZE = 32 * 1024;
     private static final int DEFAULT_SO_LINGER = -1;
@@ -57,6 +57,7 @@ final class DefaultAioSocketChannelConfig extends DefaultChannelConfig
      */
     DefaultAioSocketChannelConfig(AioSocketChannel channel) {
         super(channel);
+        enableTcpNoDelay();
     }
 
     /**
@@ -65,6 +66,18 @@ final class DefaultAioSocketChannelConfig extends DefaultChannelConfig
     DefaultAioSocketChannelConfig(AioSocketChannel channel, NetworkChannel javaChannel) {
         super(channel);
         this.javaChannel.set(javaChannel);
+        enableTcpNoDelay();
+    }
+
+    private void enableTcpNoDelay() {
+        // Enable TCP_NODELAY by default if possible.
+        if (PlatformDependent.canEnableTcpNoDelayByDefault()) {
+            try {
+                setTcpNoDelay(true);
+            } catch (Exception e) {
+                // Ignore.
+            }
+        }
     }
 
     @Override
@@ -342,5 +355,10 @@ final class DefaultAioSocketChannelConfig extends DefaultChannelConfig
     @Override
     public AioSocketChannelConfig setAutoRead(boolean autoRead) {
         return (AioSocketChannelConfig) super.setAutoRead(autoRead);
+    }
+
+    @Override
+    public AioSocketChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type) {
+        return (AioSocketChannelConfig) super.setDefaultHandlerByteBufType(type);
     }
 }

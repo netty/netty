@@ -126,7 +126,7 @@ public interface Cookie extends Comparable<Cookie> {
     boolean isSecure();
 
     /**
-     * Sets the security status of this {@link Cookie}
+     * Sets the security getStatus of this {@link Cookie}
      *
      * @param secure True if this {@link Cookie} is to be secure, otherwise false
      */

@@ -15,43 +15,35 @@
  */
 package io.netty.channel.rxtx;
 
+import static io.netty.channel.rxtx.RxtxChannelOption.*;
+
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.oio.OioByteStreamChannel;
+
+import java.net.SocketAddress;
+import java.util.concurrent.TimeUnit;
+
 import gnu.io.CommPort;
 import gnu.io.CommPortIdentifier;
 import gnu.io.SerialPort;
-import io.netty.buffer.BufType;
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelMetadata;
-import io.netty.channel.socket.oio.AbstractOioByteChannel;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.SocketAddress;
-import java.net.SocketTimeoutException;
-import java.nio.channels.NotYetConnectedException;
-
-import static io.netty.channel.rxtx.RxtxChannelOptions.*;
 
 /**
  * A channel to a serial device using the RXTX library.
  */
-public class RxtxChannel extends AbstractOioByteChannel {
+public class RxtxChannel extends OioByteStreamChannel {
 
     private static final RxtxDeviceAddress LOCAL_ADDRESS = new RxtxDeviceAddress("localhost");
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.BYTE, true);
 
     private final RxtxChannelConfig config;
 
     private boolean open = true;
     private RxtxDeviceAddress deviceAddress;
     private SerialPort serialPort;
-    private InputStream in;
-    private OutputStream out;
 
     public RxtxChannel() {
         super(null, null);
 
-        config = new RxtxChannelConfig(this);
+        config = new DefaultRxtxChannelConfig(this);
     }
 
     @Override
@@ -60,66 +52,37 @@ public class RxtxChannel extends AbstractOioByteChannel {
     }
 
     @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
-    }
-
-    @Override
     public boolean isOpen() {
         return open;
     }
 
     @Override
-    public boolean isActive() {
-        return in != null && out != null;
-    }
-
-    @Override
-    protected int available() {
-        try {
-            return in.available();
-        } catch (IOException e) {
-            return 0;
-        }
-    }
-
-    @Override
-    protected int doReadBytes(ByteBuf buf) throws Exception {
-        try {
-            return buf.writeBytes(in, buf.writableBytes());
-        } catch (SocketTimeoutException e) {
-            return 0;
-        }
-    }
-
-    @Override
-    protected void doWriteBytes(ByteBuf buf) throws Exception {
-        if (out == null) {
-            throw new NotYetConnectedException();
-        }
-        buf.readBytes(out, buf.readableBytes());
+    protected AbstractUnsafe newUnsafe() {
+        return new RxtxUnsafe();
     }
 
     @Override
     protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         RxtxDeviceAddress remote = (RxtxDeviceAddress) remoteAddress;
-        final CommPortIdentifier cpi = CommPortIdentifier.getPortIdentifier(remote.getDeviceAddress());
+        final CommPortIdentifier cpi = CommPortIdentifier.getPortIdentifier(remote.value());
         final CommPort commPort = cpi.open(getClass().getName(), 1000);
 
         deviceAddress = remote;
 
         serialPort = (SerialPort) commPort;
+    }
+
+    protected void doInit() throws Exception {
         serialPort.setSerialPortParams(
-                config().getOption(BAUD_RATE),
-                config().getOption(DATA_BITS).value(),
-                config().getOption(STOP_BITS).value(),
-                config().getOption(PARITY_BIT).value()
+            config().getOption(BAUD_RATE),
+            config().getOption(DATA_BITS).value(),
+            config().getOption(STOP_BITS).value(),
+            config().getOption(PARITY_BIT).value()
         );
         serialPort.setDTR(config().getOption(DTR));
         serialPort.setRTS(config().getOption(RTS));
 
-        out = serialPort.getOutputStream();
-        in = serialPort.getInputStream();
+        activate(serialPort.getInputStream(), serialPort.getOutputStream());
     }
 
     @Override
@@ -155,36 +118,67 @@ public class RxtxChannel extends AbstractOioByteChannel {
     @Override
     protected void doClose() throws Exception {
         open = false;
-
-        IOException ex = null;
-
         try {
-            if (in != null) {
-                in.close();
+           super.doClose();
+        } finally {
+            if (serialPort != null) {
+                serialPort.removeEventListener();
+                serialPort.close();
+                serialPort = null;
             }
-        } catch (IOException e) {
-            ex = e;
         }
+    }
 
-        try {
-            if (out != null) {
-                out.close();
+    private final class RxtxUnsafe extends AbstractUnsafe {
+        @Override
+        public void connect(
+                final SocketAddress remoteAddress,
+                final SocketAddress localAddress, final ChannelPromise promise) {
+            if (eventLoop().inEventLoop()) {
+                if (!ensureOpen(promise)) {
+                    return;
+                }
+
+                try {
+                    final boolean wasActive = isActive();
+                    doConnect(remoteAddress, localAddress);
+
+                    int waitTime = config().getOption(WAIT_TIME);
+                    if (waitTime > 0) {
+                        eventLoop().schedule(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    doInit();
+                                    promise.setSuccess();
+                                    if (!wasActive && isActive()) {
+                                        pipeline().fireChannelActive();
+                                    }
+                                } catch (Throwable t) {
+                                    promise.setFailure(t);
+                                    closeIfClosed();
+                                }
+                            }
+                       }, waitTime, TimeUnit.MILLISECONDS);
+                    } else {
+                        doInit();
+                        promise.setSuccess();
+                        if (!wasActive && isActive()) {
+                            pipeline().fireChannelActive();
+                        }
+                    }
+                } catch (Throwable t) {
+                    promise.setFailure(t);
+                    closeIfClosed();
+                }
+            } else {
+                eventLoop().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        connect(remoteAddress, localAddress, promise);
+                    }
+                });
             }
-        } catch (IOException e) {
-            ex = e;
-        }
-
-        if (serialPort != null) {
-            serialPort.removeEventListener();
-            serialPort.close();
-        }
-
-        in = null;
-        out = null;
-        serialPort = null;
-
-        if (ex != null) {
-            throw ex;
         }
     }
 }

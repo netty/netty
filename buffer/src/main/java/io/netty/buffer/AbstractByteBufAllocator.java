@@ -16,18 +16,32 @@
 
 package io.netty.buffer;
 
+import io.netty.util.internal.PlatformDependent;
+
+/**
+ * Skeltal {@link ByteBufAllocator} implementation to extend.
+ */
 public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
 
     private final boolean directByDefault;
     private final ByteBuf emptyBuf;
 
+    /**
+     * Instance use heap buffers by default
+     */
     protected AbstractByteBufAllocator() {
         this(false);
     }
 
-    protected AbstractByteBufAllocator(boolean directByDefault) {
-        this.directByDefault = directByDefault;
-        emptyBuf = new UnpooledHeapByteBuf(this, 0, 0);
+    /**
+     * Create new instance
+     *
+     * @param preferDirect {@code true} if {@link #buffer(int)} should try to allocate a direct buffer rather than
+     *                     a heap buffer
+     */
+    protected AbstractByteBufAllocator(boolean preferDirect) {
+        directByDefault = preferDirect && PlatformDependent.hasUnsafe();
+        emptyBuf = new EmptyByteBuf(this);
     }
 
     @Override
@@ -49,6 +63,30 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
     @Override
     public ByteBuf buffer(int initialCapacity, int maxCapacity) {
         if (directByDefault) {
+            return directBuffer(initialCapacity, maxCapacity);
+        }
+        return heapBuffer(initialCapacity, maxCapacity);
+    }
+
+    @Override
+    public ByteBuf ioBuffer() {
+        if (PlatformDependent.hasUnsafe()) {
+            return directBuffer(0);
+        }
+        return heapBuffer(0);
+    }
+
+    @Override
+    public ByteBuf ioBuffer(int initialCapacity) {
+        if (PlatformDependent.hasUnsafe()) {
+            return directBuffer(initialCapacity);
+        }
+        return heapBuffer(initialCapacity);
+    }
+
+    @Override
+    public ByteBuf ioBuffer(int initialCapacity, int maxCapacity) {
+        if (PlatformDependent.hasUnsafe()) {
             return directBuffer(initialCapacity, maxCapacity);
         }
         return heapBuffer(initialCapacity, maxCapacity);
@@ -139,6 +177,13 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
         }
     }
 
+    /**
+     * Create a heap {@link ByteBuf} with the given initialCapacity and maxCapacity.
+     */
     protected abstract ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity);
+
+    /**
+     * Create a direct {@link ByteBuf} with the given initialCapacity and maxCapacity.
+     */
     protected abstract ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity);
 }

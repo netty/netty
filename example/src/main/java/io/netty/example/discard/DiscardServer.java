@@ -18,8 +18,9 @@ package io.netty.example.discard;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 /**
@@ -34,27 +35,29 @@ public class DiscardServer {
     }
 
     public void run() throws Exception {
-        ServerBootstrap b = new ServerBootstrap();
+        EventLoopGroup bossGroup = new NioEventLoopGroup();
+        EventLoopGroup workerGroup = new NioEventLoopGroup();
         try {
-            b.group(new NioEventLoopGroup(), new NioEventLoopGroup())
+            ServerBootstrap b = new ServerBootstrap();
+            b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
-             .localAddress(port)
              .childHandler(new ChannelInitializer<SocketChannel>() {
-                @Override
-                public void initChannel(SocketChannel ch) throws Exception {
-                    ch.pipeline().addLast(new DiscardServerHandler());
-                }
+                 @Override
+                 public void initChannel(SocketChannel ch) throws Exception {
+                     ch.pipeline().addLast(new DiscardServerHandler());
+                 }
              });
 
             // Bind and start to accept incoming connections.
-            ChannelFuture f = b.bind().sync();
+            ChannelFuture f = b.bind(port).sync();
 
             // Wait until the server socket is closed.
             // In this example, this does not happen, but you can do that to gracefully
             // shut down your server.
             f.channel().closeFuture().sync();
         } finally {
-            b.shutdown();
+            workerGroup.shutdownGracefully();
+            bossGroup.shutdownGracefully();
         }
     }
 

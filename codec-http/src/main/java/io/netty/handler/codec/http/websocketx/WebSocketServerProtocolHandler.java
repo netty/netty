@@ -20,8 +20,11 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelStateHandler;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.AttributeKey;
 
@@ -38,8 +41,22 @@ import static io.netty.handler.codec.http.HttpVersion.*;
  * The implementation of this handler assumes that you just want to run  a websocket server and not process other types
  * HTTP requests (like GET and POST). If you wish to support both HTTP requests and websockets in the one server, refer
  * to the <tt>io.netty.example.http.websocketx.server.WebSocketServer</tt> example.
+ *
+ * To know once a handshake was done you can intercept the
+ * {@link ChannelStateHandler#userEventTriggered(ChannelHandlerContext, Object)} and check if the event was of type
+ * {@link ServerHandshakeStateEvent#HANDSHAKE_COMPLETE}.
  */
-public class WebSocketServerProtocolHandler extends ChannelInboundMessageHandlerAdapter<WebSocketFrame> {
+public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
+
+    /**
+     * Events that are fired to notify about handshake status
+     */
+    public enum ServerHandshakeStateEvent {
+        /**
+         * The Handshake was complete succesful and so the channel was upgraded to websockets
+         */
+        HANDSHAKE_COMPLETE
+    }
 
     private static final AttributeKey<WebSocketServerHandshaker> HANDSHAKER_ATTR_KEY =
             new AttributeKey<WebSocketServerHandshaker>(WebSocketServerHandshaker.class.getName());
@@ -63,7 +80,7 @@ public class WebSocketServerProtocolHandler extends ChannelInboundMessageHandler
     }
 
     @Override
-    public void afterAdd(ChannelHandlerContext ctx) {
+    public void handlerAdded(ChannelHandlerContext ctx) {
         ChannelPipeline cp = ctx.pipeline();
         if (cp.get(WebSocketServerProtocolHandshakeHandler.class) == null) {
             // Add the WebSocketHandshakeHandler before this one.
@@ -76,23 +93,18 @@ public class WebSocketServerProtocolHandler extends ChannelInboundMessageHandler
     public void messageReceived(ChannelHandlerContext ctx, WebSocketFrame frame) throws Exception {
         if (frame instanceof CloseWebSocketFrame) {
             WebSocketServerHandshaker handshaker = getHandshaker(ctx);
+            frame.retain();
             handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
             return;
         }
-        if (frame instanceof PingWebSocketFrame) {
-            ctx.channel().write(new PongWebSocketFrame(frame.getBinaryData()));
-            return;
-        }
-
-        ctx.nextInboundMessageBuffer().add(frame);
-        ctx.fireInboundBufferUpdated();
+        super.messageReceived(ctx, frame);
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (cause instanceof WebSocketHandshakeException) {
-            DefaultHttpResponse response = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.BAD_REQUEST);
-            response.setContent(Unpooled.wrappedBuffer(cause.getMessage().getBytes()));
+            FullHttpResponse response = new DefaultFullHttpResponse(
+                    HTTP_1_1, HttpResponseStatus.BAD_REQUEST, Unpooled.wrappedBuffer(cause.getMessage().getBytes()));
             ctx.channel().write(response).addListener(ChannelFutureListener.CLOSE);
         } else {
             ctx.close();
@@ -108,18 +120,13 @@ public class WebSocketServerProtocolHandler extends ChannelInboundMessageHandler
     }
 
     static ChannelHandler forbiddenHttpRequestResponder() {
-        return new ChannelInboundMessageHandlerAdapter<Object>() {
+        return new ChannelInboundMessageHandlerAdapter<FullHttpRequest>() {
             @Override
-            public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-                if (!(msg instanceof WebSocketFrame)) {
-                    DefaultHttpResponse response = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.FORBIDDEN);
-                    ctx.channel().write(response);
-                } else {
-                    ctx.nextInboundMessageBuffer().add(msg);
-                    ctx.fireInboundBufferUpdated();
-                }
+            public void messageReceived(ChannelHandlerContext ctx, FullHttpRequest msg) throws Exception {
+                FullHttpResponse response =
+                        new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.FORBIDDEN);
+                ctx.channel().write(response);
             }
         };
     }
-
 }

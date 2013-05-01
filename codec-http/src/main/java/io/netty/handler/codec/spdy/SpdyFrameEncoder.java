@@ -31,7 +31,7 @@ import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 /**
  * Encodes a SPDY Data or Control Frame into a {@link ByteBuf}.
  */
-public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
+public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyDataOrControlFrame> {
 
     private final int version;
     private volatile boolean finished;
@@ -50,8 +50,6 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
      * Creates a new instance with the specified parameters.
      */
     public SpdyFrameEncoder(int version, int compressionLevel, int windowBits, int memLevel) {
-        super(SpdyDataFrame.class, SpdyControlFrame.class);
-
         if (version < SpdyConstants.SPDY_MIN_VERSION || version > SpdyConstants.SPDY_MAX_VERSION) {
             throw new IllegalArgumentException(
                     "unknown version: " + version);
@@ -62,7 +60,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
     }
 
     @Override
-    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
@@ -78,13 +76,13 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, SpdyDataOrControlFrame msg, ByteBuf out) throws Exception {
         if (msg instanceof SpdyDataFrame) {
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
-            ByteBuf data = spdyDataFrame.getData();
+            ByteBuf data = spdyDataFrame.content();
             byte flags = spdyDataFrame.isLast() ? SPDY_DATA_FLAG_FIN : 0;
-            out.ensureWritableBytes(SPDY_HEADER_SIZE + data.readableBytes());
+            out.ensureWritable(SPDY_HEADER_SIZE + data.readableBytes());
             out.writeInt(spdyDataFrame.getStreamId() & 0x7FFFFFFF);
             out.writeByte(flags);
             out.writeMedium(data.readableBytes());
@@ -106,7 +104,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
             } else {
                 length = 10 + headerBlockLength;
             }
-            out.ensureWritableBytes(SPDY_HEADER_SIZE + length);
+            out.ensureWritable(SPDY_HEADER_SIZE + length);
             out.writeShort(version | 0x8000);
             out.writeShort(SPDY_SYN_STREAM_FRAME);
             out.writeByte(flags);
@@ -141,7 +139,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
             } else {
                 length = 4 + headerBlockLength;
             }
-            out.ensureWritableBytes(SPDY_HEADER_SIZE + length);
+            out.ensureWritable(SPDY_HEADER_SIZE + length);
             out.writeShort(version | 0x8000);
             out.writeShort(SPDY_SYN_REPLY_FRAME);
             out.writeByte(flags);
@@ -159,7 +157,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
         } else if (msg instanceof SpdyRstStreamFrame) {
 
             SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
-            out.ensureWritableBytes(SPDY_HEADER_SIZE + 8);
+            out.ensureWritable(SPDY_HEADER_SIZE + 8);
             out.writeShort(version | 0x8000);
             out.writeShort(SPDY_RST_STREAM_FRAME);
             out.writeInt(8);
@@ -174,7 +172,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
             Set<Integer> IDs = spdySettingsFrame.getIds();
             int numEntries = IDs.size();
             int length = 4 + numEntries * 8;
-            out.ensureWritableBytes(SPDY_HEADER_SIZE + length);
+            out.ensureWritable(SPDY_HEADER_SIZE + length);
             out.writeShort(version | 0x8000);
             out.writeShort(SPDY_SETTINGS_FRAME);
             out.writeByte(flags);
@@ -206,7 +204,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
 
         } else if (msg instanceof SpdyNoOpFrame) {
 
-            out.ensureWritableBytes(SPDY_HEADER_SIZE);
+            out.ensureWritable(SPDY_HEADER_SIZE);
             out.writeShort(version | 0x8000);
             out.writeShort(SPDY_NOOP_FRAME);
             out.writeInt(0);
@@ -214,7 +212,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
         } else if (msg instanceof SpdyPingFrame) {
 
             SpdyPingFrame spdyPingFrame = (SpdyPingFrame) msg;
-            out.ensureWritableBytes(SPDY_HEADER_SIZE + 4);
+            out.ensureWritable(SPDY_HEADER_SIZE + 4);
             out.writeShort(version | 0x8000);
             out.writeShort(SPDY_PING_FRAME);
             out.writeInt(4);
@@ -224,7 +222,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
 
             SpdyGoAwayFrame spdyGoAwayFrame = (SpdyGoAwayFrame) msg;
             int length = version < 3 ? 4 : 8;
-            out.ensureWritableBytes(SPDY_HEADER_SIZE + length);
+            out.ensureWritable(SPDY_HEADER_SIZE + length);
             out.writeShort(version | 0x8000);
             out.writeShort(SPDY_GOAWAY_FRAME);
             out.writeInt(length);
@@ -246,7 +244,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
             } else {
                 length = 4 + headerBlockLength;
             }
-            out.ensureWritableBytes(SPDY_HEADER_SIZE + length);
+            out.ensureWritable(SPDY_HEADER_SIZE + length);
             out.writeShort(version | 0x8000);
             out.writeShort(SPDY_HEADERS_FRAME);
             out.writeByte(flags);
@@ -260,7 +258,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
         } else if (msg instanceof SpdyWindowUpdateFrame) {
 
             SpdyWindowUpdateFrame spdyWindowUpdateFrame = (SpdyWindowUpdateFrame) msg;
-            out.ensureWritableBytes(SPDY_HEADER_SIZE + 8);
+            out.ensureWritable(SPDY_HEADER_SIZE + 8);
             out.writeShort(version | 0x8000);
             out.writeShort(SPDY_WINDOW_UPDATE_FRAME);
             out.writeInt(8);
@@ -289,7 +287,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
 
     private static ByteBuf encodeHeaderBlock(int version, SpdyHeaderBlock headerFrame)
             throws Exception {
-        Set<String> names = headerFrame.getHeaderNames();
+        Set<String> names = headerFrame.headers().names();
         int numHeaders = names.size();
         if (numHeaders == 0) {
             return Unpooled.EMPTY_BUFFER;
@@ -307,7 +305,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
             int savedIndex = headerBlock.writerIndex();
             int valueLength = 0;
             writeLengthField(version, headerBlock, valueLength);
-            for (String value: headerFrame.getHeaders(name)) {
+            for (String value: headerFrame.headers().getAll(name)) {
                 byte[] valueBytes = value.getBytes(CharsetUtil.UTF_8);
                 if (valueBytes.length > 0) {
                     headerBlock.writeBytes(valueBytes);
