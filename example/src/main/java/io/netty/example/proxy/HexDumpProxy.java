@@ -49,8 +49,8 @@ public class HexDumpProxy {
              .childOption(ChannelOption.AUTO_READ, false)
              .bind(localPort).sync().channel().closeFuture().sync();
         } finally {
-            bossGroup.shutdown();
-            workerGroup.shutdown();
+            bossGroup.shutdownGracefully();
+            workerGroup.shutdownGracefully();
         }
     }
 

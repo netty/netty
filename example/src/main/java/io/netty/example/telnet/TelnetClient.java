@@ -74,7 +74,7 @@ public class TelnetClient {
                 lastWriteFuture.sync();
             }
         } finally {
-            group.shutdown();
+            group.shutdownGracefully();
         }
     }
 

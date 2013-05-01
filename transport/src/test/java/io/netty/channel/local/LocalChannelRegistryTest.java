@@ -80,8 +80,8 @@ public class LocalChannelRegistryTest {
             // Close the channel
             cc.close().sync();
 
-            serverGroup.shutdown();
-            clientGroup.shutdown();
+            serverGroup.shutdownGracefully();
+            clientGroup.shutdownGracefully();
 
             sc.closeFuture().sync();
 

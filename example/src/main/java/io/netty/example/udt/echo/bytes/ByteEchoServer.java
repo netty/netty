@@ -73,8 +73,8 @@ public class ByteEchoServer {
             future.channel().closeFuture().sync();
         } finally {
             // Shut down all event loops to terminate all threads.
-            acceptGroup.shutdown();
-            connectGroup.shutdown();
+            acceptGroup.shutdownGracefully();
+            connectGroup.shutdownGracefully();
         }
     }
 

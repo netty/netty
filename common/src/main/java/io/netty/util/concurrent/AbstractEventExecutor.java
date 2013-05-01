@@ -15,7 +15,9 @@
  */
 package io.netty.util.concurrent;
 
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.Callable;
@@ -35,6 +37,28 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     @Override
     public Iterator<EventExecutor> iterator() {
         return new EventExecutorIterator();
+    }
+
+    @Override
+    public void shutdownGracefully() {
+        shutdownGracefully(2, 15, TimeUnit.SECONDS);
+    }
+
+    /**
+     * @deprecated {@link #shutdownGracefully(long, long, TimeUnit)} or {@link #shutdownGracefully()} instead.
+     */
+    @Override
+    @Deprecated
+    public abstract void shutdown();
+
+    /**
+     * @deprecated {@link #shutdownGracefully(long, long, TimeUnit)} or {@link #shutdownGracefully()} instead.
+     */
+    @Override
+    @Deprecated
+    public List<Runnable> shutdownNow() {
+        shutdown();
+        return Collections.emptyList();
     }
 
     @Override

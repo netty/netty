@@ -185,10 +185,12 @@ public class LocalChannel extends AbstractChannel {
         }
 
         // Update all internal state before the closeFuture is notified.
-        if (parent() == null) {
-            LocalChannelRegistry.unregister(localAddress);
+        if (localAddress != null) {
+            if (parent() == null) {
+                LocalChannelRegistry.unregister(localAddress);
+            }
+            localAddress = null;
         }
-        localAddress = null;
         state = 3;
     }
 

@@ -73,8 +73,8 @@ public class BootstrapTest {
                 f.sync();
             }
         } finally {
-            groupA.shutdown();
-            groupB.shutdown();
+            groupA.shutdownGracefully();
+            groupB.shutdownGracefully();
         }
     }
 
@@ -119,8 +119,8 @@ public class BootstrapTest {
                 f.sync();
             }
         } finally {
-            groupA.shutdown();
-            groupB.shutdown();
+            groupA.shutdownGracefully();
+            groupB.shutdownGracefully();
         }
     }
 

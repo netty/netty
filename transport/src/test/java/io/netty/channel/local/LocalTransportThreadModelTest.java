@@ -76,7 +76,7 @@ public class LocalTransportThreadModelTest {
 
     @AfterClass
     public static void destroy() {
-        group.shutdown();
+        group.shutdownGracefully();
     }
 
     @Test(timeout = 30000)
@@ -195,9 +195,9 @@ public class LocalTransportThreadModelTest {
             System.out.println("H3O: " + h3.outboundThreadNames);
             throw e;
         } finally {
-            l.shutdown();
-            e1.shutdown();
-            e2.shutdown();
+            l.shutdownGracefully();
+            e1.shutdownGracefully();
+            e2.shutdownGracefully();
             l.awaitTermination(5, TimeUnit.SECONDS);
             e1.awaitTermination(5, TimeUnit.SECONDS);
             e2.awaitTermination(5, TimeUnit.SECONDS);
@@ -320,12 +320,12 @@ public class LocalTransportThreadModelTest {
 
             ch.close().sync();
         } finally {
-            l.shutdown();
-            e1.shutdown();
-            e2.shutdown();
-            e3.shutdown();
-            e4.shutdown();
-            e5.shutdown();
+            l.shutdownGracefully();
+            e1.shutdownGracefully();
+            e2.shutdownGracefully();
+            e3.shutdownGracefully();
+            e4.shutdownGracefully();
+            e5.shutdownGracefully();
         }
     }
 

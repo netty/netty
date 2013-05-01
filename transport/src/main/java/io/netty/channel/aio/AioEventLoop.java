@@ -75,15 +75,13 @@ final class AioEventLoop extends SingleThreadEventLoop {
     @Override
     protected void run() {
         for (;;) {
-            Runnable task;
-            try {
-                task = takeTask();
+            Runnable task = takeTask();
+            if (task != null) {
                 task.run();
-            } catch (InterruptedException e) {
-                // Waken up by interruptThread()
+                updateLastExecutionTime();
             }
 
-            if (isShutdown()) {
+            if (isShuttingDown()) {
                 closeAll();
                 if (confirmShutdown()) {
                     break;

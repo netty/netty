@@ -235,7 +235,7 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
     @Override
     protected void checkDeadLock() {
         EventExecutor e = executor();
-        if (e != null && !(e instanceof DefaultChannelGroup.ImmediateEventExecutor) && e.inEventLoop()) {
+        if (e != null && !(e instanceof ImmediateEventExecutor) && e.inEventLoop()) {
             throw new BlockingOperationException();
         }
     }
