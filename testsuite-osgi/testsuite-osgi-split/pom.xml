@@ -32,7 +32,7 @@
 
   <dependencies>
 
-    <!-- include all osgi bundle release modules -->
+    <!-- Include all Netty OSGI bundle release modules. -->
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-buffer</artifactId>
@@ -89,7 +89,7 @@
   <build>
     <plugins>
 
-      <!-- fail build on package split -->
+      <!-- Fail build on package split. -->
       <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
@@ -103,7 +103,7 @@
         </configuration>
       </plugin>
 
-      <!-- do not deploy this artifact -->
+      <!-- Do not deploy this artifact. -->
       <plugin>
         <artifactId>maven-deploy-plugin</artifactId>
         <configuration>
@@ -113,4 +113,5 @@
 
     </plugins>
   </build>
+  
 </project>
