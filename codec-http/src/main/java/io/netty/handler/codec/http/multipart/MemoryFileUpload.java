@@ -133,7 +133,7 @@ public class MemoryFileUpload extends AbstractMemoryHttpData implements FileUplo
     public FileUpload copy() {
         MemoryFileUpload upload = new MemoryFileUpload(getName(), getFilename(), getContentType(),
                 getContentTransferEncoding(), getCharset(), size);
-        ByteBuf buf = data();
+        ByteBuf buf = content();
         if (buf != null) {
             try {
                 upload.setContent(buf.copy());

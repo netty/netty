@@ -111,7 +111,7 @@ public final class SctpMessage extends DefaultByteBufHolder {
             return false;
         }
 
-        if (!data().equals(sctpFrame.data())) {
+        if (!content().equals(sctpFrame.content())) {
             return false;
         }
 
@@ -122,16 +122,16 @@ public final class SctpMessage extends DefaultByteBufHolder {
     public int hashCode() {
         int result = streamIdentifier;
         result = 31 * result + protocolIdentifier;
-        result = 31 * result + data().hashCode();
+        result = 31 * result + content().hashCode();
         return result;
     }
 
     @Override
     public SctpMessage copy() {
         if (msgInfo == null) {
-            return new SctpMessage(protocolIdentifier, streamIdentifier, data().copy());
+            return new SctpMessage(protocolIdentifier, streamIdentifier, content().copy());
         } else {
-            return new SctpMessage(msgInfo, data().copy());
+            return new SctpMessage(msgInfo, content().copy());
         }
     }
 
@@ -156,6 +156,6 @@ public final class SctpMessage extends DefaultByteBufHolder {
         }
         return "SctpFrame{" +
                 "streamIdentifier=" + streamIdentifier + ", protocolIdentifier=" + protocolIdentifier +
-                ", data=" + BufUtil.hexDump(data()) + '}';
+                ", data=" + BufUtil.hexDump(content()) + '}';
     }
 }

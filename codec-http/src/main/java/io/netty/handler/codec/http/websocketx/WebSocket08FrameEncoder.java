@@ -98,7 +98,7 @@ public class WebSocket08FrameEncoder extends MessageToByteEncoder<WebSocketFrame
 
         byte[] mask;
 
-        ByteBuf data = msg.data();
+        ByteBuf data = msg.content();
         if (data == null) {
             data = Unpooled.EMPTY_BUFFER;
         }

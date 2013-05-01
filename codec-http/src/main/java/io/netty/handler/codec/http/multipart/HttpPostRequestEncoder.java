@@ -699,11 +699,11 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
                 }
             }
             HttpHeaders.setTransferEncodingChunked(request);
-            request.data().clear();
+            request.content().clear();
         } else {
             // get the only one body and set it to the request
             HttpContent chunk = nextChunk();
-            request.data().clear().writeBytes(chunk.data());
+            request.content().clear().writeBytes(chunk.content());
         }
         return request;
     }

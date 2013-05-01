@@ -110,7 +110,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
 
                 if (isFull) {
                     // Pass through the full response with empty content and continue waiting for the the next resp.
-                    if (!((ByteBufHolder) res).data().isReadable()) {
+                    if (!((ByteBufHolder) res).content().isReadable()) {
                         // Set the content length to 0.
                         res.headers().remove(Names.TRANSFER_ENCODING);
                         res.headers().set(Names.CONTENT_LENGTH, "0");
@@ -127,7 +127,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                     if (isFull) {
                         // As an unchunked response
                         res.headers().remove(Names.TRANSFER_ENCODING);
-                        res.headers().set(Names.CONTENT_LENGTH, ((ByteBufHolder) res).data().readableBytes());
+                        res.headers().set(Names.CONTENT_LENGTH, ((ByteBufHolder) res).content().readableBytes());
                         out.add(BufUtil.retain(res));
                     } else {
                         // As a chunked response
@@ -201,7 +201,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
 
     private HttpContent[] encodeContent(HttpContent c) {
         ByteBuf newContent = Unpooled.buffer();
-        ByteBuf content = c.data();
+        ByteBuf content = c.content();
 
         encode(content, newContent);
 

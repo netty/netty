@@ -177,7 +177,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel
         // expects a message
         final UdtMessage message = (UdtMessage) messageQueue.peek();
 
-        final ByteBuf byteBuf = message.data();
+        final ByteBuf byteBuf = message.content();
 
         final int messageSize = byteBuf.readableBytes();
 

@@ -31,7 +31,7 @@ public class DefaultByteBufHolder implements ByteBufHolder {
     }
 
     @Override
-    public ByteBuf data() {
+    public ByteBuf content() {
         if (data.refCnt() <= 0) {
             throw new IllegalBufferAccessException();
         }
@@ -72,6 +72,6 @@ public class DefaultByteBufHolder implements ByteBufHolder {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + '(' + data().toString() + ')';
+        return getClass().getSimpleName() + '(' + content().toString() + ')';
     }
 }

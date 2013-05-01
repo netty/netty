@@ -37,7 +37,7 @@ public interface SpdyDataFrame extends ByteBufHolder, SpdyStreamFrame, SpdyDataO
      * The data payload cannot exceed 16777215 bytes.
      */
     @Override
-    ByteBuf data();
+    ByteBuf content();
 
     @Override
     SpdyDataFrame copy();

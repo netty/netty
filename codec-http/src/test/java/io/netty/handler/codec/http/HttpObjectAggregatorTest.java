@@ -52,7 +52,7 @@ public class HttpObjectAggregatorTest {
         DefaultFullHttpRequest aggratedMessage = (DefaultFullHttpRequest) embedder.readInbound();
         assertNotNull(aggratedMessage);
 
-        assertEquals(chunk1.data().readableBytes() + chunk2.data().readableBytes(),
+        assertEquals(chunk1.content().readableBytes() + chunk2.content().readableBytes(),
                 HttpHeaders.getContentLength(aggratedMessage));
         assertEquals(aggratedMessage.headers().get("X-Test"), Boolean.TRUE.toString());
         checkContentBuffer(aggratedMessage);
@@ -60,7 +60,7 @@ public class HttpObjectAggregatorTest {
     }
 
     private static void checkContentBuffer(FullHttpRequest aggregatedMessage) {
-        CompositeByteBuf buffer = (CompositeByteBuf) aggregatedMessage.data();
+        CompositeByteBuf buffer = (CompositeByteBuf) aggregatedMessage.content();
         assertEquals(2, buffer.numComponents());
         List<ByteBuf> buffers = buffer.decompose(0, buffer.capacity());
         assertEquals(2, buffers.size());
@@ -93,7 +93,7 @@ public class HttpObjectAggregatorTest {
         DefaultFullHttpRequest aggratedMessage = (DefaultFullHttpRequest) embedder.readInbound();
         assertNotNull(aggratedMessage);
 
-        assertEquals(chunk1.data().readableBytes() + chunk2.data().readableBytes(),
+        assertEquals(chunk1.content().readableBytes() + chunk2.content().readableBytes(),
                 HttpHeaders.getContentLength(aggratedMessage));
         assertEquals(aggratedMessage.headers().get("X-Test"), Boolean.TRUE.toString());
         assertEquals(aggratedMessage.headers().get("X-Trailer"), Boolean.TRUE.toString());
@@ -158,7 +158,7 @@ public class HttpObjectAggregatorTest {
         FullHttpRequest aggratedMessage = (FullHttpRequest) embedder.readInbound();
         assertNotNull(aggratedMessage);
 
-        assertEquals(chunk1.data().readableBytes() + chunk2.data().readableBytes(),
+        assertEquals(chunk1.content().readableBytes() + chunk2.content().readableBytes(),
                 HttpHeaders.getContentLength(aggratedMessage));
         assertEquals(aggratedMessage.headers().get("X-Test"), Boolean.TRUE.toString());
         checkContentBuffer(aggratedMessage);

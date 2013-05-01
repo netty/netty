@@ -231,8 +231,8 @@ public class MixedFileUpload implements FileUpload {
     }
 
     @Override
-    public ByteBuf data() {
-        return fileUpload.data();
+    public ByteBuf content() {
+        return fileUpload.content();
     }
 
     @Override

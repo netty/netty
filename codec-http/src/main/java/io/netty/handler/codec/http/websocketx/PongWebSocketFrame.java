@@ -56,7 +56,7 @@ public class PongWebSocketFrame extends WebSocketFrame {
 
     @Override
     public PongWebSocketFrame copy() {
-        return new PongWebSocketFrame(isFinalFragment(), rsv(), data().copy());
+        return new PongWebSocketFrame(isFinalFragment(), rsv(), content().copy());
     }
 
     @Override

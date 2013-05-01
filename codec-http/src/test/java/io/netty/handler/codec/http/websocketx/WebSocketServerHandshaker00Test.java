@@ -66,6 +66,6 @@ public class WebSocketServerHandshaker00Test {
         Assert.assertEquals("chat", res.headers().get(Names.SEC_WEBSOCKET_PROTOCOL));
         LastHttpContent content = (LastHttpContent) ch2.readInbound();
 
-        Assert.assertEquals("8jKS'y:G*Co,Wxa-", content.data().toString(CharsetUtil.US_ASCII));
+        Assert.assertEquals("8jKS'y:G*Co,Wxa-", content.content().toString(CharsetUtil.US_ASCII));
     }
 }

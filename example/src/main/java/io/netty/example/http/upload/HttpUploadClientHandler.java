@@ -59,7 +59,7 @@ public class HttpUploadClientHandler extends ChannelInboundMessageHandlerAdapter
         }
         if (msg instanceof HttpContent) {
             HttpContent chunk = (HttpContent) msg;
-            logger.info(chunk.data().toString(CharsetUtil.UTF_8));
+            logger.info(chunk.content().toString(CharsetUtil.UTF_8));
 
             if (chunk instanceof LastHttpContent) {
                 if (readingChunks) {
@@ -69,7 +69,7 @@ public class HttpUploadClientHandler extends ChannelInboundMessageHandlerAdapter
                 }
                 readingChunks = false;
             } else {
-                logger.info(chunk.data().toString(CharsetUtil.UTF_8));
+                logger.info(chunk.content().toString(CharsetUtil.UTF_8));
             }
         }
     }

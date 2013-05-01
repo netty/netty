@@ -179,7 +179,7 @@ public class SpdySessionHandler
 
             if (flowControl) {
                 // Update receive window size
-                int deltaWindowSize = -1 * spdyDataFrame.data().readableBytes();
+                int deltaWindowSize = -1 * spdyDataFrame.content().readableBytes();
                 int newWindowSize = spdySession.updateReceiveWindowSize(streamID, deltaWindowSize);
 
                 // Window size can become negative if we sent a SETTINGS frame that reduces the
@@ -195,9 +195,9 @@ public class SpdySessionHandler
                 // Window size became negative due to sender writing frame before receiving SETTINGS
                 // Send data frames upstream in initialReceiveWindowSize chunks
                 if (newWindowSize < 0) {
-                    while (spdyDataFrame.data().readableBytes() > initialReceiveWindowSize) {
+                    while (spdyDataFrame.content().readableBytes() > initialReceiveWindowSize) {
                         SpdyDataFrame partialDataFrame = new DefaultSpdyDataFrame(streamID,
-                                spdyDataFrame.data().readSlice(initialReceiveWindowSize).retain());
+                                spdyDataFrame.content().readSlice(initialReceiveWindowSize).retain());
                         ctx.nextOutboundMessageBuffer().add(partialDataFrame);
                         ctx.flush();
                     }
@@ -492,7 +492,7 @@ public class SpdySessionHandler
 
             if (flowControl) {
                 synchronized (flowControlLock) {
-                    int dataLength = spdyDataFrame.data().readableBytes();
+                    int dataLength = spdyDataFrame.content().readableBytes();
                     int sendWindowSize = spdySession.getSendWindowSize(streamID);
 
                     if (sendWindowSize >= dataLength) {
@@ -521,7 +521,7 @@ public class SpdySessionHandler
 
                         // Create a partial data frame whose length is the current window size
                         SpdyDataFrame partialDataFrame = new DefaultSpdyDataFrame(streamID,
-                                spdyDataFrame.data().readSlice(sendWindowSize).retain());
+                                spdyDataFrame.content().readSlice(sendWindowSize).retain());
 
                         // Enqueue the remaining data (will be the first frame queued)
                         spdySession.putPendingWrite(streamID, spdyDataFrame);
@@ -805,7 +805,7 @@ public class SpdySessionHandler
                     break;
                 }
 
-                int dataFrameSize = spdyDataFrame.data().readableBytes();
+                int dataFrameSize = spdyDataFrame.content().readableBytes();
 
                 if (newWindowSize >= dataFrameSize) {
                     // Window size is large enough to send entire data frame
@@ -840,7 +840,7 @@ public class SpdySessionHandler
 
                     // Create a partial data frame whose length is the current window size
                     SpdyDataFrame partialDataFrame = new DefaultSpdyDataFrame(streamID,
-                            spdyDataFrame.data().readSlice(newWindowSize).retain());
+                            spdyDataFrame.content().readSlice(newWindowSize).retain());
 
                     // The transfer window size is pre-decremented when sending a data frame downstream.
                     // Close the stream on write failures that leaves the transfer window in a corrupt state.

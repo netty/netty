@@ -15,11 +15,10 @@
  */
 package io.netty.channel.udt;
 
+import com.barchart.udt.TypeUDT;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.channel.udt.nio.NioUdtProvider;
-
-import com.barchart.udt.TypeUDT;
 
 /**
  * The message container that is used for {@link TypeUDT#DATAGRAM} messages.
@@ -34,7 +33,7 @@ public final class UdtMessage extends DefaultByteBufHolder {
 
     @Override
     public UdtMessage copy() {
-        return new UdtMessage(data().copy());
+        return new UdtMessage(content().copy());
     }
 
     @Override

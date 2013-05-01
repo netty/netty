@@ -58,7 +58,7 @@ public class SctpInboundByteStreamHandler extends ChannelInboundMessageHandlerAd
                     "pipeline before this handler", SctpMessageCompletionHandler.class.getSimpleName()));
         }
 
-        ctx.nextInboundByteBuffer().writeBytes(msg.data());
+        ctx.nextInboundByteBuffer().writeBytes(msg.content());
         ctx.fireInboundBufferUpdated();
     }
 }

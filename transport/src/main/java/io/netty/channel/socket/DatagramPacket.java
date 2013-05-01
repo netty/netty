@@ -15,44 +15,36 @@
  */
 package io.netty.channel.socket;
 
-import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.DefaultByteBufHolder;
+import io.netty.buffer.ByteBufHolder;
+import io.netty.channel.DefaultAddressedEnvelope;
 
 import java.net.InetSocketAddress;
 
 /**
  * The message container that is used for {@link DatagramChannel} to communicate with the remote peer.
  */
-public final class DatagramPacket extends DefaultByteBufHolder {
-
-    private final InetSocketAddress remoteAddress;
+public final class DatagramPacket
+        extends DefaultAddressedEnvelope<ByteBuf, InetSocketAddress> implements ByteBufHolder {
 
     /**
-     * Create a new instance
-     *
-     * @param data              the {@link ByteBuf} which holds the data of the packet
-     * @param remoteAddress     the (@link InetSocketAddress} from which the packet was received or to which the
-     *                          packet will be send
+     * Create a new instance with the specified packet {@code data} and {@code recipient} address.
      */
-    public DatagramPacket(ByteBuf data, InetSocketAddress remoteAddress) {
-        super(data);
-        if (remoteAddress == null) {
-            throw new NullPointerException("remoteAddress");
-        }
-
-        this.remoteAddress = remoteAddress;
+    public DatagramPacket(ByteBuf data, InetSocketAddress recipient) {
+        super(data, recipient);
     }
+
     /**
-     * The {@link InetSocketAddress} which this {@link DatagramPacket} will send to or was received from.
+     * Create a new instance with the specified packet {@code data}, {@code recipient} address, and {@code sender}
+     * address.
      */
-    public InetSocketAddress remoteAddress() {
-        return remoteAddress;
+    public DatagramPacket(ByteBuf data, InetSocketAddress recipient, InetSocketAddress sender) {
+        super(data, recipient, sender);
     }
 
     @Override
     public DatagramPacket copy() {
-        return new DatagramPacket(data().copy(), remoteAddress());
+        return new DatagramPacket(content().copy(), recipient(), sender());
     }
 
     @Override
@@ -65,15 +57,5 @@ public final class DatagramPacket extends DefaultByteBufHolder {
     public DatagramPacket retain(int increment) {
         super.retain(increment);
         return this;
-    }
-
-    @Override
-    public String toString() {
-        if (refCnt() == 0) {
-            return "DatagramPacket{remoteAddress=" + remoteAddress().toString() +
-                    ", data=(FREED)}";
-        }
-        return "DatagramPacket{remoteAddress=" + remoteAddress().toString() +
-                ", data=" + BufUtil.hexDump(data()) + '}';
     }
 }

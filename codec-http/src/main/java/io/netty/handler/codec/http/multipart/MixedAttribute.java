@@ -205,8 +205,8 @@ public class MixedAttribute implements Attribute {
     }
 
     @Override
-    public ByteBuf data() {
-        return attribute.data();
+    public ByteBuf content() {
+        return attribute.content();
     }
 
     @Override

@@ -201,14 +201,14 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyDataOrControlFr
                 return;
             }
 
-            ByteBuf content = fullHttpMessage.data();
-            if (content.readableBytes() > maxContentLength - spdyDataFrame.data().readableBytes()) {
+            ByteBuf content = fullHttpMessage.content();
+            if (content.readableBytes() > maxContentLength - spdyDataFrame.content().readableBytes()) {
                 messageMap.remove(streamID);
                 throw new TooLongFrameException(
                         "HTTP content length exceeded " + maxContentLength + " bytes.");
             }
 
-            ByteBuf spdyDataFrameData = spdyDataFrame.data();
+            ByteBuf spdyDataFrameData = spdyDataFrame.content();
             int spdyDataFrameDataLen = spdyDataFrameData.readableBytes();
             content.writeBytes(spdyDataFrameData, spdyDataFrameData.readerIndex(), spdyDataFrameDataLen);
 

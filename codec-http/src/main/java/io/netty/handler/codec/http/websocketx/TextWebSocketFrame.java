@@ -91,12 +91,12 @@ public class TextWebSocketFrame extends WebSocketFrame {
      * Returns the text data in this frame
      */
     public String text() {
-        return data().toString(CharsetUtil.UTF_8);
+        return content().toString(CharsetUtil.UTF_8);
     }
 
     @Override
     public TextWebSocketFrame copy() {
-        return new TextWebSocketFrame(isFinalFragment(), rsv(), data().copy());
+        return new TextWebSocketFrame(isFinalFragment(), rsv(), content().copy());
     }
 
     @Override

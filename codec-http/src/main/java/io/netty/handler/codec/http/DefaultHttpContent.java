@@ -35,7 +35,7 @@ public class DefaultHttpContent extends DefaultHttpObject implements HttpContent
     }
 
     @Override
-    public ByteBuf data() {
+    public ByteBuf content() {
         return content;
     }
 
@@ -73,6 +73,6 @@ public class DefaultHttpContent extends DefaultHttpObject implements HttpContent
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "(data: " + data() + ", getDecoderResult: " + getDecoderResult() + ')';
+        return getClass().getSimpleName() + "(data: " + content() + ", getDecoderResult: " + getDecoderResult() + ')';
     }
 }
