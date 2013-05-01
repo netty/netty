@@ -49,7 +49,7 @@
 
   <build>
     <plugins>
-      <!-- do not deploy this artifact -->
+      <!-- Do not deploy this artifact. -->
       <plugin>
         <artifactId>maven-deploy-plugin</artifactId>
         <configuration>

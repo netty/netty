@@ -50,9 +50,6 @@ public final class UnitHelp {
                 // mavenBundle().groupId("org.ops4j.pax.logging").artifactId(
                 // "pax-logging-service"),
 
-                /** install scr annotations */
-                mavenBundle("com.carrotgarden.osgi",
-                        "carrot-osgi-anno-scr-core").versionAsInProject(),
                 /** install scr runtime provider */
                 mavenBundle("org.apache.felix", "org.apache.felix.scr")
                         .versionAsInProject(),
