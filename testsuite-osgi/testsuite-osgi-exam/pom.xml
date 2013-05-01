@@ -36,9 +36,7 @@
   </properties>
 
   <dependencies>
-
     <!-- MAIN -->
-
     <!-- Include all Netty OSGI bundle release modules. -->
     <dependency>
       <groupId>${project.groupId}</groupId>

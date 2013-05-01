@@ -31,9 +31,7 @@
   <description>verify osgi compliance: all transitive dependencies must be osgi bundles</description>
 
   <dependencies>
-  
     <!-- MAIN -->
-    
     <!-- Include all Netty OSGI bundle release modules. -->
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -116,11 +114,11 @@
         <version>3.0.0.RC1</version>
         <extensions>true</extensions>
         <executions>
-        	<execution>
-        		<goals>
-        			<goal>features-generate-descriptor</goal>
-        		</goals>
-        	</execution>
+          <execution>
+            <goals>
+              <goal>features-generate-descriptor</goal>
+            </goals>
+          </execution>
         </executions>
       </plugin>
 
@@ -178,5 +176,5 @@
       </plugins>
     </pluginManagement>
   </build>
-  
 </project>
+
