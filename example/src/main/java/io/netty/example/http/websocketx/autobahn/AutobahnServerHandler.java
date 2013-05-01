@@ -94,7 +94,7 @@ public class AutobahnServerHandler extends ChannelInboundMessageHandlerAdapter<O
             handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame.retain());
         } else if (frame instanceof PingWebSocketFrame) {
             ctx.nextOutboundMessageBuffer().add(
-                    new PongWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.data().retain()));
+                    new PongWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.content().retain()));
         } else if (frame instanceof TextWebSocketFrame) {
             ctx.nextOutboundMessageBuffer().add(frame.retain());
         } else if (frame instanceof BinaryWebSocketFrame) {
@@ -120,8 +120,8 @@ public class AutobahnServerHandler extends ChannelInboundMessageHandlerAdapter<O
             ChannelHandlerContext ctx, FullHttpRequest req, FullHttpResponse res) {
         // Generate an error page if response getStatus code is not OK (200).
         if (res.getStatus().code() != 200) {
-            res.data().writeBytes(Unpooled.copiedBuffer(res.getStatus().toString(), CharsetUtil.UTF_8));
-            setContentLength(res, res.data().readableBytes());
+            res.content().writeBytes(Unpooled.copiedBuffer(res.getStatus().toString(), CharsetUtil.UTF_8));
+            setContentLength(res, res.content().readableBytes());
         }
 
         // Send the response and close the connection if necessary.

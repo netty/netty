@@ -84,7 +84,7 @@ public class DefaultSpdyDataFrame extends DefaultByteBufHolder implements SpdyDa
 
     @Override
     public DefaultSpdyDataFrame copy() {
-        DefaultSpdyDataFrame frame = new DefaultSpdyDataFrame(getStreamId(), data().copy());
+        DefaultSpdyDataFrame frame = new DefaultSpdyDataFrame(getStreamId(), content().copy());
         frame.setLast(isLast());
         return frame;
     }
@@ -116,7 +116,7 @@ public class DefaultSpdyDataFrame extends DefaultByteBufHolder implements SpdyDa
         if (refCnt() == 0) {
             buf.append("(freed)");
         } else {
-            buf.append(data().readableBytes());
+            buf.append(content().readableBytes());
         }
         return buf.toString();
     }

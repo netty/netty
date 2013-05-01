@@ -13,26 +13,32 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.buffer;
+
+package io.netty.channel;
+
+import io.netty.buffer.ReferenceCounted;
+
+import java.net.SocketAddress;
 
 /**
- * A packet which is send or receive.
+ * A message that wraps another message with a sender address and a recipient address.
+ *
+ * @param <M> the type of the wrapped message
+ * @param <A> the type of the address
  */
-public interface ByteBufHolder extends ReferenceCounted {
+public interface AddressedEnvelope<M, A extends SocketAddress> extends ReferenceCounted {
+    /**
+     * Returns the message wrapped by this envelope message.
+     */
+    M content();
 
     /**
-     * Return the data which is held by this {@link ByteBufHolder}.
+     * Returns the address of the sender of this message.
      */
-    ByteBuf content();
+    A sender();
 
     /**
-     * Create a deep copy of this {@link ByteBufHolder}.
+     * Returns the address of the recipient of this message.
      */
-    ByteBufHolder copy();
-
-    @Override
-    ByteBufHolder retain();
-
-    @Override
-    ByteBufHolder retain(int increment);
+    A recipient();
 }

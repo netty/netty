@@ -99,14 +99,12 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         private volatile boolean fail;
 
         @Override
-        public void messageReceived(
-                ChannelHandlerContext ctx,
-                DatagramPacket msg) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
             if (done) {
                 fail = true;
             }
 
-            assertEquals(1, msg.data().readInt());
+            assertEquals(1, msg.content().readInt());
             latch.countDown();
 
             // mark the handler as done as we only are supposed to receive one message

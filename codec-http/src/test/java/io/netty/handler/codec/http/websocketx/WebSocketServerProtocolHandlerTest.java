@@ -129,7 +129,7 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     private static String getResponseMessage(FullHttpResponse response) {
-        return new String(response.data().array());
+        return new String(response.content().array());
     }
 
     private static FullHttpResponse getHttpResponse(EmbeddedMessageChannel ch) {

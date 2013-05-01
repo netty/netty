@@ -49,7 +49,7 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
 
     @Override
     public LastHttpContent copy() {
-        DefaultLastHttpContent copy = new DefaultLastHttpContent(data().copy());
+        DefaultLastHttpContent copy = new DefaultLastHttpContent(content().copy());
         copy.trailingHeaders().set(trailingHeaders());
         return copy;
     }

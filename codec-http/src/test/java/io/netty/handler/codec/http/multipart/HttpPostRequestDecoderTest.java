@@ -97,7 +97,7 @@ public class HttpPostRequestDecoderTest {
                             data + "\r\n" +
                             "--" + boundary + "--\r\n";
 
-            req.data().writeBytes(body.getBytes(CharsetUtil.UTF_8));
+            req.content().writeBytes(body.getBytes(CharsetUtil.UTF_8));
         }
         // Create decoder instance to test.
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);

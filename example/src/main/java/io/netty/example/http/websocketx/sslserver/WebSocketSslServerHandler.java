@@ -113,8 +113,8 @@ public class WebSocketSslServerHandler extends ChannelInboundMessageHandlerAdapt
             return;
         }
         if (frame instanceof PingWebSocketFrame) {
-            frame.data().retain();
-            ctx.channel().write(new PongWebSocketFrame(frame.data()));
+            frame.content().retain();
+            ctx.channel().write(new PongWebSocketFrame(frame.content()));
             return;
         }
         if (!(frame instanceof TextWebSocketFrame)) {
@@ -134,8 +134,8 @@ public class WebSocketSslServerHandler extends ChannelInboundMessageHandlerAdapt
             ChannelHandlerContext ctx, FullHttpRequest req, FullHttpResponse res) {
         // Generate an error page if response getStatus code is not OK (200).
         if (res.getStatus().code() != 200) {
-            res.data().writeBytes(Unpooled.copiedBuffer(res.getStatus().toString(), CharsetUtil.UTF_8));
-            setContentLength(res, res.data().readableBytes());
+            res.content().writeBytes(Unpooled.copiedBuffer(res.getStatus().toString(), CharsetUtil.UTF_8));
+            setContentLength(res, res.content().readableBytes());
         }
 
         // Send the response and close the connection if necessary.

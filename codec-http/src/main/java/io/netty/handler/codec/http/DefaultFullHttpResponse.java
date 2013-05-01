@@ -45,7 +45,7 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
     }
 
     @Override
-    public ByteBuf data() {
+    public ByteBuf content() {
         return content;
     }
 
@@ -90,7 +90,7 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
 
     @Override
     public FullHttpResponse copy() {
-        DefaultFullHttpResponse copy = new DefaultFullHttpResponse(getProtocolVersion(), getStatus(), data().copy());
+        DefaultFullHttpResponse copy = new DefaultFullHttpResponse(getProtocolVersion(), getStatus(), content().copy());
         copy.headers().set(headers());
         copy.trailingHeaders().set(trailingHeaders());
         return copy;

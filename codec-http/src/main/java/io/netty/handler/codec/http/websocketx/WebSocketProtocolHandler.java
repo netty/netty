@@ -24,8 +24,8 @@ abstract class WebSocketProtocolHandler  extends ChannelInboundMessageHandlerAda
     @Override
     public void messageReceived(ChannelHandlerContext ctx, WebSocketFrame frame) throws Exception {
         if (frame instanceof PingWebSocketFrame) {
-            frame.data().retain();
-            ctx.channel().write(new PongWebSocketFrame(frame.data()));
+            frame.content().retain();
+            ctx.channel().write(new PongWebSocketFrame(frame.content()));
             return;
         }
         if (frame instanceof PongWebSocketFrame) {

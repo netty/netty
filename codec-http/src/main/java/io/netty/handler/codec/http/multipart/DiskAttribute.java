@@ -144,7 +144,7 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
     public Attribute copy() {
         DiskAttribute attr = new DiskAttribute(getName());
         attr.setCharset(getCharset());
-        ByteBuf content = data();
+        ByteBuf content = content();
         if (content != null) {
             try {
                 attr.setContent(content.copy());

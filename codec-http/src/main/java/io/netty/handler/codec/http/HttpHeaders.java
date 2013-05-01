@@ -809,7 +809,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
 
     /**
      * Returns the length of the content.  Please note that this value is
-     * not retrieved from {@link HttpContent#data()} but from the
+     * not retrieved from {@link HttpContent#content()} but from the
      * {@code "Content-Length"} header, and thus they are independent from each
      * other.
      *
@@ -838,7 +838,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
 
     /**
      * Returns the length of the content.  Please note that this value is
-     * not retrieved from {@link HttpContent#data()} but from the
+     * not retrieved from {@link HttpContent#content()} but from the
      * {@code "Content-Length"} header, and thus they are independent from each
      * other.
      *

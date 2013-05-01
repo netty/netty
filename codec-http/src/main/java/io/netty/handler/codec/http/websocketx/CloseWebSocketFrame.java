@@ -109,7 +109,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      * a getStatus code is set, -1 is returned.
      */
     public int statusCode() {
-        ByteBuf binaryData = data();
+        ByteBuf binaryData = content();
         if (binaryData == null || binaryData.capacity() == 0) {
             return -1;
         }
@@ -126,7 +126,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      * text is not supplied, an empty string is returned.
      */
     public String reasonText() {
-        ByteBuf binaryData = data();
+        ByteBuf binaryData = content();
         if (binaryData == null || binaryData.capacity() <= 2) {
             return "";
         }
@@ -140,7 +140,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
 
     @Override
     public CloseWebSocketFrame copy() {
-        return new CloseWebSocketFrame(isFinalFragment(), rsv(), data().copy());
+        return new CloseWebSocketFrame(isFinalFragment(), rsv(), content().copy());
     }
 
     @Override

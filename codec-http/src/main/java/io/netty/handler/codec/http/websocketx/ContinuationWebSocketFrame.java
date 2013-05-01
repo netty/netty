@@ -95,7 +95,7 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
      * Returns the text data in this frame
      */
     public String text() {
-        return data().toString(CharsetUtil.UTF_8);
+        return content().toString(CharsetUtil.UTF_8);
     }
 
     /**
@@ -121,7 +121,7 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
 
     @Override
     public ContinuationWebSocketFrame copy() {
-        return new ContinuationWebSocketFrame(isFinalFragment(), rsv(), data().copy(), aggregatedText());
+        return new ContinuationWebSocketFrame(isFinalFragment(), rsv(), content().copy(), aggregatedText());
     }
 
     @Override

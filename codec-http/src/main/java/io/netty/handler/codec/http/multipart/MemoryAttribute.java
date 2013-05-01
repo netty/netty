@@ -105,7 +105,7 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
     public Attribute copy() {
         MemoryAttribute attr = new MemoryAttribute(getName());
         attr.setCharset(getCharset());
-        ByteBuf content = data();
+        ByteBuf content = content();
         if (content != null) {
             try {
                 attr.setContent(content.copy());

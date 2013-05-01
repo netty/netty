@@ -81,7 +81,7 @@ public class HttpContentCompressorTest {
         HttpContent chunk;
         chunk = (HttpContent) ch.readOutbound();
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
-        assertThat(chunk.data().isReadable(), is(true));
+        assertThat(chunk.content().isReadable(), is(true));
 
         assertThat(ch.readOutbound(), is(nullValue()));
     }

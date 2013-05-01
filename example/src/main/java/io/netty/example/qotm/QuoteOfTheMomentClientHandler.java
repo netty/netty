@@ -26,7 +26,7 @@ public class QuoteOfTheMomentClientHandler extends ChannelInboundMessageHandlerA
     public void messageReceived(
             ChannelHandlerContext ctx, DatagramPacket msg)
             throws Exception {
-        String response = msg.data().toString(CharsetUtil.UTF_8);
+        String response = msg.content().toString(CharsetUtil.UTF_8);
         if (response.startsWith("QOTM: ")) {
             System.out.println("Quote of the Moment: " + response.substring(6));
             ctx.close();

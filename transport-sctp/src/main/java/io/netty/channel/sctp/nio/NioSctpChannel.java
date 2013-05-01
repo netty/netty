@@ -289,7 +289,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     @Override
     protected int doWriteMessages(MessageBuf<Object> buf, boolean lastSpin) throws Exception {
         SctpMessage packet = (SctpMessage) buf.peek();
-        ByteBuf data = packet.data();
+        ByteBuf data = packet.content();
         int dataLen = data.readableBytes();
         ByteBuffer nioData;
         if (data.nioBufferCount() == 1) {

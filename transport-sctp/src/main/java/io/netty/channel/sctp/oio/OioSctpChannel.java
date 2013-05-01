@@ -226,7 +226,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                     return;
                 }
                 try {
-                    ByteBuf data = packet.data();
+                    ByteBuf data = packet.content();
                     int dataLen = data.readableBytes();
                     ByteBuffer nioData;
 

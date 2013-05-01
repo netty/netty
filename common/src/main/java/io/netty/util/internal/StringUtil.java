@@ -84,4 +84,24 @@ public final class StringUtil {
 
         return res.toArray(new String[res.size()]);
     }
+
+    /**
+     * The shortcut to {@link #simpleClassName(Class) simpleClassName(o.getClass())}.
+     */
+    public static String simpleClassName(Object o) {
+        return simpleClassName(o.getClass());
+    }
+
+    /**
+     * Generates a simplified name from a {@link Class}.  Similar to {@link Class#getSimpleName()}, but it works fine
+     * with anonymous classes.
+     */
+    public static String simpleClassName(Class<?> clazz) {
+        Package pkg = clazz.getPackage();
+        if (pkg != null) {
+            return clazz.getName().substring(pkg.getName().length() + 1);
+        } else {
+            return clazz.getName();
+        }
+    }
 }

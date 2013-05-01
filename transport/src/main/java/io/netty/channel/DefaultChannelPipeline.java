@@ -24,6 +24,7 @@ import io.netty.channel.Channel.Unsafe;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -282,13 +283,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         synchronized (cache) {
             name = cache.get(handlerType);
             if (name == null) {
-                Package pkg = handlerType.getPackage();
-                if (pkg != null) {
-                    name = handlerType.getName().substring(pkg.getName().length() + 1);
-                } else {
-                    name = handlerType.getName();
-                }
-                name += "#0";
+                name = StringUtil.simpleClassName(handlerType) + "#0";
                 cache.put(handlerType, name);
             }
         }

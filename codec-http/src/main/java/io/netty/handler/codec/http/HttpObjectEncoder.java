@@ -72,7 +72,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             }
 
             HttpContent chunk = (HttpContent) msg;
-            ByteBuf content = chunk.data();
+            ByteBuf content = chunk.content();
             int contentLength = content.readableBytes();
 
             if (state == ST_CONTENT_NON_CHUNK) {

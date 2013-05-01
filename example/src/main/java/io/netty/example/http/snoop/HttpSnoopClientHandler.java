@@ -52,7 +52,7 @@ public class HttpSnoopClientHandler extends ChannelInboundMessageHandlerAdapter<
         if (msg instanceof HttpContent) {
             HttpContent content = (HttpContent) msg;
 
-            System.out.print(content.data().toString(CharsetUtil.UTF_8));
+            System.out.print(content.content().toString(CharsetUtil.UTF_8));
             System.out.flush();
 
             if (content instanceof LastHttpContent) {

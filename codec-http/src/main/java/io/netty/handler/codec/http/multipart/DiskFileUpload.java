@@ -167,7 +167,7 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
     public FileUpload copy() {
         DiskFileUpload upload = new DiskFileUpload(getName(),
                 getFilename(), getContentType(), getContentTransferEncoding(), getCharset(), size);
-        ByteBuf buf = data();
+        ByteBuf buf = content();
         if (buf != null) {
             try {
                 upload.setContent(buf.copy());

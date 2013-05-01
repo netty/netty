@@ -24,6 +24,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.MessageToMessageDecoder;
 
+import java.util.Collections;
+
 /**
  * Decodes the content of the received {@link HttpRequest} and {@link HttpContent}.
  * The original content is replaced with the new content decoded by the
@@ -106,18 +108,17 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                     } else {
                         headers.set(HttpHeaders.Names.CONTENT_ENCODING, targetContentEncoding);
                     }
+
                     Object[] decoded = decodeContent(message, c);
 
                     // Replace the content.
                     if (headers.contains(HttpHeaders.Names.CONTENT_LENGTH)) {
                         headers.set(
                                 HttpHeaders.Names.CONTENT_LENGTH,
-                                Integer.toString(((ByteBufHolder) decoded[1]).data().readableBytes()));
+                                Integer.toString(((ByteBufHolder) decoded[1]).content().readableBytes()));
                     }
 
-                    for (Object obj: decoded) {
-                        out.add(obj);
-                    }
+                    Collections.addAll(out, decoded);
                     return;
                 }
 
@@ -130,11 +131,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
             }
 
             if (decoder != null) {
-                Object[] decoded = decodeContent(null, c);
-
-                for (Object obj: decoded) {
-                    out.add(obj);
-                }
+                Collections.addAll(out, decodeContent(null, c));
             } else {
                 if (c instanceof LastHttpContent) {
                     decodeStarted = false;
@@ -146,7 +143,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
 
     private Object[] decodeContent(HttpMessage header, HttpContent c) {
         ByteBuf newContent = Unpooled.buffer();
-        ByteBuf content = c.data();
+        ByteBuf content = c.content();
         decode(content, newContent);
 
         if (c instanceof LastHttpContent) {

@@ -53,7 +53,7 @@ public class SctpMessageCompletionHandler extends ChannelInboundMessageHandlerAd
     @Override
     public void messageReceived(ChannelHandlerContext ctx, SctpMessage msg) throws Exception {
 
-        final ByteBuf byteBuf = msg.data();
+        final ByteBuf byteBuf = msg.content();
         final int protocolIdentifier = msg.protocolIdentifier();
         final int streamIdentifier = msg.streamIdentifier();
         final boolean isComplete = msg.isComplete();
