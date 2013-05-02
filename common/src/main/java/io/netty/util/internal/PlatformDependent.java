@@ -70,7 +70,7 @@ public final class PlatformDependent {
         }
 
         if (!hasUnsafe()) {
-            logger.warn(
+            logger.info(
                     "Your platform does not provide complete low-level API for accessing direct buffers reliably. " +
                     "Unless explicitly requested, heap buffer will always be preferred to avoid potential system " +
                     "unstability.");
@@ -482,7 +482,7 @@ public final class PlatformDependent {
             return true;
         } catch (Throwable t) {
             logger.debug("Javassist: unavailable");
-            logger.warn(
+            logger.info(
                     "You don't have Javassist in your class path or you don't have enough permission " +
                     "to load dynamically generated classes.  Please check the configuration for better performance.");
             return false;
