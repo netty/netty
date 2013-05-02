@@ -50,8 +50,8 @@ import java.util.concurrent.TimeUnit;
  * +--------------------------+    |    | Completed with failure    |
  * |      isDone() = <b>false</b>    |    |    +---------------------------+
  * |   isSuccess() = false    |----+---->   isDone() = <b>true</b>         |
- * | isCancelled() = false    |    |    | getCause() = <b>non-null</b>     |
- * |    getCause() = null     |    |    +===========================+
+ * | isCancelled() = false    |    |    | cause() = <b>non-null</b>     |
+ * |    cause() = null     |    |    +===========================+
  * +--------------------------+    |    | Completed by cancellation |
  *                                 |    +---------------------------+
  *                                 +---->      isDone() = <b>true</b>      |
@@ -138,7 +138,7 @@ import java.util.concurrent.TimeUnit;
  * } else if (!f.isSuccess()) {
  *     // You might get a NullPointerException here because the future
  *     // might not be completed yet.
- *     f.getCause().printStackTrace();
+ *     f.cause().printStackTrace();
  * } else {
  *     // Connection established successfully
  * }
@@ -156,7 +156,7 @@ import java.util.concurrent.TimeUnit;
  * if (f.isCancelled()) {
  *     // Connection attempt cancelled by user
  * } else if (!f.isSuccess()) {
- *     f.getCause().printStackTrace();
+ *     f.cause().printStackTrace();
  * } else {
  *     // Connection established successfully
  * }
