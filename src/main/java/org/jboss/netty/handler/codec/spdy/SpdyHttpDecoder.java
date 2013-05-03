@@ -214,7 +214,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
         } else if (msg instanceof SpdyHeadersFrame) {
 
             SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
-            Integer streamId = spdyHeadersFrame.getStreamId();
+            int streamId = spdyHeadersFrame.getStreamId();
             HttpMessage httpMessage = getMessage(streamId);
 
             // If message is not in map discard HEADERS frame.
@@ -227,6 +227,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
             }
 
             if (spdyHeadersFrame.isLast()) {
+                HttpHeaders.setContentLength(httpMessage, httpMessage.getContent().readableBytes());
                 removeMessage(streamId);
                 return httpMessage;
             }
@@ -234,7 +235,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
         } else if (msg instanceof SpdyDataFrame) {
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
-            Integer streamId = spdyDataFrame.getStreamId();
+            int streamId = spdyDataFrame.getStreamId();
             HttpMessage httpMessage = getMessage(streamId);
 
             // If message is not in map discard Data Frame.
@@ -266,7 +267,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
         } else if (msg instanceof SpdyRstStreamFrame) {
 
             SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
-            Integer streamId = spdyRstStreamFrame.getStreamId();
+            int streamId = spdyRstStreamFrame.getStreamId();
             removeMessage(streamId);
         }
 
