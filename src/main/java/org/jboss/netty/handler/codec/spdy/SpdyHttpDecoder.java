@@ -17,7 +17,7 @@ package org.jboss.netty.handler.codec.spdy;
 
 import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -45,7 +45,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
 
     private final int spdyVersion;
     private final int maxContentLength;
-    private final Map<Integer, HttpMessage> messageMap = new ConcurrentHashMap<Integer, HttpMessage>();
+    private final Map<Integer, HttpMessage> messageMap;
 
     /**
      * Creates a new instance for the SPDY/2 protocol
@@ -68,6 +68,19 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
      *        a {@link TooLongFrameException} will be raised.
      */
     public SpdyHttpDecoder(int version, int maxContentLength) {
+        this(version, maxContentLength, new HashMap<Integer, HttpMessage>());
+    }
+
+    /**
+     * Creates a new instance with the specified parameters.
+     *
+     * @param version the protocol version
+     * @param maxContentLength the maximum length of the message content.
+     *        If the length of the message content exceeds this value,
+     *        a {@link TooLongFrameException} will be raised.
+     * @param messageMap the {@link Map} used to hold partially received messages.
+     */
+    protected SpdyHttpDecoder(int version, int maxContentLength, Map<Integer, HttpMessage> messageMap) {
         if (version < SPDY_MIN_VERSION || version > SPDY_MAX_VERSION) {
             throw new IllegalArgumentException(
                     "unsupported version: " + version);
@@ -78,6 +91,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
         }
         spdyVersion = version;
         this.maxContentLength = maxContentLength;
+        this.messageMap = messageMap;
     }
 
     protected HttpMessage putMessage(int streamId, HttpMessage message) {
