@@ -28,6 +28,8 @@ import io.netty.handler.codec.http.multipart.HttpPostBodyUtil.TransferEncodingMe
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
@@ -460,13 +462,15 @@ public class HttpPostRequestDecoder {
                     if (read == '=') {
                         currentStatus = MultiPartStatus.FIELD;
                         equalpos = currentpos - 1;
-                        String key = undecodedChunk.toString(firstpos, equalpos - firstpos, charset);
+                        String key = decodeAttribute(undecodedChunk.toString(firstpos, equalpos - firstpos, charset),
+                                charset);
                         currentAttribute = factory.createAttribute(request, key);
                         firstpos = currentpos;
                     } else if (read == '&') { // special empty FIELD
                         currentStatus = MultiPartStatus.DISPOSITION;
                         ampersandpos = currentpos - 1;
-                        String key = undecodedChunk.toString(firstpos, ampersandpos - firstpos, charset);
+                        String key = decodeAttribute(
+                                undecodedChunk.toString(firstpos, ampersandpos - firstpos, charset), charset);
                         currentAttribute = factory.createAttribute(request, key);
                         currentAttribute.setValue(""); // empty
                         addHttpData(currentAttribute);
@@ -578,14 +582,15 @@ public class HttpPostRequestDecoder {
                     if (read == '=') {
                         currentStatus = MultiPartStatus.FIELD;
                         equalpos = currentpos - 1;
-                        String key = undecodedChunk.toString(firstpos, equalpos - firstpos, charset);
+                        String key = decodeAttribute(undecodedChunk.toString(firstpos, equalpos - firstpos, charset),
+                                charset);
                         currentAttribute = factory.createAttribute(request, key);
                         firstpos = currentpos;
                     } else if (read == '&') { // special empty FIELD
                         currentStatus = MultiPartStatus.DISPOSITION;
                         ampersandpos = currentpos - 1;
-                        String key = undecodedChunk.toString(firstpos, ampersandpos - firstpos, charset);
-                        System.out.println("received:"+key+":"+firstpos+":"+ampersandpos);
+                        String key = decodeAttribute(
+                                undecodedChunk.toString(firstpos, ampersandpos - firstpos, charset), charset);
                         currentAttribute = factory.createAttribute(request, key);
                         currentAttribute.setValue(""); // empty
                         addHttpData(currentAttribute);
@@ -675,10 +680,28 @@ public class HttpPostRequestDecoder {
 
     private void setFinalBuffer(ByteBuf buffer) throws ErrorDataDecoderException, IOException {
         currentAttribute.addContent(buffer, true);
-        String value = currentAttribute.getByteBuf().toString(charset);
+        String value = decodeAttribute(currentAttribute.getByteBuf().toString(charset), charset);
         currentAttribute.setValue(value);
         addHttpData(currentAttribute);
         currentAttribute = null;
+    }
+
+    /**
+     * Decode component
+     *
+     * @return the decoded component
+     */
+    private static String decodeAttribute(String s, Charset charset) throws ErrorDataDecoderException {
+        if (s == null) {
+            return "";
+        }
+        try {
+            return URLDecoder.decode(s, charset.name());
+        } catch (UnsupportedEncodingException e) {
+            throw new ErrorDataDecoderException(charset.toString(), e);
+        } catch (IllegalArgumentException e) {
+            throw new ErrorDataDecoderException("Bad string: '" + s + '\'', e);
+        }
     }
 
     /**
@@ -757,7 +780,8 @@ public class HttpPostRequestDecoder {
             Attribute nameAttribute = currentFieldAttributes.get(HttpPostBodyUtil.NAME);
             if (currentAttribute == null) {
                 try {
-                    currentAttribute = factory.createAttribute(request, nameAttribute.getValue());
+                    currentAttribute = factory.createAttribute(request,
+                            decodeAttribute(nameAttribute.getValue(), charset));
                 } catch (NullPointerException e) {
                     throw new ErrorDataDecoderException(e);
                 } catch (IllegalArgumentException e) {
@@ -931,8 +955,9 @@ public class HttpPostRequestDecoder {
                         String[] values = StringUtil.split(contents[i], '=');
                         Attribute attribute;
                         try {
-                            attribute = factory.createAttribute(request, values[0].trim(),
-                                    cleanString(values[1]));
+                            attribute = factory.createAttribute(request,
+                                    decodeAttribute(values[0].trim(), charset),
+                                    decodeAttribute(cleanString(values[1]), charset));
                         } catch (NullPointerException e) {
                             throw new ErrorDataDecoderException(e);
                         } catch (IllegalArgumentException e) {
@@ -991,8 +1016,9 @@ public class HttpPostRequestDecoder {
                         } else {
                             Attribute attribute;
                             try {
-                                attribute = factory.createAttribute(request, contents[0].trim(),
-                                        cleanString(contents[i]));
+                                attribute = factory.createAttribute(request,
+                                        decodeAttribute(contents[0].trim(), charset),
+                                        decodeAttribute(cleanString(contents[i]), charset));
                             } catch (NullPointerException e) {
                                 throw new ErrorDataDecoderException(e);
                             } catch (IllegalArgumentException e) {
@@ -1092,8 +1118,10 @@ public class HttpPostRequestDecoder {
                 size = 0;
             }
             try {
-                currentFileUpload = factory.createFileUpload(request, nameAttribute.getValue(),
-                        filenameAttribute.getValue(), contentTypeAttribute.getValue(), mechanism.value(), localCharset,
+                currentFileUpload = factory.createFileUpload(request,
+                        decodeAttribute(nameAttribute.getValue(), charset),
+                        decodeAttribute(filenameAttribute.getValue(), charset),
+                        contentTypeAttribute.getValue(), mechanism.value(), localCharset,
                         size);
             } catch (NullPointerException e) {
                 throw new ErrorDataDecoderException(e);

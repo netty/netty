@@ -522,10 +522,6 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
          */
         public static final String S_MAXAGE = "s-maxage";
         /**
-         * {@code "text/plain"}
-         */
-        public static final String TEXTPLAIN = "text/plain";
-        /**
          * {@code "trailers"}
          */
         public static final String TRAILERS = "trailers";
