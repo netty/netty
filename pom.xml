@@ -107,13 +107,6 @@
   <dependencyManagement>
     <dependencies>
       <!-- Byte code generator - completely optional -->
-      <dependency>
-        <groupId>org.javassist</groupId>
-        <artifactId>javassist</artifactId>
-        <version>3.17.1-GA</version>
-        <scope>compile</scope>
-        <optional>true</optional>
-      </dependency>
 
       <!-- JBoss Marshalling - completely optional -->
       <dependency>
@@ -128,11 +121,6 @@
         <groupId>com.google.protobuf</groupId>
         <artifactId>protobuf-java</artifactId>
         <version>2.5.0</version>
-      </dependency>
-      <dependency>
-        <groupId>com.jcraft</groupId>
-        <artifactId>jzlib</artifactId>
-          <version>1.1.2</version>
       </dependency>
 
       <dependency>
@@ -224,7 +212,7 @@
     <dependency>
       <groupId>org.javassist</groupId>
       <artifactId>javassist</artifactId>
-      <scope>test</scope>
+      <version>3.17.1-GA</version>
     </dependency>
 
     <!-- Testing frameworks and related dependencies -->
@@ -257,6 +245,11 @@
       <artifactId>logback-classic</artifactId>
       <version>1.0.10</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+    	<groupId>com.jcraft</groupId>
+    	<artifactId>jzlib</artifactId>
+    	<version>1.1.2</version>
     </dependency>
   </dependencies>
 

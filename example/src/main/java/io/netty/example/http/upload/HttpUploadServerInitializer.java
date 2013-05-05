@@ -43,7 +43,7 @@ public class HttpUploadServerInitializer extends ChannelInitializer<SocketChanne
 
         // Remove the following line if you don't want automatic content
         // compression.
-        pipeline.addLast("deflater", new HttpContentCompressor());
+        //pipeline.addLast("deflater", new HttpContentCompressor());
 
         pipeline.addLast("handler", new HttpUploadServerHandler());
     }
