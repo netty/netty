@@ -47,7 +47,7 @@ public class HttpUploadClientIntializer extends ChannelInitializer<SocketChannel
         pipeline.addLast("codec", new HttpClientCodec());
 
         // Remove the following line if you don't want automatic content decompression.
-        //pipeline.addLast("inflater", new HttpContentDecompressor());
+        pipeline.addLast("inflater", new HttpContentDecompressor());
 
         // to be used since huge file transfer
         pipeline.addLast("chunkedWriter", new ChunkedWriteHandler());

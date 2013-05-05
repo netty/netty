@@ -62,7 +62,7 @@
     <dependency>
       <groupId>com.jcraft</groupId>
       <artifactId>jzlib</artifactId>
-      <version>1.1.2</version>
+      <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>org.javassist</groupId>

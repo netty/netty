@@ -30,7 +30,6 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.http.ServerCookieEncoder;
 import io.netty.handler.codec.http.multipart.Attribute;
@@ -183,14 +182,6 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
         if (msg instanceof HttpContent) {
             // New chunk is received
             HttpContent chunk = (HttpContent) msg;
-        	if (decoder == null) {
-        		System.err.println("Decoder null but should not! "+(chunk instanceof LastHttpContent));
-        	}
-        	if (chunk instanceof LastHttpContent) {
-        		// ignore
-        		readingChunks = false;
-        		return;
-        	}
             try {
                 decoder.offer(chunk);
             } catch (ErrorDataDecoderException e1) {
