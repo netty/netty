@@ -486,7 +486,9 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
             Charset localcharset = attribute.getCharset();
             if (localcharset != null) {
                 // Content-Type: charset=charset
-                internal.addValue(HttpHeaders.Names.CONTENT_TYPE + ": " + HttpHeaders.Values.CHARSET + '='
+                internal.addValue(HttpHeaders.Names.CONTENT_TYPE + ": " +
+                        HttpPostBodyUtil.DEFAULT_TEXT_CONTENT_TYPE + "; " +
+                        HttpHeaders.Values.CHARSET + '='
                         + localcharset + "\r\n");
             }
             // CRLF between body header and data
