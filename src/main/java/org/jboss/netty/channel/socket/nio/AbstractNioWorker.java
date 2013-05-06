@@ -250,8 +250,12 @@ abstract class AbstractNioWorker extends AbstractNioSelector implements Worker {
                         fireExceptionCaughtLater(channel, t);
                     }
                     if (t instanceof IOException) {
+                        // close must be handled from outside the write lock to fix a possible deadlock
+                        // which can happen when MemoryAwareThreadPoolExecutor is used and the limit is exceed
+                        // and a close is triggered while the lock is hold. This is because the close(..)
+                        // may try to submit a task to handle it via the ExecutorHandler which then deadlocks.
+                        // See #1310
                         open = false;
-                        close(channel, succeededFuture(channel));
                     }
                 }
             }
@@ -269,6 +273,9 @@ abstract class AbstractNioWorker extends AbstractNioSelector implements Worker {
                 } else if (removeOpWrite) {
                     clearOpWrite(channel);
                 }
+            } else {
+                // close the channel now
+                close(channel, succeededFuture(channel));
             }
         }
         if (iothread) {
