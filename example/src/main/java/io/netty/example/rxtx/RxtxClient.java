@@ -16,7 +16,6 @@
 package io.netty.example.rxtx;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.BufType;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
@@ -43,7 +42,7 @@ public final class RxtxClient {
                  public void initChannel(RxtxChannel ch) throws Exception {
                      ch.pipeline().addLast(
                          new LineBasedFrameDecoder(32768),
-                         new StringEncoder(BufType.BYTE),
+                         new StringEncoder(),
                          new StringDecoder(),
                          new RxtxClientHandler()
                      );
