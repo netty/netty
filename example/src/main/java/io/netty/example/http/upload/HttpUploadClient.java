@@ -23,9 +23,11 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.ClientCookieEncoder;
 import io.netty.handler.codec.http.DefaultCookie;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.QueryStringEncoder;
 import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
@@ -220,8 +222,8 @@ public class HttpUploadClient {
         Channel channel = bootstrap.connect(host, port).sync().channel();
 
         // Prepare the HTTP request.
-        FullHttpRequest request =
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uriSimple.toASCIIString());
+        HttpRequest request =
+                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uriSimple.toASCIIString());
 
         // Use the PostBody encoder
         HttpPostRequestEncoder bodyRequestEncoder = null;
@@ -304,7 +306,7 @@ public class HttpUploadClient {
         Channel channel = bootstrap.connect(host, port).sync().channel();
 
         // Prepare the HTTP request.
-        FullHttpRequest request =
+        HttpRequest request =
                 new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uriFile.toASCIIString());
 
         // Use the PostBody encoder
@@ -338,7 +340,7 @@ public class HttpUploadClient {
 
         // finalize request
         try {
-            bodyRequestEncoder.finalizeRequest();
+            request = bodyRequestEncoder.finalizeRequest();
         } catch (ErrorDataEncoderException e) {
             // if an encoding error occurs
             e.printStackTrace();
