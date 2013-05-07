@@ -927,7 +927,7 @@ public class SslHandler
             // only log in debug mode as it most likely harmless and latest chrome still trigger
             // this all the time.
             //
-            // #1340
+            // See https://github.com/netty/netty/issues/1340
             if (!disconnected) {
                 logger.debug("SSLEngine.closeInbound() raised an exception after a handshake failure.", e);
             } else if (!closeNotifyWriteListener.done) {
