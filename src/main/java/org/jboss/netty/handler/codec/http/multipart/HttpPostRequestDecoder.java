@@ -978,7 +978,7 @@ public class HttpPostRequestDecoder {
                         Attribute attribute;
                         try {
                             attribute = factory.createAttribute(request,
-                                    decodeAttributeMultipart(values[0], charset),
+                                    decodeAttributeMultipart(values[0].trim(), charset),
                                     decodeAttributeMultipart(values[1], charset));
                         } catch (NullPointerException e) {
                             throw new ErrorDataDecoderException(e);
@@ -1050,7 +1050,7 @@ public class HttpPostRequestDecoder {
                             Attribute attribute;
                             try {
                                 attribute = factory.createAttribute(request,
-                                        decodeAttributeMultipart(contents[0], charset),
+                                        decodeAttributeMultipart(contents[0].trim(), charset),
                                         decodeAttributeMultipart(contents[i], charset));
                             } catch (NullPointerException e) {
                                 throw new ErrorDataDecoderException(e);
