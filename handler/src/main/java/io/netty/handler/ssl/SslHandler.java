@@ -924,10 +924,14 @@ public class SslHandler
         try {
             engine.closeInbound();
         } catch (SSLException e) {
+            // only log in debug mode as it most likely harmless and latest chrome still trigger
+            // this all the time.
+            //
+            // #1340
             if (!disconnected) {
-                logger.warn("SSLEngine.closeInbound() raised an exception after a handshake failure.", e);
+                logger.debug("SSLEngine.closeInbound() raised an exception after a handshake failure.", e);
             } else if (!closeNotifyWriteListener.done) {
-                logger.warn("SSLEngine.closeInbound() raised an exception due to closed connection.", e);
+                logger.debug("SSLEngine.closeInbound() raised an exception due to closed connection.", e);
             } else {
                 // cause == null && sentCloseNotify
                 // closeInbound() will raise an exception with bogus truncation attack warning.
