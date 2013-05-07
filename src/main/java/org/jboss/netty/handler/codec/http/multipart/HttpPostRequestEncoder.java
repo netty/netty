@@ -458,7 +458,7 @@ public class HttpPostRequestEncoder implements ChunkedInput {
             internal.addValue(HttpPostBodyUtil.CONTENT_DISPOSITION + ": " +
                     HttpPostBodyUtil.FORM_DATA + "; " +
                     HttpPostBodyUtil.NAME + "=\"" +
-                    encodeAttribute(attribute.getName(), charset) + "\"\r\n");
+                    encodeAttributeMultipart(attribute.getName(), charset) + "\"\r\n");
             Charset localcharset = attribute.getCharset();
             if (localcharset != null) {
                 // Content-Type: charset=charset
@@ -529,14 +529,14 @@ public class HttpPostRequestEncoder implements ChunkedInput {
                     globalBodySize -= pastAttribute.size();
                     String replacement = HttpPostBodyUtil.CONTENT_DISPOSITION + ": " +
                         HttpPostBodyUtil.FORM_DATA + "; " + HttpPostBodyUtil.NAME + "=\"" +
-                        encodeAttribute(fileUpload.getName(), charset) + "\"\r\n";
+                        encodeAttributeMultipart(fileUpload.getName(), charset) + "\"\r\n";
                     replacement += HttpHeaders.Names.CONTENT_TYPE + ": " +
                         HttpPostBodyUtil.MULTIPART_MIXED + "; " + HttpHeaders.Values.BOUNDARY +
                         '=' + multipartMixedBoundary + "\r\n\r\n";
                     replacement += "--" + multipartMixedBoundary + "\r\n";
                     replacement += HttpPostBodyUtil.CONTENT_DISPOSITION + ": " +
                         HttpPostBodyUtil.FILE + "; " + HttpPostBodyUtil.FILENAME + "=\"" +
-                        encodeAttribute(fileUpload.getFilename(), charset) +
+                        encodeAttributeMultipart(fileUpload.getFilename(), charset) +
                         "\"\r\n";
                     pastAttribute.setValue(replacement, 1);
                     // update past size
@@ -563,16 +563,16 @@ public class HttpPostRequestEncoder implements ChunkedInput {
                 // Content-Disposition: file; filename="file1.txt"
                 internal.addValue(HttpPostBodyUtil.CONTENT_DISPOSITION + ": " +
                         HttpPostBodyUtil.FILE + "; " + HttpPostBodyUtil.FILENAME + "=\"" +
-                        encodeAttribute(fileUpload.getFilename(), charset) +
+                        encodeAttributeMultipart(fileUpload.getFilename(), charset) +
                         "\"\r\n");
             } else {
                 internal.addValue("--" + multipartDataBoundary + "\r\n");
                 // Content-Disposition: form-data; name="files"; filename="file1.txt"
                 internal.addValue(HttpPostBodyUtil.CONTENT_DISPOSITION + ": " +
                         HttpPostBodyUtil.FORM_DATA + "; " + HttpPostBodyUtil.NAME + "=\"" +
-                        encodeAttribute(fileUpload.getName(), charset) + "\"; " +
+                        encodeAttributeMultipart(fileUpload.getName(), charset) + "\"; " +
                         HttpPostBodyUtil.FILENAME + "=\"" +
-                        encodeAttribute(fileUpload.getFilename(), charset) +
+                        encodeAttributeMultipart(fileUpload.getFilename(), charset) +
                         "\"\r\n");
             }
             // Content-Type: image/gif
@@ -719,6 +719,24 @@ public class HttpPostRequestEncoder implements ChunkedInput {
                     encoded = entry.getKey().matcher(encoded).replaceAll(replacement);
                 }
             }
+            return encoded;
+        } catch (UnsupportedEncodingException e) {
+            throw new ErrorDataEncoderException(charset.name(), e);
+        }
+    }
+
+    /**
+     * Encode one attribute
+     * @return the encoded attribute
+     * @throws ErrorDataEncoderException if the encoding is in error
+     */
+    private String encodeAttributeMultipart(String s, Charset charset)
+            throws ErrorDataEncoderException {
+        if (s == null) {
+            return "";
+        }
+        try {
+            String encoded = new String(s.getBytes(charset.name()));
             return encoded;
         } catch (UnsupportedEncodingException e) {
             throw new ErrorDataEncoderException(charset.name(), e);
