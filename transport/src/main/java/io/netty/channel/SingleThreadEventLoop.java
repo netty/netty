@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.SingleThreadEventExecutor;
+
 import java.util.concurrent.ThreadFactory;
 
 /**
@@ -23,13 +25,8 @@ import java.util.concurrent.ThreadFactory;
  */
 public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor implements EventLoop {
 
-    /**
-     *
-     * @see SingleThreadEventExecutor#SingleThreadEventExecutor(EventExecutorGroup, ThreadFactory, ChannelTaskScheduler)
-     */
-    protected SingleThreadEventLoop(
-            EventLoopGroup parent, ThreadFactory threadFactory, ChannelTaskScheduler scheduler) {
-        super(parent, threadFactory, scheduler);
+    protected SingleThreadEventLoop(EventLoopGroup parent, ThreadFactory threadFactory, boolean addTaskWakesUp) {
+        super(parent, threadFactory, addTaskWakesUp);
     }
 
     @Override
@@ -44,31 +41,19 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
 
     @Override
     public ChannelFuture register(Channel channel) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
-        }
         return register(channel, channel.newPromise());
     }
 
     @Override
     public ChannelFuture register(final Channel channel, final ChannelPromise promise) {
-        if (isShutdown()) {
-            channel.unsafe().closeForcibly();
-            promise.setFailure(new EventLoopException("cannot register a channel to a shut down loop"));
-            return promise;
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
+        if (promise == null) {
+            throw new NullPointerException("promise");
         }
 
-        if (inEventLoop()) {
-            channel.unsafe().register(this, promise);
-        } else {
-            execute(new Runnable() {
-                @Override
-                public void run() {
-                    channel.unsafe().register(SingleThreadEventLoop.this, promise);
-                }
-            });
-        }
-
+        channel.unsafe().register(this, promise);
         return promise;
     }
 }

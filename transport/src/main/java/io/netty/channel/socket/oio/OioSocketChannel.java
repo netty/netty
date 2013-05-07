@@ -20,12 +20,13 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
+import io.netty.channel.oio.OioByteStreamChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.oio.OioByteStreamChannel;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -199,6 +200,10 @@ public class OioSocketChannel extends OioByteStreamChannel
             socket.connect(remoteAddress, config().getConnectTimeoutMillis());
             activate(socket.getInputStream(), socket.getOutputStream());
             success = true;
+        } catch (SocketTimeoutException e) {
+            ConnectTimeoutException cause = new ConnectTimeoutException("connection timed out: " + remoteAddress);
+            cause.setStackTrace(e.getStackTrace());
+            throw cause;
         } finally {
             if (!success) {
                 doClose();

@@ -15,21 +15,20 @@
  */
 package io.netty.example.http.websocketx.sslserver;
 
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
-
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import java.io.FileInputStream;
 import java.security.KeyStore;
 import java.security.Security;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Creates a {@link SSLContext} for just server certificates.
  */
 public final class WebSocketSslServerSslContext {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketSslServerSslContext.class);
+    private static final Logger logger = Logger.getLogger(WebSocketSslServerSslContext.class.getName());
     private static final String PROTOCOL = "TLS";
     private final SSLContext _serverContext;
 
@@ -83,9 +82,7 @@ public final class WebSocketSslServerSslContext {
                 throw new Error("Failed to initialize the server-side SSLContext", e);
             }
         } catch (Exception ex) {
-            if (logger.isErrorEnabled()) {
-                logger.error("Error initializing SslContextManager. " + ex.getMessage(), ex);
-            }
+            logger.log(Level.WARNING, "Error initializing SslContextManager.", ex);
             System.exit(1);
         } finally {
             _serverContext = serverContext;

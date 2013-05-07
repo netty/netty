@@ -19,9 +19,10 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.nio.NioDatagramChannel;
-import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.CharsetUtil;
 
 import java.net.InetSocketAddress;
@@ -41,9 +42,10 @@ public class QuoteOfTheMomentClient {
     }
 
     public void run() throws Exception {
-        Bootstrap b = new Bootstrap();
+        EventLoopGroup group = new NioEventLoopGroup();
         try {
-            b.group(new NioEventLoopGroup())
+            Bootstrap b = new Bootstrap();
+            b.group(group)
              .channel(NioDatagramChannel.class)
              .option(ChannelOption.SO_BROADCAST, true)
              .handler(new QuoteOfTheMomentClientHandler());
@@ -53,7 +55,7 @@ public class QuoteOfTheMomentClient {
             // Broadcast the QOTM request to port 8080.
             ch.write(new DatagramPacket(
                     Unpooled.copiedBuffer("QOTM?", CharsetUtil.UTF_8),
-                    new InetSocketAddress("255.255.255.255", port)));
+                    new InetSocketAddress("255.255.255.255", port))).sync();
 
             // QuoteOfTheMomentClientHandler will close the DatagramChannel when a
             // response is received.  If the channel is not closed within 5 seconds,
@@ -62,7 +64,7 @@ public class QuoteOfTheMomentClient {
                 System.err.println("QOTM request timed out.");
             }
         } finally {
-            b.shutdown();
+            group.shutdownGracefully();
         }
     }
 

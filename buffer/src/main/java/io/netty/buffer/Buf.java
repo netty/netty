@@ -18,7 +18,7 @@ package io.netty.buffer;
 /**
  * A buffer to operate on
  */
-public interface Buf extends Freeable {
+public interface Buf extends ReferenceCounted {
     /**
      * The BufType which will be handled by the Buf implementation
      */
@@ -49,4 +49,10 @@ public interface Buf extends Freeable {
      * elements.
      */
     boolean isWritable(int size);
+
+    @Override
+    Buf retain();
+
+    @Override
+    Buf retain(int increment);
 }

@@ -55,4 +55,9 @@ public interface ChannelStateHandler extends ChannelHandler {
      * to wait for more data and consume it later.
      */
     void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * Gets called if an user event was triggered.
+     */
+    void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception;
 }

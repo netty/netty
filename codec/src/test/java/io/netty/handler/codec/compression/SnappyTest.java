@@ -38,7 +38,7 @@ public class SnappyTest {
             0x6e, 0x65, 0x74, 0x74, 0x79 // "netty"
         });
         ByteBuf out = Unpooled.buffer(5);
-        snappy.decode(in, out, 7);
+        snappy.decode(in, out);
 
         // "netty"
         ByteBuf expected = Unpooled.wrappedBuffer(new byte[] {
@@ -57,7 +57,7 @@ public class SnappyTest {
             0x05 // offset
         });
         ByteBuf out = Unpooled.buffer(10);
-        snappy.decode(in, out, 10);
+        snappy.decode(in, out);
 
         // "nettynetty" - we saved a whole byte :)
         ByteBuf expected = Unpooled.wrappedBuffer(new byte[] {
@@ -69,14 +69,14 @@ public class SnappyTest {
     @Test(expected = CompressionException.class)
     public void testDecodeCopyWithTinyOffset() throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
-            0x0a, // preamble length
+            0x0b, // preamble length
             0x04 << 2, // literal tag + length
             0x6e, 0x65, 0x74, 0x74, 0x79, // "netty"
             0x05 << 2 | 0x01, // copy with 1-byte offset + length
-            0x03 // INVALID offset (< 4)
+            0x00 // INVALID offset (< 1)
         });
         ByteBuf out = Unpooled.buffer(10);
-        snappy.decode(in, out, 9);
+        snappy.decode(in, out);
     }
 
     @Test(expected = CompressionException.class)
@@ -89,7 +89,7 @@ public class SnappyTest {
             0x0b // INVALID offset (greater than chunk size)
         });
         ByteBuf out = Unpooled.buffer(10);
-        snappy.decode(in, out, 9);
+        snappy.decode(in, out);
     }
 
     @Test(expected = CompressionException.class)
@@ -100,7 +100,7 @@ public class SnappyTest {
             0x6e, 0x65, 0x74, 0x74, 0x79, // "netty"
         });
         ByteBuf out = Unpooled.buffer(10);
-        snappy.decode(in, out, 9);
+        snappy.decode(in, out);
     }
 
     @Test

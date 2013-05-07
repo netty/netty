@@ -15,22 +15,14 @@
  */
 package io.netty.channel.group;
 
-import java.util.EventListener;
+import io.netty.util.concurrent.GenericFutureListener;
 
 /**
  * Listens to the result of a {@link ChannelGroupFuture}.  The result of the
  * asynchronous {@link ChannelGroup} I/O operations is notified once this
- * listener is added by calling {@link ChannelGroupFuture#addListener(ChannelGroupFutureListener)}
+ * listener is added by calling {@link ChannelGroupFuture#addListener(GenericFutureListener)}
  * and all I/O operations are complete.
  */
-public interface ChannelGroupFutureListener extends EventListener {
+public interface ChannelGroupFutureListener extends GenericFutureListener<ChannelGroupFuture> {
 
-    /**
-     * Invoked when all I/O operations associated with the
-     * {@link ChannelGroupFuture} have been completed.
-     *
-     * @param future  The source {@link ChannelGroupFuture} which called this
-     *                callback.
-     */
-    void operationComplete(ChannelGroupFuture future) throws Exception;
 }

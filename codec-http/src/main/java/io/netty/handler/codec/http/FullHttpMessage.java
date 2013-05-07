@@ -16,11 +16,16 @@
 package io.netty.handler.codec.http;
 
 /**
- * Combines {@link FullHttpMessage} and {@link LastHttpContent} into one
+ * Combines {@link HttpMessage} and {@link LastHttpContent} into one
  * message. So it represent a <i>complete</i> http message.
  */
 public interface FullHttpMessage extends HttpMessage, LastHttpContent {
     @Override
     FullHttpMessage copy();
 
+    @Override
+    FullHttpMessage retain(int increment);
+
+    @Override
+    FullHttpMessage retain();
 }

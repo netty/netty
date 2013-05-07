@@ -17,6 +17,7 @@ package io.netty.handler.logging;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelOutboundByteHandler;
 import io.netty.channel.ChannelPromise;
@@ -108,7 +109,7 @@ public class ByteLoggingHandler
 
     @Override
     public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ctx.alloc().buffer();
+        return ChannelHandlerUtil.allocate(ctx);
     }
 
     @Override
@@ -117,23 +118,13 @@ public class ByteLoggingHandler
     }
 
     @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        ctx.inboundByteBuffer().free();
-    }
-
-    @Override
     public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ctx.alloc().buffer();
+        return ChannelHandlerUtil.allocate(ctx);
     }
 
     @Override
     public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
         ctx.outboundByteBuffer().discardSomeReadBytes();
-    }
-
-    @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        ctx.outboundByteBuffer().free();
     }
 
     @Override

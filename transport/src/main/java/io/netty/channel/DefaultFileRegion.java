@@ -15,8 +15,9 @@
  */
 package io.netty.channel;
 
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.buffer.AbstractReferenceCounted;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;
@@ -25,7 +26,7 @@ import java.nio.channels.WritableByteChannel;
 /**
  * Default {@link FileRegion} implementation which transfer data from a {@link FileChannel}.
  */
-public class DefaultFileRegion implements FileRegion {
+public class DefaultFileRegion extends AbstractReferenceCounted implements FileRegion {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultFileRegion.class);
 
@@ -81,7 +82,7 @@ public class DefaultFileRegion implements FileRegion {
     }
 
     @Override
-    public void close() {
+    protected void deallocate() {
         try {
             file.close();
         } catch (IOException e) {

@@ -16,6 +16,7 @@
 package io.netty.handler.codec.socks;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 
@@ -30,8 +31,8 @@ public class SocksAuthResponseDecoder extends ReplayingDecoder<SocksAuthResponse
         return name;
     }
 
-    private SocksMessage.SubnegotiationVersion version;
-    private SocksMessage.AuthStatus authStatus;
+    private SocksSubnegotiationVersion version;
+    private SocksAuthStatus authStatus;
     private SocksResponse msg = SocksCommonUtils.UNKNOWN_SOCKS_RESPONSE;
 
     public SocksAuthResponseDecoder() {
@@ -39,25 +40,26 @@ public class SocksAuthResponseDecoder extends ReplayingDecoder<SocksAuthResponse
     }
 
     @Override
-    public Object decode(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf) throws Exception {
+    protected void decode(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf, MessageBuf<Object> out)
+            throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
-                version = SocksMessage.SubnegotiationVersion.fromByte(byteBuf.readByte());
-                if (version != SocksMessage.SubnegotiationVersion.AUTH_PASSWORD) {
+                version = SocksSubnegotiationVersion.fromByte(byteBuf.readByte());
+                if (version != SocksSubnegotiationVersion.AUTH_PASSWORD) {
                     break;
                 }
                 checkpoint(State.READ_AUTH_RESPONSE);
             }
             case READ_AUTH_RESPONSE: {
-                authStatus = SocksMessage.AuthStatus.fromByte(byteBuf.readByte());
+                authStatus = SocksAuthStatus.fromByte(byteBuf.readByte());
                 msg = new SocksAuthResponse(authStatus);
             }
         }
         channelHandlerContext.pipeline().remove(this);
-        return msg;
+        out.add(msg);
     }
 
-    public enum State {
+    enum State {
         CHECK_PROTOCOL_VERSION,
         READ_AUTH_RESPONSE
     }

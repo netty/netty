@@ -20,14 +20,14 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.ssl.SslHandler;
+import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.testsuite.util.BogusSslContextFactory;
+import io.netty.util.concurrent.Future;
 import org.junit.Test;
 
 import javax.net.ssl.SSLEngine;
@@ -54,6 +54,19 @@ public class SocketSslEchoTest extends AbstractSocketTest {
     }
 
     public void testSslEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testSslEcho0(sb, cb, false);
+    }
+
+    @Test
+    public void testSslEchoWithChunkHandler() throws Throwable {
+        run();
+    }
+
+    public void testSslEchoWithChunkHandler(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testSslEcho0(sb, cb, true);
+    }
+
+    private void testSslEcho0(ServerBootstrap sb, Bootstrap cb, final boolean chunkWriteHandler) throws Throwable {
         final EchoHandler sh = new EchoHandler(true);
         final EchoHandler ch = new EchoHandler(false);
 
@@ -66,6 +79,9 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             @Override
             public void initChannel(SocketChannel sch) throws Exception {
                 sch.pipeline().addFirst("ssl", new SslHandler(sse));
+                if (chunkWriteHandler) {
+                    sch.pipeline().addLast(new ChunkedWriteHandler());
+                }
                 sch.pipeline().addLast("handler", sh);
             }
         });
@@ -74,22 +90,19 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             @Override
             public void initChannel(SocketChannel sch) throws Exception {
                 sch.pipeline().addFirst("ssl", new SslHandler(cse));
+                if (chunkWriteHandler) {
+                    sch.pipeline().addLast(new ChunkedWriteHandler());
+                }
                 sch.pipeline().addLast("handler", ch);
             }
         });
 
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.connect().sync().channel();
-        ChannelFuture hf = cc.pipeline().get(SslHandler.class).handshake();
-        final ChannelFuture firstByteWriteFuture =
-                cc.write(Unpooled.wrappedBuffer(data, 0, FIRST_MESSAGE_SIZE));
+        Future<Channel> hf = cc.pipeline().get(SslHandler.class).handshakeFuture();
+        cc.write(Unpooled.wrappedBuffer(data, 0, FIRST_MESSAGE_SIZE));
         final AtomicBoolean firstByteWriteFutureDone = new AtomicBoolean();
-        hf.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                firstByteWriteFutureDone.set(firstByteWriteFuture.isDone());
-            }
-        });
+
         hf.sync();
 
         assertFalse(firstByteWriteFutureDone.get());

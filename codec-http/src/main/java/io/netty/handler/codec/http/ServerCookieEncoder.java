@@ -32,9 +32,6 @@ import static io.netty.handler.codec.http.CookieEncoderUtil.*;
  * </pre>
  *
  * @see CookieDecoder
- *
- * @apiviz.stereotype utility
- * @apiviz.has        io.netty.handler.codec.http.Cookie oneway - - encodes
  */
 public final class ServerCookieEncoder {
 

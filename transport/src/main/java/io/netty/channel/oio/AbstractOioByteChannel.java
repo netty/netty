@@ -126,7 +126,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                 pipeline.fireExceptionCaught(t);
             } else {
                 firedInboundBufferSuspeneded = true;
-                pipeline.fireInboundBufferSuspended();
+                pipeline.fireChannelReadSuspended();
                 pipeline.fireExceptionCaught(t);
                 unsafe().close(unsafe().voidFuture());
             }
@@ -144,7 +144,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                     }
                 }
             } else if (!firedInboundBufferSuspeneded) {
-                pipeline.fireInboundBufferSuspended();
+                pipeline.fireChannelReadSuspended();
             }
         }
     }

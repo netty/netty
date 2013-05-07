@@ -179,4 +179,10 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
 
     @Override
     HttpData copy();
+
+    @Override
+    HttpData retain();
+
+    @Override
+    HttpData retain(int increment);
 }

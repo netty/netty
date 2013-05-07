@@ -18,8 +18,5 @@
  * Encoder, decoder and their compatibility stream implementations which
  * transform a {@link java.io.Serializable} object into a byte buffer and
  * vice versa.
- *
- * @apiviz.exclude ^java\.io\.
- * @apiviz.exclude \.codec\.(?!serialization)[a-z0-9]+\.
  */
 package io.netty.handler.codec.serialization;

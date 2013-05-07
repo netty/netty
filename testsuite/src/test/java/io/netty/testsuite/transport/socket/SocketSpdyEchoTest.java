@@ -17,6 +17,7 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -234,6 +235,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
 
         @Override
         public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+            BufUtil.retain(msg);
             ctx.write(msg);
         }
 

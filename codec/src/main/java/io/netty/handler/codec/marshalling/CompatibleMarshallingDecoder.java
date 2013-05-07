@@ -16,6 +16,7 @@
 package io.netty.handler.codec.marshalling;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
@@ -54,11 +55,11 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<Void> {
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, MessageBuf<Object> out) throws Exception {
         if (discardingTooLongFrame) {
             buffer.skipBytes(actualReadableBytes());
             checkpoint();
-            return null;
+            return;
         }
 
         Unmarshaller unmarshaller = provider.getUnmarshaller(ctx);
@@ -70,7 +71,7 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<Void> {
             unmarshaller.start(input);
             Object obj = unmarshaller.readObject();
             unmarshaller.finish();
-            return obj;
+            out.add(obj);
         } catch (LimitingByteInput.TooBigObjectException e) {
             discardingTooLongFrame = true;
             throw new TooLongFrameException();
@@ -82,19 +83,19 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<Void> {
     }
 
     @Override
-    protected Object decodeLast(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+    protected void decodeLast(ChannelHandlerContext ctx, ByteBuf buffer, MessageBuf<Object> out) throws Exception {
         switch (buffer.readableBytes()) {
         case 0:
-            return null;
+            return;
         case 1:
             // Ignore the last TC_RESET
             if (buffer.getByte(buffer.readerIndex()) == ObjectStreamConstants.TC_RESET) {
                 buffer.skipBytes(1);
-                return null;
+                return;
             }
         }
 
-        return decode(ctx, buffer);
+        decode(ctx, buffer, out);
     }
 
     @Override

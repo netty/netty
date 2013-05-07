@@ -58,4 +58,10 @@ public interface FileUpload extends HttpData {
 
     @Override
     FileUpload copy();
+
+    @Override
+    FileUpload retain();
+
+    @Override
+    FileUpload retain(int increment);
 }

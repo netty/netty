@@ -20,8 +20,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
@@ -29,9 +30,10 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundByteHandler;
 import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultEventExecutorGroup;
-import io.netty.channel.EventExecutorGroup;
 import io.netty.channel.EventLoopGroup;
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.util.concurrent.EventExecutorGroup;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -42,21 +44,20 @@ import java.util.HashSet;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class LocalTransportThreadModelTest {
 
-    private static ServerBootstrap sb;
+    private static EventLoopGroup group;
     private static LocalAddress localAddr;
 
     @BeforeClass
     public static void init() {
         // Configure a test server
-        sb = new ServerBootstrap();
-        sb.group(new LocalEventLoopGroup())
+        group = new LocalEventLoopGroup();
+        ServerBootstrap sb = new ServerBootstrap();
+        sb.group(group)
           .channel(LocalServerChannel.class)
           .childHandler(new ChannelInitializer<LocalChannel>() {
               @Override
@@ -75,11 +76,11 @@ public class LocalTransportThreadModelTest {
 
     @AfterClass
     public static void destroy() {
-        sb.shutdown();
+        group.shutdownGracefully();
     }
 
     @Test(timeout = 30000)
-    @Ignore
+    @Ignore("regression test")
     public void testStagedExecutionMultiple() throws Throwable {
         for (int i = 0; i < 10; i ++) {
             testStagedExecution();
@@ -87,11 +88,10 @@ public class LocalTransportThreadModelTest {
     }
 
     @Test(timeout = 5000)
-    @Ignore
     public void testStagedExecution() throws Throwable {
-        EventLoopGroup l = new LocalEventLoopGroup(4, new PrefixThreadFactory("l"));
-        EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e1"));
-        EventExecutorGroup e2 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e2"));
+        EventLoopGroup l = new LocalEventLoopGroup(4, new DefaultThreadFactory("l"));
+        EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e1"));
+        EventExecutorGroup e2 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e2"));
         ThreadNameAuditor h1 = new ThreadNameAuditor();
         ThreadNameAuditor h2 = new ThreadNameAuditor();
         ThreadNameAuditor h3 = new ThreadNameAuditor();
@@ -195,9 +195,9 @@ public class LocalTransportThreadModelTest {
             System.out.println("H3O: " + h3.outboundThreadNames);
             throw e;
         } finally {
-            l.shutdown();
-            e1.shutdown();
-            e2.shutdown();
+            l.shutdownGracefully();
+            e1.shutdownGracefully();
+            e2.shutdownGracefully();
             l.awaitTermination(5, TimeUnit.SECONDS);
             e1.awaitTermination(5, TimeUnit.SECONDS);
             e2.awaitTermination(5, TimeUnit.SECONDS);
@@ -205,14 +205,14 @@ public class LocalTransportThreadModelTest {
     }
 
     @Test(timeout = 30000)
-    @Ignore
+    @Ignore("regression test")
     public void testConcurrentMessageBufferAccess() throws Throwable {
-        EventLoopGroup l = new LocalEventLoopGroup(4, new PrefixThreadFactory("l"));
-        EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e1"));
-        EventExecutorGroup e2 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e2"));
-        EventExecutorGroup e3 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e3"));
-        EventExecutorGroup e4 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e4"));
-        EventExecutorGroup e5 = new DefaultEventExecutorGroup(4, new PrefixThreadFactory("e5"));
+        EventLoopGroup l = new LocalEventLoopGroup(4, new DefaultThreadFactory("l"));
+        EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e1"));
+        EventExecutorGroup e2 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e2"));
+        EventExecutorGroup e3 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e3"));
+        EventExecutorGroup e4 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e4"));
+        EventExecutorGroup e5 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e5"));
 
         try {
             final MessageForwarder1 h1 = new MessageForwarder1();
@@ -319,19 +319,18 @@ public class LocalTransportThreadModelTest {
             }
 
             ch.close().sync();
-
         } finally {
-            l.shutdown();
-            e1.shutdown();
-            e2.shutdown();
-            e3.shutdown();
-            e4.shutdown();
-            e5.shutdown();
+            l.shutdownGracefully();
+            e1.shutdownGracefully();
+            e2.shutdownGracefully();
+            e3.shutdownGracefully();
+            e4.shutdownGracefully();
+            e5.shutdownGracefully();
         }
     }
 
     private static class ThreadNameAuditor
-            extends ChannelHandlerAdapter
+            extends ChannelDuplexHandler
             implements ChannelInboundMessageHandler<Object>,
                        ChannelOutboundMessageHandler<Object> {
 
@@ -346,18 +345,8 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            // Nothing to free
-        }
-
-        @Override
         public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return Unpooled.messageBuffer();
-        }
-
-        @Override
-        public void freeOutboundBuffer(ChannelHandlerContext ctx) {
-            // Nothing to free
         }
 
         @Override
@@ -394,7 +383,7 @@ public class LocalTransportThreadModelTest {
      * Converts integers into a binary stream.
      */
     private static class MessageForwarder1
-            extends ChannelHandlerAdapter
+            extends ChannelDuplexHandler
             implements ChannelInboundMessageHandler<Integer>, ChannelOutboundByteHandler {
 
         private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
@@ -408,23 +397,13 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            // Nothing to free
-        }
-
-        @Override
         public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return ctx.alloc().buffer();
+            return ChannelHandlerUtil.allocate(ctx);
         }
 
         @Override
         public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
             // NOOP
-        }
-
-        @Override
-        public void freeOutboundBuffer(ChannelHandlerContext ctx) {
-            ctx.outboundByteBuffer().free();
         }
 
         @Override
@@ -502,7 +481,7 @@ public class LocalTransportThreadModelTest {
      * Converts a binary stream into integers.
      */
     private static class MessageForwarder2
-            extends ChannelHandlerAdapter
+            extends ChannelDuplexHandler
             implements ChannelInboundByteHandler, ChannelOutboundMessageHandler<Integer> {
 
         private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
@@ -522,19 +501,9 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            ctx.inboundByteBuffer().free();
-        }
-
-        @Override
         public MessageBuf<Integer> newOutboundBuffer(
                 ChannelHandlerContext ctx) throws Exception {
             return Unpooled.messageBuffer();
-        }
-
-        @Override
-        public void freeOutboundBuffer(ChannelHandlerContext ctx) {
-            // Nothing to free
         }
 
         @Override
@@ -605,7 +574,7 @@ public class LocalTransportThreadModelTest {
      * Simply forwards the received object to the next handler.
      */
     private static class MessageForwarder3
-            extends ChannelHandlerAdapter
+            extends ChannelDuplexHandler
             implements ChannelInboundMessageHandler<Object>, ChannelOutboundMessageHandler<Object> {
 
         private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
@@ -619,18 +588,8 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            // Nothing to free
-        }
-
-        @Override
         public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return Unpooled.messageBuffer();
-        }
-
-        @Override
-        public void freeOutboundBuffer(ChannelHandlerContext ctx) {
-            // Nothing to free
         }
 
         @Override
@@ -695,7 +654,7 @@ public class LocalTransportThreadModelTest {
      * Discards all received messages.
      */
     private static class MessageDiscarder
-            extends ChannelHandlerAdapter
+            extends ChannelDuplexHandler
             implements ChannelInboundMessageHandler<Object>, ChannelOutboundMessageHandler<Object> {
 
         private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
@@ -709,18 +668,8 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            // Nothing to free
-        }
-
-        @Override
         public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return Unpooled.messageBuffer();
-        }
-
-        @Override
-        public void freeOutboundBuffer(ChannelHandlerContext ctx) {
-            // Nothing to free
         }
 
         @Override
@@ -774,24 +723,6 @@ public class LocalTransportThreadModelTest {
             //System.err.print("[" + Thread.currentThread().getName() + "] ");
             //cause.printStackTrace();
             super.exceptionCaught(ctx, cause);
-        }
-    }
-
-    private static class PrefixThreadFactory implements ThreadFactory {
-
-        private final String prefix;
-        private final AtomicInteger id = new AtomicInteger();
-
-        public PrefixThreadFactory(String prefix) {
-            this.prefix = prefix;
-        }
-
-        @Override
-        public Thread newThread(Runnable r) {
-            Thread t = new Thread(r);
-            t.setName(prefix + '-' + id.incrementAndGet());
-            t.setDaemon(true);
-            return t;
         }
     }
 }

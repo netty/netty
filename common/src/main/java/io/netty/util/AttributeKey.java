@@ -15,7 +15,8 @@
  */
 package io.netty.util;
 
-import java.util.concurrent.ConcurrentHashMap;
+import io.netty.util.internal.PlatformDependent;
+
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -25,9 +26,10 @@ import java.util.concurrent.ConcurrentMap;
  *
  * @param <T>   the type of the {@link Attribute} which can be accessed via this {@link AttributeKey}.
  */
+@SuppressWarnings("UnusedDeclaration") // 'T' is used only at compile time
 public final class AttributeKey<T> extends UniqueName {
 
-    private static final ConcurrentMap<String, Boolean> names = new ConcurrentHashMap<String, Boolean>();
+    private static final ConcurrentMap<String, Boolean> names = PlatformDependent.newConcurrentHashMap();
 
     /**
      * Create a new instance

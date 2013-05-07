@@ -17,63 +17,11 @@ package io.netty.channel;
 
 import java.net.SocketAddress;
 
-public abstract class ChannelOperationHandlerAdapter implements ChannelOperationHandler {
-
-    /**
-     * Do nothing by default, sub-classes may override this method.
-     */
-    @Override
-    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
-        // NOOP
-    }
-
-    /**
-     * Do nothing by default, sub-classes may override this method.
-     */
-    @Override
-    public void afterAdd(ChannelHandlerContext ctx) throws Exception {
-        // NOOP
-    }
-
-    /**
-     * Do nothing by default, sub-classes may override this method.
-     */
-    @Override
-    public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
-        // NOOP
-    }
-
-    /**
-     * Do nothing by default, sub-classes may override this method.
-     */
-    @Override
-    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
-        // NOOP
-    }
-
-    /**
-     * Calls {@link ChannelHandlerContext#fireExceptionCaught(Throwable)} to forward
-     * to the next {@link ChannelHandler} in the {@link ChannelPipeline}.
-     *
-     * Sub-classes may override this method to change behavior.
-     */
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
-            throws Exception {
-        ctx.fireExceptionCaught(cause);
-    }
-
-    /**
-     * Calls {@link ChannelHandlerContext#fireUserEventTriggered(Object)} to forward
-     * to the next {@link ChannelHandler} in the {@link ChannelPipeline}.
-     *
-     * Sub-classes may override this method to change behavior.
-     */
-    @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt)
-            throws Exception {
-        ctx.fireUserEventTriggered(evt);
-    }
+/**
+ * Skelton implementation of a {@link ChannelOperationHandler}. This implementation just forwards each method call via
+ * the {@link ChannelHandlerContext}.
+ */
+public abstract class ChannelOperationHandlerAdapter extends ChannelHandlerAdapter implements ChannelOperationHandler {
 
     /**
      * Calls {@link ChannelHandlerContext#bind(SocketAddress, ChannelPromise)} to forward
@@ -135,29 +83,15 @@ public abstract class ChannelOperationHandlerAdapter implements ChannelOperation
         ctx.deregister(promise);
     }
 
-    @Override
-    public void read(ChannelHandlerContext ctx) {
-        ctx.read();
-    }
-
     /**
-     * Calls {@link ChannelHandlerContext#flush(ChannelPromise)} to forward
+     * Calls {@link ChannelHandlerContext#read()} to forward
      * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
-     *
-     * Be aware that if your class also implement {@link ChannelOutboundHandler} it need to {@code override} this
-     * method!
      */
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise promise)
-            throws Exception {
-        if (this instanceof ChannelOutboundHandler) {
-            throw new IllegalStateException(
-                    "flush(...) must be overridden by " + getClass().getName() +
-                    ", which implements " + ChannelOutboundHandler.class.getSimpleName());
-        }
-        ctx.flush(promise);
+    public void read(ChannelHandlerContext ctx) {
+        ctx.read();
     }
 
     /**

@@ -64,7 +64,18 @@ public abstract class WebSocketFrame extends DefaultByteBufHolder {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "(data: " + data().toString() + ')';
+        return getClass().getSimpleName() + "(data: " + content().toString() + ')';
     }
 
+    @Override
+    public WebSocketFrame retain() {
+        super.retain();
+        return this;
+    }
+
+    @Override
+    public WebSocketFrame retain(int increment) {
+        super.retain(increment);
+        return this;
+    }
 }

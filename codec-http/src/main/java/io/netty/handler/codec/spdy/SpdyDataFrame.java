@@ -22,7 +22,7 @@ import io.netty.buffer.Unpooled;
 /**
  * A SPDY Protocol Data Frame
  */
-public interface SpdyDataFrame extends ByteBufHolder, SpdyStreamFrame {
+public interface SpdyDataFrame extends ByteBufHolder, SpdyStreamFrame, SpdyDataOrControlFrame {
 
     @Override
     SpdyDataFrame setStreamId(int streamID);
@@ -37,8 +37,14 @@ public interface SpdyDataFrame extends ByteBufHolder, SpdyStreamFrame {
      * The data payload cannot exceed 16777215 bytes.
      */
     @Override
-    ByteBuf data();
+    ByteBuf content();
 
     @Override
     SpdyDataFrame copy();
+
+    @Override
+    SpdyDataFrame retain();
+
+    @Override
+    SpdyDataFrame retain(int increment);
 }

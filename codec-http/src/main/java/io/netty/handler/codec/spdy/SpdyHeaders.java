@@ -28,7 +28,6 @@ import java.util.Set;
 /**
  * Provides the constants for the standard SPDY HTTP header names and commonly
  * used utility methods that access a {@link SpdyHeaderBlock}.
- * @apiviz.stereotype static
  */
 public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>> {
 
@@ -102,7 +101,6 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
 
     /**
      * SPDY HTTP header names
-     * @apiviz.stereotype static
      */
     public static final class HttpNames {
         /**
@@ -110,9 +108,9 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
          */
         public static final String HOST = ":host";
         /**
-         * {@code ":getMethod"}
+         * {@code ":method"}
          */
-        public static final String METHOD = ":getMethod";
+        public static final String METHOD = ":method";
         /**
          * {@code ":path"}
          */
@@ -122,9 +120,9 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
          */
         public static final String SCHEME = ":scheme";
         /**
-         * {@code ":getStatus"}
+         * {@code ":status"}
          */
-        public static final String STATUS = ":getStatus";
+        public static final String STATUS = ":status";
         /**
          * {@code ":version"}
          */
@@ -135,21 +133,20 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
 
     /**
      * SPDY/2 HTTP header names
-     * @apiviz.stereotype static
      */
     public static final class Spdy2HttpNames {
         /**
-         * {@code "getMethod"}
+         * {@code "method"}
          */
-        public static final String METHOD = "getMethod";
+        public static final String METHOD = "method";
         /**
          * {@code "scheme"}
          */
         public static final String SCHEME = "scheme";
         /**
-         * {@code "getStatus"}
+         * {@code "status"}
          */
-        public static final String STATUS = "getStatus";
+        public static final String STATUS = "status";
         /**
          * {@code "url"}
          */
@@ -234,7 +231,7 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-     * Removes the HTTP getMethod header.
+     * Removes the HTTP method header.
      */
     public static void removeMethod(int spdyVersion, SpdyHeaderBlock block) {
         if (spdyVersion < 3) {
@@ -245,7 +242,7 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-     * Returns the {@link HttpMethod} represented by the HTTP getMethod header.
+     * Returns the {@link HttpMethod} represented by the HTTP method header.
      */
     public static HttpMethod getMethod(int spdyVersion, SpdyHeaderBlock block) {
         try {
@@ -260,7 +257,7 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-     * Sets the HTTP getMethod header.
+     * Sets the HTTP method header.
      */
     public static void setMethod(int spdyVersion, SpdyHeaderBlock block, HttpMethod method) {
         if (spdyVersion < 3) {
@@ -304,7 +301,7 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-     * Removes the HTTP response getStatus header.
+     * Removes the HTTP response status header.
      */
     public static void removeStatus(int spdyVersion, SpdyHeaderBlock block) {
         if (spdyVersion < 3) {
@@ -315,7 +312,7 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-     * Returns the {@link HttpResponseStatus} represented by the HTTP response getStatus header.
+     * Returns the {@link HttpResponseStatus} represented by the HTTP response status header.
      */
     public static HttpResponseStatus getStatus(int spdyVersion, SpdyHeaderBlock block) {
         try {
@@ -344,7 +341,7 @@ public abstract class SpdyHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-     * Sets the HTTP response getStatus header.
+     * Sets the HTTP response status header.
      */
     public static void setStatus(int spdyVersion, SpdyHeaderBlock block, HttpResponseStatus status) {
         if (spdyVersion < 3) {

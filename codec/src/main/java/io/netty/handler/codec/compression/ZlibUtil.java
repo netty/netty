@@ -15,25 +15,33 @@
  */
 package io.netty.handler.codec.compression;
 
-import io.netty.util.internal.jzlib.JZlib;
-import io.netty.util.internal.jzlib.ZStream;
+import com.jcraft.jzlib.Deflater;
+import com.jcraft.jzlib.Inflater;
+import com.jcraft.jzlib.JZlib;
 
 /**
  * Utility methods used by {@link JZlibEncoder} and {@link JZlibDecoder}.
  */
 final class ZlibUtil {
 
-    static void fail(ZStream z, String message, int resultCode) {
-        throw exception(z, message, resultCode);
+    static void fail(Inflater z, String message, int resultCode) {
+        throw inflaterException(z, message, resultCode);
     }
 
-    static CompressionException exception(ZStream z, String message, int resultCode) {
-        return new CompressionException(message + " (" + resultCode + ')' +
-                (z.msg != null? ": " + z.msg : ""));
+    static void fail(Deflater z, String message, int resultCode) {
+        throw deflaterException(z, message, resultCode);
     }
 
-    static Enum<?> convertWrapperType(ZlibWrapper wrapper) {
-        Enum<?> convertedWrapperType;
+    static CompressionException inflaterException(Inflater z, String message, int resultCode) {
+        return new CompressionException(message + " (" + resultCode + ')' + (z.msg != null? ": " + z.msg : ""));
+    }
+
+    static CompressionException deflaterException(Deflater z, String message, int resultCode) {
+        return new CompressionException(message + " (" + resultCode + ')' + (z.msg != null? ": " + z.msg : ""));
+    }
+
+    static JZlib.WrapperType convertWrapperType(ZlibWrapper wrapper) {
+        JZlib.WrapperType convertedWrapperType;
         switch (wrapper) {
         case NONE:
             convertedWrapperType = JZlib.W_NONE;
@@ -45,7 +53,7 @@ final class ZlibUtil {
             convertedWrapperType = JZlib.W_GZIP;
             break;
         case ZLIB_OR_NONE:
-            convertedWrapperType = JZlib.W_ZLIB_OR_NONE;
+            convertedWrapperType = JZlib.W_ANY;
             break;
         default:
             throw new Error();

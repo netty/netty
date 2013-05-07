@@ -34,12 +34,8 @@ public class SocksMessageEncoder extends MessageToByteEncoder<SocksMessage> {
         return name;
     }
 
-    public SocksMessageEncoder() {
-        super(SocksMessage.class);
-    }
-
     @Override
-    public void encode(ChannelHandlerContext ctx, SocksMessage msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, SocksMessage msg, ByteBuf out) throws Exception {
         msg.encodeAsByteBuf(out);
     }
 }

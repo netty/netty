@@ -19,7 +19,7 @@ import java.lang.ref.Reference;
 import java.lang.ref.SoftReference;
 import java.util.Map;
 
-public class SoftReferenceMap<K, V> extends ReferenceMap<K, V> {
+final class SoftReferenceMap<K, V> extends ReferenceMap<K, V> {
 
     public SoftReferenceMap(Map<K, Reference<V>> delegate) {
         super(delegate);

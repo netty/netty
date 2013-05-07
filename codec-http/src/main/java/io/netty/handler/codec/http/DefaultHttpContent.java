@@ -35,27 +35,44 @@ public class DefaultHttpContent extends DefaultHttpObject implements HttpContent
     }
 
     @Override
-    public ByteBuf data() {
+    public ByteBuf content() {
         return content;
     }
 
     @Override
     public HttpContent copy() {
-        return new DefaultHttpContent(data().copy());
+        return new DefaultHttpContent(content.copy());
     }
 
     @Override
-    public boolean isFreed() {
-        return content.isFreed();
+    public int refCnt() {
+        return content.refCnt();
     }
 
     @Override
-    public void free() {
-        content.free();
+    public HttpContent retain() {
+        content.retain();
+        return this;
+    }
+
+    @Override
+    public HttpContent retain(int increment) {
+        content.retain(increment);
+        return this;
+    }
+
+    @Override
+    public boolean release() {
+        return content.release();
+    }
+
+    @Override
+    public boolean release(int decrement) {
+        return content.release(decrement);
     }
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "(data: " + data() + ", getDecoderResult: " + getDecoderResult() + ')';
+        return getClass().getSimpleName() + "(data: " + content() + ", getDecoderResult: " + getDecoderResult() + ')';
     }
 }

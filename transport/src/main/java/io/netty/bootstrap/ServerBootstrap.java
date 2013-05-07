@@ -18,8 +18,6 @@ package io.netty.bootstrap;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandler;
@@ -30,11 +28,10 @@ import io.netty.channel.ChannelStateHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.AttributeKey;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.net.SocketAddress;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -140,17 +137,10 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
     }
 
     @Override
-    ChannelFuture doBind(SocketAddress localAddress) {
-        Channel channel = channelFactory().newChannel();
-
-        try {
-            final Map<ChannelOption<?>, Object> options = options();
-            synchronized (options) {
-                channel.config().setOptions(options);
-            }
-        } catch (Exception e) {
-            channel.close();
-            return channel.newFailedFuture(e);
+    void init(Channel channel) throws Exception {
+        final Map<ChannelOption<?>, Object> options = options();
+        synchronized (options) {
+            channel.config().setOptions(options);
         }
 
         final Map<AttributeKey<?>, Object> attrs = attrs();
@@ -185,16 +175,11 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
                         currentChildGroup, currentChildHandler, currentChildOptions, currentChildAttrs));
             }
         });
-
-        ChannelFuture f = group().register(channel).awaitUninterruptibly();
-        if (!f.isSuccess()) {
-            return f;
-        }
-
-        return channel.bind(localAddress).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
     }
 
     @Override
+    @Deprecated
+    @SuppressWarnings("deprecation")
     public void shutdown() {
         super.shutdown();
         if (childGroup != null) {
@@ -203,7 +188,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
     }
 
     @Override
-    public void validate() {
+    public ServerBootstrap validate() {
         super.validate();
         if (childHandler == null) {
             throw new IllegalStateException("childHandler not set");
@@ -212,6 +197,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
             logger.warn("childGroup is not set. Using parentGroup instead.");
             childGroup = group();
         }
+        return this;
     }
 
     @SuppressWarnings("unchecked")
@@ -280,11 +266,6 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
                     logger.warn("Failed to register an accepted channel: " + child, t);
                 }
             }
-        }
-
-        @Override
-        public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            ctx.inboundMessageBuffer().free();
         }
     }
 

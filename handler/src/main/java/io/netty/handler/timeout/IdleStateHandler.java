@@ -17,15 +17,15 @@ package io.netty.handler.timeout;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOperationHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelStateHandlerAdapter;
-import io.netty.channel.EventExecutor;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.channel.FileRegion;
 
 import java.net.SocketAddress;
@@ -75,7 +75,7 @@ import java.util.concurrent.TimeUnit;
  * }
  *
  * // Handler should handle the {@link IdleStateEvent} triggered by {@link IdleStateHandler}.
- * public class MyHandler extends {@link ChannelHandlerAdapter} {
+ * public class MyHandler extends {@link ChannelDuplexHandler} {
  *     {@code @Override}
  *     public void userEventTriggered({@link ChannelHandlerContext} ctx, {@link Object} evt) throws {@link Exception} {
  *         if (evt instanceof {@link IdleState}} {
@@ -97,10 +97,6 @@ import java.util.concurrent.TimeUnit;
  *
  * @see ReadTimeoutHandler
  * @see WriteTimeoutHandler
- *
- * @apiviz.landmark
- * @apiviz.uses io.netty.util.HashedWheelTimer
- * @apiviz.has io.netty.handler.timeout.IdleStateEvent oneway - - triggers
  */
 public class IdleStateHandler extends ChannelStateHandlerAdapter implements ChannelOperationHandler {
 
@@ -214,7 +210,7 @@ public class IdleStateHandler extends ChannelStateHandlerAdapter implements Chan
     }
 
     @Override
-    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         if (ctx.channel().isActive() & ctx.channel().isRegistered()) {
             // channelActvie() event has been fired already, which means this.channelActive() will
             // not be invoked. We have to initialize here instead.
@@ -226,7 +222,7 @@ public class IdleStateHandler extends ChannelStateHandlerAdapter implements Chan
     }
 
     @Override
-    public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         destroy();
     }
 

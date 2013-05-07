@@ -108,7 +108,7 @@ import java.nio.charset.UnsupportedCharsetException;
  * <pre>
  * // Fills the writable bytes of a buffer with random integers.
  * {@link ByteBuf} buffer = ...;
- * while (buffer.writableBytes() >= 4) {
+ * while (buffer.maxWritableBytes() >= 4) {
  *     buffer.writeInt(random.nextInt());
  * }
  * </pre>
@@ -214,7 +214,7 @@ import java.nio.charset.UnsupportedCharsetException;
  *
  * If a {@link ByteBuf} can be converted into an NIO {@link ByteBuffer} which shares its
  * content (i.e. view buffer), you can get it via the {@link #nioBuffer()} method.  To determine
- * if a buffer can be converted into an NIO buffer, use {@link #nioBuffer()}.
+ * if a buffer can be converted into an NIO buffer, use {@link #nioBufferCount()}.
  *
  * <h4>Strings</h4>
  *
@@ -226,7 +226,6 @@ import java.nio.charset.UnsupportedCharsetException;
  *
  * Please refer to {@link ByteBufInputStream} and
  * {@link ByteBufOutputStream}.
- * @apiviz.landmark
  */
 public interface ByteBuf extends Buf, Comparable<ByteBuf> {
 
@@ -1837,6 +1836,20 @@ public interface ByteBuf extends Buf, Comparable<ByteBuf> {
     int arrayOffset();
 
     /**
+     * Returns {@code true} if and only if this buffer has a reference to the low-level memory address that points
+     * to the backing data.
+     */
+    boolean hasMemoryAddress();
+
+    /**
+     * Returns the low-level memory address that point to the first byte of ths backing data.
+     *
+     * @throws UnsupportedOperationException
+     *         if this buffer does not support accessing the low-level memory address
+     */
+    long memoryAddress();
+
+    /**
      * Decodes this buffer's readable bytes into a string with the specified
      * character set name.  This method is identical to
      * {@code buf.toString(buf.readerIndex(), buf.readableBytes(), charsetName)}.
@@ -1915,18 +1928,9 @@ public interface ByteBuf extends Buf, Comparable<ByteBuf> {
     @Override
     String toString();
 
-    /**
-     * Deallocates the internal memory block of this buffer or returns it to the allocator or pool it came from.
-     * The result of accessing a released buffer is unspecified and can even cause JVM crash.
-     *
-     * @throws UnsupportedOperationException if this buffer is derived
-     */
     @Override
-    void free();
+    ByteBuf retain(int increment);
 
-    /**
-     * Returns {@code true} if and only if this buffer has been deallocated by {@link #free()}.
-     */
     @Override
-    boolean isFreed();
+    ByteBuf retain();
 }

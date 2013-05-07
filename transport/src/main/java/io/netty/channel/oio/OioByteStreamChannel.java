@@ -17,6 +17,7 @@ package io.netty.channel.oio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.FileRegion;
 
@@ -83,13 +84,7 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
 
     @Override
     protected int doReadBytes(ByteBuf buf) throws Exception {
-        int length = available();
-        if (length < 1) {
-            length = 1;
-        }
-        if (length > buf.writableBytes()) {
-            length = buf.writableBytes();
-        }
+        int length = Math.max(1, Math.min(available(), buf.maxWritableBytes()));
         return buf.writeBytes(is, length);
     }
 
@@ -111,17 +106,21 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
         if (outChannel == null) {
             outChannel = Channels.newChannel(os);
         }
-        long written = 0;
 
+        long written = 0;
         for (;;) {
             long localWritten = region.transferTo(outChannel, written);
             if (localWritten == -1) {
                 checkEOF(region, written);
-                region.close();
+                region.release();
                 promise.setSuccess();
                 return;
             }
             written += localWritten;
+            if (promise instanceof ChannelProgressivePromise) {
+                final ChannelProgressivePromise pp = (ChannelProgressivePromise) promise;
+                pp.setProgress(written, region.count());
+            }
             if (written >= region.count()) {
                 promise.setSuccess();
                 return;

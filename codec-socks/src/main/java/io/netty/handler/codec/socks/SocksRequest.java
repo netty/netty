@@ -28,7 +28,7 @@ public abstract class SocksRequest extends SocksMessage {
     private final SocksRequestType requestType;
 
     protected SocksRequest(SocksRequestType requestType) {
-        super(MessageType.REQUEST);
+        super(SocksMessageType.REQUEST);
         if (requestType == null) {
             throw new NullPointerException("requestType");
         }
@@ -42,15 +42,5 @@ public abstract class SocksRequest extends SocksMessage {
      */
     public SocksRequestType requestType() {
         return requestType;
-    }
-
-    /**
-     * Type of socks request
-     */
-    public enum SocksRequestType {
-        INIT,
-        AUTH,
-        CMD,
-        UNKNOWN
     }
 }

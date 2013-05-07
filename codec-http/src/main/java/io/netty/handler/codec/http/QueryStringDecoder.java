@@ -52,9 +52,6 @@ import java.util.Map;
  * integer parameter.
  *
  * @see QueryStringEncoder
- *
- * @apiviz.stereotype utility
- * @apiviz.has        io.netty.handler.codec.http.FullHttpRequest oneway - - decodes
  */
 public class QueryStringDecoder {
 

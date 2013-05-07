@@ -16,12 +16,13 @@
 package io.netty.handler.codec.http.multipart;
 
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Default factory giving Attribute and FileUpload according to constructor
@@ -46,8 +47,9 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     /**
      * Keep all HttpDatas until cleanAllHttpDatas() is called.
      */
-    private final ConcurrentHashMap<HttpRequest, List<HttpData>> requestFileDeleteMap =
-        new ConcurrentHashMap<HttpRequest, List<HttpData>>();
+    private final ConcurrentMap<HttpRequest, List<HttpData>> requestFileDeleteMap =
+            PlatformDependent.newConcurrentHashMap();
+
     /**
      * HttpData will be in memory if less than default size (16KB).
      * The type will be Mixed.

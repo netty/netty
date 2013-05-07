@@ -36,13 +36,13 @@ public class SctpMessageCompletionHandler extends ChannelInboundMessageHandlerAd
     private boolean assembled;
 
     @Override
-    protected boolean beginMessageReceived(ChannelHandlerContext ctx) throws Exception {
+    public boolean beginMessageReceived(ChannelHandlerContext ctx) throws Exception {
         assembled = false;
         return super.beginMessageReceived(ctx);
     }
 
     @Override
-    protected void endMessageReceived(ChannelHandlerContext ctx) throws Exception {
+    public void endMessageReceived(ChannelHandlerContext ctx) throws Exception {
         if (assembled) {
             assembled = false;
             ctx.fireInboundBufferUpdated();
@@ -51,9 +51,9 @@ public class SctpMessageCompletionHandler extends ChannelInboundMessageHandlerAd
     }
 
     @Override
-    protected void messageReceived(ChannelHandlerContext ctx, SctpMessage msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, SctpMessage msg) throws Exception {
 
-        final ByteBuf byteBuf = msg.data();
+        final ByteBuf byteBuf = msg.content();
         final int protocolIdentifier = msg.protocolIdentifier();
         final int streamIdentifier = msg.streamIdentifier();
         final boolean isComplete = msg.isComplete();
@@ -84,15 +84,12 @@ public class SctpMessageCompletionHandler extends ChannelInboundMessageHandlerAd
             //first incomplete message
             fragments.put(streamIdentifier, byteBuf);
         }
+
+        byteBuf.retain();
     }
 
     private void handleAssembledMessage(ChannelHandlerContext ctx, SctpMessage assembledMsg) {
         ctx.nextInboundMessageBuffer().add(assembledMsg);
         assembled = true;
-    }
-
-    @Override
-    protected void freeInboundMessage(SctpMessage msg) throws Exception {
-        // It is an aggregator so not free it yet
     }
 }

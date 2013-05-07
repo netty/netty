@@ -16,10 +16,8 @@
 package io.netty.handler.traffic;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandler;
-import io.netty.channel.ChannelOutboundByteHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
@@ -43,9 +41,7 @@ import java.util.concurrent.TimeUnit;
  * or start the monitoring, to change the checkInterval directly, or to have access to its values.</li>
  * </ul>
  */
-public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapter
-        implements ChannelInboundByteHandler, ChannelOutboundByteHandler {
-
+public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler {
     /**
      * Default delay between two checks: 1s
      */
@@ -202,14 +198,11 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
     }
 
     /**
-    *
-    * @return the time that should be necessary to wait to respect limit. Can
-    *         be negative time
-    */
-    private static long getTimeToWait(long limit, long bytes, long lastTime,
-            long curtime) {
+     * @return the time that should be necessary to wait to respect limit. Can be negative time
+     */
+    private static long getTimeToWait(long limit, long bytes, long lastTime, long curtime) {
         long interval = curtime - lastTime;
-        if (interval == 0) {
+        if (interval <= 0) {
             // Time is too short, so just lets continue
             return 0;
         }
@@ -217,38 +210,9 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
     }
 
     @Override
-    public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ctx.nextInboundByteBuffer();
-    }
-
-    @Override
-    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-        // NOOP
-    }
-
-    @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        // do nothing
-    }
-
-    @Override
-    public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ctx.nextOutboundByteBuffer();
-    }
-
-    @Override
-    public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-        // NOOP
-    }
-
-    @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        // do nothing
-    }
-
-    @Override
     public void inboundBufferUpdated(final ChannelHandlerContext ctx) throws Exception {
-        ByteBuf buf = ctx.inboundByteBuffer();
+        ByteBuf buf = ctx.nextInboundByteBuffer();
+
         long curtime = System.currentTimeMillis();
         long size = buf.readableBytes();
 
@@ -313,7 +277,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
     @Override
     public void flush(final ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
         long curtime = System.currentTimeMillis();
-        long size = ctx.outboundByteBuffer().readableBytes();
+        long size = ctx.nextOutboundByteBuffer().readableBytes();
 
         if (trafficCounter != null) {
             trafficCounter.bytesWriteFlowControl(size);
@@ -349,7 +313,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelHandlerAdapte
     }
 
     @Override
-    public void beforeRemove(ChannelHandlerContext ctx) {
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         if (trafficCounter != null) {
             trafficCounter.stop();
         }

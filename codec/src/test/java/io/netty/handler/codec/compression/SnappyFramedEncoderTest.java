@@ -25,7 +25,7 @@ import static org.junit.Assert.*;
 
 public class SnappyFramedEncoderTest {
     private EmbeddedByteChannel channel;
-    
+
     @Before
     public void setUp() {
         channel = new EmbeddedByteChannel(new SnappyFramedEncoder());
@@ -41,8 +41,8 @@ public class SnappyFramedEncoderTest {
         assertTrue(channel.finish());
 
         ByteBuf expected = Unpooled.wrappedBuffer(new byte[] {
-            -0x80, 0x06, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
-             0x01, 0x05, 0x00, 0x2d, -0x5a, -0x7e, -0x5e, 'n', 'e', 't', 't', 'y'
+            -0x80, 0x06, 0x00, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
+             0x01, 0x09, 0x00, 0x00, 0x2d, -0x5a, -0x7e, -0x5e, 'n', 'e', 't', 't', 'y'
         });
         assertEquals(expected, channel.readOutbound());
     }
@@ -58,8 +58,8 @@ public class SnappyFramedEncoderTest {
         assertTrue(channel.finish());
 
         ByteBuf expected = Unpooled.wrappedBuffer(new byte[] {
-            -0x80, 0x06, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
-             0x00, 0x14, 0x00, 0x7b, 0x1f, 0x65, 0x64,
+            -0x80, 0x06, 0x00, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
+             0x00, 0x0E, 0x00, 0x00, 0x7b, 0x1f, 0x65, 0x64,
                    0x14, 0x10,
                    'n', 'e', 't', 't', 'y',
                    0x3a, 0x05, 0x00
@@ -73,19 +73,20 @@ public class SnappyFramedEncoderTest {
             'n', 'e', 't', 't', 'y'
         });
 
-        channel.writeOutbound(in);
+        channel.writeOutbound(in.copy());
         in.readerIndex(0); // rewind the buffer to write the same data
-        channel.writeOutbound(in);
+        channel.writeOutbound(in.copy());
         assertTrue(channel.finish());
 
         ByteBuf expected = Unpooled.wrappedBuffer(new byte[] {
-            -0x80, 0x06, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
-             0x01, 0x05, 0x00, 0x2d, -0x5a, -0x7e, -0x5e, 'n', 'e', 't', 't', 'y',
-             0x01, 0x05, 0x00, 0x2d, -0x5a, -0x7e, -0x5e, 'n', 'e', 't', 't', 'y',
+            -0x80, 0x06, 0x00, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
+             0x01, 0x09, 0x00, 0x00, 0x2d, -0x5a, -0x7e, -0x5e, 'n', 'e', 't', 't', 'y',
+             0x01, 0x09, 0x00, 0x00, 0x2d, -0x5a, -0x7e, -0x5e, 'n', 'e', 't', 't', 'y',
         });
         assertEquals(expected, channel.readOutbound());
+        in.release();
     }
-    
+
     /**
      * This test asserts that if we have a remainder after emitting a copy that
      * is less than 4 bytes (ie. the minimum required for a copy), we should
@@ -127,7 +128,7 @@ public class SnappyFramedEncoderTest {
              -1,   -1,   -1, // copy
              -1,   1 // remainder
         });
-        
+
         channel.writeOutbound(in);
         assertTrue(channel.finish());
     }

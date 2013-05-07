@@ -67,17 +67,11 @@ import java.net.SocketAddress;
  * transport.  Down-cast the {@link Channel} to sub-type to invoke such
  * operations.  For example, with the old I/O datagram transport, multicast
  * join / leave operations are provided by {@link DatagramChannel}.
- *
- * @apiviz.landmark
- * @apiviz.composedOf io.netty.channel.ChannelConfig
- * @apiviz.composedOf io.netty.channel.ChannelPipeline
- *
- * @apiviz.exclude ^io\.netty\.channel\.([a-z]+\.)+[^\.]+Channel$
  */
 public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPropertyAccess, Comparable<Channel> {
 
     /**
-     * Returns the unique integer ID of this channel.
+     * Returns the unique integer ID of this channel. The returned value MUST be non {@code null}.
      */
     Integer id();
 
@@ -179,10 +173,9 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
      */
     interface Unsafe {
         /**
-         * Return the {@link ChannelHandlerContext} which is directly connected to the outbound of the
-         * underlying transport.
+         * Return the internal {@link ChannelHandlerContext} that is placed before all user handlers.
          */
-        ChannelHandlerContext directOutboundContext();
+        ChannelHandlerContext headContext();
 
         /**
          * Return a {@link VoidChannelPromise}. This method always return the same instance.
@@ -253,7 +246,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
         void beginRead();
 
         /**
-         * Flush out all data that was buffered in the buffer of the {@link #directOutboundContext()} and was not
+         * Flush out all data that was buffered in the buffer of the {@link #headContext()} and was not
          * flushed out yet. After that is done the {@link ChannelFuture} will get notified
          */
         void flush(ChannelPromise promise);
@@ -266,7 +259,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
         /**
          * Send a {@link FileRegion} to the remote peer and notify the {@link ChannelPromise} once it completes
          * or an error was detected. Once the {@link FileRegion} was transfered or an error was thrown it will
-         * automaticly closed via {@link FileRegion#close()}.
+         * automaticly call {@link FileRegion#release()}.
          */
         void sendFile(FileRegion region, ChannelPromise promise);
     }

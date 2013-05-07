@@ -18,7 +18,7 @@ package io.netty.buffer;
 
 /**
  * An {@link IllegalStateException} raised when a user attempts to access a {@link Buf} which was freed by
- * {@link Buf#free()} already.
+ * {@link Buf#release()} } already.
  */
 public class IllegalBufferAccessException extends IllegalStateException {
 

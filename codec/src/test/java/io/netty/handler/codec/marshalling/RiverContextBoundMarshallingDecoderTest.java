@@ -25,5 +25,4 @@ public class RiverContextBoundMarshallingDecoderTest extends RiverMarshallingDec
         return new ContextBoundUnmarshallerProvider(factory, config);
     }
 
-
 }

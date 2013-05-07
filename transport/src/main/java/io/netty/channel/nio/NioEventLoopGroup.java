@@ -16,9 +16,8 @@
 package io.netty.channel.nio;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelTaskScheduler;
-import io.netty.channel.EventExecutor;
 import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.util.concurrent.EventExecutor;
 
 import java.nio.channels.Selector;
 import java.nio.channels.spi.SelectorProvider;
@@ -30,11 +29,11 @@ import java.util.concurrent.ThreadFactory;
 public class NioEventLoopGroup extends MultithreadEventLoopGroup {
 
     /**
-     * Create a new instance using {@link #DEFAULT_POOL_SIZE} number of threads, the default {@link ThreadFactory} and
-     * the  {@link SelectorProvider} which is returned by {@link SelectorProvider#provider()}.
+     * Create a new instance using {@link #DEFAULT_EVENT_LOOP_THREADS} number of threads, the default
+     * {@link ThreadFactory} and  the {@link SelectorProvider} which is returned by {@link SelectorProvider#provider()}.
      */
     public NioEventLoopGroup() {
-        this(0);
+        this(DEFAULT_EVENT_LOOP_THREADS);
     }
 
     /**
@@ -63,6 +62,16 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
     }
 
     /**
+     * Sets the percentage of the desired amount of time spent for I/O in the child event loops.  The default value is
+     * {@code 50}, which means the event loop will try to spend the same amount of time for I/O as for non-I/O tasks.
+     */
+    public void setIoRatio(int ioRatio) {
+        for (EventExecutor e: children()) {
+            ((NioEventLoop) e).setIoRatio(ioRatio);
+        }
+    }
+
+    /**
      * Replaces the current {@link Selector}s of the child event loops with newly created {@link Selector}s to work
      * around the  infamous epoll 100% CPU bug.
      */
@@ -74,7 +83,7 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
 
     @Override
     protected EventExecutor newChild(
-            ThreadFactory threadFactory, ChannelTaskScheduler scheduler, Object... args) throws Exception {
-        return new NioEventLoop(this, threadFactory, scheduler, (SelectorProvider) args[0]);
+            ThreadFactory threadFactory, Object... args) throws Exception {
+        return new NioEventLoop(this, threadFactory, (SelectorProvider) args[0]);
     }
 }

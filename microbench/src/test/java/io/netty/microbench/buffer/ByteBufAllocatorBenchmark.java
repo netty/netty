@@ -28,10 +28,12 @@ import java.util.Deque;
 
 public class ByteBufAllocatorBenchmark extends DefaultBenchmark {
 
-    private static final ByteBufAllocator POOLED_ALLOCATOR_HEAP = PooledByteBufAllocator.DEFAULT;
+    private static final ByteBufAllocator UNPOOLED_ALLOCATOR_HEAP = new UnpooledByteBufAllocator(false);
+    private static final ByteBufAllocator UNPOOLED_ALLOCATOR_DIRECT = new UnpooledByteBufAllocator(true);
+    private static final ByteBufAllocator POOLED_ALLOCATOR_HEAP = new PooledByteBufAllocator(false);
     private static final ByteBufAllocator POOLED_ALLOCATOR_DIRECT = new PooledByteBufAllocator(true);
 
-    @Param({"0", "256", "1024", "4096", "16384", "65536"})
+    @Param({ "0", "256", "1024", "4096", "16384", "65536" })
     private int size;
 
     @Param
@@ -51,7 +53,7 @@ public class ByteBufAllocatorBenchmark extends DefaultBenchmark {
     @Override
     protected void tearDown() throws Exception {
         for (ByteBuf b: queue) {
-            b.free();
+            b.release();
         }
         queue.clear();
     }
@@ -63,7 +65,7 @@ public class ByteBufAllocatorBenchmark extends DefaultBenchmark {
 
         for (int i = 0; i < reps; i ++) {
             queue.add(alloc.buffer(size));
-            queue.removeFirst().free();
+            queue.removeFirst().release();
         }
     }
 
@@ -71,13 +73,13 @@ public class ByteBufAllocatorBenchmark extends DefaultBenchmark {
         UNPOOLED_HEAP {
             @Override
             ByteBufAllocator alloc() {
-                return UnpooledByteBufAllocator.HEAP_BY_DEFAULT;
+                return UNPOOLED_ALLOCATOR_HEAP;
             }
         },
         UNPOOLED_DIRECT {
             @Override
             ByteBufAllocator alloc() {
-                return UnpooledByteBufAllocator.DIRECT_BY_DEFAULT;
+                return UNPOOLED_ALLOCATOR_DIRECT;
             }
         },
         POOLED_HEAP {

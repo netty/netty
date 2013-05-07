@@ -25,26 +25,29 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
- * Default {@link MessageBuf} implementation
+ * Default {@link MessageBuf} implementation.
+ *
+ * You should use {@link Unpooled#messageBuffer()} to create an instance
  *
  */
-final class DefaultMessageBuf<T> extends AbstractMessageBuf<T> {
+public class DefaultMessageBuf<T> extends AbstractMessageBuf<T> {
 
     private static final int MIN_INITIAL_CAPACITY = 8;
+    private static final Object[] PLACEHOLDER = new Object[2];
 
     private T[] elements;
     private int head;
     private int tail;
 
-    DefaultMessageBuf() {
+    protected DefaultMessageBuf() {
         this(MIN_INITIAL_CAPACITY << 1);
     }
 
-    DefaultMessageBuf(int initialCapacity) {
+    protected DefaultMessageBuf(int initialCapacity) {
         this(initialCapacity, Integer.MAX_VALUE);
     }
 
-    DefaultMessageBuf(int initialCapacity, int maxCapacity) {
+    protected DefaultMessageBuf(int initialCapacity, int maxCapacity) {
         super(maxCapacity);
 
         if (initialCapacity < 0) {
@@ -76,10 +79,10 @@ final class DefaultMessageBuf<T> extends AbstractMessageBuf<T> {
     }
 
     @Override
-    protected void doFree() {
-        elements = null;
+    protected void deallocate() {
         head = 0;
         tail = 0;
+        elements = cast(PLACEHOLDER);
     }
 
     @Override
@@ -87,6 +90,8 @@ final class DefaultMessageBuf<T> extends AbstractMessageBuf<T> {
         if (e == null) {
             throw new NullPointerException();
         }
+
+        ensureAccessible();
         if (!isWritable()) {
             return false;
         }
@@ -119,6 +124,7 @@ final class DefaultMessageBuf<T> extends AbstractMessageBuf<T> {
 
     @Override
     public T poll() {
+        ensureAccessible();
         int h = head;
         T result = elements[h]; // Element is null if deque empty
         if (result == null) {
@@ -131,6 +137,7 @@ final class DefaultMessageBuf<T> extends AbstractMessageBuf<T> {
 
     @Override
     public T peek() {
+        ensureAccessible();
         return elements[head]; // elements[head] is null if deque empty
     }
 
@@ -139,6 +146,8 @@ final class DefaultMessageBuf<T> extends AbstractMessageBuf<T> {
         if (o == null) {
             return false;
         }
+
+        ensureAccessible();
         int mask = elements.length - 1;
         int i = head;
         T x;
@@ -208,6 +217,7 @@ final class DefaultMessageBuf<T> extends AbstractMessageBuf<T> {
 
     @Override
     public Iterator<T> iterator() {
+        ensureAccessible();
         return new Itr();
     }
 
@@ -217,6 +227,7 @@ final class DefaultMessageBuf<T> extends AbstractMessageBuf<T> {
             return false;
         }
 
+        ensureAccessible();
         final int mask = elements.length - 1;
         int i = head;
         Object e;
@@ -232,6 +243,7 @@ final class DefaultMessageBuf<T> extends AbstractMessageBuf<T> {
 
     @Override
     public void clear() {
+        ensureAccessible();
         int head = this.head;
         int tail = this.tail;
         if (head != tail) {
@@ -247,11 +259,13 @@ final class DefaultMessageBuf<T> extends AbstractMessageBuf<T> {
 
     @Override
     public Object[] toArray() {
+        ensureAccessible();
         return copyElements(new Object[size()]);
     }
 
     @Override
     public <T> T[] toArray(T[] a) {
+        ensureAccessible();
         int size = size();
         if (a.length < size) {
             a = cast(Array.newInstance(a.getClass().getComponentType(), size));
@@ -286,11 +300,13 @@ final class DefaultMessageBuf<T> extends AbstractMessageBuf<T> {
 
         @Override
         public boolean hasNext() {
+            ensureAccessible();
             return cursor != fence;
         }
 
         @Override
         public T next() {
+            ensureAccessible();
             if (cursor == fence) {
                 throw new NoSuchElementException();
             }
@@ -307,6 +323,7 @@ final class DefaultMessageBuf<T> extends AbstractMessageBuf<T> {
 
         @Override
         public void remove() {
+            ensureAccessible();
             if (lastRet < 0) {
                 throw new IllegalStateException();
             }

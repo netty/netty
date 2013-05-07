@@ -28,8 +28,8 @@ import io.netty.channel.udt.DefaultUdtChannelConfig;
 import io.netty.channel.udt.UdtChannel;
 import io.netty.channel.udt.UdtChannelConfig;
 import io.netty.channel.udt.UdtMessage;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -154,7 +154,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel
                 maximumMessageSize);
 
         if (receivedMessageSize <= 0) {
-            byteBuf.free();
+            byteBuf.release();
             return 0;
         }
 
@@ -177,7 +177,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel
         // expects a message
         final UdtMessage message = (UdtMessage) messageQueue.peek();
 
-        final ByteBuf byteBuf = message.data();
+        final ByteBuf byteBuf = message.content();
 
         final int messageSize = byteBuf.readableBytes();
 
@@ -216,7 +216,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel
 
         messageQueue.remove();
 
-        message.free();
+        message.release();
 
         return 1;
     }

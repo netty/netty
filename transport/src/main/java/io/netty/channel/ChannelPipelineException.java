@@ -18,8 +18,6 @@ package io.netty.channel;
 /**
  * A {@link ChannelException} which is thrown when a {@link ChannelPipeline}
  * failed to execute an operation.
- *
- * @apiviz.exclude
  */
 public class ChannelPipelineException extends ChannelException {
 

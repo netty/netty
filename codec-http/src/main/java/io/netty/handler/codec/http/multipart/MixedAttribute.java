@@ -205,17 +205,34 @@ public class MixedAttribute implements Attribute {
     }
 
     @Override
-    public ByteBuf data() {
-        return attribute.data();
+    public ByteBuf content() {
+        return attribute.content();
     }
 
     @Override
-    public void free() {
-       attribute.free();
+    public int refCnt() {
+        return attribute.refCnt();
     }
 
     @Override
-    public boolean isFreed() {
-        return attribute.isFreed();
+    public Attribute retain() {
+        attribute.retain();
+        return this;
+    }
+
+    @Override
+    public Attribute retain(int increment) {
+        attribute.retain(increment);
+        return this;
+    }
+
+    @Override
+    public boolean release() {
+        return attribute.release();
+    }
+
+    @Override
+    public boolean release(int decrement) {
+        return attribute.release(decrement);
     }
 }

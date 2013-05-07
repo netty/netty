@@ -37,9 +37,8 @@ import static io.netty.handler.codec.http.HttpConstants.*;
  * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
  * To implement the encoder of such a derived protocol, extend this class and
  * implement all abstract methods properly.
- * @apiviz.landmark
  */
-public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageToByteEncoder<Object> {
+public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageToByteEncoder<HttpObject> {
 
     private static final int ST_INIT = 0;
     private static final int ST_CONTENT_NON_CHUNK = 1;
@@ -48,25 +47,18 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     @SuppressWarnings("RedundantFieldInitialization")
     private int state = ST_INIT;
 
-    /**
-     * Creates a new instance.
-     */
-    protected HttpObjectEncoder() {
-        super(HttpObject.class);
-    }
-
     @Override
-    @SuppressWarnings("unchecked")
-    protected void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, HttpObject msg, ByteBuf out) throws Exception {
         if (msg instanceof HttpMessage) {
             if (state != ST_INIT) {
                 throw new IllegalStateException("unexpected message type: " + msg.getClass().getSimpleName());
             }
 
-            HttpMessage m = (HttpMessage) msg;
+            @SuppressWarnings({ "unchecked", "CastConflictsWithInstanceof" })
+            H m = (H) msg;
 
             // Encode the message.
-            encodeInitialLine(out, (H) m);
+            encodeInitialLine(out, m);
             encodeHeaders(out, m);
             out.writeByte(CR);
             out.writeByte(LF);
@@ -80,7 +72,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             }
 
             HttpContent chunk = (HttpContent) msg;
-            ByteBuf content = chunk.data();
+            ByteBuf content = chunk.content();
             int contentLength = content.readableBytes();
 
             if (state == ST_CONTENT_NON_CHUNK) {

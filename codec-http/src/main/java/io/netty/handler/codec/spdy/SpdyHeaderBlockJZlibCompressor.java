@@ -16,14 +16,15 @@
 package io.netty.handler.codec.spdy;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
+
+import com.jcraft.jzlib.Deflater;
+import com.jcraft.jzlib.JZlib;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.compression.CompressionException;
-import io.netty.util.internal.jzlib.JZlib;
-import io.netty.util.internal.jzlib.ZStream;
 
 class SpdyHeaderBlockJZlibCompressor extends SpdyHeaderBlockCompressor {
 
-    private final ZStream z = new ZStream();
+    private final Deflater z = new Deflater();
 
     public SpdyHeaderBlockJZlibCompressor(
             int version, int compressionLevel, int windowBits, int memLevel) {

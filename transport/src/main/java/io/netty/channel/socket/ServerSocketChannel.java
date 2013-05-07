@@ -21,8 +21,6 @@ import java.net.InetSocketAddress;
 
 /**
  * A TCP/IP {@link ServerChannel} which accepts incoming TCP/IP connections.
- * @apiviz.landmark
- * @apiviz.composedOf io.netty.channel.socket.ServerSocketChannelConfig
  */
 public interface ServerSocketChannel extends ServerChannel {
     @Override

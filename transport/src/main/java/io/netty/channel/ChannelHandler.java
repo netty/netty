@@ -72,7 +72,7 @@ import java.lang.annotation.Target;
  *     // your methods here
  * }
  *
- * public class DataServerHandler extends {@link ChannelInboundMessageHandlerAdapter}&ltMessage&gt {
+ * public class DataServerHandler extends {@link ChannelInboundMessageHandlerAdapter}&lt;Message&gt; {
  *
  *     <b>private boolean loggedIn;</b>
  *
@@ -121,7 +121,7 @@ import java.lang.annotation.Target;
  * }
  *
  * {@code @Sharable}
- * public class DataServerHandler extends {@link ChannelInboundMessageHandlerAdapter}&ltMessage&gt {
+ * public class DataServerHandler extends {@link ChannelInboundMessageHandlerAdapter}&lt;Message&gt; {
  *   private final {@link AttributeKey}&lt{@link Boolean}&gt auth =
  *           new {@link AttributeKey}&lt{@link Boolean}&gt("auth");
  *
@@ -186,40 +186,24 @@ import java.lang.annotation.Target;
  * {@link ChannelPipeline} to find out more about inbound and outbound operations,
  * what fundamental differences they have, how they flow in a  pipeline,  and how to handle
  * the operation in your application.
- * @apiviz.landmark
- * @apiviz.exclude ^io\.netty\.handler\..*$
  */
 public interface ChannelHandler {
 
     /**
-     * Gets called before the {@link ChannelHandler} is added to the actual context.
+     * Gets called after the {@link ChannelHandler} was added to the actual context and it's ready to handle events.
      */
-    void beforeAdd(ChannelHandlerContext ctx) throws Exception;
+    void handlerAdded(ChannelHandlerContext ctx) throws Exception;
 
     /**
-     * Gets called after the {@link ChannelHandler} was added to the actual context.
+     * Gets called after the {@link ChannelHandler} was removed from the actual context and it doesn't handle events
+     * anymore.
      */
-    void afterAdd(ChannelHandlerContext ctx) throws Exception;
-
-    /**
-     * Gets called before the {@link ChannelHandler} is removed from the actual context.
-     */
-    void beforeRemove(ChannelHandlerContext ctx) throws Exception;
-
-    /**
-     * Gets called after the {@link ChannelHandler} was removed from the actual context.
-     */
-    void afterRemove(ChannelHandlerContext ctx) throws Exception;
+    void handlerRemoved(ChannelHandlerContext ctx) throws Exception;
 
     /**
      * Gets called if a {@link Throwable} was thrown.
      */
     void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception;
-
-    /**
-     * Gets called if an user event was triggered.
-     */
-    void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception;
 
     /**
      * Indicates that the same instance of the annotated {@link ChannelHandler}

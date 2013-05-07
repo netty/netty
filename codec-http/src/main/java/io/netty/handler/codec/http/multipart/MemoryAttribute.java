@@ -102,10 +102,10 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
     }
 
     @Override
-    public MemoryAttribute copy() {
+    public Attribute copy() {
         MemoryAttribute attr = new MemoryAttribute(getName());
         attr.setCharset(getCharset());
-        ByteBuf content = data();
+        ByteBuf content = content();
         if (content != null) {
             try {
                 attr.setContent(content.copy());
@@ -114,5 +114,17 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
             }
         }
         return attr;
+    }
+
+    @Override
+    public Attribute retain() {
+        super.retain();
+        return this;
+    }
+
+    @Override
+    public Attribute retain(int increment) {
+        super.retain(increment);
+        return this;
     }
 }

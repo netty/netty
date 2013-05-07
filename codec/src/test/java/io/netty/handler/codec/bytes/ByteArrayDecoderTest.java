@@ -15,18 +15,20 @@
  */
 package io.netty.handler.codec.bytes;
 
-import static io.netty.buffer.Unpooled.*;
-import static org.hamcrest.core.Is.*;
-import static org.junit.Assert.*;
 import io.netty.channel.embedded.EmbeddedMessageChannel;
-
-import java.util.Random;
-
+import io.netty.util.internal.EmptyArrays;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Random;
+
+import static io.netty.buffer.Unpooled.*;
+import static org.hamcrest.core.Is.*;
+import static org.junit.Assert.*;
+
 /**
  */
+@SuppressWarnings("ZeroLengthArrayAllocation")
 public class ByteArrayDecoderTest {
 
     private EmbeddedMessageChannel ch;
@@ -46,9 +48,8 @@ public class ByteArrayDecoderTest {
 
     @Test
     public void testDecodeEmpty() {
-        byte[] b = new byte[0];
-        ch.writeInbound(wrappedBuffer(b));
-        assertThat((byte[]) ch.readInbound(), is(b));
+        ch.writeInbound(EMPTY_BUFFER);
+        assertThat((byte[]) ch.readInbound(), is(EmptyArrays.EMPTY_BYTES));
     }
 
     @Test

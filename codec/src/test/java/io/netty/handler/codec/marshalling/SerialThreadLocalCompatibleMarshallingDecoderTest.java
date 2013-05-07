@@ -20,7 +20,6 @@ import org.jboss.marshalling.MarshallingConfiguration;
 
 public class SerialThreadLocalCompatibleMarshallingDecoderTest extends SerialCompatibleMarshallingDecoderTest {
 
-
     @Override
     protected UnmarshallerProvider createProvider(MarshallerFactory factory, MarshallingConfiguration config) {
         return new ThreadLocalUnmarshallerProvider(factory, config);

@@ -16,6 +16,7 @@
 package io.netty.handler.codec.base64;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -40,8 +41,6 @@ import io.netty.handler.codec.MessageToMessageDecoder;
  * // Encoder
  * pipeline.addLast("base64Encoder", new {@link Base64Encoder}());
  * </pre>
- * @apiviz.landmark
- * @apiviz.uses io.netty.handler.codec.base64.Base64
  */
 @Sharable
 public class Base64Decoder extends MessageToMessageDecoder<ByteBuf> {
@@ -53,8 +52,6 @@ public class Base64Decoder extends MessageToMessageDecoder<ByteBuf> {
     }
 
     public Base64Decoder(Base64Dialect dialect) {
-        super(ByteBuf.class);
-
         if (dialect == null) {
             throw new NullPointerException("dialect");
         }
@@ -62,7 +59,7 @@ public class Base64Decoder extends MessageToMessageDecoder<ByteBuf> {
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
-        return Base64.decode(msg, msg.readerIndex(), msg.readableBytes(), dialect);
+    protected void decode(ChannelHandlerContext ctx, ByteBuf msg, MessageBuf<Object> out) throws Exception {
+        out.add(Base64.decode(msg, msg.readerIndex(), msg.readableBytes(), dialect));
     }
 }

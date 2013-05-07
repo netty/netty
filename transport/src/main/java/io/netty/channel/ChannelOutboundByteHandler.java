@@ -21,6 +21,13 @@ import io.netty.buffer.ByteBuf;
  * {@link ChannelOutboundHandler} which operates on bytes which are hold in a {@link ByteBuf}.
  */
 public interface ChannelOutboundByteHandler extends ChannelOutboundHandler {
+    /**
+     * {@inheritDoc}
+     * <p>
+     * An implementation should respect the {@link ChannelConfig#getDefaultHandlerByteBufType()} setting unless
+     * there's a good reason to ignore it.  If in doubt, use {@link ChannelHandlerUtil#allocate(ChannelHandlerContext)}.
+     * </p>
+     */
     @Override
     ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception;
 

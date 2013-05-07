@@ -16,13 +16,13 @@
 
 package io.netty.util;
 
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.lang.ref.PhantomReference;
 import java.lang.ref.ReferenceQueue;
-import java.lang.ref.WeakReference;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -33,10 +33,9 @@ public final class ResourceLeakDetector<T> {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ResourceLeakDetector.class);
 
     static {
-        if (ENABLED) {
-            logger.debug("Resource leak detection enabled.");
-        }
+        logger.debug("io.netty.resourceLeakDetection: {}", ENABLED);
     }
+
     private static final int DEFAULT_SAMPLING_INTERVAL = 113;
 
     private static final ResourceLeak NOOP = new ResourceLeak() {
@@ -51,7 +50,7 @@ public final class ResourceLeakDetector<T> {
     private final DefaultResourceLeak tail = new DefaultResourceLeak(null);
 
     private final ReferenceQueue<Object> refQueue = new ReferenceQueue<Object>();
-    private final ConcurrentMap<Exception, Boolean> reportedLeaks = new ConcurrentHashMap<Exception, Boolean>();
+    private final ConcurrentMap<Exception, Boolean> reportedLeaks = PlatformDependent.newConcurrentHashMap();
 
     private final String resourceType;
     private final int samplingInterval;
@@ -59,7 +58,7 @@ public final class ResourceLeakDetector<T> {
     private long active;
     private final AtomicBoolean loggedTooManyActive = new AtomicBoolean();
 
-    private static volatile long leakCheckCnt;
+    private long leakCheckCnt;
 
     public ResourceLeakDetector(Class<?> resourceType) {
         this(resourceType.getSimpleName());
@@ -131,6 +130,8 @@ public final class ResourceLeakDetector<T> {
                 break;
             }
 
+            ref.clear();
+
             if (!ref.close()) {
                 continue;
             }
@@ -141,7 +142,7 @@ public final class ResourceLeakDetector<T> {
         }
     }
 
-    private final class DefaultResourceLeak extends WeakReference<Object> implements ResourceLeak {
+    private final class DefaultResourceLeak extends PhantomReference<Object> implements ResourceLeak {
 
         private final ResourceLeakException exception;
         private final AtomicBoolean freed;

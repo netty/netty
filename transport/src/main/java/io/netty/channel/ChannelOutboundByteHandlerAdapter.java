@@ -21,10 +21,10 @@ import io.netty.buffer.ByteBuf;
  * Abstract base class which handles outgoing bytes.
  */
 public abstract class ChannelOutboundByteHandlerAdapter
-        extends ChannelOutboundHandlerAdapter implements ChannelOutboundByteHandler {
+        extends ChannelOperationHandlerAdapter implements ChannelOutboundByteHandler {
     @Override
     public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ctx.alloc().buffer();
+        return ChannelHandlerUtil.allocate(ctx);
     }
 
     @Override
@@ -32,8 +32,20 @@ public abstract class ChannelOutboundByteHandlerAdapter
         ctx.outboundByteBuffer().discardSomeReadBytes();
     }
 
+    /**
+     * This method merely delegates the flush request to {@link #flush(ChannelHandlerContext, ByteBuf, ChannelPromise)}.
+     */
     @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        ctx.outboundByteBuffer().free();
+    public final void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        flush(ctx, ctx.outboundByteBuffer(), promise);
     }
+
+    /**
+     * Invoked when a flush request has been issued.
+     *
+     * @param ctx the current context
+     * @param in this handler's outbound buffer
+     * @param promise the promise associate with the current flush request
+     */
+    protected abstract void flush(ChannelHandlerContext ctx, ByteBuf in, ChannelPromise promise) throws Exception;
 }

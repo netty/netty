@@ -16,17 +16,17 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.MessageBuf;
-import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPromise;
+import io.netty.util.internal.TypeParameterMatcher;
 
 /**
  * A Codec for on-the-fly encoding/decoding of message.
  *
- * This can be though of an combination of {@link MessageToMessageDecoder} and {@link MessageToMessageEncoder}.
+ * This can be thought of as a combination of {@link MessageToMessageDecoder} and {@link MessageToMessageEncoder}.
  *
  * Here is an example of a {@link MessageToMessageCodec} which just decode from {@link Integer} to {@link Long}
  * and encode from {@link Long} to {@link Integer}.
@@ -49,77 +49,63 @@ import io.netty.channel.ChannelPromise;
  * </pre>
  */
 public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
-        extends ChannelHandlerAdapter
+        extends ChannelDuplexHandler
         implements ChannelInboundMessageHandler<INBOUND_IN>,
                    ChannelOutboundMessageHandler<OUTBOUND_IN> {
 
-    private final MessageToMessageEncoder<OUTBOUND_IN> encoder =
-            new MessageToMessageEncoder<OUTBOUND_IN>() {
+    private final MessageToMessageEncoder<Object> encoder =
+            new MessageToMessageEncoder<Object>() {
         @Override
-        public boolean isEncodable(Object msg) throws Exception {
-            return MessageToMessageCodec.this.isEncodable(msg);
+        public boolean acceptOutboundMessage(Object msg) throws Exception {
+            return MessageToMessageCodec.this.acceptOutboundMessage(msg);
         }
 
         @Override
-        public Object encode(ChannelHandlerContext ctx, OUTBOUND_IN msg) throws Exception {
-            return MessageToMessageCodec.this.encode(ctx, msg);
-        }
-
-        @Override
-        protected void freeOutboundMessage(OUTBOUND_IN msg) throws Exception {
-            MessageToMessageCodec.this.freeOutboundMessage(msg);
+        @SuppressWarnings("unchecked")
+        protected void encode(ChannelHandlerContext ctx, Object msg, MessageBuf<Object> out) throws Exception {
+            MessageToMessageCodec.this.encode(ctx, (OUTBOUND_IN) msg, out);
         }
     };
 
-    private final MessageToMessageDecoder<INBOUND_IN> decoder =
-            new MessageToMessageDecoder<INBOUND_IN>() {
+    private final MessageToMessageDecoder<Object> decoder =
+            new MessageToMessageDecoder<Object>() {
+
         @Override
-        public boolean isDecodable(Object msg) throws Exception {
-            return MessageToMessageCodec.this.isDecodable(msg);
+        public boolean acceptInboundMessage(Object msg) throws Exception {
+            return MessageToMessageCodec.this.acceptInboundMessage(msg);
         }
 
         @Override
-        public Object decode(ChannelHandlerContext ctx, INBOUND_IN msg) throws Exception {
-            return MessageToMessageCodec.this.decode(ctx, msg);
-        }
-
-        @Override
-        protected void freeInboundMessage(INBOUND_IN msg) throws Exception {
-            MessageToMessageCodec.this.freeInboundMessage(msg);
+        @SuppressWarnings("unchecked")
+        protected void decode(ChannelHandlerContext ctx, Object msg, MessageBuf<Object> out) throws Exception {
+            MessageToMessageCodec.this.decode(ctx, (INBOUND_IN) msg, out);
         }
     };
 
-    private final Class<?>[] acceptedInboundMsgTypes;
-    private final Class<?>[] acceptedOutboundMsgTypes;
+    private final TypeParameterMatcher inboundMsgMatcher;
+    private final TypeParameterMatcher outboundMsgMatcher;
 
     protected MessageToMessageCodec() {
-        this(null, null);
+        inboundMsgMatcher = TypeParameterMatcher.find(this, MessageToMessageCodec.class, "INBOUND_IN");
+        outboundMsgMatcher = TypeParameterMatcher.find(this, MessageToMessageCodec.class, "OUTBOUND_IN");
     }
 
     protected MessageToMessageCodec(
-            Class<?>[] acceptedInboundMsgTypes, Class<?>[] acceptedOutboundMsgTypes) {
-        this.acceptedInboundMsgTypes = ChannelHandlerUtil.acceptedMessageTypes(acceptedInboundMsgTypes);
-        this.acceptedOutboundMsgTypes = ChannelHandlerUtil.acceptedMessageTypes(acceptedOutboundMsgTypes);
+            Class<? extends INBOUND_IN> inboundMessageType, Class<? extends OUTBOUND_IN> outboundMessageType) {
+        inboundMsgMatcher = TypeParameterMatcher.get(inboundMessageType);
+        outboundMsgMatcher = TypeParameterMatcher.get(outboundMessageType);
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public MessageBuf<INBOUND_IN> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return decoder.newInboundBuffer(ctx);
+        return (MessageBuf<INBOUND_IN>) decoder.newInboundBuffer(ctx);
     }
 
     @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        decoder.freeInboundBuffer(ctx);
-    }
-
-    @Override
+    @SuppressWarnings("unchecked")
     public MessageBuf<OUTBOUND_IN> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return encoder.newOutboundBuffer(ctx);
-    }
-
-    @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        encoder.freeOutboundBuffer(ctx);
+        return (MessageBuf<OUTBOUND_IN>) encoder.newOutboundBuffer(ctx);
     }
 
     @Override
@@ -138,8 +124,8 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
      *
      * @param msg the message
      */
-    public boolean isDecodable(Object msg) throws Exception {
-        return ChannelHandlerUtil.acceptMessage(acceptedInboundMsgTypes, msg);
+    public boolean acceptInboundMessage(Object msg) throws Exception {
+        return inboundMsgMatcher.match(msg);
     }
 
     /**
@@ -147,18 +133,10 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
      *
      * @param msg the message
      */
-    public boolean isEncodable(Object msg) throws Exception {
-        return ChannelHandlerUtil.acceptMessage(acceptedOutboundMsgTypes, msg);
+    public boolean acceptOutboundMessage(Object msg) throws Exception {
+        return outboundMsgMatcher.match(msg);
     }
 
-    protected abstract Object encode(ChannelHandlerContext ctx, OUTBOUND_IN msg) throws Exception;
-    protected abstract Object decode(ChannelHandlerContext ctx, INBOUND_IN msg) throws Exception;
-
-    protected void freeInboundMessage(INBOUND_IN msg) throws Exception {
-        ChannelHandlerUtil.freeMessage(msg);
-    }
-
-    protected void freeOutboundMessage(OUTBOUND_IN msg) throws Exception {
-        ChannelHandlerUtil.freeMessage(msg);
-    }
+    protected abstract void encode(ChannelHandlerContext ctx, OUTBOUND_IN msg, MessageBuf<Object> out) throws Exception;
+    protected abstract void decode(ChannelHandlerContext ctx, INBOUND_IN msg, MessageBuf<Object> out) throws Exception;
 }

@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.FileRegion;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
@@ -30,7 +31,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.WritableByteChannel;
 
 /**
- * {@link io.netty.channel.nio.AbstractNioChannel} base class for {@link Channel}s that operate on bytes.
+ * {@link AbstractNioChannel} base class for {@link Channel}s that operate on bytes.
  */
 public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
@@ -56,13 +57,16 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         public void read() {
             assert eventLoop().inEventLoop();
             final SelectionKey key = selectionKey();
-            key.interestOps(key.interestOps() & ~readInterestOp);
+            if (!config().isAutoRead()) {
+                // only remove readInterestOp if needed
+                key.interestOps(key.interestOps() & ~readInterestOp);
+            }
 
             final ChannelPipeline pipeline = pipeline();
             final ByteBuf byteBuf = pipeline.inboundByteBuffer();
             boolean closed = false;
             boolean read = false;
-            boolean firedInboundBufferSuspended = false;
+            boolean firedChannelReadSuspended = false;
             try {
                 expandReadBuffer(byteBuf);
                 loop: for (;;) {
@@ -103,8 +107,8 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 if (t instanceof IOException) {
                     closed = true;
                 } else if (!closed) {
-                    firedInboundBufferSuspended = true;
-                    pipeline.fireInboundBufferSuspended();
+                    firedChannelReadSuspended = true;
+                    pipeline.fireChannelReadSuspended();
                 }
                 pipeline().fireExceptionCaught(t);
             } finally {
@@ -116,13 +120,14 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     setInputShutdown();
                     if (isOpen()) {
                         if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
+                            key.interestOps(key.interestOps() & ~readInterestOp);
                             pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                         } else {
                             close(voidFuture());
                         }
                     }
-                } else if (!firedInboundBufferSuspended) {
-                    pipeline.fireInboundBufferSuspended();
+                } else if (!firedChannelReadSuspended) {
+                    pipeline.fireChannelReadSuspended();
                 }
             }
         }
@@ -130,12 +135,6 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
     @Override
     protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
-        if (!buf.isReadable()) {
-            // Reset reader/writerIndex to 0 if the buffer is empty.
-            buf.clear();
-            return;
-        }
-
         for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
             int localFlushedAmount = doWriteBytes(buf, i == 0);
             if (localFlushedAmount > 0) {
@@ -187,15 +186,18 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                         return;
                     } else {
                         writtenBytes += localWrittenBytes;
+                        if (promise instanceof ChannelProgressivePromise) {
+                            ((ChannelProgressivePromise) promise).setProgress(writtenBytes, region.count());
+                        }
                         if (writtenBytes >= region.count()) {
-                            region.close();
+                            region.release();
                             promise.setSuccess();
                             return;
                         }
                     }
                 }
             } catch (Throwable cause) {
-                region.close();
+                region.release();
                 promise.setFailure(cause);
             }
         }
@@ -213,7 +215,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             }
 
             if (writtenBytes < region.count()) {
-                region.close();
+                region.release();
                 if (!isOpen()) {
                     promise.setFailure(new ClosedChannelException());
                 } else {

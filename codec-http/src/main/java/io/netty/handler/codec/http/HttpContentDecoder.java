@@ -15,12 +15,16 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.MessageToMessageDecoder;
+
+import java.util.Collections;
 
 /**
  * Decodes the content of the received {@link HttpRequest} and {@link HttpContent}.
@@ -41,34 +45,43 @@ import io.netty.handler.codec.MessageToMessageDecoder;
  * so that this handler can intercept HTTP requests after {@link HttpObjectDecoder}
  * converts {@link ByteBuf}s into HTTP requests.
  */
-public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object> {
+public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObject> {
 
     private EmbeddedByteChannel decoder;
     private HttpMessage message;
     private boolean decodeStarted;
-
-    /**
-     * Creates a new instance.
-     */
-    protected HttpContentDecoder() {
-        super(HttpObject.class);
-    }
+    private boolean continueResponse;
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Object msg) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, HttpObject msg, MessageBuf<Object> out) throws Exception {
         if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().code() == 100) {
+
+            if (!(msg instanceof LastHttpContent)) {
+                continueResponse = true;
+            }
             // 100-continue response must be passed through.
-            return msg;
+            out.add(BufUtil.retain(msg));
+            return;
         }
+
+        if (continueResponse) {
+            if (msg instanceof LastHttpContent) {
+                continueResponse = false;
+            }
+            // 100-continue response must be passed through.
+            out.add(BufUtil.retain(msg));
+            return;
+        }
+
         if (msg instanceof HttpMessage) {
             assert message == null;
             message = (HttpMessage) msg;
-
+            decodeStarted = false;
             cleanup();
         }
 
         if (msg instanceof HttpContent) {
-            HttpContent c = (HttpContent) msg;
+            final HttpContent c = (HttpContent) msg;
 
             if (!decodeStarted) {
                 decodeStarted = true;
@@ -95,37 +108,42 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
                     } else {
                         headers.set(HttpHeaders.Names.CONTENT_ENCODING, targetContentEncoding);
                     }
+
                     Object[] decoded = decodeContent(message, c);
 
                     // Replace the content.
                     if (headers.contains(HttpHeaders.Names.CONTENT_LENGTH)) {
                         headers.set(
                                 HttpHeaders.Names.CONTENT_LENGTH,
-                                Integer.toString(((ByteBufHolder) decoded[1]).data().readableBytes()));
+                                Integer.toString(((ByteBufHolder) decoded[1]).content().readableBytes()));
                     }
-                    return decoded;
+
+                    Collections.addAll(out, decoded);
+                    return;
                 }
-                return new Object[] { message, c };
+
+                if (c instanceof LastHttpContent) {
+                    decodeStarted = false;
+                }
+                out.add(message);
+                out.add(c.retain());
+                return;
             }
-            return decodeContent(null, c);
-        }
 
-        // Because FullHttpMessage and HttpChunk is a mutable object, we can simply forward it.
-        return msg;
-    }
-
-    @Override
-    protected void freeInboundMessage(Object msg) throws Exception {
-        if (decoder == null) {
-            // if the decoder was null we returned the original message so we are not allowed to free it
-            return;
+            if (decoder != null) {
+                Collections.addAll(out, decodeContent(null, c));
+            } else {
+                if (c instanceof LastHttpContent) {
+                    decodeStarted = false;
+                }
+                out.add(c.retain());
+            }
         }
-        super.freeInboundMessage(msg);
     }
 
     private Object[] decodeContent(HttpMessage header, HttpContent c) {
         ByteBuf newContent = Unpooled.buffer();
-        ByteBuf content = c.data();
+        ByteBuf content = c.content();
         decode(content, newContent);
 
         if (c instanceof LastHttpContent) {
@@ -140,6 +158,12 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
                 } else {
                     return new Object[] { header,  new DefaultHttpContent(newContent),
                             new DefaultLastHttpContent(lastProduct)};
+                }
+            } else {
+                if (header == null) {
+                    return new Object[] { new DefaultLastHttpContent(newContent) };
+                } else {
+                    return new Object[] { header, new DefaultLastHttpContent(newContent) };
                 }
             }
         }
@@ -175,9 +199,9 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
     }
 
     @Override
-    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         cleanup();
-        super.afterRemove(ctx);
+        super.handlerRemoved(ctx);
     }
 
     @Override
@@ -194,7 +218,8 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
     }
 
     private void decode(ByteBuf in, ByteBuf out) {
-        decoder.writeInbound(in);
+        // call retain as it will be release after is written
+        decoder.writeInbound(in.retain());
         fetchDecoderOutput(out);
     }
 
@@ -202,6 +227,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<Object>
         if (decoder.finish()) {
             fetchDecoderOutput(out);
         }
+        decodeStarted = false;
         decoder = null;
     }
 

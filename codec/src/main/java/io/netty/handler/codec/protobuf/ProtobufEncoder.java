@@ -15,8 +15,11 @@
  */
 package io.netty.handler.codec.protobuf;
 
-import static io.netty.buffer.Unpooled.*;
+import com.google.protobuf.Message;
+import com.google.protobuf.MessageLite;
+import com.google.protobuf.MessageLiteOrBuilder;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -24,8 +27,7 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.MessageToMessageEncoder;
 
-import com.google.protobuf.Message;
-import com.google.protobuf.MessageLite;
+import static io.netty.buffer.Unpooled.*;
 
 /**
  * Encodes the requested <a href="http://code.google.com/p/protobuf/">Google
@@ -53,23 +55,19 @@ import com.google.protobuf.MessageLite;
  *     ch.write(res);
  * }
  * </pre>
- * @apiviz.landmark
  */
 @Sharable
-public class ProtobufEncoder extends MessageToMessageEncoder<Object> {
-
-    public ProtobufEncoder() {
-        super(MessageLite.class, MessageLite.Builder.class);
-    }
+public class ProtobufEncoder extends MessageToMessageEncoder<MessageLiteOrBuilder> {
 
     @Override
-    protected Object encode(ChannelHandlerContext ctx, Object msg) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, MessageLiteOrBuilder msg, MessageBuf<Object> out)
+            throws Exception {
         if (msg instanceof MessageLite) {
-            return wrappedBuffer(((MessageLite) msg).toByteArray());
+            out.add(wrappedBuffer(((MessageLite) msg).toByteArray()));
+            return;
         }
         if (msg instanceof MessageLite.Builder) {
-            return wrappedBuffer(((MessageLite.Builder) msg).build().toByteArray());
+            out.add(wrappedBuffer(((MessageLite.Builder) msg).build().toByteArray()));
         }
-        return null;
     }
 }

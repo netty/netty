@@ -15,7 +15,9 @@
  */
 package io.netty.handler.codec.http.multipart;
 
+import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -32,6 +34,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -41,7 +44,7 @@ import static io.netty.buffer.Unpooled.*;
 /**
  * This decoder will decode Body and can handle POST BODY.
  */
-public class HttpPostRequestDecoder {
+public class HttpPostRequestDecoder implements Iterator<InterfaceHttpData> {
     /**
      * Factory used to create InterfaceHttpData
      */
@@ -205,9 +208,14 @@ public class HttpPostRequestDecoder {
         if (!bodyToDecode) {
             throw new IncompatibleDataDecoderException("No Body to decode");
         }
-        undecodedChunk = buffer();
-        isLastChunk = true;
-        parseBody();
+        if (request instanceof HttpContent) {
+            // Offer automatically if the given request is als type of HttpContent
+            // See #1089
+            offer((HttpContent) request);
+        } else {
+            undecodedChunk = buffer();
+            parseBody();
+        }
     }
 
     /**
@@ -342,8 +350,11 @@ public class HttpPostRequestDecoder {
      *             if there is a problem with the charset decoding or other
      *             errors
      */
-    public void offer(HttpContent content) throws ErrorDataDecoderException {
-        ByteBuf chunked = content.data();
+    public HttpPostRequestDecoder offer(HttpContent content) throws ErrorDataDecoderException {
+        // Maybe we should better not copy here for performance reasons but this will need
+        // more care by teh caller to release the content in a correct manner later
+        // So maybe something to optimize on a later stage
+        ByteBuf chunked = content.content().copy();
         if (undecodedChunk == null) {
             undecodedChunk = chunked;
         } else {
@@ -356,6 +367,7 @@ public class HttpPostRequestDecoder {
             isLastChunk = true;
         }
         parseBody();
+        return this;
     }
 
     /**
@@ -418,7 +430,7 @@ public class HttpPostRequestDecoder {
     /**
      * Utility function to add a new decoded data
      */
-    private void addHttpData(InterfaceHttpData data) {
+    protected void addHttpData(InterfaceHttpData data) {
         if (data == null) {
             return;
         }
@@ -478,7 +490,7 @@ public class HttpPostRequestDecoder {
                     if (read == '&') {
                         currentStatus = MultiPartStatus.DISPOSITION;
                         ampersandpos = currentpos - 1;
-                        setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos));
+                        setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos).retain());
                         firstpos = currentpos;
                         contRead = true;
                     } else if (read == HttpConstants.CR) {
@@ -488,7 +500,7 @@ public class HttpPostRequestDecoder {
                             if (read == HttpConstants.LF) {
                                 currentStatus = MultiPartStatus.PREEPILOGUE;
                                 ampersandpos = currentpos - 2;
-                                setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos));
+                                setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos).retain());
                                 firstpos = currentpos;
                                 contRead = false;
                             } else {
@@ -501,7 +513,7 @@ public class HttpPostRequestDecoder {
                     } else if (read == HttpConstants.LF) {
                         currentStatus = MultiPartStatus.PREEPILOGUE;
                         ampersandpos = currentpos - 1;
-                        setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos));
+                        setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos).retain());
                         firstpos = currentpos;
                         contRead = false;
                     }
@@ -515,7 +527,7 @@ public class HttpPostRequestDecoder {
                 // special case
                 ampersandpos = currentpos;
                 if (ampersandpos > firstpos) {
-                    setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos));
+                    setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos).retain());
                 } else if (!currentAttribute.isCompleted()) {
                     setFinalBuffer(EMPTY_BUFFER);
                 }
@@ -526,7 +538,7 @@ public class HttpPostRequestDecoder {
             if (contRead && currentAttribute != null) {
                 // reset index except if to continue in case of FIELD getStatus
                 if (currentStatus == MultiPartStatus.FIELD) {
-                    currentAttribute.addContent(undecodedChunk.slice(firstpos, currentpos - firstpos), false);
+                    currentAttribute.addContent(undecodedChunk.slice(firstpos, currentpos - firstpos).retain(), false);
                     firstpos = currentpos;
                 }
                 undecodedChunk.readerIndex(firstpos);
@@ -598,7 +610,7 @@ public class HttpPostRequestDecoder {
                     if (read == '&') {
                         currentStatus = MultiPartStatus.DISPOSITION;
                         ampersandpos = currentpos - 1;
-                        setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos));
+                        setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos).retain());
                         firstpos = currentpos;
                         contRead = true;
                     } else if (read == HttpConstants.CR) {
@@ -609,7 +621,7 @@ public class HttpPostRequestDecoder {
                                 currentStatus = MultiPartStatus.PREEPILOGUE;
                                 ampersandpos = currentpos - 2;
                                 sao.setReadPosition(0);
-                                setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos));
+                                setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos).retain());
                                 firstpos = currentpos;
                                 contRead = false;
                                 break loop;
@@ -627,7 +639,7 @@ public class HttpPostRequestDecoder {
                         currentStatus = MultiPartStatus.PREEPILOGUE;
                         ampersandpos = currentpos - 1;
                         sao.setReadPosition(0);
-                        setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos));
+                        setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos).retain());
                         firstpos = currentpos;
                         contRead = false;
                         break loop;
@@ -644,7 +656,7 @@ public class HttpPostRequestDecoder {
                 // special case
                 ampersandpos = currentpos;
                 if (ampersandpos > firstpos) {
-                    setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos));
+                    setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos).retain());
                 } else if (!currentAttribute.isCompleted()) {
                     setFinalBuffer(EMPTY_BUFFER);
                 }
@@ -655,7 +667,7 @@ public class HttpPostRequestDecoder {
             if (contRead && currentAttribute != null) {
                 // reset index except if to continue in case of FIELD getStatus
                 if (currentStatus == MultiPartStatus.FIELD) {
-                    currentAttribute.addContent(undecodedChunk.slice(firstpos, currentpos - firstpos), false);
+                    currentAttribute.addContent(undecodedChunk.slice(firstpos, currentpos - firstpos).retain(), false);
                     firstpos = currentpos;
                 }
                 undecodedChunk.readerIndex(firstpos);
@@ -775,7 +787,8 @@ public class HttpPostRequestDecoder {
             Attribute nameAttribute = currentFieldAttributes.get(HttpPostBodyUtil.NAME);
             if (currentAttribute == null) {
                 try {
-                    currentAttribute = factory.createAttribute(request, nameAttribute.getValue());
+                    currentAttribute = factory.createAttribute(request,
+                            decodeAttribute(nameAttribute.getValue(), charset));
                 } catch (NullPointerException e) {
                     throw new ErrorDataDecoderException(e);
                 } catch (IllegalArgumentException e) {
@@ -949,7 +962,8 @@ public class HttpPostRequestDecoder {
                         String[] values = StringUtil.split(contents[i], '=');
                         Attribute attribute;
                         try {
-                            attribute = factory.createAttribute(request, values[0].trim(),
+                            attribute = factory.createAttribute(request,
+                                    decodeAttribute(values[0].trim(), charset),
                                     decodeAttribute(cleanString(values[1]), charset));
                         } catch (NullPointerException e) {
                             throw new ErrorDataDecoderException(e);
@@ -1009,7 +1023,8 @@ public class HttpPostRequestDecoder {
                         } else {
                             Attribute attribute;
                             try {
-                                attribute = factory.createAttribute(request, contents[0].trim(),
+                                attribute = factory.createAttribute(request,
+                                        decodeAttribute(contents[0].trim(), charset),
                                         decodeAttribute(cleanString(contents[i]), charset));
                             } catch (NullPointerException e) {
                                 throw new ErrorDataDecoderException(e);
@@ -1059,7 +1074,7 @@ public class HttpPostRequestDecoder {
      * @return the InterfaceHttpData if any
      * @throws ErrorDataDecoderException
      */
-    private InterfaceHttpData getFileUpload(String delimiter) throws ErrorDataDecoderException {
+    protected InterfaceHttpData getFileUpload(String delimiter) throws ErrorDataDecoderException {
         // eventually restart from existing FileUpload
         // Now get value according to Content-Type and Charset
         Attribute encoding = currentFieldAttributes.get(HttpHeaders.Names.CONTENT_TRANSFER_ENCODING);
@@ -1110,8 +1125,10 @@ public class HttpPostRequestDecoder {
                 size = 0;
             }
             try {
-                currentFileUpload = factory.createFileUpload(request, nameAttribute.getValue(),
-                        filenameAttribute.getValue(), contentTypeAttribute.getValue(), mechanism.value(), localCharset,
+                currentFileUpload = factory.createFileUpload(request,
+                        decodeAttribute(nameAttribute.getValue(), charset),
+                        decodeAttribute(filenameAttribute.getValue(), charset),
+                        contentTypeAttribute.getValue(), mechanism.value(), localCharset,
                         size);
             } catch (NullPointerException e) {
                 throw new ErrorDataDecoderException(e);
@@ -1506,6 +1523,12 @@ public class HttpPostRequestDecoder {
                                 newLine = true;
                                 index = 0;
                                 lastPosition = undecodedChunk.readerIndex() - 2;
+                            } else {
+                                // save last valid position
+                                lastPosition = undecodedChunk.readerIndex() - 1;
+
+                                // Unread next byte.
+                                undecodedChunk.readerIndex(lastPosition);
                             }
                         }
                     } else if (nextByte == HttpConstants.LF) {
@@ -1526,6 +1549,12 @@ public class HttpPostRequestDecoder {
                             newLine = true;
                             index = 0;
                             lastPosition = undecodedChunk.readerIndex() - 2;
+                        } else {
+                            // save last valid position
+                            lastPosition = undecodedChunk.readerIndex() - 1;
+
+                            // Unread next byte.
+                            undecodedChunk.readerIndex(lastPosition);
                         }
                     }
                 } else if (nextByte == HttpConstants.LF) {
@@ -1538,7 +1567,7 @@ public class HttpPostRequestDecoder {
                 }
             }
         }
-        ByteBuf buffer = undecodedChunk.slice(readerIndex, lastPosition - readerIndex);
+        ByteBuf buffer = undecodedChunk.slice(readerIndex, lastPosition - readerIndex).retain();
         if (found) {
             // found so lastPosition is correct and final
             try {
@@ -1611,6 +1640,12 @@ public class HttpPostRequestDecoder {
                                 newLine = true;
                                 index = 0;
                                 lastrealpos = sao.pos - 2;
+                            } else {
+                                // unread next byte
+                                sao.pos--;
+
+                                // save last valid position
+                                lastrealpos = sao.pos;
                             }
                         }
                     } else if (nextByte == HttpConstants.LF) {
@@ -1631,6 +1666,12 @@ public class HttpPostRequestDecoder {
                             newLine = true;
                             index = 0;
                             lastrealpos = sao.pos - 2;
+                        } else {
+                            // unread next byte
+                            sao.pos--;
+
+                            // save last valid position
+                            lastrealpos = sao.pos;
                         }
                     }
                 } else if (nextByte == HttpConstants.LF) {
@@ -1644,7 +1685,7 @@ public class HttpPostRequestDecoder {
             }
         }
         lastPosition = sao.getReadPosition(lastrealpos);
-        ByteBuf buffer = undecodedChunk.slice(readerIndex, lastPosition - readerIndex);
+        ByteBuf buffer = undecodedChunk.slice(readerIndex, lastPosition - readerIndex).retain();
         if (found) {
             // found so lastPosition is correct and final
             try {
@@ -1742,14 +1783,16 @@ public class HttpPostRequestDecoder {
                 // delimiter or simple one)
                 // so go back of delimiter size
                 try {
-                    currentAttribute.addContent(undecodedChunk.slice(readerIndex, lastPosition - readerIndex), true);
+                    currentAttribute.addContent(
+                            undecodedChunk.slice(readerIndex, lastPosition - readerIndex).retain(), true);
                 } catch (IOException e) {
                     throw new ErrorDataDecoderException(e);
                 }
                 undecodedChunk.readerIndex(lastPosition);
             } else {
                 try {
-                    currentAttribute.addContent(undecodedChunk.slice(readerIndex, lastPosition - readerIndex), false);
+                    currentAttribute.addContent(
+                            undecodedChunk.slice(readerIndex, lastPosition - readerIndex).retain(), false);
                 } catch (IOException e) {
                     throw new ErrorDataDecoderException(e);
                 }
@@ -1845,14 +1888,16 @@ public class HttpPostRequestDecoder {
                 // delimiter or simple one)
                 // so go back of delimiter size
                 try {
-                    currentAttribute.addContent(undecodedChunk.slice(readerIndex, lastPosition - readerIndex), true);
+                    currentAttribute.addContent(
+                            undecodedChunk.slice(readerIndex, lastPosition - readerIndex).retain(), true);
                 } catch (IOException e) {
                     throw new ErrorDataDecoderException(e);
                 }
                 undecodedChunk.readerIndex(lastPosition);
             } else {
                 try {
-                    currentAttribute.addContent(undecodedChunk.slice(readerIndex, lastPosition - readerIndex), false);
+                    currentAttribute.addContent(
+                            undecodedChunk.slice(readerIndex, lastPosition - readerIndex).retain(), false);
                 } catch (IOException e) {
                     throw new ErrorDataDecoderException(e);
                 }
@@ -1992,11 +2037,16 @@ public class HttpPostRequestDecoder {
         return array;
     }
 
+    @Override
+    public void remove() {
+        throw new UnsupportedOperationException();
+    }
+
     /**
      * Exception when try reading data from request in chunked format, and not
      * enough data are available (need more chunks)
      */
-    public static class NotEnoughDataDecoderException extends Exception {
+    public static class NotEnoughDataDecoderException extends DecoderException {
         private static final long serialVersionUID = -7846841864603865638L;
 
         public NotEnoughDataDecoderException() {
@@ -2018,14 +2068,14 @@ public class HttpPostRequestDecoder {
     /**
      * Exception when the body is fully decoded, even if there is still data
      */
-    public static class EndOfDataDecoderException extends Exception {
+    public static class EndOfDataDecoderException extends DecoderException {
         private static final long serialVersionUID = 1336267941020800769L;
     }
 
     /**
      * Exception when an error occurs while decoding
      */
-    public static class ErrorDataDecoderException extends Exception {
+    public static class ErrorDataDecoderException extends DecoderException {
         private static final long serialVersionUID = 5020247425493164465L;
 
         public ErrorDataDecoderException() {
@@ -2047,7 +2097,7 @@ public class HttpPostRequestDecoder {
     /**
      * Exception when an unappropriated getMethod was called on a request
      */
-    public static class IncompatibleDataDecoderException extends Exception {
+    public static class IncompatibleDataDecoderException extends DecoderException {
         private static final long serialVersionUID = -953268047926250267L;
 
         public IncompatibleDataDecoderException() {

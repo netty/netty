@@ -25,10 +25,9 @@ import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.example.udt.util.UtilThreadFactory;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ThreadFactory;
+import java.util.logging.Logger;
 
 /**
  * UDT Message Flow Server
@@ -37,8 +36,7 @@ import java.util.concurrent.ThreadFactory;
  */
 public class MsgEchoServer {
 
-    private static final Logger log = LoggerFactory
-            .getLogger(MsgEchoServer.class);
+    private static final Logger log = Logger.getLogger(MsgEchoServer.class.getName());
 
     private final int port;
 
@@ -54,8 +52,8 @@ public class MsgEchoServer {
         final NioEventLoopGroup connectGroup = new NioEventLoopGroup(1,
                 connectFactory, NioUdtProvider.MESSAGE_PROVIDER);
         // Configure the server.
-        final ServerBootstrap boot = new ServerBootstrap();
         try {
+            final ServerBootstrap boot = new ServerBootstrap();
             boot.group(acceptGroup, connectGroup)
                     .channelFactory(NioUdtProvider.MESSAGE_ACCEPTOR)
                     .option(ChannelOption.SO_BACKLOG, 10)
@@ -75,7 +73,8 @@ public class MsgEchoServer {
             future.channel().closeFuture().sync();
         } finally {
             // Shut down all event loops to terminate all threads.
-            boot.shutdown();
+            acceptGroup.shutdownGracefully();
+            connectGroup.shutdownGracefully();
         }
     }
 

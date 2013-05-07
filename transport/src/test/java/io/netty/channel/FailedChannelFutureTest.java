@@ -15,17 +15,17 @@
  */
 package io.netty.channel;
 
+import org.junit.Test;
+
 import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
-
-import org.junit.Test;
 
 public class FailedChannelFutureTest {
     @Test
     public void testConstantProperties() {
         Channel channel = createMock(Channel.class);
         Exception e = new Exception();
-        FailedChannelFuture future = new FailedChannelFuture(channel, e);
+        FailedChannelFuture future = new FailedChannelFuture(channel, null, e);
 
         assertFalse(future.isSuccess());
         assertSame(e, future.cause());
@@ -33,6 +33,6 @@ public class FailedChannelFutureTest {
 
     @Test(expected = NullPointerException.class)
     public void shouldDisallowNullException() {
-        new FailedChannelFuture(createMock(Channel.class), null);
+        new FailedChannelFuture(createMock(Channel.class), null, null);
     }
 }

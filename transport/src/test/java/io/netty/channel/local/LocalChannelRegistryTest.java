@@ -21,9 +21,12 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.channel.EventLoopGroup;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Test;
+
+import java.util.concurrent.CountDownLatch;
 
 import static org.junit.Assert.*;
 
@@ -38,15 +41,17 @@ public class LocalChannelRegistryTest {
     public void testLocalAddressReuse() throws Exception {
 
         for (int i = 0; i < 2; i ++) {
+            EventLoopGroup clientGroup = new LocalEventLoopGroup();
+            EventLoopGroup serverGroup = new LocalEventLoopGroup();
             LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
             Bootstrap cb = new Bootstrap();
             ServerBootstrap sb = new ServerBootstrap();
 
-            cb.group(new LocalEventLoopGroup())
+            cb.group(clientGroup)
               .channel(LocalChannel.class)
               .handler(new TestHandler());
 
-            sb.group(new LocalEventLoopGroup())
+            sb.group(serverGroup)
               .channel(LocalServerChannel.class)
               .childHandler(new ChannelInitializer<LocalChannel>() {
                   @Override
@@ -55,22 +60,28 @@ public class LocalChannelRegistryTest {
                   }
               });
 
-
             // Start server
             Channel sc = sb.bind(addr).sync().channel();
 
+            final CountDownLatch latch = new CountDownLatch(1);
             // Connect to the server
-            Channel cc = cb.connect(addr).sync().channel();
-
-            // Send a message event up the pipeline.
-            cc.pipeline().inboundMessageBuffer().add("Hello, World");
-            cc.pipeline().fireInboundBufferUpdated();
+            final Channel cc = cb.connect(addr).sync().channel();
+            cc.eventLoop().execute(new Runnable() {
+                @Override
+                public void run() {
+                    // Send a message event up the pipeline.
+                    cc.pipeline().inboundMessageBuffer().add("Hello, World");
+                    cc.pipeline().fireInboundBufferUpdated();
+                    latch.countDown();
+                }
+            });
+            latch.await();
 
             // Close the channel
             cc.close().sync();
 
-            sb.shutdown();
-            cb.shutdown();
+            serverGroup.shutdownGracefully();
+            clientGroup.shutdownGracefully();
 
             sc.closeFuture().sync();
 

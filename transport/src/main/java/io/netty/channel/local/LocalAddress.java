@@ -22,8 +22,6 @@ import java.net.SocketAddress;
 /**
  * An endpoint in the local transport.  Each endpoint is identified by a unique
  * case-insensitive string.
- *
- * @apiviz.landmark
  */
 public final class LocalAddress extends SocketAddress implements Comparable<LocalAddress> {
 

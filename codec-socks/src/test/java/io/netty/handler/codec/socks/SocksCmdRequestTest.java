@@ -16,74 +16,75 @@
 package io.netty.handler.codec.socks;
 
 import org.junit.Test;
-import static org.junit.Assert.assertTrue;
+
+import static org.junit.Assert.*;
 
 public class SocksCmdRequestTest {
     @Test
-    public void testConstructorParamsAreNotNull(){
+    public void testConstructorParamsAreNotNull() {
         try {
-            new SocksCmdRequest(null, SocksMessage.AddressType.UNKNOWN, "", 0);
-        } catch (Exception e){
+            new SocksCmdRequest(null, SocksAddressType.UNKNOWN, "", 0);
+        } catch (Exception e) {
             assertTrue(e instanceof NullPointerException);
         }
 
         try {
-            new SocksCmdRequest(SocksMessage.CmdType.UNKNOWN, null, "", 0);
-        } catch (Exception e){
+            new SocksCmdRequest(SocksCmdType.UNKNOWN, null, "", 0);
+        } catch (Exception e) {
             assertTrue(e instanceof NullPointerException);
         }
 
         try {
-            new SocksCmdRequest(SocksMessage.CmdType.UNKNOWN, SocksMessage.AddressType.UNKNOWN, null, 0);
-        } catch (Exception e){
+            new SocksCmdRequest(SocksCmdType.UNKNOWN, SocksAddressType.UNKNOWN, null, 0);
+        } catch (Exception e) {
             assertTrue(e instanceof NullPointerException);
         }
     }
 
     @Test
-    public void testIPv4CorrectAddress(){
+    public void testIPv4CorrectAddress() {
         try {
-            new SocksCmdRequest(SocksMessage.CmdType.BIND, SocksMessage.AddressType.IPv4, "54.54.1111.253", 0);
-        } catch (Exception e){
+            new SocksCmdRequest(SocksCmdType.BIND, SocksAddressType.IPv4, "54.54.1111.253", 0);
+        } catch (Exception e) {
             assertTrue(e instanceof IllegalArgumentException);
         }
     }
 
     @Test
-    public void testIPv6CorrectAddress(){
+    public void testIPv6CorrectAddress() {
         try {
-            new SocksCmdRequest(SocksMessage.CmdType.BIND, SocksMessage.AddressType.IPv6, "xxx:xxx:xxx", 0);
-        } catch (Exception e){
+            new SocksCmdRequest(SocksCmdType.BIND, SocksAddressType.IPv6, "xxx:xxx:xxx", 0);
+        } catch (Exception e) {
             assertTrue(e instanceof IllegalArgumentException);
         }
     }
 
     @Test
-    public void testIDNNotExceeds255CharsLimit(){
+    public void testIDNNotExceeds255CharsLimit() {
         try {
-            new SocksCmdRequest(SocksMessage.CmdType.BIND, SocksMessage.AddressType.DOMAIN,
+            new SocksCmdRequest(SocksCmdType.BIND, SocksAddressType.DOMAIN,
                     "παράδειγμα.δοκιμήπαράδειγμα.δοκιμήπαράδειγμα.δοκιμήπαράδειγμα.δοκιμή" +
                     "παράδειγμα.δοκιμήπαράδειγμα.δοκιμήπαράδειγμα.δοκιμήπαράδειγμα.δοκιμή" +
                     "παράδειγμα.δοκιμήπαράδειγμα.δοκιμήπαράδειγμα.δοκιμήπαράδειγμα.δοκιμή" +
                     "παράδειγμα.δοκιμήπαράδειγμα.δοκιμήπαράδειγμα.δοκιμήπαράδειγμα.δοκιμή", 0);
-        } catch (Exception e){
+        } catch (Exception e) {
             assertTrue(e instanceof IllegalArgumentException);
         }
     }
 
     @Test
-    public void testValidPortRange(){
+    public void testValidPortRange() {
         try {
-            new SocksCmdRequest(SocksMessage.CmdType.BIND, SocksMessage.AddressType.DOMAIN,
+            new SocksCmdRequest(SocksCmdType.BIND, SocksAddressType.DOMAIN,
                     "παράδειγμα.δοκιμήπαράδει", -1);
-        } catch (Exception e){
+        } catch (Exception e) {
             assertTrue(e instanceof IllegalArgumentException);
         }
 
         try {
-            new SocksCmdRequest(SocksMessage.CmdType.BIND, SocksMessage.AddressType.DOMAIN,
+            new SocksCmdRequest(SocksCmdType.BIND, SocksAddressType.DOMAIN,
                     "παράδειγμα.δοκιμήπαράδει", 65536);
-        } catch (Exception e){
+        } catch (Exception e) {
             assertTrue(e instanceof IllegalArgumentException);
         }
     }

@@ -21,9 +21,14 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelProgressiveFuture;
+import io.netty.channel.ChannelProgressiveFutureListener;
+import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.DefaultFileRegion;
-import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.FileRegion;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.string.StringDecoder;
@@ -48,9 +53,11 @@ public class FileServer {
 
     public void run() throws Exception {
         // Configure the server.
-        ServerBootstrap b = new ServerBootstrap();
+        EventLoopGroup bossGroup = new NioEventLoopGroup();
+        EventLoopGroup workerGroup = new NioEventLoopGroup();
         try {
-            b.group(new NioEventLoopGroup(), new NioEventLoopGroup())
+            ServerBootstrap b = new ServerBootstrap();
+            b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
              .option(ChannelOption.SO_BACKLOG, 100)
              .handler(new LoggingHandler(LogLevel.INFO))
@@ -72,7 +79,8 @@ public class FileServer {
             f.channel().closeFuture().sync();
         } finally {
             // Shut down all event loops to terminate all threads.
-            b.shutdown();
+            bossGroup.shutdownGracefully();
+            workerGroup.shutdownGracefully();
         }
     }
 
@@ -96,7 +104,21 @@ public class FileServer {
                     return;
                 }
                 ctx.write(file + " " + file.length() + '\n');
-                ctx.sendFile(new DefaultFileRegion(new FileInputStream(file).getChannel(), 0, file.length()));
+                FileRegion region = new DefaultFileRegion(new FileInputStream(file).getChannel(), 0, file.length());
+                ChannelProgressivePromise promise = ctx.newProgressivePromise();
+                promise.addListener(new ChannelProgressiveFutureListener() {
+                    @Override
+                    public void operationProgressed(ChannelProgressiveFuture f, long progress, long total) {
+                        System.err.println("progress: " + progress + " / " + total);
+                    }
+
+                    @Override
+                    public void operationComplete(ChannelProgressiveFuture future) {
+                        System.err.println("file transfer complete");
+                    }
+                });
+
+                ctx.sendFile(region, promise);
                 ctx.write("\n");
             } else {
                 ctx.write("File not found: " + file + '\n');

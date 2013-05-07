@@ -16,12 +16,11 @@
 package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 import io.netty.testsuite.transport.socket.SocketTestPermutation.Factory;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.NetUtil;
-
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 
@@ -58,8 +57,6 @@ public abstract class AbstractServerSocketTest {
                 m.invoke(this, sb);
             } catch (InvocationTargetException ex) {
                 throw ex.getCause();
-            } finally {
-                sb.shutdown();
             }
         }
     }

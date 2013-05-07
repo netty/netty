@@ -15,11 +15,11 @@
  */
 package io.netty.handler.codec.compression;
 
-import static io.netty.handler.codec.compression.SnappyChecksumUtil.calculateChecksum;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToByteEncoder;
+
+import static io.netty.handler.codec.compression.SnappyChecksumUtil.*;
 
 /**
  * Compresses a {@link ByteBuf} using the Snappy framing format.
@@ -39,7 +39,7 @@ public class SnappyFramedEncoder extends ByteToByteEncoder {
      * type 0xff, a length field of 0x6, and 'sNaPpY' in ASCII.
      */
     private static final byte[] STREAM_START = {
-        -0x80, 0x06, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59
+        -0x80, 0x06, 0x00, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59
     };
 
     private final Snappy snappy = new Snappy();
@@ -56,27 +56,51 @@ public class SnappyFramedEncoder extends ByteToByteEncoder {
             out.writeBytes(STREAM_START);
         }
 
-        final int chunkLength = in.readableBytes();
-        if (chunkLength > MIN_COMPRESSIBLE_LENGTH) {
-            // If we have lots of available data, break it up into smaller chunks
-            int numberOfChunks = 1 + chunkLength / Short.MAX_VALUE;
-            for (int i = 0; i < numberOfChunks; i++) {
-                int subChunkLength = Math.min(Short.MAX_VALUE, chunkLength);
-                out.writeByte(0);
-                writeChunkLength(out, subChunkLength);
-                ByteBuf slice = in.slice(in.readerIndex(), subChunkLength);
-                calculateAndWriteChecksum(slice, out);
+        int dataLength = in.readableBytes();
+        if (dataLength > MIN_COMPRESSIBLE_LENGTH) {
+            for (;;) {
+                final int lengthIdx = out.writerIndex() + 1;
+                if (dataLength < MIN_COMPRESSIBLE_LENGTH) {
+                    ByteBuf slice = in.readSlice(dataLength);
+                    writeUnencodedChunk(slice, out, dataLength);
+                    break;
+                }
 
-                snappy.encode(slice, out, subChunkLength);
-
-                in.readerIndex(slice.readerIndex());
+                out.writeInt(0);
+                if (dataLength > Short.MAX_VALUE) {
+                    ByteBuf slice = in.readSlice(Short.MAX_VALUE);
+                    calculateAndWriteChecksum(slice, out);
+                    snappy.encode(slice, out, Short.MAX_VALUE);
+                    setChunkLength(out, lengthIdx);
+                    dataLength -= Short.MAX_VALUE;
+                } else {
+                    ByteBuf slice = in.readSlice(dataLength);
+                    calculateAndWriteChecksum(slice, out);
+                    snappy.encode(slice, out, dataLength);
+                    setChunkLength(out, lengthIdx);
+                    break;
+                }
             }
         } else {
-            out.writeByte(1);
-            writeChunkLength(out, chunkLength);
-            calculateAndWriteChecksum(in, out);
-            out.writeBytes(in, chunkLength);
+            writeUnencodedChunk(in, out, dataLength);
         }
+    }
+
+    private static void writeUnencodedChunk(ByteBuf in, ByteBuf out, int dataLength) {
+        out.writeByte(1);
+        writeChunkLength(out, dataLength + 4);
+        calculateAndWriteChecksum(in, out);
+        out.writeBytes(in, dataLength);
+    }
+
+    private static void setChunkLength(ByteBuf out, int lengthIdx) {
+        int chunkLength = out.writerIndex() - lengthIdx - 3;
+        if (chunkLength >>> 24 != 0) {
+            throw new CompressionException("compressed data too large: " + chunkLength);
+        }
+        out.setByte(lengthIdx, chunkLength & 0xff);
+        out.setByte(lengthIdx + 1, chunkLength >>> 8 & 0xff);
+        out.setByte(lengthIdx + 2, chunkLength >>> 16 & 0xff);
     }
 
     /**
@@ -86,8 +110,9 @@ public class SnappyFramedEncoder extends ByteToByteEncoder {
      * @param chunkLength The length to write
      */
     private static void writeChunkLength(ByteBuf out, int chunkLength) {
-        out.writeByte(chunkLength & 0x0ff);
-        out.writeByte(chunkLength >> 8 & 0x0ff);
+        out.writeByte(chunkLength & 0xff);
+        out.writeByte(chunkLength >>> 8 & 0xff);
+        out.writeByte(chunkLength >>> 16 & 0xff);
     }
 
     /**
@@ -99,8 +124,8 @@ public class SnappyFramedEncoder extends ByteToByteEncoder {
     private static void calculateAndWriteChecksum(ByteBuf slice, ByteBuf out) {
         int checksum = calculateChecksum(slice);
         out.writeByte(checksum & 0x0ff);
-        out.writeByte(checksum >> 8 & 0x0ff);
-        out.writeByte(checksum >> 16 & 0x0ff);
-        out.writeByte(checksum >> 24 & 0x0ff);
+        out.writeByte(checksum >>> 8 & 0x0ff);
+        out.writeByte(checksum >>> 16 & 0x0ff);
+        out.writeByte(checksum >>> 24);
     }
 }

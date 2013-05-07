@@ -1,43 +1,29 @@
-# The Netty Project
+# Netty Project
 
-Netty is an asynchronous event-driven network application framework for rapid development of maintainable high performance protocol servers & clients.
+Netty is an asynchronous event-driven network application framework for rapid development of maintainable high
+performance protocol servers & clients.
 
 ## Links
 
-- Web Site: http://netty.io/
+* [Web Site](http://netty.io/)
+* [Downloads](http://netty.io/downloads.html)
+* [Documentation](http://netty.io/wiki/)
+* [@netty_project](https://twitter.com/netty_project)
 
-- Docs: http://netty.io/docs/
+## How to build
 
-- Blog: http://netty.io/blog/
+For the detailed information about building and developing Netty, please visit [the developer guide](http://netty.io/wiki/developer-guide.html).  This page only gives very basic information.
 
-- Twitter: @netty_project
+You require the following to build Netty:
 
-## Getting Netty
+* Latest stable [Oracle JDK 7](http://www.oracle.com/technetwork/java/)
+* Latest stable [Apache Maven](http://maven.apache.org/)
 
-- Download Page: http://netty.io/downloads/
+Note that this is build-time requirement.  JDK 5 (for 3.x) or 6 (for 4.0) is enough to run your Netty-based
+application.
 
-- Maven Repository: 
+## Branches
 
-```xml
-    <dependencies>
-      ...
-      <dependency>
-        <groupId>io.netty</groupId>
-        <artifactId>netty</artifactId>
-        <version>X.Y.Z.Q</version>
-        <scope>compile</scope>
-      </dependency>
-      ...
-    </dependencies>
-```
-
-## Developer Information
-
-- Netty is setup to build using [Maven](http://maven.apache.org/)
-
-- You need JDK 7 to __build__ Netty. Netty will run with JDK 5 (3.x) and JDK 6 (4).
-
-- __master__ branch contains code for Netty 4.x
-
-- __3__ branch contains code for Netty 3.x
+* [4.0](https://github.com/netty/netty)
+* [3.x](https://github.com/netty/netty/tree/3)
 

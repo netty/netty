@@ -21,7 +21,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufIndexFinder;
 import io.netty.buffer.SwappedByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.util.internal.Signal;
+import io.netty.util.Signal;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -38,9 +38,9 @@ final class ReplayingDecoderBuffer implements ByteBuf {
 
     private static final Signal REPLAY = ReplayingDecoder.REPLAY;
 
-    private final ByteBuf buffer;
-    private final SwappedByteBuf swapped;
+    private ByteBuf buffer;
     private boolean terminated;
+    private SwappedByteBuf swapped;
 
     static final ReplayingDecoderBuffer EMPTY_BUFFER = new ReplayingDecoderBuffer(Unpooled.EMPTY_BUFFER);
 
@@ -48,9 +48,14 @@ final class ReplayingDecoderBuffer implements ByteBuf {
         EMPTY_BUFFER.terminate();
     }
 
+    ReplayingDecoderBuffer() { }
+
     ReplayingDecoderBuffer(ByteBuf buffer) {
+        setCumulation(buffer);
+    }
+
+    void setCumulation(ByteBuf buffer) {
         this.buffer = buffer;
-        swapped = new SwappedByteBuf(this);
     }
 
     void terminate() {
@@ -103,6 +108,16 @@ final class ReplayingDecoderBuffer implements ByteBuf {
 
     @Override
     public int arrayOffset() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean hasMemoryAddress() {
+        return false;
+    }
+
+    @Override
+    public long memoryAddress() {
         throw new UnsupportedOperationException();
     }
 
@@ -387,6 +402,11 @@ final class ReplayingDecoderBuffer implements ByteBuf {
         if (endianness == order()) {
             return this;
         }
+
+        SwappedByteBuf swapped = this.swapped;
+        if (swapped == null) {
+            this.swapped = swapped = new SwappedByteBuf(this);
+        }
         return swapped;
     }
 
@@ -466,7 +486,9 @@ final class ReplayingDecoderBuffer implements ByteBuf {
 
     @Override
     public ByteBuf readBytes(ByteBuf dst) {
-        throw new UnreplayableOperationException();
+        checkReadableBytes(dst.writableBytes());
+        buffer.readBytes(dst);
+        return this;
     }
 
     @Override
@@ -879,12 +901,27 @@ final class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
-    public boolean isFreed() {
-        return buffer.isFreed();
+    public int refCnt() {
+        return buffer.refCnt();
     }
 
     @Override
-    public void free() {
+    public ByteBuf retain() {
+        throw new UnreplayableOperationException();
+    }
+
+    @Override
+    public ByteBuf retain(int increment) {
+        throw new UnreplayableOperationException();
+    }
+
+    @Override
+    public boolean release() {
+        throw new UnreplayableOperationException();
+    }
+
+    @Override
+    public boolean release(int decrement) {
         throw new UnreplayableOperationException();
     }
 

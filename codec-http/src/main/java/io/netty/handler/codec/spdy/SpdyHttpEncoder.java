@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.spdy;
 
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
@@ -27,7 +28,6 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -120,7 +120,7 @@ import java.util.Map;
  * All pushed resources should be sent before sending the response
  * that corresponds to the initial request.
  */
-public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
+public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
 
     private final int spdyVersion;
     private volatile int currentStreamId;
@@ -131,8 +131,6 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
      * @param version the protocol version
      */
     public SpdyHttpEncoder(int version) {
-        super(HttpObject.class);
-
         if (version < SpdyConstants.SPDY_MIN_VERSION || version > SpdyConstants.SPDY_MAX_VERSION) {
             throw new IllegalArgumentException(
                     "unsupported version: " + version);
@@ -141,14 +139,17 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
     }
 
     @Override
-    public Object encode(ChannelHandlerContext ctx, Object msg) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, HttpObject msg, MessageBuf<Object> out) throws Exception {
 
-        List<Object> out = new ArrayList<Object>();
+        boolean valid = false;
+
         if (msg instanceof HttpRequest) {
 
             HttpRequest httpRequest = (HttpRequest) msg;
             SpdySynStreamFrame spdySynStreamFrame = createSynStreamFrame(httpRequest);
             out.add(spdySynStreamFrame);
+
+            valid = true;
         }
         if (msg instanceof HttpResponse) {
 
@@ -160,11 +161,15 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
                 SpdySynReplyFrame spdySynReplyFrame = createSynReplyFrame(httpResponse);
                 out.add(spdySynReplyFrame);
             }
+
+            valid = true;
         }
         if (msg instanceof HttpContent) {
 
             HttpContent chunk = (HttpContent) msg;
-            SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(currentStreamId, chunk.data());
+
+            chunk.content().retain();
+            SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(currentStreamId, chunk.content());
             spdyDataFrame.setLast(chunk instanceof LastHttpContent);
             if (chunk instanceof LastHttpContent) {
                 LastHttpContent trailer = (LastHttpContent) chunk;
@@ -185,11 +190,13 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
             } else {
                 out.add(spdyDataFrame);
             }
-        } else {
-            throw new UnsupportedMessageTypeException(msg);
+
+            valid = true;
         }
 
-        return out.toArray();
+        if (!valid) {
+            throw new UnsupportedMessageTypeException(msg);
+        }
     }
 
     private SpdySynStreamFrame createSynStreamFrame(HttpMessage httpMessage)
@@ -255,8 +262,6 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
 
     private SpdySynReplyFrame createSynReplyFrame(HttpResponse httpResponse)
             throws Exception {
-        boolean chunked = HttpHeaders.isTransferEncodingChunked(httpResponse);
-
         // Get the Stream-ID from the headers
         int streamID = SpdyHttpHeaders.getStreamId(httpResponse);
         SpdyHttpHeaders.removeStreamId(httpResponse);
@@ -279,20 +284,9 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<Object> {
             spdySynReplyFrame.headers().add(entry.getKey(), entry.getValue());
         }
 
-        if (chunked) {
-            currentStreamId = streamID;
-            spdySynReplyFrame.setLast(false);
-        }
+        currentStreamId = streamID;
+        spdySynReplyFrame.setLast(false);
 
         return spdySynReplyFrame;
-    }
-
-    @Override
-    protected void freeOutboundMessage(Object msg) throws Exception {
-        if (msg instanceof HttpContent) {
-            // Will be freed later as the content of them is just reused here
-            return;
-        }
-        super.freeOutboundMessage(msg);
     }
 }

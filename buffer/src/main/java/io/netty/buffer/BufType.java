@@ -20,7 +20,7 @@ package io.netty.buffer;
  */
 public enum BufType {
     /**
-     * Operates one bytes.
+     * Operates on bytes.
      */
     BYTE,
 

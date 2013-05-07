@@ -17,7 +17,6 @@ package io.netty.example.http.snoop;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
@@ -99,7 +98,7 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
         if (msg instanceof HttpContent) {
             HttpContent httpContent = (HttpContent) msg;
 
-            ByteBuf content = httpContent.data();
+            ByteBuf content = httpContent.content();
             if (content.isReadable()) {
                 buf.append("CONTENT: ");
                 buf.append(content.toString(CharsetUtil.UTF_8));
@@ -133,11 +132,7 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
             return;
         }
 
-        buf.append(".. WITH A ");
-        if (result.isPartialFailure()) {
-            buf.append("PARTIAL ");
-        }
-        buf.append("DECODER FAILURE: ");
+        buf.append(".. WITH DECODER FAILURE: ");
         buf.append(result.cause());
         buf.append("\r\n");
     }
@@ -154,7 +149,7 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
 
         if (keepAlive) {
             // Add 'Content-Length' header only for a keep-alive connection.
-            response.headers().set(CONTENT_LENGTH, response.data().readableBytes());
+            response.headers().set(CONTENT_LENGTH, response.content().readableBytes());
             // Add keep alive header as per:
             // - http://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.html#Connection
             response.headers().set(CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
@@ -177,17 +172,22 @@ public class HttpSnoopServerHandler extends ChannelInboundMessageHandlerAdapter<
         }
 
         // Write the response.
-        ChannelFuture future = ctx.write(response);
+        ctx.nextOutboundMessageBuffer().add(response);
 
         // Close the non-keep-alive connection after the write operation is done.
         if (!keepAlive) {
-            future.addListener(ChannelFutureListener.CLOSE);
+            ctx.flush().addListener(ChannelFutureListener.CLOSE);
         }
     }
 
     private static void send100Continue(ChannelHandlerContext ctx) {
         HttpResponse response = new DefaultHttpResponse(HTTP_1_1, CONTINUE);
-        ctx.write(response);
+        ctx.nextOutboundMessageBuffer().add(response);
+    }
+
+    @Override
+    public void endMessageReceived(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
     }
 
     @Override

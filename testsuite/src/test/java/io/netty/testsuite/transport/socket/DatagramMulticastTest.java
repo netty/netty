@@ -25,7 +25,6 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.oio.OioDatagramChannel;
 import io.netty.util.NetUtil;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
@@ -37,7 +36,6 @@ import static org.junit.Assert.*;
 public class DatagramMulticastTest extends AbstractDatagramTest {
 
     @Test
-    @Ignore("Ignore because it does give different behavior on different OS, need to investigate!")
     public void testMulticast() throws Throwable {
         run();
     }
@@ -92,7 +90,6 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
 
         sc.close().awaitUninterruptibly();
         cc.close().awaitUninterruptibly();
-
     }
 
     private static final class MulticastTestHandler extends ChannelInboundMessageHandlerAdapter<DatagramPacket> {
@@ -102,14 +99,12 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         private volatile boolean fail;
 
         @Override
-        public void messageReceived(
-                ChannelHandlerContext ctx,
-                DatagramPacket msg) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
             if (done) {
                 fail = true;
             }
 
-            assertEquals(1, msg.data().readInt());
+            assertEquals(1, msg.content().readInt());
             latch.countDown();
 
             // mark the handler as done as we only are supposed to receive one message

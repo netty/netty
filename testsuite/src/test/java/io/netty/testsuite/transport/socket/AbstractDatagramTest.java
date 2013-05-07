@@ -16,11 +16,11 @@
 package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 import io.netty.testsuite.transport.socket.SocketTestPermutation.Factory;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.NetUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 
@@ -32,8 +32,7 @@ import java.util.Map.Entry;
 
 public abstract class AbstractDatagramTest {
 
-    private static final List<Entry<Factory<Bootstrap>, Factory<Bootstrap>>> COMBO =
-            SocketTestPermutation.datagram();
+    private static final List<Entry<Factory<Bootstrap>, Factory<Bootstrap>>> COMBO = SocketTestPermutation.datagram();
 
     @Rule
     public final TestName testName = new TestName();
@@ -50,7 +49,7 @@ public abstract class AbstractDatagramTest {
             sb = e.getKey().newInstance();
             cb = e.getValue().newInstance();
             addr = new InetSocketAddress(
-                    NetUtil.LOCALHOST, TestUtils.getFreePort());
+                    NetUtil.LOCALHOST4, TestUtils.getFreePort());
             sb.localAddress(addr);
             cb.localAddress(0).remoteAddress(addr);
 
@@ -62,9 +61,6 @@ public abstract class AbstractDatagramTest {
                 m.invoke(this, sb, cb);
             } catch (InvocationTargetException ex) {
                 throw ex.getCause();
-            } finally {
-                sb.shutdown();
-                cb.shutdown();
             }
         }
     }

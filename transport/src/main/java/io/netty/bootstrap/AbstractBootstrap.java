@@ -19,8 +19,10 @@ package io.netty.bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.AttributeKey;
 
@@ -34,8 +36,10 @@ import java.util.Map;
  * {@link AbstractBootstrap} is a helper class that makes it easy to bootstrap a {@link Channel}. It support
  * method-chaining to provide an easy way to configure the {@link AbstractBootstrap}.
  *
+ * <p>When not used in a {@link ServerBootstrap} context, the {@link #bind()} methods are useful for connectionless
+ * transports such as datagram (UDP).</p>
  */
-abstract class AbstractBootstrap<B extends AbstractBootstrap<?, C>, C extends Channel> implements Cloneable {
+abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C extends Channel> implements Cloneable {
 
     private volatile EventLoopGroup group;
     private volatile ChannelFactory<? extends C> channelFactory;
@@ -185,10 +189,13 @@ abstract class AbstractBootstrap<B extends AbstractBootstrap<?, C>, C extends Ch
     }
 
     /**
+     * @deprecated Use {@link EventLoopGroup#shutdown()} instead.
+     *
      * Shutdown the {@link AbstractBootstrap} and the {@link EventLoopGroup} which is
      * used by it. Only call this if you don't share the {@link EventLoopGroup}
      * between different {@link AbstractBootstrap}'s.
      */
+    @Deprecated
     public void shutdown() {
         if (group != null) {
             group.shutdown();
@@ -199,13 +206,15 @@ abstract class AbstractBootstrap<B extends AbstractBootstrap<?, C>, C extends Ch
      * Validate all the parameters. Sub-classes may override this, but should
      * call the super method in that case.
      */
-    public void validate() {
+    @SuppressWarnings("unchecked")
+    public B validate() {
         if (group == null) {
             throw new IllegalStateException("group not set");
         }
         if (channelFactory == null) {
             throw new IllegalStateException("factory not set");
         }
+        return (B) this;
     }
 
     /**
@@ -261,7 +270,75 @@ abstract class AbstractBootstrap<B extends AbstractBootstrap<?, C>, C extends Ch
         return doBind(localAddress);
     }
 
-    abstract ChannelFuture doBind(SocketAddress localAddress);
+    private ChannelFuture doBind(final SocketAddress localAddress) {
+        final ChannelFuture regPromise = initAndRegister();
+        final Channel channel = regPromise.channel();
+        final ChannelPromise promise = channel.newPromise();
+        if (regPromise.isDone()) {
+            doBind0(regPromise, channel, localAddress, promise);
+        } else {
+            regPromise.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    doBind0(future, channel, localAddress, promise);
+                }
+            });
+        }
+
+        return promise;
+    }
+
+    final ChannelFuture initAndRegister() {
+        final Channel channel = channelFactory().newChannel();
+        try {
+            init(channel);
+        } catch (Throwable t) {
+            channel.unsafe().closeForcibly();
+            return channel.newFailedFuture(t);
+        }
+
+        ChannelPromise regPromise = channel.newPromise();
+        group().register(channel, regPromise);
+        if (regPromise.cause() != null) {
+            if (channel.isRegistered()) {
+                channel.close();
+            } else {
+                channel.unsafe().closeForcibly();
+            }
+        }
+
+        // If we are here and the promise is not failed, it's one of the following cases:
+        // 1) If we attempted registration from the event loop, the registration has been completed at this point.
+        //    i.e. It's safe to attempt bind() or connect() now beause the channel has been registered.
+        // 2) If we attempted registration from the other thread, the registration request has been successfully
+        //    added to the event loop's task queue for later execution.
+        //    i.e. It's safe to attempt bind() or connect() now:
+        //         because bind() or connect() will be executed *after* the scheduled registration task is executed
+        //         because register(), bind(), and connect() are all bound to the same thread.
+
+        return regPromise;
+    }
+
+    abstract void init(Channel channel) throws Exception;
+
+    private static void doBind0(
+            final ChannelFuture regFuture, final Channel channel,
+            final SocketAddress localAddress, final ChannelPromise promise) {
+
+        // This method is invoked before channelRegistered() is triggered.  Give user handlers a chance to set up
+        // the pipeline in its channelRegistered() implementation.
+
+        channel.eventLoop().execute(new Runnable() {
+            @Override
+            public void run() {
+                if (regFuture.isSuccess()) {
+                    channel.bind(localAddress, promise).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+                } else {
+                    promise.setFailure(regFuture.cause());
+                }
+            }
+        });
+    }
 
     /**
      * the {@link ChannelHandler} to use for serving the requests.

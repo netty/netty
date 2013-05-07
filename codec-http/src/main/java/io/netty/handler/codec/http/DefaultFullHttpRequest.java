@@ -43,18 +43,35 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     }
 
     @Override
-    public ByteBuf data() {
+    public ByteBuf content() {
         return content;
     }
 
     @Override
-    public boolean isFreed() {
-        return content.isFreed();
+    public int refCnt() {
+        return content.refCnt();
     }
 
     @Override
-    public void free() {
-        content.free();
+    public FullHttpRequest retain() {
+        content.retain();
+        return this;
+    }
+
+    @Override
+    public FullHttpRequest retain(int increment) {
+        content.retain(increment);
+        return this;
+    }
+
+    @Override
+    public boolean release() {
+        return content.release();
+    }
+
+    @Override
+    public boolean release(int decrement) {
+        return content.release(decrement);
     }
 
     @Override
@@ -78,7 +95,7 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     @Override
     public FullHttpRequest copy() {
         DefaultFullHttpRequest copy = new DefaultFullHttpRequest(
-                getProtocolVersion(), getMethod(), getUri(), data().copy());
+                getProtocolVersion(), getMethod(), getUri(), content().copy());
         copy.headers().set(headers());
         copy.trailingHeaders().set(trailingHeaders());
         return copy;

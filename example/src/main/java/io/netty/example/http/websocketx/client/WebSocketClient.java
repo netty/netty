@@ -41,14 +41,14 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpRequestEncoder;
-import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
@@ -66,8 +66,9 @@ public class WebSocketClient {
     }
 
     public void run() throws Exception {
-        Bootstrap b = new Bootstrap();
+        EventLoopGroup group = new NioEventLoopGroup();
         try {
+            Bootstrap b = new Bootstrap();
             String protocol = uri.getScheme();
             if (!"ws".equals(protocol)) {
                 throw new IllegalArgumentException("Unsupported protocol: " + protocol);
@@ -84,14 +85,13 @@ public class WebSocketClient {
                             WebSocketClientHandshakerFactory.newHandshaker(
                                     uri, WebSocketVersion.V13, null, false, customHeaders));
 
-            b.group(new NioEventLoopGroup())
+            b.group(group)
              .channel(NioSocketChannel.class)
              .handler(new ChannelInitializer<SocketChannel>() {
                  @Override
                  public void initChannel(SocketChannel ch) throws Exception {
                      ChannelPipeline pipeline = ch.pipeline();
-                     pipeline.addLast("decoder", new HttpResponseDecoder());
-                     pipeline.addLast("encoder", new HttpRequestEncoder());
+                     pipeline.addLast("http-codec", new HttpClientCodec());
                      pipeline.addLast("aggregator", new HttpObjectAggregator(8192));
                      pipeline.addLast("ws-handler", handler);
                  }
@@ -119,7 +119,7 @@ public class WebSocketClient {
             // responds to the CloseWebSocketFrame.
             ch.closeFuture().sync();
         } finally {
-            b.shutdown();
+            group.shutdownGracefully();
         }
     }
 

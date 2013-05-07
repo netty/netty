@@ -118,7 +118,6 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
         private void reject(ChannelPromise future) {
             Exception cause = new UnsupportedOperationException();
             future.setFailure(cause);
-            pipeline().fireExceptionCaught(cause);
         }
     }
 }

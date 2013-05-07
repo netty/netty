@@ -24,9 +24,6 @@ import io.netty.handler.codec.http.HttpObjectEncoder;
 /**
  * Encodes an RTSP message represented in {@link FullHttpMessage} into
  * a {@link ByteBuf}.
-
- *
- * @apiviz.landmark
  */
 @Sharable
 public abstract class RtspObjectEncoder<H extends HttpMessage> extends HttpObjectEncoder<H> {
@@ -38,7 +35,7 @@ public abstract class RtspObjectEncoder<H extends HttpMessage> extends HttpObjec
     }
 
     @Override
-    public boolean isEncodable(Object msg) throws Exception {
+    public boolean acceptOutboundMessage(Object msg) throws Exception {
         return msg instanceof FullHttpMessage;
     }
 }

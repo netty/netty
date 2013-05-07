@@ -17,11 +17,13 @@ package io.netty.channel.socket.aio;
 
 import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFlushPromiseNotifier;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
@@ -75,7 +77,12 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     private boolean readInProgress;
     private boolean inDoBeginRead;
     private boolean readAgain;
-    private boolean writeInProgress;
+
+    private static final int NO_WRITE_IN_PROGRESS = 0;
+    private static final int WRITE_IN_PROGRESS = 1;
+    private static final int WRITE_FAILED = -2;
+
+    private int writeInProgress;
     private boolean inDoFlushByteBuffer;
 
     /**
@@ -245,7 +252,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
     @Override
     protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
-        if (inDoFlushByteBuffer || writeInProgress) {
+        if (inDoFlushByteBuffer || writeInProgress != NO_WRITE_IN_PROGRESS) {
             return;
         }
 
@@ -254,7 +261,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         try {
             if (buf.isReadable()) {
                 for (;;) {
-                    if (buf.isFreed()) {
+                    if (buf.refCnt() == 0) {
                         break;
                     }
                     // Ensure the readerIndex of the buffer is 0 before beginning an async write.
@@ -262,7 +269,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                     // discardReadBytes() later, modifying the readerIndex and the writerIndex unexpectedly.
                     buf.discardReadBytes();
 
-                    writeInProgress = true;
+                    writeInProgress = WRITE_IN_PROGRESS;
                     if (buf.nioBufferCount() == 1) {
                         javaChannel().write(
                                 buf.nioBuffer(), config.getWriteTimeout(), TimeUnit.MILLISECONDS, this, WRITE_HANDLER);
@@ -278,7 +285,13 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                         }
                     }
 
-                    if (writeInProgress) {
+                    if (writeInProgress != NO_WRITE_IN_PROGRESS) {
+                        if (writeInProgress == WRITE_FAILED) {
+                            // failed because of an exception so reset state and break out of the loop now
+                            // See #1242
+                            writeInProgress = NO_WRITE_IN_PROGRESS;
+                            break;
+                        }
                         // JDK decided to write data (or notify handler) later.
                         buf.suspendIntermediaryDeallocations();
                         break;
@@ -367,10 +380,10 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
         @Override
         protected void completed0(T result, AioSocketChannel channel) {
-            channel.writeInProgress = false;
+            channel.writeInProgress = NO_WRITE_IN_PROGRESS;
 
-            ByteBuf buf = channel.unsafe().directOutboundContext().outboundByteBuffer();
-            if (buf.isFreed()) {
+            ByteBuf buf = channel.unsafe().headContext().outboundByteBuffer();
+            if (buf.refCnt() == 0) {
                 return;
             }
 
@@ -406,7 +419,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
         @Override
         protected void failed0(Throwable cause, AioSocketChannel channel) {
-            channel.writeInProgress = false;
+            channel.writeInProgress = WRITE_FAILED;
             channel.flushFutureNotifier.notifyFlushFutures(cause);
 
             // Check if the exception was raised because of an InterruptedByTimeoutException which means that the
@@ -436,7 +449,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
             boolean closed = false;
             boolean read = false;
-            boolean firedInboundBufferSuspended = false;
+            boolean firedChannelReadSuspended = false;
             try {
                 int localReadAmount = result.intValue();
                 if (localReadAmount > 0) {
@@ -458,8 +471,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 }
 
                 if (!closed && channel.isOpen()) {
-                    firedInboundBufferSuspended = true;
-                    pipeline.fireInboundBufferSuspended();
+                    firedChannelReadSuspended = true;
+                    pipeline.fireChannelReadSuspended();
                 }
 
                 pipeline.fireExceptionCaught(t);
@@ -478,8 +491,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                             channel.unsafe().close(channel.unsafe().voidFuture());
                         }
                     }
-                } else if (!firedInboundBufferSuspended) {
-                    pipeline.fireInboundBufferSuspended();
+                } else if (!firedChannelReadSuspended) {
+                    pipeline.fireChannelReadSuspended();
                 }
             }
         }
@@ -509,7 +522,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         @Override
         protected void completed0(Void result, AioSocketChannel channel) {
             ((DefaultAioUnsafe) channel.unsafe()).connectSuccess();
-            channel.pipeline().fireChannelActive();
         }
 
         @Override
@@ -535,13 +547,13 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
         @Override
         public int write(final ByteBuffer src) {
-            javaChannel().write(src, null, new CompletionHandler<Integer, Object>() {
+            javaChannel().write(src, AioSocketChannel.this, new AioCompletionHandler<Integer, Channel>() {
 
                 @Override
-                public void completed(Integer result, Object attachment) {
+                public void completed0(Integer result, Channel attachment) {
                     try {
                         if (result == 0) {
-                            javaChannel().write(src, null, this);
+                            javaChannel().write(src, AioSocketChannel.this, this);
                             return;
                         }
                         if (result == -1) {
@@ -551,25 +563,29 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                         }
                         written += result;
 
+                        if (promise instanceof ChannelProgressivePromise) {
+                            ((ChannelProgressivePromise) promise).setProgress(written, region.count());
+                        }
+
                         if (written >= region.count()) {
-                            region.close();
+                            region.release();
                             promise.setSuccess();
                             return;
                         }
                         if (src.hasRemaining()) {
-                            javaChannel().write(src, null, this);
+                            javaChannel().write(src, AioSocketChannel.this, this);
                         } else {
                             region.transferTo(WritableByteChannelAdapter.this, written);
                         }
                     } catch (Throwable cause) {
-                        region.close();
+                        region.release();
                         promise.setFailure(cause);
                     }
                 }
 
                 @Override
-                public void failed(Throwable exc, Object attachment) {
-                    region.close();
+                public void failed0(Throwable exc, Channel attachment) {
+                    region.release();
                     promise.setFailure(exc);
                 }
             });

@@ -20,9 +20,10 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.channel.ChannelPromise;
 import io.netty.util.AttributeKey;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -34,6 +35,8 @@ import java.util.Map.Entry;
  * A {@link Bootstrap} that makes it easy to bootstrap a {@link Channel} to use
  * for clients.
  *
+ * <p>The {@link #bind()} methods are useful in combination with connectionless transports such as datagram (UDP).
+ * For regular TCP connections, please use the provided {@link #connect()} methods.</p>
  */
 public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
 
@@ -71,19 +74,6 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     public Bootstrap remoteAddress(InetAddress inetHost, int inetPort) {
         remoteAddress = new InetSocketAddress(inetHost, inetPort);
         return this;
-    }
-
-    @Override
-    ChannelFuture doBind(SocketAddress localAddress) {
-        Channel channel = channelFactory().newChannel();
-        try {
-            init(channel);
-        } catch (Throwable t) {
-            channel.close();
-            return channel.newFailedFuture(t);
-        }
-
-        return channel.bind(localAddress).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
     }
 
     /**
@@ -139,28 +129,54 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     /**
      * @see {@link #connect()}
      */
-    private ChannelFuture doConnect(SocketAddress remoteAddress, SocketAddress localAddress) {
-        final Channel channel = channelFactory().newChannel();
-
-        try {
-            init(channel);
-        } catch (Throwable t) {
-            channel.close();
-            return channel.newFailedFuture(t);
+    private ChannelFuture doConnect(final SocketAddress remoteAddress, final SocketAddress localAddress) {
+        final ChannelFuture regFuture = initAndRegister();
+        final Channel channel = regFuture.channel();
+        if (regFuture.cause() != null) {
+            return regFuture;
         }
 
-        final ChannelFuture future;
-        if (localAddress == null) {
-            future = channel.connect(remoteAddress);
+        final ChannelPromise promise = channel.newPromise();
+        if (regFuture.isDone()) {
+            doConnect0(regFuture, channel, remoteAddress, localAddress, promise);
         } else {
-            future = channel.connect(remoteAddress, localAddress);
+            regFuture.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    doConnect0(regFuture, channel, remoteAddress, localAddress, promise);
+                }
+            });
         }
 
-        return future.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+        return promise;
     }
 
+    private static void doConnect0(
+            final ChannelFuture regFuture, final Channel channel,
+            final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
+
+        // This method is invoked before channelRegistered() is triggered.  Give user handlers a chance to set up
+        // the pipeline in its channelRegistered() implementation.
+        channel.eventLoop().execute(new Runnable() {
+            @Override
+            public void run() {
+                if (regFuture.isSuccess()) {
+                    if (localAddress == null) {
+                        channel.connect(remoteAddress, promise);
+                    } else {
+                        channel.connect(remoteAddress, localAddress, promise);
+                    }
+                    promise.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+                } else {
+                    promise.setFailure(regFuture.cause());
+                }
+            }
+        });
+    }
+
+    @Override
     @SuppressWarnings("unchecked")
-    private void init(Channel channel) throws Exception {
+    void init(Channel channel) throws Exception {
         ChannelPipeline p = channel.pipeline();
         p.addLast(handler());
 
@@ -183,16 +199,15 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
                 channel.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
             }
         }
-
-        group().register(channel).syncUninterruptibly();
     }
 
     @Override
-    public void validate() {
+    public Bootstrap validate() {
         super.validate();
         if (handler() == null) {
             throw new IllegalStateException("handler not set");
         }
+        return this;
     }
 
     @Override

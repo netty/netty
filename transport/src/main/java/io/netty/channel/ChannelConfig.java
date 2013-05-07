@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.socket.SocketChannelConfig;
 
@@ -46,26 +47,27 @@ import java.util.Map;
  * <tr>
  * <th>Name</th><th>Associated setter method</th>
  * </tr><tr>
- * <td>{@link io.netty.channel.ChannelOption#CONNECT_TIMEOUT_MILLIS}</td><td>{@link #setConnectTimeoutMillis(int)}</td>
+ * <td>{@link ChannelOption#CONNECT_TIMEOUT_MILLIS}</td><td>{@link #setConnectTimeoutMillis(int)}</td>
  * </tr><tr>
- * <td>{@link io.netty.channel.ChannelOption#WRITE_SPIN_COUNT}</td><td>{@link #setWriteSpinCount(int)}</td>
+ * <td>{@link ChannelOption#WRITE_SPIN_COUNT}</td><td>{@link #setWriteSpinCount(int)}</td>
  * </tr><tr>
- * <td>{@link io.netty.channel.ChannelOption#ALLOCATOR}</td><td>{@link #setAllocator(ByteBufAllocator)}</td>
+ * <td>{@link ChannelOption#ALLOCATOR}</td><td>{@link #setAllocator(ByteBufAllocator)}</td>
  * </tr><tr>
- * <td>{@link io.netty.channel.ChannelOption#AUTO_READ}</td><td>{@link #setAutoRead(boolean)}</td>
+ * <td>{@link ChannelOption#AUTO_READ}</td><td>{@link #setAutoRead(boolean)}</td>
  * </tr>
  * </table>
  * <p>
  * More options are available in the sub-types of {@link ChannelConfig}.  For
  * example, you can configure the parameters which are specific to a TCP/IP
  * socket as explained in {@link SocketChannelConfig}.
- *
- * @apiviz.has io.netty.channel.ChannelPipelineFactory
- * @apiviz.composedOf io.netty.channel.ReceiveBufferSizePredictor
- *
- * @apiviz.excludeSubtypes
  */
 public interface ChannelConfig {
+
+    enum ChannelHandlerByteBufType {
+        HEAP,
+        DIRECT,
+        PREFER_DIRECT
+    }
 
     /**
      * Return all set {@link ChannelOption}'s.
@@ -167,4 +169,23 @@ public interface ChannelConfig {
      * need to call it at all. The default value is {@code true}.
      */
     ChannelConfig setAutoRead(boolean autoRead);
+
+    /**
+     * Returns the {@link ChannelHandlerByteBufType} which is used to determine what kind of {@link ByteBuf} will
+     * be created by the {@link ChannelInboundByteHandler#newInboundBuffer(ChannelHandlerContext)} and
+     * {@link ChannelOutboundByteHandler#newOutboundBuffer(ChannelHandlerContext)} methods.
+     * <p>
+     * The implementation of {@link ChannelInboundByteHandler} or {@link ChannelOutboundByteHandler} may still return
+     * another {@link ByteBuf} if it depends on a special type.
+     *
+     * The default is {@link ChannelHandlerByteBufType#PREFER_DIRECT}.
+     */
+    ChannelHandlerByteBufType getDefaultHandlerByteBufType();
+
+    /**
+     * Sets the {@link ChannelHandlerByteBufType} which is used to determine what kind of {@link ByteBuf} will
+     * be created by the {@link ChannelInboundByteHandler#newInboundBuffer(ChannelHandlerContext)} and
+     * {@link ChannelOutboundByteHandler#newOutboundBuffer(ChannelHandlerContext)} methods.
+     */
+    ChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type);
 }

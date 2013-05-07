@@ -18,7 +18,6 @@ package io.netty.handler.stream;
 
 /**
  * A data stream of indefinite length which is consumed by {@link ChunkedWriteHandler}.
- * @apiviz.landmark
  */
 public interface ChunkedInput<B> {
 

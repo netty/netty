@@ -141,10 +141,10 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
     }
 
     @Override
-    public DiskAttribute copy() {
+    public Attribute copy() {
         DiskAttribute attr = new DiskAttribute(getName());
         attr.setCharset(getCharset());
-        ByteBuf content = data();
+        ByteBuf content = content();
         if (content != null) {
             try {
                 attr.setContent(content.copy());
@@ -153,5 +153,17 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
             }
         }
         return attr;
+    }
+
+    @Override
+    public Attribute retain(int increment) {
+        super.retain(increment);
+        return this;
+    }
+
+    @Override
+    public Attribute retain() {
+        super.retain();
+        return this;
     }
 }

@@ -15,11 +15,10 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelInboundByteHandler;
+import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -27,14 +26,11 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpHeaders.Values;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpRequestEncoder;
-import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 
 /**
  * <p>
@@ -48,7 +44,7 @@ import java.util.Arrays;
  */
 public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
 
-    private byte[] expectedChallengeResponseBytes;
+    private ByteBuf expectedChallengeResponseBytes;
 
     /**
      * Constructor specifying the destination web socket location and version to initiate
@@ -87,11 +83,9 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      * ^n:ds[4U
      * </pre>
      *
-     * @param channel
-     *            Channel into which we can write our request
      */
     @Override
-    public ChannelFuture handshake(Channel channel, final ChannelPromise promise) {
+    protected FullHttpRequest newHandshakeRequest() {
         // Make keys
         int spaces1 = WebSocketUtil.randomNumber(1, 12);
         int spaces2 = WebSocketUtil.randomNumber(1, 12);
@@ -127,7 +121,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         System.arraycopy(number1Array, 0, challenge, 0, 4);
         System.arraycopy(number2Array, 0, challenge, 4, 4);
         System.arraycopy(key3, 0, challenge, 8, 8);
-        expectedChallengeResponseBytes = WebSocketUtil.md5(challenge);
+        expectedChallengeResponseBytes = Unpooled.wrappedBuffer(WebSocketUtil.md5(challenge));
 
         // Get path
         URI wsURL = uri();
@@ -171,28 +165,8 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         // Set Content-Length to workaround some known defect.
         // See also: http://www.ietf.org/mail-archive/web/hybi/current/msg02149.html
         headers.set(Names.CONTENT_LENGTH, key3.length);
-        request.data().writeBytes(key3);
-
-        channel.pipeline().get(HttpResponseDecoder.class).setSingleDecode(true);
-
-        ChannelFuture future = channel.write(request);
-        future.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                ChannelPipeline p = future.channel().pipeline();
-                p.addAfter(
-                        p.context(HttpRequestEncoder.class).name(),
-                        "ws-encoder", new WebSocket00FrameEncoder());
-
-                if (future.isSuccess()) {
-                    promise.setSuccess();
-                } else {
-                    promise.setFailure(future.cause());
-                }
-            }
-        });
-
-        return promise;
+        request.content().writeBytes(key3);
+        return request;
     }
 
     /**
@@ -211,14 +185,12 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      * 8jKS'y:G*Co,Wxa-
      * </pre>
      *
-     * @param channel
-     *            Channel
      * @param response
      *            HTTP response returned from the server for the request sent by beginOpeningHandshake00().
      * @throws WebSocketHandshakeException
      */
     @Override
-    public void finishHandshake(Channel channel, FullHttpResponse response) {
+    protected void verify(FullHttpResponse response) {
         final HttpResponseStatus status = new HttpResponseStatus(101, "WebSocket Protocol Handshake");
 
         if (!response.getStatus().equals(status)) {
@@ -239,20 +211,10 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
                     + connection);
         }
 
-        byte[] challenge = response.data().array();
-        if (!Arrays.equals(challenge, expectedChallengeResponseBytes)) {
+        ByteBuf challenge = response.content();
+        if (!challenge.equals(expectedChallengeResponseBytes)) {
             throw new WebSocketHandshakeException("Invalid challenge");
         }
-
-        String subprotocol = headers.get(Names.SEC_WEBSOCKET_PROTOCOL);
-        setActualSubprotocol(subprotocol);
-
-        setHandshakeComplete();
-
-        ChannelPipeline p = channel.pipeline();
-        p.remove(HttpRequestEncoder.class);
-        p.replaceAndForward(HttpResponseDecoder.class,
-                "ws-decoder", new WebSocket00FrameDecoder(maxFramePayloadLength()));
     }
 
     private static String insertRandomCharacters(String key) {
@@ -287,5 +249,15 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         }
 
         return key;
+    }
+
+    @Override
+    protected ChannelInboundByteHandler newWebsocketDecoder() {
+        return new WebSocket00FrameDecoder(maxFramePayloadLength());
+    }
+
+    @Override
+    protected ChannelOutboundMessageHandler<WebSocketFrame> newWebSocketEncoder() {
+        return new WebSocket00FrameEncoder();
     }
 }

@@ -19,9 +19,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.LineBasedFrameDecoder;
-import io.netty.handler.codec.MessageToMessageEncoder;
 
 import java.nio.charset.Charset;
 
@@ -45,10 +45,9 @@ import java.nio.charset.Charset;
  *     ch.write("Did you say '" + msg + "'?\n");
  * }
  * </pre>
- * @apiviz.landmark
  */
 @Sharable
-public class StringEncoder extends MessageToMessageEncoder<CharSequence> {
+public class StringEncoder extends ChannelOutboundMessageHandlerAdapter<CharSequence> {
 
     // TODO Use CharsetEncoder instead.
     private final Charset charset;
@@ -64,8 +63,6 @@ public class StringEncoder extends MessageToMessageEncoder<CharSequence> {
      * Creates a new instance with the specified character set.
      */
     public StringEncoder(Charset charset) {
-        super(CharSequence.class);
-
         if (charset == null) {
             throw new NullPointerException("charset");
         }
@@ -73,7 +70,20 @@ public class StringEncoder extends MessageToMessageEncoder<CharSequence> {
     }
 
     @Override
-    protected Object encode(ChannelHandlerContext ctx, CharSequence msg) throws Exception {
-        return Unpooled.copiedBuffer(msg, charset);
+    public void flush(ChannelHandlerContext ctx, CharSequence msg) throws Exception {
+        if (msg.length() == 0) {
+            return;
+        }
+        ByteBuf encoded = Unpooled.copiedBuffer(msg, charset);
+        switch (ctx.nextOutboundBufferType()) {
+            case BYTE:
+                ctx.nextOutboundByteBuffer().writeBytes(encoded);
+                break;
+            case MESSAGE:
+                ctx.nextOutboundMessageBuffer().add(Unpooled.wrappedBuffer(encoded));
+                break;
+            default:
+                throw new Error();
+        }
     }
 }

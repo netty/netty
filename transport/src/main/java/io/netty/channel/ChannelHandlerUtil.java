@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,175 +13,306 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package io.netty.channel;
 
+import io.netty.buffer.BufType;
+import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Freeable;
 import io.netty.buffer.MessageBuf;
+import io.netty.util.Signal;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 /**
- * Utilities for {@link ChannelHandler} implementations.
+ * Utility methods for use within your {@link ChannelHandler} implementation.
  */
 public final class ChannelHandlerUtil {
 
-    /**
-     * Unfold the given msg and pass it to the next buffer depending on the msg type.
-     *
-     * @param ctx
-     *          the {@link ChannelHandlerContext} on which to operate
-     * @param msg
-     *          the msg to unfold and pass to the next buffer
-     * @param inbound
-     *          {@code true} if it is an inbound message, {@code false} otherwise
-     * @return added
-     *          {@code true} if the message was added to the next {@link ByteBuf} or {@link MessageBuf}
-     * @throws Exception
-     *          thrown if an error accour
-     */
-    public static boolean unfoldAndAdd(
-            ChannelHandlerContext ctx, Object msg, boolean inbound) throws Exception {
-        if (msg == null) {
-            return false;
+    public static final Signal ABORT = new Signal(ChannelHandlerUtil.class.getName() + ".ABORT");
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelHandlerUtil.class);
+
+    public static <T> void handleInboundBufferUpdated(
+            ChannelHandlerContext ctx, SingleInboundMessageHandler<T> handler) throws Exception {
+        MessageBuf<Object> in = ctx.inboundMessageBuffer();
+        if (in.isEmpty() || !handler.beginMessageReceived(ctx)) {
+            return;
         }
 
-        // Note we only recognize Object[] because Iterable is often implemented by user messages.
-        if (msg instanceof Object[]) {
-            Object[] array = (Object[]) msg;
-            if (array.length == 0) {
-                return false;
-            }
-
-            boolean added = false;
-            for (Object m: array) {
-                if (m == null) {
+        MessageBuf<Object> out = ctx.nextInboundMessageBuffer();
+        int oldOutSize = out.size();
+        try {
+            for (;;) {
+                Object msg = in.poll();
+                if (msg == null) {
                     break;
                 }
-                if (unfoldAndAdd(ctx, m, inbound)) {
-                    added = true;
+
+                if (!handler.acceptInboundMessage(msg)) {
+                    out.add(msg);
+                    continue;
+                }
+
+                @SuppressWarnings("unchecked")
+                T imsg = (T) msg;
+                try {
+                    handler.messageReceived(ctx, imsg);
+                } finally {
+                    BufUtil.release(imsg);
                 }
             }
-            return added;
+        } catch (Signal abort) {
+            abort.expect(ABORT);
+        } finally {
+            if (oldOutSize != out.size()) {
+                ctx.fireInboundBufferUpdated();
+            }
+
+            handler.endMessageReceived(ctx);
         }
-
-        if (inbound) {
-            if (ctx.hasNextInboundMessageBuffer()) {
-                ctx.nextInboundMessageBuffer().add(msg);
-                return true;
-            }
-
-            if (msg instanceof ByteBuf && ctx.hasNextInboundByteBuffer()) {
-                ByteBuf altDst = ctx.nextInboundByteBuffer();
-                ByteBuf src = (ByteBuf) msg;
-                altDst.writeBytes(src, src.readerIndex(), src.readableBytes());
-                return true;
-            }
-        } else {
-            if (ctx.hasNextOutboundMessageBuffer()) {
-                ctx.nextOutboundMessageBuffer().add(msg);
-                return true;
-            }
-
-            if (msg instanceof ByteBuf && ctx.hasNextOutboundByteBuffer()) {
-                ByteBuf altDst = ctx.nextOutboundByteBuffer();
-                ByteBuf src = (ByteBuf) msg;
-                altDst.writeBytes(src, src.readerIndex(), src.readableBytes());
-                return true;
-            }
-        }
-
-        throw new NoSuchBufferException(String.format(
-                "the handler '%s' could not find a %s which accepts a %s.",
-                ctx.name(),
-                inbound? ChannelInboundHandler.class.getSimpleName()
-                       : ChannelOutboundHandler.class.getSimpleName(),
-                msg.getClass().getSimpleName()));
     }
 
-    private static final Class<?>[] EMPTY_TYPES = new Class<?>[0];
+    public static <T> void handleFlush(
+            ChannelHandlerContext ctx, ChannelPromise promise,
+            SingleOutboundMessageHandler<T> handler) throws Exception {
 
-    /**
-     * Creates a safe copy of the given array and return it.
-     */
-    public static Class<?>[] acceptedMessageTypes(Class<?>[] acceptedMsgTypes) {
-        if (acceptedMsgTypes == null) {
-            return EMPTY_TYPES;
-        }
-
-        int numElem = 0;
-        for (Class<?> c: acceptedMsgTypes) {
-            if (c == null) {
-                break;
-            }
-            numElem ++;
-        }
-
-        Class<?>[] newAllowedMsgTypes = new Class[numElem];
-        System.arraycopy(acceptedMsgTypes, 0, newAllowedMsgTypes, 0, numElem);
-
-        return newAllowedMsgTypes;
+        handleFlush(ctx, promise, true, handler);
     }
 
-    /**
-     * Return {@code true} if the given msg is compatible with one of the given acceptedMessageTypes or if
-     * acceptedMessageTypes is null / empty.
-     */
-    public static boolean acceptMessage(Class<?>[] acceptedMsgTypes, Object msg) {
-        if (acceptedMsgTypes == null || acceptedMsgTypes.length == 0) {
-            return true;
+    public static <T> void handleFlush(
+            ChannelHandlerContext ctx, ChannelPromise promise, boolean closeOnFailedFlush,
+            SingleOutboundMessageHandler<T> handler) throws Exception {
+
+        MessageBuf<Object> in = ctx.outboundMessageBuffer();
+        final int inSize = in.size();
+        if (inSize == 0) {
+            ctx.flush(promise);
+            return;
         }
 
-        for (Class<?> c: acceptedMsgTypes) {
-            if (c.isInstance(msg)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Add the given msg to the next outbound {@link MessageBuf}.
-     */
-    public static void addToNextOutboundBuffer(ChannelHandlerContext ctx, Object msg) {
+        int processed = 0;
         try {
-            ctx.nextOutboundMessageBuffer().add(msg);
-        } catch (NoSuchBufferException e) {
-            NoSuchBufferException newE =
-                    new NoSuchBufferException(e.getMessage() + " (msg: " + msg + ')');
-            newE.setStackTrace(e.getStackTrace());
-            throw newE;
-        }
-    }
+            if (!handler.beginFlush(ctx)) {
+                throw new IncompleteFlushException(
+                        "beginFlush(..) rejected the flush request by returning false. " +
+                        "none of " + inSize + " message(s) fulshed.");
+            }
+            for (;;) {
+                Object msg = in.poll();
+                if (msg == null) {
+                    break;
+                }
 
-    /**
-     * Add the given msg to the next inbound {@link MessageBuf}.
-     */
-    public static void addToNextInboundBuffer(ChannelHandlerContext ctx, Object msg) {
+                if (!handler.acceptOutboundMessage(msg)) {
+                    addToNextOutboundBuffer(ctx, msg);
+                    processed ++;
+                    continue;
+                }
+
+                @SuppressWarnings("unchecked")
+                T imsg = (T) msg;
+                try {
+                    handler.flush(ctx, imsg);
+                    processed ++;
+                } finally {
+                    BufUtil.release(imsg);
+                }
+            }
+        } catch (Throwable t) {
+            IncompleteFlushException pfe;
+            if (t instanceof IncompleteFlushException) {
+                pfe = (IncompleteFlushException) t;
+            } else {
+                String msg = processed + " out of " + inSize + " message(s) flushed";
+                if (t instanceof Signal) {
+                    Signal abort = (Signal) t;
+                    abort.expect(ABORT);
+                    pfe = new IncompleteFlushException("aborted: " + msg);
+                } else {
+                    pfe = new IncompleteFlushException(msg, t);
+                }
+            }
+            fail(ctx, promise, closeOnFailedFlush, pfe);
+        }
+
         try {
-            ctx.nextInboundMessageBuffer().add(msg);
-        } catch (NoSuchBufferException e) {
-            NoSuchBufferException newE =
-                    new NoSuchBufferException(e.getMessage() + " (msg: " + msg + ')');
-            newE.setStackTrace(e.getStackTrace());
-            throw newE;
-        }
-    }
-
-    /**
-     * Try to free up resources that are held by the message.
-     */
-    public static void freeMessage(Object msg) throws Exception {
-        if (msg instanceof Freeable) {
-            try {
-                ((Freeable) msg).free();
-            } catch (UnsupportedOperationException e) {
-                // This can happen for derived buffers
-                // TODO: Think about this
+            handler.endFlush(ctx);
+        } catch (Throwable t) {
+            if (promise.isDone()) {
+                logger.warn("endFlush() raised a masked exception due to failed flush().", t);
+            } else {
+                fail(ctx, promise, closeOnFailedFlush, t);
             }
         }
+
+        if (!promise.isDone()) {
+            ctx.flush(promise);
+        }
     }
 
-    private ChannelHandlerUtil() {
-        // Unused
+    private static void fail(
+            ChannelHandlerContext ctx, ChannelPromise promise, boolean closeOnFailedFlush, Throwable cause) {
+        promise.setFailure(cause);
+        if (closeOnFailedFlush) {
+            ctx.close();
+        }
+    }
+
+    /**
+     * Allocate a {@link ByteBuf} taking the {@link ChannelConfig#getDefaultHandlerByteBufType()}
+     * setting into account.
+     */
+    public static ByteBuf allocate(ChannelHandlerContext ctx) {
+        switch(ctx.channel().config().getDefaultHandlerByteBufType()) {
+            case DIRECT:
+                return ctx.alloc().directBuffer();
+            case PREFER_DIRECT:
+                return ctx.alloc().ioBuffer();
+            case HEAP:
+                return ctx.alloc().heapBuffer();
+            default:
+                throw new IllegalStateException();
+        }
+    }
+
+    /**
+     * Allocate a {@link ByteBuf} taking the {@link ChannelConfig#getDefaultHandlerByteBufType()}
+     * setting into account.
+     */
+    public static ByteBuf allocate(ChannelHandlerContext ctx, int initialCapacity) {
+        switch(ctx.channel().config().getDefaultHandlerByteBufType()) {
+            case DIRECT:
+                return ctx.alloc().directBuffer(initialCapacity);
+            case PREFER_DIRECT:
+                return ctx.alloc().ioBuffer(initialCapacity);
+            case HEAP:
+                return ctx.alloc().heapBuffer(initialCapacity);
+            default:
+                throw new IllegalStateException();
+        }
+    }
+
+    /**
+     * Allocate a {@link ByteBuf} taking the {@link ChannelConfig#getDefaultHandlerByteBufType()}
+     * setting into account.
+     */
+    public static ByteBuf allocate(ChannelHandlerContext ctx, int initialCapacity, int maxCapacity) {
+        switch(ctx.channel().config().getDefaultHandlerByteBufType()) {
+            case DIRECT:
+                return ctx.alloc().directBuffer(initialCapacity, maxCapacity);
+            case PREFER_DIRECT:
+                return ctx.alloc().ioBuffer(initialCapacity, maxCapacity);
+            case HEAP:
+                return ctx.alloc().heapBuffer(initialCapacity, maxCapacity);
+            default:
+                throw new IllegalStateException();
+        }
+    }
+
+    /**
+     * Add the msg to the next outbound buffer in the {@link ChannelPipeline}. This takes special care of
+     * msgs that are of type {@link ByteBuf}.
+     */
+    public static boolean addToNextOutboundBuffer(ChannelHandlerContext ctx, Object msg) {
+        if (msg instanceof ByteBuf) {
+            if (ctx.nextOutboundBufferType() == BufType.BYTE) {
+                ctx.nextOutboundByteBuffer().writeBytes((ByteBuf) msg);
+                return true;
+            }
+        }
+        return ctx.nextOutboundMessageBuffer().add(msg);
+    }
+
+    /**
+     * Add the msg to the next inbound buffer in the {@link ChannelPipeline}. This takes special care of
+     * msgs that are of type {@link ByteBuf}.
+     */
+    public static boolean addToNextInboundBuffer(ChannelHandlerContext ctx, Object msg) {
+        if (msg instanceof ByteBuf) {
+            if (ctx.nextInboundBufferType() == BufType.BYTE) {
+                ctx.nextInboundByteBuffer().writeBytes((ByteBuf) msg);
+                return true;
+            }
+        }
+        return ctx.nextInboundMessageBuffer().add(msg);
+    }
+
+    private ChannelHandlerUtil() { }
+
+    public interface SingleInboundMessageHandler<T> {
+        /**
+         * Returns {@code true} if and only if the specified message can be handled by this handler.
+         *
+         * @param msg the message
+         */
+        boolean acceptInboundMessage(Object msg) throws Exception;
+
+        /**
+         * Will get notified once {@link ChannelStateHandler#inboundBufferUpdated(ChannelHandlerContext)} was called.
+         *
+         * If this method returns {@code false} no further processing of the {@link MessageBuf}
+         * will be done until the next call of {@link ChannelStateHandler#inboundBufferUpdated(ChannelHandlerContext)}.
+         *
+         * This will return {@code true} by default, and may get overriden by sub-classes for
+         * special handling.
+         *
+         * @param ctx           the {@link ChannelHandlerContext} which this {@link ChannelHandler} belongs to
+         */
+        boolean beginMessageReceived(ChannelHandlerContext ctx) throws Exception;
+
+        /**
+         * Is called once a message was received.
+         *
+         * @param ctx           the {@link ChannelHandlerContext} which this {@link ChannelHandler} belongs to
+         * @param msg           the message to handle
+         */
+        void messageReceived(ChannelHandlerContext ctx, T msg) throws Exception;
+
+        /**
+         * Is called when {@link #messageReceived(ChannelHandlerContext, Object)} returns.
+         *
+         * Super-classes may-override this for special handling.
+         *
+         * @param ctx           the {@link ChannelHandlerContext} which this {@link ChannelHandler} belongs to
+         */
+        void endMessageReceived(ChannelHandlerContext ctx) throws Exception;
+    }
+
+    public interface SingleOutboundMessageHandler<T> {
+        /**
+         * Returns {@code true} if and only if the specified message can be handled by this handler.
+         *
+         * @param msg the message
+         */
+        boolean acceptOutboundMessage(Object msg) throws Exception;
+
+        /**
+         * Will get notified once {@link ChannelOperationHandler#flush(ChannelHandlerContext, ChannelPromise)}
+         * was called.
+         *
+         * @param ctx           the {@link ChannelHandlerContext} which this {@link ChannelHandler} belongs to
+         *
+         * @return {@code true} to accept the flush request.  {@code false} to reject the flush request and
+         *         to fail the promise associated with the flush request with {@link IncompleteFlushException}.
+         */
+        boolean beginFlush(ChannelHandlerContext ctx) throws Exception;
+
+        /**
+         * Is called once a message is being flushed.
+         *
+         * @param ctx           the {@link ChannelHandlerContext} which this {@link ChannelHandler} belongs to
+         * @param msg           the message to handle
+         */
+        void flush(ChannelHandlerContext ctx, T msg) throws Exception;
+
+        /**
+         * Is called when {@link ChannelOperationHandler#flush(ChannelHandlerContext, ChannelPromise)} returns.
+         *
+         * Super-classes may-override this for special handling.
+         *
+         * @param ctx           the {@link ChannelHandlerContext} which this {@link ChannelHandler} belongs to
+         */
+        void endFlush(ChannelHandlerContext ctx) throws Exception;
     }
 }

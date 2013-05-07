@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.spdy;
 
+import io.netty.buffer.BufUtil;
+import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.handler.codec.http.HttpMessage;
@@ -32,21 +34,23 @@ public class SpdyHttpResponseStreamIdHandler extends
     private static final Integer NO_ID = -1;
     private final Queue<Integer> ids = new LinkedList<Integer>();
 
-    public SpdyHttpResponseStreamIdHandler() {
-        super(new Class<?>[] { HttpMessage.class, SpdyRstStreamFrame.class }, new Class<?>[] { HttpMessage.class });
+    @Override
+    public boolean acceptInboundMessage(Object msg) throws Exception {
+        return msg instanceof HttpMessage || msg instanceof SpdyRstStreamFrame;
     }
 
     @Override
-    protected Object encode(ChannelHandlerContext ctx, HttpMessage msg) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, HttpMessage msg, MessageBuf<Object> out) throws Exception {
         Integer id = ids.poll();
         if (id != null && id.intValue() != NO_ID && !msg.headers().contains(SpdyHttpHeaders.Names.STREAM_ID)) {
             SpdyHttpHeaders.setStreamId(msg, id);
         }
-        return msg;
+
+        out.add(BufUtil.retain(msg));
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Object msg) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, Object msg, MessageBuf<Object> out) throws Exception {
         if (msg instanceof HttpMessage) {
             boolean contains = ((HttpMessage) msg).headers().contains(SpdyHttpHeaders.Names.STREAM_ID);
             if (!contains) {
@@ -58,16 +62,6 @@ public class SpdyHttpResponseStreamIdHandler extends
             ids.remove(((SpdyRstStreamFrame) msg).getStreamId());
         }
 
-        return msg;
-    }
-
-    @Override
-    protected void freeInboundMessage(Object msg) throws Exception {
-        // just pass through so no free
-    }
-
-    @Override
-    protected void freeOutboundMessage(HttpMessage msg) throws Exception {
-        // just pass through so no free
+        out.add(BufUtil.retain(msg));
     }
 }

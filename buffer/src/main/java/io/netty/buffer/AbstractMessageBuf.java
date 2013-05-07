@@ -16,13 +16,42 @@
 
 package io.netty.buffer;
 
+import io.netty.util.internal.PlatformDependent;
+
 import java.util.AbstractQueue;
 import java.util.Collection;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
+/**
+ * Abstract base class for {@link MessageBuf} implementations.
+ * @param <T>
+ */
 public abstract class AbstractMessageBuf<T> extends AbstractQueue<T> implements MessageBuf<T> {
 
+    @SuppressWarnings("rawtypes")
+    private static final AtomicIntegerFieldUpdater<AbstractMessageBuf> refCntUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(AbstractMessageBuf.class, "refCnt");
+
+    private static final long REFCNT_FIELD_OFFSET;
+
+    static {
+        long refCntFieldOffset = -1;
+        try {
+            if (PlatformDependent.hasUnsafe()) {
+                refCntFieldOffset = PlatformDependent.objectFieldOffset(
+                        AbstractMessageBuf.class.getDeclaredField("refCnt"));
+            }
+        } catch (Throwable t) {
+            // Ignored
+        }
+
+        REFCNT_FIELD_OFFSET = refCntFieldOffset;
+    }
+
     private final int maxCapacity;
-    private boolean freed;
+
+    @SuppressWarnings("FieldMayBeFinal")
+    private volatile int refCnt = 1;
 
     protected AbstractMessageBuf(int maxCapacity) {
         if (maxCapacity < 0) {
@@ -37,24 +66,94 @@ public abstract class AbstractMessageBuf<T> extends AbstractQueue<T> implements 
     }
 
     @Override
-    public final boolean isFreed() {
-        return freed;
+    public final int refCnt() {
+        if (REFCNT_FIELD_OFFSET >= 0) {
+            // Try to do non-volatile read for performance.
+            return PlatformDependent.getInt(this, REFCNT_FIELD_OFFSET);
+        } else {
+            return refCnt;
+        }
     }
 
     @Override
-    public final void free() {
-        if (freed) {
-            return;
+    public MessageBuf<T> retain() {
+        for (;;) {
+            int refCnt = this.refCnt;
+            if (refCnt == 0) {
+                throw new IllegalBufferAccessException();
+            }
+            if (refCnt == Integer.MAX_VALUE) {
+                throw new IllegalBufferAccessException("refCnt overflow");
+            }
+            if (refCntUpdater.compareAndSet(this, refCnt, refCnt + 1)) {
+                break;
+            }
+        }
+        return this;
+    }
+
+    @Override
+    public MessageBuf<T> retain(int increment) {
+        if (increment <= 0) {
+            throw new IllegalArgumentException("increment: " + increment + " (expected: > 0)");
         }
 
-        try {
-            doFree();
-        } finally {
-            freed = true;
+        for (;;) {
+            int refCnt = this.refCnt;
+            if (refCnt == 0) {
+                throw new IllegalBufferAccessException();
+            }
+            if (refCnt > Integer.MAX_VALUE - increment) {
+                throw new IllegalBufferAccessException("refCnt overflow");
+            }
+            if (refCntUpdater.compareAndSet(this, refCnt, refCnt + increment)) {
+                break;
+            }
+        }
+        return this;
+    }
+
+    @Override
+    public final boolean release() {
+        for (;;) {
+            int refCnt = this.refCnt;
+            if (refCnt == 0) {
+                throw new IllegalBufferAccessException();
+            }
+
+            if (refCntUpdater.compareAndSet(this, refCnt, refCnt - 1)) {
+                if (refCnt == 1) {
+                    deallocate();
+                    return true;
+                }
+                return false;
+            }
         }
     }
 
-    protected abstract void doFree();
+    @Override
+    public final boolean release(int decrement) {
+        if (decrement <= 0) {
+            throw new IllegalArgumentException("decrement: " + decrement + " (expected: > 0)");
+        }
+
+        for (;;) {
+            int refCnt = this.refCnt;
+            if (refCnt < decrement) {
+                throw new IllegalBufferAccessException();
+            }
+
+            if (refCntUpdater.compareAndSet(this, refCnt, refCnt - decrement)) {
+                if (refCnt == decrement) {
+                    deallocate();
+                    return true;
+                }
+                return false;
+            }
+        }
+    }
+
+    protected abstract void deallocate();
 
     @Override
     public final int maxCapacity() {
@@ -87,8 +186,8 @@ public abstract class AbstractMessageBuf<T> extends AbstractQueue<T> implements 
         return size() <= maxCapacity - size;
     }
 
-    protected final void checkUnfreed() {
-        if (isFreed()) {
+    protected final void ensureAccessible() {
+        if (refCnt <= 0) {
             throw new IllegalBufferAccessException();
         }
     }
@@ -110,7 +209,7 @@ public abstract class AbstractMessageBuf<T> extends AbstractQueue<T> implements 
 
     @Override
     public int drainTo(Collection<? super T> c) {
-        checkUnfreed();
+        ensureAccessible();
         int cnt = 0;
         for (;;) {
             T o = poll();
@@ -125,7 +224,7 @@ public abstract class AbstractMessageBuf<T> extends AbstractQueue<T> implements 
 
     @Override
     public int drainTo(Collection<? super T> c, int maxElements) {
-        checkUnfreed();
+        ensureAccessible();
         int cnt = 0;
         while (cnt < maxElements) {
             T o = poll();
@@ -140,7 +239,7 @@ public abstract class AbstractMessageBuf<T> extends AbstractQueue<T> implements 
 
     @Override
     public String toString() {
-        if (isFreed()) {
+        if (refCnt <= 0) {
             return getClass().getSimpleName() + "(freed)";
         }
 

@@ -20,43 +20,58 @@ package io.netty.buffer;
  *
  */
 public class DefaultByteBufHolder implements ByteBufHolder {
+
     private final ByteBuf data;
+
     public DefaultByteBufHolder(ByteBuf data) {
         if (data == null) {
             throw new NullPointerException("data");
-        }
-        if (data.unwrap() != null && !(data instanceof SwappedByteBuf)) {
-            throw new IllegalArgumentException("Only not-derived ByteBuf instance are supported, you used: "
-                    + data.getClass().getSimpleName());
         }
         this.data = data;
     }
 
     @Override
-    public ByteBuf data() {
-        if (data.isFreed()) {
+    public ByteBuf content() {
+        if (data.refCnt() <= 0) {
             throw new IllegalBufferAccessException();
         }
         return data;
     }
 
     @Override
-    public void free() {
-        data.free();
-    }
-
-    @Override
-    public boolean isFreed() {
-        return data.isFreed();
-    }
-
-    @Override
     public ByteBufHolder copy() {
-        return new DefaultByteBufHolder(data().copy());
+        return new DefaultByteBufHolder(data.copy());
+    }
+
+    @Override
+    public int refCnt() {
+        return data.refCnt();
+    }
+
+    @Override
+    public ByteBufHolder retain() {
+        data.retain();
+        return this;
+    }
+
+    @Override
+    public ByteBufHolder retain(int increment) {
+        data.retain(increment);
+        return this;
+    }
+
+    @Override
+    public boolean release() {
+        return data.release();
+    }
+
+    @Override
+    public boolean release(int decrement) {
+        return data.release(decrement);
     }
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + '(' + data().toString() + ')';
+        return getClass().getSimpleName() + '(' + content().toString() + ')';
     }
 }

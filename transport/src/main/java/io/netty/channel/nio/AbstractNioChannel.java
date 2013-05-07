@@ -19,9 +19,10 @@ import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -54,7 +55,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      */
     private ChannelPromise connectPromise;
     private ScheduledFuture<?> connectTimeoutFuture;
-    private ConnectException connectTimeoutException;
+    private SocketAddress requestedRemoteAddress;
 
     /**
      * Create a new instance
@@ -174,6 +175,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                         }
                     } else {
                         connectPromise = promise;
+                        requestedRemoteAddress = remoteAddress;
 
                         // Schedule connect timeout.
                         int connectTimeoutMillis = config().getConnectTimeoutMillis();
@@ -181,11 +183,10 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                             connectTimeoutFuture = eventLoop().schedule(new Runnable() {
                                 @Override
                                 public void run() {
-                                    if (connectTimeoutException == null) {
-                                        connectTimeoutException = new ConnectException("connection timed out");
-                                    }
                                     ChannelPromise connectPromise = AbstractNioChannel.this.connectPromise;
-                                    if (connectPromise != null && connectPromise.tryFailure(connectTimeoutException)) {
+                                    ConnectTimeoutException cause =
+                                            new ConnectTimeoutException("connection timed out: " + remoteAddress);
+                                    if (connectPromise != null && connectPromise.tryFailure(cause)) {
                                         close(voidFuture());
                                     }
                                 }
@@ -193,6 +194,11 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                         }
                     }
                 } catch (Throwable t) {
+                    if (t instanceof ConnectException) {
+                        Throwable newT = new ConnectException(t.getMessage() + ": " + remoteAddress);
+                        newT.setStackTrace(t.getStackTrace());
+                        t = newT;
+                    }
                     promise.setFailure(t);
                     closeIfClosed();
                 }
@@ -218,6 +224,12 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     pipeline().fireChannelActive();
                 }
             } catch (Throwable t) {
+                if (t instanceof ConnectException) {
+                    Throwable newT = new ConnectException(t.getMessage() + ": " + requestedRemoteAddress);
+                    newT.setStackTrace(t.getStackTrace());
+                    t = newT;
+                }
+
                 connectPromise.setFailure(t);
                 closeIfClosed();
             } finally {
@@ -261,8 +273,9 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doDeregister() throws Exception {
+    protected Runnable doDeregister() throws Exception {
         eventLoop().cancel(selectionKey());
+        return null;
     }
 
     @Override
@@ -277,15 +290,13 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         }
 
         final int interestOps = selectionKey.interestOps();
-        if ((interestOps & readInterestOp) != 0) {
-            return;
+        if ((interestOps & readInterestOp) == 0) {
+            selectionKey.interestOps(interestOps | readInterestOp);
         }
-
-        this.selectionKey.interestOps(interestOps | readInterestOp);
     }
 
     /**
-     * Conect to the remote peer
+     * Connect to the remote peer
      */
     protected abstract boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception;
 

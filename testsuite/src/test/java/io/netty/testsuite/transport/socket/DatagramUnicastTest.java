@@ -43,7 +43,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
             public void messageReceived(
                     ChannelHandlerContext ctx,
                     DatagramPacket msg) throws Exception {
-                assertEquals(1, msg.data().readInt());
+                assertEquals(1, msg.content().readInt());
                 latch.countDown();
             }
         });

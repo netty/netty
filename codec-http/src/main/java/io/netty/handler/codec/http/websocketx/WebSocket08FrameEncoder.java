@@ -58,8 +58,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteBuffer;
 
@@ -90,17 +90,15 @@ public class WebSocket08FrameEncoder extends MessageToByteEncoder<WebSocketFrame
      *            false.
      */
     public WebSocket08FrameEncoder(boolean maskPayload) {
-        super(WebSocketFrame.class);
         this.maskPayload = maskPayload;
     }
 
     @Override
-    public void encode(
-            ChannelHandlerContext ctx, WebSocketFrame msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, ByteBuf out) throws Exception {
 
         byte[] mask;
 
-        ByteBuf data = msg.data();
+        ByteBuf data = msg.content();
         if (data == null) {
             data = Unpooled.EMPTY_BUFFER;
         }

@@ -25,11 +25,10 @@ import io.netty.example.udt.util.UtilConsoleReporter;
 import io.netty.example.udt.util.UtilThreadFactory;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
 /**
  * UDT Byte Stream Client
@@ -41,8 +40,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class ByteEchoClient {
 
-    private static final Logger log = LoggerFactory
-            .getLogger(ByteEchoClient.class);
+    private static final Logger log = Logger.getLogger(ByteEchoClient.class.getName());
 
     private final String host;
     private final int port;
@@ -57,11 +55,11 @@ public class ByteEchoClient {
 
     public void run() throws Exception {
         // Configure the client.
-        final Bootstrap boot = new Bootstrap();
         final ThreadFactory connectFactory = new UtilThreadFactory("connect");
         final NioEventLoopGroup connectGroup = new NioEventLoopGroup(1,
                 connectFactory, NioUdtProvider.BYTE_PROVIDER);
         try {
+            final Bootstrap boot = new Bootstrap();
             boot.group(connectGroup)
                     .channelFactory(NioUdtProvider.BYTE_CONNECTOR)
                     .handler(new ChannelInitializer<UdtChannel>() {
@@ -79,7 +77,7 @@ public class ByteEchoClient {
             f.channel().closeFuture().sync();
         } finally {
             // Shut down the event loop to terminate all threads.
-            boot.shutdown();
+            connectGroup.shutdownGracefully();
         }
     }
 

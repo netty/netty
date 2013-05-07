@@ -18,6 +18,8 @@ package io.netty.channel.udt;
 import com.barchart.udt.OptionUDT;
 import com.barchart.udt.SocketUDT;
 import com.barchart.udt.nio.ChannelUDT;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
 
@@ -230,4 +232,33 @@ public class DefaultUdtChannelConfig extends DefaultChannelConfig implements
         return systemSendBuferSize;
     }
 
+    @Override
+    public UdtChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
+        super.setConnectTimeoutMillis(connectTimeoutMillis);
+        return this;
+    }
+
+    @Override
+    public UdtChannelConfig setWriteSpinCount(int writeSpinCount) {
+        super.setWriteSpinCount(writeSpinCount);
+        return this;
+    }
+
+    @Override
+    public UdtChannelConfig setAllocator(ByteBufAllocator allocator) {
+        super.setAllocator(allocator);
+        return this;
+    }
+
+    @Override
+    public UdtChannelConfig setAutoRead(boolean autoRead) {
+        super.setAutoRead(autoRead);
+        return this;
+    }
+
+    @Override
+    public UdtChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type) {
+        super.setDefaultHandlerByteBufType(type);
+        return this;
+    }
 }

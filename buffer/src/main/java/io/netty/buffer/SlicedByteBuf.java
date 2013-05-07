@@ -30,7 +30,7 @@ import java.nio.channels.ScatteringByteChannel;
  * {@link ByteBuf#slice(int, int)} instead of calling the constructor
  * explicitly.
  */
-public class SlicedByteBuf extends AbstractByteBuf {
+public class SlicedByteBuf extends AbstractDerivedByteBuf {
 
     private final ByteBuf buffer;
     private final int adjustment;
@@ -38,14 +38,8 @@ public class SlicedByteBuf extends AbstractByteBuf {
 
     public SlicedByteBuf(ByteBuf buffer, int index, int length) {
         super(length);
-        if (index < 0 || index > buffer.capacity()) {
-            throw new IndexOutOfBoundsException("Invalid index of " + index
-                    + ", maximum is " + buffer.capacity());
-        }
-
-        if (index + length > buffer.capacity()) {
-            throw new IndexOutOfBoundsException("Invalid combined index of "
-                    + (index + length) + ", maximum is " + buffer.capacity());
+        if (index < 0 || index > buffer.capacity() - length) {
+            throw new IndexOutOfBoundsException(buffer.toString() + ".slice(" + index + ", " + length + ')');
         }
 
         if (buffer instanceof SlicedByteBuf) {
@@ -109,32 +103,37 @@ public class SlicedByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public byte getByte(int index) {
-        checkIndex(index);
+    public boolean hasMemoryAddress() {
+        return buffer.hasMemoryAddress();
+    }
+
+    @Override
+    public long memoryAddress() {
+        return buffer.memoryAddress() + adjustment;
+    }
+
+    @Override
+    protected byte _getByte(int index) {
         return buffer.getByte(index + adjustment);
     }
 
     @Override
-    public short getShort(int index) {
-        checkIndex(index, 2);
+    protected short _getShort(int index) {
         return buffer.getShort(index + adjustment);
     }
 
     @Override
-    public int getUnsignedMedium(int index) {
-        checkIndex(index, 3);
+    protected int _getUnsignedMedium(int index) {
         return buffer.getUnsignedMedium(index + adjustment);
     }
 
     @Override
-    public int getInt(int index) {
-        checkIndex(index, 4);
+    protected int _getInt(int index) {
         return buffer.getInt(index + adjustment);
     }
 
     @Override
-    public long getLong(int index) {
-        checkIndex(index, 8);
+    protected long _getLong(int index) {
         return buffer.getLong(index + adjustment);
     }
 
@@ -182,38 +181,28 @@ public class SlicedByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public ByteBuf setByte(int index, int value) {
-        checkIndex(index);
+    protected void _setByte(int index, int value) {
         buffer.setByte(index + adjustment, value);
-        return this;
     }
 
     @Override
-    public ByteBuf setShort(int index, int value) {
-        checkIndex(index, 2);
+    protected void _setShort(int index, int value) {
         buffer.setShort(index + adjustment, value);
-        return this;
     }
 
     @Override
-    public ByteBuf setMedium(int index, int value) {
-        checkIndex(index, 3);
+    protected void _setMedium(int index, int value) {
         buffer.setMedium(index + adjustment, value);
-        return this;
     }
 
     @Override
-    public ByteBuf setInt(int index, int value) {
-        checkIndex(index, 4);
+    protected void _setInt(int index, int value) {
         buffer.setInt(index + adjustment, value);
-        return this;
     }
 
     @Override
-    public ByteBuf setLong(int index, long value) {
-        checkIndex(index, 8);
+    protected void _setLong(int index, long value) {
         buffer.setLong(index + adjustment, value);
-        return this;
     }
 
     @Override
@@ -238,30 +227,26 @@ public class SlicedByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    public ByteBuf getBytes(int index, OutputStream out, int length)
-            throws IOException {
+    public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
         checkIndex(index, length);
         buffer.getBytes(index + adjustment, out, length);
         return this;
     }
 
     @Override
-    public int getBytes(int index, GatheringByteChannel out, int length)
-            throws IOException {
+    public int getBytes(int index, GatheringByteChannel out, int length) throws IOException {
         checkIndex(index, length);
         return buffer.getBytes(index + adjustment, out, length);
     }
 
     @Override
-    public int setBytes(int index, InputStream in, int length)
-            throws IOException {
+    public int setBytes(int index, InputStream in, int length) throws IOException {
         checkIndex(index, length);
         return buffer.setBytes(index + adjustment, in, length);
     }
 
     @Override
-    public int setBytes(int index, ScatteringByteChannel in, int length)
-            throws IOException {
+    public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
         checkIndex(index, length);
         return buffer.setBytes(index + adjustment, in, length);
     }
@@ -280,26 +265,6 @@ public class SlicedByteBuf extends AbstractByteBuf {
     @Override
     public ByteBuffer[] nioBuffers(int index, int length) {
         checkIndex(index, length);
-        return buffer.nioBuffers(index, length);
-    }
-
-    @Override
-    public boolean isFreed() {
-        return buffer.isFreed();
-    }
-
-    @Override
-    public void free() {
-        throw new UnsupportedOperationException("derived");
-    }
-
-    @Override
-    public ByteBuf suspendIntermediaryDeallocations() {
-        throw new UnsupportedOperationException("derived");
-    }
-
-    @Override
-    public ByteBuf resumeIntermediaryDeallocations() {
-        throw new UnsupportedOperationException("derived");
+        return buffer.nioBuffers(index + adjustment, length);
     }
 }

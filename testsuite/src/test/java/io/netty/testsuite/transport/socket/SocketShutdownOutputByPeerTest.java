@@ -27,7 +27,7 @@ import org.junit.Test;
 import java.net.Socket;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.*;
@@ -64,6 +64,7 @@ public class SocketShutdownOutputByPeerTest extends AbstractServerSocketTest {
             assertTrue(h.ch.isInputShutdown());
             assertFalse(h.ch.isOutputShutdown());
             assertEquals(1, h.closure.getCount());
+            Thread.sleep(100);
             assertEquals(1, h.halfClosureCount.intValue());
         } finally {
             s.close();
@@ -101,6 +102,7 @@ public class SocketShutdownOutputByPeerTest extends AbstractServerSocketTest {
             assertTrue(h.ch.isOutputShutdown());
 
             assertEquals(1, h.halfClosure.getCount());
+            Thread.sleep(100);
             assertEquals(0, h.halfClosureCount.intValue());
         } finally {
             s.close();
@@ -109,7 +111,7 @@ public class SocketShutdownOutputByPeerTest extends AbstractServerSocketTest {
 
     private static class TestHandler extends ChannelInboundByteHandlerAdapter {
         volatile SocketChannel ch;
-        final BlockingQueue<Byte> queue = new SynchronousQueue<Byte>();
+        final BlockingQueue<Byte> queue = new LinkedBlockingQueue<Byte>();
         final CountDownLatch halfClosure = new CountDownLatch(1);
         final CountDownLatch closure = new CountDownLatch(1);
         final AtomicInteger halfClosureCount = new AtomicInteger();

@@ -31,7 +31,7 @@ import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 /**
  * Encodes a SPDY Data or Control Frame into a {@link ByteBuf}.
  */
-public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
+public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyDataOrControlFrame> {
 
     private final int version;
     private volatile boolean finished;
@@ -50,8 +50,6 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
      * Creates a new instance with the specified parameters.
      */
     public SpdyFrameEncoder(int version, int compressionLevel, int windowBits, int memLevel) {
-        super(SpdyDataFrame.class, SpdyControlFrame.class);
-
         if (version < SpdyConstants.SPDY_MIN_VERSION || version > SpdyConstants.SPDY_MAX_VERSION) {
             throw new IllegalArgumentException(
                     "unknown version: " + version);
@@ -62,7 +60,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
     }
 
     @Override
-    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
@@ -78,11 +76,11 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<Object> {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, SpdyDataOrControlFrame msg, ByteBuf out) throws Exception {
         if (msg instanceof SpdyDataFrame) {
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
-            ByteBuf data = spdyDataFrame.data();
+            ByteBuf data = spdyDataFrame.content();
             byte flags = spdyDataFrame.isLast() ? SPDY_DATA_FLAG_FIN : 0;
             out.ensureWritable(SPDY_HEADER_SIZE + data.readableBytes());
             out.writeInt(spdyDataFrame.getStreamId() & 0x7FFFFFFF);

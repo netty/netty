@@ -17,9 +17,9 @@ package io.netty.handler.timeout;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOperationHandlerAdapter;
@@ -45,7 +45,7 @@ import java.util.concurrent.TimeUnit;
  * }
  *
  * // Handler should handle the {@link WriteTimeoutException}.
- * public class MyHandler extends {@link ChannelHandlerAdapter} {
+ * public class MyHandler extends {@link ChannelDuplexHandler} {
  *     {@code @Override}
  *     public void exceptionCaught({@link ChannelHandlerContext} ctx, {@link Throwable} cause)
  *             throws {@link Exception} {
@@ -64,9 +64,6 @@ import java.util.concurrent.TimeUnit;
  * </pre>
  * @see ReadTimeoutHandler
  * @see IdleStateHandler
- *
- * @apiviz.landmark
- * @apiviz.has io.netty.handler.timeout.TimeoutException oneway - - raises
  */
 public class WriteTimeoutHandler extends ChannelOperationHandlerAdapter {
 
@@ -107,14 +104,12 @@ public class WriteTimeoutHandler extends ChannelOperationHandlerAdapter {
     @Override
     public void flush(final ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
         scheduleTimeout(ctx, promise);
-
-        super.flush(ctx, promise);
+        ctx.flush(promise);
     }
 
     @Override
     public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise promise) throws Exception {
         scheduleTimeout(ctx, promise);
-
         super.sendFile(ctx, region, promise);
     }
 

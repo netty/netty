@@ -26,8 +26,8 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
-import io.netty.channel.SingleThreadEventExecutor;
 import io.netty.channel.SingleThreadEventLoop;
+import io.netty.util.concurrent.SingleThreadEventExecutor;
 
 import java.net.SocketAddress;
 import java.nio.channels.AlreadyConnectedException;
@@ -185,27 +185,31 @@ public class LocalChannel extends AbstractChannel {
         }
 
         // Update all internal state before the closeFuture is notified.
-        if (parent() == null) {
-            LocalChannelRegistry.unregister(localAddress);
+        if (localAddress != null) {
+            if (parent() == null) {
+                LocalChannelRegistry.unregister(localAddress);
+            }
+            localAddress = null;
         }
-        localAddress = null;
         state = 3;
     }
 
     @Override
     protected void doClose() throws Exception {
-        if (peer.isActive()) {
+        LocalChannel peer = this.peer;
+        if (peer != null && peer.isActive()) {
             peer.unsafe().close(peer.unsafe().voidFuture());
-            peer = null;
+            this.peer = null;
         }
     }
 
     @Override
-    protected void doDeregister() throws Exception {
+    protected Runnable doDeregister() throws Exception {
         if (isOpen()) {
             unsafe().close(unsafe().voidFuture());
         }
         ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
+        return null;
     }
 
     @Override
@@ -222,7 +226,7 @@ public class LocalChannel extends AbstractChannel {
         }
 
         pipeline.fireInboundBufferUpdated();
-        pipeline.fireInboundBufferSuspended();
+        pipeline.fireChannelReadSuspended();
     }
 
     @Override
@@ -259,7 +263,7 @@ public class LocalChannel extends AbstractChannel {
         if (peer.readInProgress) {
             peer.readInProgress = false;
             peerPipeline.fireInboundBufferUpdated();
-            peerPipeline.fireInboundBufferSuspended();
+            peerPipeline.fireChannelReadSuspended();
         }
     }
 
@@ -311,10 +315,8 @@ public class LocalChannel extends AbstractChannel {
 
                 Channel boundChannel = LocalChannelRegistry.get(remoteAddress);
                 if (!(boundChannel instanceof LocalServerChannel)) {
-                    Exception cause =
-                            new ChannelException("connection refused");
+                    Exception cause = new ChannelException("connection refused");
                     promise.setFailure(cause);
-                    pipeline().fireExceptionCaught(cause);
                     close(voidFuture());
                     return;
                 }

@@ -21,16 +21,16 @@ import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.CharsetUtil;
+
+import java.util.logging.Logger;
 
 /**
  * Handler that just dumps the contents of the response from the server
  */
 public class HttpUploadClientHandler extends ChannelInboundMessageHandlerAdapter<Object> {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(HttpUploadClientHandler.class);
+    private static final Logger logger = Logger.getLogger(HttpUploadClientHandler.class.getName());
 
     private boolean readingChunks;
 
@@ -59,7 +59,7 @@ public class HttpUploadClientHandler extends ChannelInboundMessageHandlerAdapter
         }
         if (msg instanceof HttpContent) {
             HttpContent chunk = (HttpContent) msg;
-            logger.info(chunk.data().toString(CharsetUtil.UTF_8));
+            logger.info(chunk.content().toString(CharsetUtil.UTF_8));
 
             if (chunk instanceof LastHttpContent) {
                 if (readingChunks) {
@@ -69,7 +69,7 @@ public class HttpUploadClientHandler extends ChannelInboundMessageHandlerAdapter
                 }
                 readingChunks = false;
             } else {
-                logger.info(chunk.data().toString(CharsetUtil.UTF_8));
+                logger.info(chunk.content().toString(CharsetUtil.UTF_8));
             }
         }
     }

@@ -56,6 +56,18 @@ public class BinaryWebSocketFrame extends WebSocketFrame {
 
     @Override
     public BinaryWebSocketFrame copy() {
-        return new BinaryWebSocketFrame(isFinalFragment(), rsv(), data().copy());
+        return new BinaryWebSocketFrame(isFinalFragment(), rsv(), content().copy());
+    }
+
+    @Override
+    public BinaryWebSocketFrame retain() {
+        super.retain();
+        return this;
+    }
+
+    @Override
+    public BinaryWebSocketFrame retain(int increment) {
+        super.retain(increment);
+        return this;
     }
 }

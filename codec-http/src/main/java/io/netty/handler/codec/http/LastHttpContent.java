@@ -30,7 +30,7 @@ public interface LastHttpContent extends HttpContent {
     LastHttpContent EMPTY_LAST_CONTENT = new LastHttpContent() {
 
         @Override
-        public ByteBuf data() {
+        public ByteBuf content() {
             return Unpooled.EMPTY_BUFFER;
         }
 
@@ -55,13 +55,28 @@ public interface LastHttpContent extends HttpContent {
         }
 
         @Override
-        public boolean isFreed() {
+        public int refCnt() {
+            return 1;
+        }
+
+        @Override
+        public LastHttpContent retain() {
+            return this;
+        }
+
+        @Override
+        public LastHttpContent retain(int increment) {
+            return this;
+        }
+
+        @Override
+        public boolean release() {
             return false;
         }
 
         @Override
-        public void free() {
-            // NOOP
+        public boolean release(int decrement) {
+            return false;
         }
     };
 
@@ -69,4 +84,10 @@ public interface LastHttpContent extends HttpContent {
 
     @Override
     LastHttpContent copy();
+
+    @Override
+    LastHttpContent retain(int increment);
+
+    @Override
+    LastHttpContent retain();
 }

@@ -31,9 +31,10 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.CharsetUtil;
+
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 import static io.netty.handler.codec.http.HttpHeaders.*;
@@ -45,7 +46,7 @@ import static io.netty.handler.codec.http.HttpVersion.*;
  * Handles handshakes and messages
  */
 public class WebSocketServerHandler extends ChannelInboundMessageHandlerAdapter<Object> {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketServerHandler.class);
+    private static final Logger logger = Logger.getLogger(WebSocketServerHandler.class.getName());
 
     private static final String WEBSOCKET_PATH = "/websocket";
 
@@ -105,11 +106,13 @@ public class WebSocketServerHandler extends ChannelInboundMessageHandlerAdapter<
 
         // Check for closing frame
         if (frame instanceof CloseWebSocketFrame) {
+            frame.retain();
             handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
             return;
         }
         if (frame instanceof PingWebSocketFrame) {
-            ctx.channel().write(new PongWebSocketFrame(frame.data()));
+            frame.content().retain();
+            ctx.channel().write(new PongWebSocketFrame(frame.content()));
             return;
         }
         if (!(frame instanceof TextWebSocketFrame)) {
@@ -119,8 +122,8 @@ public class WebSocketServerHandler extends ChannelInboundMessageHandlerAdapter<
 
         // Send the uppercase string back.
         String request = ((TextWebSocketFrame) frame).text();
-        if (logger.isDebugEnabled()) {
-            logger.debug(String.format("Channel %s received %s", ctx.channel().id(), request));
+        if (logger.isLoggable(Level.FINE)) {
+            logger.fine(String.format("Channel %s received %s", ctx.channel().id(), request));
         }
         ctx.channel().write(new TextWebSocketFrame(request.toUpperCase()));
     }
@@ -129,8 +132,8 @@ public class WebSocketServerHandler extends ChannelInboundMessageHandlerAdapter<
             ChannelHandlerContext ctx, FullHttpRequest req, FullHttpResponse res) {
         // Generate an error page if response getStatus code is not OK (200).
         if (res.getStatus().code() != 200) {
-            res.data().writeBytes(Unpooled.copiedBuffer(res.getStatus().toString(), CharsetUtil.UTF_8));
-            setContentLength(res, res.data().readableBytes());
+            res.content().writeBytes(Unpooled.copiedBuffer(res.getStatus().toString(), CharsetUtil.UTF_8));
+            setContentLength(res, res.content().readableBytes());
         }
 
         // Send the response and close the connection if necessary.
@@ -144,15 +147,6 @@ public class WebSocketServerHandler extends ChannelInboundMessageHandlerAdapter<
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         cause.printStackTrace();
         ctx.close();
-    }
-
-    @Override
-    protected void freeInboundMessage(Object msg) throws Exception {
-        if (msg instanceof PingWebSocketFrame || msg instanceof CloseWebSocketFrame) {
-            // Will be freed once wrote back
-            return;
-        }
-        super.freeInboundMessage(msg);
     }
 
     private static String getWebSocketLocation(FullHttpRequest req) {

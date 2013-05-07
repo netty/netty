@@ -35,7 +35,12 @@ public abstract class AioCompletionHandler<V, A extends Channel> implements Comp
      */
     protected abstract void failed0(Throwable exc, A channel);
 
-    private static final int MAX_STACK_DEPTH = 4;
+    // According to JDK AIO documentation, the ExecutorService a user specified must not call the Runnable given by
+    // JDK AIO implementation directly.  However, we violates that rull by calling Runnable.run() directly for
+    // optimization purposes, and it can result in infinite recursion in combination with the fact that the JDK AIO
+    // implementation often makes recursive invocations.  Therefore, we must make sure we don't go too deep in the
+    // stack.
+    private static final int MAX_STACK_DEPTH = 8;
     private static final ThreadLocal<Integer> STACK_DEPTH = new ThreadLocal<Integer>() {
         @Override
         protected Integer initialValue() {
@@ -55,16 +60,24 @@ public abstract class AioCompletionHandler<V, A extends Channel> implements Comp
                 } finally {
                     STACK_DEPTH.set(d);
                 }
-                return;
+            } else {
+                // schedule it with a special runnable to make sure we keep the right
+                // order and exist the recursive call to prevent stackoverflow
+                loop.execute(new AioEventLoop.RecursionBreakingRunnable() {
+                    @Override
+                    public void run() {
+                        completed0(result, channel);
+                    }
+                });
             }
+        } else {
+            loop.execute(new Runnable() {
+                @Override
+                public void run() {
+                    completed0(result, channel);
+                }
+            });
         }
-
-        loop.execute(new Runnable() {
-            @Override
-            public void run() {
-                completed0(result, channel);
-            }
-        });
     }
 
     @Override
@@ -79,15 +92,23 @@ public abstract class AioCompletionHandler<V, A extends Channel> implements Comp
                 } finally {
                     STACK_DEPTH.set(d);
                 }
-                return;
+            } else {
+                // schedule it with a special runnable to make sure we keep the right
+                // order and exist the recursive call to prevent stackoverflow
+                loop.execute(new AioEventLoop.RecursionBreakingRunnable() {
+                    @Override
+                    public void run() {
+                        failed0(exc, channel);
+                    }
+                });
             }
+        } else {
+            loop.execute(new Runnable() {
+                @Override
+                public void run() {
+                    failed0(exc, channel);
+                }
+            });
         }
-
-        loop.execute(new Runnable() {
-            @Override
-            public void run() {
-                failed0(exc, channel);
-            }
-        });
     }
 }

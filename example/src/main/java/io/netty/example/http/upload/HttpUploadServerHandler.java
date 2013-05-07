@@ -15,6 +15,7 @@
  */
 package io.netty.example.http.upload;
 
+import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -47,8 +48,6 @@ import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.Incompatible
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.NotEnoughDataDecoderException;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData.HttpDataType;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.CharsetUtil;
 
 import java.io.IOException;
@@ -58,13 +57,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import static io.netty.buffer.Unpooled.*;
 import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 
 public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter<Object> {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(HttpUploadServerHandler.class);
+    private static final Logger logger = Logger.getLogger(HttpUploadServerHandler.class.getName());
 
     private HttpRequest request;
 
@@ -99,12 +100,6 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
     public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
     	//System.out.println(msg.getClass().getName());
         if (msg instanceof HttpRequest) {
-            // clean previous FileUpload if Any
-            if (decoder != null) {
-                decoder.cleanFiles();
-                decoder = null;
-            }
-
             HttpRequest request = this.request = (HttpRequest) msg;
             URI uri = new URI(request.getUri());
             if (!uri.getPath().startsWith("/form")) {
@@ -180,36 +175,46 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
                 // Chunk version
                 responseContent.append("Chunks: ");
                 readingChunks = true;
-            } else {
-                // Not chunk version
-                readHttpDataAllReceive(ctx.channel());
-                responseContent.append("\r\n\r\nEND OF NOT CHUNKED CONTENT\r\n");
-                writeResponse(ctx.channel());
             }
         }
-        if (msg instanceof HttpContent && msg != LastHttpContent.EMPTY_LAST_CONTENT) {
-            // New chunk is received
-            HttpContent chunk = (HttpContent) msg;
-            try {
-                decoder.offer(chunk);
-            } catch (ErrorDataDecoderException e1) {
-                e1.printStackTrace();
-                responseContent.append(e1.getMessage());
-                writeResponse(ctx.channel());
-                ctx.channel().close();
-                return;
-            }
-            responseContent.append('o');
-            // example of reading chunk by chunk (minimize memory usage due to
-            // Factory)
-            readHttpDataChunkByChunk();
-            // example of reading only if at the end
-            if (chunk instanceof HttpContent) {
-                readHttpDataAllReceive(ctx.channel());
-                writeResponse(ctx.channel());
-                readingChunks = false;
+
+        // check if the decoder was constructed before
+        // if not it handles the form get
+        if (decoder != null) {
+            if (msg instanceof HttpContent) {
+                // New chunk is received
+                HttpContent chunk = (HttpContent) msg;
+                try {
+                    decoder.offer(chunk);
+                } catch (ErrorDataDecoderException e1) {
+                    e1.printStackTrace();
+                    responseContent.append(e1.getMessage());
+                    writeResponse(ctx.channel());
+                    ctx.channel().close();
+                    return;
+                }
+                responseContent.append('o');
+                // example of reading chunk by chunk (minimize memory usage due to
+                // Factory)
+                readHttpDataChunkByChunk();
+                // example of reading only if at the end
+                if (chunk instanceof LastHttpContent) {
+                    readHttpDataAllReceive(ctx.channel());
+                    writeResponse(ctx.channel());
+                    readingChunks = false;
+
+                    reset();
+                }
             }
         }
+    }
+
+    private void reset() {
+        request = null;
+
+        // clean previous FileUpload if Any
+        decoder.cleanFiles();
+        decoder = null;
     }
 
     /**
@@ -300,6 +305,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
                 }
             }
         }
+        //BufUtil.release(data);
     }
 
     private void writeResponse(Channel channel) {
@@ -430,7 +436,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        logger.error(responseContent.toString(), cause);
+        logger.log(Level.WARNING, responseContent.toString(), cause);
         ctx.channel().close();
     }
 }

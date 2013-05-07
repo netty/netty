@@ -18,6 +18,7 @@ package io.netty.channel.aio;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
 
 import java.net.ConnectException;
@@ -40,7 +41,7 @@ public abstract class AbstractAioChannel extends AbstractChannel {
      */
     protected ChannelPromise connectPromise;
     protected ScheduledFuture<?> connectTimeoutFuture;
-    private ConnectException connectTimeoutException;
+    private SocketAddress requestedRemoteAddress;
 
     /**
      * Creates a new instance.
@@ -103,6 +104,7 @@ public abstract class AbstractAioChannel extends AbstractChannel {
                         throw new IllegalStateException("connection attempt already made");
                     }
                     connectPromise = promise;
+                    requestedRemoteAddress = remoteAddress;
 
                     doConnect(remoteAddress, localAddress, promise);
 
@@ -112,19 +114,21 @@ public abstract class AbstractAioChannel extends AbstractChannel {
                         connectTimeoutFuture = eventLoop().schedule(new Runnable() {
                             @Override
                             public void run() {
-                                if (connectTimeoutException == null) {
-                                    connectTimeoutException = new ConnectException("connection timed out");
-                                }
                                 ChannelPromise connectFuture = connectPromise;
-                                if (connectFuture != null &&
-                                        connectFuture.tryFailure(connectTimeoutException)) {
-                                    pipeline().fireExceptionCaught(connectTimeoutException);
+                                ConnectTimeoutException cause =
+                                        new ConnectTimeoutException("connection timed out: " + remoteAddress);
+                                if (connectFuture != null && connectFuture.tryFailure(cause)) {
                                     close(voidFuture());
                                 }
                             }
                         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
                     }
                 } catch (Throwable t) {
+                    if (t instanceof ConnectException) {
+                        Throwable newT = new ConnectException(t.getMessage() + ": " + remoteAddress);
+                        newT.setStackTrace(t.getStackTrace());
+                        t = newT;
+                    }
                     promise.setFailure(t);
                     closeIfClosed();
                 }
@@ -139,8 +143,12 @@ public abstract class AbstractAioChannel extends AbstractChannel {
         }
 
         public void connectFailed(Throwable t) {
+            if (t instanceof ConnectException) {
+                Throwable newT = new ConnectException(t.getMessage() + ": " + requestedRemoteAddress);
+                newT.setStackTrace(t.getStackTrace());
+                t = newT;
+            }
             connectPromise.setFailure(t);
-            pipeline().fireExceptionCaught(t);
             closeIfClosed();
         }
 
@@ -148,11 +156,8 @@ public abstract class AbstractAioChannel extends AbstractChannel {
             assert eventLoop().inEventLoop();
             assert connectPromise != null;
             try {
-                boolean wasActive = isActive();
                 connectPromise.setSuccess();
-                if (!wasActive && isActive()) {
-                    pipeline().fireChannelActive();
-                }
+                pipeline().fireChannelActive();
             } catch (Throwable t) {
                 connectPromise.setFailure(t);
                 closeIfClosed();

@@ -16,7 +16,7 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandler;
 import io.netty.channel.ChannelOutboundByteHandler;
@@ -25,7 +25,7 @@ import io.netty.channel.ChannelPromise;
 /**
  * A Codec for on-the-fly encoding/decoding of bytes.
  *
- * This can be though of an combination of {@link ByteToByteDecoder} and {@link ByteToByteEncoder}.
+ * This can be thought of as a combination of {@link ByteToByteDecoder} and {@link ByteToByteEncoder}.
  *
  * Here is an example of a {@link ByteToByteCodec} which just square {@link Integer} read from a {@link ByteBuf}.
  * <pre>
@@ -53,12 +53,12 @@ import io.netty.channel.ChannelPromise;
  * </pre>
  */
 public abstract class ByteToByteCodec
-        extends ChannelHandlerAdapter
+        extends ChannelDuplexHandler
         implements ChannelInboundByteHandler, ChannelOutboundByteHandler {
 
     private final ByteToByteEncoder encoder = new ByteToByteEncoder() {
         @Override
-        public void encode(
+        protected void encode(
                 ChannelHandlerContext ctx,
                 ByteBuf in, ByteBuf out) throws Exception {
             ByteToByteCodec.this.encode(ctx, in, out);
@@ -67,7 +67,7 @@ public abstract class ByteToByteCodec
 
     private final ByteToByteDecoder decoder = new ByteToByteDecoder() {
         @Override
-        public void decode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
+        protected void decode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
             ByteToByteCodec.this.decode(ctx, in, out);
         }
 
@@ -106,16 +106,6 @@ public abstract class ByteToByteCodec
     @Override
     public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
         encoder.discardOutboundReadBytes(ctx);
-    }
-
-    @Override
-    public void freeInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        decoder.freeInboundBuffer(ctx);
-    }
-
-    @Override
-    public void freeOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        encoder.freeOutboundBuffer(ctx);
     }
 
     /**
