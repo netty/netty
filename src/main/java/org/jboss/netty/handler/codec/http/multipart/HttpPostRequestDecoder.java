@@ -802,7 +802,7 @@ public class HttpPostRequestDecoder {
             if (currentAttribute == null) {
                 try {
                     currentAttribute = factory.createAttribute(request,
-                            decodeAttributeMultipart(nameAttribute.getValue(), charset));
+                            decodeAttributeMultipart(cleanString(nameAttribute.getValue()), charset));
                 } catch (NullPointerException e) {
                     throw new ErrorDataDecoderException(e);
                 } catch (IllegalArgumentException e) {
@@ -978,7 +978,7 @@ public class HttpPostRequestDecoder {
                         Attribute attribute;
                         try {
                             attribute = factory.createAttribute(request,
-                                    decodeAttributeMultipart(values[0].trim(), charset),
+                                    decodeAttributeMultipart(cleanString(values[0]), charset),
                                     decodeAttributeMultipart(values[1], charset));
                         } catch (NullPointerException e) {
                             throw new ErrorDataDecoderException(e);
@@ -1050,7 +1050,7 @@ public class HttpPostRequestDecoder {
                             Attribute attribute;
                             try {
                                 attribute = factory.createAttribute(request,
-                                        decodeAttributeMultipart(contents[0].trim(), charset),
+                                        decodeAttributeMultipart(cleanString(contents[0]), charset),
                                         decodeAttributeMultipart(contents[i], charset));
                             } catch (NullPointerException e) {
                                 throw new ErrorDataDecoderException(e);
@@ -1165,8 +1165,8 @@ public class HttpPostRequestDecoder {
             try {
                 currentFileUpload = factory.createFileUpload(
                         request,
-                        decodeAttributeMultipart(nameAttribute.getValue(), charset),
-                        decodeAttributeMultipart(filenameAttribute.getValue(), charset),
+                        decodeAttributeMultipart(cleanString(nameAttribute.getValue()), charset),
+                        decodeAttributeMultipart(cleanString(filenameAttribute.getValue()), charset),
                         contentTypeAttribute.getValue(), mechanism.value(),
                         localCharset, size);
             } catch (NullPointerException e) {
