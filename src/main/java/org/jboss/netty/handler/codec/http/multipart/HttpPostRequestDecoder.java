@@ -705,24 +705,6 @@ public class HttpPostRequestDecoder {
     }
 
     /**
-     * Decode component for Multipart
-     * @return the decoded component
-     */
-    private static String decodeAttributeMultipart(String s, Charset charset)
-            throws ErrorDataDecoderException {
-        if (s == null) {
-            return "";
-        }
-        try {
-            return new String(s.getBytes(), charset.name());
-        } catch (UnsupportedEncodingException e) {
-            throw new ErrorDataDecoderException(charset.toString(), e);
-        } catch (IllegalArgumentException e) {
-            throw new ErrorDataDecoderException("Bad string: '" + s + '\'', e);
-        }
-    }
-
-    /**
      * Parse the Body for multipart
      *
      * @throws ErrorDataDecoderException if there is a problem with the charset decoding or other errors
@@ -802,7 +784,7 @@ public class HttpPostRequestDecoder {
             if (currentAttribute == null) {
                 try {
                     currentAttribute = factory.createAttribute(request,
-                            decodeAttributeMultipart(cleanString(nameAttribute.getValue()), charset));
+                            cleanString(nameAttribute.getValue()));
                 } catch (NullPointerException e) {
                     throw new ErrorDataDecoderException(e);
                 } catch (IllegalArgumentException e) {
@@ -978,8 +960,7 @@ public class HttpPostRequestDecoder {
                         Attribute attribute;
                         try {
                             attribute = factory.createAttribute(request,
-                                    decodeAttributeMultipart(cleanString(values[0]), charset),
-                                    decodeAttributeMultipart(values[1], charset));
+                                    cleanString(values[0]), values[1]);
                         } catch (NullPointerException e) {
                             throw new ErrorDataDecoderException(e);
                         } catch (IllegalArgumentException e) {
@@ -1050,8 +1031,7 @@ public class HttpPostRequestDecoder {
                             Attribute attribute;
                             try {
                                 attribute = factory.createAttribute(request,
-                                        decodeAttributeMultipart(cleanString(contents[0]), charset),
-                                        decodeAttributeMultipart(contents[i], charset));
+                                        cleanString(contents[0]), contents[i]);
                             } catch (NullPointerException e) {
                                 throw new ErrorDataDecoderException(e);
                             } catch (IllegalArgumentException e) {
@@ -1165,8 +1145,7 @@ public class HttpPostRequestDecoder {
             try {
                 currentFileUpload = factory.createFileUpload(
                         request,
-                        decodeAttributeMultipart(cleanString(nameAttribute.getValue()), charset),
-                        decodeAttributeMultipart(cleanString(filenameAttribute.getValue()), charset),
+                        cleanString(nameAttribute.getValue()), cleanString(filenameAttribute.getValue()),
                         contentTypeAttribute.getValue(), mechanism.value(),
                         localCharset, size);
             } catch (NullPointerException e) {
