@@ -457,8 +457,7 @@ public class HttpPostRequestEncoder implements ChunkedInput {
             Attribute attribute = (Attribute) data;
             internal.addValue(HttpPostBodyUtil.CONTENT_DISPOSITION + ": " +
                     HttpPostBodyUtil.FORM_DATA + "; " +
-                    HttpPostBodyUtil.NAME + "=\"" +
-                    encodeAttribute(attribute.getName(), charset) + "\"\r\n");
+                    HttpPostBodyUtil.NAME + "=\"" + attribute.getName() + "\"\r\n");
             Charset localcharset = attribute.getCharset();
             if (localcharset != null) {
                 // Content-Type: charset=charset
@@ -529,15 +528,14 @@ public class HttpPostRequestEncoder implements ChunkedInput {
                     globalBodySize -= pastAttribute.size();
                     String replacement = HttpPostBodyUtil.CONTENT_DISPOSITION + ": " +
                         HttpPostBodyUtil.FORM_DATA + "; " + HttpPostBodyUtil.NAME + "=\"" +
-                        encodeAttribute(fileUpload.getName(), charset) + "\"\r\n";
+                        fileUpload.getName() + "\"\r\n";
                     replacement += HttpHeaders.Names.CONTENT_TYPE + ": " +
                         HttpPostBodyUtil.MULTIPART_MIXED + "; " + HttpHeaders.Values.BOUNDARY +
                         '=' + multipartMixedBoundary + "\r\n\r\n";
                     replacement += "--" + multipartMixedBoundary + "\r\n";
                     replacement += HttpPostBodyUtil.CONTENT_DISPOSITION + ": " +
                         HttpPostBodyUtil.FILE + "; " + HttpPostBodyUtil.FILENAME + "=\"" +
-                        encodeAttribute(fileUpload.getFilename(), charset) +
-                        "\"\r\n";
+                        fileUpload.getFilename() + "\"\r\n";
                     pastAttribute.setValue(replacement, 1);
                     // update past size
                     globalBodySize += pastAttribute.size();
@@ -563,16 +561,16 @@ public class HttpPostRequestEncoder implements ChunkedInput {
                 // Content-Disposition: file; filename="file1.txt"
                 internal.addValue(HttpPostBodyUtil.CONTENT_DISPOSITION + ": " +
                         HttpPostBodyUtil.FILE + "; " + HttpPostBodyUtil.FILENAME + "=\"" +
-                        encodeAttribute(fileUpload.getFilename(), charset) +
+                        fileUpload.getFilename() +
                         "\"\r\n");
             } else {
                 internal.addValue("--" + multipartDataBoundary + "\r\n");
                 // Content-Disposition: form-data; name="files"; filename="file1.txt"
                 internal.addValue(HttpPostBodyUtil.CONTENT_DISPOSITION + ": " +
                         HttpPostBodyUtil.FORM_DATA + "; " + HttpPostBodyUtil.NAME + "=\"" +
-                        encodeAttribute(fileUpload.getName(), charset) + "\"; " +
+                        fileUpload.getName() + "\"; " +
                         HttpPostBodyUtil.FILENAME + "=\"" +
-                        encodeAttribute(fileUpload.getFilename(), charset) +
+                        fileUpload.getFilename() +
                         "\"\r\n");
             }
             // Content-Type: image/gif

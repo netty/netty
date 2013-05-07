@@ -784,7 +784,7 @@ public class HttpPostRequestDecoder {
             if (currentAttribute == null) {
                 try {
                     currentAttribute = factory.createAttribute(request,
-                            decodeAttribute(cleanString(nameAttribute.getValue()), charset));
+                            cleanString(nameAttribute.getValue()));
                 } catch (NullPointerException e) {
                     throw new ErrorDataDecoderException(e);
                 } catch (IllegalArgumentException e) {
@@ -960,8 +960,7 @@ public class HttpPostRequestDecoder {
                         Attribute attribute;
                         try {
                             attribute = factory.createAttribute(request,
-                                    decodeAttribute(cleanString(values[0].trim()), charset),
-                                    decodeAttribute(cleanString(values[1]), charset));
+                                    cleanString(values[0]), values[1]);
                         } catch (NullPointerException e) {
                             throw new ErrorDataDecoderException(e);
                         } catch (IllegalArgumentException e) {
@@ -1032,8 +1031,7 @@ public class HttpPostRequestDecoder {
                             Attribute attribute;
                             try {
                                 attribute = factory.createAttribute(request,
-                                        decodeAttribute(cleanString(contents[0].trim()), charset),
-                                        decodeAttribute(cleanString(contents[i]), charset));
+                                        cleanString(contents[0]), contents[i]);
                             } catch (NullPointerException e) {
                                 throw new ErrorDataDecoderException(e);
                             } catch (IllegalArgumentException e) {
@@ -1147,8 +1145,7 @@ public class HttpPostRequestDecoder {
             try {
                 currentFileUpload = factory.createFileUpload(
                         request,
-                        decodeAttribute(cleanString(nameAttribute.getValue()), charset),
-                        decodeAttribute(cleanString(filenameAttribute.getValue()), charset),
+                        cleanString(nameAttribute.getValue()), cleanString(filenameAttribute.getValue()),
                         contentTypeAttribute.getValue(), mechanism.value(),
                         localCharset, size);
             } catch (NullPointerException e) {
