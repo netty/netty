@@ -30,6 +30,7 @@ public class DefaultChannelProgressivePromise
         extends DefaultProgressivePromise<Void> implements ChannelProgressivePromise, FlushCheckpoint {
 
     private final Channel channel;
+    private long checkpoint;
 
     /**
      * Creates a new instance.
@@ -145,15 +146,12 @@ public class DefaultChannelProgressivePromise
 
     @Override
     public long flushCheckpoint() {
-        return state & 0x000000FFFFFFFFFFL;
+        return checkpoint;
     }
 
     @Override
     public void flushCheckpoint(long checkpoint) {
-        if ((checkpoint & 0xFFFFFF0000000000L) != 0) {
-            throw new IllegalStateException("flushCheckpoint overflow");
-        }
-        state = state & 0xFFFFFF0000000000L | checkpoint;
+        this.checkpoint = checkpoint;
     }
 
     @Override
