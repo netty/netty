@@ -216,6 +216,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
             // log something
             if (channel.isOpen() && ! asyncClosed) {
                 logger.warn("Failed to create a new channel from an accepted socket.", t);
+                channel.pipeline().fireExceptionCaught(t);
             }
         }
     }
