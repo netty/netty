@@ -974,7 +974,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
     private HttpContent nextChunk() throws ErrorDataEncoderException {
         if (isLastChunk) {
             isLastChunkSent = true;
-            return new DefaultHttpContent(EMPTY_BUFFER);
+            return LastHttpContent.EMPTY_LAST_CONTENT;
         }
         ByteBuf buffer;
         int size = HttpPostBodyUtil.chunkSize;
@@ -1032,7 +1032,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
         if (currentBuffer == null) {
             isLastChunkSent = true;
             // LastChunk with no more data
-            return new DefaultHttpContent(EMPTY_BUFFER);
+            return LastHttpContent.EMPTY_LAST_CONTENT;
         }
         // Previous LastChunk with no more data
         buffer = currentBuffer;
