@@ -962,8 +962,18 @@ public class HttpPostRequestDecoder implements Iterator<InterfaceHttpData> {
                         String[] values = StringUtil.split(contents[i], '=');
                         Attribute attribute;
                         try {
-                            attribute = factory.createAttribute(request,
-                                    cleanString(values[0]), values[1]);
+                            String name = cleanString(values[0]);
+                            String value = values[1];
+
+                            // See http://www.w3.org/Protocols/rfc2616/rfc2616-sec19.html
+                            if (HttpPostBodyUtil.FILENAME.equals(name)) {
+                                // filename value is quoted string so strip them
+                                value = value.substring(1, value.length() - 1);
+                            } else {
+                                // otherwise we need to clean the value
+                                value = cleanString(value);
+                            }
+                            attribute = factory.createAttribute(request, name, value);
                         } catch (NullPointerException e) {
                             throw new ErrorDataDecoderException(e);
                         } catch (IllegalArgumentException e) {
