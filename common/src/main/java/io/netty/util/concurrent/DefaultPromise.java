@@ -43,7 +43,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private volatile Object result;
     private Object listeners; // Can be ChannelFutureListener or DefaultFutureListeners
 
-    private long waiters;
+    private short waiters;
 
     /**
      * Creates a new instance.
@@ -445,14 +445,14 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     private void incWaiters() {
-        if (waiters == Long.MAX_VALUE) {
+        if (waiters == Short.MAX_VALUE) {
             throw new IllegalStateException("too many waiters");
         }
-        waiters++;
+        waiters ++;
     }
 
     private void decWaiters() {
-        waiters--;
+        waiters --;
     }
 
     private void notifyListeners() {
