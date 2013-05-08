@@ -160,26 +160,26 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
             return -1;
         }
 
-        Socket s = null;
         try {
-            s = socket.accept();
-            if (s != null) {
-                buf.add(new OioSocketChannel(this, null, s));
-                return 1;
+            Socket s = socket.accept();
+            try {
+                if (s != null) {
+                    buf.add(new OioSocketChannel(this, null, s));
+                    return 1;
+                }
+            } catch (Throwable t) {
+                logger.warn("Failed to create a new channel from an accepted socket.", t);
+                if (s != null) {
+                    try {
+                        s.close();
+                    } catch (Throwable t2) {
+                        logger.warn("Failed to close a socket.", t2);
+                    }
+                }
             }
         } catch (SocketTimeoutException e) {
             // Expected
-        } catch (Throwable t) {
-            logger.warn("Failed to create a new channel from an accepted socket.", t);
-            if (s != null) {
-                try {
-                    s.close();
-                } catch (Throwable t2) {
-                    logger.warn("Failed to close a socket.", t2);
-                }
-            }
         }
-
         return 0;
     }
 
