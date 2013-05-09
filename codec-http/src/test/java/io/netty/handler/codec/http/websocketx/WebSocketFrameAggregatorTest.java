@@ -101,11 +101,29 @@ public class WebSocketFrameAggregatorTest {
         Assert.assertNull(channel.readInbound());
     }
 
-    @Test(expected = TooLongFrameException.class)
+    @Test
     public void textFrameTooBig() {
         EmbeddedMessageChannel channel = new EmbeddedMessageChannel(new WebSocketFrameAggregator(8));
         channel.writeInbound(new BinaryWebSocketFrame(true, 1, content1.copy()));
         channel.writeInbound(new BinaryWebSocketFrame(false, 0, content1.copy()));
+        try {
+            channel.writeInbound(new ContinuationWebSocketFrame(false, 0, content2.copy()));
+            Assert.fail();
+        } catch (TooLongFrameException e) {
+            // expected
+        }
         channel.writeInbound(new ContinuationWebSocketFrame(false, 0, content2.copy()));
+        channel.writeInbound(new ContinuationWebSocketFrame(true, 0, content2.copy()));
+
+        channel.writeInbound(new BinaryWebSocketFrame(true, 1, content1.copy()));
+        channel.writeInbound(new BinaryWebSocketFrame(false, 0, content1.copy()));
+        try {
+            channel.writeInbound(new ContinuationWebSocketFrame(false, 0, content2.copy()));
+            Assert.fail();
+        } catch (TooLongFrameException e) {
+            // expected
+        }
+        channel.writeInbound(new ContinuationWebSocketFrame(false, 0, content2.copy()));
+        channel.writeInbound(new ContinuationWebSocketFrame(true, 0, content2.copy()));
     }
 }
