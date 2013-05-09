@@ -108,8 +108,17 @@ public class HttpChunkAggregatorTest {
         DecoderEmbedder<HttpMessage> embedder = new DecoderEmbedder<HttpMessage>(aggr);
         HttpMessage message = new DefaultHttpMessage(HttpVersion.HTTP_1_1);
         message.setChunked(true);
+        HttpMessage message2= new DefaultHttpMessage(HttpVersion.HTTP_1_1);
+        message2.setChunked(true);
         HttpChunk chunk1 = new DefaultHttpChunk(ChannelBuffers.copiedBuffer("test", CharsetUtil.US_ASCII));
         HttpChunk chunk2 = new DefaultHttpChunk(ChannelBuffers.copiedBuffer("test2", CharsetUtil.US_ASCII));
+        HttpChunk chunk3 = new DefaultHttpChunk(ChannelBuffers.copiedBuffer("test3", CharsetUtil.US_ASCII));
+        HttpChunk chunk4 = HttpChunk.LAST_CHUNK;
+        HttpChunk chunk5 = new DefaultHttpChunk(ChannelBuffers.copiedBuffer("test", CharsetUtil.US_ASCII));
+        HttpChunk chunk6 = new DefaultHttpChunk(ChannelBuffers.copiedBuffer("test2", CharsetUtil.US_ASCII));
+        HttpChunk chunk7 = new DefaultHttpChunk(ChannelBuffers.copiedBuffer("test3", CharsetUtil.US_ASCII));
+        HttpChunk chunk8 = HttpChunk.LAST_CHUNK;
+
         assertFalse(embedder.offer(message));
         assertFalse(embedder.offer(chunk1));
         try {
@@ -118,6 +127,19 @@ public class HttpChunkAggregatorTest {
         } catch (CodecEmbedderException e) {
             assertTrue(e.getCause() instanceof TooLongFrameException);
         }
+        assertFalse(embedder.offer(chunk3));
+        assertFalse(embedder.offer(chunk4));
+
+        assertFalse(embedder.offer(message2));
+        assertFalse(embedder.offer(chunk5));
+        try {
+            embedder.offer(chunk6);
+            fail();
+        } catch (CodecEmbedderException e) {
+            assertTrue(e.getCause() instanceof TooLongFrameException);
+        }
+        assertFalse(embedder.offer(chunk7));
+        assertFalse(embedder.offer(chunk8));
     }
     
     @Test(expected = IllegalArgumentException.class)

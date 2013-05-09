@@ -59,7 +59,7 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler implements
 
     private final int maxContentLength;
     private HttpMessage currentMessage;
-
+    private boolean tooLongFrameFound;
     private ChannelHandlerContext ctx;
 
     private int maxCumulationBufferComponents = DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS;
@@ -122,6 +122,7 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler implements
 
         if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;
+            tooLongFrameFound = false;
 
             // Handle the 'Expect: 100-continue' header if necessary.
             // TODO: Respond with 413 Request Entity Too Large
@@ -150,16 +151,21 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler implements
                         "received " + HttpChunk.class.getSimpleName() +
                         " without " + HttpMessage.class.getSimpleName());
             }
+            HttpChunk chunk = (HttpChunk) msg;
+
+            if (tooLongFrameFound) {
+                if (chunk.isLast()) {
+                    this.currentMessage = null;
+                }
+                return;
+            }
 
             // Merge the received chunk into the content of the current message.
-            HttpChunk chunk = (HttpChunk) msg;
             ChannelBuffer content = currentMessage.getContent();
 
             if (content.readableBytes() > maxContentLength - chunk.getContent().readableBytes()) {
-                // TODO: Respond with 413 Request Entity Too Large
-                //   and discard the traffic or close the connection.
-                //       No need to notify the upstream handlers - just log.
-                //       If decoding a response, just throw an exception.
+                tooLongFrameFound = true;
+
                 throw new TooLongFrameException(
                         "HTTP content length exceeded " + maxContentLength +
                         " bytes.");
