@@ -111,6 +111,7 @@ public class HttpObjectAggregatorTest {
         HttpContent chunk1 = new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
         HttpContent chunk2 = new DefaultHttpContent(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII));
         HttpContent chunk3 = new DefaultHttpContent(Unpooled.copiedBuffer("test3", CharsetUtil.US_ASCII));
+        HttpContent chunk4 = LastHttpContent.EMPTY_LAST_CONTENT;
 
         assertFalse(embedder.writeInbound(message));
         assertFalse(embedder.writeInbound(chunk1.copy()));
@@ -121,6 +122,7 @@ public class HttpObjectAggregatorTest {
             // expected
         }
         assertFalse(embedder.writeInbound(chunk3.copy()));
+        assertFalse(embedder.writeInbound(chunk4.copy()));
 
         assertFalse(embedder.writeInbound(message));
         assertFalse(embedder.writeInbound(chunk1.copy()));
@@ -131,6 +133,7 @@ public class HttpObjectAggregatorTest {
             // expected
         }
         assertFalse(embedder.writeInbound(chunk3.copy()));
+        assertFalse(embedder.writeInbound(chunk4.copy()));
     }
 
     @Test(expected = IllegalArgumentException.class)
