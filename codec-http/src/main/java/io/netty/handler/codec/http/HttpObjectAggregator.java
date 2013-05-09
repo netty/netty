@@ -153,7 +153,9 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             assert currentMessage != null;
 
             if (tooLongFrameFound) {
-                this.currentMessage = null;
+                if (msg instanceof LastHttpContent) {
+                    this.currentMessage = null;
+                }
                 // already detect the too long frame so just discard the content
                 return;
             }
