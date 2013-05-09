@@ -15,7 +15,10 @@
  */
 package io.netty.handler.codec.compression;
 
+import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
+
+import java.util.zip.CRC32;
 
 /**
  * Uncompresses an input {@link ByteBuf} encoded with Snappy compression into an
@@ -24,6 +27,7 @@ import io.netty.buffer.ByteBuf;
  * See http://code.google.com/p/snappy/source/browse/trunk/format_description.txt
  */
 public class Snappy {
+
     private static final int MAX_HT_SIZE = 1 << 14;
     private static final int MIN_COMPRESSIBLE_BYTES = 15;
 
@@ -41,7 +45,7 @@ public class Snappy {
     private byte tag;
     private int written;
 
-    private static enum State {
+    private enum State {
         READY,
         READING_PREAMBLE,
         READING_TAG,
@@ -390,11 +394,10 @@ public class Snappy {
      * byte stream.
      *
      * @param tag The tag that identified this segment as a literal is also
-     *     used to encode part of the length of the data
+     *            used to encode part of the length of the data
      * @param in The input buffer to read the literal from
      * @param out The output buffer to write the literal to
-     * @return The number of bytes appended to the output buffer, or -1 to indicate
-     *     "try again later"
+     * @return The number of bytes appended to the output buffer, or -1 to indicate "try again later"
      */
     private static int decodeLiteral(byte tag, ByteBuf in, ByteBuf out) {
         in.markReaderIndex();
@@ -410,25 +413,19 @@ public class Snappy {
             if (in.readableBytes() < 2) {
                 return NOT_ENOUGH_INPUT;
             }
-            length = in.readUnsignedByte()
-                   | in.readUnsignedByte() << 8;
+            length = BufUtil.swapShort(in.readShort());
             break;
         case 62:
             if (in.readableBytes() < 3) {
                 return NOT_ENOUGH_INPUT;
             }
-            length = in.readUnsignedByte()
-                   | in.readUnsignedByte() << 8
-                   | in.readUnsignedByte() << 16;
+            length = BufUtil.swapMedium(in.readUnsignedMedium());
             break;
         case 64:
             if (in.readableBytes() < 4) {
                 return NOT_ENOUGH_INPUT;
             }
-            length = in.readUnsignedByte()
-                   | in.readUnsignedByte() << 8
-                   | in.readUnsignedByte() << 16
-                   | in.readUnsignedByte() << 24;
+            length = BufUtil.swapInt(in.readInt());
             break;
         default:
             length = tag >> 2 & 0x3F;
@@ -508,7 +505,7 @@ public class Snappy {
 
         int initialIndex = out.writerIndex();
         int length = 1 + (tag >> 2 & 0x03f);
-        int offset = in.readUnsignedByte() | in.readUnsignedByte() << 8;
+        int offset = BufUtil.swapShort(in.readShort());
 
         validateOffset(offset, writtenSoFar);
 
@@ -552,10 +549,7 @@ public class Snappy {
 
         int initialIndex = out.writerIndex();
         int length = 1 + (tag >> 2 & 0x03F);
-        int offset = in.readUnsignedByte() |
-                          in.readUnsignedByte() << 8 |
-                          in.readUnsignedByte() << 16 |
-                          in.readUnsignedByte() << 24;
+        int offset = BufUtil.swapInt(in.readInt());
 
         validateOffset(offset, writtenSoFar);
 
@@ -600,5 +594,84 @@ public class Snappy {
         if (offset > chunkSizeSoFar) {
             throw new CompressionException("Offset exceeds size of chunk");
         }
+    }
+
+    /**
+     * Computes the CRC32 checksum of the supplied data and performs the "mask" operation
+     * on the computed checksum
+     *
+     * @param data The input data to calculate the CRC32 checksum of
+     */
+    public static int calculateChecksum(ByteBuf data) {
+        return calculateChecksum(data, data.readerIndex(), data.readableBytes());
+    }
+
+    /**
+     * Computes the CRC32 checksum of the supplied data and performs the "mask" operation
+     * on the computed checksum
+     *
+     * @param data The input data to calculate the CRC32 checksum of
+     */
+    public static int calculateChecksum(ByteBuf data, int offset, int length) {
+        CRC32 crc32 = new CRC32();
+        try {
+            if (data.hasArray()) {
+                crc32.update(data.array(), data.arrayOffset() + offset, length);
+            } else {
+                byte[] array = new byte[length];
+                data.getBytes(offset, array);
+                crc32.update(array);
+            }
+
+            return maskChecksum((int) crc32.getValue());
+        } finally {
+            crc32.reset();
+        }
+    }
+
+    /**
+     * Computes the CRC32 checksum of the supplied data, performs the "mask" operation
+     * on the computed checksum, and then compares the resulting masked checksum to the
+     * supplied checksum.
+     *
+     * @param expectedChecksum The checksum decoded from the stream to compare against
+     * @param data The input data to calculate the CRC32 checksum of
+     * @throws CompressionException If the calculated and supplied checksums do not match
+     */
+    static void validateChecksum(int expectedChecksum, ByteBuf data) {
+        validateChecksum(expectedChecksum, data, data.readerIndex(), data.readableBytes());
+    }
+
+    /**
+     * Computes the CRC32 checksum of the supplied data, performs the "mask" operation
+     * on the computed checksum, and then compares the resulting masked checksum to the
+     * supplied checksum.
+     *
+     * @param expectedChecksum The checksum decoded from the stream to compare against
+     * @param data The input data to calculate the CRC32 checksum of
+     * @throws CompressionException If the calculated and supplied checksums do not match
+     */
+    static void validateChecksum(int expectedChecksum, ByteBuf data, int offset, int length) {
+        final int actualChecksum = calculateChecksum(data, offset, length);
+        if (actualChecksum != expectedChecksum) {
+            throw new CompressionException(
+                    "mismatching checksum: " + Integer.toHexString(actualChecksum) +
+                            " (expected: " + Integer.toHexString(expectedChecksum) + ')');
+        }
+    }
+
+    /**
+     * From the spec:
+     *
+     * "Checksums are not stored directly, but masked, as checksumming data and
+     * then its own checksum can be problematic. The masking is the same as used
+     * in Apache Hadoop: Rotate the checksum by 15 bits, then add the constant
+     * 0xa282ead8 (using wraparound as normal for unsigned integers)."
+     *
+     * @param checksum The actual checksum of the data
+     * @return The masked checksum
+     */
+    static int maskChecksum(int checksum) {
+        return (checksum >> 15 | checksum << 17) + 0xa282ead8;
     }
 }

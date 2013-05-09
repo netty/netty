@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import org.junit.After;
 import org.junit.Test;
 
+import static io.netty.handler.codec.compression.Snappy.*;
 import static org.junit.Assert.*;
 
 public class SnappyTest {
@@ -167,5 +168,31 @@ public class SnappyTest {
         });
 
         assertEquals("Encoded result was incorrect", expected, out);
+    }
+
+    @Test
+    public void testCalculateChecksum() {
+        ByteBuf input = Unpooled.wrappedBuffer(new byte[] {
+                'n', 'e', 't', 't', 'y'
+        });
+        assertEquals(maskChecksum(0xddaa8ce6), calculateChecksum(input));
+    }
+
+    @Test
+    public void testValidateChecksumMatches() {
+        ByteBuf input = Unpooled.wrappedBuffer(new byte[] {
+                'y', 't', 't', 'e', 'n'
+        });
+
+        validateChecksum(maskChecksum(0x37c55159), input);
+    }
+
+    @Test(expected = CompressionException.class)
+    public void testValidateChecksumFails() {
+        ByteBuf input = Unpooled.wrappedBuffer(new byte[] {
+                'y', 't', 't', 'e', 'n'
+        });
+
+        validateChecksum(maskChecksum(0xddaa8ce6), input);
     }
 }
