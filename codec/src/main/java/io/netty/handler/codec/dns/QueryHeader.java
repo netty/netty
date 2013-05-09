@@ -2,7 +2,7 @@ package bakkar.mohamed.dnscodec;
 
 public class QueryHeader extends Header {
 
-	protected QueryHeader(Message parent, int id) {
+	public QueryHeader(Message parent, int id) {
 		super(parent, id);
 
 		// defaults

@@ -14,7 +14,11 @@ public class Header {
 	private int opcode;
 	private int id;
 	private int type;
-	private Message parent;
+	protected Message parent;
+	protected int questionCount;
+	protected int answerCount;
+	protected int nameServerCount;
+	protected int additionalResourceCount;
 
 	public Header(Message parent, int id) {
 		this.parent = parent;
@@ -23,6 +27,22 @@ public class Header {
 
 	public boolean isRecursionDesired() {
 		return recursionDesired;
+	}
+
+	public int getQuestionCount() {
+		return questionCount;
+	}
+
+	public int getAnswerCount() {
+		return answerCount;
+	}
+
+	public int getNameServerResourceCount() {
+		return nameServerCount;
+	}
+
+	public int getAdditionalResourceCount() {
+		return additionalResourceCount;
 	}
 
 	public int getId() {

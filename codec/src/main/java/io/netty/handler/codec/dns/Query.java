@@ -2,8 +2,9 @@ package bakkar.mohamed.dnscodec;
 
 public class Query extends Message {
 
-	public Query(int id) {
+	public Query(int id, Question question) {
 		header = new QueryHeader(this, id);
+		addQuestion(question);
 	}
 
 	public byte[] encode() {
