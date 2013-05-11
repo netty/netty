@@ -1,12 +1,37 @@
-package bakkar.mohamed.dnscodec;
+package io.netty.handler.codec.dns;
 
+/**
+ * A DNS query packet. Sent to a server to receive a DNS response packet with information
+ * answering a query's questions.
+ * 
+ * @author Mohamed Bakkar
+ * @version 1.0
+ */
 public class Query extends Message {
 
+	/**
+	 * Constructs a DNS query without a question. By default the opcode
+	 * will be 0 (standard query) and recursion will be toggled on.
+	 */
+	public Query(int id) {
+		header = new QueryHeader(this, id);
+	}
+
+	/**
+	 * Constructs a DNS query with a question. By default the opcode will
+	 * be 0 (standard query) and recursion will be toggled on.
+	 */
 	public Query(int id, Question question) {
 		header = new QueryHeader(this, id);
 		addQuestion(question);
 	}
 
+	/**
+	 * Encodes a query to a byte array of variable length. This can be sent to
+	 * a DNS server, and a response will be sent from the server.
+	 * 
+	 * @return Returns a byte array of this query, encoded.
+	 */
 	public byte[] encode() {
 		byte[] header = ((QueryHeader) getHeader()).encode();
 		Question[] questions = getQuestions();

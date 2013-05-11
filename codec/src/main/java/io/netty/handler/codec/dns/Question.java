@@ -1,53 +1,67 @@
-package bakkar.mohamed.dnscodec;
+package io.netty.handler.codec.dns;
 
+/**
+ * The DNS question class. Represents a question being sent to a server via a
+ * query, or the question being duplicated and sent back in a response. Usually
+ * a message contains a single question, and DNS servers often don't support
+ * multiple questions in a single query.
+ * 
+ * @author Mohamed Bakkar
+ * @version 1.0
+ */
+public class Question extends DNSEntry {
 
-public class Question {
-
-	public static final int CLASS_IN = 1;
-
-	private int type;
-	private int qClass;
-	private String name;
-
-	public static Question decode(byte[] data, int off) {
-		int pos = off;
-		StringBuilder name = new StringBuilder();
-		for (int len = data[pos++] & 0xff; pos < data.length && len != 0; len = data[pos++] & 0xff) {
-			name.append(new String(data, pos, len)).append(".");
-			pos += len;
-		}
+	/**
+	 * Decodes a question, given a DNS packet. A proper position must be indicated.
+	 * In a normal DNS packet, the question will begin at an offset of 12 bytes (a header
+	 * is usually 12 bytes in size, and the question follows directly after the header).
+	 * 
+	 * @param data The DNS packet, encoded in a byte array, or data containing a question.
+	 * @param pos The position at which the question begins.
+	 * @return Returns a new Question object given an encoded DNS packet.
+	 */
+	public static Question decode(byte[] data, int pos) {
+		String name = getName(data, pos);
+		pos += getSize(name);
 		int type = ((data[pos++] & 0xff) << 8) | data[pos++] & 0xff;
 		int qClass = ((data[pos++] & 0xff) << 8) | data[pos++] & 0xff;
-		return new Question(type, qClass, name.substring(0, name.length() - 1));
+		return new Question(name, type, qClass);
 	}
 
-	public Question(int type, String name) {
-		this(type, CLASS_IN, name);
+	/**
+	 * Constructs a question with the default class IN (Internet).
+	 * 
+	 * @param name The domain name being queried i.e. "www.example.com"
+	 * @param type The question type, which represents the type of {@link Resource} record that should be returned.
+	 */
+	public Question(String name, int type) {
+		this(name, type, CLASS_IN);
 	}
 
-	public Question(int type, int qClass, String name) {
-		this.name = name;
-		this.type = type;
-		this.qClass = qClass;
+	/**
+	 * Constructs a question with the given class.
+	 * 
+	 * @param name The domain name being queried i.e. "www.example.com"
+	 * @param type The question type, which represents the type of {@link Resource} record that should be returned.
+	 * @param qClass The class of a DNS record.
+	 */
+	public Question(String name, int type, int qClass) {
+		super(name, type, qClass);
 	}
 
+	/**
+	 * Returns the size, in bytes, of this question.
+	 */
 	public int getSize() {
-		int extra = name.indexOf(".") > 0 ? 1 : 0;
-		return name.length() + extra + 5;
+		return getSize(name) + 4;
 	}
 
-	public String getName() {
-		return name;
-	}
-
-	public int getType() {
-		return type;
-	}
-
-	public int getQuestionClass() {
-		return qClass;
-	}
-
+	/**
+	 * Encodes the question by writing it to a variable length
+	 * byte array.
+	 * 
+	 * @return A variable length byte array with the question encoded.
+	 */
 	public byte[] encode() {
 		byte[] data = new byte[getSize()];
 		int pos = 0;
@@ -61,8 +75,8 @@ public class Question {
 		pos++;
 		data[pos++] = (byte) (type >> 8);
 		data[pos++] = (byte) type;
-		data[pos++] = (byte) (qClass >> 8);
-		data[pos++] = (byte) qClass;
+		data[pos++] = (byte) (dnsClass >> 8);
+		data[pos++] = (byte) dnsClass;
 		return data;
 	}
 
