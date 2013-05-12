@@ -1,4 +1,21 @@
+/*
+ * Copyright 2012 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package io.netty.handler.codec.dns;
+
+import io.netty.buffer.ByteBuf;
 
 /**
  * A class representing entries in a DNS packet (questions, and all resource records). Has
@@ -198,78 +215,39 @@ public class DNSEntry {
 	public static final int CLASS_ANY = 0x00ff;
 
 	/**
-	 * Retrieves a domain name given a buffer and an offset.
+	 * Retrieves a domain name given a buffer containing a DNS packet.
+	 * If the name contains a pointer, the position of the buffer will be
+	 * set to directly after the pointer's index after the name has been
+	 * read.
 	 * 
-	 * @param data The byte array containing a DNS packet.
-	 * @param pos The position at which the domain name is located.
-	 * @return  Returns the domain name for an entry.
+	 * @param buf The byte buffer containing the DNS packet.
+	 * @return The domain name for an entry.
 	 */
-	public static String getName(byte[] data, int pos) {
+	public static String readName(ByteBuf buf) {
+		int position = -1;
 		StringBuilder name = new StringBuilder();
-		for (int len = data[pos++] & 0xff; pos < data.length && len != 0; len = data[pos++] & 0xff) {
+		for (int len = buf.readByte() & 0xff; buf.isReadable() && len != 0; len = buf.readByte() & 0xff) {
 			boolean pointer = (len & 0xc0) == 0xc0;
 			if (pointer) {
-				pos = ((data[pos - 1] << 8) | data[pos]) & 0x3fff;
+				if (position == -1) {
+					position = buf.readerIndex() + 1;
+				}
+				buf.readerIndex((len & 0x3f) << 8 | (buf.readByte() & 0xff));
 			} else {
-				name.append(new String(data, pos, len)).append(".");
-				pos += len;
+				byte[] info = new byte[len];
+				buf.readBytes(info);
+				name.append(new String(info)).append(".");
 			}
+		}
+		if (position != -1) {
+			buf.readerIndex(position);
 		}
 		return name.substring(0, name.length() - 1);
 	}
 
-	/**
-	 * Gives the size in bytes of a domain name, when sent in a
-	 * DNS packet. Does not work with pointers.
-	 * 
-	 * @param name The domain name.
-	 * @return The size in bytes of the name.
-	 */
-	public static int getSize(String name) {
-		int extra = name.indexOf(".") > 0 ? 1 : 0;
-		return name.length() + extra + 1;
-	}
-
-	/**
-	 * Gets the size of a domain name in bytes, excluding data read from
-	 * pointers. A pointer is indicated by the length of the next label having
-	 * the flag 0xC0 (the two most significant bits are 1 and 1). This
-	 * will get the size in bytes of the data preceding the pointer + 2 (2 is the
-	 * size of a pointer).
-	 * 
-	 * Example:
-	 * 
-	 * 07 101 120 97 109 112 108 101 -48 12
-	 * 
-	 * In this byte sequence, the beginning byte indicates a label of length 7.
-	 * The following 7 characters read "example", a sub-domain of the main domain.
-	 * The next label length is -64 which has the flag C0 (1100 0000 binary). The
-	 * 14 bits directly after this flag (01 0000 0000 1100) indicate the position
-	 * in the packet where you should continue reading to obtain the full domain
-	 * name. In this case, 4108 bytes into the packet (which is unrealistic, since
-	 * usually DNS packets are limited to 512 bytes, but this is just an example).
-	 * This method will only include the bytes preceding the pointer data in
-	 * calculating size, so this example will return a size of 10 bytes.
-	 * 
-	 * @param data The byte array containing a DNS packet.
-	 * @param pos The position at which the domain name is located.
-	 * @return  Returns the size in bytes of a domain name, excluding data read from pointers.
-	 */
-	public static int getTrueSize(byte[] data, int pos) {
-		int start = pos;
-		for (int len = data[pos++] & 0xff; pos < data.length && len != 0; len = data[pos++] & 0xff) {
-			if ((len & 0xc0) == 0xc0) {
-				pos++;
-				break;
-			}
-			pos += len;
-		}
-		return pos - start;
-	}
-
-	protected String name;
-	protected int type;
-	protected int dnsClass;
+	protected final String name;
+	protected final int type;
+	protected final int dnsClass;
 
 	public DNSEntry(String name, int type, int dnsClass) {
 		this.name = name;
@@ -278,23 +256,23 @@ public class DNSEntry {
 	}
 
 	/**
-	 * Returns the name of this entry (the domain).
+	 * @return The name of this entry (the domain).
 	 */
-	public String getName() {
+	public String name() {
 		return name;
 	}
 
 	/**
-	 * Returns the type of resource record to be returned.
+	 * @return The type of resource record to be returned.
 	 */
-	public int getType() {
+	public int type() {
 		return type;
 	}
 
 	/**
-	 * Returns the class for this entry. Default is IN (Internet).
+	 * @return The class for this entry. Default is IN (Internet).
 	 */
-	public int getDNSClass() {
+	public int DNSClass() {
 		return dnsClass;
 	}
 

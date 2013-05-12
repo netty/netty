@@ -1,3 +1,18 @@
+/*
+ * Copyright 2012 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package io.netty.handler.codec.dns;
 
 /**
@@ -30,80 +45,62 @@ public class Header {
 	@Deprecated
 	public static final int OPCODE_IQUERY = 1;
 
+	private Message parent;
 	private boolean recursionDesired;
 	private int opcode;
 	private int id;
 	private int type;
-	protected Message parent;
-	protected int questionCount;
-	protected int answerCount;
-	protected int authorityCount;
-	protected int additionalResourceCount;
 
-	/**
-	 * Constructor for a DNS packet header. The id is the id
-	 * sent to the server by the client.
-	 * 
-	 * @param parent The {@link Message} this header belongs to.
-	 * @param id A 2 bit unsigned identification number for this header.
-	 */
-	public Header(Message parent, int id) {
+	public Header(Message parent) {
 		this.parent = parent;
-		this.id = id;
 	}
 
 	/**
-	 * Returns true if a query is to be pursued recursively.
+	 * @return The number of questions in the {@link Message}.
 	 */
-	public boolean isRecursionDesired() {
+	public int questionCount() {
+		return parent.getQuestions().length;
+	}
+
+	/**
+	 * @return The number of answer resource records in the {@link Message}.
+	 */
+	public int answerCount() {
+		return parent.getAnswers().length;
+	}
+
+	/**
+	 * @return The number of authority resource records in the {@link Message}.
+	 */
+	public int authorityResourceCount() {
+		return parent.getAuthorityResources().length;
+	}
+
+	/**
+	 * @return The number of additional resource records in the {@link Message}.
+	 */
+	public int additionalResourceCount() {
+		return parent.getAdditionalResources().length;
+	}
+
+	/**
+	 * @return True if a query is to be pursued recursively.
+	 */
+	public boolean getRecursionDesired() {
 		return recursionDesired;
 	}
 
 	/**
-	 * Returns the number of questions in the {@link Message}.
-	 */
-	public int getQuestionCount() {
-		return questionCount;
-	}
-
-	/**
-	 * Returns the number of answer resource records in the {@link Message}.
-	 */
-	public int getAnswerCount() {
-		return answerCount;
-	}
-
-	/**
-	 * Returns the number of authority resource records in the {@link Message}.
-	 */
-	public int getAuthorityResourceCount() {
-		return authorityCount;
-	}
-
-	/**
-	 * Returns the number of additional resource records in the {@link Message}.
-	 */
-	public int getAdditionalResourceCount() {
-		return additionalResourceCount;
-	}
-
-	/**
-	 * Returns the 2 bit unsigned identifier number used for the {@link Message}.
-	 */
-	public int getId() {
-		return id;
-	}
-
-	/**
-	 * Returns the 4 bit opcode used for the {@link Message}.
+	 * @return The 4 bit opcode used for the {@link Message}.
+	 * @see #OPCODE_QUERY
+	 * @see #OPCODE_IQUERY
 	 */
 	public int getOpcode() {
 		return opcode;
 	}
 
 	/**
-	 * Returns the type of {@link Message}.
-	 * 
+	 * @return The type of {@link Message}.
 	 * @see #TYPE_QUERY
 	 * @see #TYPE_HEADER
 	 */
@@ -112,42 +109,48 @@ public class Header {
 	}
 
 	/**
-	 * Returns the {@link Message} this header belongs to.
+	 * @return The 2 byte unsigned identifier number used for the {@link Message}.
 	 */
-	public Message getParent() {
-		return parent;
+	public int getId() {
+		return id;
 	}
 
 	/**
 	 * Sets the opcode for this {@link Message}.
 	 * 
 	 * @param opcode Opcode to set.
-	 * @see #OPCODE_QUERY
-	 * @see #OPCODE_IQUERY
-	 * @see #OPCODE_STATUS
+	 * @return Returns the header to allow method chaining.
 	 */
-	public void setOpcode(int opcode) {
+	public Header setOpcode(int opcode) {
 		this.opcode = opcode;
+		return this;
 	}
 
 	/**
 	 * Sets whether a name server is directed to pursue a query recursively or not.
 	 * 
 	 * @param recursionDesired If set to true, pursues query recursively.
+	 * @return Returns the header to allow method chaining.
 	 */
-	public void setRecursionDesired(boolean recursionDesired) {
+	public Header setRecursionDesired(boolean recursionDesired) {
 		this.recursionDesired = recursionDesired;
+		return this;
 	}
 
 	/**
 	 * Sets the {@link Message} type.
 	 * 
 	 * @param type Message type.
-	 * @see #TYPE_QUERY
-	 * @see #TYPE_RESPONSE
+	 * @return Returns the header to allow method chaining.
 	 */
-	public void setType(int type) {
+	public Header setType(int type) {
 		this.type = type;
+		return this;
+	}
+
+	public Header setId(int id) {
+		this.id = id;
+		return this;
 	}
 
 }

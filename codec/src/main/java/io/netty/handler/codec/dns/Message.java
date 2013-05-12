@@ -1,3 +1,18 @@
+/*
+ * Copyright 2012 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package io.netty.handler.codec.dns;
 
 /**
@@ -8,23 +23,18 @@ package io.netty.handler.codec.dns;
  */
 public abstract class Message {
 
-	protected Header header;
-	private int questionCount;
-	private int answerCount;
-	private int authorityCount;
-	private int additionalResourceCount;
-
-	private Question[] questions = new Question[1];
-	private Resource[] answers = new Resource[1];
-	private Resource[] authorityRecords = new Resource[1];
-	private Resource[] additional = new Resource[1];
+	private Header header;
+	private Question[] questions = new Question[0];
+	private Resource[] answers = new Resource[0];
+	private Resource[] authority = new Resource[0];
+	private Resource[] additional = new Resource[0];
 
 	protected Message() {
-		
+
 	}
 
 	/**
-	 * Returns the header belonging to this message. If the message is a {@link Query}, this is a
+	 * @Return The header belonging to this message. If the message is a {@link Query}, this is a
 	 * {@link QueryHeader}. If the message is a {@link Response}, this is a {@link ResponseQuery}.
 	 */
 	public Header getHeader() {
@@ -32,138 +42,108 @@ public abstract class Message {
 	}
 
 	/**
-	 * Returns the number of questions in this message.
-	 */
-	public int getQuestionCount() {
-		return header.getQuestionCount();
-	}
-
-	/**
-	 * Returns the number of answer resource records in the {@link Message}.
-	 */
-	public int getAnswerCount() {
-		return header.getAnswerCount();
-	}
-
-	/**
-	 * Returns the number of authority resource records in the {@link Message}.
-	 */
-	public int getAuthorityResourceCount() {
-		return header.getAuthorityResourceCount();
-	}
-
-	/**
-	 * Returns the number of additional resource records in the {@link Message}.
-	 */
-	public int getAdditionalResourceCount() {
-		return header.getAdditionalResourceCount();
-	}
-
-	/**
-	 * Returns all the questions in this message.
+	 * @return All the questions in this message.
 	 */
 	public Question[] getQuestions() {
-		Question[] temp = new Question[questionCount];
-		System.arraycopy(questions, 0, temp, 0, temp.length);
-		return temp;
+		return questions.clone();
 	}
 
 	/**
-	 * Returns all the answer resource records in this message.
+	 * @return All the answer resource records in this message.
 	 */
 	public Resource[] getAnswers() {
-		Resource[] temp = new Resource[answerCount];
-		if (answerCount > 0) {
-			System.arraycopy(answers, 0, temp, 0, temp.length);
-		}
-		return temp;
+		return answers.clone();
 	}
 
 	/**
-	 * Returns all the authority resource records in this message.
+	 * @return All the authority resource records in this message.
 	 */
 	public Resource[] getAuthorityResources() {
-		Resource[] temp = new Resource[authorityCount];
-		if (authorityCount > 0) {
-			System.arraycopy(authorityRecords, 0, temp, 0, temp.length);
-		}
-		return temp;
+		return authority.clone();
 	}
 
 	/**
-	 * Returns all the additional resource records in this message.
+	 * @return All the additional resource records in this message.
 	 */
 	public Resource[] getAdditionalResources() {
-		Resource[] temp = new Resource[additionalResourceCount];
-		if (additionalResourceCount > 0) {
-			System.arraycopy(additional, 0, temp, 0, temp.length);
-		}
-		return temp;
+		return additional.clone();
 	}
+
+	// The following add methods build a new array each time. This is fine
+	// because a Message will almost never have more than 1 question, and
+	// in Response messages, the number of answers will usually be small
+	// (1 in many cases). The get methods are likely to be called with a
+	// higher frequency, and they are quicker as a result of these add methods.
 
 	/**
 	 * Adds an answer resource record to this message.
 	 * 
 	 * @param answer The answer resource record to be added.
+	 * @return Returns the message to allow method chaining.
 	 */
-	public void addAnswer(Resource answer) {
-		if (answerCount == answers.length) {
-			Resource[] temp = new Resource[answers.length * 2];
-			System.arraycopy(answers, 0, temp, 0, answerCount);
-			answers = temp;
-		}
-		answers[answerCount++] = answer;
+	public Message addAnswer(Resource answer) {
+		int pos = answers.length;
+		Resource[] temp = new Resource[pos + 1];
+		System.arraycopy(answers, 0, temp, 0, answers.length);
+		answers = temp;
+		answers[pos] = answer;
+		return this;
 	}
 
 	/**
 	 * Adds a question to this message.
 	 * 
 	 * @param question The question to be added.
+	 * @return Returns the message to allow method chaining.
 	 */
-	public void addQuestion(Question question) {
-		if (questionCount == questions.length) {
-			Question[] temp = new Question[questions.length * 2];
-			System.arraycopy(questions, 0, temp, 0, questionCount);
-			questions = temp;
-		}
-		questions[questionCount++] = question;
+	public Message addQuestion(Question question) {
+		int pos = questions.length;
+		Question[] temp = new Question[pos + 1];
+		System.arraycopy(questions, 0, temp, 0, questions.length);
+		questions = temp;
+		questions[pos] = question;
+		return this;
 	}
 
 	/**
 	 * Adds an authority resource record to this message.
 	 * 
 	 * @param authority The authority resource record to be added.
+	 * @return Returns the message to allow method chaining.
 	 */
-	public void addAuthorityResource(Resource authority) {
-		if (authorityCount == authorityRecords.length) {
-			Resource[] temp = new Resource[authorityRecords.length * 2];
-			System.arraycopy(authorityRecords, 0, temp, 0, authorityCount);
-			authorityRecords = temp;
-		}
-		authorityRecords[authorityCount++] = authority;
+	public Message addAuthorityResource(Resource resource) {
+		int pos = authority.length;
+		Resource[] temp = new Resource[pos + 1];
+		System.arraycopy(authority, 0, temp, 0, authority.length);
+		authority = temp;
+		authority[pos] = resource;
+		return this;
 	}
 
 	/**
 	 * Adds an additional resource record to this message.
 	 * 
 	 * @param resource The additional resource record to be added.
+	 * @return Returns the message to allow method chaining.
 	 */
-	public void addAdditionalResource(Resource resource) {
-		if (additionalResourceCount == additional.length) {
-			Resource[] temp = new Resource[additional.length * 2];
-			System.arraycopy(additional, 0, temp, 0, additionalResourceCount);
-			additional = temp;
-		}
-		additional[additionalResourceCount++] = resource;
+	public Message addAdditionalResource(Resource resource) {
+		int pos = additional.length;
+		Resource[] temp = new Resource[pos + 1];
+		System.arraycopy(additional, 0, temp, 0, additional.length);
+		additional = temp;
+		additional[pos] = resource;
+		return this;
 	}
 
 	/**
 	 * Sets this message's {@link Header}.
 	 * 
 	 * @param header The header being attached to this message.
+	 * @return Returns the message to allow method chaining.
 	 */
-	public void setHeader(Header header) {
+	public Message setHeader(Header header) {
 		this.header = header;
+		return this;
 	}
 
 }

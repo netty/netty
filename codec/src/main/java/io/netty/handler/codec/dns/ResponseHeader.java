@@ -1,4 +1,21 @@
+/*
+ * Copyright 2012 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package io.netty.handler.codec.dns;
+
+import io.netty.buffer.ByteBuf;
 
 /**
  * The DNS response header class. Used when receiving data from a DNS server.
@@ -10,6 +27,11 @@ package io.netty.handler.codec.dns;
  */
 public class ResponseHeader extends Header {
 
+	private int readQuestions;
+	private int readAnswers;
+	private int readAuthorityResources;
+	private int readAdditionalResources;
+
 	private boolean authoritativeAnswer;
 	private boolean truncated;
 	private boolean recursionAvailable;
@@ -17,69 +39,85 @@ public class ResponseHeader extends Header {
 	private int z;
 	private int responseCode;
 
-	/**
-	 * Constructor for a DNS packet response header. The id is the id
-	 * sent to the server by the client.
-	 * 
-	 * @param parent The {@link Message} this header belongs to.
-	 * @param id A 2 bit unsigned identification number for this response.
-	 */
-	public ResponseHeader(Message parent, int id) {
-		super(parent, id);
+	protected ResponseHeader(Message parent, ByteBuf buf) throws ResponseException {
+		super(parent);
+		decode(buf);
 	}
 
 	/**
-	 * Returns true when responding server is authoritative for the domain name in the query message.
+	 * @return True when responding server is authoritative for the domain name in the query message.
 	 */
 	public boolean isAuthoritativeAnswer() {
 		return authoritativeAnswer;
 	}
 
 	/**
-	 * Returns true if response has been truncated, usually if it is over 512 bytes.
+	 * @return True if response has been truncated, usually if it is over 512 bytes.
 	 */
 	public boolean isTruncated() {
 		return truncated;
 	}
 
 	/**
-	 * Returns true if DNS can handle recursive queries.
+	 * @return True if DNS can handle recursive queries.
 	 */
 	public boolean isRecursionAvailable() {
 		return recursionAvailable;
 	}
 
 	/**
-	 * 3 bit reserved field.
+	 * @return The 3 bit reserved field 'Z'.
 	 */
-	public int getZ() {
+	public int z() {
 		return z;
 	}
 
 	/**
-	 * 4 bit return code for query message. Response codes outlined in {@link ReturnCode}.
+	 * @return 4 bit return code for query message. Response codes outlined in {@link ReturnCode}.
 	 */
-	public int getResponseCode() {
+	public int responseCode() {
 		return responseCode;
 	}
 
 	/**
-	 * Decodes data from a response packet received from a DNS. A DNS packet
-	 * begins with the ID, and the response header begins at the 3rd byte.
-	 * This method begins reading from the 3rd byte, so the data should not
-	 * have any offset.
-	 * 
-	 * @param data DNS response packet read from server, no offset.
+	 * @return The number of questions to read for this DNS response packet.
 	 */
-	public void decode(byte[] data) throws ResponseException {
-		int flags = ((data[2] & 0xff) << 8) | data[3] & 0xff;
-		int type = flags >> 15;
-		int opcode = (flags >> 11) & 0xf;
+	public int readQuestions() {
+		return readQuestions;
+	}
 
-		setOpcode(opcode);
-		setType(type);
+	/**
+	 * @return The number of answers to read for this DNS response packet.
+	 */
+	public int readAnswers() {
+		return readAnswers;
+	}
+
+	/**
+	 * @return The number of authority resource records to read for this DNS response packet.
+	 */
+	public int readAuthorityResources() {
+		return readAuthorityResources;
+	}
+
+	/**
+	 * @return The number of additional resource records to read for this DNS response packet.
+	 */
+	public int readAdditionalResources() {
+		return readAdditionalResources;
+	}
+
+	/**
+	 * Decodes data from a response packet received from a DNS server.
+	 * 
+	 * @param buf The byte buffer containing the DNS packet.
+	 */
+	private void decode(ByteBuf buf) throws ResponseException {
+		setId(buf.readUnsignedShort());
+		int flags = buf.readUnsignedShort();
+		setType(flags >> 15);
+		setOpcode((flags >> 11) & 0xf);
 		setRecursionDesired(((flags >> 8) & 1) == 1);
-
 		authoritativeAnswer = ((flags >> 10) & 1) == 1;
 		truncated = ((flags >> 9) & 1) == 1;
 		recursionAvailable = ((flags >> 7) & 1) == 1;
@@ -87,10 +125,10 @@ public class ResponseHeader extends Header {
 		responseCode = flags & 0xf;
 		if (responseCode != 0)
 			throw new ResponseException(responseCode);
-		questionCount = ((data[4] & 0xff) << 8) | data[5] & 0xff;
-		answerCount = ((data[6] & 0xff) << 8) | data[7] & 0xff;
-		authorityCount = ((data[8] & 0xff) << 8) | data[9] & 0xff;
-		additionalResourceCount = ((data[10] & 0xff) << 8) | data[11] & 0xff;
+		readQuestions = buf.readUnsignedShort();
+		readAnswers = buf.readUnsignedShort();
+		readAuthorityResources = buf.readUnsignedShort();
+		readAdditionalResources = buf.readUnsignedShort();
 	}
 
 }

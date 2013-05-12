@@ -1,4 +1,21 @@
+/*
+ * Copyright 2012 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package io.netty.handler.codec.dns;
+
+import io.netty.buffer.ByteBuf;
 
 /**
  * The DNS question class. Represents a question being sent to a server via a
@@ -12,19 +29,15 @@ package io.netty.handler.codec.dns;
 public class Question extends DNSEntry {
 
 	/**
-	 * Decodes a question, given a DNS packet. A proper position must be indicated.
-	 * In a normal DNS packet, the question will begin at an offset of 12 bytes (a header
-	 * is usually 12 bytes in size, and the question follows directly after the header).
+	 * Decodes a question, given a DNS packet in a byte buffer.
 	 * 
-	 * @param data The DNS packet, encoded in a byte array, or data containing a question.
-	 * @param pos The position at which the question begins.
-	 * @return Returns a new Question object given an encoded DNS packet.
+	 * @param buf The byte buffer containing the DNS packet.
+	 * @return A decoded Question object.
 	 */
-	public static Question decode(byte[] data, int pos) {
-		String name = getName(data, pos);
-		pos += getSize(name);
-		int type = ((data[pos++] & 0xff) << 8) | data[pos++] & 0xff;
-		int qClass = ((data[pos++] & 0xff) << 8) | data[pos++] & 0xff;
+	public static Question decode(ByteBuf buf) {
+		String name = readName(buf);
+		int type = buf.readUnsignedShort();
+		int qClass = buf.readUnsignedShort();
 		return new Question(name, type, qClass);
 	}
 
@@ -50,34 +63,17 @@ public class Question extends DNSEntry {
 	}
 
 	/**
-	 * Returns the size, in bytes, of this question.
+	 * Encodes the question and writes it to a byte buffer.
 	 */
-	public int getSize() {
-		return getSize(name) + 4;
-	}
-
-	/**
-	 * Encodes the question by writing it to a variable length
-	 * byte array.
-	 * 
-	 * @return A variable length byte array with the question encoded.
-	 */
-	public byte[] encode() {
-		byte[] data = new byte[getSize()];
-		int pos = 0;
+	public void encode(ByteBuf buf) {
 		String[] parts = name.split("\\.");
 		for (int i = 0; i < parts.length; i++) {
-			data[pos++] = (byte) parts[i].length();
-			byte[] chars = parts[i].getBytes();
-			System.arraycopy(chars, 0, data, pos, chars.length);
-			pos += chars.length;
+			buf.writeByte(parts[i].length());
+			buf.writeBytes(parts[i].getBytes());
 		}
-		pos++;
-		data[pos++] = (byte) (type >> 8);
-		data[pos++] = (byte) type;
-		data[pos++] = (byte) (dnsClass >> 8);
-		data[pos++] = (byte) dnsClass;
-		return data;
+		buf.writeByte(0);
+		buf.writeShort(type);
+		buf.writeShort(dnsClass);
 	}
 
 }

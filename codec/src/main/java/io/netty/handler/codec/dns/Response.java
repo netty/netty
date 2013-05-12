@@ -1,4 +1,21 @@
+/*
+ * Copyright 2012 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package io.netty.handler.codec.dns;
+
+import io.netty.buffer.ByteBuf;
 
 /**
  * A DNS response packet. Sent to a client after server received a query.
@@ -9,61 +26,32 @@ package io.netty.handler.codec.dns;
 public class Response extends Message {
 
 	/**
-	 * Decodes a DNS response packet from a raw data buffer.
+	 * Decodes a DNS response packet from a byte buffer.
 	 * 
-	 * @param data The DNS packet buffer.
-	 * @return Returns a response object containing packet's information.
+	 * @param buf The byte buffer containing the DNS packet.
+	 * @return A Response object containing the packet's information.
 	 * @throws ResponseException
 	 */
-	public static Response decode(byte[] data) throws ResponseException {
-		int pos = 0;
-		int id = ((data[pos++] & 0xff) << 8) | data[pos++] & 0xff;
-		Response response = new Response(id);
-		((ResponseHeader) response.getHeader()).decode(data);
-		pos += 10; // Header, excluding the 2 bit id, is 10 bytes
-		Question question = Question.decode(data, pos); // We assume there is always 1 question.
-		response.addQuestion(question);
-		pos += question.getSize();
-		for (int i = 0; i < response.getAnswerCount(); i++) {
-			Resource resource = getResource(data, pos);
-			pos += resource.getSize(data, pos);
-			response.addAnswer(resource);
+	public static Response decode(ByteBuf buf) throws ResponseException {
+		Response response = new Response(buf);
+		ResponseHeader header = (ResponseHeader) response.getHeader();
+		for (int i = 0; i < header.readQuestions(); i++) {
+			response.addQuestion(Question.decode(buf));
 		}
-		for (int i = 0; i < response.getAuthorityResourceCount(); i++) {
-			Resource resource = getResource(data, pos);
-			pos += resource.getSize(data, pos);
-			response.addAuthorityResource(resource);
+		for (int i = 0; i < header.readAnswers(); i++) {
+			response.addAnswer(Resource.decode(buf));
 		}
-		for (int i = 0; i < response.getAdditionalResourceCount(); i++) {
-			Resource resource = getResource(data, pos);
-			pos += resource.getSize(data, pos);
-			response.addAdditionalResource(resource);
+		for (int i = 0; i < header.readAuthorityResources(); i++) {
+			response.addAuthorityResource(Resource.decode(buf));
+		}
+		for (int i = 0; i < header.readAdditionalResources(); i++) {
+			response.addAdditionalResource(Resource.decode(buf));
 		}
 		return response;
 	}
 
-	/**
-	 * Decodes a resource record, given a DNS packet buffer and the position at
-	 * which the resource record begins.
-	 * 
-	 * @param data The DNS packet buffer.
-	 * @param pos The position at which the resource record begins in the packet.
-	 * @return Returns a resource record.
-	 */
-	public static Resource getResource(byte[] data, int pos) {
-		String name = DNSEntry.getName(data, pos);
-		pos += DNSEntry.getTrueSize(data, pos);
-		int type = ((data[pos++] & 0xff) << 8) | data[pos++] & 0xff;
-		int aClass = ((data[pos++] & 0xff) << 8) | data[pos++] & 0xff;
-		long ttl = ((data[pos++] & 0xffl) << 24l) | ((data[pos++] & 0xffl) << 16l) | ((data[pos++] & 0xffl) << 8l) | data[pos++] & 0xffl;
-		int len = ((data[pos++] & 0xff) << 8) | data[pos++] & 0xff;
-		byte[] resourceData = new byte[len];
-		System.arraycopy(data, pos, resourceData, 0, len);
-		return new Resource(name, type, aClass, ttl, resourceData);
-	}
-
-	private Response(int id) {
-		header = new ResponseHeader(this, id);
+	private Response(ByteBuf buf) throws ResponseException {
+		setHeader(new ResponseHeader(this, buf));
 	}
 
 }
