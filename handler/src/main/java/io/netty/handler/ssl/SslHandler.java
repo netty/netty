@@ -938,10 +938,15 @@ public class SslHandler
             }
         }
 
+        notifyHandshakeFailure(cause);
+        flush0(ctx, 0, cause);
+    }
+
+    private void notifyHandshakeFailure(Throwable cause) {
         if (handshakePromise.tryFailure(cause)) {
             ctx.fireUserEventTriggered(new SslHandshakeCompletionEvent(cause));
+            ctx.pipeline().fireExceptionCaught(cause);
         }
-        flush0(ctx, 0, cause);
     }
 
     private void closeOutboundAndChannel(
@@ -985,11 +990,7 @@ public class SslHandler
                     if (handshakePromise.isDone()) {
                         return;
                     }
-
-                    if (handshakePromise.tryFailure(HANDSHAKE_TIMED_OUT)) {
-                        ctx.fireExceptionCaught(HANDSHAKE_TIMED_OUT);
-                        ctx.close();
-                    }
+                    notifyHandshakeFailure(HANDSHAKE_TIMED_OUT);
                 }
             }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);
         } else {
@@ -1008,10 +1009,7 @@ public class SslHandler
             engine.beginHandshake();
             flush0(ctx, ctx.newPromise(), true);
         } catch (Exception e) {
-            if (handshakePromise.tryFailure(e)) {
-                ctx.fireExceptionCaught(e);
-                ctx.close();
-            }
+            notifyHandshakeFailure(e);
         }
         return handshakePromise;
     }
@@ -1028,7 +1026,6 @@ public class SslHandler
                 @Override
                 public void operationComplete(Future<Channel> future) throws Exception {
                     if (!future.isSuccess()) {
-                        ctx.pipeline().fireExceptionCaught(future.cause());
                         ctx.close();
                     }
                 }
