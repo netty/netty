@@ -15,8 +15,6 @@
  */
 package org.jboss.netty.handler.codec.protobuf;
 
-import static org.jboss.netty.buffer.ChannelBuffers.*;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandler.Sharable;
@@ -67,10 +65,12 @@ public class ProtobufEncoder extends OneToOneEncoder {
     protected Object encode(
             ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
         if (msg instanceof MessageLite) {
-            return wrappedBuffer(((MessageLite) msg).toByteArray());
+            byte[] array = ((MessageLite) msg).toByteArray();
+            return ctx.getChannel().getConfig().getBufferFactory().getBuffer(array, 0, array.length);
         }
         if (msg instanceof MessageLite.Builder) {
-            return wrappedBuffer(((MessageLite.Builder) msg).build().toByteArray());
+            byte[] array = ((MessageLite.Builder) msg).build().toByteArray();
+            return ctx.getChannel().getConfig().getBufferFactory().getBuffer(array, 0, array.length);
         }
         return msg;
     }
