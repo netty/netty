@@ -1541,9 +1541,7 @@ public class SslHandler extends FrameDecoder
             handshake().addListener(new ChannelFutureListener() {
 
                 public void operationComplete(ChannelFuture future) throws Exception {
-                    if (!future.isSuccess()) {
-                        fireExceptionCaught(future.getChannel(), future.getCause());
-                    } else {
+                    if (future.isSuccess()) {
                         // Send the event upstream after the handshake was completed without an error.
                         //
                         // See https://github.com/netty/netty/issues/358
