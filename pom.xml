@@ -402,14 +402,27 @@
         <version>2.3.7</version>
         <extensions>true</extensions>
       </plugin>             
-       <plugin>
+      <plugin>
         <artifactId>maven-source-plugin</artifactId>
         <version>2.2.1</version>
         <executions>
+          <!--
+            ~ This workaround prevents Maven from executing the 'generate-sources' phase twice.
+            ~ See http://jira.codehaus.org/browse/MSOURCES-13
+            ~ and http://blog.peterlynch.ca/2010/05/maven-how-to-prevent-generate-sources.html
+            -->
           <execution>
             <id>attach-sources</id>
+            <phase>invalid</phase>
             <goals>
               <goal>jar</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>attach-sources-no-fork</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar-no-fork</goal>
             </goals>
           </execution>
         </executions>
