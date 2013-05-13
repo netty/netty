@@ -17,6 +17,8 @@ package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
 
+import java.nio.charset.Charset;
+
 /**
  * A class representing entries in a DNS packet (questions, and all resource records). Has
  * utility methods for reading domain names and sizing them. Additionally, contains data shared
@@ -223,21 +225,42 @@ public class DNSEntry {
 	public static String readName(ByteBuf buf) {
 		int position = -1;
 		StringBuilder name = new StringBuilder();
-		for (int len = buf.readByte() & 0xff; buf.isReadable() && len != 0; len = buf.readByte() & 0xff) {
+		for (int len = buf.readUnsignedByte(); buf.isReadable() && len != 0; len = buf.readUnsignedByte()) {
 			boolean pointer = (len & 0xc0) == 0xc0;
 			if (pointer) {
 				if (position == -1) {
 					position = buf.readerIndex() + 1;
 				}
-				buf.readerIndex((len & 0x3f) << 8 | (buf.readByte() & 0xff));
+				buf.readerIndex((len & 0x3f) << 8 | buf.readUnsignedByte());
 			} else {
-				byte[] info = new byte[len];
-				buf.readBytes(info);
-				name.append(new String(info)).append(".");
+				name.append(buf.toString(buf.readerIndex(), len, Charset.forName("UTF-8"))).append(".");
+				buf.skipBytes(len);
 			}
 		}
 		if (position != -1) {
 			buf.readerIndex(position);
+		}
+		return name.substring(0, name.length() - 1);
+	}
+
+	/**
+	 * Retrieves a domain name given a buffer containing a DNS packet
+	 * without advancing the readerIndex for the buffer.
+	 * 
+	 * @param buf The byte buffer containing the DNS packet.
+	 * @param offset The position at which the name begins.
+	 * @return The domain name for an entry.
+	 */
+	public static String getName(ByteBuf buf, int offset) {
+		StringBuilder name = new StringBuilder();
+		for (int len = buf.getUnsignedByte(offset++); buf.writerIndex() > offset && len != 0; len = buf.getUnsignedByte(offset++)) {
+			boolean pointer = (len & 0xc0) == 0xc0;
+			if (pointer) {
+				offset = (len & 0x3f) << 8 | buf.getUnsignedByte(offset++);
+			} else {
+				name.append(buf.toString(offset, len, Charset.forName("UTF-8"))).append(".");
+				offset += len;
+			}
 		}
 		return name.substring(0, name.length() - 1);
 	}
