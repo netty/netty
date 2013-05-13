@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -19,9 +19,6 @@ import io.netty.buffer.ByteBuf;
 
 /**
  * The DNS query header class. Used when sending data to a DNS server.
- * 
- * @author Mohamed Bakkar
- * @version 1.0
  */
 public class QueryHeader extends Header {
 
@@ -32,7 +29,7 @@ public class QueryHeader extends Header {
 	 * @param parent The {@link Message} this header belongs to.
 	 * @param id A 2 bit unsigned identification number for this query.
 	 */
-	public QueryHeader(Message parent, int id) {
+	public QueryHeader(Message<? extends QueryHeader> parent, int id) {
 		super(parent);
 		setId(id);
 		setRecursionDesired(true);

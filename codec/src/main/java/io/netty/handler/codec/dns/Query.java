@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,34 +15,17 @@
  */
 package io.netty.handler.codec.dns;
 
-import io.netty.buffer.ByteBuf;
-
 /**
  * A DNS query packet. Sent to a server to receive a DNS response packet with information
  * answering a query's questions.
- * 
- * @author Mohamed Bakkar
- * @version 1.0
  */
-public class Query extends Message {
+public class Query extends Message<QueryHeader> {
 
 	/**
 	 * Constructs a DNS query. By default recursion will be toggled on.
 	 */
 	public Query(int id) {
 		setHeader(new QueryHeader(this, id));
-	}
-
-	/**
-	 * Encodes a query and writes it to a byte buffer. This can be sent to
-	 * a DNS server, and a response will be sent from the server.
-	 */
-	public void encode(ByteBuf buf) {
-		((QueryHeader) getHeader()).encode(buf);
-		Question[] questions = getQuestions();
-		for (int i = 0; i < questions.length; i++) {
-			questions[i].encode(buf);
-		}
 	}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -21,9 +21,6 @@ import io.netty.buffer.ByteBuf;
  * A class representing entries in a DNS packet (questions, and all resource records). Has
  * utility methods for reading domain names and sizing them. Additionally, contains data shared
  * by entries such as name, type, and class.
- * 
- * @author Mohamed Bakkar
- * @version 1.0
  */
 public class DNSEntry {
 
@@ -272,7 +269,7 @@ public class DNSEntry {
 	/**
 	 * @return The class for this entry. Default is IN (Internet).
 	 */
-	public int DNSClass() {
+	public int dnsClass() {
 		return dnsClass;
 	}
 

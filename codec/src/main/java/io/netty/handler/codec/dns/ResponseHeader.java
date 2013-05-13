@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -21,9 +21,6 @@ import io.netty.buffer.ByteBuf;
  * The DNS response header class. Used when receiving data from a DNS server.
  * Contains information contained in a DNS response header, such as recursion
  * availability, and response codes.
- * 
- * @author Mohamed Bakkar
- * @version 1.0
  */
 public class ResponseHeader extends Header {
 
@@ -39,7 +36,7 @@ public class ResponseHeader extends Header {
 	private int z;
 	private int responseCode;
 
-	protected ResponseHeader(Message parent, ByteBuf buf) throws ResponseException {
+	protected ResponseHeader(Message<? extends ResponseHeader> parent, ByteBuf buf) throws ResponseException {
 		super(parent);
 		decode(buf);
 	}

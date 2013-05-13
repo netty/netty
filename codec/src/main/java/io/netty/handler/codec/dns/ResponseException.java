@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -20,13 +20,10 @@ import java.io.IOException;
 /**
  * This exception is thrown when the server sends an error response
  * code (any response code that is not 0).
- * 
- * @author Mohamed Bakkar
- * @version 1.0
  */
 public class ResponseException extends IOException {
 
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 8063126944779655031L;
 
 	public ResponseException(int id) {
 		super(ResponseCode.obtainError(id));

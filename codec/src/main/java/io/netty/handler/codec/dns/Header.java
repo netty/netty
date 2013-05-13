@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -19,9 +19,6 @@ package io.netty.handler.codec.dns;
  * The header super-class. Includes information shared by DNS query and response packet headers
  * such as the ID, opcode, and type. The only flag shared by both classes is the flag for
  * desiring recursion.
- * 
- * @author Mohamed Bakkar
- * @version 1.0
  */
 public class Header {
 
@@ -29,6 +26,7 @@ public class Header {
 	 * Message type is query.
 	 */
 	public static final int TYPE_QUERY = 0;
+
 	/**
 	 * Message type is response.
 	 */
@@ -38,6 +36,7 @@ public class Header {
 	 * Message is for a standard query.
 	 */
 	public static final int OPCODE_QUERY = 0;
+
 	/**
 	 * Message is for an inverse query. <strong>Note: inverse queries have been obsoleted since RFC 3425,
 	 * and are not necessarily supported.</strong>
@@ -45,13 +44,13 @@ public class Header {
 	@Deprecated
 	public static final int OPCODE_IQUERY = 1;
 
-	private Message parent;
+	private Message<? extends Header> parent;
 	private boolean recursionDesired;
 	private int opcode;
 	private int id;
 	private int type;
 
-	public Header(Message parent) {
+	public Header(Message<? extends Header> parent) {
 		this.parent = parent;
 	}
 
@@ -59,28 +58,28 @@ public class Header {
 	 * @return The number of questions in the {@link Message}.
 	 */
 	public int questionCount() {
-		return parent.getQuestions().length;
+		return parent.getQuestions().size();
 	}
 
 	/**
 	 * @return The number of answer resource records in the {@link Message}.
 	 */
 	public int answerCount() {
-		return parent.getAnswers().length;
+		return parent.getAnswers().size();
 	}
 
 	/**
 	 * @return The number of authority resource records in the {@link Message}.
 	 */
 	public int authorityResourceCount() {
-		return parent.getAuthorityResources().length;
+		return parent.getAuthorityResources().size();
 	}
 
 	/**
 	 * @return The number of additional resource records in the {@link Message}.
 	 */
 	public int additionalResourceCount() {
-		return parent.getAdditionalResources().length;
+		return parent.getAdditionalResources().size();
 	}
 
 	/**
@@ -148,6 +147,12 @@ public class Header {
 		return this;
 	}
 
+	/**
+	 * Sets the id for this {@link Message}.
+	 * 
+	 * @param id A unique 2 byte unsigned identifier
+	 * @return Returns the header to allow method chaining.
+	 */
 	public Header setId(int id) {
 		this.id = id;
 		return this;

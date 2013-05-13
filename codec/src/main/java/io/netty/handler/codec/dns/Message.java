@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,65 +15,60 @@
  */
 package io.netty.handler.codec.dns;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 /**
  * The message super-class. Contains core information concerning DNS packets, both outgoing and incoming.
- * 
- * @author Mohamed Bakkar
- * @version 1.0
  */
-public abstract class Message {
+public abstract class Message<H extends Header> {
 
-	private Header header;
-	private Question[] questions = new Question[0];
-	private Resource[] answers = new Resource[0];
-	private Resource[] authority = new Resource[0];
-	private Resource[] additional = new Resource[0];
+	private H header;
+	private List<Question> questions = new ArrayList<Question>();
+	private List<Resource> answers = new ArrayList<Resource>();
+	private List<Resource> authority = new ArrayList<Resource>();
+	private List<Resource> additional = new ArrayList<Resource>();
 
 	protected Message() {
 
 	}
 
 	/**
-	 * @Return The header belonging to this message. If the message is a {@link Query}, this is a
-	 * {@link QueryHeader}. If the message is a {@link Response}, this is a {@link ResponseQuery}.
+	 * @Return The header belonging to this message. If the message is a {@link Query}, this should be
+	 * {@link QueryHeader}. If the message is a {@link Response}, this should be {@link ResponseQuery}.
 	 */
-	public Header getHeader() {
+	public H getHeader() {
 		return header;
 	}
 
 	/**
-	 * @return All the questions in this message.
+	 * @return A list of all the questions in this message.
 	 */
-	public Question[] getQuestions() {
-		return questions.clone();
+	public List<Question> getQuestions() {
+		return Collections.unmodifiableList(questions);
 	}
 
 	/**
-	 * @return All the answer resource records in this message.
+	 * @return A list of all the answer resource records in this message.
 	 */
-	public Resource[] getAnswers() {
-		return answers.clone();
+	public List<Resource> getAnswers() {
+		return Collections.unmodifiableList(answers);
 	}
 
 	/**
-	 * @return All the authority resource records in this message.
+	 * @return A list of all the authority resource records in this message.
 	 */
-	public Resource[] getAuthorityResources() {
-		return authority.clone();
+	public List<Resource> getAuthorityResources() {
+		return Collections.unmodifiableList(authority);
 	}
 
 	/**
-	 * @return All the additional resource records in this message.
+	 * @return A list of all the additional resource records in this message.
 	 */
-	public Resource[] getAdditionalResources() {
-		return additional.clone();
+	public List<Resource> getAdditionalResources() {
+		return Collections.unmodifiableList(additional);
 	}
-
-	// The following add methods build a new array each time. This is fine
-	// because a Message will almost never have more than 1 question, and
-	// in Response messages, the number of answers will usually be small
-	// (1 in many cases). The get methods are likely to be called with a
-	// higher frequency, and they are quicker as a result of these add methods.
 
 	/**
 	 * Adds an answer resource record to this message.
@@ -81,12 +76,8 @@ public abstract class Message {
 	 * @param answer The answer resource record to be added.
 	 * @return Returns the message to allow method chaining.
 	 */
-	public Message addAnswer(Resource answer) {
-		int pos = answers.length;
-		Resource[] temp = new Resource[pos + 1];
-		System.arraycopy(answers, 0, temp, 0, answers.length);
-		answers = temp;
-		answers[pos] = answer;
+	public Message<H> addAnswer(Resource answer) {
+		answers.add(answer);
 		return this;
 	}
 
@@ -96,12 +87,8 @@ public abstract class Message {
 	 * @param question The question to be added.
 	 * @return Returns the message to allow method chaining.
 	 */
-	public Message addQuestion(Question question) {
-		int pos = questions.length;
-		Question[] temp = new Question[pos + 1];
-		System.arraycopy(questions, 0, temp, 0, questions.length);
-		questions = temp;
-		questions[pos] = question;
+	public Message<H> addQuestion(Question question) {
+		questions.add(question);
 		return this;
 	}
 
@@ -111,12 +98,8 @@ public abstract class Message {
 	 * @param authority The authority resource record to be added.
 	 * @return Returns the message to allow method chaining.
 	 */
-	public Message addAuthorityResource(Resource resource) {
-		int pos = authority.length;
-		Resource[] temp = new Resource[pos + 1];
-		System.arraycopy(authority, 0, temp, 0, authority.length);
-		authority = temp;
-		authority[pos] = resource;
+	public Message<H> addAuthorityResource(Resource resource) {
+		authority.add(resource);
 		return this;
 	}
 
@@ -126,12 +109,8 @@ public abstract class Message {
 	 * @param resource The additional resource record to be added.
 	 * @return Returns the message to allow method chaining.
 	 */
-	public Message addAdditionalResource(Resource resource) {
-		int pos = additional.length;
-		Resource[] temp = new Resource[pos + 1];
-		System.arraycopy(additional, 0, temp, 0, additional.length);
-		additional = temp;
-		additional[pos] = resource;
+	public Message<H> addAdditionalResource(Resource resource) {
+		additional.add(resource);
 		return this;
 	}
 
@@ -141,7 +120,7 @@ public abstract class Message {
 	 * @param header The header being attached to this message.
 	 * @return Returns the message to allow method chaining.
 	 */
-	public Message setHeader(Header header) {
+	public Message<H> setHeader(H header) {
 		this.header = header;
 		return this;
 	}

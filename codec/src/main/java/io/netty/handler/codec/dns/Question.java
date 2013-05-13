@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -22,9 +22,6 @@ import io.netty.buffer.ByteBuf;
  * query, or the question being duplicated and sent back in a response. Usually
  * a message contains a single question, and DNS servers often don't support
  * multiple questions in a single query.
- * 
- * @author Mohamed Bakkar
- * @version 1.0
  */
 public class Question extends DNSEntry {
 
