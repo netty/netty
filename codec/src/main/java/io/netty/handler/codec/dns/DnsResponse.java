@@ -15,13 +15,12 @@
  */
 package io.netty.handler.codec.dns;
 
-
 /**
- * A DNS response packet. Sent to a client after server received a query.
+ * A DNS response packet which is sent to a client after a server receives a query.
  */
-public class Response extends Message<ResponseHeader> {
+public class DnsResponse extends DnsMessage<DnsResponseHeader> {
 
-	public Response() {
+	public DnsResponse() {
 		
 	}
 

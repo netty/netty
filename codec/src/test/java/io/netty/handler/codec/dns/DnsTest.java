@@ -33,7 +33,7 @@ import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class DNSTest {
+public class DnsTest {
 
 	@Test
 	public void sendQuery() throws Exception {
@@ -48,13 +48,13 @@ public class DNSTest {
 			.option(ChannelOption.SO_BROADCAST, true)
 			.handler(new Initializer());
 			Channel ch = b.connect(address).sync().channel();
-			Query query = new Query(15305);
+			DnsQuery query = new DnsQuery(15305);
 			query.addQuestion(new Question(domain, Resource.TYPE_A));
 			Assert.assertEquals("Invalid question count, expected 1.", 1, query.getHeader().questionCount());
 			Assert.assertEquals("Invalid answer count, expected 0.", 0, query.getHeader().answerCount());
 			Assert.assertEquals("Invalid authority resource record count, expected 0.", 0, query.getHeader().authorityResourceCount());
 			Assert.assertEquals("Invalid additional resource record count, expected 0.", 0, query.getHeader().additionalResourceCount());
-			Assert.assertEquals("Invalid type, should be TYPE_QUERY (0)", Header.TYPE_QUERY, query.getHeader().getType());
+			Assert.assertEquals("Invalid type, should be TYPE_QUERY (0)", DnsHeader.TYPE_QUERY, query.getHeader().getType());
 			ch.write(query).sync();
 			if (!ch.closeFuture().await(5000)) {
 				System.err.println("DNS request timed out.");
@@ -69,25 +69,25 @@ public class DNSTest {
 		@Override
 		protected void initChannel(NioDatagramChannel ch) throws Exception {
 			ch.pipeline()
-				.addLast("decoder", new ResponseDecoder())
-				.addLast("encoder", new QueryEncoder())
+				.addLast("decoder", new DnsResponseDecoder())
+				.addLast("encoder", new DnsQueryEncoder())
 				.addLast("handler", new Handler());
 		}
 
 	}
 
-	class Handler extends ChannelInboundMessageHandlerAdapter<Response> {
+	class Handler extends ChannelInboundMessageHandlerAdapter<DnsResponse> {
 
 		@Override
 		public void messageReceived(ChannelHandlerContext ctx,
-				Response object) throws Exception {
-			Response response = (Response) object;
-			ResponseHeader header = response.getHeader();
-			Assert.assertEquals("Invalid response code, expected TYPE_RESPONSE (1).", Header.TYPE_RESPONSE,
+				DnsResponse object) throws Exception {
+			DnsResponse response = (DnsResponse) object;
+			DnsResponseHeader header = response.getHeader();
+			Assert.assertEquals("Invalid response code, expected TYPE_RESPONSE (1).", DnsHeader.TYPE_RESPONSE,
 					header.getType());
 			Assert.assertFalse("Server response was truncated.", header.isTruncated());
 			Assert.assertTrue("Inconsistency between recursion desirability and availability.",
-					header.getRecursionDesired() == header.isRecursionAvailable());
+					header.isRecursionDesired() == header.isRecursionAvailable());
 			Assert.assertEquals("Invalid ID returned from server.", 15305, response.getHeader().getId());
 			Assert.assertEquals("Question count in response not 1.", 1, response.getHeader().questionCount());
 			Assert.assertTrue("Server didn't send any resources.",
@@ -96,7 +96,7 @@ public class DNSTest {
 					+ response.getHeader().additionalResourceCount() > 0);
 			List<Resource> answers = response.getAnswers();
 			for (Resource answer : answers) {
-				if (answer.type() == DNSEntry.TYPE_A) {
+				if (answer.type() == DnsEntry.TYPE_A) {
 					ByteBuf info = answer.data();
 					Assert.assertEquals("A non-IPv4 resource record was returned.", info.writerIndex(), 4);
 					StringBuilder builder = new StringBuilder();

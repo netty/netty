@@ -15,41 +15,23 @@
  */
 package io.netty.handler.codec.dns;
 
-import io.netty.buffer.ByteBuf;
 
 /**
- * The DNS query header class. Used when sending data to a DNS server.
+ * The DNS query header class which is used to represent the 12 byte header in a {@link DnsQuery}.
  */
-public class QueryHeader extends Header {
+public class DnsQueryHeader extends DnsHeader {
 
 	/**
 	 * Constructor for a DNS packet query header. The id is user generated and
 	 * will be replicated in the response packet by the server.
 	 * 
-	 * @param parent The {@link Message} this header belongs to.
-	 * @param id A 2 bit unsigned identification number for this query.
+	 * @param parent the {@link DnsMessage} this header belongs to
+	 * @param id a 2 bit unsigned identification number for this query
 	 */
-	public QueryHeader(Message<? extends QueryHeader> parent, int id) {
+	public DnsQueryHeader(DnsMessage<? extends DnsQueryHeader> parent, int id) {
 		super(parent);
 		setId(id);
 		setRecursionDesired(true);
-	}
-
-	/**
-	 * Encodes all the information in the header and writes to a byte buffer.
-	 * The header is always 12 bytes long.
-	 */
-	public void encode(ByteBuf buf) {
-		buf.writeShort(getId());
-		int flags = 0;
-		flags |= getType() << 15;
-		flags |= getOpcode() << 14;
-		flags |= getRecursionDesired() ? (1 << 8) : 0;
-		buf.writeShort(flags);
-		buf.writeShort(questionCount());
-		buf.writeShort(answerCount()); // Must be 0
-		buf.writeShort(authorityResourceCount()); // Must be 0
-		buf.writeShort(additionalResourceCount()); // Must be 0
 	}
 
 }

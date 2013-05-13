@@ -103,8 +103,8 @@ public enum ResponseCode {
 	 * Returns a formated message for an error received given an ID, or unknown
 	 * if the error is unsupported.
 	 * 
-	 * @param id ID of the error code.
-	 * @return Formatted error message.
+	 * @param id the error code's id
+	 * @return formatted error message
 	 */
 	public static String obtainError(int id) {
 		ResponseCode[] errors = ResponseCode.values();

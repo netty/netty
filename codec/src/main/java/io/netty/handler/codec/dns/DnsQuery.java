@@ -16,16 +16,16 @@
 package io.netty.handler.codec.dns;
 
 /**
- * A DNS query packet. Sent to a server to receive a DNS response packet with information
- * answering a query's questions.
+ * A DNS query packet which is sent to a server to receive a DNS response packet with information
+ * answering a DnsQuery's questions.
  */
-public class Query extends Message<QueryHeader> {
+public class DnsQuery extends DnsMessage<DnsQueryHeader> {
 
 	/**
 	 * Constructs a DNS query. By default recursion will be toggled on.
 	 */
-	public Query(int id) {
-		setHeader(new QueryHeader(this, id));
+	public DnsQuery(int id) {
+		setHeader(new DnsQueryHeader(this, id));
 	}
 
 }

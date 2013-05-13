@@ -16,30 +16,12 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 
 
 /**
  * Represents any resource record (answer, authority, or additional resource records).
  */
-public class Resource extends DNSEntry {
-
-	/**
-	 * Decodes a resource record, given a DNS packet buffer.
-	 * 
-	 * @param buf The byte buffer containing the DNS packet.
-	 * @return A resource record containing response data.
-	 */
-	public static Resource decode(ByteBuf buf) {
-		String name = DNSEntry.readName(buf);
-		int type = buf.readUnsignedShort();
-		int aClass = buf.readUnsignedShort();
-		long ttl = buf.readUnsignedInt();
-		int len = buf.readUnsignedShort();
-		ByteBuf resourceData = Unpooled.buffer(len);
-		resourceData.writeBytes(buf, len);
-		return new Resource(name, type, aClass, ttl, resourceData);
-	}
+public class Resource extends DnsEntry {
 
 	private final long ttl; // The time to live is actually a 4 byte integer, but since it's unsigned
 					  // we should store it as long to be properly expressed in Java.
@@ -48,11 +30,11 @@ public class Resource extends DNSEntry {
 	/**
 	 * Constructs a resource record.
 	 * 
-	 * @param name The domain name.
-	 * @param type The type of record being returned.
-	 * @param aClass The class for this resource record.
-	 * @param ttl The time to live after reading.
-	 * @param resourceData The data contained in this record.
+	 * @param name the domain name
+	 * @param type the type of record being returned
+	 * @param aClass the class for this resource record
+	 * @param ttl the time to live after reading
+	 * @param resourceData the data contained in this record
 	 */
 	public Resource(String name, int type, int aClass, long ttl, ByteBuf resourceData) {
 		super(name, type, aClass);
@@ -61,21 +43,21 @@ public class Resource extends DNSEntry {
 	}
 
 	/**
-	 * @return The time to live after reading for this resource record.
+	 * Returns the time to live after reading for this resource record.
 	 */
 	public long timeToLive() {
 		return ttl;
 	}
 
 	/**
-	 * @return The length of the data in this resource record.
+	 *Returns the length of the data in this resource record.
 	 */
 	public int dataLength() {
 		return resourceData.writerIndex();
 	}
 
 	/**
-	 * @return The data contained in this resource record.
+	 * Returns the data contained in this resource record.
 	 */
 	public ByteBuf data() {
 		return resourceData.copy();
