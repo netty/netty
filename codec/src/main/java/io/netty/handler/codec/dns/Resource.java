@@ -16,16 +16,17 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 
 
 /**
  * Represents any resource record (answer, authority, or additional resource records).
  */
-public class Resource extends DnsEntry {
+public class Resource extends DnsEntry implements ByteBufHolder {
 
 	private final long ttl; // The time to live is actually a 4 byte integer, but since it's unsigned
-					  // we should store it as long to be properly expressed in Java.
-	private final ByteBuf resourceData;
+	// we should store it as long to be properly expressed in Java.
+	private final ByteBuf content;
 
 	/**
 	 * Constructs a resource record.
@@ -34,12 +35,12 @@ public class Resource extends DnsEntry {
 	 * @param type the type of record being returned
 	 * @param aClass the class for this resource record
 	 * @param ttl the time to live after reading
-	 * @param resourceData the data contained in this record
+	 * @param content the data contained in this record
 	 */
-	public Resource(String name, int type, int aClass, long ttl, ByteBuf resourceData) {
+	public Resource(String name, int type, int aClass, long ttl, ByteBuf content) {
 		super(name, type, aClass);
 		this.ttl = ttl;
-		this.resourceData = resourceData;
+		this.content = content;
 	}
 
 	/**
@@ -53,14 +54,50 @@ public class Resource extends DnsEntry {
 	 *Returns the length of the data in this resource record.
 	 */
 	public int dataLength() {
-		return resourceData.writerIndex();
+		return content.writerIndex();
 	}
 
 	/**
 	 * Returns the data contained in this resource record.
 	 */
-	public ByteBuf data() {
-		return resourceData.copy();
+	@Override
+	public ByteBuf content() {
+		return content;
+	}
+
+	/**
+	 * Returns a deep copy of this resource record.
+	 */
+	@Override
+	public Resource copy() {
+		return new Resource(name(), type(), dnsClass(), ttl, content.copy());
+	}
+
+	@Override
+	public int refCnt() {
+		return content.refCnt();
+	}
+
+	@Override
+	public Resource retain() {
+		content.retain();
+		return this;
+	}
+
+	@Override
+	public Resource retain(int increment) {
+		content.retain(increment);
+		return this;
+	}
+
+	@Override
+	public boolean release() {
+		return content.release();
+	}
+
+	@Override
+	public boolean release(int decrement) {
+		return content.release(decrement);
 	}
 
 }

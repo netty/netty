@@ -15,13 +15,13 @@
  */
 package io.netty.handler.codec.dns;
 
-import java.io.IOException;
+import io.netty.handler.codec.DecoderException;
 
 /**
  * This exception is thrown when the server sends an error response
  * code (any response code that is not 0).
  */
-public class ResponseException extends IOException {
+public class ResponseException extends DecoderException {
 
 	private static final long serialVersionUID = 8063126944779655031L;
 

@@ -312,9 +312,9 @@ public class DnsEntry {
 	public static final int CLASS_NONE = 0x00fe;
 	public static final int CLASS_ANY = 0x00ff;
 
-	protected final String name;
-	protected final int type;
-	protected final int dnsClass;
+	private final String name;
+	private final int type;
+	private final int dnsClass;
 
 	public DnsEntry(String name, int type, int dnsClass) {
 		if (name == null || name.length() == 0) {

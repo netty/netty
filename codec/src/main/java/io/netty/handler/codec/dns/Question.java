@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.dns;
 
-
 /**
  * The DNS question class which represents a question being sent to a server via a
  * query, or the question being duplicated and sent back in a response. Usually

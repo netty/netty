@@ -97,7 +97,7 @@ public class DnsTest {
 			List<Resource> answers = response.getAnswers();
 			for (Resource answer : answers) {
 				if (answer.type() == DnsEntry.TYPE_A) {
-					ByteBuf info = answer.data();
+					ByteBuf info = answer.content();
 					Assert.assertEquals("A non-IPv4 resource record was returned.", info.writerIndex(), 4);
 					StringBuilder builder = new StringBuilder();
 					for (int n = 0; n < 4; n++)
@@ -107,7 +107,5 @@ public class DnsTest {
 			}
 			ctx.close();
 		}
-
 	}
-
 }

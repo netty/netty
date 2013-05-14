@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.dns;
 
-
 /**
  * The DNS response header class which is used when receiving data from a DNS server.
  * Contains information contained in a DNS response header, such as recursion
@@ -35,8 +34,17 @@ public class DnsResponseHeader extends DnsHeader {
 	private int z;
 	private int responseCode;
 
-	protected DnsResponseHeader(DnsMessage<? extends DnsResponseHeader> parent) throws ResponseException {
+	/**
+	 * Constructor for a DNS packet response header. The id is received by
+	 * reading a {@link DnsQuery} and is sent back to the client.
+	 * 
+	 * @param parent the {@link DnsMessage} this header belongs to
+	 * @param id a 2 bit unsigned identification number received from client
+	 */
+	public DnsResponseHeader(DnsMessage<? extends DnsResponseHeader> parent, int id) throws ResponseException {
 		super(parent);
+		setId(id);
+		setType(TYPE_RESPONSE);
 	}
 
 	/**
@@ -100,6 +108,14 @@ public class DnsResponseHeader extends DnsHeader {
 	 */
 	public int getReadAdditionalResources() {
 		return readAdditionalResources;
+	}
+
+	/**
+	 * Returns the {@link DnsMessage} type. This will always return {@code TYPE_RESPONSE}.
+	 */
+	@Override
+	public final int getType() {
+		return TYPE_RESPONSE;
 	}
 
 	/**
@@ -187,6 +203,21 @@ public class DnsResponseHeader extends DnsHeader {
 	 */
 	public void setReadAdditionalResources(int readAdditionalResources) {
 		this.readAdditionalResources = readAdditionalResources;
+	}
+
+	/**
+	 * Sets the {@link DnsHeader} type. Must be {@code TYPE_RESPONSE}.
+	 * 
+	 * @param type message type
+	 * @return the header to allow method chaining
+	 */
+	@Override
+	public final DnsResponseHeader setType(int type) {
+		if (type != TYPE_RESPONSE) {
+			throw new IllegalArgumentException("type cannot be anything but TYPE_RESPONSE (1) for a response header.");
+		}
+		super.setType(type);
+		return this;
 	}
 
 }

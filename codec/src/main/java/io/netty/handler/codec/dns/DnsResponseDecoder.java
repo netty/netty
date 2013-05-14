@@ -120,8 +120,8 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
 	 * @return a {@link DnsResponseHeader} containing the response's header information
 	 */
 	public DnsResponseHeader decodeHeader(DnsResponse parent, ByteBuf buf) throws ResponseException {
-		DnsResponseHeader header = new DnsResponseHeader(parent);
-		header.setId(buf.readUnsignedShort());
+		int id = buf.readUnsignedShort();
+		DnsResponseHeader header = new DnsResponseHeader(parent, id);
 		int flags = buf.readUnsignedShort();
 		header.setType(flags >> 15);
 		header.setOpcode((flags >> 11) & 0xf);

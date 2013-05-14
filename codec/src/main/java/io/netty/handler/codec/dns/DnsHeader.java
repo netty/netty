@@ -53,7 +53,7 @@ public class DnsHeader {
 
 	public DnsHeader(DnsMessage<? extends DnsHeader> parent) {
 		if (parent == null) {
-			throw new IllegalArgumentException("the parent field cannot be null and must point to a valid DnsMessage.");
+			throw new NullPointerException("the parent field cannot be null and must point to a valid DnsMessage.");
 		}
 		this.parent = parent;
 	}

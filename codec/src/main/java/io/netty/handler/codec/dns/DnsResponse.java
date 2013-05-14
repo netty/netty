@@ -21,7 +21,6 @@ package io.netty.handler.codec.dns;
 public class DnsResponse extends DnsMessage<DnsResponseHeader> {
 
 	public DnsResponse() {
-		
 	}
 
 }

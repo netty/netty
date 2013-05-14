@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.dns;
 
-
 /**
  * The DNS query header class which is used to represent the 12 byte header in a {@link DnsQuery}.
  */
@@ -31,7 +30,31 @@ public class DnsQueryHeader extends DnsHeader {
 	public DnsQueryHeader(DnsMessage<? extends DnsQueryHeader> parent, int id) {
 		super(parent);
 		setId(id);
+		setType(TYPE_QUERY);
 		setRecursionDesired(true);
+	}
+
+	/**
+	 * Returns the {@link DnsMessage} type. This will always return {@code TYPE_QUERY}.
+	 */
+	@Override
+	public final int getType() {
+		return TYPE_QUERY;
+	}
+
+	/**
+	 * Sets the {@link DnsHeader} type. Must be {@code TYPE_RESPONSE}.
+	 * 
+	 * @param type message type
+	 * @return the header to allow method chaining
+	 */
+	@Override
+	public final DnsQueryHeader setType(int type) {
+		if (type != TYPE_QUERY) {
+			throw new IllegalArgumentException("type cannot be anything but TYPE_QUERY (0) for a query header.");
+		}
+		super.setType(type);
+		return this;
 	}
 
 }
