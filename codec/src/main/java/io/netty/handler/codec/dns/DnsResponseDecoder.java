@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.dns;
 
+import java.nio.charset.Charset;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
@@ -29,13 +31,65 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> {
 
 	/**
+	 * Retrieves a domain name given a buffer containing a DNS packet.
+	 * If the name contains a pointer, the position of the buffer will be
+	 * set to directly after the pointer's index after the name has been
+	 * read.
+	 * 
+	 * @param buf the byte buffer containing the DNS packet
+	 * @return the domain name for an entry
+	 */
+	public static String readName(ByteBuf buf) {
+		int position = -1;
+		StringBuilder name = new StringBuilder();
+		for (int len = buf.readUnsignedByte(); buf.isReadable() && len != 0; len = buf.readUnsignedByte()) {
+			boolean pointer = (len & 0xc0) == 0xc0;
+			if (pointer) {
+				if (position == -1) {
+					position = buf.readerIndex() + 1;
+				}
+				buf.readerIndex((len & 0x3f) << 8 | buf.readUnsignedByte());
+			} else {
+				name.append(buf.toString(buf.readerIndex(), len, Charset.forName("UTF-8"))).append(".");
+				buf.skipBytes(len);
+			}
+		}
+		if (position != -1) {
+			buf.readerIndex(position);
+		}
+		return name.substring(0, name.length() - 1);
+	}
+
+	/**
+	 * Retrieves a domain name given a buffer containing a DNS packet
+	 * without advancing the readerIndex for the buffer.
+	 * 
+	 * @param buf the byte buffer containing the DNS packet
+	 * @param offset the position at which the name begins
+	 * @return the domain name for an entry
+	 */
+	public static String getName(ByteBuf buf, int offset) {
+		StringBuilder name = new StringBuilder();
+		for (int len = buf.getUnsignedByte(offset++); buf.writerIndex() > offset && len != 0; len = buf.getUnsignedByte(offset++)) {
+			boolean pointer = (len & 0xc0) == 0xc0;
+			if (pointer) {
+				offset = (len & 0x3f) << 8 | buf.getUnsignedByte(offset++);
+			} else {
+				name.append(buf.toString(offset, len, Charset.forName("UTF-8"))).append(".");
+				offset += len;
+			}
+		}
+		return name.substring(0, name.length() - 1);
+	}
+
+	/**
 	 * Decodes a question, given a DNS packet in a byte buffer.
 	 * 
 	 * @param buf the byte buffer containing the DNS packet
 	 * @return a decoded {@link Question}
 	 */
 	public static Question decodeQuestion(ByteBuf buf) {
-		String name = DnsEntry.readName(buf);
+		String name = readName(buf);
 		int type = buf.readUnsignedShort();
 		int qClass = buf.readUnsignedShort();
 		return new Question(name, type, qClass);
@@ -48,7 +102,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
 	 * @return a {@link Resource} record containing response data
 	 */
 	public static Resource decodeResource(ByteBuf buf) {
-		String name = DnsEntry.readName(buf);
+		String name = readName(buf);
 		int type = buf.readUnsignedShort();
 		int aClass = buf.readUnsignedShort();
 		long ttl = buf.readUnsignedInt();

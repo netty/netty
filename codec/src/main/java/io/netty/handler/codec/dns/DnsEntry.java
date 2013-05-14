@@ -15,14 +15,9 @@
  */
 package io.netty.handler.codec.dns;
 
-import io.netty.buffer.ByteBuf;
-
-import java.nio.charset.Charset;
-
 /**
- * A class representing entries in a DNS packet (questions, and all resource records). Has
- * utility methods for reading domain names and sizing them. Additionally, contains data shared
- * by entries such as name, type, and class.
+ * A class representing entries in a DNS packet (questions, and all resource records).
+ * Contains data shared by entries such as name, type, and class.
  */
 public class DnsEntry {
 
@@ -316,58 +311,6 @@ public class DnsEntry {
 	public static final int CLASS_HESIOD = 0x0004;
 	public static final int CLASS_NONE = 0x00fe;
 	public static final int CLASS_ANY = 0x00ff;
-
-	/**
-	 * Retrieves a domain name given a buffer containing a DNS packet.
-	 * If the name contains a pointer, the position of the buffer will be
-	 * set to directly after the pointer's index after the name has been
-	 * read.
-	 * 
-	 * @param buf the byte buffer containing the DNS packet
-	 * @return the domain name for an entry
-	 */
-	public static String readName(ByteBuf buf) {
-		int position = -1;
-		StringBuilder name = new StringBuilder();
-		for (int len = buf.readUnsignedByte(); buf.isReadable() && len != 0; len = buf.readUnsignedByte()) {
-			boolean pointer = (len & 0xc0) == 0xc0;
-			if (pointer) {
-				if (position == -1) {
-					position = buf.readerIndex() + 1;
-				}
-				buf.readerIndex((len & 0x3f) << 8 | buf.readUnsignedByte());
-			} else {
-				name.append(buf.toString(buf.readerIndex(), len, Charset.forName("UTF-8"))).append(".");
-				buf.skipBytes(len);
-			}
-		}
-		if (position != -1) {
-			buf.readerIndex(position);
-		}
-		return name.substring(0, name.length() - 1);
-	}
-
-	/**
-	 * Retrieves a domain name given a buffer containing a DNS packet
-	 * without advancing the readerIndex for the buffer.
-	 * 
-	 * @param buf the byte buffer containing the DNS packet
-	 * @param offset the position at which the name begins
-	 * @return the domain name for an entry
-	 */
-	public static String getName(ByteBuf buf, int offset) {
-		StringBuilder name = new StringBuilder();
-		for (int len = buf.getUnsignedByte(offset++); buf.writerIndex() > offset && len != 0; len = buf.getUnsignedByte(offset++)) {
-			boolean pointer = (len & 0xc0) == 0xc0;
-			if (pointer) {
-				offset = (len & 0x3f) << 8 | buf.getUnsignedByte(offset++);
-			} else {
-				name.append(buf.toString(offset, len, Charset.forName("UTF-8"))).append(".");
-				offset += len;
-			}
-		}
-		return name.substring(0, name.length() - 1);
-	}
 
 	protected final String name;
 	protected final int type;
