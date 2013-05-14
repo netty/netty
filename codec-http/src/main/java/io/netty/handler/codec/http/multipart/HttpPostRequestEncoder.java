@@ -471,14 +471,14 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
          */
         if (data instanceof Attribute) {
             if (duringMixedMode) {
-                InternalAttribute internal = new InternalAttribute();
+                InternalAttribute internal = new InternalAttribute(charset);
                 internal.addValue("\r\n--" + multipartMixedBoundary + "--");
                 multipartHttpDatas.add(internal);
                 multipartMixedBoundary = null;
                 currentFileUpload = null;
                 duringMixedMode = false;
             }
-            InternalAttribute internal = new InternalAttribute();
+            InternalAttribute internal = new InternalAttribute(charset);
             if (!multipartHttpDatas.isEmpty()) {
                 // previously a data field so CRLF
                 internal.addValue("\r\n");
@@ -503,7 +503,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
             globalBodySize += attribute.length() + internal.size();
         } else if (data instanceof FileUpload) {
             FileUpload fileUpload = (FileUpload) data;
-            InternalAttribute internal = new InternalAttribute();
+            InternalAttribute internal = new InternalAttribute(charset);
             if (!multipartHttpDatas.isEmpty()) {
                 // previously a data field so CRLF
                 internal.addValue("\r\n");
@@ -525,7 +525,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
                     multipartMixedBoundary = null;
                     // start a new one (could be replaced if mixed start again
                     // from here
-                    internal = new InternalAttribute();
+                    internal = new InternalAttribute(charset);
                     internal.addValue("\r\n");
                     localMixed = false;
                     // new currentFileUpload and no more in Mixed mode
@@ -640,7 +640,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
         // Finalize the multipartHttpDatas
         if (!headerFinalized) {
             if (isMultipart) {
-                InternalAttribute internal = new InternalAttribute();
+                InternalAttribute internal = new InternalAttribute(charset);
                 if (duringMixedMode) {
                     internal.addValue("\r\n--" + multipartMixedBoundary + "--");
                 }
@@ -799,14 +799,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
         }
         ByteBuf buffer;
         if (currentData instanceof InternalAttribute) {
-            String internal = currentData.toString();
-            byte[] bytes;
-            try {
-                bytes = internal.getBytes("ASCII");
-            } catch (UnsupportedEncodingException e) {
-                throw new ErrorDataEncoderException(e);
-            }
-            buffer = wrappedBuffer(bytes);
+            buffer = ((InternalAttribute) currentData).toByteBuf();
             currentData = null;
         } else {
             if (currentData instanceof Attribute) {
