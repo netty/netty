@@ -15,6 +15,12 @@
  */
 package org.jboss.netty.handler.codec.http.multipart;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.util.CharsetUtil;
+
+import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,12 +29,25 @@ import java.util.List;
  * (like Multipart Mixed mode)
  */
 public class InternalAttribute implements InterfaceHttpData {
+    @Deprecated
     protected final List<String> value = new ArrayList<String>();
+    private final Charset charset;
+
+    @Deprecated
+    public InternalAttribute() {
+       this(CharsetUtil.UTF_8);
+    }
+
+    @Deprecated
+    public InternalAttribute(Charset charset) {
+        this.charset = charset;
+    }
 
     public HttpDataType getHttpDataType() {
         return HttpDataType.InternalAttribute;
     }
 
+    @Deprecated
     public List<String> getValue() {
         return value;
     }
@@ -83,7 +102,11 @@ public class InternalAttribute implements InterfaceHttpData {
     public int size() {
         int size = 0;
         for (String elt : value) {
-            size += elt.length();
+            try {
+                size += elt.getBytes(charset.name()).length;
+            } catch (UnsupportedEncodingException e) {
+                throw new RuntimeException(e);
+            }
         }
         return size;
     }
@@ -94,6 +117,14 @@ public class InternalAttribute implements InterfaceHttpData {
             result.append(elt);
         }
         return result.toString();
+    }
+
+    public ChannelBuffer toChannelBuffer() {
+        ChannelBuffer[] buffers = new ChannelBuffer[value.size()];
+        for (int i = 0; i < buffers.length; i++) {
+            buffers[i] = ChannelBuffers.copiedBuffer(value.get(i), charset);
+        }
+        return ChannelBuffers.wrappedBuffer(buffers);
     }
 
     public String getName() {
