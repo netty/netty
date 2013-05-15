@@ -31,10 +31,6 @@ public abstract class DnsMessage<H extends DnsHeader> {
 
 	private H header;
 
-	protected DnsMessage() {
-
-	}
-
 	/**
 	 * Returns the header belonging to this message. If the message is a {@link DnsQuery}, this should be
 	 * {@link DnsQueryHeader}. If the message is a {@link DnsResponse}, this should be {@link ResponseQuery}.
