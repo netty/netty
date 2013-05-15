@@ -186,7 +186,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                                 ConnectTimeoutException cause =
                                         new ConnectTimeoutException("connection timed out: " + remoteAddress);
                                 if (connectPromise != null && connectPromise.tryFailure(cause)) {
-                                    close(voidFuture());
+                                    close(voidPromise());
                                 }
                             }
                         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);

@@ -91,6 +91,7 @@ public final class ChannelHandlerUtil {
             return;
         }
 
+        boolean failed = false;
         int processed = 0;
         try {
             if (!handler.beginFlush(ctx)) {
@@ -120,6 +121,7 @@ public final class ChannelHandlerUtil {
                 }
             }
         } catch (Throwable t) {
+            failed = true;
             IncompleteFlushException pfe;
             if (t instanceof IncompleteFlushException) {
                 pfe = (IncompleteFlushException) t;
@@ -138,24 +140,25 @@ public final class ChannelHandlerUtil {
 
         try {
             handler.endFlush(ctx);
+
         } catch (Throwable t) {
-            if (promise.isDone()) {
-                logger.warn("endFlush() raised a masked exception due to failed flush().", t);
-            } else {
-                fail(ctx, promise, closeOnFailedFlush, t);
-            }
+            failed = true;
+            fail(ctx, promise, closeOnFailedFlush, t);
         }
 
-        if (!promise.isDone()) {
+        if (!failed) {
             ctx.flush(promise);
         }
     }
 
     private static void fail(
             ChannelHandlerContext ctx, ChannelPromise promise, boolean closeOnFailedFlush, Throwable cause) {
-        promise.setFailure(cause);
-        if (closeOnFailedFlush) {
-            ctx.close();
+        if (promise.tryFailure(cause)) {
+            if (closeOnFailedFlush) {
+                ctx.close();
+            }
+        } else {
+            logger.warn("endFlush() raised a masked exception due to failed flush().", cause);
         }
     }
 
