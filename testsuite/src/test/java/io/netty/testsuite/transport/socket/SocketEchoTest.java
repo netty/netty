@@ -64,7 +64,7 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     public void testSimpleEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, Integer.MAX_VALUE, false);
+        testSimpleEcho0(sb, cb, Integer.MAX_VALUE, false, false);
     }
 
     @Test(timeout = 30000)
@@ -73,7 +73,7 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     public void testSimpleEchoWithBridge(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, Integer.MAX_VALUE, true);
+        testSimpleEcho0(sb, cb, Integer.MAX_VALUE, true, false);
     }
 
     @Test(timeout = 30000)
@@ -82,7 +82,7 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     public void testSimpleEchoWithBoundedBuffer(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, 32, false);
+        testSimpleEcho0(sb, cb, 32, false, false);
     }
 
     @Test(timeout = 30000)
@@ -91,11 +91,30 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     public void testSimpleEchoWithBridgedBoundedBuffer(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, 32, true);
+        testSimpleEcho0(sb, cb, 32, true, false);
+    }
+
+    @Test(timeout = 30000)
+    public void testSimpleEchoWithVoidPromise() throws Throwable {
+        run();
+    }
+
+    public void testSimpleEchoWithVoidPromise(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testSimpleEcho0(sb, cb, Integer.MAX_VALUE, false, true);
+    }
+
+    @Test(timeout = 30000)
+    public void testSimpleEchoWithBridgeAndVoidPromise() throws Throwable {
+        run();
+    }
+
+    public void testSimpleEchoWithBridgeAndVoidPromise(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testSimpleEcho0(sb, cb, Integer.MAX_VALUE, true, true);
     }
 
     private static void testSimpleEcho0(
-            ServerBootstrap sb, Bootstrap cb, int maxInboundBufferSize, boolean bridge) throws Throwable {
+            ServerBootstrap sb, Bootstrap cb, int maxInboundBufferSize, boolean bridge, boolean voidPromise)
+            throws Throwable {
 
         final EchoHandler sh = new EchoHandler(maxInboundBufferSize);
         final EchoHandler ch = new EchoHandler(maxInboundBufferSize);
@@ -123,7 +142,12 @@ public class SocketEchoTest extends AbstractSocketTest {
 
         for (int i = 0; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
-            cc.write(Unpooled.wrappedBuffer(data, i, length));
+            ByteBuf buf = Unpooled.wrappedBuffer(data, i, length);
+            if (voidPromise) {
+                assertEquals(cc.voidPromise(), cc.write(buf, cc.voidPromise()));
+            } else {
+                assertNotEquals(cc.voidPromise(), cc.write(buf));
+            }
             i += length;
         }
 

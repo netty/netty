@@ -173,7 +173,6 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
      * following methods:
      * <ul>
      *   <li>{@link #headContext()}</li>
-     *   <li>{@link #voidFuture()}</li>
      *   <li>{@link #localAddress()}</li>
      *   <li>{@link #remoteAddress()}</li>
      *   <li>{@link #closeForcibly()}</li>
@@ -185,11 +184,6 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
          * Return the internal {@link ChannelHandlerContext} that is placed before all user handlers.
          */
         ChannelHandlerContext headContext();
-
-        /**
-         * Return a {@link VoidChannelPromise}. This method always return the same instance.
-         */
-        ChannelPromise voidFuture();
 
         /**
          * Return the {@link SocketAddress} to which is bound local or
