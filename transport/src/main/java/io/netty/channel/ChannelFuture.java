@@ -193,12 +193,4 @@ public interface ChannelFuture extends Future<Void> {
 
     @Override
     ChannelFuture awaitUninterruptibly();
-
-    /**
-     * A {@link ChannelFuture} which is not allowed to be sent to {@link ChannelPipeline} due to
-     * implementation details.
-     */
-    interface Unsafe extends ChannelFuture {
-        // Tag interface
-    }
 }

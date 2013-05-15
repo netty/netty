@@ -1141,7 +1141,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (localAddress == null) {
             throw new NullPointerException("localAddress");
         }
-        validateFuture(promise);
+        validateFuture(promise, false);
         return findContextOutbound().invokeBind(localAddress, promise);
     }
 
@@ -1182,7 +1182,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (remoteAddress == null) {
             throw new NullPointerException("remoteAddress");
         }
-        validateFuture(promise);
+        validateFuture(promise, false);
         return findContextOutbound().invokeConnect(remoteAddress, localAddress, promise);
     }
 
@@ -1217,7 +1217,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelFuture disconnect(ChannelPromise promise) {
-        validateFuture(promise);
+        validateFuture(promise, false);
 
         // Translate disconnect to close if the channel has no notion of disconnect-reconnect.
         // So far, UDP/IP is the only transport that has such behavior.
@@ -1258,7 +1258,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelFuture close(ChannelPromise promise) {
-        validateFuture(promise);
+        validateFuture(promise, false);
         return findContextOutbound().invokeClose(promise);
     }
 
@@ -1292,7 +1292,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelFuture deregister(ChannelPromise promise) {
-        validateFuture(promise);
+        validateFuture(promise, false);
         return findContextOutbound().invokeDeregister(promise);
     }
 
@@ -1361,7 +1361,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelFuture flush(final ChannelPromise promise) {
-        validateFuture(promise);
+        validateFuture(promise, true);
 
         EventExecutor executor = executor();
         Thread currentThread = Thread.currentThread();
@@ -1453,7 +1453,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (region == null) {
             throw new NullPointerException("region");
         }
-        validateFuture(promise);
+        validateFuture(promise, true);
         return findContextOutbound().invokeSendFile(region, promise);
     }
 
@@ -1499,7 +1499,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (message == null) {
             throw new NullPointerException("message");
         }
-        validateFuture(promise);
+        validateFuture(promise, true);
 
         DefaultChannelHandlerContext ctx = prev;
         EventExecutor executor;
@@ -1631,7 +1631,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         return new FailedChannelFuture(channel(), executor(), cause);
     }
 
-    private void validateFuture(ChannelFuture future) {
+    private void validateFuture(ChannelFuture future, boolean allowUnsafe) {
         if (future == null) {
             throw new NullPointerException("future");
         }
@@ -1642,8 +1642,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (future.isDone()) {
             throw new IllegalArgumentException("future already done");
         }
-        if (future instanceof ChannelFuture.Unsafe) {
-            throw new IllegalArgumentException("internal use only future not allowed");
+        if (!allowUnsafe && future instanceof VoidChannelPromise) {
+            throw new IllegalArgumentException("VoidChannelPromise not allowed for this operation");
+        }
+        if (future instanceof AbstractChannel.CloseFuture) {
+            throw new IllegalArgumentException("AbstractChannel.CloseFuture may not send through the pipeline");
         }
     }
 
@@ -1810,5 +1813,10 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             }
             return bridge;
         }
+    }
+
+    @Override
+    public ChannelPromise voidPromise() {
+        return channel.voidPromise();
     }
 }

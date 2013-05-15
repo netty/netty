@@ -117,7 +117,7 @@ public abstract class AbstractAioChannel extends AbstractChannel {
                             ConnectTimeoutException cause =
                                     new ConnectTimeoutException("connection timed out: " + remoteAddress);
                             if (connectFuture != null && connectFuture.tryFailure(cause)) {
-                                close(voidFuture());
+                                close(voidPromise());
                             }
                         }
                     }, connectTimeoutMillis, TimeUnit.MILLISECONDS);

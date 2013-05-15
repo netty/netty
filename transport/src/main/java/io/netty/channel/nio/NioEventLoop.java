@@ -243,7 +243,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                         logger.warn("Failed to re-register a Channel to the new Selector.", e);
                         if (a instanceof AbstractNioChannel) {
                             AbstractNioChannel ch = (AbstractNioChannel) a;
-                            ch.unsafe().close(ch.unsafe().voidFuture());
+                            ch.unsafe().close(ch.voidPromise());
                         } else {
                             @SuppressWarnings("unchecked")
                             NioTask<SelectableChannel> task = (NioTask<SelectableChannel>) a;
@@ -418,7 +418,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         final NioUnsafe unsafe = ch.unsafe();
         if (!k.isValid()) {
             // close the channel if the key is not valid anymore
-            unsafe.close(unsafe.voidFuture());
+            unsafe.close(ch.voidPromise());
             return;
         }
 
@@ -448,7 +448,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             if (readyOps != -1 && (readyOps & SelectionKey.OP_WRITE) != 0) {
                 unregisterWritableTasks(ch);
             }
-            unsafe.close(unsafe.voidFuture());
+            unsafe.close(ch.voidPromise());
         }
     }
 
@@ -518,7 +518,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
         for (AbstractNioChannel ch: channels) {
             unregisterWritableTasks(ch);
-            ch.unsafe().close(ch.unsafe().voidFuture());
+            ch.unsafe().close(ch.voidPromise());
         }
     }
 
