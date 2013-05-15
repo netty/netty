@@ -16,15 +16,18 @@
 package io.netty.handler.codec.frame;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.IncompleteFlushException;
 import io.netty.channel.embedded.EmbeddedByteChannel;
 import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.util.CharsetUtil;
 import org.junit.Before;
 import org.junit.Test;
 
-import static io.netty.buffer.Unpooled.*;
-import static org.junit.Assert.*;
-import static org.hamcrest.core.Is.*;
+import static io.netty.buffer.Unpooled.copiedBuffer;
+import static io.netty.buffer.Unpooled.wrappedBuffer;
+import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 public class LengthFieldPrependerTest {
 
@@ -47,5 +50,23 @@ public class LengthFieldPrependerTest {
         final EmbeddedByteChannel ch = new EmbeddedByteChannel(new LengthFieldPrepender(4, true));
         ch.writeOutbound(msg);
         assertThat(ch.readOutbound(), is(wrappedBuffer(new byte[]{0, 0, 0, 5, 'A'})));
+    }
+
+    @Test
+    public void testPrependAdjustedLength() throws Exception {
+        final EmbeddedByteChannel ch = new EmbeddedByteChannel(new LengthFieldPrepender(4, -1));
+        ch.writeOutbound(msg);
+        assertThat(ch.readOutbound(), is(wrappedBuffer(new byte[]{0, 0, 0, 0, 'A'})));
+    }
+
+    @Test
+    public void testAdjustedLengthLessThanZero() throws Exception {
+        final EmbeddedByteChannel ch = new EmbeddedByteChannel(new LengthFieldPrepender(4, -2));
+        try {
+            ch.writeOutbound(msg);
+            fail(IncompleteFlushException.class.getSimpleName() + " must be raised.");
+        } catch (IncompleteFlushException e) {
+            // Expected
+        }
     }
 }
