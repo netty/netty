@@ -166,7 +166,7 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
                         } finally {
                             in.writerIndex(oldWriterIndex);
                         }
-                        int uncompressedLength = in.writerIndex() - uncompressedStart;
+                        int uncompressedLength = out.writerIndex() - uncompressedStart;
                         validateChecksum(checksum, out, uncompressedStart, uncompressedLength);
                     } else {
                         snappy.decode(in.readSlice(chunkLength - 4), out);

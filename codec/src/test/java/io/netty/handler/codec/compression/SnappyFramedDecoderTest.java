@@ -126,4 +126,33 @@ public class SnappyFramedDecoderTest {
         ByteBuf expected = Unpooled.wrappedBuffer(new byte[] { 'n', 'e', 't', 't', 'y' });
         assertEquals(expected, channel.readInbound());
     }
+
+    // The following two tests differ in only the checksum provided for the literal
+    // uncompressed string "netty"
+
+    @Test(expected = CompressionException.class)
+    public void testInvalidChecksumThrowsException() throws Exception {
+        EmbeddedByteChannel channel = new EmbeddedByteChannel(new SnappyFramedDecoder(true));
+
+        // checksum here is presented as 0
+        ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
+           -0x80, 0x06, 0x00, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
+            0x01, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
+        });
+
+        channel.writeInbound(in);
+    }
+
+    @Test
+    public void testInvalidChecksumDoesNotThrowException() throws Exception {
+        EmbeddedByteChannel channel = new EmbeddedByteChannel(new SnappyFramedDecoder(true));
+
+        // checksum here is presented as -1568496083 (little endian)
+        ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
+           -0x80, 0x06, 0x00, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
+            0x01, 0x09, 0x00, 0x00, 0x2d, -0x5a, -0x7e, -0x5e, 'n', 'e', 't', 't', 'y'
+        });
+
+        channel.writeInbound(in);
+    }
 }
