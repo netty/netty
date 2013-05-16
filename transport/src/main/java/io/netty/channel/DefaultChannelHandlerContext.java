@@ -198,12 +198,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         outMsgBuf = null;
     }
 
-    void forwardBufferContentAndRemove(
+    void forwardBufferContentAndFree(
             final DefaultChannelHandlerContext forwardPrev, final DefaultChannelHandlerContext forwardNext) {
 
+        boolean flush = false;
+        boolean inboundBufferUpdated = false;
         try {
-            boolean flush = false;
-            boolean inboundBufferUpdated = false;
             if (!isOutboundFreed()) {
                 if (hasOutboundByteBuffer() && outboundByteBuffer().isReadable()) {
                     ByteBuf forwardPrevBuf;
@@ -251,39 +251,39 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     }
                 }
             }
-
-            if (flush) {
-                EventExecutor executor = executor();
-                Thread currentThread = Thread.currentThread();
-                if (executor.inEventLoop(currentThread)) {
-                    invokePrevFlush(newPromise(), currentThread, findContextOutboundInclusive(forwardPrev));
-                } else {
-                    executor.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            invokePrevFlush(newPromise(), Thread.currentThread(),
-                                    findContextOutboundInclusive(forwardPrev));
-                        }
-                    });
-                }
-            }
-
-            if (inboundBufferUpdated) {
-                EventExecutor executor = executor();
-                if (executor.inEventLoop()) {
-                    fireInboundBufferUpdated0(findContextInboundInclusive(forwardNext));
-                } else {
-                    executor.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            fireInboundBufferUpdated0(findContextInboundInclusive(forwardNext));
-                        }
-                    });
-                }
-            }
         } finally {
             flags |= FLAG_REMOVED;
             freeAllIfRemoved();
+        }
+
+        if (flush) {
+            EventExecutor executor = executor();
+            Thread currentThread = Thread.currentThread();
+            if (executor.inEventLoop(currentThread)) {
+                invokePrevFlush(newPromise(), currentThread, findContextOutboundInclusive(forwardPrev));
+            } else {
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        invokePrevFlush(newPromise(), Thread.currentThread(),
+                                findContextOutboundInclusive(forwardPrev));
+                    }
+                });
+            }
+        }
+
+        if (inboundBufferUpdated) {
+            EventExecutor executor = executor();
+            if (executor.inEventLoop()) {
+                fireInboundBufferUpdated0(findContextInboundInclusive(forwardNext));
+            } else {
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        fireInboundBufferUpdated0(findContextInboundInclusive(forwardNext));
+                    }
+                });
+            }
         }
     }
 
