@@ -541,7 +541,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         // Finish removal by forwarding buffer content and freeing the buffers.
         if (forward) {
             try {
-                ctx.forwardBufferContentAndRemove(ctxPrev, ctxNext);
+                ctx.forwardBufferContentAndFree(ctxPrev, ctxNext);
             } catch (Throwable t) {
                 fireExceptionCaught(new ChannelPipelineException(
                         "failed to forward buffer content of " + ctx.handler().getClass().getName(), t));
