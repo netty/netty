@@ -331,14 +331,14 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         synchronized (this) {
             if (!ctx.channel().isRegistered() || ctx.executor().inEventLoop()) {
-                remove0(ctx);
+                remove0(ctx, true);
                 return ctx;
             } else {
                future = ctx.executor().submit(new Runnable() {
                    @Override
                    public void run() {
                        synchronized (DefaultChannelPipeline.this) {
-                           remove0(ctx);
+                           remove0(ctx, true);
                        }
                    }
                });
@@ -354,14 +354,14 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         return context;
     }
 
-    private void remove0(DefaultChannelHandlerContext ctx) {
+    void remove0(DefaultChannelHandlerContext ctx, boolean forward) {
         DefaultChannelHandlerContext prev = ctx.prev;
         DefaultChannelHandlerContext next = ctx.next;
         prev.next = next;
         next.prev = prev;
         name2ctx.remove(ctx.name());
 
-        callHandlerRemoved(ctx, prev, next);
+        callHandlerRemoved(ctx, prev, next, forward);
     }
 
     @Override
@@ -462,7 +462,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         // because callHandlerRemoved() will trigger inboundBufferUpdated() or flush() on newHandler and those
         // event handlers must be called after handlerAdded().
         callHandlerAdded(newCtx);
-        callHandlerRemoved(oldCtx, newCtx, newCtx);
+        callHandlerRemoved(oldCtx, newCtx, newCtx, true);
     }
 
     private static void checkMultiplicity(ChannelHandlerContext ctx) {
@@ -519,31 +519,33 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     private void callHandlerRemoved(
             final DefaultChannelHandlerContext ctx, final DefaultChannelHandlerContext ctxPrev,
-            final DefaultChannelHandlerContext ctxNext) {
+            final DefaultChannelHandlerContext ctxNext, final boolean forward) {
         if (ctx.channel().isRegistered() && !ctx.executor().inEventLoop()) {
             ctx.executor().execute(new Runnable() {
                 @Override
                 public void run() {
-                    callHandlerRemoved0(ctx, ctxPrev, ctxNext);
+                    callHandlerRemoved0(ctx, ctxPrev, ctxNext, forward);
                 }
             });
             return;
         }
-        callHandlerRemoved0(ctx, ctxPrev, ctxNext);
+        callHandlerRemoved0(ctx, ctxPrev, ctxNext, forward);
     }
 
     private void callHandlerRemoved0(
             final DefaultChannelHandlerContext ctx, DefaultChannelHandlerContext ctxPrev,
-            DefaultChannelHandlerContext ctxNext) {
+            DefaultChannelHandlerContext ctxNext, boolean forward) {
 
         final ChannelHandler handler = ctx.handler();
 
         // Finish removal by forwarding buffer content and freeing the buffers.
-        try {
-            ctx.forwardBufferContentAndRemove(ctxPrev, ctxNext);
-        } catch (Throwable t) {
-            fireExceptionCaught(new ChannelPipelineException(
-                    "failed to forward buffer content of " + ctx.handler().getClass().getName(), t));
+        if (forward) {
+            try {
+                ctx.forwardBufferContentAndRemove(ctxPrev, ctxNext);
+            } catch (Throwable t) {
+                fireExceptionCaught(new ChannelPipelineException(
+                        "failed to forward buffer content of " + ctx.handler().getClass().getName(), t));
+            }
         }
 
         // Notify the complete removal.
