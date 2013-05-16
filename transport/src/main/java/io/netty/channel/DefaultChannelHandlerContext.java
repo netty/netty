@@ -439,7 +439,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 freeBuffer(outByteBuf);
                 freeBuffer(outMsgBuf);
             } finally {
-                free();
+                flags |= FLAG_FREED | FLAG_FREED_INBOUND | FLAG_FREED_OUTBOUND;
+                freeNextInboundBridgeFeeder();
+                freeNextOutboundBridgeFeeder();
             }
         }
     }
@@ -454,20 +456,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
     }
 
-    private void free() {
-        flags |= FLAG_FREED;
-        freeInbound();
-        freeOutbound();
-    }
-
     private boolean isInboundFreed() {
         return (flags & FLAG_FREED_INBOUND) != 0;
     }
 
-    private void freeInbound() {
+    private void freeNextInboundBridgeFeeder() {
         // Release the bridge feeder
-        flags |= FLAG_FREED_INBOUND;
-
         NextBridgeFeeder feeder;
         feeder = nextInBridgeFeeder;
         if (feeder != null) {
@@ -489,10 +483,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         return (flags & FLAG_FREED_OUTBOUND) != 0;
     }
 
-    private void freeOutbound() {
+    private void freeNextOutboundBridgeFeeder() {
         // Release the bridge feeder
-        flags |= FLAG_FREED_OUTBOUND;
-
         NextBridgeFeeder feeder = nextOutBridgeFeeder;
         if (feeder != null) {
             feeder.release();
@@ -1461,75 +1453,77 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         invokeFlush0(promise);
     }
 
-    void invokeFreeInboundBuffer() {
+    void freeInbound() {
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            invokeFreeInboundBuffer0();
+            freeInbound0();
         } else {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    invokeFreeInboundBuffer0();
+                    freeInbound0();
                 }
             });
         }
     }
 
-    private void invokeFreeInboundBuffer0() {
+    private void freeInbound0() {
         try {
             freeBuffer(inByteBuf);
             freeBuffer(inMsgBuf);
         } finally {
-            freeInbound();
+            flags |= FLAG_FREED_INBOUND;
+            freeNextInboundBridgeFeeder();
         }
 
         if (next != null) {
             DefaultChannelHandlerContext nextCtx = findContextInbound();
-            nextCtx.invokeFreeInboundBuffer();
+            nextCtx.freeInbound();
         } else {
             // Freed all inbound buffers. Free all outbound buffers in a reverse order.
-            findContextOutbound().invokeFreeOutboundBuffer();
+            findContextOutbound().freeOutbound();
         }
     }
 
-    /** Invocation initiated by {@link #invokeFreeInboundBuffer0()} after freeing all inbound buffers. */
-    private void invokeFreeOutboundBuffer() {
+    /** Invocation initiated by {@link #freeInbound0()} after freeing all inbound buffers. */
+    private void freeOutbound() {
         EventExecutor executor = executor();
         if (next == null) {
             if (executor.inEventLoop()) {
-                invokeFreeOutboundBuffer0();
+                freeOutbound0();
             } else {
                 executor.execute(new Runnable() {
                     @Override
                     public void run() {
-                        invokeFreeOutboundBuffer0();
+                        freeOutbound0();
                     }
                 });
             }
         } else {
             if (executor.inEventLoop()) {
-                invokeFreeOutboundBuffer0();
+                freeOutbound0();
             } else {
                 executor.execute(new Runnable() {
                     @Override
                     public void run() {
-                        invokeFreeOutboundBuffer0();
+                        freeOutbound0();
                     }
                 });
             }
         }
     }
 
-    private void invokeFreeOutboundBuffer0() {
+    private void freeOutbound0() {
         try {
             freeBuffer(outByteBuf);
             freeBuffer(outMsgBuf);
         } finally {
-            freeOutbound();
+            flags |= FLAG_FREED_OUTBOUND;
+            freeNextOutboundBridgeFeeder();
         }
 
         if (prev != null) {
-            findContextOutbound().invokeFreeOutboundBuffer();
+            findContextOutbound().freeOutbound();
         }
     }
 
