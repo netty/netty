@@ -635,7 +635,7 @@ public class DefaultChannelPipelineTest {
         assertTrue(handler3.updated);
     }
 
-    @Test(timeout = 20000)
+    @Test(timeout = 10000)
     public void testLifeCycleAwareness() throws Exception {
         setUp();
 
