@@ -56,6 +56,11 @@ public abstract class WebSocketServerHandshaker {
     private String selectedSubprotocol;
 
     /**
+     * Use this as wildcard to support all requested sub-protocols
+     */
+    public final static String SUB_PROTOCOL_WILDCARD = "*";
+
+    /**
      * Constructor specifying the destination web socket location
      *
      * @param version
@@ -232,7 +237,8 @@ public abstract class WebSocketServerHandshaker {
             String requestedSubprotocol = p.trim();
 
             for (String supportedSubprotocol: subprotocols) {
-                if (requestedSubprotocol.equals(supportedSubprotocol)) {
+                if (SUB_PROTOCOL_WILDCARD.equals(supportedSubprotocol)
+                        || requestedSubprotocol.equals(supportedSubprotocol)) {
                     return requestedSubprotocol;
                 }
             }
