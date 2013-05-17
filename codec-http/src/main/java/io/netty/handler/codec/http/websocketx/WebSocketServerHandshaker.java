@@ -58,7 +58,7 @@ public abstract class WebSocketServerHandshaker {
     /**
      * Use this as wildcard to support all requested sub-protocols
      */
-    public final static String SUB_PROTOCOL_WILDCARD = "*";
+    public static final String SUB_PROTOCOL_WILDCARD = "*";
 
     /**
      * Constructor specifying the destination web socket location
