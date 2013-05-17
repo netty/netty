@@ -93,6 +93,11 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                                         "least one byte.");
                             }
                         }
+                        if (!config().isAutoRead()) {
+                            // stop reading until next Channel.read() call
+                            // See https://github.com/netty/netty/issues/1363
+                            break loop;
+                        }
                     }
                 }
             } catch (Throwable t) {
