@@ -117,8 +117,11 @@ public class LocalTransportThreadModelTest {
         ch.pipeline().context(h2).flush();
         ch.pipeline().context(h1).flush().sync();
 
+        ch.close().sync();
+
         // Wait until all events are handled completely.
-        while (h1.outboundThreadNames.size() < 3 || h3.inboundThreadNames.size() < 3) {
+        while (h1.outboundThreadNames.size() < 3 || h3.inboundThreadNames.size() < 3 ||
+               h1.removalThreadNames.size() < 1) {
             if (h1.exception.get() != null) {
                 throw h1.exception.get();
             }
@@ -142,6 +145,9 @@ public class LocalTransportThreadModelTest {
             Assert.assertFalse(h1.outboundThreadNames.contains(currentName));
             Assert.assertFalse(h2.outboundThreadNames.contains(currentName));
             Assert.assertFalse(h3.outboundThreadNames.contains(currentName));
+            Assert.assertFalse(h1.removalThreadNames.contains(currentName));
+            Assert.assertFalse(h2.removalThreadNames.contains(currentName));
+            Assert.assertFalse(h3.removalThreadNames.contains(currentName));
 
             // Assert that events were handled by the correct executor.
             for (String name: h1.inboundThreadNames) {
@@ -162,21 +168,33 @@ public class LocalTransportThreadModelTest {
             for (String name: h3.outboundThreadNames) {
                 Assert.assertTrue(name.startsWith("e2-"));
             }
+            for (String name: h1.removalThreadNames) {
+                Assert.assertTrue(name.startsWith("l-"));
+            }
+            for (String name: h2.removalThreadNames) {
+                Assert.assertTrue(name.startsWith("e1-"));
+            }
+            for (String name: h3.removalThreadNames) {
+                Assert.assertTrue(name.startsWith("e2-"));
+            }
 
             // Assert that the events for the same handler were handled by the same thread.
             Set<String> names = new HashSet<String>();
             names.addAll(h1.inboundThreadNames);
             names.addAll(h1.outboundThreadNames);
+            names.addAll(h1.removalThreadNames);
             Assert.assertEquals(1, names.size());
 
             names.clear();
             names.addAll(h2.inboundThreadNames);
             names.addAll(h2.outboundThreadNames);
+            names.addAll(h2.removalThreadNames);
             Assert.assertEquals(1, names.size());
 
             names.clear();
             names.addAll(h3.inboundThreadNames);
             names.addAll(h3.outboundThreadNames);
+            names.addAll(h3.removalThreadNames);
             Assert.assertEquals(1, names.size());
 
             // Count the number of events
@@ -186,6 +204,9 @@ public class LocalTransportThreadModelTest {
             Assert.assertEquals(3, h1.outboundThreadNames.size());
             Assert.assertEquals(2, h2.outboundThreadNames.size());
             Assert.assertEquals(1, h3.outboundThreadNames.size());
+            Assert.assertEquals(1, h1.removalThreadNames.size());
+            Assert.assertEquals(1, h2.removalThreadNames.size());
+            Assert.assertEquals(1, h3.removalThreadNames.size());
         } catch (AssertionError e) {
             System.out.println("H1I: " + h1.inboundThreadNames);
             System.out.println("H2I: " + h2.inboundThreadNames);
@@ -193,6 +214,9 @@ public class LocalTransportThreadModelTest {
             System.out.println("H1O: " + h1.outboundThreadNames);
             System.out.println("H2O: " + h2.outboundThreadNames);
             System.out.println("H3O: " + h3.outboundThreadNames);
+            System.out.println("H1R: " + h1.removalThreadNames);
+            System.out.println("H2R: " + h2.removalThreadNames);
+            System.out.println("H3R: " + h3.removalThreadNames);
             throw e;
         } finally {
             l.shutdownGracefully();
@@ -338,6 +362,7 @@ public class LocalTransportThreadModelTest {
 
         private final Queue<String> inboundThreadNames = new ConcurrentLinkedQueue<String>();
         private final Queue<String> outboundThreadNames = new ConcurrentLinkedQueue<String>();
+        private final Queue<String> removalThreadNames = new ConcurrentLinkedQueue<String>();
 
         @Override
         public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
@@ -347,6 +372,11 @@ public class LocalTransportThreadModelTest {
         @Override
         public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
             return Unpooled.messageBuffer();
+        }
+
+        @Override
+        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+            removalThreadNames.add(Thread.currentThread().getName());
         }
 
         @Override
