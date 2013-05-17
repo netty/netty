@@ -151,6 +151,19 @@
                   <includeArtifactIds>netty-all</includeArtifactIds>
                 </configuration>
               </execution>
+              <execution>
+                <id>copy-apidocs-all-in-one</id>
+                <phase>prepare-package</phase>
+                <goals>
+                  <goal>copy-dependencies</goal>
+                </goals>
+                <configuration>
+                  <classifier>javadoc</classifier>
+                  <outputDirectory>${project.build.directory}/apidocs-all</outputDirectory>
+                  <includeGroupIds>${project.groupId}</includeGroupIds>
+                  <includeArtifactIds>netty-all</includeArtifactIds>
+                </configuration>
+              </execution>
             </executions>
           </plugin>
           <plugin>
