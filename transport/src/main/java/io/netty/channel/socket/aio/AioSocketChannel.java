@@ -23,10 +23,8 @@ import io.netty.channel.ChannelFlushPromiseNotifier;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
-import io.netty.channel.FileRegion;
 import io.netty.channel.aio.AbstractAioChannel;
 import io.netty.channel.aio.AioCompletionHandler;
 import io.netty.channel.aio.AioEventLoopGroup;
@@ -315,8 +313,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     }
 
     @Override
-    protected void doFlushFileRegion(FileRegion region, ChannelPromise promise) throws Exception {
-        region.transferTo(new WritableByteChannelAdapter(region, promise), 0);
+    protected void doFlushFileRegion(FlushTask task) throws Exception {
+        task.region().transferTo(new WritableByteChannelAdapter(task), 0);
     }
 
     @Override
@@ -427,7 +425,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             //
             // See http://openjdk.java.net/projects/nio/javadoc/java/nio/channels/AsynchronousSocketChannel.html
             if (cause instanceof InterruptedByTimeoutException) {
-                channel.unsafe().close(channel.unsafe().voidFuture());
+                channel.unsafe().close(channel.voidPromise());
             }
         }
     }
@@ -488,7 +486,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                         if (channel.config().isAllowHalfClosure()) {
                             pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                         } else {
-                            channel.unsafe().close(channel.unsafe().voidFuture());
+                            channel.unsafe().close(channel.voidPromise());
                         }
                     }
                 } else if (!firedChannelReadSuspended) {
@@ -512,7 +510,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             //
             // See http://openjdk.java.net/projects/nio/javadoc/java/nio/channels/AsynchronousSocketChannel.html
             if (t instanceof IOException || t instanceof InterruptedByTimeoutException) {
-                channel.unsafe().close(channel.unsafe().voidFuture());
+                channel.unsafe().close(channel.voidPromise());
             }
         }
     }
@@ -536,13 +534,11 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     }
 
     private final class WritableByteChannelAdapter implements WritableByteChannel {
-        private final FileRegion region;
-        private final ChannelPromise promise;
+        private final FlushTask task;
         private long written;
 
-        public WritableByteChannelAdapter(FileRegion region, ChannelPromise promise) {
-            this.region = region;
-            this.promise = promise;
+        public WritableByteChannelAdapter(FlushTask task) {
+            this.task = task;
         }
 
         @Override
@@ -557,36 +553,31 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                             return;
                         }
                         if (result == -1) {
-                            checkEOF(region, written);
-                            promise.setSuccess();
+                            checkEOF(task.region(), written);
+                            task.setSuccess();
                             return;
                         }
                         written += result;
 
-                        if (promise instanceof ChannelProgressivePromise) {
-                            ((ChannelProgressivePromise) promise).setProgress(written, region.count());
-                        }
+                        task.setProgress(written);
 
-                        if (written >= region.count()) {
-                            region.release();
-                            promise.setSuccess();
+                        if (written >= task.region().count()) {
+                            task.setSuccess();
                             return;
                         }
                         if (src.hasRemaining()) {
                             javaChannel().write(src, AioSocketChannel.this, this);
                         } else {
-                            region.transferTo(WritableByteChannelAdapter.this, written);
+                            task.region().transferTo(WritableByteChannelAdapter.this, written);
                         }
                     } catch (Throwable cause) {
-                        region.release();
-                        promise.setFailure(cause);
+                        task.setFailure(cause);
                     }
                 }
 
                 @Override
                 public void failed0(Throwable exc, Channel attachment) {
-                    region.release();
-                    promise.setFailure(exc);
+                    task.setFailure(exc);
                 }
             });
             return 0;

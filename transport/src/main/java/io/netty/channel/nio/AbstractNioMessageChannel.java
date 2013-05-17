@@ -87,7 +87,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                     pipeline.fireInboundBufferUpdated();
                 }
                 if (closed && isOpen()) {
-                    close(voidFuture());
+                    close(voidPromise());
                 } else if (!firedChannelReadSuspended) {
                     pipeline.fireChannelReadSuspended();
                 }

@@ -47,7 +47,7 @@ public class LocalChannel extends AbstractChannel {
     private final Runnable shutdownHook = new Runnable() {
         @Override
         public void run() {
-            unsafe().close(unsafe().voidFuture());
+            unsafe().close(voidPromise());
         }
     };
 
@@ -198,7 +198,7 @@ public class LocalChannel extends AbstractChannel {
     protected void doClose() throws Exception {
         LocalChannel peer = this.peer;
         if (peer != null && peer.isActive()) {
-            peer.unsafe().close(peer.unsafe().voidFuture());
+            peer.unsafe().close(voidPromise());
             this.peer = null;
         }
     }
@@ -206,7 +206,7 @@ public class LocalChannel extends AbstractChannel {
     @Override
     protected Runnable doDeregister() throws Exception {
         if (isOpen()) {
-            unsafe().close(unsafe().voidFuture());
+            unsafe().close(voidPromise());
         }
         ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
         return null;
@@ -307,7 +307,7 @@ public class LocalChannel extends AbstractChannel {
                 } catch (Throwable t) {
                     promise.setFailure(t);
                     pipeline().fireExceptionCaught(t);
-                    close(voidFuture());
+                    close(voidPromise());
                     return;
                 }
             }
@@ -316,7 +316,7 @@ public class LocalChannel extends AbstractChannel {
             if (!(boundChannel instanceof LocalServerChannel)) {
                 Exception cause = new ChannelException("connection refused");
                 promise.setFailure(cause);
-                close(voidFuture());
+                close(voidPromise());
                 return;
             }
 

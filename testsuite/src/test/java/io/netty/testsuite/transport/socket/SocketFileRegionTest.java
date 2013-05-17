@@ -19,10 +19,10 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.DefaultFileRegion;
+import io.netty.channel.FileRegion;
 import org.junit.Test;
 
 import java.io.File;
@@ -48,7 +48,20 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         run();
     }
 
+    @Test
+    public void testFileRegionVoidPromise() throws Throwable {
+        run();
+    }
+
     public void testFileRegion(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testFileRegion0(sb, cb, false);
+    }
+
+    public void testFileRegionVoidPromise(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testFileRegion0(sb, cb, true);
+    }
+
+    private void testFileRegion0(ServerBootstrap sb, Bootstrap cb, boolean voidPromise) throws Throwable {
         File file = File.createTempFile("netty-", ".tmp");
         file.deleteOnExit();
 
@@ -75,9 +88,13 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         Channel sc = sb.bind().sync().channel();
 
         Channel cc = cb.connect().sync().channel();
-        ChannelFuture future = cc.sendFile(new DefaultFileRegion(new FileInputStream(file).getChannel(),
-                0L, file.length())).syncUninterruptibly();
-        assertTrue(future.isSuccess());
+        FileRegion region = new DefaultFileRegion(new FileInputStream(file).getChannel(),
+                0L, file.length());
+        if (voidPromise) {
+            assertEquals(cc.voidPromise(), cc.sendFile(region, cc.voidPromise()));
+        } else {
+            assertNotEquals(cc.voidPromise(), cc.sendFile(region));
+        }
         while (sh.counter < data.length) {
             if (sh.exception.get() != null) {
                 break;
