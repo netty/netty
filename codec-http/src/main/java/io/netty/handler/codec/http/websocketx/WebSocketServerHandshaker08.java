@@ -125,7 +125,6 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
                 throw new WebSocketHandshakeException("Requested subprotocol(s) not supported: " + subprotocols);
             } else {
                 res.headers().add(Names.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
-                setSelectedSubprotocol(selectedSubprotocol);
             }
         }
         return res;

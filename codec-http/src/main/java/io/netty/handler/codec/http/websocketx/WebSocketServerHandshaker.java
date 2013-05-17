@@ -239,6 +239,7 @@ public abstract class WebSocketServerHandshaker {
             for (String supportedSubprotocol: subprotocols) {
                 if (SUB_PROTOCOL_WILDCARD.equals(supportedSubprotocol)
                         || requestedSubprotocol.equals(supportedSubprotocol)) {
+                    selectedSubprotocol = requestedSubprotocol;
                     return requestedSubprotocol;
                 }
             }
@@ -258,6 +259,7 @@ public abstract class WebSocketServerHandshaker {
         return selectedSubprotocol;
     }
 
+    @Deprecated
     protected void setSelectedSubprotocol(String value) {
         selectedSubprotocol = value;
     }
