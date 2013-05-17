@@ -277,61 +277,51 @@ public class LocalChannel extends AbstractChannel {
         @Override
         public void connect(final SocketAddress remoteAddress,
                 SocketAddress localAddress, final ChannelPromise promise) {
-            if (eventLoop().inEventLoop()) {
-                if (!ensureOpen(promise)) {
-                    return;
+            if (!ensureOpen(promise)) {
+                return;
+            }
+
+            if (state == 2) {
+                Exception cause = new AlreadyConnectedException();
+                promise.setFailure(cause);
+                pipeline().fireExceptionCaught(cause);
+                return;
+            }
+
+            if (connectPromise != null) {
+                throw new ConnectionPendingException();
+            }
+
+            connectPromise = promise;
+
+            if (state != 1) {
+                // Not bound yet and no localAddress specified - get one.
+                if (localAddress == null) {
+                    localAddress = new LocalAddress(LocalChannel.this);
                 }
+            }
 
-                if (state == 2) {
-                    Exception cause = new AlreadyConnectedException();
-                    promise.setFailure(cause);
-                    pipeline().fireExceptionCaught(cause);
-                    return;
-                }
-
-                if (connectPromise != null) {
-                    throw new ConnectionPendingException();
-                }
-
-                connectPromise = promise;
-
-                if (state != 1) {
-                    // Not bound yet and no localAddress specified - get one.
-                    if (localAddress == null) {
-                        localAddress = new LocalAddress(LocalChannel.this);
-                    }
-                }
-
-                if (localAddress != null) {
-                    try {
-                        doBind(localAddress);
-                    } catch (Throwable t) {
-                        promise.setFailure(t);
-                        pipeline().fireExceptionCaught(t);
-                        close(voidFuture());
-                        return;
-                    }
-                }
-
-                Channel boundChannel = LocalChannelRegistry.get(remoteAddress);
-                if (!(boundChannel instanceof LocalServerChannel)) {
-                    Exception cause = new ChannelException("connection refused");
-                    promise.setFailure(cause);
+            if (localAddress != null) {
+                try {
+                    doBind(localAddress);
+                } catch (Throwable t) {
+                    promise.setFailure(t);
+                    pipeline().fireExceptionCaught(t);
                     close(voidFuture());
                     return;
                 }
-
-                LocalServerChannel serverChannel = (LocalServerChannel) boundChannel;
-                peer = serverChannel.serve(LocalChannel.this);
-            } else {
-                final SocketAddress localAddress0 = localAddress;
-                eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        connect(remoteAddress, localAddress0, promise);
-                    }
-                });
             }
+
+            Channel boundChannel = LocalChannelRegistry.get(remoteAddress);
+            if (!(boundChannel instanceof LocalServerChannel)) {
+                Exception cause = new ChannelException("connection refused");
+                promise.setFailure(cause);
+                close(voidFuture());
+                return;
+            }
+
+            LocalServerChannel serverChannel = (LocalServerChannel) boundChannel;
+            peer = serverChannel.serve(LocalChannel.this);
         }
     }
 }
