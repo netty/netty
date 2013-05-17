@@ -153,7 +153,6 @@ import java.util.NoSuchElementException;
  * <li>Protocol Decoder - translates binary data (e.g. {@link ByteBuf})
  *                        into a Java object.</li>
  * <li>Protocol Encoder - translates a Java object into binary data.</li>
- * <li><tt>ExecutionHandler</tt> - applies a thread model.</li>
  * <li>Business Logic Handler - performs the actual business logic
  *                              (e.g. database access).</li>
  * </ol>
@@ -164,14 +163,13 @@ import java.util.NoSuchElementException;
  * {@link ChannelPipeline} pipeline = ...;
  * pipeline.addLast("decoder", new MyProtocolDecoder());
  * pipeline.addLast("encoder", new MyProtocolEncoder());
- * pipeline.addLast("executor", new ExecutionHandler(...));
  * pipeline.addLast("handler", new MyBusinessLogicHandler());
  * </pre>
  *
  * <h3>Thread safety</h3>
  * <p>
  * A {@link ChannelHandler} can be added or removed at any time because a
- * {@link ChannelPipeline} is thread safe.  For example, you can insert an
+ * {@link ChannelPipeline} is thread safe. For example, you can insert an
  * encryption handler when sensitive information is about to be exchanged,
  * and remove it after the exchange.
  */
