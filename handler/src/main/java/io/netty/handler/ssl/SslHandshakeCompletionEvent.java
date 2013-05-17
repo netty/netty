@@ -24,7 +24,7 @@ public final class SslHandshakeCompletionEvent {
 
     private final Throwable cause;
 
-    SslHandshakeCompletionEvent(Throwable cause) {
+    public SslHandshakeCompletionEvent(Throwable cause) {
         this.cause = cause;
     }
 
