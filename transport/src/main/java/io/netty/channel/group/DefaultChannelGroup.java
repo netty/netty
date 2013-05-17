@@ -22,6 +22,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.FileRegion;
 import io.netty.channel.ServerChannel;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.internal.PlatformDependent;
 
 import java.util.AbstractSet;
@@ -39,7 +40,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class DefaultChannelGroup extends AbstractSet<Channel> implements ChannelGroup {
 
     private static final AtomicInteger nextId = new AtomicInteger();
-    private static final ImmediateEventExecutor DEFAULT_EXECUTOR = new ImmediateEventExecutor();
     private final String name;
     private final EventExecutor executor;
     private final ConcurrentMap<Integer, Channel> serverChannels = PlatformDependent.newConcurrentHashMap();
@@ -72,7 +72,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
      * is done against group names.
      */
     public DefaultChannelGroup(String name) {
-        this(name, DEFAULT_EXECUTOR);
+        this(name, ImmediateEventExecutor.INSTANCE);
     }
 
     /**
