@@ -128,13 +128,12 @@ public class LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
     }
 
     @Override
-    protected void encode(
-            ChannelHandlerContext ctx,
-            ByteBuf msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, ByteBuf msg, ByteBuf out) throws Exception {
 
-        int length = (lengthIncludesLengthFieldLength?
-                msg.readableBytes() + lengthFieldLength : msg.readableBytes()) +
-                lengthAdjustment;
+        int length = msg.readableBytes() + lengthAdjustment;
+        if (lengthIncludesLengthFieldLength) {
+            length += lengthFieldLength;
+        }
 
         if (length < 0) {
             throw new IllegalArgumentException(
