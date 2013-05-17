@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -23,11 +23,9 @@ import io.netty.util.CharsetUtil;
 import org.junit.Before;
 import org.junit.Test;
 
-import static io.netty.buffer.Unpooled.copiedBuffer;
-import static io.netty.buffer.Unpooled.wrappedBuffer;
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import static io.netty.buffer.Unpooled.*;
+import static org.hamcrest.core.Is.*;
+import static org.junit.Assert.*;
 
 public class LengthFieldPrependerTest {
 
