@@ -476,13 +476,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
         }
 
-        private final Runnable beginReadTask = new Runnable() {
-            @Override
-            public void run() {
-                beginRead();
-            }
-        };
-
         private final Runnable flushLaterTask = new Runnable() {
             @Override
             public void run() {
@@ -495,26 +488,16 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final void sendFile(final FileRegion region, final ChannelPromise promise) {
-
-            if (eventLoop().inEventLoop()) {
-                if (outboundBufSize() > 0) {
-                    flushNotifier(newPromise()).addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture cf) throws Exception {
-                            sendFile0(region, promise);
-                        }
-                    });
-                } else {
-                    // nothing pending try to send the fileRegion now!
-                    sendFile0(region, promise);
-                }
-            } else {
-                eventLoop().execute(new Runnable() {
+            if (outboundBufSize() > 0) {
+                flushNotifier(newPromise()).addListener(new ChannelFutureListener() {
                     @Override
-                    public void run() {
-                        sendFile(region, promise);
+                    public void operationComplete(ChannelFuture cf) throws Exception {
+                        sendFile0(region, promise);
                     }
                 });
+            } else {
+                // nothing pending try to send the fileRegion now!
+                sendFile0(region, promise);
             }
         }
 
@@ -631,114 +614,87 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final void bind(final SocketAddress localAddress, final ChannelPromise promise) {
-            if (eventLoop().inEventLoop()) {
-                if (!ensureOpen(promise)) {
-                    return;
+            if (!ensureOpen(promise)) {
+                return;
+            }
+
+            try {
+                boolean wasActive = isActive();
+
+                // See: https://github.com/netty/netty/issues/576
+                if (!PlatformDependent.isWindows() && !PlatformDependent.isRoot() &&
+                    Boolean.TRUE.equals(config().getOption(ChannelOption.SO_BROADCAST)) &&
+                    localAddress instanceof InetSocketAddress &&
+                    !((InetSocketAddress) localAddress).getAddress().isAnyLocalAddress()) {
+                    // Warn a user about the fact that a non-root user can't receive a
+                    // broadcast packet on *nix if the socket is bound on non-wildcard address.
+                    logger.warn(
+                            "A non-root user can't receive a broadcast packet if the socket " +
+                            "is not bound to a wildcard address; binding to a non-wildcard " +
+                            "address (" + localAddress + ") anyway as requested.");
                 }
 
-                try {
-                    boolean wasActive = isActive();
-
-                    // See: https://github.com/netty/netty/issues/576
-                    if (!PlatformDependent.isWindows() && !PlatformDependent.isRoot() &&
-                        Boolean.TRUE.equals(config().getOption(ChannelOption.SO_BROADCAST)) &&
-                        localAddress instanceof InetSocketAddress &&
-                        !((InetSocketAddress) localAddress).getAddress().isAnyLocalAddress()) {
-                        // Warn a user about the fact that a non-root user can't receive a
-                        // broadcast packet on *nix if the socket is bound on non-wildcard address.
-                        logger.warn(
-                                "A non-root user can't receive a broadcast packet if the socket " +
-                                "is not bound to a wildcard address; binding to a non-wildcard " +
-                                "address (" + localAddress + ") anyway as requested.");
-                    }
-
-                    doBind(localAddress);
-                    promise.setSuccess();
-                    if (!wasActive && isActive()) {
-                        pipeline.fireChannelActive();
-                    }
-                } catch (Throwable t) {
-                    promise.setFailure(t);
-                    closeIfClosed();
+                doBind(localAddress);
+                promise.setSuccess();
+                if (!wasActive && isActive()) {
+                    pipeline.fireChannelActive();
                 }
-            } else {
-                eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        bind(localAddress, promise);
-                    }
-                });
+            } catch (Throwable t) {
+                promise.setFailure(t);
+                closeIfClosed();
             }
         }
 
         @Override
         public final void disconnect(final ChannelPromise promise) {
-            if (eventLoop().inEventLoop()) {
-                try {
-                    boolean wasActive = isActive();
-                    doDisconnect();
-                    promise.setSuccess();
-                    if (wasActive && !isActive()) {
-                        invokeLater(new Runnable() {
-                            @Override
-                            public void run() {
-                                pipeline.fireChannelInactive();
-                            }
-                        });
-                    }
-                } catch (Throwable t) {
-                    promise.setFailure(t);
-                    closeIfClosed();
+            try {
+                boolean wasActive = isActive();
+                doDisconnect();
+                promise.setSuccess();
+                if (wasActive && !isActive()) {
+                    invokeLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            pipeline.fireChannelInactive();
+                        }
+                    });
                 }
-            } else {
-                eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        disconnect(promise);
-                    }
-                });
+            } catch (Throwable t) {
+                promise.setFailure(t);
+                closeIfClosed();
             }
         }
 
         @Override
         public final void close(final ChannelPromise promise) {
-            if (eventLoop().inEventLoop()) {
-                boolean wasActive = isActive();
-                if (closeFuture.setClosed()) {
-                    try {
-                        doClose();
-                        promise.setSuccess();
-                    } catch (Throwable t) {
-                        promise.setFailure(t);
-                    }
-
-                    if (closedChannelException == null) {
-                        closedChannelException = new ClosedChannelException();
-                    }
-
-                    flushFutureNotifier.notifyFlushFutures(closedChannelException);
-
-                    if (wasActive && !isActive()) {
-                        invokeLater(new Runnable() {
-                            @Override
-                            public void run() {
-                                pipeline.fireChannelInactive();
-                            }
-                        });
-                    }
-
-                    deregister(voidFuture());
-                } else {
-                    // Closed already.
+            boolean wasActive = isActive();
+            if (closeFuture.setClosed()) {
+                try {
+                    doClose();
                     promise.setSuccess();
+                } catch (Throwable t) {
+                    promise.setFailure(t);
                 }
+
+                if (closedChannelException == null) {
+                    closedChannelException = new ClosedChannelException();
+                }
+
+                flushFutureNotifier.notifyFlushFutures(closedChannelException);
+
+                if (wasActive && !isActive()) {
+                    invokeLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            pipeline.fireChannelInactive();
+                        }
+                    });
+                }
+
+                deregister(voidFuture());
             } else {
-                eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        close(promise);
-                    }
-                });
+                // Closed already.
+                promise.setSuccess();
             }
         }
 
@@ -753,45 +709,36 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final void deregister(final ChannelPromise promise) {
-            if (eventLoop().inEventLoop()) {
-                if (!registered) {
+            if (!registered) {
+                promise.setSuccess();
+                return;
+            }
+
+            Runnable postTask = null;
+            try {
+                postTask = doDeregister();
+            } catch (Throwable t) {
+                logger.warn("Unexpected exception occurred while deregistering a channel.", t);
+            } finally {
+                if (registered) {
+                    registered = false;
                     promise.setSuccess();
-                    return;
+                    invokeLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            pipeline.fireChannelUnregistered();
+                        }
+                    });
+                } else {
+                    // Some transports like local and AIO does not allow the deregistration of
+                    // an open channel.  Their doDeregister() calls close().  Consequently,
+                    // close() calls deregister() again - no need to fire channelUnregistered.
+                    promise.setSuccess();
                 }
 
-                Runnable postTask = null;
-                try {
-                    postTask = doDeregister();
-                } catch (Throwable t) {
-                    logger.warn("Unexpected exception occurred while deregistering a channel.", t);
-                } finally {
-                    if (registered) {
-                        registered = false;
-                        promise.setSuccess();
-                        invokeLater(new Runnable() {
-                            @Override
-                            public void run() {
-                                pipeline.fireChannelUnregistered();
-                            }
-                        });
-                    } else {
-                        // Some transports like local and AIO does not allow the deregistration of
-                        // an open channel.  Their doDeregister() calls close().  Consequently,
-                        // close() calls deregister() again - no need to fire channelUnregistered.
-                        promise.setSuccess();
-                    }
-
-                    if (postTask != null) {
-                        postTask.run();
-                    }
+                if (postTask != null) {
+                    postTask.run();
                 }
-            } else {
-                eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        deregister(promise);
-                    }
-                });
             }
         }
 
@@ -801,48 +748,34 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
-            if (eventLoop().inEventLoop()) {
-                try {
-                    doBeginRead();
-                } catch (final Exception e) {
-                    invokeLater(new Runnable() {
-                        @Override
-                        public void run() {
-                            pipeline.fireExceptionCaught(e);
-                        }
-                    });
-                    close(unsafe().voidFuture());
-                }
-            } else {
-                eventLoop().execute(beginReadTask);
+            try {
+                doBeginRead();
+            } catch (final Exception e) {
+                invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        pipeline.fireExceptionCaught(e);
+                    }
+                });
+                close(unsafe().voidFuture());
             }
         }
 
         @Override
         public void flush(final ChannelPromise promise) {
-            if (eventLoop().inEventLoop()) {
-                FlushTask task = flushTaskInProgress;
-                if (task != null) {
-                    // loop over the tasks to find the last one
-                    for (;;) {
-                        FlushTask t = task.next;
-                        if (t == null) {
-                            break;
-                        }
-                        task = t.next;
-                    }
-                    task.next = new FlushTask(null, promise);
-
-                    return;
-                }
+            FlushTask task = flushTaskInProgress;
+            if (task == null) {
                 flushNotifierAndFlush(promise);
             } else {
-                eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        flush(promise);
+                // loop over the tasks to find the last one
+                for (;;) {
+                    FlushTask t = task.next;
+                    if (t == null) {
+                        break;
                     }
-                });
+                    task = t.next;
+                }
+                task.next = new FlushTask(null, promise);
             }
         }
 
