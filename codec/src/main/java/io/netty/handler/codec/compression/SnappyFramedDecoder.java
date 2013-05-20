@@ -28,6 +28,12 @@ import static io.netty.handler.codec.compression.Snappy.*;
  * Uncompresses a {@link ByteBuf} encoded with the Snappy framing format.
  *
  * See http://code.google.com/p/snappy/source/browse/trunk/framing_format.txt
+ *
+ * Note that by default, validation of the checksum header in each chunk is
+ * DISABLED for performance improvements. If performance is less of an issue,
+ * or if you would prefer the safety that checksum validation brings, please
+ * use the {@link #SnappyFramedDecoder(boolean)} constructor with the argument
+ * set to {@code true}.
  */
 public class SnappyFramedDecoder extends ByteToByteDecoder {
     enum ChunkType {
@@ -48,7 +54,8 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
 
     /**
      * Creates a new snappy-framed decoder with validation of checksums
-     * turned off
+     * turned OFF. To turn checksum validation on, please use the alternate
+     * {@link #SnappyFramedDecoder(boolean)} constructor.
      */
     public SnappyFramedDecoder() {
         this(false);
