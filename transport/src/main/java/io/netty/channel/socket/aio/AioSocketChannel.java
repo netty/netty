@@ -336,6 +336,13 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 }
 
                 ByteBuf byteBuf = pipeline().inboundByteBuffer();
+
+                // Ensure the readerIndex of the buffer is 0 before beginning an async read.
+                // Otherwise, JDK can read into a wrong region of the buffer when a handler calls
+                // discardReadBytes() later, modifying the readerIndex and the writerIndex unexpectedly.
+                // See https://github.com/netty/netty/issues/1377
+                byteBuf.discardReadBytes();
+
                 expandReadBuffer(byteBuf);
 
                 readInProgress = true;
