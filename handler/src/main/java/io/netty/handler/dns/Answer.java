@@ -1,12 +1,14 @@
-package io.netty.handler.dns;
+package bakkar.mohamed.dnsresolver;
+
+import io.netty.buffer.ByteBuf;
 
 public class Answer {
 
 	private final long expiration;
-	private final byte[] data;
+	private final ByteBuf content;
 
-	public Answer(byte[] data, long ttl) {
-		this.data = data;
+	public Answer(ByteBuf content, long ttl) {
+		this.content = content;
 		expiration = System.currentTimeMillis() + ttl * 1000l;
 	}
 
@@ -14,8 +16,8 @@ public class Answer {
 		return expiration;
 	}
 
-	public byte[] data() {
-		return data;
+	public ByteBuf content() {
+		return content;
 	}
 
 }

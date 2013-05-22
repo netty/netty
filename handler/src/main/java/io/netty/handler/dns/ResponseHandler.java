@@ -1,6 +1,5 @@
-package io.netty.handler.dns;
+package bakkar.mohamed.dnsresolver;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 
@@ -11,31 +10,24 @@ import bakkar.mohamed.dnscodec.Resource;
 
 public class ResponseHandler extends ChannelInboundMessageHandlerAdapter<DnsResponse> {
 
-	private final DnsTransmission parent;
-
-	public ResponseHandler(DnsTransmission parent) {
-		this.parent = parent;
-	}
-
 	@Override
 	public void messageReceived(ChannelHandlerContext ctx,
 			DnsResponse object) throws Exception {
 		DnsResponse response = (DnsResponse) object;
 		int id = response.getHeader().getId();
-		DnsTransmission resolver = DnsTransmission.forId(id);
-		if (resolver == null)
+		DnsExchange resolver = DnsExchange.forId(id);
+		if (resolver == null) {
 			return;
+		}
 		List<Resource> answers = response.getAnswers();
 		for (Resource answer : answers) {
 			if (answer.type() == resolver.question().type()) {
-				ByteBuf info = answer.content();
-				byte[] content = info.array();
-				DnsCache.submitAnswer(parent.name(), content, answer.timeToLive());
-				parent.setResult(content);
+				DnsCache.submitAnswer(resolver.name(), answer.type(), answer.content(), answer.timeToLive());
+				resolver.setResult(answer.content());
 				synchronized (resolver) {
 					resolver.notify();
 				}
-				break;
+				return;
 			}
 		}
 	}

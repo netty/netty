@@ -1,4 +1,4 @@
-package io.netty.handler.dns;
+package bakkar.mohamed.dnsresolver;
 
 import io.netty.channel.Channel;
 

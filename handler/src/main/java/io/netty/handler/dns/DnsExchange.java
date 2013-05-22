@@ -13,9 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.dns;
+package bakkar.mohamed.dnsresolver;
 
-import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import io.netty.buffer.ByteBuf;
 import io.netty.util.concurrent.Future;
 
 import java.net.UnknownHostException;
@@ -26,57 +26,57 @@ import java.util.concurrent.Callable;
 
 import bakkar.mohamed.dnscodec.Question;
 
-public class DnsTransmission implements Callable<byte[]> {
+public class DnsExchange implements Callable<ByteBuf> {
 
 	private static final Random random = new Random();
-	private static final DefaultEventExecutorGroup executor = new DefaultEventExecutorGroup(4);
-	private static final Map<Integer, DnsTransmission> resolvers = new HashMap<Integer, DnsTransmission>();
+	private static final Map<Integer, DnsExchange> resolvers = new HashMap<Integer, DnsExchange>();
 
-	public static DnsTransmission forId(int id) {
+	public static DnsExchange forId(int id) {
 		synchronized (resolvers) {
 			return resolvers.get(id);
 		}
 	}
 
 	private static int generateShort() {
-		return random.nextInt(Short.MAX_VALUE + 1);
+		return random.nextInt(65536);
 	}
 
 	private final byte[] dnsAddress;
 	private final String name;
-	private final int id;
 	private final Question question;
 
-	private byte[] result = null;
+	private int id = -1;
+	private ByteBuf result = null;
 
-	public DnsTransmission(byte[] dnsAddress, Question question) {
+	public DnsExchange(byte[] dnsAddress, Question question) {
 		this.dnsAddress = dnsAddress;
 		this.name = question.name();
 		this.question = question;
-		int id;
-		synchronized (resolvers) {
-			for (id = generateShort(); resolvers.containsKey(id); id = generateShort());
-			this.id = id;
-			resolvers.put(id, this);
-		}
 	}
 
 	@Override
-	public byte[] call() {
-		byte[] cached = DnsCache.obtainAnswerData(name);
-		if (cached == null) {
-			try {
-				DnsClient.resolveQuery(this);
-			} catch (UnknownHostException | InterruptedException e) {
-				e.printStackTrace();
-			}
-			return result;
+	public ByteBuf call() {
+		synchronized (resolvers) {
+			for (id = generateShort(); resolvers.containsKey(id); id = generateShort());
+			resolvers.put(id, this);
 		}
-		return cached;
+		try {
+			DnsClient.resolveQuery(this);
+		} catch (UnknownHostException | InterruptedException e) {
+			e.printStackTrace();
+		}
+		synchronized (resolvers) {
+			resolvers.remove(id);
+		}
+		return result;
 	}
 
-	public Future<byte[]> submitQuery() throws Exception {
-		return executor.submit(this);
+	public Future<ByteBuf> submitQuery() throws Exception {
+		ByteBuf cachedData = DnsCache.obtainAnswerData(name, question.type());
+		if (cachedData != null) {
+			return new CachedFuture(cachedData);
+		}
+		return DnsClient.serverInfo(dnsAddress).channel().eventLoop().parent().submit(this);
 	}
 
 	public byte[] dnsAddress() {
@@ -95,7 +95,7 @@ public class DnsTransmission implements Callable<byte[]> {
 		return question;
 	}
 
-	public void setResult(byte[] result) {
+	public void setResult(ByteBuf result) {
 		this.result = result;
 	}
 
