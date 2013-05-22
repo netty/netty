@@ -66,7 +66,7 @@ final class HttpHeaderDateFormat extends SimpleDateFormat {
         private static final long serialVersionUID = -3178072504225114298L;
 
         HttpHeaderDateFormatObsolete1() {
-            super("E, dd-MMM-y HH:mm:ss z", Locale.ENGLISH);
+            super("E, dd-MMM-yy HH:mm:ss z", Locale.ENGLISH);
             setTimeZone(TimeZone.getTimeZone("GMT"));
         }
     }
