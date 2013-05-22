@@ -26,7 +26,7 @@ public class CookieEncoderTest {
     @Test
     public void testEncodingSingleCookieV0() {
         String result = "myCookie=myValue; Expires=XXX; Path=/apathsomewhere; Domain=.adomainsomewhere; Secure";
-        DateFormat df = new CookieDateFormat();
+        DateFormat df = new HttpHeaderDateFormat();
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
         CookieEncoder encoder = new CookieEncoder(true);
         encoder.addCookie(cookie);
