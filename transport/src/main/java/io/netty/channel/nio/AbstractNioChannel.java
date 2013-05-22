@@ -157,58 +157,49 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         @Override
         public void connect(
                 final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
-            if (eventLoop().inEventLoop()) {
-                if (!ensureOpen(promise)) {
-                    return;
+            if (!ensureOpen(promise)) {
+                return;
+            }
+
+            try {
+                if (connectPromise != null) {
+                    throw new IllegalStateException("connection attempt already made");
                 }
 
-                try {
-                    if (connectPromise != null) {
-                        throw new IllegalStateException("connection attempt already made");
+                boolean wasActive = isActive();
+                if (doConnect(remoteAddress, localAddress)) {
+                    promise.setSuccess();
+                    if (!wasActive && isActive()) {
+                        pipeline().fireChannelActive();
                     }
+                } else {
+                    connectPromise = promise;
+                    requestedRemoteAddress = remoteAddress;
 
-                    boolean wasActive = isActive();
-                    if (doConnect(remoteAddress, localAddress)) {
-                        promise.setSuccess();
-                        if (!wasActive && isActive()) {
-                            pipeline().fireChannelActive();
-                        }
-                    } else {
-                        connectPromise = promise;
-                        requestedRemoteAddress = remoteAddress;
-
-                        // Schedule connect timeout.
-                        int connectTimeoutMillis = config().getConnectTimeoutMillis();
-                        if (connectTimeoutMillis > 0) {
-                            connectTimeoutFuture = eventLoop().schedule(new Runnable() {
-                                @Override
-                                public void run() {
-                                    ChannelPromise connectPromise = AbstractNioChannel.this.connectPromise;
-                                    ConnectTimeoutException cause =
-                                            new ConnectTimeoutException("connection timed out: " + remoteAddress);
-                                    if (connectPromise != null && connectPromise.tryFailure(cause)) {
-                                        close(voidFuture());
-                                    }
+                    // Schedule connect timeout.
+                    int connectTimeoutMillis = config().getConnectTimeoutMillis();
+                    if (connectTimeoutMillis > 0) {
+                        connectTimeoutFuture = eventLoop().schedule(new Runnable() {
+                            @Override
+                            public void run() {
+                                ChannelPromise connectPromise = AbstractNioChannel.this.connectPromise;
+                                ConnectTimeoutException cause =
+                                        new ConnectTimeoutException("connection timed out: " + remoteAddress);
+                                if (connectPromise != null && connectPromise.tryFailure(cause)) {
+                                    close(voidPromise());
                                 }
-                            }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
-                        }
+                            }
+                        }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
                     }
-                } catch (Throwable t) {
-                    if (t instanceof ConnectException) {
-                        Throwable newT = new ConnectException(t.getMessage() + ": " + remoteAddress);
-                        newT.setStackTrace(t.getStackTrace());
-                        t = newT;
-                    }
-                    promise.setFailure(t);
-                    closeIfClosed();
                 }
-            } else {
-                eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        connect(remoteAddress, localAddress, promise);
-                    }
-                });
+            } catch (Throwable t) {
+                if (t instanceof ConnectException) {
+                    Throwable newT = new ConnectException(t.getMessage() + ": " + remoteAddress);
+                    newT.setStackTrace(t.getStackTrace());
+                    t = newT;
+                }
+                promise.setFailure(t);
+                closeIfClosed();
             }
         }
 

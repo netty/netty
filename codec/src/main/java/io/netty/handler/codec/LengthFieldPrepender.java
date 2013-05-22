@@ -51,6 +51,7 @@ public class LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
 
     private final int lengthFieldLength;
     private final boolean lengthIncludesLengthFieldLength;
+    private final int lengthAdjustment;
 
     /**
      * Creates a new instance.
@@ -79,6 +80,40 @@ public class LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
      *         if {@code lengthFieldLength} is not 1, 2, 3, 4, or 8
      */
     public LengthFieldPrepender(int lengthFieldLength, boolean lengthIncludesLengthFieldLength) {
+        this(lengthFieldLength, 0, lengthIncludesLengthFieldLength);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param lengthFieldLength the length of the prepended length field.
+     *                          Only 1, 2, 3, 4, and 8 are allowed.
+     * @param lengthAdjustment  the compensation value to add to the value
+     *                          of the length field
+     *
+     * @throws IllegalArgumentException
+     *         if {@code lengthFieldLength} is not 1, 2, 3, 4, or 8
+     */
+    public LengthFieldPrepender(int lengthFieldLength, int lengthAdjustment) {
+        this(lengthFieldLength, lengthAdjustment, false);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param lengthFieldLength the length of the prepended length field.
+     *                          Only 1, 2, 3, 4, and 8 are allowed.
+     * @param lengthAdjustment  the compensation value to add to the value
+     *                          of the length field
+     * @param lengthIncludesLengthFieldLength
+     *                          if {@code true}, the length of the prepended
+     *                          length field is added to the value of the
+     *                          prepended length field.
+     *
+     * @throws IllegalArgumentException
+     *         if {@code lengthFieldLength} is not 1, 2, 3, 4, or 8
+     */
+    public LengthFieldPrepender(int lengthFieldLength, int lengthAdjustment, boolean lengthIncludesLengthFieldLength) {
         if (lengthFieldLength != 1 && lengthFieldLength != 2 &&
             lengthFieldLength != 3 && lengthFieldLength != 4 &&
             lengthFieldLength != 8) {
@@ -89,15 +124,22 @@ public class LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
 
         this.lengthFieldLength = lengthFieldLength;
         this.lengthIncludesLengthFieldLength = lengthIncludesLengthFieldLength;
+        this.lengthAdjustment = lengthAdjustment;
     }
 
     @Override
-    protected void encode(
-            ChannelHandlerContext ctx,
-            ByteBuf msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, ByteBuf msg, ByteBuf out) throws Exception {
 
-        int length = lengthIncludesLengthFieldLength?
-                msg.readableBytes() + lengthFieldLength : msg.readableBytes();
+        int length = msg.readableBytes() + lengthAdjustment;
+        if (lengthIncludesLengthFieldLength) {
+            length += lengthFieldLength;
+        }
+
+        if (length < 0) {
+            throw new IllegalArgumentException(
+                    "Adjusted frame length (" + length + ") is less than zero");
+        }
+
         switch (lengthFieldLength) {
         case 1:
             if (length >= 256) {

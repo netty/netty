@@ -53,6 +53,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
 
     private final int maxContentLength;
     private FullHttpMessage currentMessage;
+    private boolean tooLongFrameFound;
 
     private int maxCumulationBufferComponents = DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS;
     private ChannelHandlerContext ctx;
@@ -111,6 +112,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
         FullHttpMessage currentMessage = this.currentMessage;
 
         if (msg instanceof HttpMessage) {
+            tooLongFrameFound = false;
             assert currentMessage == null;
 
             HttpMessage m = (HttpMessage) msg;
@@ -150,15 +152,21 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
         } else if (msg instanceof HttpContent) {
             assert currentMessage != null;
 
+            if (tooLongFrameFound) {
+                if (msg instanceof LastHttpContent) {
+                    this.currentMessage = null;
+                }
+                // already detect the too long frame so just discard the content
+                return;
+            }
+
             // Merge the received chunk into the content of the current message.
             HttpContent chunk = (HttpContent) msg;
             CompositeByteBuf content = (CompositeByteBuf) currentMessage.content();
 
             if (content.readableBytes() > maxContentLength - chunk.content().readableBytes()) {
-                // TODO: Respond with 413 Request Entity Too Large
-                //   and discard the traffic or close the connection.
-                //       No need to notify the upstream handlers - just log.
-                //       If decoding a response, just throw an exception.
+                tooLongFrameFound = true;
+
                 throw new TooLongFrameException(
                         "HTTP content length exceeded " + maxContentLength +
                         " bytes.");

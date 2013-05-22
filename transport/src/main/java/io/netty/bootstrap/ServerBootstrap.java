@@ -18,6 +18,7 @@ package io.netty.bootstrap;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandler;
@@ -35,6 +36,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
 
 /**
  * {@link Bootstrap} sub-class which allows easy bootstrap of {@link ServerChannel}
@@ -266,6 +268,25 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
                     logger.warn("Failed to register an accepted channel: " + child, t);
                 }
             }
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            final ChannelConfig config = ctx.channel().config();
+            if (config.isAutoRead()) {
+                // stop accept new connections for 1 second to allow the channel to recover
+                // See https://github.com/netty/netty/issues/1328
+                config.setAutoRead(false);
+                ctx.channel().eventLoop().schedule(new Runnable() {
+                    @Override
+                    public void run() {
+                       config.setAutoRead(true);
+                    }
+                }, 1, TimeUnit.SECONDS);
+            }
+            // still let the exceptionCaught event flow through the pipeline to give the user
+            // a chance to do something with it
+            ctx.fireExceptionCaught(cause);
         }
     }
 

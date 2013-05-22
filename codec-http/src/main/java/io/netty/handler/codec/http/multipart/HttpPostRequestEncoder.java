@@ -471,14 +471,14 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
          */
         if (data instanceof Attribute) {
             if (duringMixedMode) {
-                InternalAttribute internal = new InternalAttribute();
+                InternalAttribute internal = new InternalAttribute(charset);
                 internal.addValue("\r\n--" + multipartMixedBoundary + "--");
                 multipartHttpDatas.add(internal);
                 multipartMixedBoundary = null;
                 currentFileUpload = null;
                 duringMixedMode = false;
             }
-            InternalAttribute internal = new InternalAttribute();
+            InternalAttribute internal = new InternalAttribute(charset);
             if (!multipartHttpDatas.isEmpty()) {
                 // previously a data field so CRLF
                 internal.addValue("\r\n");
@@ -487,10 +487,10 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
             // content-disposition: form-data; name="field1"
             Attribute attribute = (Attribute) data;
             internal.addValue(HttpPostBodyUtil.CONTENT_DISPOSITION + ": " + HttpPostBodyUtil.FORM_DATA + "; "
-                    + HttpPostBodyUtil.NAME + "=\"" + encodeAttribute(attribute.getName(), charset) + "\"\r\n");
+                    + HttpPostBodyUtil.NAME + "=\"" + attribute.getName() + "\"\r\n");
             Charset localcharset = attribute.getCharset();
             if (localcharset != null) {
-                // Content-Type: charset=charset
+                // Content-Type: text/plain; charset=charset
                 internal.addValue(HttpHeaders.Names.CONTENT_TYPE + ": " +
                         HttpPostBodyUtil.DEFAULT_TEXT_CONTENT_TYPE + "; " +
                         HttpHeaders.Values.CHARSET + '='
@@ -503,7 +503,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
             globalBodySize += attribute.length() + internal.size();
         } else if (data instanceof FileUpload) {
             FileUpload fileUpload = (FileUpload) data;
-            InternalAttribute internal = new InternalAttribute();
+            InternalAttribute internal = new InternalAttribute(charset);
             if (!multipartHttpDatas.isEmpty()) {
                 // previously a data field so CRLF
                 internal.addValue("\r\n");
@@ -525,7 +525,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
                     multipartMixedBoundary = null;
                     // start a new one (could be replaced if mixed start again
                     // from here
-                    internal = new InternalAttribute();
+                    internal = new InternalAttribute(charset);
                     internal.addValue("\r\n");
                     localMixed = false;
                     // new currentFileUpload and no more in Mixed mode
@@ -560,14 +560,12 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
                     // remove past size
                     globalBodySize -= pastAttribute.size();
                     String replacement = HttpPostBodyUtil.CONTENT_DISPOSITION + ": " + HttpPostBodyUtil.FORM_DATA
-                            + "; " + HttpPostBodyUtil.NAME + "=\"" + encodeAttribute(fileUpload.getName(), charset)
-                            + "\"\r\n";
+                            + "; " + HttpPostBodyUtil.NAME + "=\"" + fileUpload.getName() + "\"\r\n";
                     replacement += HttpHeaders.Names.CONTENT_TYPE + ": " + HttpPostBodyUtil.MULTIPART_MIXED + "; "
                             + HttpHeaders.Values.BOUNDARY + '=' + multipartMixedBoundary + "\r\n\r\n";
                     replacement += "--" + multipartMixedBoundary + "\r\n";
                     replacement += HttpPostBodyUtil.CONTENT_DISPOSITION + ": " + HttpPostBodyUtil.FILE + "; "
-                            + HttpPostBodyUtil.FILENAME + "=\"" + encodeAttribute(fileUpload.getFilename(), charset)
-                            + "\"\r\n";
+                            + HttpPostBodyUtil.FILENAME + "=\"" + fileUpload.getFilename() + "\"\r\n";
                     pastAttribute.setValue(replacement, 1);
                     // update past size
                     globalBodySize += pastAttribute.size();
@@ -594,16 +592,14 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
                 internal.addValue("--" + multipartMixedBoundary + "\r\n");
                 // Content-Disposition: file; filename="file1.txt"
                 internal.addValue(HttpPostBodyUtil.CONTENT_DISPOSITION + ": " + HttpPostBodyUtil.FILE + "; "
-                        + HttpPostBodyUtil.FILENAME + "=\"" + encodeAttribute(fileUpload.getFilename(), charset)
-                        + "\"\r\n");
+                        + HttpPostBodyUtil.FILENAME + "=\"" + fileUpload.getFilename() + "\"\r\n");
             } else {
                 internal.addValue("--" + multipartDataBoundary + "\r\n");
                 // Content-Disposition: form-data; name="files";
                 // filename="file1.txt"
                 internal.addValue(HttpPostBodyUtil.CONTENT_DISPOSITION + ": " + HttpPostBodyUtil.FORM_DATA + "; "
-                        + HttpPostBodyUtil.NAME + "=\"" + encodeAttribute(fileUpload.getName(), charset) + "\"; "
-                        + HttpPostBodyUtil.FILENAME + "=\"" + encodeAttribute(fileUpload.getFilename(), charset)
-                        + "\"\r\n");
+                        + HttpPostBodyUtil.NAME + "=\"" + fileUpload.getName() + "\"; "
+                        + HttpPostBodyUtil.FILENAME + "=\"" + fileUpload.getFilename() + "\"\r\n");
             }
             // Content-Type: image/gif
             // Content-Type: text/plain; charset=ISO-8859-1
@@ -644,7 +640,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
         // Finalize the multipartHttpDatas
         if (!headerFinalized) {
             if (isMultipart) {
-                InternalAttribute internal = new InternalAttribute();
+                InternalAttribute internal = new InternalAttribute(charset);
                 if (duringMixedMode) {
                     internal.addValue("\r\n--" + multipartMixedBoundary + "--");
                 }
@@ -803,14 +799,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
         }
         ByteBuf buffer;
         if (currentData instanceof InternalAttribute) {
-            String internal = currentData.toString();
-            byte[] bytes;
-            try {
-                bytes = internal.getBytes("ASCII");
-            } catch (UnsupportedEncodingException e) {
-                throw new ErrorDataEncoderException(e);
-            }
-            buffer = wrappedBuffer(bytes);
+            buffer = ((InternalAttribute) currentData).toByteBuf();
             currentData = null;
         } else {
             if (currentData instanceof Attribute) {
@@ -974,7 +963,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
     private HttpContent nextChunk() throws ErrorDataEncoderException {
         if (isLastChunk) {
             isLastChunkSent = true;
-            return new DefaultHttpContent(EMPTY_BUFFER);
+            return LastHttpContent.EMPTY_LAST_CONTENT;
         }
         ByteBuf buffer;
         int size = HttpPostBodyUtil.chunkSize;
@@ -1032,7 +1021,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
         if (currentBuffer == null) {
             isLastChunkSent = true;
             // LastChunk with no more data
-            return new DefaultHttpContent(EMPTY_BUFFER);
+            return LastHttpContent.EMPTY_LAST_CONTENT;
         }
         // Previous LastChunk with no more data
         buffer = currentBuffer;

@@ -19,7 +19,6 @@ import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
@@ -97,14 +96,6 @@ public class ChunkedWriteHandler
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
-    }
-
-    // This method should not need any synchronization as the ChunkedWriteHandler will not receive any new events
-    @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        // Fail all promised that are queued. This is needed because otherwise we would never notify the
-        // ChannelFuture and the registered FutureListener. See #304
-        discard(ctx, new ChannelException(ChunkedWriteHandler.class.getSimpleName() + " removed from pipeline."));
     }
 
     private boolean isWritable() {

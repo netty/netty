@@ -124,7 +124,6 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
                         "Requested subprotocol(s) not supported: " + subprotocols);
             } else {
                 res.headers().add(Names.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
-                setSelectedSubprotocol(selectedSubprotocol);
             }
         }
         return res;

@@ -87,32 +87,14 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     private final class DefaultServerUnsafe extends AbstractUnsafe {
         @Override
         public void flush(final ChannelPromise future) {
-            if (eventLoop().inEventLoop()) {
-                reject(future);
-            } else {
-                eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        flush(future);
-                    }
-                });
-            }
+            reject(future);
         }
 
         @Override
         public void connect(
                 final SocketAddress remoteAddress, final SocketAddress localAddress,
                 final ChannelPromise future) {
-            if (eventLoop().inEventLoop()) {
-                reject(future);
-            } else {
-                eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        connect(remoteAddress, localAddress, future);
-                    }
-                });
-            }
+            reject(future);
         }
 
         private void reject(ChannelPromise future) {

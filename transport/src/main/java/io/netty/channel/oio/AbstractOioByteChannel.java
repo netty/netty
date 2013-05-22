@@ -90,29 +90,32 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                     break;
                 }
 
-                if (byteBuf.isWritable()) {
-                    continue;
-                }
-
-                final int capacity = byteBuf.capacity();
-                final int maxCapacity = byteBuf.maxCapacity();
-                if (capacity == maxCapacity) {
-                    if (read) {
-                        read = false;
-                        pipeline.fireInboundBufferUpdated();
-                        if (!byteBuf.isWritable()) {
-                            throw new IllegalStateException(
-                                    "an inbound handler whose buffer is full must consume at " +
-                                            "least one byte.");
+                if (!byteBuf.isWritable()) {
+                    final int capacity = byteBuf.capacity();
+                    final int maxCapacity = byteBuf.maxCapacity();
+                    if (capacity == maxCapacity) {
+                        if (read) {
+                            read = false;
+                            pipeline.fireInboundBufferUpdated();
+                            if (!byteBuf.isWritable()) {
+                                throw new IllegalStateException(
+                                        "an inbound handler whose buffer is full must consume at " +
+                                                "least one byte.");
+                            }
+                        }
+                    } else {
+                        final int writerIndex = byteBuf.writerIndex();
+                        if (writerIndex + available > maxCapacity) {
+                            byteBuf.capacity(maxCapacity);
+                        } else {
+                            byteBuf.ensureWritable(available);
                         }
                     }
-                } else {
-                    final int writerIndex = byteBuf.writerIndex();
-                    if (writerIndex + available > maxCapacity) {
-                        byteBuf.capacity(maxCapacity);
-                    } else {
-                        byteBuf.ensureWritable(available);
-                    }
+                }
+                if (!config().isAutoRead()) {
+                    // stop reading until next Channel.read() call
+                    // See https://github.com/netty/netty/issues/1363
+                    break;
                 }
             }
         } catch (Throwable t) {
@@ -128,7 +131,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                 firedInboundBufferSuspeneded = true;
                 pipeline.fireChannelReadSuspended();
                 pipeline.fireExceptionCaught(t);
-                unsafe().close(unsafe().voidFuture());
+                unsafe().close(voidPromise());
             }
         } finally {
             if (read) {
@@ -140,7 +143,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                     if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
                         pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                     } else {
-                        unsafe().close(unsafe().voidFuture());
+                        unsafe().close(voidPromise());
                     }
                 }
             } else if (!firedInboundBufferSuspeneded) {

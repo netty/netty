@@ -31,6 +31,7 @@ import io.netty.handler.codec.TooLongFrameException;
 public class WebSocketFrameAggregator extends MessageToMessageDecoder<WebSocketFrame> {
     private final int maxFrameSize;
     private WebSocketFrame currentFrame;
+    private boolean tooLongFrameFound;
 
     /**
      * Construct a new instance
@@ -48,6 +49,7 @@ public class WebSocketFrameAggregator extends MessageToMessageDecoder<WebSocketF
     @Override
     protected void decode(ChannelHandlerContext ctx, WebSocketFrame msg, MessageBuf<Object> out) throws Exception {
         if (currentFrame == null) {
+            tooLongFrameFound = false;
             if (msg.isFinalFragment()) {
                 out.add(msg.retain());
                 return;
@@ -66,8 +68,15 @@ public class WebSocketFrameAggregator extends MessageToMessageDecoder<WebSocketF
             return;
         }
         if (msg instanceof ContinuationWebSocketFrame) {
+            if (tooLongFrameFound) {
+                if (msg.isFinalFragment()) {
+                    currentFrame = null;
+                }
+                return;
+            }
             CompositeByteBuf content = (CompositeByteBuf) currentFrame.content();
             if (content.readableBytes() > maxFrameSize - msg.content().readableBytes()) {
+                tooLongFrameFound = true;
                 throw new TooLongFrameException(
                         "WebSocketFrame length exceeded " + content +
                                 " bytes.");

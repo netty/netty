@@ -150,7 +150,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
      *         {@code null} if this channel is not connected.
      *         If this channel is not connected but it can receive messages
      *         from arbitrary remote addresses (e.g. {@link DatagramChannel},
-     *         use {@link DatagramPacket#remoteAddress()} to determine
+     *         use {@link DatagramPacket#recipient()} to determine
      *         the origination of the received message as this method will
      *         return {@code null}.
      */
@@ -163,24 +163,27 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
     ChannelFuture closeFuture();
 
     /**
-     * <strong>Caution</strong> for transport implementations use only!
+     * Returns an <em>internal-use-only</em> object that provides unsafe operations.
      */
     Unsafe unsafe();
 
     /**
-     * <strong>Unsafe</strong> operations that should <strong>never</strong> be called
-     * from user-code. These methods are only provided to implement the actual transport.
+     * <em>Unsafe</em> operations that should <em>never</em> be called from user-code. These methods
+     * are only provided to implement the actual transport, and must be invoked from an I/O thread except for the
+     * following methods:
+     * <ul>
+     *   <li>{@link #headContext()}</li>
+     *   <li>{@link #localAddress()}</li>
+     *   <li>{@link #remoteAddress()}</li>
+     *   <li>{@link #closeForcibly()}</li>
+     *   <li>{@link #register(EventLoop, ChannelPromise)}</li>
+     * </ul>
      */
     interface Unsafe {
         /**
          * Return the internal {@link ChannelHandlerContext} that is placed before all user handlers.
          */
         ChannelHandlerContext headContext();
-
-        /**
-         * Return a {@link VoidChannelPromise}. This method always return the same instance.
-         */
-        ChannelPromise voidFuture();
 
         /**
          * Return the {@link SocketAddress} to which is bound local or

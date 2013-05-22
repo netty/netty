@@ -49,8 +49,6 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf imp
     private final List<Component> components = new ArrayList<Component>();
     private final int maxNumComponents;
 
-    private Component lastAccessed;
-    private int lastAccessedId;
     private boolean freed;
     private Queue<ByteBuf> suspendedDeallocations;
 
@@ -284,9 +282,6 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf imp
 
     private void updateComponentOffsets(int cIndex) {
         Component c = components.get(cIndex);
-        lastAccessed = c;
-        lastAccessedId = cIndex;
-
         if (cIndex == 0) {
             c.offset = 0;
             c.endOffset = c.length;
@@ -508,37 +503,19 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf imp
         assert !freed;
         checkIndex(offset);
 
-        Component c = lastAccessed;
-        if (c == null) {
-            lastAccessed = c = components.get(0);
-        }
-        if (offset >= c.offset) {
-            if (offset < c.endOffset) {
-                return lastAccessedId;
-            }
-
-            // Search right
-            for (int i = lastAccessedId + 1; i < components.size(); i ++) {
-                c = components.get(i);
-                if (offset < c.endOffset) {
-                    lastAccessedId = i;
-                    lastAccessed = c;
-                    return i;
-                }
-            }
-        } else {
-            // Search left
-            for (int i = lastAccessedId - 1; i >= 0; i --) {
-                c = components.get(i);
-                if (offset >= c.offset) {
-                    lastAccessedId = i;
-                    lastAccessed = c;
-                    return i;
-                }
+        for (int low = 0, high = components.size(); low <= high;) {
+            int mid = low + high >>> 1;
+            Component c = components.get(mid);
+            if (offset >= c.endOffset) {
+                low = mid + 1;
+            } else if (offset < c.offset) {
+                high = mid - 1;
+            } else {
+                return mid;
             }
         }
 
-        throw new IllegalStateException("should not reach here - concurrent modification?");
+        throw new Error("should not reach here");
     }
 
     @Override
@@ -982,38 +959,22 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf imp
         assert !freed;
         checkIndex(offset);
 
-        Component c = lastAccessed;
-        if (c == null) {
-            lastAccessed = c = components.get(0);
-        }
+        assert !freed;
+        checkIndex(offset);
 
-        if (offset >= c.offset) {
-            if (offset < c.endOffset) {
+        for (int low = 0, high = components.size(); low <= high;) {
+            int mid = low + high >>> 1;
+            Component c = components.get(mid);
+            if (offset >= c.endOffset) {
+                low = mid + 1;
+            } else if (offset < c.offset) {
+                high = mid - 1;
+            } else {
                 return c;
             }
-
-            // Search right
-            for (int i = lastAccessedId + 1; i < components.size(); i ++) {
-                c = components.get(i);
-                if (offset < c.endOffset) {
-                    lastAccessedId = i;
-                    lastAccessed = c;
-                    return c;
-                }
-            }
-        } else {
-            // Search left
-            for (int i = lastAccessedId - 1; i >= 0; i --) {
-                c = components.get(i);
-                if (offset >= c.offset) {
-                    lastAccessedId = i;
-                    lastAccessed = c;
-                    return c;
-                }
-            }
         }
 
-        throw new IllegalStateException("should not reach here - concurrent modification?");
+        throw new Error("should not reach here");
     }
 
     @Override

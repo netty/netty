@@ -15,6 +15,8 @@
  */
 package io.netty.testsuite.transport.socket;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -28,15 +30,15 @@ import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.testsuite.util.BogusSslContextFactory;
 import io.netty.util.concurrent.Future;
-import org.junit.Test;
 
-import javax.net.ssl.SSLEngine;
 import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.*;
+import javax.net.ssl.SSLEngine;
+
+import org.junit.Test;
 
 public class SocketSslEchoTest extends AbstractSocketTest {
 

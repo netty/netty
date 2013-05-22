@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.0.0.CR2-SNAPSHOT</version>
+  <version>4.0.0.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>http://netty.io/</url>
@@ -144,7 +144,7 @@
       <dependency>
         <groupId>com.barchart.udt</groupId>
         <artifactId>barchart-udt-bundle</artifactId>
-        <version>2.2.6</version>
+        <version>2.3.0</version>
       </dependency>
 
       <dependency>
@@ -288,7 +288,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.0</version>
+        <version>3.1</version>
         <configuration>
           <compilerVersion>1.7</compilerVersion>
           <fork>true</fork>
@@ -402,14 +402,27 @@
         <version>2.3.7</version>
         <extensions>true</extensions>
       </plugin>             
-       <plugin>
+      <plugin>
         <artifactId>maven-source-plugin</artifactId>
         <version>2.2.1</version>
         <executions>
+          <!--
+            ~ This workaround prevents Maven from executing the 'generate-sources' phase twice.
+            ~ See http://jira.codehaus.org/browse/MSOURCES-13
+            ~ and http://blog.peterlynch.ca/2010/05/maven-how-to-prevent-generate-sources.html
+            -->
           <execution>
             <id>attach-sources</id>
+            <phase>invalid</phase>
             <goals>
               <goal>jar</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>attach-sources-no-fork</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar-no-fork</goal>
             </goals>
           </execution>
         </executions>

@@ -23,7 +23,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.socket.nio.NioSocketChannel;
 
 public class HexDumpProxyFrontendHandler extends ChannelInboundByteHandlerAdapter {
 
@@ -44,7 +43,7 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundByteHandlerAdapte
         // Start the connection attempt.
         Bootstrap b = new Bootstrap();
         b.group(inboundChannel.eventLoop())
-         .channel(NioSocketChannel.class)
+         .channel(ctx.channel().getClass())
          .handler(new HexDumpProxyBackendHandler(inboundChannel))
          .option(ChannelOption.AUTO_READ, false);
         ChannelFuture f = b.connect(remoteHost, remotePort);

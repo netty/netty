@@ -102,7 +102,7 @@ public class HttpObjectAggregatorTest {
         assertNull(embedder.readInbound());
     }
 
-    @Test(expected = TooLongFrameException.class)
+    @Test
     public void testTooLongFrameException() {
         HttpObjectAggregator aggr = new HttpObjectAggregator(4);
         EmbeddedMessageChannel embedder = new EmbeddedMessageChannel(aggr);
@@ -110,10 +110,30 @@ public class HttpObjectAggregatorTest {
                 HttpMethod.GET, "http://localhost");
         HttpContent chunk1 = new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
         HttpContent chunk2 = new DefaultHttpContent(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII));
+        HttpContent chunk3 = new DefaultHttpContent(Unpooled.copiedBuffer("test3", CharsetUtil.US_ASCII));
+        HttpContent chunk4 = LastHttpContent.EMPTY_LAST_CONTENT;
+
         assertFalse(embedder.writeInbound(message));
-        assertFalse(embedder.writeInbound(chunk1));
-        embedder.writeInbound(chunk2);
-        fail();
+        assertFalse(embedder.writeInbound(chunk1.copy()));
+        try {
+            embedder.writeInbound(chunk2.copy());
+            fail();
+        } catch (TooLongFrameException e) {
+            // expected
+        }
+        assertFalse(embedder.writeInbound(chunk3.copy()));
+        assertFalse(embedder.writeInbound(chunk4.copy()));
+
+        assertFalse(embedder.writeInbound(message));
+        assertFalse(embedder.writeInbound(chunk1.copy()));
+        try {
+            embedder.writeInbound(chunk2.copy());
+            fail();
+        } catch (TooLongFrameException e) {
+            // expected
+        }
+        assertFalse(embedder.writeInbound(chunk3.copy()));
+        assertFalse(embedder.writeInbound(chunk4.copy()));
     }
 
     @Test(expected = IllegalArgumentException.class)

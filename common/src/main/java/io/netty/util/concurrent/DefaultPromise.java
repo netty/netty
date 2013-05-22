@@ -43,12 +43,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private volatile Object result;
     private Object listeners; // Can be ChannelFutureListener or DefaultFutureListeners
 
-    /**
-     * The the most significant 24 bits of this field represents the number of waiter threads waiting for this promise
-     * with await*() and sync*().  Subclasses can use the other 40 bits of this field to represents its own state, and
-     * are responsible for retaining the most significant 24 bits as is when modifying this field.
-     */
-    protected long state;
+    private short waiters;
 
     /**
      * Creates a new instance.
@@ -446,19 +441,18 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     private boolean hasWaiters() {
-        return (state & 0xFFFFFF0000000000L) != 0;
+        return waiters > 0;
     }
 
     private void incWaiters() {
-        long newState = state + 0x10000000000L;
-        if ((newState & 0xFFFFFF0000000000L) == 0) {
+        if (waiters == Short.MAX_VALUE) {
             throw new IllegalStateException("too many waiters");
         }
-        state = newState;
+        waiters ++;
     }
 
     private void decWaiters() {
-        state -= 0x10000000000L;
+        waiters --;
     }
 
     private void notifyListeners() {
