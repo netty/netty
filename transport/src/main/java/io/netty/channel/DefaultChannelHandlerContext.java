@@ -1502,7 +1502,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         validateFuture(promise, true);
 
         DefaultChannelHandlerContext ctx = prev;
-        EventExecutor executor;
+        EventExecutor executor = executor();
         final boolean msgBuf;
 
         if (message instanceof ByteBuf) {
@@ -1519,7 +1519,26 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     break;
                 }
 
-                ctx = ctx.prev;
+                DefaultChannelHandlerContext prev = ctx.prev;
+                if (prev == null) {
+                    assert ctx == pipeline.head;
+                    // this means we reached end of pipeline but the head-handler was not yet init.
+                    // in this case init it now and schedule the write via the executor so it is
+                    // done after fireChannelRegistered() completes
+                    //
+                    // See https://github.com/netty/netty/issues/1385
+                    ctx.initHeadHandler();
+
+                    executor.execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            write(message, promise);
+                        }
+                    });
+                    return promise;
+                } else {
+                    ctx = prev;
+                }
             }
         } else {
             msgBuf = true;
