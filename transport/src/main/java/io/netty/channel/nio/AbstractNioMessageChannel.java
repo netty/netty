@@ -84,16 +84,19 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                     }
 
                     if (t instanceof IOException) {
-                    closed = true;
+                        closed = true;
                     } else if (!closed) {
                         firedChannelReadSuspended = true;
                         pipeline.fireChannelReadSuspended();
                     }
 
                     pipeline().fireExceptionCaught(t);
+
+                    // break the loop now
+                    break;
                 } finally {
                     if (read) {
-                    pipeline.fireInboundBufferUpdated();
+                        pipeline.fireInboundBufferUpdated();
                     }
                     if (closed && isOpen()) {
                         close(voidPromise());
