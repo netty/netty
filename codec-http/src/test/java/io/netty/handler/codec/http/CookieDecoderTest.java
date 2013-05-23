@@ -30,7 +30,7 @@ public class CookieDecoderTest {
     public void testDecodingSingleCookieV0() {
         String cookieString = "myCookie=myValue;expires=XXX;path=/apathsomewhere;domain=.adomainsomewhere;secure;";
         cookieString = cookieString.replace("XXX",
-                new HttpHeaderDateFormat().format(new Date(System.currentTimeMillis() + 50000)));
+                HttpHeaderDateFormat.get().format(new Date(System.currentTimeMillis() + 50000)));
 
         Set<Cookie> cookies = CookieDecoder.decode(cookieString);
         assertEquals(1, cookies.size());

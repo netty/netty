@@ -304,10 +304,10 @@ public class DefaultHttpHeaders extends HttpHeaders {
             return value.toString();
         }
         if (value instanceof Date) {
-            return new HttpHeaderDateFormat().format((Date) value);
+            return HttpHeaderDateFormat.get().format((Date) value);
         }
         if (value instanceof Calendar) {
-            return new HttpHeaderDateFormat().format(((Calendar) value).getTime());
+            return HttpHeaderDateFormat.get().format(((Calendar) value).getTime());
         }
         return value.toString();
     }
