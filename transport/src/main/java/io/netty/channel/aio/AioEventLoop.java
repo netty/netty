@@ -110,10 +110,10 @@ final class AioEventLoop extends SingleThreadEventLoop {
 
     @Override
     protected void addTask(Runnable task) {
-        if (task instanceof RecursionBreakingRunnable) {
-            if (task == null) {
+        if (task == null) {
                 throw new NullPointerException("task");
             }
+        if (task instanceof RecursionBreakingRunnable) {
             if (isTerminated()) {
                 reject();
             }
