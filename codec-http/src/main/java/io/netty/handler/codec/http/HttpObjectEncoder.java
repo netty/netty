@@ -39,7 +39,9 @@ import static io.netty.handler.codec.http.HttpConstants.*;
  * implement all abstract methods properly.
  */
 public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageToByteEncoder<HttpObject> {
-
+    private static final byte[] CRLF = { CR, LF };
+    private static final byte[] CRLF_END = { CR, LF, 0 };
+    private static final byte[] HEADER_SEPARATOR = { COLON , SP };
     private static final int ST_INIT = 0;
     private static final int ST_CONTENT_NON_CHUNK = 1;
     private static final int ST_CONTENT_CHUNK = 2;
@@ -60,8 +62,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             // Encode the message.
             encodeInitialLine(out, m);
             encodeHeaders(out, m);
-            out.writeByte(CR);
-            out.writeByte(LF);
+            out.writeBytes(CRLF);
 
             state = HttpHeaders.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
         }
@@ -86,20 +87,16 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             } else if (state == ST_CONTENT_CHUNK) {
                 if (contentLength > 0) {
                     out.writeBytes(copiedBuffer(Integer.toHexString(contentLength), CharsetUtil.US_ASCII));
-                    out.writeByte(CR);
-                    out.writeByte(LF);
+                    out.writeBytes(CRLF);
                     out.writeBytes(content, content.readerIndex(), contentLength);
-                    out.writeByte(CR);
-                    out.writeByte(LF);
+                    out.writeBytes(CRLF);
                 }
 
                 if (chunk instanceof LastHttpContent) {
-                    out.writeByte((byte) '0');
-                    out.writeByte(CR);
-                    out.writeByte(LF);
+                    out.writeBytes(CRLF_END);
                     encodeTrailingHeaders(out, (LastHttpContent) chunk);
-                    out.writeByte(CR);
-                    out.writeByte(LF);
+                    out.writeBytes(CRLF);
+
                     state = ST_INIT;
                 }
             } else {
@@ -122,11 +119,9 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
 
     private static void encodeHeader(ByteBuf buf, String header, String value) {
         buf.writeBytes(header.getBytes(CharsetUtil.US_ASCII));
-        buf.writeByte(COLON);
-        buf.writeByte(SP);
+        buf.writeBytes(HEADER_SEPARATOR);
         buf.writeBytes(value.getBytes(CharsetUtil.US_ASCII));
-        buf.writeByte(CR);
-        buf.writeByte(LF);
+        buf.writeBytes(CRLF);
     }
 
     protected abstract void encodeInitialLine(ByteBuf buf, H message) throws Exception;
