@@ -231,9 +231,9 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         final int expectedWrittenBytes = buf.readableBytes();
         final int writtenBytes = buf.readBytes(javaChannel(), expectedWrittenBytes);
 
-        final SelectionKey key = selectionKey();
-        final int interestOps = key.interestOps();
         if (writtenBytes >= expectedWrittenBytes) {
+            final SelectionKey key = selectionKey();
+            final int interestOps = key.interestOps();
             // Wrote the outbound buffer completely - clear OP_WRITE.
             if ((interestOps & SelectionKey.OP_WRITE) != 0) {
                 key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
@@ -248,6 +248,8 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             //    2) If 'lastSpin' is true, the caller will not retry.
             //       - Set OP_WRITE so that the event loop calls flushForcibly() later.
             if (writtenBytes > 0 || lastSpin) {
+                final SelectionKey key = selectionKey();
+                final int interestOps = key.interestOps();
                 if ((interestOps & SelectionKey.OP_WRITE) == 0) {
                     key.interestOps(interestOps | SelectionKey.OP_WRITE);
                 }
