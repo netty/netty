@@ -206,19 +206,13 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             }
             if (nextState == State.SKIP_CONTROL_CHARS) {
                 // No content is expected.
-                HttpObject[] parts =  reset();
-                for (HttpObject object: parts) {
-                    out.add(object);
-                }
+                reset(out);
                 return;
             }
             long contentLength = HttpHeaders.getContentLength(message, -1);
             if (contentLength == 0 || contentLength == -1 && isDecodingRequest()) {
                 content = Unpooled.EMPTY_BUFFER;
-                HttpObject[] parts =  reset();
-                for (HttpObject object: parts) {
-                    out.add(object);
-                }
+                reset(out);
                 return;
             }
 
@@ -276,10 +270,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             return;
         }
         case READ_FIXED_LENGTH_CONTENT: {
-            HttpObject[] parts = readFixedLengthContent(buffer);
-            for (HttpObject part: parts) {
-                out.add(part);
-            }
+            readFixedLengthContent(buffer, out);
             return;
         }
         case READ_FIXED_LENGTH_CONTENT_AS_CHUNKS: {
@@ -406,10 +397,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             LastHttpContent trailer = readTrailingHeaders(buffer);
             if (maxChunkSize == 0) {
                 // Chunked encoding disabled.
-                HttpObject[] parts =  reset();
-                for (HttpObject object: parts) {
-                    out.add(object);
-                }
+                reset(out);
                 return;
             } else {
                 reset();
@@ -458,23 +446,29 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         return false;
     }
 
-    private HttpObject[] reset() {
-        HttpMessage message = this.message;
-        ByteBuf content = this.content;
-        LastHttpContent httpContent;
+    private void reset() {
+        reset(null);
+    }
+    private void reset(MessageBuf<Object> out) {
+        if (out != null) {
+            HttpMessage message = this.message;
+            ByteBuf content = this.content;
+            LastHttpContent httpContent;
 
-        if (content == null || !content.isReadable()) {
-            httpContent = LastHttpContent.EMPTY_LAST_CONTENT;
-        } else {
-            httpContent = new DefaultLastHttpContent(content);
+            if (content == null || !content.isReadable()) {
+                httpContent = LastHttpContent.EMPTY_LAST_CONTENT;
+            } else {
+                httpContent = new DefaultLastHttpContent(content);
+            }
+
+            out.add(message);
+            out.add(httpContent);
         }
 
-        HttpObject[] messages =  { message, httpContent };
-        this.content = null;
-        this.message = null;
+        content = null;
+        message = null;
 
         checkpoint(State.SKIP_CONTROL_CHARS);
-        return messages;
     }
 
     private HttpMessage invalidMessage(Exception cause) {
@@ -506,7 +500,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         }
     }
 
-    private HttpObject[] readFixedLengthContent(ByteBuf buffer) {
+    private void readFixedLengthContent(ByteBuf buffer, MessageBuf<Object> out) {
         //we have a content-length so we just read the correct number of bytes
         long length = HttpHeaders.getContentLength(message, -1);
         assert length <= Integer.MAX_VALUE;
@@ -516,14 +510,16 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         }
         contentRead += toRead;
         if (length < contentRead) {
-            return new HttpObject[] {message, new DefaultHttpContent(buffer.readBytes(toRead))};
+            out.add(message);
+            out.add(new DefaultHttpContent(buffer.readBytes(toRead)));
+            return;
         }
         if (content == null) {
             content = buffer.readBytes((int) length);
         } else {
             content.writeBytes(buffer, (int) length);
         }
-        return reset();
+        reset(out);
     }
 
     private State readHeaders(ByteBuf buffer) {
