@@ -50,8 +50,11 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             assert eventLoop().inEventLoop();
             final SelectionKey key = selectionKey();
             if (!config().isAutoRead()) {
-                // only remove readInterestOp if needed
-                key.interestOps(key.interestOps() & ~readInterestOp);
+                int interestOps = key.interestOps();
+                if ((interestOps & readInterestOp) != 0) {
+                    // only remove readInterestOp if needed
+                    key.interestOps(interestOps & ~readInterestOp);
+                }
             }
 
             final ChannelPipeline pipeline = pipeline();
@@ -73,8 +76,12 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                             closed = true;
                             break loop;
                         }
+
                         if (reads++ > READ_BATCH_SIZE) {
                             break;
+                        }
+                        if (!config().isAutoRead()) {
+                            break loop;
                         }
                     }
                 } catch (Throwable t) {
