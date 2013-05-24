@@ -55,8 +55,11 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             assert eventLoop().inEventLoop();
             final SelectionKey key = selectionKey();
             if (!config().isAutoRead()) {
-                // only remove readInterestOp if needed
-                key.interestOps(key.interestOps() & ~readInterestOp);
+                int interestOps = key.interestOps();
+                if ((interestOps & readInterestOp) != 0) {
+                    // only remove readInterestOp if needed
+                    key.interestOps(interestOps & ~readInterestOp);
+                }
             }
 
             final ChannelPipeline pipeline = pipeline();
@@ -139,12 +142,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
         for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
             int localFlushedAmount = doWriteBytes(buf, i == 0);
-            if (localFlushedAmount > 0) {
-                break;
-            }
-            if (!buf.isReadable()) {
-                // Reset reader/writerIndex to 0 if the buffer is empty.
-                buf.clear();
+            if (localFlushedAmount > 0 || !buf.isReadable()) {
                 break;
             }
         }
