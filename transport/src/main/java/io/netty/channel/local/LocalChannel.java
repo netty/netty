@@ -43,7 +43,24 @@ public class LocalChannel extends AbstractChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
 
+    private static final int MAX_READER_STACK_DEPTH = 8;
+    private static final ThreadLocal<Integer> READER_STACK_DEPTH = new ThreadLocal<Integer>() {
+        @Override
+        protected Integer initialValue() {
+            return 0;
+        }
+    };
+
     private final ChannelConfig config = new DefaultChannelConfig(this);
+    private final Runnable readTask = new Runnable() {
+        @Override
+        public void run() {
+            ChannelPipeline pipeline = pipeline();
+            pipeline.fireInboundBufferUpdated();
+            pipeline.fireChannelReadSuspended();
+        }
+    };
+
     private final Runnable shutdownHook = new Runnable() {
         @Override
         public void run() {
@@ -225,8 +242,18 @@ public class LocalChannel extends AbstractChannel {
             return;
         }
 
-        pipeline.fireInboundBufferUpdated();
-        pipeline.fireChannelReadSuspended();
+        final Integer stackDepth = READER_STACK_DEPTH.get();
+        if (stackDepth < MAX_READER_STACK_DEPTH) {
+            READER_STACK_DEPTH.set(stackDepth + 1);
+            try {
+                pipeline.fireInboundBufferUpdated();
+                pipeline.fireChannelReadSuspended();
+            } finally {
+                READER_STACK_DEPTH.set(stackDepth);
+            }
+        } else {
+            eventLoop().execute(readTask);
+        }
     }
 
     @Override
