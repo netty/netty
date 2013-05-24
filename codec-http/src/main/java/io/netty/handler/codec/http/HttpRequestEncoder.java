@@ -26,6 +26,7 @@ import static io.netty.handler.codec.http.HttpConstants.*;
  */
 public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
     private static final char SLASH = '/';
+    private static final byte[] CRLF = { CR, LF };
 
     @Override
     public boolean acceptOutboundMessage(Object msg) throws Exception {
@@ -47,11 +48,10 @@ public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
                 uri += SLASH;
             }
         }
-        buf.writeBytes(uri.getBytes("UTF-8"));
+        buf.writeBytes(uri.getBytes(CharsetUtil.UTF_8));
 
         buf.writeByte(SP);
         buf.writeBytes(request.getProtocolVersion().toString().getBytes(CharsetUtil.US_ASCII));
-        buf.writeByte(CR);
-        buf.writeByte(LF);
+        buf.writeBytes(CRLF);
     }
 }
