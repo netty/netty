@@ -97,7 +97,7 @@ final class AioEventLoop extends SingleThreadEventLoop {
         }
 
         for (Channel ch: channels) {
-            ch.unsafe().close(ch.voidPromise());
+            ch.unsafe().close(ch.unsafe().voidPromise());
         }
     }
 

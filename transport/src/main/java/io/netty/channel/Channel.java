@@ -177,6 +177,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
      *   <li>{@link #remoteAddress()}</li>
      *   <li>{@link #closeForcibly()}</li>
      *   <li>{@link #register(EventLoop, ChannelPromise)}</li>
+     *   <li>{@link #voidPromise()}</li>
      * </ul>
      */
     interface Unsafe {
@@ -265,5 +266,12 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
          * automaticly call {@link FileRegion#release()}.
          */
         void sendFile(FileRegion region, ChannelPromise promise);
+
+        /**
+         * Return a special ChannelPromise which can be reused and passed to the operations in {@link Unsafe}.
+         * It will never be notified of a success or error and so is only a placeholder for operations
+         * that take a {@link ChannelPromise} as argument but for which you not want to get notified.
+         */
+        ChannelPromise voidPromise();
     }
 }

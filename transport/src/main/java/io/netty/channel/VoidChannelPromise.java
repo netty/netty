@@ -24,17 +24,19 @@ import java.util.concurrent.TimeUnit;
 final class VoidChannelPromise extends AbstractFuture<Void> implements ChannelPromise {
 
     private final Channel channel;
+    private final boolean fireException;
 
     /**
      * Creates a new instance.
      *
      * @param channel the {@link Channel} associated with this future
      */
-    public VoidChannelPromise(Channel channel) {
+    public VoidChannelPromise(Channel channel, boolean fireException) {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
         this.channel = channel;
+        this.fireException = fireException;
     }
 
     @Override
@@ -132,7 +134,9 @@ final class VoidChannelPromise extends AbstractFuture<Void> implements ChannelPr
     }
     @Override
     public VoidChannelPromise setFailure(Throwable cause) {
-        channel.pipeline().fireExceptionCaught(cause);
+        if (fireException) {
+            channel.pipeline().fireExceptionCaught(cause);
+        }
         return this;
     }
 
@@ -143,7 +147,9 @@ final class VoidChannelPromise extends AbstractFuture<Void> implements ChannelPr
 
     @Override
     public boolean tryFailure(Throwable cause) {
-        channel.pipeline().fireExceptionCaught(cause);
+        if (fireException) {
+            channel.pipeline().fireExceptionCaught(cause);
+        }
         return false;
     }
 

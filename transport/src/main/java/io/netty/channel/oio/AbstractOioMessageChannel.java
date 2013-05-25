@@ -56,7 +56,7 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
             pipeline.fireChannelReadSuspended();
             pipeline.fireExceptionCaught(t);
             if (t instanceof IOException) {
-                unsafe().close(voidPromise());
+                unsafe().close(unsafe().voidPromise());
             }
         } finally {
             if (read) {
@@ -66,7 +66,7 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
                 pipeline.fireChannelReadSuspended();
             }
             if (closed && isOpen()) {
-                unsafe().close(voidPromise());
+                unsafe().close(unsafe().voidPromise());
             }
         }
     }

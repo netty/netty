@@ -432,7 +432,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             //
             // See http://openjdk.java.net/projects/nio/javadoc/java/nio/channels/AsynchronousSocketChannel.html
             if (cause instanceof InterruptedByTimeoutException) {
-                channel.unsafe().close(channel.voidPromise());
+                channel.unsafe().close(channel.unsafe().voidPromise());
             }
         }
     }
@@ -493,7 +493,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                         if (channel.config().isAllowHalfClosure()) {
                             pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                         } else {
-                            channel.unsafe().close(channel.voidPromise());
+                            channel.unsafe().close(channel.unsafe().voidPromise());
                         }
                     }
                 } else if (!firedChannelReadSuspended) {
@@ -517,7 +517,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             //
             // See http://openjdk.java.net/projects/nio/javadoc/java/nio/channels/AsynchronousSocketChannel.html
             if (t instanceof IOException || t instanceof InterruptedByTimeoutException) {
-                channel.unsafe().close(channel.voidPromise());
+                channel.unsafe().close(channel.unsafe().voidPromise());
             }
         }
     }

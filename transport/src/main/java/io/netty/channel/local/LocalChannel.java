@@ -64,7 +64,7 @@ public class LocalChannel extends AbstractChannel {
     private final Runnable shutdownHook = new Runnable() {
         @Override
         public void run() {
-            unsafe().close(voidPromise());
+            unsafe().close(unsafe().voidPromise());
         }
     };
 
@@ -215,7 +215,7 @@ public class LocalChannel extends AbstractChannel {
     protected void doClose() throws Exception {
         LocalChannel peer = this.peer;
         if (peer != null && peer.isActive()) {
-            peer.unsafe().close(voidPromise());
+            peer.unsafe().close(unsafe().voidPromise());
             this.peer = null;
         }
     }
@@ -223,7 +223,7 @@ public class LocalChannel extends AbstractChannel {
     @Override
     protected Runnable doDeregister() throws Exception {
         if (isOpen()) {
-            unsafe().close(voidPromise());
+            unsafe().close(unsafe().voidPromise());
         }
         ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
         return null;
