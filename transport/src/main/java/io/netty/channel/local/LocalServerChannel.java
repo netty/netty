@@ -36,7 +36,7 @@ public class LocalServerChannel extends AbstractServerChannel {
     private final Runnable shutdownHook = new Runnable() {
         @Override
         public void run() {
-            unsafe().close(voidPromise());
+            unsafe().close(unsafe().voidPromise());
         }
     };
 

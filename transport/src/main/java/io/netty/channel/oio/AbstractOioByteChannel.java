@@ -143,7 +143,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                     if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
                         pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                     } else {
-                        unsafe().close(voidPromise());
+                        unsafe().close(unsafe().voidPromise());
                     }
                 }
             } else if (!firedInboundBufferSuspeneded) {

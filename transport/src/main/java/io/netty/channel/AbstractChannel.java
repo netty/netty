@@ -79,7 +79,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final Unsafe unsafe;
     private final DefaultChannelPipeline pipeline;
     private final ChannelFuture succeededFuture = new SucceededChannelFuture(this, null);
-    private final VoidChannelPromise voidPromise = new VoidChannelPromise(this);
+    private final VoidChannelPromise voidPromise = new VoidChannelPromise(this, true);
+    private final VoidChannelPromise unsafeVoidPromise = new VoidChannelPromise(this, false);
     private final CloseFuture closeFuture = new CloseFuture(this);
 
     protected final ChannelFlushPromiseNotifier flushFutureNotifier = new ChannelFlushPromiseNotifier();
@@ -934,6 +935,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             } finally {
                 inFlushNow = false;
             }
+        }
+
+        @Override
+        public ChannelPromise voidPromise() {
+            return unsafeVoidPromise;
         }
 
         protected final boolean ensureOpen(ChannelPromise promise) {
