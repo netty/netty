@@ -37,11 +37,23 @@ final class HttpHeaderDateFormat extends SimpleDateFormat {
     private final SimpleDateFormat format1 = new HttpHeaderDateFormatObsolete1();
     private final SimpleDateFormat format2 = new HttpHeaderDateFormatObsolete2();
 
+    private static final ThreadLocal<HttpHeaderDateFormat> FORMAT_THREAD_LOCAL =
+            new ThreadLocal<HttpHeaderDateFormat>() {
+        @Override
+        protected HttpHeaderDateFormat initialValue() {
+            return new HttpHeaderDateFormat();
+        }
+    };
+
+    public static HttpHeaderDateFormat get() {
+        return FORMAT_THREAD_LOCAL.get();
+    }
+
     /**
      * Standard date format<p>
      * Sun, 06 Nov 1994 08:49:37 GMT -> E, d MMM yyyy HH:mm:ss z
      */
-    HttpHeaderDateFormat() {
+    private HttpHeaderDateFormat() {
         super("E, dd MMM yyyy HH:mm:ss z", Locale.ENGLISH);
         setTimeZone(TimeZone.getTimeZone("GMT"));
     }

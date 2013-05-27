@@ -132,7 +132,7 @@ public class CookieDecoder {
                 } else if (CookieHeaderNames.EXPIRES.equalsIgnoreCase(name)) {
                     try {
                         long maxAgeMillis =
-                            new HttpHeaderDateFormat().parse(value).getTime() -
+                            HttpHeaderDateFormat.get().parse(value).getTime() -
                             System.currentTimeMillis();
 
                         maxAge = (int) (maxAgeMillis / 1000) +
