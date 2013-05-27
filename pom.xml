@@ -425,6 +425,7 @@
     <module>codec-memcache</module>
     <module>codec-mqtt</module>
     <module>codec-socks</module>
+    <module>codec-sockjs</module>
     <module>codec-stomp</module>
     <module>resolver</module>
     <module>resolver-dns</module>
@@ -591,7 +592,12 @@
         </exclusions>
         <optional>true</optional>
       </dependency>
-      
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>2.3.0</version>
+      </dependency>
+
       <!-- Metrics providers -->
       <dependency>
         <groupId>com.yammer.metrics</groupId>
@@ -665,6 +671,19 @@
         <artifactId>commons-compress</artifactId>
         <version>1.8.1</version>
         <scope>test</scope>
+      </dependency>
+      
+      <dependency>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-core</artifactId>
+        <scope>test</scope>
+        <version>1.9.5</version>
+        <exclusions>
+            <exclusion>
+                <groupId>org.hamcrest</groupId>
+                <artifactId>hamcrest-core</artifactId>
+            </exclusion>
+        </exclusions> 
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -1315,6 +1334,11 @@
               </pluginExecutions>
             </lifecycleMappingMetadata>
           </configuration>
+        </plugin>
+        <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>1.2</version>
         </plugin>
       </plugins>
     </pluginManagement>
