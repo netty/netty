@@ -124,7 +124,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         DefaultChannelHandlerContext prev = this.prev;
         if (prev != null) {
             synchronized (pipeline) {
-                pipeline.remove0(this, false);
+                pipeline.remove0(this);
             }
             prev.teardown();
         }
@@ -677,7 +677,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
         ChannelOutboundHandler handler = (ChannelOutboundHandler) handler();
         try {
-            handler.write(this, promise, msgs);
+            handler.write(this, new Object[]{msgs}, promise);
         } catch (Throwable t) {
             notifyHandlerException(t);
         }

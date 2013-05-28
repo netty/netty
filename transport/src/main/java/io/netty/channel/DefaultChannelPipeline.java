@@ -316,14 +316,14 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         synchronized (this) {
             if (!ctx.channel().isRegistered() || ctx.executor().inEventLoop()) {
-                remove0(ctx, true);
+                remove0(ctx);
                 return ctx;
             } else {
                future = ctx.executor().submit(new Runnable() {
                    @Override
                    public void run() {
                        synchronized (DefaultChannelPipeline.this) {
-                           remove0(ctx, true);
+                           remove0(ctx);
                        }
                    }
                });
@@ -339,14 +339,14 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         return context;
     }
 
-    void remove0(DefaultChannelHandlerContext ctx, boolean forward) {
+    void remove0(DefaultChannelHandlerContext ctx) {
         DefaultChannelHandlerContext prev = ctx.prev;
         DefaultChannelHandlerContext next = ctx.next;
         prev.next = next;
         next.prev = prev;
         name2ctx.remove(ctx.name());
 
-        callHandlerRemoved(ctx, prev, next, forward);
+        callHandlerRemoved(ctx);
     }
 
     @Override
@@ -447,7 +447,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         // because callHandlerRemoved() will trigger inboundBufferUpdated() or flush() on newHandler and those
         // event handlers must be called after handlerAdded().
         callHandlerAdded(newCtx);
-        callHandlerRemoved(oldCtx, newCtx, newCtx, true);
+        callHandlerRemoved(oldCtx);
     }
 
     private static void checkMultiplicity(ChannelHandlerContext ctx) {
@@ -502,9 +502,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private void callHandlerRemoved(
-            final DefaultChannelHandlerContext ctx, final DefaultChannelHandlerContext ctxPrev,
-            final DefaultChannelHandlerContext ctxNext, final boolean forward) {
+    private void callHandlerRemoved(final DefaultChannelHandlerContext ctx) {
         if (ctx.channel().isRegistered() && !ctx.executor().inEventLoop()) {
             ctx.executor().execute(new Runnable() {
                 @Override
@@ -947,7 +945,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object... msgs) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs) throws Exception {
             int size = 0;
             for (Object m: msgs) {
                 if (m == null) {
@@ -1024,7 +1022,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, ChannelPromise promise, Object... msgs) throws Exception {
+        public void write(ChannelHandlerContext ctx, Object[] msgs, ChannelPromise promise) throws Exception {
             unsafe.write(promise, msgs);
         }
 

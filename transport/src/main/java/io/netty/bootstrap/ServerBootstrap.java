@@ -228,7 +228,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
 
         @Override
         @SuppressWarnings("unchecked")
-        public void messageReceived(ChannelHandlerContext ctx, Object... msgs) {
+        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs) {
             for (Object m: msgs) {
                 if (m == null) {
                     break;

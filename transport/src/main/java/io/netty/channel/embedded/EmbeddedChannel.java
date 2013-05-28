@@ -298,7 +298,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
     private final class LastInboundHandler extends ChannelInboundHandlerAdapter {
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object... msgs) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs) throws Exception {
             for (Object m: msgs) {
                 if (m == null) {
                     break;

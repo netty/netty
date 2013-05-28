@@ -80,7 +80,7 @@ public class ChannelInboundHandlerAdapter extends ChannelHandlerAdapter implemen
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object... msgs) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, Object[] msgs) throws Exception {
         ctx.fireMessageReceived(msgs);
     }
 
