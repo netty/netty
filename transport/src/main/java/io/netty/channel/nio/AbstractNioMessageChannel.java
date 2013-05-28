@@ -15,7 +15,7 @@
  */
 package io.netty.channel.nio;
 
-import io.netty.buffer.MessageBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 
@@ -27,9 +27,6 @@ import java.nio.channels.SelectionKey;
  * {@link AbstractNioChannel} base class for {@link Channel}s that operate on messages.
  */
 public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
-
-    // Hard coded for now.
-    private static final int READ_BATCH_SIZE = 16;
 
     /**
      * @see {@link AbstractNioChannel#AbstractNioChannel(Channel, Integer, SelectableChannel, int)}
@@ -45,6 +42,9 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
     }
 
     private final class NioMessageUnsafe extends AbstractNioUnsafe {
+        // maximal read is 16 messages at once
+        private final Object[] msgBuf = new Object[16];
+
         @Override
         public void read() {
             assert eventLoop().inEventLoop();
@@ -58,93 +58,87 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             }
 
             final ChannelPipeline pipeline = pipeline();
-            final MessageBuf<Object> msgBuf = pipeline.inboundMessageBuffer();
             boolean closed = false;
             boolean read = false;
             boolean firedChannelReadSuspended = false;
-            loop: for (;;) {
-                int reads = 0;
+            int index = 0;
+            try {
+                loop: for (;;) {
+                    try {
+                        for (;;) {
+                            int localRead = doReadMessages(msgBuf, index);
+                            if (localRead > 0) {
+                                index += localRead;
+                                read = true;
+                            } else if (localRead == 0) {
+                                break loop;
+                            } else if (localRead < 0) {
+                                closed = true;
+                                break loop;
+                            }
+                            if (!config().isAutoRead()) {
+                                break loop;
+                            }
+                        }
+                    } catch (Throwable t) {
+                        if (read) {
+                            read = false;
+                            pipeline.fireMessageReceived(msgBuf, 0, index);
+                        }
 
-                try {
-                    for (;;) {
-                        int localReadAmount = doReadMessages(msgBuf);
-                        if (localReadAmount > 0) {
-                            read = true;
-                        } else if (localReadAmount == 0) {
-                            break loop;
-                        } else if (localReadAmount < 0) {
+                        if (t instanceof IOException) {
                             closed = true;
-                            break loop;
+                        } else if (!closed) {
+                            firedChannelReadSuspended = true;
+                            pipeline.fireChannelReadSuspended();
                         }
 
-                        if (reads++ > READ_BATCH_SIZE) {
-                            break;
+                        pipeline().fireExceptionCaught(t);
+
+                        // break the loop now
+                        break;
+                    } finally {
+                        if (read) {
+                            pipeline.fireMessageReceived(msgBuf, 0, index);
                         }
-                        if (!config().isAutoRead()) {
-                            break loop;
+                        if (closed && isOpen()) {
+                            close(voidPromise());
+                        } else if (!firedChannelReadSuspended) {
+                            pipeline.fireChannelReadSuspended();
                         }
                     }
-                } catch (Throwable t) {
-                    if (read) {
-                        read = false;
-                        pipeline.fireInboundBufferUpdated();
-                    }
-
-                    if (t instanceof IOException) {
-                        closed = true;
-                    } else if (!closed) {
-                        firedChannelReadSuspended = true;
-                        pipeline.fireChannelReadSuspended();
-                    }
-
-                    pipeline().fireExceptionCaught(t);
-
-                    // break the loop now
-                    break;
-                } finally {
-                    if (read) {
-                        pipeline.fireInboundBufferUpdated();
-                    }
-                    if (closed && isOpen()) {
-                        close(voidPromise());
-                    } else if (!firedChannelReadSuspended) {
-                        pipeline.fireChannelReadSuspended();
-                    }
+                }
+            } finally {
+                for (int i = 0; i < index; i++) {
+                    ByteBufUtil.release(msgBuf[i]);
                 }
             }
         }
     }
 
     @Override
-    protected void doFlushMessageBuffer(MessageBuf<Object> buf) throws Exception {
+    protected int doWrite(Object[] msgs, int index, int length) throws Exception {
         final int writeSpinCount = config().getWriteSpinCount() - 1;
-        while (!buf.isEmpty()) {
-            boolean wrote = false;
-            for (int i = writeSpinCount; i >= 0; i --) {
-                int localFlushedAmount = doWriteMessages(buf, i == 0);
-                if (localFlushedAmount > 0) {
-                    wrote = true;
-                    break;
-                }
-            }
-
-            if (!wrote) {
-                break;
+        for (int i = writeSpinCount; i >= 0; i --) {
+            int written = doWriteMessages(msgs, index, length, i == 0);
+            if (written > 0) {
+                return index + written;
             }
         }
+        return index;
     }
 
     /**
-     * Read messages into the given {@link MessageBuf} and return the amount.
+     * Read messages into the given array and return the amount which was read.
      */
-    protected abstract int doReadMessages(MessageBuf<Object> buf) throws Exception;
+    protected abstract int doReadMessages(Object[] buf, int index) throws Exception;
 
     /**
-     * Write messages form the given {@link MessageBuf} to the underlying {@link java.nio.channels.Channel}.
-     * @param buf           the {@link MessageBuf} from which the bytes should be written
+     * Write messages to the underlying {@link java.nio.channels.Channel}.
+     * @param msg           Object to write
      * @param lastSpin      {@code true} if this is the last write try
-     * @return amount       the amount of written bytes
+     * @return written      the amount of written messages
      * @throws Exception    thrown if an error accour
      */
-    protected abstract int doWriteMessages(MessageBuf<Object> buf, boolean lastSpin) throws Exception;
+    protected abstract int doWriteMessages(Object[] msg, int index, int length, boolean lastSpin) throws Exception;
 }

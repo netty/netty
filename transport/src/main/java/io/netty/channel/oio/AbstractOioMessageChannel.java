@@ -15,7 +15,6 @@
  */
 package io.netty.channel.oio;
 
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 
@@ -25,6 +24,8 @@ import java.io.IOException;
  * Abstract base class for OIO which reads and writes objects from/to a Socket
  */
 public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
+    // maximal read is 16 messages at once
+    private final Object[] msgBuf = new Object[16];
 
     /**
      * @see AbstractOioChannel#AbstractOioChannel(Channel, Integer)
@@ -36,12 +37,12 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
     @Override
     protected void doRead() {
         final ChannelPipeline pipeline = pipeline();
-        final MessageBuf<Object> msgBuf = pipeline.inboundMessageBuffer();
         boolean closed = false;
         boolean read = false;
         boolean firedChannelReadSuspended = false;
+        int localReadAmount = 0;
         try {
-            int localReadAmount = doReadMessages(msgBuf);
+            localReadAmount = doReadMessages(msgBuf, 0);
             if (localReadAmount > 0) {
                 read = true;
             } else if (localReadAmount < 0) {
@@ -50,7 +51,7 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
         } catch (Throwable t) {
             if (read) {
                 read = false;
-                pipeline.fireInboundBufferUpdated();
+                pipeline.fireMessageReceived(msgBuf, 0, localReadAmount);
             }
             firedChannelReadSuspended = true;
             pipeline.fireChannelReadSuspended();
@@ -60,7 +61,7 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
             }
         } finally {
             if (read) {
-                pipeline.fireInboundBufferUpdated();
+                pipeline.fireMessageReceived(msgBuf, 0, localReadAmount);
             }
             if (!firedChannelReadSuspended) {
                 pipeline.fireChannelReadSuspended();
@@ -72,27 +73,23 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
     }
 
     @Override
-    protected void doFlushMessageBuffer(MessageBuf<Object> buf) throws Exception {
-        while (!buf.isEmpty()) {
-            doWriteMessages(buf);
+    protected int doWrite(Object[] msgs, int index, int length) throws Exception {
+        int written = doWriteMessages(msgs, index, length);
+        if (written > 0) {
+            return index + written;
         }
+        return index;
     }
+    /**
+     * Read messages into the given array and return the amount which was read.
+     */
+    protected abstract int doReadMessages(Object[] buf, int index) throws Exception;
 
     /**
-     * Read Objects from the underlying Socket.
-     *
-     * @param buf           the {@link MessageBuf} into which the read objects will be written
-     * @return amount       the number of objects read. This may return a negative amount if the underlying
-     *                      Socket was closed
-     * @throws Exception    is thrown if an error accoured
+     * Write messages to the underlying {@link java.net.Socket}.
+     * @param msg           Object to write
+     * @return written      the amount of written messages
+     * @throws Exception    thrown if an error accour
      */
-    protected abstract int doReadMessages(MessageBuf<Object> buf) throws Exception;
-
-    /**
-     * Write the Objects which is hold by the {@link MessageBuf} to the underlying Socket.
-     *
-     * @param buf           the {@link MessageBuf} which holds the data to transfer
-     * @throws Exception    is thrown if an error accoured
-     */
-    protected abstract void doWriteMessages(MessageBuf<Object> buf) throws Exception;
+    protected abstract int doWriteMessages(Object[] msg, int index, int length) throws Exception;
 }

@@ -21,7 +21,6 @@ import io.netty.channel.Channel;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.channels.Channels;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.WritableByteChannel;
 
@@ -94,6 +93,7 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
         buf.readBytes(os, buf.readableBytes());
     }
 
+    /*
     @Override
     protected void doFlushFileRegion(FlushTask task) throws Exception {
         OutputStream os = this.os;
@@ -121,6 +121,7 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
             }
         }
     }
+    */
 
     @Override
     protected void doClose() throws Exception {

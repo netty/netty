@@ -15,7 +15,6 @@
  */
 package io.netty.channel.oio;
 
-import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelMetadata;
@@ -31,7 +30,7 @@ import java.io.IOException;
 public abstract class AbstractOioByteChannel extends AbstractOioChannel {
 
     private volatile boolean inputShutdown;
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.BYTE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     /**
      * @see AbstractOioByteChannel#AbstractOioByteChannel(Channel, Integer)
@@ -72,92 +71,100 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
         }
 
         final ChannelPipeline pipeline = pipeline();
-        final ByteBuf byteBuf = pipeline.inboundByteBuffer();
-        boolean closed = false;
-        boolean read = false;
-        boolean firedInboundBufferSuspeneded = false;
+
+        // TODO: calculate size as in 3.x
+        final ByteBuf byteBuf = alloc().ioBuffer();
         try {
-            for (;;) {
-                int localReadAmount = doReadBytes(byteBuf);
-                if (localReadAmount > 0) {
-                    read = true;
-                } else if (localReadAmount < 0) {
-                    closed = true;
-                }
+            boolean closed = false;
+            boolean read = false;
+            boolean firedInboundBufferSuspeneded = false;
+            try {
+                for (;;) {
+                    int localReadAmount = doReadBytes(byteBuf);
+                    if (localReadAmount > 0) {
+                        read = true;
+                    } else if (localReadAmount < 0) {
+                        closed = true;
+                    }
 
-                final int available = available();
-                if (available <= 0) {
-                    break;
-                }
+                    final int available = available();
+                    if (available <= 0) {
+                        break;
+                    }
 
-                if (!byteBuf.isWritable()) {
-                    final int capacity = byteBuf.capacity();
-                    final int maxCapacity = byteBuf.maxCapacity();
-                    if (capacity == maxCapacity) {
-                        if (read) {
-                            read = false;
-                            pipeline.fireInboundBufferUpdated();
-                            if (!byteBuf.isWritable()) {
-                                throw new IllegalStateException(
-                                        "an inbound handler whose buffer is full must consume at " +
-                                                "least one byte.");
+                    if (!byteBuf.isWritable()) {
+                        final int capacity = byteBuf.capacity();
+                        final int maxCapacity = byteBuf.maxCapacity();
+                        if (capacity == maxCapacity) {
+                           if (read) {
+                                read = false;
+                                pipeline.fireMessageReceived(byteBuf);
+                                byteBuf.clear();
+                            }
+                        } else {
+                            final int writerIndex = byteBuf.writerIndex();
+                            if (writerIndex + available > maxCapacity) {
+                                byteBuf.capacity(maxCapacity);
+                            } else {
+                                byteBuf.ensureWritable(available);
                             }
                         }
-                    } else {
-                        final int writerIndex = byteBuf.writerIndex();
-                        if (writerIndex + available > maxCapacity) {
-                            byteBuf.capacity(maxCapacity);
+                    }
+                    if (!config().isAutoRead()) {
+                        // stop reading until next Channel.read() call
+                        // See https://github.com/netty/netty/issues/1363
+                        break;
+                    }
+                }
+            } catch (Throwable t) {
+                if (read) {
+                    read = false;
+                    pipeline.fireMessageReceived(byteBuf);
+                }
+
+                if (t instanceof IOException) {
+                    closed = true;
+                    pipeline.fireExceptionCaught(t);
+                } else {
+                    firedInboundBufferSuspeneded = true;
+                    pipeline.fireChannelReadSuspended();
+                    pipeline.fireExceptionCaught(t);
+                    unsafe().close(voidPromise());
+                }
+            } finally {
+                if (read) {
+                    pipeline.fireMessageReceived(byteBuf);
+                }
+                if (closed) {
+                    inputShutdown = true;
+                    if (isOpen()) {
+                        if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
+                            pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                         } else {
-                            byteBuf.ensureWritable(available);
+                            unsafe().close(unsafe().voidPromise());
                         }
                     }
+                } else if (!firedInboundBufferSuspeneded) {
+                    pipeline.fireChannelReadSuspended();
                 }
-                if (!config().isAutoRead()) {
-                    // stop reading until next Channel.read() call
-                    // See https://github.com/netty/netty/issues/1363
-                    break;
-                }
-            }
-        } catch (Throwable t) {
-            if (read) {
-                read = false;
-                pipeline.fireInboundBufferUpdated();
-            }
-
-            if (t instanceof IOException) {
-                closed = true;
-                pipeline.fireExceptionCaught(t);
-            } else {
-                firedInboundBufferSuspeneded = true;
-                pipeline.fireChannelReadSuspended();
-                pipeline.fireExceptionCaught(t);
-                unsafe().close(voidPromise());
             }
         } finally {
-            if (read) {
-                pipeline.fireInboundBufferUpdated();
-            }
-            if (closed) {
-                inputShutdown = true;
-                if (isOpen()) {
-                    if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
-                        pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
-                    } else {
-                        unsafe().close(unsafe().voidPromise());
-                    }
-                }
-            } else if (!firedInboundBufferSuspeneded) {
-                pipeline.fireChannelReadSuspended();
-            }
+            byteBuf.release();
         }
     }
 
     @Override
-    protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
-        while (buf.isReadable()) {
-            doWriteBytes(buf);
+    protected int doWrite(Object[] msgs, int index, int length) throws Exception {
+        Object msg = msgs[index];
+        if (msg instanceof ByteBuf) {
+            ByteBuf buf = (ByteBuf) msg;
+            while (buf.isReadable()) {
+                doWriteBytes(buf);
+            }
+            return index + 1;
+        } else {
+            throw new UnsupportedOperationException();
         }
-        buf.clear();
     }
 
     /**

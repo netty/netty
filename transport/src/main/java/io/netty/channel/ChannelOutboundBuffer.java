@@ -19,6 +19,7 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.ByteBufUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -171,6 +172,10 @@ final class ChannelOutboundBuffer {
                 if (!currentPromise.tryFailure(cause)) {
                     logger.warn("Promise done already:", cause);
                 }
+            }
+            // release all failed messages
+            for (int i = currentMessageStart; i < currentMessageEnd; i++) {
+                ByteBufUtil.release(currentMessages[i]);
             }
         } while(next());
     }

@@ -15,7 +15,6 @@
  */
 package io.netty.channel.socket.nio;
 
-import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
@@ -41,7 +40,7 @@ import java.nio.channels.SocketChannel;
  */
 public class NioSocketChannel extends AbstractNioByteChannel implements io.netty.channel.socket.SocketChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.BYTE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioSocketChannel.class);
 

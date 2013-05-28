@@ -15,11 +15,9 @@
  */
 package io.netty.channel.socket.oio;
 
-import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
@@ -59,7 +57,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OioDatagramChannel.class);
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, true);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(true);
 
     private final MulticastSocket socket;
     private final DatagramChannelConfig config;
@@ -199,7 +197,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
+    protected int doReadMessages(Object[] buf, int index) throws Exception {
         int packetSize = config().getReceivePacketSize();
         ByteBuf data = alloc().heapBuffer(packetSize);
         boolean free = true;
@@ -213,7 +211,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
                 remoteAddr = remoteAddress();
             }
 
-            buf.add(new DatagramPacket(data.writerIndex(tmpPacket.getLength()), localAddress(), remoteAddr));
+            buf[index] = new DatagramPacket(data.writerIndex(tmpPacket.getLength()), localAddress(), remoteAddr);
             free = false;
             return 1;
         } catch (SocketTimeoutException e) {
@@ -235,8 +233,8 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected void doWriteMessages(MessageBuf<Object> buf) throws Exception {
-        final Object o = buf.poll();
+    protected int doWriteMessages(Object[] msg, int index, int l) throws Exception {
+        final Object o = msg[index];
         final Object m;
         final ByteBuf data;
         final SocketAddress remoteAddress;
@@ -255,7 +253,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
         } else if (m instanceof ByteBuf) {
             data = (ByteBuf) m;
         } else {
-            ByteBufUtil.release(buf.remove());
+            ByteBufUtil.release(o);
             throw new ChannelException("unsupported message type: " + StringUtil.simpleClassName(o));
         }
 
@@ -272,6 +270,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
                 tmpPacket.setData(tmp);
             }
             socket.send(tmpPacket);
+            return 1;
         } finally {
             ByteBufUtil.release(o);
         }
