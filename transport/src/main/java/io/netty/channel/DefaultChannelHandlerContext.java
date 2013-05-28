@@ -437,12 +437,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelFuture write(Object msg) {
-        return write(newPromise(), msg);
+        return write(msg, newPromise());
     }
 
     @Override
-    public ChannelFuture write(Object... msgs) {
-        return write(newPromise(), msgs);
+    public ChannelFuture write(Object[] msgs) {
+        return write(new Object[]{msgs}, newPromise());
     }
 
     @Override
@@ -645,12 +645,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public ChannelFuture write(final ChannelPromise promise, Object msg) {
-        return write(promise, new Object[] { msg });
+    public ChannelFuture write(Object msg, final ChannelPromise promise) {
+        return write(new Object[]{new Object[]{msg}}, promise);
     }
 
     @Override
-    public ChannelFuture write(final ChannelPromise promise, final Object... msgs) {
+    public ChannelFuture write(final Object[] msgs, final ChannelPromise promise) {
         validateFuture(promise, true);
 
         EventExecutor executor = executor();

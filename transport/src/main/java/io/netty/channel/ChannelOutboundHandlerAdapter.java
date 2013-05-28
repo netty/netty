@@ -96,6 +96,6 @@ public class ChannelOutboundHandlerAdapter extends ChannelHandlerAdapter impleme
 
     @Override
     public void write(ChannelHandlerContext ctx, Object[] msgs, ChannelPromise promise) throws Exception {
-        ctx.write(promise, msgs);
+        ctx.write(new Object[]{msgs}, promise);
     }
 }

@@ -25,7 +25,7 @@ import java.net.SocketAddress;
  * <ul>
  * <li>{@link #connect(SocketAddress, ChannelPromise)}</li>
  * <li>{@link #disconnect(ChannelPromise)}</li>
- * <li>{@link #write(ChannelPromise, Object)}</li>
+ * <li>{@link ChannelOutboundInvoker#write(Object, ChannelPromise)}</li>
  * <li>and the shortcut methods which calls the methods mentioned above
  * </ul>
  */

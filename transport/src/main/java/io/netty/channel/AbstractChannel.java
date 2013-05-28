@@ -241,7 +241,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelFuture write(Object... msgs) {
+    public ChannelFuture write(Object[] msgs) {
         return pipeline.write(msgs);
     }
 
@@ -281,13 +281,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelFuture write(ChannelPromise promise, Object msg) {
-        return pipeline.write(promise, msg);
+    public ChannelFuture write(Object msg, ChannelPromise promise) {
+        return pipeline.write(msg, promise);
     }
 
     @Override
-    public ChannelFuture write(ChannelPromise promise, Object... msgs) {
-        return pipeline.write(promise, msgs);
+    public ChannelFuture write(Object[] msgs, ChannelPromise promise) {
+        return pipeline.write(new Object[]{msgs}, promise);
     }
 
     @Override

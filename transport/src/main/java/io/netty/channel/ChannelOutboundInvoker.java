@@ -117,7 +117,7 @@ interface ChannelOutboundInvoker {
      * {@link Channel}.
      */
     ChannelFuture write(Object msg);
-    ChannelFuture write(Object... msgs);
+    ChannelFuture write(Object[] msgs);
 
     /**
      * Request to bind to the given {@link SocketAddress} and notify the {@link ChannelFuture} once the operation
@@ -239,6 +239,6 @@ interface ChannelOutboundInvoker {
      * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    ChannelFuture write(ChannelPromise promise, Object msg);
-    ChannelFuture write(ChannelPromise promise, Object... msgs);
+    ChannelFuture write(Object msg, ChannelPromise promise);
+    ChannelFuture write(Object[] msgs, ChannelPromise promise);
 }

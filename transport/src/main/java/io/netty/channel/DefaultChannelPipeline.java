@@ -828,7 +828,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelFuture write(Object... msgs) {
+    public ChannelFuture write(Object[] msgs) {
         return tail.write(msgs);
     }
 
@@ -868,13 +868,13 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelFuture write(ChannelPromise promise, Object msg) {
-        return tail.write(promise, msg);
+    public ChannelFuture write(Object msg, ChannelPromise promise) {
+        return tail.write(msg, promise);
     }
 
     @Override
-    public ChannelFuture write(ChannelPromise promise, Object... msgs) {
-        return tail.write(promise, msgs);
+    public ChannelFuture write(Object[] msgs, ChannelPromise promise) {
+        return tail.write(new Object[]{msgs}, promise);
     }
 
     private void checkDuplicateName(String name) {
