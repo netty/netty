@@ -83,9 +83,4 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
             }
         }
     }
-
-    @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-        ctx.fireInboundBufferUpdated();
-    }
 }

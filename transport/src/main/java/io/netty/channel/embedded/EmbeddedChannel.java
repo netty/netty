@@ -277,15 +277,10 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    protected int doWrite(Object[] msgs, int index) throws Exception {
-        for (int i = index; i < msgs.length; i ++) {
-            Object m = msgs[i];
-            if (m == null) {
-                break;
-            }
-            lastOutboundBuffer.add(m);
+    protected int doWrite(Object[] msgs, int index, int length) throws Exception {
+        for (int i = index; i < index + length; i ++) {
+            lastOutboundBuffer.add(msgs[i]);
         }
-
         return -1;
     }
 
@@ -298,12 +293,9 @@ public class EmbeddedChannel extends AbstractChannel {
 
     private final class LastInboundHandler extends ChannelInboundHandlerAdapter {
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs) throws Exception {
-            for (Object m: msgs) {
-                if (m == null) {
-                    break;
-                }
-                lastInboundBuffer.add(m);
+        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+            for (int i = index; i < index + length; i ++) {
+                lastInboundBuffer.add(msgs[i]);
             }
         }
 

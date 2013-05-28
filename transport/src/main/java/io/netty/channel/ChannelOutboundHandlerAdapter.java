@@ -78,8 +78,7 @@ public class ChannelOutboundHandlerAdapter extends ChannelHandlerAdapter impleme
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise)
-            throws Exception {
+    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         ctx.deregister(promise);
     }
 
@@ -90,12 +89,13 @@ public class ChannelOutboundHandlerAdapter extends ChannelHandlerAdapter impleme
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void read(ChannelHandlerContext ctx) {
+    public void read(ChannelHandlerContext ctx) throws Exception {
         ctx.read();
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object[] msgs, ChannelPromise promise) throws Exception {
-        ctx.write(new Object[]{msgs}, promise);
+    public void write(
+            ChannelHandlerContext ctx, Object[] msgs, int index, int length, ChannelPromise promise) throws Exception {
+        ctx.write(msgs, index, length, promise);
     }
 }

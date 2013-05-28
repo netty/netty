@@ -175,5 +175,8 @@ public interface ChannelHandlerContext
     ChannelHandlerContext fireMessageReceived(Object... msgs);
 
     @Override
+    ChannelHandlerContext fireMessageReceived(Object[] msgs, int index, int length);
+
+    @Override
     ChannelHandlerContext fireChannelReadSuspended();
 }

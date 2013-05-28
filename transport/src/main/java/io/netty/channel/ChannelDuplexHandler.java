@@ -24,7 +24,7 @@ import java.net.SocketAddress;
  * It is a good starting point if your {@link ChannelHandler} implementation needs to intercept operations and also
  * state updates.
  */
-public abstract class ChannelDuplexHandler extends ChannelInboundHandlerAdapter implements ChannelOutboundHandler {
+public class ChannelDuplexHandler extends ChannelInboundHandlerAdapter implements ChannelOutboundHandler {
 
     /**
      * Calls {@link ChannelHandlerContext#bind(SocketAddress, ChannelPromise)} to forward
@@ -69,8 +69,7 @@ public abstract class ChannelDuplexHandler extends ChannelInboundHandlerAdapter 
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise future)
-            throws Exception {
+    public void close(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
         ctx.close(future);
     }
 
@@ -81,24 +80,18 @@ public abstract class ChannelDuplexHandler extends ChannelInboundHandlerAdapter 
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise future)
-            throws Exception {
+    public void deregister(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
         ctx.deregister(future);
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) {
+    public void read(ChannelHandlerContext ctx) throws Exception {
         ctx.read();
     }
 
-    /**
-     * Calls {@link ChannelHandlerContext#sendFile(FileRegion, ChannelPromise)} to forward
-     * to the next {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
-     *
-     * Sub-classes may override this method to change behavior.
-     */
     @Override
-    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise future) throws Exception {
-        ctx.sendFile(region, future);
+    public void write(
+            ChannelHandlerContext ctx, Object[] msgs, int index, int length, ChannelPromise promise) throws Exception {
+        ctx.write(msgs, index, length, promise);
     }
 }

@@ -30,10 +30,14 @@ final class ChannelOutboundBuffer {
 
     ChannelPromise currentPromise;
     Object[] currentMessages;
-    int currentMessageIndex;
+    int currentMessageStart;
+    int currentMessageEnd;
 
     private ChannelPromise[] promises;
     private Object[][] messages;
+    private int[] messageIndexes;
+    private int[] messageLengths;
+
 
     private int head;
     private int tail;
@@ -66,12 +70,16 @@ final class ChannelOutboundBuffer {
 
         promises = new ChannelPromise[initialCapacity];
         messages = new Object[initialCapacity][];
+        messageIndexes = new int[initialCapacity];
+        messageLengths = new int[initialCapacity];
     }
 
-    void add(ChannelPromise promise, Object[] msgs) {
+    void add(Object[] msgs, int index, int length, ChannelPromise promise) {
         int tail = this.tail;
         promises[tail] = promise;
         messages[tail] = msgs;
+        messageIndexes[tail] = index;
+        messageLengths[tail] = length;
 
         if ((this.tail = tail + 1 & promises.length - 1) == head) {
             doubleCapacity();
@@ -99,6 +107,16 @@ final class ChannelOutboundBuffer {
         System.arraycopy(messages, 0, a2, r, p);
         messages = a2;
 
+        int[] a3 = new int[newCapacity];
+        System.arraycopy(messageIndexes, p, a3, 0, r);
+        System.arraycopy(messageIndexes, 0, a3, r, p);
+        messageIndexes = a3;
+
+        int[] a4 = new int[newCapacity];
+        System.arraycopy(messageLengths, p, a4, 0, r);
+        System.arraycopy(messageLengths, 0, a4, r, p);
+        messageLengths = a4;
+
         head = 0;
         tail = n;
     }
@@ -114,7 +132,8 @@ final class ChannelOutboundBuffer {
 
         currentPromise = e;
         currentMessages = messages[h];
-        currentMessageIndex = 0;
+        currentMessageStart = messageIndexes[h];
+        currentMessageEnd = currentMessageStart + messageLengths[h];
 
         promises[h] = null;
         messages[h] = null;
@@ -154,16 +173,5 @@ final class ChannelOutboundBuffer {
                 }
             }
         } while(next());
-    }
-
-    static final class Entry {
-        ChannelPromise promise;
-        Object[] messages;
-        int index;
-
-        private Entry(ChannelPromise promise, Object[] messages) {
-            this.promise = promise;
-            this.messages = messages;
-        }
     }
 }

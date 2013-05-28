@@ -74,7 +74,7 @@ public interface ChannelOutboundHandler extends ChannelHandler {
     /**
      * Intercepts {@link ChannelHandlerContext#read()}.
      */
-    void read(ChannelHandlerContext ctx);
+    void read(ChannelHandlerContext ctx) throws Exception;
 
     /**
      * Called once a flush operation is made and so the outbound data should be written.
@@ -84,5 +84,6 @@ public interface ChannelOutboundHandler extends ChannelHandler {
      * @param promise           the {@link ChannelPromise} to notify once the operation completes
      * @throws Exception        thrown if an error accour
      */
-    void write(ChannelHandlerContext ctx, Object[] msgs, ChannelPromise promise) throws Exception;
+    void write(
+            ChannelHandlerContext ctx, Object[] msgs, int index, int length, ChannelPromise promise) throws Exception;
 }

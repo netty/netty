@@ -54,7 +54,7 @@ public interface ChannelInboundHandler extends ChannelHandler {
      * implementation. It's up to the implementation to consume it or keep it in the buffer
      * to wait for more data and consume it later.
      */
-    void messageReceived(ChannelHandlerContext ctx, Object[] msgs) throws Exception;
+    void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception;
 
     /**
      * Gets called if an user event was triggered.

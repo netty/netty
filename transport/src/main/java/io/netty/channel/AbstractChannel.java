@@ -246,6 +246,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
+    public ChannelFuture write(Object[] msgs, int index, int length) {
+        return pipeline.write(msgs, index, length);
+    }
+
+    @Override
     public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
         return pipeline.bind(localAddress, promise);
     }
@@ -288,6 +293,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     @Override
     public ChannelFuture write(Object[] msgs, ChannelPromise promise) {
         return pipeline.write(new Object[]{msgs}, promise);
+    }
+
+    @Override
+    public ChannelFuture write(Object[] msgs, int index, int length, ChannelPromise promise) {
+        return pipeline.write(msgs, index, length, promise);
     }
 
     @Override
@@ -659,14 +669,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public void write(ChannelPromise promise, Object... msgs) {
-            for (Object m: msgs) {
-                if (m == null) {
-                    break;
-                }
-                outboundBuffer.add(promise, msgs);
-            }
-
+        public void write(Object[] msgs, int index, int length, ChannelPromise promise) {
+            outboundBuffer.add(msgs, index, length, promise);
             flush();
         }
 
@@ -710,10 +714,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     }
 
                     final Object[] messages = outboundBuffer.currentMessages;
-                    int messageIndex = doWrite(messages, outboundBuffer.currentMessageIndex);
-                    outboundBuffer.currentMessageIndex = messageIndex;
+                    int start = outboundBuffer.currentMessageStart;
+                    int end = outboundBuffer.currentMessageEnd;
+                    outboundBuffer.currentMessageStart = start = doWrite(messages, start, end - start);
 
-                    if (messageIndex < 0) {
+                    if (start < 0 || start >= end) {
                         promise.trySuccess();
                         if (!outboundBuffer.next()) {
                             break;
@@ -841,7 +846,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      *
      * @return the next index or {@code -1} if succeeded to write all messages
      */
-    protected abstract int doWrite(Object[] msgs, int index) throws Exception;
+    protected abstract int doWrite(Object[] msgs, int index, int length) throws Exception;
 
     protected static void checkEOF(FileRegion region, long writtenBytes) throws IOException {
         if (writtenBytes < region.count()) {

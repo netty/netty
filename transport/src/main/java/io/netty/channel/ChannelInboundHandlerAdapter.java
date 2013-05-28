@@ -80,8 +80,8 @@ public class ChannelInboundHandlerAdapter extends ChannelHandlerAdapter implemen
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object[] msgs) throws Exception {
-        ctx.fireMessageReceived(msgs);
+    public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+        ctx.fireMessageReceived(msgs, index, length);
     }
 
     /**
@@ -91,8 +91,7 @@ public class ChannelInboundHandlerAdapter extends ChannelHandlerAdapter implemen
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt)
-            throws Exception {
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         ctx.fireUserEventTriggered(evt);
     }
 }

@@ -228,13 +228,9 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
 
         @Override
         @SuppressWarnings("unchecked")
-        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs) {
-            for (Object m: msgs) {
-                if (m == null) {
-                    break;
-                }
-
-                Channel child = (Channel) m;
+        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) {
+            for (int i = 0; i < index + length; i ++) {
+                Channel child = (Channel) msgs[i];
                 child.pipeline().addLast(childHandler);
 
                 for (Entry<ChannelOption<?>, Object> e: childOptions) {

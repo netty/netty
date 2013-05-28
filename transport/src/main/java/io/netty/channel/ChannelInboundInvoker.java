@@ -84,6 +84,7 @@ interface ChannelInboundInvoker {
      */
     ChannelInboundInvoker fireMessageReceived(Object msg);
     ChannelInboundInvoker fireMessageReceived(Object... msgs);
+    ChannelInboundInvoker fireMessageReceived(Object[] msgs, int index, int length);
 
     /**
      * Triggers an {@link ChannelInboundHandler#channelReadSuspended(ChannelHandlerContext) channelReadSuspended}

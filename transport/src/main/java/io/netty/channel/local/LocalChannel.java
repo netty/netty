@@ -261,7 +261,7 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected int doWrite(Object[] msgs, final int index) throws Exception {
+    protected int doWrite(final Object[] msgs, final int index, final int length) throws Exception {
         if (state < 2) {
             throw new NotYetConnectedException();
         }
@@ -274,25 +274,16 @@ public class LocalChannel extends AbstractChannel {
         final EventLoop peerLoop = peer.eventLoop();
 
         if (peerLoop == eventLoop()) {
-            for (int i = index; i < msgs.length; i ++) {
-                Object m = msgs[i];
-                if (m == null) {
-                    break;
-                }
-                peer.inboundBuffer.add(m);
+            for (int i = index; i < index + length; i ++) {
+                peer.inboundBuffer.add(msgs[i]);
             }
             finishPeerRead(peer, peerPipeline);
         } else {
-            final Object[] msgsClone = msgs.clone();
             peerLoop.execute(new Runnable() {
                 @Override
                 public void run() {
-                    for (int i = index; i < msgsClone.length; i ++) {
-                        Object m = msgsClone[i];
-                        if (m == null) {
-                            break;
-                        }
-                        peer.inboundBuffer.add(m);
+                    for (int i = index; i < index + length; i++) {
+                        peer.inboundBuffer.add(msgs[i]);
                     }
                     finishPeerRead(peer, peerPipeline);
                 }

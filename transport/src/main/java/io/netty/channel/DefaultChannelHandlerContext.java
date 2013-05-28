@@ -343,11 +343,19 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (msg == null) {
             throw new NullPointerException("msg");
         }
-        return fireMessageReceived(new Object[] { msg });
+        return fireMessageReceived(new Object[] { msg }, 0, 1);
     }
 
     @Override
-    public ChannelHandlerContext fireMessageReceived(final Object... msgs) {
+    public ChannelHandlerContext fireMessageReceived(Object... msgs) {
+        if (msgs == null) {
+            throw new NullPointerException("msgs");
+        }
+        return fireMessageReceived(msgs, 0, msgs.length);
+    }
+
+    @Override
+    public ChannelHandlerContext fireMessageReceived(final Object[] msgs, final int index, final int length) {
         if (msgs == null) {
             throw new NullPointerException("msgs");
         }
@@ -355,22 +363,22 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         final DefaultChannelHandlerContext next = findContextInbound();
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            next.invokeMessageReceived(msgs);
+            next.invokeMessageReceived(msgs, index, length);
         } else {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    next.invokeMessageReceived(msgs);
+                    next.invokeMessageReceived(msgs, index, length);
                 }
             });
         }
         return this;
     }
 
-    private void invokeMessageReceived(Object... msgs) {
+    private void invokeMessageReceived(Object[] msgs, int index, int length) {
         ChannelInboundHandler handler = (ChannelInboundHandler) handler();
         try {
-            handler.messageReceived(this, msgs);
+            handler.messageReceived(this, msgs, index, length);
         } catch (Throwable t) {
             notifyHandlerException(t);
         }
@@ -442,7 +450,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelFuture write(Object[] msgs) {
-        return write(new Object[]{msgs}, newPromise());
+        return write(msgs, newPromise());
+    }
+
+    @Override
+    public ChannelFuture write(Object[] msgs, int index, int length) {
+        return write(msgs, index, length, newPromise());
     }
 
     @Override
@@ -646,21 +659,32 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelFuture write(Object msg, final ChannelPromise promise) {
-        return write(new Object[]{new Object[]{msg}}, promise);
+        if (msg == null) {
+            throw new NullPointerException("msg");
+        }
+        return write(new Object[] { msg }, 0, 1, promise);
     }
 
     @Override
-    public ChannelFuture write(final Object[] msgs, final ChannelPromise promise) {
+    public ChannelFuture write(Object[] msgs, ChannelPromise promise) {
+        if (msgs == null) {
+            throw new NullPointerException("msgs");
+        }
+        return write(msgs, 0, msgs.length, promise);
+    }
+
+    @Override
+    public ChannelFuture write(final Object[] msgs, final int index, final int length, final ChannelPromise promise) {
         validateFuture(promise, true);
 
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            invokeWrite(promise, msgs);
+            invokeWrite(msgs, index, length, promise);
         } else {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    invokeWrite(promise, msgs);
+                    invokeWrite(msgs, index, length, promise);
                 }
             });
         }
@@ -668,7 +692,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         return promise;
     }
 
-    private void invokeWrite(ChannelPromise promise, Object... msgs) {
+    private void invokeWrite(Object[] msgs, int index, int length, ChannelPromise promise) {
         Channel channel = channel();
         if (!channel.isActive() && !channel.isRegistered()) {
             promise.setFailure(new ClosedChannelException());
@@ -677,7 +701,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
         ChannelOutboundHandler handler = (ChannelOutboundHandler) handler();
         try {
-            handler.write(this, new Object[]{msgs}, promise);
+            handler.write(this, msgs, index, length, promise);
         } catch (Throwable t) {
             notifyHandlerException(t);
         }

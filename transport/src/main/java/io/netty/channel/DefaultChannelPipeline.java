@@ -784,6 +784,12 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
+    public ChannelPipeline fireMessageReceived(Object[] msgs, int index, int length) {
+        head.fireMessageReceived(msgs, index, length);
+        return this;
+    }
+
+    @Override
     public ChannelPipeline fireChannelReadSuspended() {
         head.fireChannelReadSuspended();
         if (channel.config().isAutoRead()) {
@@ -833,6 +839,11 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
+    public ChannelFuture write(Object[] msgs, int index, int length) {
+        return tail.write(msgs, index, length);
+    }
+
+    @Override
     public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
         return tail.bind(localAddress, promise);
     }
@@ -874,7 +885,12 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelFuture write(Object[] msgs, ChannelPromise promise) {
-        return tail.write(new Object[]{msgs}, promise);
+        return tail.write(msgs, promise);
+    }
+
+    @Override
+    public ChannelFuture write(Object[] msgs, int index, int length, ChannelPromise promise) {
+        return tail.write(msgs, index, length, promise);
     }
 
     private void checkDuplicateName(String name) {
@@ -945,9 +961,9 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs) throws Exception {
-            int size = 0;
-            for (Object m: msgs) {
+        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+            for (int i = index; i < index + length; i ++) {
+                Object m = msgs[i];
                 if (m == null) {
                     break;
                 }
@@ -957,13 +973,12 @@ final class DefaultChannelPipeline implements ChannelPipeline {
                                 "Please check your pipeline configuration.", m);
 
                 ByteBufUtil.release(m);
-                size ++;
             }
 
-            if (size != 0) {
+            if (length != 0) {
                 logger.warn(
                         "Discarded {} inbound message(s) that reached at the tail of the pipeline. " +
-                        "Please check your pipeline configuration.", size);
+                        "Please check your pipeline configuration.", length);
             }
         }
     }
@@ -1022,8 +1037,10 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object[] msgs, ChannelPromise promise) throws Exception {
-            unsafe.write(promise, msgs);
+        public void write(
+                ChannelHandlerContext ctx,
+                Object[] msgs, int index, int length, ChannelPromise promise) throws Exception {
+            unsafe.write(msgs, index, length, promise);
         }
 
         @Override
