@@ -15,11 +15,11 @@
  */
 package io.netty.example.factorial;
 
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.MessageList;
+import io.netty.channel.SimpleChannelInboundHandler;
 
 import java.math.BigInteger;
 import java.util.concurrent.BlockingQueue;
@@ -34,7 +34,7 @@ import java.util.logging.Logger;
  * to create a new handler instance whenever you create a new channel and insert
  * this handler to avoid a race condition.
  */
-public class FactorialClientHandler extends ChannelInboundMessageHandlerAdapter<BigInteger> {
+public class FactorialClientHandler extends SimpleChannelInboundHandler<BigInteger> {
 
     private static final Logger logger = Logger.getLogger(
             FactorialClientHandler.class.getName());
@@ -98,7 +98,7 @@ public class FactorialClientHandler extends ChannelInboundMessageHandlerAdapter<
     private void sendNumbers() {
         // Do not send more than 4096 numbers.
         boolean finished = false;
-        MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
+        MessageList<Object> out = MessageList.newInstance(4096);
         while (out.size() < 4096) {
             if (i <= count) {
                 out.add(Integer.valueOf(i));
@@ -109,7 +109,7 @@ public class FactorialClientHandler extends ChannelInboundMessageHandlerAdapter<
             }
         }
 
-        ChannelFuture f = ctx.flush();
+        ChannelFuture f = ctx.write(out);
         if (!finished) {
             f.addListener(numberSender);
         }

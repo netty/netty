@@ -18,8 +18,9 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.MessageList;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.SocketChannel;
 import org.junit.Test;
@@ -109,7 +110,7 @@ public class SocketShutdownOutputByPeerTest extends AbstractServerSocketTest {
         }
     }
 
-    private static class TestHandler extends ChannelInboundByteHandlerAdapter {
+    private static class TestHandler extends ChannelInboundHandlerAdapter {
         volatile SocketChannel ch;
         final BlockingQueue<Byte> queue = new LinkedBlockingQueue<Byte>();
         final CountDownLatch halfClosure = new CountDownLatch(1);
@@ -127,8 +128,11 @@ public class SocketShutdownOutputByPeerTest extends AbstractServerSocketTest {
         }
 
         @Override
-        public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-            queue.offer(in.readByte());
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            for (int i = 0; i < msgs.size(); i ++) {
+                queue.offer(((ByteBuf) msgs.get(i)).readByte());
+            }
+            msgs.releaseAllAndRecycle();
         }
 
         @Override

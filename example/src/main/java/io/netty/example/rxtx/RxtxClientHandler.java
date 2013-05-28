@@ -16,9 +16,10 @@
 package io.netty.example.rxtx;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MessageList;
 
-public class RxtxClientHandler extends ChannelInboundMessageHandlerAdapter<String> {
+public class RxtxClientHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
@@ -26,12 +27,16 @@ public class RxtxClientHandler extends ChannelInboundMessageHandlerAdapter<Strin
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
-        if ("OK".equals(msg)) {
-            System.out.println("Serial port responded to AT");
-        } else {
-            System.out.println("Serial port responded with not-OK: " + msg);
+    public void messageReceived(ChannelHandlerContext ctx,  MessageList<Object> msgs) throws Exception {
+        for (int i = 0; i < msgs.size(); i++) {
+            String msg = msgs.get(i).toString();
+            if ("OK".equals(msg)) {
+                System.out.println("Serial port responded to AT");
+            } else {
+                System.out.println("Serial port responded with not-OK: " + msg);
+            }
         }
+        msgs.releaseAllAndRecycle();
         ctx.close();
     }
 }

@@ -40,7 +40,7 @@ import static io.netty.handler.codec.http.HttpConstants.*;
  */
 public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageToByteEncoder<HttpObject> {
     private static final byte[] CRLF = { CR, LF };
-    private static final byte[] CRLF_END = { CR, LF, 0 };
+    private static final byte[] ZERO_CRLF = { '0', CR, LF };
     private static final byte[] HEADER_SEPARATOR = { COLON , SP };
     private static final int ST_INIT = 0;
     private static final int ST_CONTENT_NON_CHUNK = 1;
@@ -93,7 +93,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                 }
 
                 if (chunk instanceof LastHttpContent) {
-                    out.writeBytes(CRLF_END);
+                    out.writeBytes(ZERO_CRLF);
                     encodeTrailingHeaders(out, (LastHttpContent) chunk);
                     out.writeBytes(CRLF);
 

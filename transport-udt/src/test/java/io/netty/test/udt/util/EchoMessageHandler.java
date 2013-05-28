@@ -18,10 +18,10 @@ package io.netty.test.udt.util;
 
 import com.yammer.metrics.core.Meter;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MessageList;
 import io.netty.channel.udt.UdtMessage;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.util.internal.logging.InternalLogger;
@@ -32,8 +32,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  * between the echo peers by sending the first message to the other peer on
  * activation.
  */
-public class EchoMessageHandler extends
-        ChannelInboundMessageHandlerAdapter<UdtMessage> {
+public class EchoMessageHandler extends ChannelInboundHandlerAdapter {
 
     private static final InternalLogger log = InternalLoggerFactory.getInstance(EchoMessageHandler.class);
 
@@ -61,11 +60,7 @@ public class EchoMessageHandler extends
 
         log.info("ECHO active {}", NioUdtProvider.socketUDT(ctx.channel())
                 .toStringOptions());
-
-        final MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
-
-        out.add(message);
-        ctx.flush();
+        ctx.write(message);
     }
 
     @Override
@@ -75,18 +70,13 @@ public class EchoMessageHandler extends
     }
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx, final UdtMessage message) throws Exception {
-
-        final ByteBuf byteBuf = message.content();
-
-        if (meter != null) {
-            meter.mark(byteBuf.readableBytes());
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        for (int i = 0; i < msgs.size(); i ++) {
+            UdtMessage udtMsg = (UdtMessage) msgs.get(i);
+            if (meter != null) {
+                meter.mark(udtMsg.content().readableBytes());
+            }
         }
-
-        final MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
-
-        message.retain();
-        out.add(message);
-        ctx.flush();
+        ctx.write(msgs);
     }
 }

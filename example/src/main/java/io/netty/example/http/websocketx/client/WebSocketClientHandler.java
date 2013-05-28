@@ -40,8 +40,9 @@ package io.netty.example.http.websocketx.client;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.MessageList;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
@@ -50,7 +51,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.util.CharsetUtil;
 
-public class WebSocketClientHandler extends ChannelInboundMessageHandlerAdapter<Object> {
+public class WebSocketClientHandler extends ChannelInboundHandlerAdapter {
 
     private final WebSocketClientHandshaker handshaker;
     private ChannelPromise handshakeFuture;
@@ -79,31 +80,35 @@ public class WebSocketClientHandler extends ChannelInboundMessageHandlerAdapter<
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-        Channel ch = ctx.channel();
-        if (!handshaker.isHandshakeComplete()) {
-            handshaker.finishHandshake(ch, (FullHttpResponse) msg);
-            System.out.println("WebSocket Client connected!");
-            handshakeFuture.setSuccess();
-            return;
-        }
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        for (int i = 0; i < msgs.size(); i++) {
+            Object msg = msgs.get(i);
+            Channel ch = ctx.channel();
+            if (!handshaker.isHandshakeComplete()) {
+                handshaker.finishHandshake(ch, (FullHttpResponse) msg);
+                System.out.println("WebSocket Client connected!");
+                handshakeFuture.setSuccess();
+                continue;
+            }
 
-        if (msg instanceof FullHttpResponse) {
-            FullHttpResponse response = (FullHttpResponse) msg;
-            throw new Exception("Unexpected FullHttpResponse (getStatus=" + response.getStatus() + ", content="
-                    + response.content().toString(CharsetUtil.UTF_8) + ')');
-        }
+            if (msg instanceof FullHttpResponse) {
+                FullHttpResponse response = (FullHttpResponse) msg;
+                throw new Exception("Unexpected FullHttpResponse (getStatus=" + response.getStatus() + ", content="
+                        + response.content().toString(CharsetUtil.UTF_8) + ')');
+            }
 
-        WebSocketFrame frame = (WebSocketFrame) msg;
-        if (frame instanceof TextWebSocketFrame) {
-            TextWebSocketFrame textFrame = (TextWebSocketFrame) frame;
-            System.out.println("WebSocket Client received message: " + textFrame.text());
-        } else if (frame instanceof PongWebSocketFrame) {
-            System.out.println("WebSocket Client received pong");
-        } else if (frame instanceof CloseWebSocketFrame) {
-            System.out.println("WebSocket Client received closing");
-            ch.close();
+            WebSocketFrame frame = (WebSocketFrame) msg;
+            if (frame instanceof TextWebSocketFrame) {
+                TextWebSocketFrame textFrame = (TextWebSocketFrame) frame;
+                System.out.println("WebSocket Client received message: " + textFrame.text());
+            } else if (frame instanceof PongWebSocketFrame) {
+                System.out.println("WebSocket Client received pong");
+            } else if (frame instanceof CloseWebSocketFrame) {
+                System.out.println("WebSocket Client received closing");
+                ch.close();
+            }
         }
+        msgs.releaseAllAndRecycle();
     }
 
     @Override

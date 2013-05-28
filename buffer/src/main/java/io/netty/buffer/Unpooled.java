@@ -23,11 +23,10 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Queue;
 
 
 /**
- * Creates a new {@link ByteBuf} or a new {@link MessageBuf} by allocating new space or by wrapping
+ * Creates a new {@link ByteBuf} by allocating new space or by wrapping
  * or copying existing byte arrays, byte buffers and a string.
  *
  * <h3>Use static import</h3>
@@ -93,39 +92,6 @@ public final class Unpooled {
      * A buffer whose capacity is {@code 0}.
      */
     public static final ByteBuf EMPTY_BUFFER = ALLOC.buffer(0, 0);
-
-    /**
-     * Creates a new {@link MessageBuf} with reasonably small initial capacity, which
-     * expands its capacity boundlessly on demand.
-     */
-    public static <T> MessageBuf<T> messageBuffer() {
-        return new DefaultMessageBuf<T>();
-    }
-
-    /**
-     * Creates a new {@link MessageBuf} with the specified {@code initialCapacity}.
-     */
-    public static <T> MessageBuf<T> messageBuffer(int initialCapacity) {
-        return new DefaultMessageBuf<T>(initialCapacity);
-    }
-
-    /**
-     * Creates a new {@link MessageBuf} with the specified {@code initialCapacity} and
-     * {@code maxCapacity}.
-     */
-    public static <T> MessageBuf<T> messageBuffer(int initialCapacity, int maxCapacity) {
-        return new DefaultMessageBuf<T>(initialCapacity, maxCapacity);
-    }
-
-    /**
-     * Creates a new {@link MessageBuf} which wraps the given {@code queue}.
-     */
-    public static <T> MessageBuf<T> wrappedBuffer(Queue<T> queue) {
-        if (queue instanceof MessageBuf) {
-            return (MessageBuf<T>) queue;
-        }
-        return new QueueBackedMessageBuf<T>(queue);
-    }
 
     /**
      * Creates a new big-endian Java heap buffer with reasonably small initial capacity, which
@@ -681,7 +647,7 @@ public final class Unpooled {
     }
 
     private static ByteBuf copiedBuffer(CharBuffer buffer, Charset charset) {
-        ByteBuffer dst = BufUtil.encodeString(buffer, charset);
+        ByteBuffer dst = ByteBufUtil.encodeString(buffer, charset);
         ByteBuf result = wrappedBuffer(dst.array());
         result.writerIndex(dst.remaining());
         return result;

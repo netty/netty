@@ -15,9 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.BufType;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
+import io.netty.buffer.ByteBufUtil;
 
 import java.net.SocketAddress;
 
@@ -27,31 +25,19 @@ import java.net.SocketAddress;
  * <ul>
  * <li>{@link #connect(SocketAddress, ChannelPromise)}</li>
  * <li>{@link #disconnect(ChannelPromise)}</li>
- * <li>{@link #flush(ChannelPromise)}</li>
+ * <li>{@link ChannelOutboundInvoker#write(Object, ChannelPromise)}</li>
  * <li>and the shortcut methods which calls the methods mentioned above
  * </ul>
  */
 public abstract class AbstractServerChannel extends AbstractChannel implements ServerChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     /**
      * Creates a new instance.
      */
     protected AbstractServerChannel(Integer id) {
         super(null, id);
-    }
-
-    @Override
-    public ByteBuf outboundByteBuffer() {
-        throw new NoSuchBufferException(String.format(
-                "%s does not have an outbound buffer.", ServerChannel.class.getSimpleName()));
-    }
-
-    @Override
-    public <T> MessageBuf<T> outboundMessageBuffer() {
-        throw new NoSuchBufferException(String.format(
-                "%s does not have an outbound buffer.", ServerChannel.class.getSimpleName()));
     }
 
     @Override
@@ -84,22 +70,28 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
         return new DefaultServerUnsafe();
     }
 
+    @Override
+    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
     private final class DefaultServerUnsafe extends AbstractUnsafe {
         @Override
-        public void flush(final ChannelPromise future) {
-            reject(future);
+        public void write(MessageList<?> msgs, ChannelPromise promise) {
+            reject(promise);
+            int size = msgs.size();
+            for (int i = 0; i < size; i ++) {
+                ByteBufUtil.release(msgs.get(i));
+            }
         }
 
         @Override
-        public void connect(
-                final SocketAddress remoteAddress, final SocketAddress localAddress,
-                final ChannelPromise future) {
-            reject(future);
+        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+            reject(promise);
         }
 
-        private void reject(ChannelPromise future) {
-            Exception cause = new UnsupportedOperationException();
-            future.setFailure(cause);
+        private void reject(ChannelPromise promise) {
+            promise.setFailure(new UnsupportedOperationException());
         }
     }
 }

@@ -16,13 +16,18 @@
 package io.netty.example.localecho;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MessageList;
 
-public class LocalEchoClientHandler extends ChannelInboundMessageHandlerAdapter<String> {
+public class LocalEchoClientHandler extends ChannelInboundHandlerAdapter {
+
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, String msg) {
-        // Print as received
-        System.out.println(msg);
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        for (int i = 0; i < msgs.size(); i++) {
+            // Print as received
+            System.out.println(msgs.get(i));
+        }
+        msgs.releaseAllAndRecycle();
     }
 
     @Override

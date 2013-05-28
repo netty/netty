@@ -17,15 +17,17 @@ package io.netty.channel.nio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.FileRegion;
+import io.netty.channel.MessageList;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 
 import java.io.IOException;
-import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.WritableByteChannel;
 
 /**
  * {@link AbstractNioChannel} base class for {@link Channel}s that operate on bytes.
@@ -50,11 +52,14 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     }
 
     private final class NioByteUnsafe extends AbstractNioUnsafe {
+        private RecvByteBufAllocator.Handle allocHandle;
+
         @Override
         public void read() {
             assert eventLoop().inEventLoop();
             final SelectionKey key = selectionKey();
-            if (!config().isAutoRead()) {
+            final ChannelConfig config = config();
+            if (!config.isAutoRead()) {
                 int interestOps = key.interestOps();
                 if ((interestOps & readInterestOp) != 0) {
                     // only remove readInterestOp if needed
@@ -63,62 +68,37 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             }
 
             final ChannelPipeline pipeline = pipeline();
-            final ByteBuf byteBuf = pipeline.inboundByteBuffer();
-            boolean closed = false;
-            boolean read = false;
-            boolean firedChannelReadSuspended = false;
-            try {
-                expandReadBuffer(byteBuf);
-                loop: for (;;) {
-                    int localReadAmount = doReadBytes(byteBuf);
-                    if (localReadAmount > 0) {
-                        read = true;
-                    } else if (localReadAmount < 0) {
-                        closed = true;
-                        break;
-                    }
 
-                    switch (expandReadBuffer(byteBuf)) {
-                    case 0:
-                        // Read all - stop reading.
-                        break loop;
-                    case 1:
-                        // Keep reading until everything is read.
-                        break;
-                    case 2:
-                        // Let the inbound handler drain the buffer and continue reading.
-                        if (read) {
-                            read = false;
-                            pipeline.fireInboundBufferUpdated();
-                            if (!byteBuf.isWritable()) {
-                                throw new IllegalStateException(
-                                        "an inbound handler whose buffer is full must consume at " +
-                                        "least one byte.");
-                            }
-                        }
-                        if (!config().isAutoRead()) {
-                            // stop reading until next Channel.read() call
-                            // See https://github.com/netty/netty/issues/1363
-                            break loop;
-                        }
-                    }
+            RecvByteBufAllocator.Handle allocHandle = this.allocHandle;
+            if (allocHandle == null) {
+                this.allocHandle = allocHandle = config.getRecvByteBufAllocator().newHandle();
+            }
+
+            ByteBuf byteBuf = allocHandle.allocate(config.getAllocator());
+            boolean closed = false;
+            Throwable exception = null;
+            try {
+                int localReadAmount = doReadBytes(byteBuf);
+                if (localReadAmount < 0) {
+                    closed = true;
                 }
             } catch (Throwable t) {
-                if (read) {
-                    read = false;
-                    pipeline.fireInboundBufferUpdated();
+                exception = t;
+            } finally {
+                int readBytes = byteBuf.readableBytes();
+                allocHandle.record(readBytes);
+                if (readBytes != 0) {
+                    pipeline.fireMessageReceived(byteBuf);
+                } else {
+                    byteBuf.release();
                 }
 
-                if (t instanceof IOException) {
-                    closed = true;
-                } else if (!closed) {
-                    firedChannelReadSuspended = true;
-                    pipeline.fireChannelReadSuspended();
-                }
-                pipeline().fireExceptionCaught(t);
-            } finally {
-                if (read) {
-                    pipeline.fireInboundBufferUpdated();
+                if (exception != null) {
+                    if (exception instanceof IOException) {
+                        closed = true;
+                    }
+
+                    pipeline().fireExceptionCaught(exception);
                 }
 
                 if (closed) {
@@ -131,7 +111,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                             close(voidPromise());
                         }
                     }
-                } else if (!firedChannelReadSuspended) {
+                } else {
                     pipeline.fireChannelReadSuspended();
                 }
             }
@@ -139,86 +119,55 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     }
 
     @Override
-    protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
-        for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
-            int localFlushedAmount = doWriteBytes(buf, i == 0);
-            if (localFlushedAmount > 0 || !buf.isReadable()) {
-                break;
-            }
-        }
-    }
+    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
+        Object msg = msgs.get(index);
 
-    @Override
-    protected void doFlushFileRegion(final FlushTask task) throws Exception {
-        if (javaChannel() instanceof WritableByteChannel) {
-            TransferTask transferTask = new TransferTask(task, (WritableByteChannel) javaChannel());
-            transferTask.transfer();
+        if (msg instanceof ByteBuf) {
+            ByteBuf buf = (ByteBuf) msg;
+            for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
+                int localFlushedAmount = doWriteBytes(buf, i == 0);
+                if (localFlushedAmount > 0 || !buf.isReadable()) {
+                    break;
+                }
+            }
+            // We may could optimize this to write multiple buffers at once (scattering)
+            if (!buf.isReadable()) {
+                buf.release();
+                return 1;
+            }
+        } else if (msg instanceof FileRegion) {
+            FileRegion region = (FileRegion) msg;
+
+            for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
+                long localFlushedAmount = doWriteFileRegion(region, i == 0);
+                if (localFlushedAmount == -1) {
+                    checkEOF(region);
+                    return 1;
+                }
+                if (localFlushedAmount > 0) {
+                    break;
+                }
+            }
+            if (region.transfered() >= region.count()) {
+                region.release();
+                return 1;
+            }
         } else {
-            throw new UnsupportedOperationException("Underlying Channel is not of instance "
-                    + WritableByteChannel.class);
+            throw new UnsupportedOperationException("Not support writing of message " + msg);
         }
+
+        return 0;
     }
 
-    private final class TransferTask implements NioTask<SelectableChannel> {
-        private long writtenBytes;
-        private final FlushTask task;
-        private final WritableByteChannel wch;
-
-        TransferTask(FlushTask task, WritableByteChannel wch) {
-            this.task = task;
-            this.wch = wch;
-        }
-
-        void transfer() {
-            try {
-                for (;;) {
-                    long localWrittenBytes = task.region().transferTo(wch, writtenBytes);
-                    if (localWrittenBytes == 0) {
-                        // reschedule for write once the channel is writable again
-                        eventLoop().executeWhenWritable(
-                                AbstractNioByteChannel.this, this);
-                        return;
-                    } else if (localWrittenBytes == -1) {
-                        checkEOF(task.region(), writtenBytes);
-                        task.setSuccess();
-                        return;
-                    } else {
-                        writtenBytes += localWrittenBytes;
-                        task.setProgress(writtenBytes);
-
-                        if (writtenBytes >= task.region().count()) {
-                            task.setSuccess();
-                            return;
-                        }
-                    }
-                }
-            } catch (Throwable cause) {
-                task.setFailure(cause);
-            }
-        }
-
-        @Override
-        public void channelReady(SelectableChannel ch, SelectionKey key) throws Exception {
-            transfer();
-        }
-
-        @Override
-        public void channelUnregistered(SelectableChannel ch, Throwable cause) throws Exception {
-            if (cause != null) {
-                task.setFailure(cause);
-                return;
-            }
-
-            if (writtenBytes < task.region().count()) {
-                if (!isOpen()) {
-                    task.setFailure(new ClosedChannelException());
-                } else {
-                    task.setFailure(new IllegalStateException(
-                            "Channel was unregistered before the region could be fully written"));
-                }
-            }
-        }
-    }
+    /**
+     * Write a {@link FileRegion}
+     *
+     * @param region        the {@link FileRegion} from which the bytes should be written
+     * @param lastSpin      {@code true} if this is the last write try
+     * @return amount       the amount of written bytes
+     * @throws Exception    thrown if an error accour
+     */
+    protected abstract long doWriteFileRegion(FileRegion region, boolean lastSpin) throws Exception;
 
     /**
      * Read bytes into the given {@link ByteBuf} and return the amount.

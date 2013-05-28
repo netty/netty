@@ -21,12 +21,12 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOperationHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.ChannelStateHandlerAdapter;
+import io.netty.channel.MessageList;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.channel.FileRegion;
 
 import java.net.SocketAddress;
 import java.util.concurrent.ScheduledFuture;
@@ -98,7 +98,7 @@ import java.util.concurrent.TimeUnit;
  * @see ReadTimeoutHandler
  * @see WriteTimeoutHandler
  */
-public class IdleStateHandler extends ChannelStateHandlerAdapter implements ChannelOperationHandler {
+public class IdleStateHandler extends ChannelInboundHandlerAdapter implements ChannelOutboundHandler {
 
     private final long readerIdleTimeMillis;
     private final long writerIdleTimeMillis;
@@ -251,10 +251,10 @@ public class IdleStateHandler extends ChannelStateHandlerAdapter implements Chan
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
         lastReadTime = System.currentTimeMillis();
         firstReaderIdleEvent = firstAllIdleEvent = true;
-        ctx.fireInboundBufferUpdated();
+        ctx.fireMessageReceived(msgs);
     }
 
     @Override
@@ -263,8 +263,7 @@ public class IdleStateHandler extends ChannelStateHandlerAdapter implements Chan
     }
 
     @Override
-
-    public void flush(final ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
         promise.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
@@ -272,8 +271,7 @@ public class IdleStateHandler extends ChannelStateHandlerAdapter implements Chan
                 firstWriterIdleEvent = firstAllIdleEvent = true;
             }
         });
-
-        ctx.flush(promise);
+        ctx.write(msgs, promise);
     }
 
     @Override
@@ -300,18 +298,6 @@ public class IdleStateHandler extends ChannelStateHandlerAdapter implements Chan
     @Override
     public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         ctx.deregister(promise);
-    }
-
-    @Override
-    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise promise) throws Exception {
-        promise.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                lastWriteTime = System.currentTimeMillis();
-                firstWriterIdleEvent = firstAllIdleEvent = true;
-            }
-        });
-        ctx.sendFile(region, promise);
     }
 
     private void initialize(ChannelHandlerContext ctx) {

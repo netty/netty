@@ -20,9 +20,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelStateHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoop;
-import io.netty.channel.FileRegion;
+import io.netty.channel.MessageList;
 import io.netty.channel.ServerChannel;
 import io.netty.util.CharsetUtil;
 
@@ -78,7 +78,7 @@ import java.util.Set;
  *     b.releaseExternalResources();
  * }
  *
- * public class MyHandler extends {@link ChannelStateHandlerAdapter} {
+ * public class MyHandler extends {@link ChannelInboundHandlerAdapter} {
  *     {@code @Override}
  *     public void channelActive({@link ChannelHandlerContext} ctx) {
  *         // closed on shutdown.
@@ -117,23 +117,17 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
     ChannelGroupFuture write(Object message);
 
     /**
-     * Writes the specified {@link FileRegion} to all {@link Channel}s in this
-     * group. Please note that this operation is asynchronous as
-     * {@link Channel#sendFile(FileRegion)} is.
+     * Writes the specified {@code messages} to all {@link Channel}s in this
+     * group. If the specified {@code messages} are an instance of
+     * {@link ByteBuf}, it is automatically
+     * {@linkplain ByteBuf#duplicate() duplicated} to avoid a race
+     * condition. Please note that this operation is asynchronous as
+     * {@link Channel#write(Object)} is.
      *
      * @return the {@link ChannelGroupFuture} instance that notifies when
      *         the operation is done for all channels
      */
-    ChannelGroupFuture sendFile(FileRegion region);
-
-    /**
-     * Flush all {@link Channel} in this group. Please note that this operation
-     * is asynchronous as {@link Channel#flush()} is.
-     *
-     * @return the {@link ChannelGroupFuture} instance that notifies when
-     *         the operation is done for all channels
-     */
-    ChannelGroupFuture flush();
+    ChannelGroupFuture write(MessageList<Object> messages);
 
     /**
      * Disconnects all {@link Channel}s in this group from their remote peers.

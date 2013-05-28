@@ -18,6 +18,7 @@ package io.netty.channel.rxtx;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.RecvByteBufAllocator;
 
 import java.util.Map;
 
@@ -192,12 +193,23 @@ final class DefaultRxtxChannelConfig extends DefaultChannelConfig implements Rxt
     }
 
     @Override
+    public RxtxChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
+        super.setRecvByteBufAllocator(allocator);
+        return this;
+    }
+
+    @Override
     public RxtxChannelConfig setAutoRead(boolean autoRead) {
         return (RxtxChannelConfig) super.setAutoRead(autoRead);
     }
 
     @Override
-    public RxtxChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type) {
-        return (RxtxChannelConfig) super.setDefaultHandlerByteBufType(type);
+    public RxtxChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
+        return (RxtxChannelConfig) super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
+    }
+
+    @Override
+    public RxtxChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
+        return (RxtxChannelConfig) super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
     }
 }

@@ -17,7 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.embedded.EmbeddedByteChannel;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import org.junit.Assert;
 import org.junit.Test;
@@ -32,10 +32,11 @@ public class HttpServerCodecTest {
 
         int maxChunkSize = 2000;
         HttpServerCodec httpServerCodec = new HttpServerCodec(1000, 1000, maxChunkSize);
-        EmbeddedByteChannel decoderEmbedder = new EmbeddedByteChannel(httpServerCodec);
+        EmbeddedChannel decoderEmbedder = new EmbeddedChannel(httpServerCodec);
 
         int totalContentLength = maxChunkSize * 5;
-        decoderEmbedder.writeInbound(Unpooled.copiedBuffer("PUT /test HTTP/1.1\r\n" +
+        decoderEmbedder.writeInbound(Unpooled.copiedBuffer(
+                "PUT /test HTTP/1.1\r\n" +
                 "Content-Length: " + totalContentLength + "\r\n" +
                 "\r\n", CharsetUtil.UTF_8));
 

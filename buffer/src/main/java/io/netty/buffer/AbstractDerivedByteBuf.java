@@ -52,14 +52,4 @@ public abstract class AbstractDerivedByteBuf extends AbstractByteBuf {
     public final boolean release(int decrement) {
         return unwrap().release(decrement);
     }
-
-    @Override
-    public final ByteBuf suspendIntermediaryDeallocations() {
-        throw new UnsupportedOperationException("derived");
-    }
-
-    @Override
-    public final ByteBuf resumeIntermediaryDeallocations() {
-        throw new UnsupportedOperationException("derived");
-    }
 }

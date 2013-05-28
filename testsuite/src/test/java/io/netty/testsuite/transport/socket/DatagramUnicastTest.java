@@ -19,7 +19,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MessageList;
 import io.netty.channel.socket.DatagramPacket;
 import org.junit.Test;
 
@@ -38,22 +39,21 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
     public void testSimpleSend(Bootstrap sb, Bootstrap cb) throws Throwable {
         final CountDownLatch latch = new CountDownLatch(1);
 
-        sb.handler(new ChannelInboundMessageHandlerAdapter<DatagramPacket>() {
+        sb.handler(new ChannelInboundHandlerAdapter() {
             @Override
-            public void messageReceived(
-                    ChannelHandlerContext ctx,
-                    DatagramPacket msg) throws Exception {
-                assertEquals(1, msg.content().readInt());
+            public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+                assertEquals(1, msgs.size());
+                assertEquals(1, ((DatagramPacket) msgs.get(0)).content().readInt());
+                msgs.releaseAllAndRecycle();
                 latch.countDown();
             }
         });
 
-        cb.handler(new ChannelInboundMessageHandlerAdapter<DatagramPacket>() {
+        cb.handler(new ChannelInboundHandlerAdapter() {
             @Override
-            public void messageReceived(
-                    ChannelHandlerContext ctx,
-                    DatagramPacket msg) throws Exception {
+            public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
                 // Nothing will be sent.
+                msgs.releaseAllAndRecycle();
             }
         });
 

@@ -23,17 +23,23 @@ import java.nio.channels.CompletionHandler;
 /**
  * Special {@link CompletionHandler} which makes sure that the callback methods gets executed in the {@link EventLoop}
  */
-public abstract class AioCompletionHandler<V, A extends Channel> implements CompletionHandler<V, A> {
+public abstract class AioCompletionHandler<C extends Channel, V, A> implements CompletionHandler<V, A> {
+
+    private final C channel;
+
+    protected AioCompletionHandler(C channel) {
+        this.channel = channel;
+    }
 
     /**
      * See {@link CompletionHandler#completed(Object, Object)}
      */
-    protected abstract void completed0(V result, A channel);
+    protected abstract void completed0(C channel, V result, A attachment);
 
     /**
      * Set {@link CompletionHandler#failed(Throwable, Object)}
      */
-    protected abstract void failed0(Throwable exc, A channel);
+    protected abstract void failed0(C channel, Throwable exc, A attachment);
 
     // According to JDK AIO documentation, the ExecutorService a user specified must not call the Runnable given by
     // JDK AIO implementation directly.  However, we violates that rull by calling Runnable.run() directly for
@@ -49,14 +55,14 @@ public abstract class AioCompletionHandler<V, A extends Channel> implements Comp
     };
 
     @Override
-    public final void completed(final V result, final A channel) {
+    public final void completed(final V result, final A attachment) {
         EventLoop loop = channel.eventLoop();
         if (loop.inEventLoop()) {
             Integer d = STACK_DEPTH.get();
             if (d < MAX_STACK_DEPTH) {
                 STACK_DEPTH.set(d + 1);
                 try {
-                    completed0(result, channel);
+                    completed0(channel, result, attachment);
                 } finally {
                     STACK_DEPTH.set(d);
                 }
@@ -66,7 +72,7 @@ public abstract class AioCompletionHandler<V, A extends Channel> implements Comp
                 loop.execute(new AioEventLoop.RecursionBreakingRunnable() {
                     @Override
                     public void run() {
-                        completed0(result, channel);
+                        completed0(channel, result, attachment);
                     }
                 });
             }
@@ -74,21 +80,21 @@ public abstract class AioCompletionHandler<V, A extends Channel> implements Comp
             loop.execute(new Runnable() {
                 @Override
                 public void run() {
-                    completed0(result, channel);
+                    completed0(channel, result, attachment);
                 }
             });
         }
     }
 
     @Override
-    public final void failed(final Throwable exc, final A channel) {
+    public final void failed(final Throwable exc, final A attachment) {
         EventLoop loop = channel.eventLoop();
         if (loop.inEventLoop()) {
             Integer d = STACK_DEPTH.get();
             if (d < MAX_STACK_DEPTH) {
                 STACK_DEPTH.set(d + 1);
                 try {
-                    failed0(exc, channel);
+                    failed0(channel, exc, attachment);
                 } finally {
                     STACK_DEPTH.set(d);
                 }
@@ -98,7 +104,7 @@ public abstract class AioCompletionHandler<V, A extends Channel> implements Comp
                 loop.execute(new AioEventLoop.RecursionBreakingRunnable() {
                     @Override
                     public void run() {
-                        failed0(exc, channel);
+                        failed0(channel, exc, attachment);
                     }
                 });
             }
@@ -106,7 +112,7 @@ public abstract class AioCompletionHandler<V, A extends Channel> implements Comp
             loop.execute(new Runnable() {
                 @Override
                 public void run() {
-                    failed0(exc, channel);
+                    failed0(channel, exc, attachment);
                 }
             });
         }

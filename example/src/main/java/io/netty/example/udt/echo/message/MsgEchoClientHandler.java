@@ -18,10 +18,10 @@ package io.netty.example.udt.echo.message;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Meter;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MessageList;
 import io.netty.channel.udt.UdtMessage;
 import io.netty.channel.udt.nio.NioUdtProvider;
 
@@ -34,8 +34,7 @@ import java.util.logging.Logger;
  * traffic between the echo client and server by sending the first message to
  * the server on activation.
  */
-public class MsgEchoClientHandler extends
-        ChannelInboundMessageHandlerAdapter<UdtMessage> {
+public class MsgEchoClientHandler extends ChannelInboundHandlerAdapter {
 
     private static final Logger log = Logger.getLogger(MsgEchoClientHandler.class.getName());
 
@@ -55,9 +54,7 @@ public class MsgEchoClientHandler extends
     @Override
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
         log.info("ECHO active " + NioUdtProvider.socketUDT(ctx.channel()).toStringOptions());
-        final MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
-        out.add(message);
-        ctx.flush();
+        ctx.write(message);
     }
 
     @Override
@@ -68,13 +65,13 @@ public class MsgEchoClientHandler extends
     }
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx,
-            final UdtMessage message) throws Exception {
-        final ByteBuf byteBuf = message.content();
-        meter.mark(byteBuf.readableBytes());
-        final MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
-        out.add(message.retain());
-        ctx.flush();
-    }
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        MessageList<UdtMessage> buffers = msgs.cast();
 
+        for (int i = 0; i < buffers.size(); i++) {
+            UdtMessage message = buffers.get(i);
+            meter.mark(message.content().readableBytes());
+        }
+        ctx.write(msgs);
+    }
 }

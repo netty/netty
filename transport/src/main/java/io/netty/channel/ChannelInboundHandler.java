@@ -15,19 +15,55 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.Buf;
-
 /**
- * {@link ChannelStateHandler} which handles inbound data.
+ * {@link ChannelHandler} which adds callbacks for state changes. This allows the user
+ * to hook in to state changes easily.
  */
-interface ChannelInboundHandler extends ChannelStateHandler {
+public interface ChannelInboundHandler extends ChannelHandler {
+
     /**
-     * Returns a new buffer which will be used to consume inbound data for the given {@link ChannelHandlerContext}.
-     * <p>
-     * Please note that this method can be called from any thread repeatatively, and thus you should neither perform
-     * stateful operation nor keep the reference of the created buffer as a member variable.  Get it always using
-     * {@link ChannelHandlerContext#inboundByteBuffer()} or {@link ChannelHandlerContext#inboundMessageBuffer()}.
-     * </p>
+     * The {@link Channel} of the {@link ChannelHandlerContext} was registered with its {@link EventLoop}
      */
-    Buf newInboundBuffer(ChannelHandlerContext ctx) throws Exception;
+    void channelRegistered(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * The {@link Channel} of the {@link ChannelHandlerContext} was unregistered from its {@link EventLoop}
+     */
+    void channelUnregistered(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * The {@link Channel} of the {@link ChannelHandlerContext} is now active
+     */
+    void channelActive(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * The {@link Channel} of the {@link ChannelHandlerContext} was registered is now inactive and reached its
+     * end of lifetime.
+     */
+    void channelInactive(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * Invoked when a {@link ChannelHandlerContext#read()} is finished and the inbound buffer of this handler will not
+     * be updated until another {@link ChannelHandlerContext#read()} request is issued.
+     */
+    void channelReadSuspended(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * The inbound buffer of the {@link ChannelHandlerContext} was updated with new data.
+     * This means something may be ready to get processed by the actual {@link ChannelInboundHandler}
+     * implementation. It's up to the implementation to consume it or keep it in the buffer
+     * to wait for more data and consume it later.
+     */
+    void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception;
+
+    /**
+     * Gets called if an user event was triggered.
+     */
+    void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception;
+
+    /**
+     * Gets called once the writable state of a {@link Channel} changed. You can check the state with
+     * {@link Channel#isWritable()}.
+     */
+    void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception;
 }

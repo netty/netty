@@ -142,20 +142,20 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         a.writerIndex(a.writerIndex() + 1);
         b.writerIndex(b.writerIndex() + 1);
         assertEquals(a.writerIndex(), b.writerIndex());
-        assertTrue(BufUtil.equals(a, b));
+        assertTrue(ByteBufUtil.equals(a, b));
         // now discard
         a.discardReadBytes();
         b.discardReadBytes();
         assertEquals(a.readerIndex(), b.readerIndex());
         assertEquals(a.writerIndex(), b.writerIndex());
-        assertTrue(BufUtil.equals(a, b));
+        assertTrue(ByteBufUtil.equals(a, b));
         a.resetReaderIndex();
         b.resetReaderIndex();
         assertEquals(a.readerIndex(), b.readerIndex());
         a.resetWriterIndex();
         b.resetWriterIndex();
         assertEquals(a.writerIndex(), b.writerIndex());
-        assertTrue(BufUtil.equals(a, b));
+        assertTrue(ByteBufUtil.equals(a, b));
     }
 
     @Test
@@ -231,7 +231,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         b = freeLater(wrappedBuffer(
                 wrappedBuffer(new byte[] { 1 }).order(order),
                 wrappedBuffer(new byte[] { 2 }).order(order)));
-        assertFalse(BufUtil.equals(a, b));
+        assertFalse(ByteBufUtil.equals(a, b));
 
         // Same content, same firstIndex, short length.
         a = freeLater(wrappedBuffer(new byte[] { 1, 2, 3 }).order(order));
@@ -239,28 +239,28 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
                 wrappedBuffer(new byte[]{1}).order(order),
                 wrappedBuffer(new byte[]{2}).order(order),
                 wrappedBuffer(new byte[]{3}).order(order)));
-        assertTrue(BufUtil.equals(a, b));
+        assertTrue(ByteBufUtil.equals(a, b));
 
         // Same content, different firstIndex, short length.
         a = freeLater(wrappedBuffer(new byte[] { 1, 2, 3 }).order(order));
         b = freeLater(wrappedBuffer(
                 wrappedBuffer(new byte[] { 0, 1, 2, 3, 4 }, 1, 2).order(order),
                 wrappedBuffer(new byte[] { 0, 1, 2, 3, 4 }, 3, 1).order(order)));
-        assertTrue(BufUtil.equals(a, b));
+        assertTrue(ByteBufUtil.equals(a, b));
 
         // Different content, same firstIndex, short length.
         a = freeLater(wrappedBuffer(new byte[] { 1, 2, 3 }).order(order));
         b = freeLater(wrappedBuffer(
                 wrappedBuffer(new byte[] { 1, 2 }).order(order),
                 wrappedBuffer(new byte[] { 4 }).order(order)));
-        assertFalse(BufUtil.equals(a, b));
+        assertFalse(ByteBufUtil.equals(a, b));
 
         // Different content, different firstIndex, short length.
         a = freeLater(wrappedBuffer(new byte[] { 1, 2, 3 }).order(order));
         b = freeLater(wrappedBuffer(
                 wrappedBuffer(new byte[] { 0, 1, 2, 4, 5 }, 1, 2).order(order),
                 wrappedBuffer(new byte[] { 0, 1, 2, 4, 5 }, 3, 1).order(order)));
-        assertFalse(BufUtil.equals(a, b));
+        assertFalse(ByteBufUtil.equals(a, b));
 
         // Same content, same firstIndex, long length.
         a = freeLater(wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }).order(order));
@@ -268,28 +268,28 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
                 wrappedBuffer(new byte[] { 1, 2, 3 }).order(order),
                 wrappedBuffer(new byte[] { 4, 5, 6 }).order(order),
                 wrappedBuffer(new byte[] { 7, 8, 9, 10 }).order(order)));
-        assertTrue(BufUtil.equals(a, b));
+        assertTrue(ByteBufUtil.equals(a, b));
 
         // Same content, different firstIndex, long length.
         a = freeLater(wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }).order(order));
         b = freeLater(wrappedBuffer(
                 wrappedBuffer(new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}, 1, 5).order(order),
                 wrappedBuffer(new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}, 6, 5).order(order)));
-        assertTrue(BufUtil.equals(a, b));
+        assertTrue(ByteBufUtil.equals(a, b));
 
         // Different content, same firstIndex, long length.
         a = freeLater(wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }).order(order));
         b = freeLater(wrappedBuffer(
                 wrappedBuffer(new byte[] { 1, 2, 3, 4, 6 }).order(order),
                 wrappedBuffer(new byte[] { 7, 8, 5, 9, 10 }).order(order)));
-        assertFalse(BufUtil.equals(a, b));
+        assertFalse(ByteBufUtil.equals(a, b));
 
         // Different content, different firstIndex, long length.
         a = freeLater(wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }).order(order));
         b = freeLater(wrappedBuffer(
                 wrappedBuffer(new byte[] { 0, 1, 2, 3, 4, 6, 7, 8, 5, 9, 10, 11 }, 1, 5).order(order),
                 wrappedBuffer(new byte[] { 0, 1, 2, 3, 4, 6, 7, 8, 5, 9, 10, 11 }, 6, 5).order(order)));
-        assertFalse(BufUtil.equals(a, b));
+        assertFalse(ByteBufUtil.equals(a, b));
     }
 
     @Test
@@ -345,7 +345,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         // to enable writeBytes
         b.writerIndex(b.writerIndex() - 1);
         b.writeBytes(wrappedBuffer(new byte[] { 2 }).order(order));
-        assertFalse(BufUtil.equals(a, b));
+        assertFalse(ByteBufUtil.equals(a, b));
 
         // Same content, same firstIndex, short length.
         a = wrappedBuffer(new byte[] { 1, 2, 3 }).order(order);
@@ -354,7 +354,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         b.writerIndex(b.writerIndex() - 2);
         b.writeBytes(wrappedBuffer(new byte[] { 2 }).order(order));
         b.writeBytes(wrappedBuffer(new byte[] { 3 }).order(order));
-        assertTrue(BufUtil.equals(a, b));
+        assertTrue(ByteBufUtil.equals(a, b));
 
         // Same content, different firstIndex, short length.
         a = wrappedBuffer(new byte[] { 1, 2, 3 }).order(order);
@@ -362,7 +362,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         // to enable writeBytes
         b.writerIndex(b.writerIndex() - 1);
         b.writeBytes(wrappedBuffer(new byte[] { 0, 1, 2, 3, 4 }, 3, 1).order(order));
-        assertTrue(BufUtil.equals(a, b));
+        assertTrue(ByteBufUtil.equals(a, b));
 
         // Different content, same firstIndex, short length.
         a = wrappedBuffer(new byte[] { 1, 2, 3 }).order(order);
@@ -370,7 +370,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         // to enable writeBytes
         b.writerIndex(b.writerIndex() - 1);
         b.writeBytes(wrappedBuffer(new byte[] { 4 }).order(order));
-        assertFalse(BufUtil.equals(a, b));
+        assertFalse(ByteBufUtil.equals(a, b));
 
         // Different content, different firstIndex, short length.
         a = wrappedBuffer(new byte[] { 1, 2, 3 }).order(order);
@@ -378,7 +378,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         // to enable writeBytes
         b.writerIndex(b.writerIndex() - 1);
         b.writeBytes(wrappedBuffer(new byte[] { 0, 1, 2, 4, 5 }, 3, 1).order(order));
-        assertFalse(BufUtil.equals(a, b));
+        assertFalse(ByteBufUtil.equals(a, b));
 
         // Same content, same firstIndex, long length.
         a = wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }).order(order);
@@ -387,7 +387,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         b.writerIndex(b.writerIndex() - 7);
         b.writeBytes(wrappedBuffer(new byte[] { 4, 5, 6 }).order(order));
         b.writeBytes(wrappedBuffer(new byte[] { 7, 8, 9, 10 }).order(order));
-        assertTrue(BufUtil.equals(a, b));
+        assertTrue(ByteBufUtil.equals(a, b));
 
         // Same content, different firstIndex, long length.
         a = wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }).order(order);
@@ -395,7 +395,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         // to enable writeBytes
         b.writerIndex(b.writerIndex() - 5);
         b.writeBytes(wrappedBuffer(new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}, 6, 5).order(order));
-        assertTrue(BufUtil.equals(a, b));
+        assertTrue(ByteBufUtil.equals(a, b));
 
         // Different content, same firstIndex, long length.
         a = wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }).order(order);
@@ -403,7 +403,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         // to enable writeBytes
         b.writerIndex(b.writerIndex() - 5);
         b.writeBytes(wrappedBuffer(new byte[] { 7, 8, 5, 9, 10 }).order(order));
-        assertFalse(BufUtil.equals(a, b));
+        assertFalse(ByteBufUtil.equals(a, b));
 
         // Different content, different firstIndex, long length.
         a = wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }).order(order);
@@ -411,7 +411,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         // to enable writeBytes
         b.writerIndex(b.writerIndex() - 5);
         b.writeBytes(wrappedBuffer(new byte[] { 0, 1, 2, 3, 4, 6, 7, 8, 5, 9, 10, 11 }, 6, 5).order(order));
-        assertFalse(BufUtil.equals(a, b));
+        assertFalse(ByteBufUtil.equals(a, b));
     }
 
     @Test

@@ -15,9 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.Buf;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.util.concurrent.EventExecutorGroup;
 
 import java.io.InputStream;
@@ -175,46 +173,6 @@ import java.util.NoSuchElementException;
  */
 public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundInvoker,
         Iterable<Entry<String, ChannelHandler>> {
-
-    /**
-     * Return the bound {@link MessageBuf} of the first {@link ChannelInboundMessageHandler} in the
-     * {@link ChannelPipeline}. If no {@link ChannelInboundMessageHandler} exists in the {@link ChannelPipeline}
-     * it will throw a {@link UnsupportedOperationException}.
-     * <p/>
-     * This method can only be called from within the event-loop, otherwise it will throw an
-     * {@link IllegalStateException}.
-     */
-    <T> MessageBuf<T> inboundMessageBuffer();
-
-    /**
-     * Return the bound {@link ByteBuf} of the first {@link ChannelInboundByteHandler} in the
-     * {@link ChannelPipeline}. If no {@link ChannelInboundByteHandler} exists in the {@link ChannelPipeline}
-     * it will throw a {@link UnsupportedOperationException}.
-     * <p/>
-     * This method can only be called from within the event-loop, otherwise it will throw an
-     * {@link IllegalStateException}.
-     */
-    ByteBuf inboundByteBuffer();
-
-    /**
-     * Return the bound {@link MessageBuf} of the first {@link ChannelOutboundMessageHandler} in the
-     * {@link ChannelPipeline}. If no {@link ChannelOutboundMessageHandler} exists in the {@link ChannelPipeline}
-     * it will throw a {@link UnsupportedOperationException}.
-     * <p/>
-     * This method can only be called from within the event-loop, otherwise it will throw an
-     * {@link IllegalStateException}.
-     */
-    <T> MessageBuf<T> outboundMessageBuffer();
-
-    /**
-     * Return the bound {@link ByteBuf} of the first {@link ChannelOutboundByteHandler} in the
-     * {@link ChannelPipeline}. If no {@link ChannelOutboundByteHandler} exists in the {@link ChannelPipeline}
-     * it will throw a {@link UnsupportedOperationException}.
-     * <p/>
-     * This method can only be called from within the event-loop, otherwise it will throw an
-     * {@link IllegalStateException}.
-     */
-    ByteBuf outboundByteBuffer();
 
     /**
      * Inserts a {@link ChannelHandler} at the first position of this pipeline.
@@ -381,9 +339,7 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
     ChannelPipeline addLast(EventExecutorGroup group, ChannelHandler... handlers);
 
     /**
-     * Removes the specified {@link ChannelHandler} from this pipeline
-     * and transfer the content of its {@link Buf} to the next
-     * {@link ChannelHandler} in the {@link ChannelPipeline}.
+     * Removes the specified {@link ChannelHandler} from this pipeline.
      *
      * @param  handler          the {@link ChannelHandler} to remove
      *
@@ -395,9 +351,7 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
     ChannelPipeline remove(ChannelHandler handler);
 
     /**
-     * Removes the {@link ChannelHandler} with the specified name from this
-     * pipeline and transfer the content of its {@link Buf} to the next
-     * {@link ChannelHandler} in the {@link ChannelPipeline}.
+     * Removes the {@link ChannelHandler} with the specified name from this pipeline.
      *
      * @param  name             the name under which the {@link ChannelHandler} was stored.
      *
@@ -411,9 +365,7 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
     ChannelHandler remove(String name);
 
     /**
-     * Removes the {@link ChannelHandler} of the specified type from this
-     * pipeline and transfer the content of its {@link Buf} to the next
-     * {@link ChannelHandler} in the {@link ChannelPipeline}.
+     * Removes the {@link ChannelHandler} of the specified type from this pipeline.
      *
      * @param <T>           the type of the handler
      * @param handlerType   the type of the handler
@@ -430,9 +382,6 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
     /**
      * Removes the first {@link ChannelHandler} in this pipeline.
      *
-     * All the remaining content in the {@link Buf) (if any) of the {@link ChannelHandler}
-     * will be discarded.
-     *
      * @return the removed handler
      *
      * @throws NoSuchElementException
@@ -443,9 +392,6 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
     /**
      * Removes the last {@link ChannelHandler} in this pipeline.
      *
-     * All the remaining content in the {@link Buf) (if any) of the {@link ChannelHandler}
-     * will be discarded.
-     *
      * @return the removed handler
      *
      * @throws NoSuchElementException
@@ -454,9 +400,7 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
     ChannelHandler removeLast();
 
     /**
-     * Replaces the specified {@link ChannelHandler} with a new handler in
-     * this pipeline and transfer the content of its {@link Buf} to the next
-     * {@link ChannelHandler} in the {@link ChannelPipeline}.
+     * Replaces the specified {@link ChannelHandler} with a new handler in this pipeline.
      *
      * @param  oldHandler    the {@link ChannelHandler} to be replaced
      * @param  newName       the name under which the replacement should be added
@@ -476,9 +420,7 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
     ChannelPipeline replace(ChannelHandler oldHandler, String newName, ChannelHandler newHandler);
 
     /**
-     * Replaces the {@link ChannelHandler} of the specified name with a new
-     * handler in this pipeline and transfer the content of its {@link Buf} to the next
-     * {@link ChannelHandler} in the {@link ChannelPipeline}.
+     * Replaces the {@link ChannelHandler} of the specified name with a new handler in this pipeline.
      *
      * @param  oldName       the name of the {@link ChannelHandler} to be replaced
      * @param  newName       the name under which the replacement should be added
@@ -498,9 +440,7 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
     ChannelHandler replace(String oldName, String newName, ChannelHandler newHandler);
 
     /**
-     * Replaces the {@link ChannelHandler} of the specified type with a new
-     * handler in this pipeline and transfer the content of its {@link Buf} to the next
-     * {@link ChannelHandler} in the {@link ChannelPipeline}.
+     * Replaces the {@link ChannelHandler} of the specified type with a new handler in this pipeline.
      *
      * @param  oldHandlerType   the type of the handler to be removed
      * @param  newName          the name under which the replacement should be added
@@ -631,8 +571,14 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
     ChannelPipeline fireUserEventTriggered(Object event);
 
     @Override
-    ChannelPipeline fireInboundBufferUpdated();
+    ChannelPipeline fireMessageReceived(Object msg);
+
+    @Override
+    ChannelPipeline fireMessageReceived(MessageList<?> msgs);
 
     @Override
     ChannelPipeline fireChannelReadSuspended();
+
+    @Override
+    ChannelPipeline fireChannelWritabilityChanged();
 }

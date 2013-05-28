@@ -17,11 +17,11 @@ package io.netty.channel.nio;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.MessageList;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import org.junit.Assert;
 import org.junit.Test;
@@ -43,10 +43,10 @@ public class NioDatagramChannelTest {
                 Bootstrap udpBootstrap = new Bootstrap();
                 udpBootstrap.group(group).channel(NioDatagramChannel.class)
                         .option(ChannelOption.SO_BROADCAST, true)
-                        .handler(new ChannelInboundMessageHandlerAdapter<DatagramPacket>() {
+                        .handler(new ChannelInboundHandlerAdapter() {
                             @Override
-                            public void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg)
-                                    throws Exception {
+                            public void messageReceived(
+                                    ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
                                 // noop
                             }
                         });

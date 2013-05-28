@@ -17,7 +17,8 @@ package io.netty.example.securechat;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MessageList;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.handler.ssl.SslHandler;
@@ -31,7 +32,7 @@ import java.util.logging.Logger;
 /**
  * Handles a server-side channel.
  */
-public class SecureChatServerHandler extends ChannelInboundMessageHandlerAdapter<String> {
+public class SecureChatServerHandler extends ChannelInboundHandlerAdapter {
 
     private static final Logger logger = Logger.getLogger(
             SecureChatServerHandler.class.getName());
@@ -60,21 +61,26 @@ public class SecureChatServerHandler extends ChannelInboundMessageHandlerAdapter
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, String request) throws Exception {
-        // Send the received message to all channels but the current one.
-        for (Channel c: channels) {
-            if (c != ctx.channel()) {
-                c.write("[" + ctx.channel().remoteAddress() + "] " +
-                        request + '\n');
-            } else {
-                c.write("[you] " + request + '\n');
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> requests) throws Exception {
+        MessageList<String> msgs = requests.cast();
+        for (int i = 0; i < msgs.size(); i++) {
+            String msg = msgs.get(i);
+            // Send the received message to all channels but the current one.
+            for (Channel c: channels) {
+                if (c != ctx.channel()) {
+                    c.write("[" + ctx.channel().remoteAddress() + "] " +
+                            msg + '\n');
+                } else {
+                    c.write("[you] " + msg + '\n');
+                }
+            }
+
+            // Close the connection if the client has sent 'bye'.
+            if ("bye".equals(msg.toLowerCase())) {
+                ctx.close();
             }
         }
-
-        // Close the connection if the client has sent 'bye'.
-        if ("bye".equals(request.toLowerCase())) {
-            ctx.close();
-        }
+        msgs.releaseAllAndRecycle();
     }
 
     @Override

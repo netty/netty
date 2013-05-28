@@ -19,8 +19,9 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.MessageList;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
@@ -133,7 +134,7 @@ public class SocketObjectEchoTest extends AbstractSocketTest {
         }
     }
 
-    private static class EchoHandler extends ChannelInboundMessageHandlerAdapter<String> {
+    private static class EchoHandler extends ChannelInboundHandlerAdapter {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
@@ -148,15 +149,18 @@ public class SocketObjectEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx,
-                String msg) throws Exception {
-            assertEquals(data[counter], msg);
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            for (int i = 0; i < msgs.size(); i ++) {
+                String msg = (String) msgs.get(i);
+                assertEquals(data[counter], msg);
 
-            if (channel.parent() != null) {
-                channel.write(msg);
+                if (channel.parent() != null) {
+                    channel.write(msg);
+                }
+
+                counter ++;
             }
-
-            counter ++;
+            msgs.releaseAllAndRecycle();
         }
 
         @Override
