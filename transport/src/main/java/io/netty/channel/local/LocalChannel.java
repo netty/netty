@@ -15,8 +15,6 @@
  */
 package io.netty.channel.local;
 
-import io.netty.buffer.BufType;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
@@ -34,14 +32,15 @@ import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
-import java.util.Collections;
+import java.util.ArrayDeque;
+import java.util.Queue;
 
 /**
  * A {@link Channel} for the local transport.
  */
 public class LocalChannel extends AbstractChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private static final int MAX_READER_STACK_DEPTH = 8;
     private static final ThreadLocal<Integer> READER_STACK_DEPTH = new ThreadLocal<Integer>() {
@@ -52,11 +51,14 @@ public class LocalChannel extends AbstractChannel {
     };
 
     private final ChannelConfig config = new DefaultChannelConfig(this);
+    private final Queue<Object> inboundBuffer = new ArrayDeque<Object>();
     private final Runnable readTask = new Runnable() {
         @Override
         public void run() {
             ChannelPipeline pipeline = pipeline();
-            pipeline.fireInboundBufferUpdated();
+            Object[] messages = inboundBuffer.toArray();
+            inboundBuffer.clear();
+            pipeline.fireMessageReceived(messages);
             pipeline.fireChannelReadSuspended();
         }
     };
@@ -236,8 +238,8 @@ public class LocalChannel extends AbstractChannel {
         }
 
         ChannelPipeline pipeline = pipeline();
-        MessageBuf<Object> buf = pipeline.inboundMessageBuffer();
-        if (buf.isEmpty()) {
+        Queue<Object> inboundBuffer = this.inboundBuffer;
+        if (inboundBuffer.isEmpty()) {
             readInProgress = true;
             return;
         }
@@ -246,7 +248,9 @@ public class LocalChannel extends AbstractChannel {
         if (stackDepth < MAX_READER_STACK_DEPTH) {
             READER_STACK_DEPTH.set(stackDepth + 1);
             try {
-                pipeline.fireInboundBufferUpdated();
+                Object[] messages = inboundBuffer.toArray();
+                inboundBuffer.clear();
+                pipeline.fireMessageReceived(messages);
                 pipeline.fireChannelReadSuspended();
             } finally {
                 READER_STACK_DEPTH.set(stackDepth);
@@ -257,7 +261,7 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doFlushMessageBuffer(MessageBuf<Object> buf) throws Exception {
+    protected int doWrite(Object[] msgs, final int index) throws Exception {
         if (state < 2) {
             throw new NotYetConnectedException();
         }
@@ -270,26 +274,40 @@ public class LocalChannel extends AbstractChannel {
         final EventLoop peerLoop = peer.eventLoop();
 
         if (peerLoop == eventLoop()) {
-            buf.drainTo(peerPipeline.inboundMessageBuffer());
+            for (int i = index; i < msgs.length; i ++) {
+                Object m = msgs[i];
+                if (m == null) {
+                    break;
+                }
+                peer.inboundBuffer.add(m);
+            }
             finishPeerRead(peer, peerPipeline);
         } else {
-            final Object[] msgs = buf.toArray();
-            buf.clear();
+            final Object[] msgsClone = msgs.clone();
             peerLoop.execute(new Runnable() {
                 @Override
                 public void run() {
-                    MessageBuf<Object> buf = peerPipeline.inboundMessageBuffer();
-                    Collections.addAll(buf, msgs);
+                    for (int i = index; i < msgsClone.length; i ++) {
+                        Object m = msgsClone[i];
+                        if (m == null) {
+                            break;
+                        }
+                        peer.inboundBuffer.add(m);
+                    }
                     finishPeerRead(peer, peerPipeline);
                 }
             });
         }
+
+        return -1;
     }
 
     private static void finishPeerRead(LocalChannel peer, ChannelPipeline peerPipeline) {
         if (peer.readInProgress) {
             peer.readInProgress = false;
-            peerPipeline.fireInboundBufferUpdated();
+            Object[] messages = peer.inboundBuffer.toArray();
+            peer.inboundBuffer.clear();
+            peerPipeline.fireMessageReceived(messages);
             peerPipeline.fireChannelReadSuspended();
         }
     }

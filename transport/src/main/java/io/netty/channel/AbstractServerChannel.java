@@ -71,7 +71,7 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    protected boolean doWrite(Object... msgs) throws Exception {
+    protected int doWrite(Object[] msgs, int index) throws Exception {
         throw new UnsupportedOperationException();
     }
 

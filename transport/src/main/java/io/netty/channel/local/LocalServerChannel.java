@@ -15,7 +15,6 @@
  */
 package io.netty.channel.local;
 
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.AbstractServerChannel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelPipeline;
@@ -26,6 +25,8 @@ import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 
 import java.net.SocketAddress;
+import java.util.ArrayDeque;
+import java.util.Queue;
 
 /**
  * A {@link ServerChannel} for the local transport which allows in VM communication.
@@ -33,6 +34,7 @@ import java.net.SocketAddress;
 public class LocalServerChannel extends AbstractServerChannel {
 
     private final ChannelConfig config = new DefaultChannelConfig(this);
+    private final Queue<Object> inboundBuffer = new ArrayDeque<Object>();
     private final Runnable shutdownHook = new Runnable() {
         @Override
         public void run() {
@@ -138,13 +140,15 @@ public class LocalServerChannel extends AbstractServerChannel {
         }
 
         ChannelPipeline pipeline = pipeline();
-        MessageBuf<Object> buf = pipeline.inboundMessageBuffer();
-        if (buf.isEmpty()) {
+        Queue<Object> inboundBuffer = this.inboundBuffer;
+        if (inboundBuffer.isEmpty()) {
             acceptInProgress = true;
             return;
         }
 
-        pipeline.fireInboundBufferUpdated();
+        Object[] messages = inboundBuffer.toArray();
+        inboundBuffer.clear();
+        pipeline.fireMessageReceived(messages);
         pipeline.fireChannelReadSuspended();
     }
 
@@ -157,10 +161,12 @@ public class LocalServerChannel extends AbstractServerChannel {
     private void serve0(final LocalChannel child) {
         if (eventLoop().inEventLoop()) {
             final ChannelPipeline pipeline = pipeline();
-            pipeline.inboundMessageBuffer().add(child);
+            inboundBuffer.add(child);
             if (acceptInProgress) {
                 acceptInProgress = false;
-                pipeline.fireInboundBufferUpdated();
+                Object[] messages = inboundBuffer.toArray();
+                inboundBuffer.clear();
+                pipeline.fireMessageReceived(messages);
                 pipeline.fireChannelReadSuspended();
             }
         } else {
