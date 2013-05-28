@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.compression;
 
-import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 
 import java.util.zip.CRC32;
 
@@ -413,19 +413,19 @@ public class Snappy {
             if (in.readableBytes() < 2) {
                 return NOT_ENOUGH_INPUT;
             }
-            length = BufUtil.swapShort(in.readShort());
+            length = ByteBufUtil.swapShort(in.readShort());
             break;
         case 62:
             if (in.readableBytes() < 3) {
                 return NOT_ENOUGH_INPUT;
             }
-            length = BufUtil.swapMedium(in.readUnsignedMedium());
+            length = ByteBufUtil.swapMedium(in.readUnsignedMedium());
             break;
         case 64:
             if (in.readableBytes() < 4) {
                 return NOT_ENOUGH_INPUT;
             }
-            length = BufUtil.swapInt(in.readInt());
+            length = ByteBufUtil.swapInt(in.readInt());
             break;
         default:
             length = tag >> 2 & 0x3F;
@@ -505,7 +505,7 @@ public class Snappy {
 
         int initialIndex = out.writerIndex();
         int length = 1 + (tag >> 2 & 0x03f);
-        int offset = BufUtil.swapShort(in.readShort());
+        int offset = ByteBufUtil.swapShort(in.readShort());
 
         validateOffset(offset, writtenSoFar);
 
@@ -549,7 +549,7 @@ public class Snappy {
 
         int initialIndex = out.writerIndex();
         int length = 1 + (tag >> 2 & 0x03F);
-        int offset = BufUtil.swapInt(in.readInt());
+        int offset = ByteBufUtil.swapInt(in.readInt());
 
         validateOffset(offset, writtenSoFar);
 

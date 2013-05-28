@@ -16,8 +16,8 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.BufType;
-import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.DefaultMessageBuf;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -171,7 +171,7 @@ final class OutputMessageBuf extends DefaultMessageBuf<Object> {
         try {
             dst.writeBytes(src, src.readerIndex(), src.readableBytes());
         } finally {
-            BufUtil.release(src);
+            ByteBufUtil.release(src);
         }
     }
 }

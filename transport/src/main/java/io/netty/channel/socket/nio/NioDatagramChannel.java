@@ -16,9 +16,9 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.buffer.BufType;
-import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.MessageBuf;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
@@ -245,7 +245,7 @@ public final class NioDatagramChannel
         } else if (m instanceof ByteBuf) {
             data = (ByteBuf) m;
         } else {
-            BufUtil.release(buf.remove());
+            ByteBufUtil.release(buf.remove());
             throw new ChannelException("unsupported message type: " + StringUtil.simpleClassName(o));
         }
 
@@ -283,7 +283,7 @@ public final class NioDatagramChannel
         }
 
         // Wrote a packet - free the message.
-        BufUtil.release(buf.remove());
+        ByteBufUtil.release(buf.remove());
 
         if (buf.isEmpty()) {
             // Wrote the outbound buffer completely - clear OP_WRITE.

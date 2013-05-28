@@ -21,12 +21,12 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOperationHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.ChannelStateHandlerAdapter;
-import io.netty.util.concurrent.EventExecutor;
 import io.netty.channel.FileRegion;
+import io.netty.util.concurrent.EventExecutor;
 
 import java.net.SocketAddress;
 import java.util.concurrent.ScheduledFuture;
@@ -98,7 +98,7 @@ import java.util.concurrent.TimeUnit;
  * @see ReadTimeoutHandler
  * @see WriteTimeoutHandler
  */
-public class IdleStateHandler extends ChannelStateHandlerAdapter implements ChannelOperationHandler {
+public class IdleStateHandler extends ChannelInboundHandlerAdapter implements ChannelOutboundHandler {
 
     private final long readerIdleTimeMillis;
     private final long writerIdleTimeMillis;

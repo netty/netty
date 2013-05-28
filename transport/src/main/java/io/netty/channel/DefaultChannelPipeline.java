@@ -15,11 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.Buf;
-import io.netty.buffer.BufUtil;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel.Unsafe;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
@@ -77,21 +73,10 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         this.channel = channel;
 
         TailHandler tailHandler = new TailHandler();
-        tail = new DefaultChannelHandlerContext(this, generateName(tailHandler), tailHandler);
+        tail = new DefaultChannelHandlerContext(this, null, generateName(tailHandler), tailHandler);
 
-        HeadHandler headHandler;
-        switch (channel.metadata().bufferType()) {
-        case BYTE:
-            headHandler = new ByteHeadHandler(channel.unsafe());
-            break;
-        case MESSAGE:
-            headHandler = new MessageHeadHandler(channel.unsafe());
-            break;
-        default:
-            throw new Error("unknown buffer type: " + channel.metadata().bufferType());
-        }
-
-        head = new DefaultChannelHandlerContext(this, generateName(headHandler), headHandler);
+        HeadHandler headHandler = new HeadHandler(channel.unsafe());
+        head = new DefaultChannelHandlerContext(this, null, generateName(headHandler), headHandler);
 
         head.next = tail;
         tail.prev = head;
@@ -524,33 +509,18 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             ctx.executor().execute(new Runnable() {
                 @Override
                 public void run() {
-                    callHandlerRemoved0(ctx, ctxPrev, ctxNext, forward);
+                    callHandlerRemoved0(ctx);
                 }
             });
             return;
         }
-        callHandlerRemoved0(ctx, ctxPrev, ctxNext, forward);
+        callHandlerRemoved0(ctx);
     }
 
-    private void callHandlerRemoved0(
-            final DefaultChannelHandlerContext ctx, DefaultChannelHandlerContext ctxPrev,
-            DefaultChannelHandlerContext ctxNext, boolean forward) {
-
-        final ChannelHandler handler = ctx.handler();
-
-        // Finish removal by forwarding buffer content and freeing the buffers.
-        if (forward) {
-            try {
-                ctx.forwardBufferContentAndFree(ctxPrev, ctxNext);
-            } catch (Throwable t) {
-                fireExceptionCaught(new ChannelPipelineException(
-                        "failed to forward buffer content of " + ctx.handler().getClass().getName(), t));
-            }
-        }
-
+    private void callHandlerRemoved0(final DefaultChannelHandlerContext ctx) {
         // Notify the complete removal.
         try {
-            handler.handlerRemoved(ctx);
+            ctx.handler().handlerRemoved(ctx);
         } catch (Throwable t) {
             fireExceptionCaught(new ChannelPipelineException(
                     ctx.handler().getClass().getName() + ".handlerRemoved() has thrown an exception.", t));
@@ -754,30 +724,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public <T> MessageBuf<T> inboundMessageBuffer() {
-        return (MessageBuf<T>) head.nextInboundMessageBuffer();
-    }
-
-    @Override
-    public ByteBuf inboundByteBuffer() {
-        return head.nextInboundByteBuffer();
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <T> MessageBuf<T> outboundMessageBuffer() {
-        return (MessageBuf<T>) tail.nextOutboundMessageBuffer();
-    }
-
-    @Override
-    public ByteBuf outboundByteBuffer() {
-        return tail.nextOutboundByteBuffer();
-    }
-
-    @Override
     public ChannelPipeline fireChannelRegistered() {
-        head.initHeadHandler();
         head.fireChannelRegistered();
         return this;
     }
@@ -795,7 +742,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelPipeline fireChannelActive() {
-        head.initHeadHandler();
         head.fireChannelActive();
 
         if (channel.config().isAutoRead()) {
@@ -828,8 +774,14 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelPipeline fireInboundBufferUpdated() {
-        head.fireInboundBufferUpdated();
+    public ChannelPipeline fireMessageReceived(Object msg) {
+        head.fireMessageReceived(msg);
+        return this;
+    }
+
+    @Override
+    public ChannelPipeline fireMessageReceived(Object... msgs) {
+        head.fireMessageReceived(msgs);
         return this;
     }
 
@@ -873,13 +825,13 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelFuture flush() {
-        return tail.flush();
+    public ChannelFuture write(Object msg) {
+        return tail.write(msg);
     }
 
     @Override
-    public ChannelFuture write(Object message) {
-        return tail.write(message);
+    public ChannelFuture write(Object... msgs) {
+        return tail.write(msgs);
     }
 
     @Override
@@ -918,23 +870,13 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelFuture flush(ChannelPromise promise) {
-        return tail.flush(promise);
+    public ChannelFuture write(ChannelPromise promise, Object msg) {
+        return tail.write(promise, msg);
     }
 
     @Override
-    public ChannelFuture sendFile(FileRegion region) {
-        return tail.sendFile(region);
-    }
-
-    @Override
-    public ChannelFuture sendFile(FileRegion region, ChannelPromise promise) {
-        return tail.sendFile(region, promise);
-    }
-
-    @Override
-    public ChannelFuture write(Object message, ChannelPromise promise) {
-        return tail.write(message, promise);
+    public ChannelFuture write(ChannelPromise promise, Object... msgs) {
+        return tail.write(promise, msgs);
     }
 
     private void checkDuplicateName(String name) {
@@ -973,9 +915,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     // A special catch-all handler that handles both bytes and messages.
     static final class TailHandler implements ChannelInboundHandler {
 
-        final ByteBuf byteSink = Unpooled.buffer(0);
-        final MessageBuf<Object> msgSink = Unpooled.messageBuffer(0);
-
         @Override
         public void channelRegistered(ChannelHandlerContext ctx) throws Exception { }
 
@@ -1008,86 +947,56 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public Buf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            throw new Error();
-        }
+        public void messageReceived(ChannelHandlerContext ctx, Object... msgs) throws Exception {
+            int size = 0;
+            for (Object m: msgs) {
+                if (m == null) {
+                    break;
+                }
 
-        @Override
-        public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-            int byteSinkSize = byteSink.readableBytes();
-            if (byteSinkSize != 0) {
-                byteSink.clear();
-                logger.warn(
-                        "Discarded {} inbound byte(s) that reached at the tail of the pipeline. " +
-                        "Please check your pipeline configuration.", byteSinkSize);
+                logger.debug(
+                        "Discarded inbound message {} that reached at the tail of the pipeline. " +
+                                "Please check your pipeline configuration.", m);
+
+                ByteBufUtil.release(m);
+                size ++;
             }
 
-            int msgSinkSize = msgSink.size();
-            if (msgSinkSize != 0) {
-                MessageBuf<Object> in = msgSink;
-                for (;;) {
-                    Object m = in.poll();
-                    if (m == null) {
-                        break;
-                    }
-                    BufUtil.release(m);
-                    logger.debug(
-                            "Discarded inbound message {} that reached at the tail of the pipeline. " +
-                                    "Please check your pipeline configuration.", m);
-                }
+            if (size != 0) {
                 logger.warn(
                         "Discarded {} inbound message(s) that reached at the tail of the pipeline. " +
-                        "Please check your pipeline configuration.", msgSinkSize);
+                        "Please check your pipeline configuration.", size);
             }
         }
     }
 
-    abstract static class HeadHandler implements ChannelOutboundHandler {
+    static final class HeadHandler implements ChannelOutboundHandler {
 
         protected final Unsafe unsafe;
-        ByteBuf byteSink;
-        MessageBuf<Object> msgSink;
-        boolean initialized;
 
         protected HeadHandler(Unsafe unsafe) {
             this.unsafe = unsafe;
         }
 
-        void init(ChannelHandlerContext ctx) {
-            assert !initialized;
-            switch (ctx.channel().metadata().bufferType()) {
-            case BYTE:
-                byteSink = ctx.alloc().ioBuffer();
-                msgSink = Unpooled.messageBuffer(0);
-                break;
-            case MESSAGE:
-                byteSink = Unpooled.buffer(0);
-                msgSink = Unpooled.messageBuffer();
-                break;
-            default:
-                throw new Error();
-            }
-        }
-
         @Override
-        public final void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
             // NOOP
         }
 
         @Override
-        public final void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
             // NOOP
         }
 
         @Override
-        public final void bind(
+        public void bind(
                 ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise)
                 throws Exception {
             unsafe.bind(localAddress, promise);
         }
 
         @Override
-        public final void connect(
+        public void connect(
                 ChannelHandlerContext ctx,
                 SocketAddress remoteAddress, SocketAddress localAddress,
                 ChannelPromise promise) throws Exception {
@@ -1095,97 +1004,33 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public final void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
             unsafe.disconnect(promise);
         }
 
         @Override
-        public final void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
             unsafe.close(promise);
         }
 
         @Override
-        public final void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
             unsafe.deregister(promise);
         }
 
         @Override
-        public final void read(ChannelHandlerContext ctx) {
+        public void read(ChannelHandlerContext ctx) {
             unsafe.beginRead();
         }
 
         @Override
-        public final void sendFile(
-                ChannelHandlerContext ctx, FileRegion region, ChannelPromise promise) throws Exception {
-            unsafe.sendFile(region, promise);
-        }
-
-        @Override
-        public final Buf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            throw new Error();
+        public void write(ChannelHandlerContext ctx, ChannelPromise promise, Object... msgs) throws Exception {
+            unsafe.write(promise, msgs);
         }
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             ctx.fireExceptionCaught(cause);
-        }
-    }
-
-    private static final class ByteHeadHandler extends HeadHandler {
-
-        private ByteHeadHandler(Unsafe unsafe) {
-            super(unsafe);
-        }
-
-        @Override
-        public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-            int discardedMessages = 0;
-            MessageBuf<Object> in = msgSink;
-            for (;;) {
-                Object m = in.poll();
-                if (m == null) {
-                    break;
-                }
-
-                if (m instanceof ByteBuf) {
-                    ByteBuf src = (ByteBuf) m;
-                    byteSink.writeBytes(src, src.readerIndex(), src.readableBytes());
-                } else {
-                    logger.debug(
-                            "Discarded outbound message {} that reached at the head of the pipeline. " +
-                                    "Please check your pipeline configuration.", m);
-                    discardedMessages ++;
-                }
-
-                BufUtil.release(m);
-            }
-
-            if (discardedMessages != 0) {
-                logger.warn(
-                        "Discarded {} outbound message(s) that reached at the head of the pipeline. " +
-                        "Please check your pipeline configuration.", discardedMessages);
-            }
-
-            unsafe.flush(promise);
-        }
-    }
-
-    private static final class MessageHeadHandler extends HeadHandler {
-
-        private MessageHeadHandler(Unsafe unsafe) {
-            super(unsafe);
-        }
-
-        @Override
-        public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-            int byteSinkSize = byteSink.readableBytes();
-            if (byteSinkSize != 0) {
-                byteSink.clear();
-                logger.warn(
-                        "Discarded {} outbound byte(s) that reached at the head of the pipeline. " +
-                                "Please check your pipeline configuration.", byteSinkSize);
-            }
-            unsafe.flush(promise);
         }
     }
 }

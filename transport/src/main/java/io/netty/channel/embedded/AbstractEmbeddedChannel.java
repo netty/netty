@@ -26,10 +26,10 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandler;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInboundMessageHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.ChannelStateHandlerAdapter;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.util.internal.PlatformDependent;
@@ -324,7 +324,7 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
         }
     }
 
-    private final class LastInboundMessageHandler extends ChannelStateHandlerAdapter
+    private final class LastInboundMessageHandler extends ChannelInboundHandlerAdapter
             implements ChannelInboundMessageHandler<Object> {
         @Override
         public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
@@ -343,7 +343,7 @@ public abstract class AbstractEmbeddedChannel<O> extends AbstractChannel {
         }
     }
 
-    private final class LastInboundByteHandler extends ChannelStateHandlerAdapter
+    private final class LastInboundByteHandler extends ChannelInboundHandlerAdapter
             implements ChannelInboundByteHandler {
         @Override
         public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {

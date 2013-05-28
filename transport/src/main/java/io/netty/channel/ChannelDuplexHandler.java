@@ -18,17 +18,17 @@ package io.netty.channel;
 import java.net.SocketAddress;
 
 /**
- * {@link ChannelHandler} implementation which represents a combination out of a {@link ChannelStateHandler} and
- * the {@link ChannelOperationHandler}.
+ * {@link ChannelHandler} implementation which represents a combination out of a {@link ChannelInboundHandler} and
+ * the {@link ChannelOutboundHandler}.
  *
  * It is a good starting point if your {@link ChannelHandler} implementation needs to intercept operations and also
  * state updates.
  */
-public abstract class ChannelDuplexHandler extends ChannelStateHandlerAdapter implements ChannelOperationHandler {
+public abstract class ChannelDuplexHandler extends ChannelInboundHandlerAdapter implements ChannelOutboundHandler {
 
     /**
      * Calls {@link ChannelHandlerContext#bind(SocketAddress, ChannelPromise)} to forward
-     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
+     * to the next {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
@@ -40,7 +40,7 @@ public abstract class ChannelDuplexHandler extends ChannelStateHandlerAdapter im
 
     /**
      * Calls {@link ChannelHandlerContext#connect(SocketAddress, SocketAddress, ChannelPromise)} to forward
-     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
+     * to the next {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
@@ -52,7 +52,7 @@ public abstract class ChannelDuplexHandler extends ChannelStateHandlerAdapter im
 
     /**
      * Calls {@link ChannelHandlerContext#disconnect(ChannelPromise)} to forward
-     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
+     * to the next {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
@@ -64,7 +64,7 @@ public abstract class ChannelDuplexHandler extends ChannelStateHandlerAdapter im
 
     /**
      * Calls {@link ChannelHandlerContext#close(ChannelPromise)} to forward
-     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
+     * to the next {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
@@ -76,7 +76,7 @@ public abstract class ChannelDuplexHandler extends ChannelStateHandlerAdapter im
 
     /**
      * Calls {@link ChannelHandlerContext#close(ChannelPromise)} to forward
-     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
+     * to the next {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
@@ -93,7 +93,7 @@ public abstract class ChannelDuplexHandler extends ChannelStateHandlerAdapter im
 
     /**
      * Calls {@link ChannelHandlerContext#sendFile(FileRegion, ChannelPromise)} to forward
-     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
+     * to the next {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */

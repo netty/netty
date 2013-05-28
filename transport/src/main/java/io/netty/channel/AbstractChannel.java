@@ -15,10 +15,8 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.MessageBuf;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
@@ -29,6 +27,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
+import java.util.ArrayDeque;
+import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.ConcurrentMap;
 
@@ -78,6 +78,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final Integer id;
     private final Unsafe unsafe;
     private final DefaultChannelPipeline pipeline;
+    private final Queue<Object> outboundBuffer = new ArrayDeque<Object>();
     private final ChannelFuture succeededFuture = new SucceededChannelFuture(this, null);
     private final VoidChannelPromise voidPromise = new VoidChannelPromise(this, true);
     private final VoidChannelPromise unsafeVoidPromise = new VoidChannelPromise(this, false);
@@ -238,13 +239,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelFuture flush() {
-        return pipeline.flush();
+    public ChannelFuture write(Object msg) {
+        return pipeline.write(msg);
     }
 
     @Override
-    public ChannelFuture write(Object message) {
-        return pipeline.write(message);
+    public ChannelFuture write(Object... msgs) {
+        return pipeline.write(msgs);
     }
 
     @Override
@@ -278,29 +279,18 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ByteBuf outboundByteBuffer() {
-        return pipeline.outboundByteBuffer();
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <T> MessageBuf<T> outboundMessageBuffer() {
-        return pipeline.outboundMessageBuffer();
-    }
-
-    @Override
     public void read() {
         pipeline.read();
     }
 
     @Override
-    public ChannelFuture flush(ChannelPromise promise) {
-        return pipeline.flush(promise);
+    public ChannelFuture write(ChannelPromise promise, Object msg) {
+        return pipeline.write(promise, msg);
     }
 
     @Override
-    public ChannelFuture write(Object message, ChannelPromise promise) {
-        return pipeline.write(message, promise);
+    public ChannelFuture write(ChannelPromise promise, Object... msgs) {
+        return pipeline.write(promise, msgs);
     }
 
     @Override
@@ -331,16 +321,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     @Override
     public Unsafe unsafe() {
         return unsafe;
-    }
-
-    @Override
-    public ChannelFuture sendFile(FileRegion region) {
-        return pipeline.sendFile(region);
-    }
-
-    @Override
-    public ChannelFuture sendFile(FileRegion region, ChannelPromise promise) {
-        return pipeline.sendFile(region, promise);
     }
 
     // 0 - not expanded because the buffer is writable
@@ -552,54 +532,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             @Override
             public void run() {
                 flushNowPending = false;
-                flush(voidPromise());
+                flush0();
             }
         };
-
-        @Override
-        public final void sendFile(final FileRegion region, final ChannelPromise promise) {
-            if (outboundBufSize() > 0) {
-                flushNotifier(newPromise()).addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture cf) throws Exception {
-                        sendFile0(region, promise);
-                    }
-                });
-            } else {
-                // nothing pending try to send the fileRegion now!
-                sendFile0(region, promise);
-            }
-        }
-
-        private void sendFile0(FileRegion region, ChannelPromise promise) {
-            FlushTask task = flushTaskInProgress;
-            if (task == null) {
-                flushTaskInProgress = task = new FlushTask(this, region, promise);
-                try {
-                    // the first FileRegion to flush so trigger it now!
-                    doFlushFileRegion(task);
-                } catch (Throwable cause) {
-                    region.release();
-                    promise.setFailure(cause);
-                }
-                return;
-            }
-
-            for (;;) {
-                FlushTask next = task.next;
-                if (next == null) {
-                    break;
-                }
-                task = next;
-            }
-            // there is something that needs to get flushed first so add it as next in the chain
-            task.next = new FlushTask(this, region, promise);
-        }
-
-        @Override
-        public final ChannelHandlerContext headContext() {
-            return pipeline.head;
-        }
 
         @Override
         public final SocketAddress localAddress() {
@@ -827,37 +762,20 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public void flush(final ChannelPromise promise) {
-            FlushTask task = flushTaskInProgress;
-            if (task == null) {
-                flushNotifierAndFlush(promise);
-            } else {
-                // loop over the tasks to find the last one
-                for (;;) {
-                    FlushTask t = task.next;
-                    if (t == null) {
-                        break;
-                    }
-                    task = t.next;
+        public void write(ChannelPromise promise, Object... msgs) {
+            for (Object m: msgs) {
+                if (m == null) {
+                    break;
                 }
-                task.next = new FlushTask(this, null, promise);
+                outboundBuffer.add(m);
             }
+
+            flushNotifierAndFlush(promise);
         }
 
         private void flushNotifierAndFlush(ChannelPromise promise) {
             flushNotifier(promise);
             flush0();
-        }
-
-        private int outboundBufSize() {
-            final int bufSize;
-            final ChannelHandlerContext ctx = headContext();
-            if (metadata().bufferType() == BufType.BYTE) {
-                bufSize = ctx.outboundByteBuffer().readableBytes();
-            } else {
-                bufSize = ctx.outboundMessageBuffer().size();
-            }
-            return bufSize;
         }
 
         private ChannelFuture flushNotifier(ChannelPromise promise) {
@@ -897,31 +815,17 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             inFlushNow = true;
-            ChannelHandlerContext ctx = headContext();
+            final Queue<Object> outboundBuffer = AbstractChannel.this.outboundBuffer;
             Throwable cause = null;
             try {
-                if (metadata().bufferType() == BufType.BYTE) {
-                    ByteBuf out = ctx.outboundByteBuffer();
-                    int oldSize = out.readableBytes();
-                    try {
-                        doFlushByteBuffer(out);
-                    } catch (Throwable t) {
-                        cause = t;
-                    } finally {
-                        int delta = oldSize - out.readableBytes();
-                        out.discardSomeReadBytes();
-                        flushFutureNotifier.increaseWriteCounter(delta);
-                    }
-                } else {
-                    MessageBuf<Object> out = ctx.outboundMessageBuffer();
-                    int oldSize = out.size();
-                    try {
-                        doFlushMessageBuffer(out);
-                    } catch (Throwable t) {
-                        cause = t;
-                    } finally {
-                        flushFutureNotifier.increaseWriteCounter(oldSize - out.size());
-                    }
+                try {
+                    doFlushByteBuffer(out);
+                } catch (Throwable t) {
+                    cause = t;
+                } finally {
+                    int delta = oldSize - out.readableBytes();
+                    out.discardSomeReadBytes();
+                    flushFutureNotifier.increaseWriteCounter(delta);
                 }
 
                 if (cause == null) {
@@ -1043,27 +947,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      *
      * Sub-classes may override this as this implementation will just thrown an {@link UnsupportedOperationException}
      */
-    protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
-        throw new UnsupportedOperationException();
-    }
-
-    /**
-     * Flush the content of the given {@link MessageBuf} to the remote peer.
-     *
-     * Sub-classes may override this as this implementation will just thrown an {@link UnsupportedOperationException}
-     */
-    protected void doFlushMessageBuffer(MessageBuf<Object> buf) throws Exception {
-        throw new UnsupportedOperationException();
-    }
-
-    /**
-     * Flush the content of the given {@link FlushTask} to the remote peer.
-     *
-     * Sub-classes may override this as this implementation will just thrown an {@link UnsupportedOperationException}
-     */
-    protected void doFlushFileRegion(FlushTask task) throws Exception {
-        throw new UnsupportedOperationException();
-    }
+    protected abstract boolean doWrite(Object... msgs) throws Exception;
 
     protected static void checkEOF(FileRegion region, long writtenBytes) throws IOException {
         if (writtenBytes < region.count()) {

@@ -15,7 +15,7 @@
  */
 package io.netty.channel.group;
 
-import io.netty.buffer.BufUtil;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -233,11 +233,11 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
         Map<Integer, ChannelFuture> futures = new LinkedHashMap<Integer, ChannelFuture>(size());
         for (Channel c: nonServerChannels.values()) {
-            BufUtil.retain(message);
+            ByteBufUtil.retain(message);
             futures.put(c.id(), c.write(message));
         }
 
-        BufUtil.release(message);
+        ByteBufUtil.release(message);
         return new DefaultChannelGroupFuture(this, futures, executor);
     }
 
@@ -249,11 +249,11 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
         Map<Integer, ChannelFuture> futures = new LinkedHashMap<Integer, ChannelFuture>(size());
         for (Channel c: nonServerChannels.values()) {
-            BufUtil.retain(region);
+            ByteBufUtil.retain(region);
             futures.put(c.id(), c.sendFile(region));
         }
 
-        BufUtil.release(region);
+        ByteBufUtil.release(region);
         return new DefaultChannelGroupFuture(this, futures, executor);
     }
 

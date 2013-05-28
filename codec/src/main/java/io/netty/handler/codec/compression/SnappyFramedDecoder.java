@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.compression;
 
-import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToByteDecoder;
 
@@ -92,7 +92,7 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
 
             final int chunkTypeVal = in.getUnsignedByte(idx);
             final ChunkType chunkType = mapChunkType((byte) chunkTypeVal);
-            final int chunkLength = BufUtil.swapMedium(in.getUnsignedMedium(idx + 1));
+            final int chunkLength = ByteBufUtil.swapMedium(in.getUnsignedMedium(idx + 1));
 
             switch (chunkType) {
                 case STREAM_IDENTIFIER:
@@ -146,7 +146,7 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
 
                     in.skipBytes(4);
                     if (validateChecksums) {
-                        int checksum = BufUtil.swapInt(in.readInt());
+                        int checksum = ByteBufUtil.swapInt(in.readInt());
                         validateChecksum(checksum, in, in.readerIndex(), chunkLength - 4);
                     } else {
                         in.skipBytes(4);
@@ -163,7 +163,7 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
                     }
 
                     in.skipBytes(4);
-                    int checksum = BufUtil.swapInt(in.readInt());
+                    int checksum = ByteBufUtil.swapInt(in.readInt());
                     if (validateChecksums) {
                         int oldWriterIndex = in.writerIndex();
                         int uncompressedStart = out.writerIndex();

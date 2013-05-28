@@ -15,9 +15,9 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -78,7 +78,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
             acceptedEncoding = HttpHeaders.Values.IDENTITY;
         }
         acceptEncodingQueue.add(acceptedEncoding);
-        out.add(BufUtil.retain(msg));
+        out.add(ByteBufUtil.retain(msg));
     }
 
     @Override
@@ -93,7 +93,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
 
                 if (res.getStatus().code() == 100) {
                     if (isFull) {
-                        out.add(BufUtil.retain(res));
+                        out.add(ByteBufUtil.retain(res));
                     } else {
                         out.add(res);
                         // Pass through all following contents.
@@ -114,7 +114,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                         // Set the content length to 0.
                         res.headers().remove(Names.TRANSFER_ENCODING);
                         res.headers().set(Names.CONTENT_LENGTH, "0");
-                        out.add(BufUtil.retain(res));
+                        out.add(ByteBufUtil.retain(res));
                         break;
                     }
                 }
@@ -128,7 +128,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                         // As an unchunked response
                         res.headers().remove(Names.TRANSFER_ENCODING);
                         res.headers().set(Names.CONTENT_LENGTH, ((ByteBufHolder) res).content().readableBytes());
-                        out.add(BufUtil.retain(res));
+                        out.add(ByteBufUtil.retain(res));
                     } else {
                         // As a chunked response
                         res.headers().remove(Names.CONTENT_LENGTH);
@@ -173,7 +173,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
             }
             case PASS_THROUGH: {
                 ensureContent(msg);
-                out.add(BufUtil.retain(msg));
+                out.add(ByteBufUtil.retain(msg));
                 // Passed through all following contents of the current response.
                 if (msg instanceof LastHttpContent) {
                     state = State.AWAIT_HEADERS;

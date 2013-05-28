@@ -20,7 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
-import io.netty.channel.ChannelOperationHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedMessageChannel;
@@ -138,7 +138,7 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     private static class MockOutboundHandler
-        extends ChannelOperationHandlerAdapter implements ChannelOutboundMessageHandler<Object> {
+        extends ChannelOutboundHandlerAdapter implements ChannelOutboundMessageHandler<Object> {
 
         @Override
         public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {

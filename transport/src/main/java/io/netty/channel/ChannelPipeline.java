@@ -15,9 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.Buf;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.util.concurrent.EventExecutorGroup;
 
 import java.io.InputStream;
@@ -175,46 +173,6 @@ import java.util.NoSuchElementException;
  */
 public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundInvoker,
         Iterable<Entry<String, ChannelHandler>> {
-
-    /**
-     * Return the bound {@link MessageBuf} of the first {@link ChannelInboundMessageHandler} in the
-     * {@link ChannelPipeline}. If no {@link ChannelInboundMessageHandler} exists in the {@link ChannelPipeline}
-     * it will throw a {@link UnsupportedOperationException}.
-     * <p/>
-     * This method can only be called from within the event-loop, otherwise it will throw an
-     * {@link IllegalStateException}.
-     */
-    <T> MessageBuf<T> inboundMessageBuffer();
-
-    /**
-     * Return the bound {@link ByteBuf} of the first {@link ChannelInboundByteHandler} in the
-     * {@link ChannelPipeline}. If no {@link ChannelInboundByteHandler} exists in the {@link ChannelPipeline}
-     * it will throw a {@link UnsupportedOperationException}.
-     * <p/>
-     * This method can only be called from within the event-loop, otherwise it will throw an
-     * {@link IllegalStateException}.
-     */
-    ByteBuf inboundByteBuffer();
-
-    /**
-     * Return the bound {@link MessageBuf} of the first {@link ChannelOutboundMessageHandler} in the
-     * {@link ChannelPipeline}. If no {@link ChannelOutboundMessageHandler} exists in the {@link ChannelPipeline}
-     * it will throw a {@link UnsupportedOperationException}.
-     * <p/>
-     * This method can only be called from within the event-loop, otherwise it will throw an
-     * {@link IllegalStateException}.
-     */
-    <T> MessageBuf<T> outboundMessageBuffer();
-
-    /**
-     * Return the bound {@link ByteBuf} of the first {@link ChannelOutboundByteHandler} in the
-     * {@link ChannelPipeline}. If no {@link ChannelOutboundByteHandler} exists in the {@link ChannelPipeline}
-     * it will throw a {@link UnsupportedOperationException}.
-     * <p/>
-     * This method can only be called from within the event-loop, otherwise it will throw an
-     * {@link IllegalStateException}.
-     */
-    ByteBuf outboundByteBuffer();
 
     /**
      * Inserts a {@link ChannelHandler} at the first position of this pipeline.
@@ -631,7 +589,10 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
     ChannelPipeline fireUserEventTriggered(Object event);
 
     @Override
-    ChannelPipeline fireInboundBufferUpdated();
+    ChannelPipeline fireMessageReceived(Object msg);
+
+    @Override
+    ChannelPipeline fireMessageReceived(Object... msgs);
 
     @Override
     ChannelPipeline fireChannelReadSuspended();

@@ -20,7 +20,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundMessageHandlerAdapter;
-import io.netty.channel.ChannelStateHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -43,7 +42,7 @@ import static io.netty.handler.codec.http.HttpVersion.*;
  * to the <tt>io.netty.example.http.websocketx.server.WebSocketServer</tt> example.
  *
  * To know once a handshake was done you can intercept the
- * {@link ChannelStateHandler#userEventTriggered(ChannelHandlerContext, Object)} and check if the event was of type
+ * {@link io.netty.channel.ChannelInboundHandler#userEventTriggered(ChannelHandlerContext, Object)} and check if the event was of type
  * {@link ServerHandshakeStateEvent#HANDSHAKE_COMPLETE}.
  */
 public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {

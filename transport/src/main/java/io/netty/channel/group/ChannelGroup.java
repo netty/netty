@@ -20,7 +20,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelStateHandlerAdapter;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
 import io.netty.channel.ServerChannel;
@@ -78,7 +77,7 @@ import java.util.Set;
  *     b.releaseExternalResources();
  * }
  *
- * public class MyHandler extends {@link ChannelStateHandlerAdapter} {
+ * public class MyHandler extends {@link io.netty.channel.ChannelInboundHandlerAdapter} {
  *     {@code @Override}
  *     public void channelActive({@link ChannelHandlerContext} ctx) {
  *         // closed on shutdown.

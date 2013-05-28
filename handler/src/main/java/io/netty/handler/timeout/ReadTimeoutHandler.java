@@ -19,8 +19,8 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelStateHandlerAdapter;
 
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -61,7 +61,7 @@ import java.util.concurrent.TimeUnit;
  * @see WriteTimeoutHandler
  * @see IdleStateHandler
  */
-public class ReadTimeoutHandler extends ChannelStateHandlerAdapter {
+public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
 
     private final long timeoutMillis;
 

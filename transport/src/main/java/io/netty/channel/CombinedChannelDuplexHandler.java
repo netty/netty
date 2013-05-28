@@ -18,17 +18,17 @@ package io.netty.channel;
 import java.net.SocketAddress;
 
 /**
- *  Combines a {@link ChannelStateHandler} and a {@link ChannelOperationHandler} into one {@link ChannelHandler}.
+ *  Combines a {@link ChannelInboundHandler} and a {@link ChannelOutboundHandler} into one {@link ChannelHandler}.
  *
  */
 public class CombinedChannelDuplexHandler extends ChannelDuplexHandler {
 
-    private ChannelStateHandler stateHandler;
-    private ChannelOperationHandler operationHandler;
+    private ChannelInboundHandler stateHandler;
+    private ChannelOutboundHandler operationHandler;
 
     /**
      * Creates a new uninitialized instance. A class that extends this handler must invoke
-     * {@link #init(ChannelStateHandler, ChannelOperationHandler)} before adding this handler into a
+     * {@link #init(ChannelInboundHandler, ChannelOutboundHandler)} before adding this handler into a
      * {@link ChannelPipeline}.
      */
     protected CombinedChannelDuplexHandler() { }
@@ -36,7 +36,7 @@ public class CombinedChannelDuplexHandler extends ChannelDuplexHandler {
     /**
      * Creates a new instance that combines the specified two handlers into one.
      */
-    public CombinedChannelDuplexHandler(ChannelStateHandler stateHandler, ChannelOperationHandler operationHandler) {
+    public CombinedChannelDuplexHandler(ChannelInboundHandler stateHandler, ChannelOutboundHandler operationHandler) {
         init(stateHandler, operationHandler);
     }
 
@@ -48,14 +48,14 @@ public class CombinedChannelDuplexHandler extends ChannelDuplexHandler {
      * @throws IllegalArgumentException if the specified handlers cannot be combined into one due to a conflict
      *                                  in the type hierarchy
      */
-    protected final void init(ChannelStateHandler stateHandler, ChannelOperationHandler operationHandler) {
+    protected final void init(ChannelInboundHandler stateHandler, ChannelOutboundHandler operationHandler) {
         validate(stateHandler, operationHandler);
         this.stateHandler = stateHandler;
         this.operationHandler = operationHandler;
     }
 
     @SuppressWarnings("InstanceofIncompatibleInterface")
-    private void validate(ChannelStateHandler stateHandler, ChannelOperationHandler operationHandler) {
+    private void validate(ChannelInboundHandler stateHandler, ChannelOutboundHandler operationHandler) {
         if (this.stateHandler != null) {
             throw new IllegalStateException(
                     "init() can not be invoked if " + CombinedChannelDuplexHandler.class.getSimpleName() +
@@ -68,15 +68,15 @@ public class CombinedChannelDuplexHandler extends ChannelDuplexHandler {
         if (operationHandler == null) {
             throw new NullPointerException("operationHandler");
         }
-        if (stateHandler instanceof ChannelOperationHandler) {
+        if (stateHandler instanceof ChannelOutboundHandler) {
             throw new IllegalArgumentException(
                     "stateHandler must not implement " +
-                    ChannelOperationHandler.class.getSimpleName() + " to get combined.");
+                    ChannelOutboundHandler.class.getSimpleName() + " to get combined.");
         }
-        if (operationHandler instanceof ChannelStateHandler) {
+        if (operationHandler instanceof ChannelInboundHandler) {
             throw new IllegalArgumentException(
                     "operationHandler must not implement " +
-                    ChannelStateHandler.class.getSimpleName() + " to get combined.");
+                    ChannelInboundHandler.class.getSimpleName() + " to get combined.");
         }
 
         if (stateHandler instanceof ChannelInboundByteHandler && !(this instanceof ChannelInboundByteHandler)) {
@@ -108,11 +108,11 @@ public class CombinedChannelDuplexHandler extends ChannelDuplexHandler {
         }
     }
 
-    protected final ChannelStateHandler stateHandler() {
+    protected final ChannelInboundHandler stateHandler() {
         return stateHandler;
     }
 
-    protected final ChannelOperationHandler operationHandler() {
+    protected final ChannelOutboundHandler operationHandler() {
         return operationHandler;
     }
 

@@ -15,7 +15,7 @@
  */
 package io.netty.handler.logging;
 
-import io.netty.buffer.BufUtil;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -98,6 +98,6 @@ public class MessageLoggingHandler
     }
 
     protected String formatBuffer(String message, MessageBuf<Object> buf) {
-        return message + '(' + buf.size() + "): " + BufUtil.contentToString(buf);
+        return message + '(' + buf.size() + "): " + ByteBufUtil.contentToString(buf);
     }
 }

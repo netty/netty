@@ -839,11 +839,6 @@ final class UnreleasableByteBuf implements ByteBuf {
     }
 
     @Override
-    public BufType type() {
-        return buf.type();
-    }
-
-    @Override
     public boolean isReadable(int size) {
         return buf.isReadable(size);
     }

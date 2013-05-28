@@ -15,7 +15,6 @@
  */
 package io.netty.example.http.upload;
 
-import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;

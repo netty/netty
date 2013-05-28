@@ -831,11 +831,6 @@ public final class EmptyByteBuf implements ByteBuf {
     }
 
     @Override
-    public BufType type() {
-        return BufType.BYTE;
-    }
-
-    @Override
     public boolean isReadable(int size) {
         checkLength(size);
         return false;

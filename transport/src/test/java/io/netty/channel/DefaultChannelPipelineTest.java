@@ -758,7 +758,7 @@ public class DefaultChannelPipelineTest {
         }
     }
 
-    private static final class ChannelInboundMessageHandlerImpl extends ChannelStateHandlerAdapter
+    private static final class ChannelInboundMessageHandlerImpl extends ChannelInboundHandlerAdapter
             implements ChannelInboundMessageHandler<Object> {
         boolean updated;
         @Override
@@ -772,7 +772,7 @@ public class DefaultChannelPipelineTest {
         }
     }
 
-    private static final class ChannelOutboundMessageHandlerImpl extends ChannelOperationHandlerAdapter
+    private static final class ChannelOutboundMessageHandlerImpl extends ChannelOutboundHandlerAdapter
             implements ChannelOutboundMessageHandler<Object> {
         boolean flushed;
         @Override
