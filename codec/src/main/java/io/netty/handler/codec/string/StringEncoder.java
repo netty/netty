@@ -19,9 +19,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.LineBasedFrameDecoder;
+import io.netty.handler.codec.MessageToByteEncoder;
 
 import java.nio.charset.Charset;
 
@@ -47,7 +47,7 @@ import java.nio.charset.Charset;
  * </pre>
  */
 @Sharable
-public class StringEncoder extends ChannelOutboundMessageHandlerAdapter<CharSequence> {
+public class StringEncoder extends MessageToByteEncoder<CharSequence> {
 
     // TODO Use CharsetEncoder instead.
     private final Charset charset;
@@ -70,20 +70,12 @@ public class StringEncoder extends ChannelOutboundMessageHandlerAdapter<CharSequ
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, CharSequence msg) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, CharSequence msg, ByteBuf out) throws Exception {
         if (msg.length() == 0) {
             return;
         }
+
         ByteBuf encoded = Unpooled.copiedBuffer(msg, charset);
-        switch (ctx.nextOutboundBufferType()) {
-            case BYTE:
-                ctx.nextOutboundByteBuffer().writeBytes(encoded);
-                break;
-            case MESSAGE:
-                ctx.nextOutboundMessageBuffer().add(Unpooled.wrappedBuffer(encoded));
-                break;
-            default:
-                throw new Error();
-        }
+        out.writeBytes(encoded);
     }
 }

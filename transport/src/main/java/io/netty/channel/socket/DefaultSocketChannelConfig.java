@@ -20,6 +20,7 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.internal.PlatformDependent;
 
 import java.net.Socket;
@@ -294,12 +295,23 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     }
 
     @Override
+    public SocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
+        super.setRecvByteBufAllocator(allocator);
+        return this;
+    }
+
+    @Override
     public SocketChannelConfig setAutoRead(boolean autoRead) {
         return (SocketChannelConfig) super.setAutoRead(autoRead);
     }
 
     @Override
-    public SocketChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type) {
-        return (SocketChannelConfig) super.setDefaultHandlerByteBufType(type);
+    public SocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
+        return (SocketChannelConfig) super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
+    }
+
+    @Override
+    public SocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
+        return (SocketChannelConfig) super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
     }
 }

@@ -15,11 +15,11 @@
  */
 package io.netty.channel.group;
 
-import io.netty.buffer.BufUtil;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.FileRegion;
+import io.netty.channel.MessageList;
 import io.netty.channel.ServerChannel;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -233,37 +233,27 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
         Map<Integer, ChannelFuture> futures = new LinkedHashMap<Integer, ChannelFuture>(size());
         for (Channel c: nonServerChannels.values()) {
-            BufUtil.retain(message);
+            ByteBufUtil.retain(message);
             futures.put(c.id(), c.write(message));
         }
 
-        BufUtil.release(message);
+        ByteBufUtil.release(message);
         return new DefaultChannelGroupFuture(this, futures, executor);
     }
 
     @Override
-    public ChannelGroupFuture sendFile(FileRegion region) {
-        if (region == null) {
-            throw new NullPointerException("region");
+    public ChannelGroupFuture write(MessageList<Object> messages) {
+        if (messages == null) {
+            throw new NullPointerException("messages");
         }
 
         Map<Integer, ChannelFuture> futures = new LinkedHashMap<Integer, ChannelFuture>(size());
         for (Channel c: nonServerChannels.values()) {
-            BufUtil.retain(region);
-            futures.put(c.id(), c.sendFile(region));
+            MessageList<Object> messagesCopy = messages.retainAll().copy();
+            futures.put(c.id(), c.write(messagesCopy));
         }
 
-        BufUtil.release(region);
-        return new DefaultChannelGroupFuture(this, futures, executor);
-    }
-
-    @Override
-    public ChannelGroupFuture flush() {
-        Map<Integer, ChannelFuture> futures = new LinkedHashMap<Integer, ChannelFuture>(size());
-        for (Channel c: nonServerChannels.values()) {
-            futures.put(c.id(), c.flush());
-        }
-
+        messages.releaseAllAndRecycle();
         return new DefaultChannelGroupFuture(this, futures, executor);
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,19 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.buffer;
 
-/**
- * The type of the Buf
- */
-public enum BufType {
-    /**
-     * Operates on bytes.
-     */
-    BYTE,
+package io.netty.channel;
+
+import io.netty.util.Signal;
+
+public interface MessageListProcessor<T> {
+
+    Signal ABORT = new Signal(MessageListProcessor.class.getName() + ".ABORT");
 
     /**
-     * Operates on messages, which can be of any kind.
+     * @return the number of elements processed. {@link MessageList#forEach(MessageListProcessor)} will determine
+     *         the index of the next element to be processed based on this value.  Usually, an implementation will
+     *         return {@code 1} to advance the index by {@code 1}.
      */
-    MESSAGE
+    int process(MessageList<T> messages, int index, T value) throws Exception;
 }

@@ -15,17 +15,17 @@
  */
 package io.netty.channel.socket.nio;
 
-import io.netty.buffer.BufType;
-import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.MessageBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.MessageList;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
@@ -59,11 +59,13 @@ import java.util.Map;
 public final class NioDatagramChannel
         extends AbstractNioMessageChannel implements io.netty.channel.socket.DatagramChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, true);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(true);
 
     private final DatagramChannelConfig config;
     private final Map<InetAddress, List<MembershipKey>> memberships =
             new HashMap<InetAddress, List<MembershipKey>>();
+
+    private RecvByteBufAllocator.Handle allocHandle;
 
     private static DatagramChannel newSocket() {
         try {
@@ -198,9 +200,14 @@ public final class NioDatagramChannel
     }
 
     @Override
-    protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
+    protected int doReadMessages(MessageList<Object> buf) throws Exception {
         DatagramChannel ch = javaChannel();
-        ByteBuf data = alloc().directBuffer(config().getReceivePacketSize());
+        DatagramChannelConfig config = config();
+        RecvByteBufAllocator.Handle allocHandle = this.allocHandle;
+        if (allocHandle == null) {
+            this.allocHandle = allocHandle = config.getRecvByteBufAllocator().newHandle();
+        }
+        ByteBuf data = allocHandle.allocate(config.getAllocator());
         boolean free = true;
         try {
             ByteBuffer nioData = data.nioBuffer(data.writerIndex(), data.writableBytes());
@@ -210,7 +217,10 @@ public final class NioDatagramChannel
                 return 0;
             }
 
-            data.writerIndex(data.writerIndex() + nioData.position());
+            int readBytes = nioData.position();
+            data.writerIndex(data.writerIndex() + readBytes);
+            allocHandle.record(readBytes);
+
             buf.add(new DatagramPacket(data, localAddress(), remoteAddress));
             free = false;
             return 1;
@@ -225,8 +235,8 @@ public final class NioDatagramChannel
     }
 
     @Override
-    protected int doWriteMessages(MessageBuf<Object> buf, boolean lastSpin) throws Exception {
-        final Object o = buf.peek();
+    protected int doWriteMessages(MessageList<Object> msgs, int index, boolean lastSpin) throws Exception {
+        final Object o = msgs.get(index);
         final Object m;
         final ByteBuf data;
         final SocketAddress remoteAddress;
@@ -245,7 +255,7 @@ public final class NioDatagramChannel
         } else if (m instanceof ByteBuf) {
             data = (ByteBuf) m;
         } else {
-            BufUtil.release(buf.remove());
+            ByteBufUtil.release(o);
             throw new ChannelException("unsupported message type: " + StringUtil.simpleClassName(o));
         }
 
@@ -283,9 +293,9 @@ public final class NioDatagramChannel
         }
 
         // Wrote a packet - free the message.
-        BufUtil.release(buf.remove());
+        ByteBufUtil.release(o);
 
-        if (buf.isEmpty()) {
+        if (index + 1 == msgs.size()) {
             // Wrote the outbound buffer completely - clear OP_WRITE.
             if ((interestOps & SelectionKey.OP_WRITE) != 0) {
                 key.interestOps(interestOps & ~SelectionKey.OP_WRITE);

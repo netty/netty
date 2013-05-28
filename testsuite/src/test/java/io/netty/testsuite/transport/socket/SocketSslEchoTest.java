@@ -15,30 +15,29 @@
  */
 package io.netty.testsuite.transport.socket;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.MessageList;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.testsuite.util.BogusSslContextFactory;
 import io.netty.util.concurrent.Future;
+import org.junit.Test;
 
+import javax.net.ssl.SSLEngine;
 import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import javax.net.ssl.SSLEngine;
-
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 public class SocketSslEchoTest extends AbstractSocketTest {
 
@@ -163,7 +162,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
     }
 
-    private class EchoHandler extends ChannelInboundByteHandlerAdapter {
+    private class EchoHandler extends ChannelInboundHandlerAdapter {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
@@ -180,22 +179,24 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void inboundBufferUpdated(
-                ChannelHandlerContext ctx, ByteBuf in)
-                throws Exception {
-            byte[] actual = new byte[in.readableBytes()];
-            in.readBytes(actual);
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            for (int j = 0; j < msgs.size(); j ++) {
+                ByteBuf in = (ByteBuf) msgs.get(j);
+                byte[] actual = new byte[in.readableBytes()];
+                in.readBytes(actual);
 
-            int lastIdx = counter;
-            for (int i = 0; i < actual.length; i ++) {
-                assertEquals(data[i + lastIdx], actual[i]);
+                int lastIdx = counter;
+                for (int i = 0; i < actual.length; i ++) {
+                    assertEquals(data[i + lastIdx], actual[i]);
+                }
+
+                if (channel.parent() != null) {
+                    channel.write(Unpooled.wrappedBuffer(actual));
+                }
+
+                counter += actual.length;
             }
-
-            if (channel.parent() != null) {
-                channel.write(Unpooled.wrappedBuffer(actual));
-            }
-
-            counter += actual.length;
+            msgs.releaseAllAndRecycle();
         }
 
         @Override

@@ -51,11 +51,6 @@ public abstract class AbstractByteBuf implements ByteBuf {
     }
 
     @Override
-    public BufType type() {
-        return BufType.BYTE;
-    }
-
-    @Override
     public int maxCapacity() {
         return maxCapacity;
     }
@@ -971,17 +966,17 @@ public abstract class AbstractByteBuf implements ByteBuf {
             nioBuffer.flip();
         }
 
-        return BufUtil.decodeString(nioBuffer, charset);
+        return ByteBufUtil.decodeString(nioBuffer, charset);
     }
 
     @Override
     public int indexOf(int fromIndex, int toIndex, byte value) {
-        return BufUtil.indexOf(this, fromIndex, toIndex, value);
+        return ByteBufUtil.indexOf(this, fromIndex, toIndex, value);
     }
 
     @Override
     public int indexOf(int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
-        return BufUtil.indexOf(this, fromIndex, toIndex, indexFinder);
+        return ByteBufUtil.indexOf(this, fromIndex, toIndex, indexFinder);
     }
 
     @Override
@@ -1027,7 +1022,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
 
     @Override
     public int hashCode() {
-        return BufUtil.hashCode(this);
+        return ByteBufUtil.hashCode(this);
     }
 
     @Override
@@ -1036,14 +1031,14 @@ public abstract class AbstractByteBuf implements ByteBuf {
             return true;
         }
         if (o instanceof ByteBuf) {
-            return BufUtil.equals(this, (ByteBuf) o);
+            return ByteBufUtil.equals(this, (ByteBuf) o);
         }
         return false;
     }
 
     @Override
     public int compareTo(ByteBuf that) {
-        return BufUtil.compare(this, that);
+        return ByteBufUtil.compare(this, that);
     }
 
     @Override

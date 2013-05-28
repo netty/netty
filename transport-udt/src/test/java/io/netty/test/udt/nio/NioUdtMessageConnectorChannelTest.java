@@ -16,7 +16,6 @@
 
 package io.netty.test.udt.nio;
 
-import io.netty.buffer.BufType;
 import io.netty.channel.udt.nio.NioUdtMessageConnectorChannel;
 import org.junit.Test;
 
@@ -29,6 +28,6 @@ public class NioUdtMessageConnectorChannelTest extends AbstractUdtTest {
      */
     @Test
     public void metadata() throws Exception {
-        assertEquals(BufType.MESSAGE, new NioUdtMessageConnectorChannel().metadata().bufferType());
+        assertEquals(false, new NioUdtMessageConnectorChannel().metadata().hasDisconnect());
     }
 }

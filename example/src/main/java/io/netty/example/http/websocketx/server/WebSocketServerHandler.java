@@ -20,7 +20,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MessageList;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -45,7 +46,7 @@ import static io.netty.handler.codec.http.HttpVersion.*;
 /**
  * Handles handshakes and messages
  */
-public class WebSocketServerHandler extends ChannelInboundMessageHandlerAdapter<Object> {
+public class WebSocketServerHandler extends ChannelInboundHandlerAdapter {
     private static final Logger logger = Logger.getLogger(WebSocketServerHandler.class.getName());
 
     private static final String WEBSOCKET_PATH = "/websocket";
@@ -53,12 +54,16 @@ public class WebSocketServerHandler extends ChannelInboundMessageHandlerAdapter<
     private WebSocketServerHandshaker handshaker;
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof FullHttpRequest) {
-            handleHttpRequest(ctx, (FullHttpRequest) msg);
-        } else if (msg instanceof WebSocketFrame) {
-            handleWebSocketFrame(ctx, (WebSocketFrame) msg);
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        for (int i = 0; i < msgs.size(); i++) {
+            Object msg = msgs.get(i);
+            if (msg instanceof FullHttpRequest) {
+                handleHttpRequest(ctx, (FullHttpRequest) msg);
+            } else if (msg instanceof WebSocketFrame) {
+                handleWebSocketFrame(ctx, (WebSocketFrame) msg);
+            }
         }
+        msgs.releaseAllAndRecycle();
     }
 
     private void handleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
@@ -106,13 +111,11 @@ public class WebSocketServerHandler extends ChannelInboundMessageHandlerAdapter<
 
         // Check for closing frame
         if (frame instanceof CloseWebSocketFrame) {
-            frame.retain();
-            handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
+            handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame.retain());
             return;
         }
         if (frame instanceof PingWebSocketFrame) {
-            frame.content().retain();
-            ctx.channel().write(new PongWebSocketFrame(frame.content()));
+            ctx.channel().write(new PongWebSocketFrame(frame.content().retain()));
             return;
         }
         if (!(frame instanceof TextWebSocketFrame)) {

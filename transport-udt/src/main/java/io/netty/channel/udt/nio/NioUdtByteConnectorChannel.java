@@ -17,11 +17,11 @@ package io.netty.channel.udt.nio;
 
 import com.barchart.udt.TypeUDT;
 import com.barchart.udt.nio.SocketChannelUDT;
-import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.FileRegion;
 import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.udt.DefaultUdtChannelConfig;
 import io.netty.channel.udt.UdtChannel;
@@ -44,8 +44,7 @@ public class NioUdtByteConnectorChannel extends AbstractNioByteChannel
     private static final InternalLogger logger = InternalLoggerFactory
             .getInstance(NioUdtByteConnectorChannel.class);
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(
-            BufType.BYTE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private final UdtChannelConfig config;
 
@@ -164,6 +163,11 @@ public class NioUdtByteConnectorChannel extends AbstractNioByteChannel
             }
         }
         return writtenBytes;
+    }
+
+    @Override
+    protected long doWriteFileRegion(FileRegion region, boolean lastSpin) throws Exception {
+        throw new UnsupportedOperationException();
     }
 
     @Override

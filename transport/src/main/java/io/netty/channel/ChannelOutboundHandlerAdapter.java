@@ -18,14 +18,14 @@ package io.netty.channel;
 import java.net.SocketAddress;
 
 /**
- * Skelton implementation of a {@link ChannelOperationHandler}. This implementation just forwards each method call via
+ * Skelton implementation of a {@link ChannelOutboundHandler}. This implementation just forwards each method call via
  * the {@link ChannelHandlerContext}.
  */
-public abstract class ChannelOperationHandlerAdapter extends ChannelHandlerAdapter implements ChannelOperationHandler {
+public class ChannelOutboundHandlerAdapter extends ChannelHandlerAdapter implements ChannelOutboundHandler {
 
     /**
      * Calls {@link ChannelHandlerContext#bind(SocketAddress, ChannelPromise)} to forward
-     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
+     * to the next {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
@@ -37,7 +37,7 @@ public abstract class ChannelOperationHandlerAdapter extends ChannelHandlerAdapt
 
     /**
      * Calls {@link ChannelHandlerContext#connect(SocketAddress, SocketAddress, ChannelPromise)} to forward
-     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
+     * to the next {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
@@ -49,7 +49,7 @@ public abstract class ChannelOperationHandlerAdapter extends ChannelHandlerAdapt
 
     /**
      * Calls {@link ChannelHandlerContext#disconnect(ChannelPromise)} to forward
-     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
+     * to the next {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
@@ -61,7 +61,7 @@ public abstract class ChannelOperationHandlerAdapter extends ChannelHandlerAdapt
 
     /**
      * Calls {@link ChannelHandlerContext#close(ChannelPromise)} to forward
-     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
+     * to the next {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
@@ -73,35 +73,28 @@ public abstract class ChannelOperationHandlerAdapter extends ChannelHandlerAdapt
 
     /**
      * Calls {@link ChannelHandlerContext#close(ChannelPromise)} to forward
-     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
+     * to the next {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise)
-            throws Exception {
+    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         ctx.deregister(promise);
     }
 
     /**
      * Calls {@link ChannelHandlerContext#read()} to forward
-     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
+     * to the next {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void read(ChannelHandlerContext ctx) {
+    public void read(ChannelHandlerContext ctx) throws Exception {
         ctx.read();
     }
 
-    /**
-     * Calls {@link ChannelHandlerContext#sendFile(FileRegion, ChannelPromise)} to forward
-     * to the next {@link ChannelOperationHandler} in the {@link ChannelPipeline}.
-     *
-     * Sub-classes may override this method to change behavior.
-     */
     @Override
-    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise promise) throws Exception {
-        ctx.sendFile(region, promise);
+    public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
+        ctx.write(msgs, promise);
     }
 }

@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ServerSocketChannelConfig;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.PlatformDependent;
@@ -219,14 +220,26 @@ final class AioServerSocketChannelConfig extends DefaultChannelConfig implements
     }
 
     @Override
+    public AioServerSocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
+        super.setRecvByteBufAllocator(allocator);
+        return this;
+    }
+
+    @Override
     public AioServerSocketChannelConfig setAutoRead(boolean autoRead) {
         super.setAutoRead(autoRead);
         return this;
     }
 
     @Override
-    public ServerSocketChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type) {
-        super.setDefaultHandlerByteBufType(type);
+    public AioServerSocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
+        super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
+        return this;
+    }
+
+    @Override
+    public AioServerSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
+        super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
         return this;
     }
 }

@@ -25,13 +25,11 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
-import java.util.Iterator;
 
 /**
- * A collection of utility methods that is related with handling {@link ByteBuf}, {@link MessageBuf}, and their
- * elements.
+ * A collection of utility methods that is related with handling {@link ByteBuf}.
  */
-public final class BufUtil {
+public final class ByteBufUtil {
 
     private static final char[] HEXDUMP_TABLE = new char[256 * 4];
 
@@ -418,29 +416,5 @@ public final class BufUtil {
         return dst.flip().toString();
     }
 
-    /**
-     * Return the content of the given {@link MessageBuf} as string representation.
-     */
-    public static String contentToString(MessageBuf<?> buf) {
-        if (buf.isEmpty()) {
-            return "[]";
-        }
-        Iterator<?> it = buf.iterator();
-        StringBuilder sb = new StringBuilder();
-        sb.append('[');
-        while (it.hasNext()) {
-            Object msg = it.next();
-            if (msg == buf) {
-                sb.append('(' + buf.getClass().getSimpleName() + ')');
-            } else {
-                sb.append(msg);
-            }
-            if (it.hasNext()) {
-                sb.append(", ");
-            }
-        }
-        return sb.append(']').toString();
-    }
-
-    private BufUtil() { }
+    private ByteBufUtil() { }
 }

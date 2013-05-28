@@ -15,13 +15,12 @@
  */
 package io.netty.channel.socket.aio;
 
-import io.netty.buffer.BufType;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
+import io.netty.channel.MessageList;
 import io.netty.channel.aio.AbstractAioChannel;
 import io.netty.channel.aio.AioCompletionHandler;
 import io.netty.channel.aio.AioEventLoopGroup;
@@ -37,6 +36,7 @@ import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
+import java.nio.channels.CompletionHandler;
 
 /**
  * {@link ServerSocketChannel} implementation which uses NIO2.
@@ -45,9 +45,9 @@ import java.nio.channels.AsynchronousSocketChannel;
  */
 public class AioServerSocketChannel extends AbstractAioChannel implements ServerSocketChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
-    private static final AcceptHandler ACCEPT_HANDLER = new AcceptHandler();
+    private final CompletionHandler<AsynchronousSocketChannel, Void> acceptHandler = new AcceptHandler(this);
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(AioServerSocketChannel.class);
 
@@ -138,7 +138,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
         }
 
         acceptInProgress = true;
-        javaChannel().accept(this, ACCEPT_HANDLER);
+        javaChannel().accept(null, acceptHandler);
     }
 
     @Override
@@ -166,6 +166,11 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     }
 
     @Override
+    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     protected Runnable doRegister() throws Exception {
         Runnable task = super.doRegister();
         if (ch == null) {
@@ -178,34 +183,25 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     }
 
     private static final class AcceptHandler
-            extends AioCompletionHandler<AsynchronousSocketChannel, AioServerSocketChannel> {
+            extends AioCompletionHandler<AioServerSocketChannel, AsynchronousSocketChannel, Void> {
+
+        AcceptHandler(AioServerSocketChannel channel) {
+            super(channel);
+        }
 
         @Override
-        protected void completed0(AsynchronousSocketChannel ch, AioServerSocketChannel channel) {
+        protected void completed0(AioServerSocketChannel channel, AsynchronousSocketChannel ch, Void attachment) {
             channel.acceptInProgress = false;
 
             ChannelPipeline pipeline = channel.pipeline();
-            MessageBuf<Object> buffer = pipeline.inboundMessageBuffer();
 
-            if (buffer.refCnt() == 0) {
-                try {
-                    ch.close();
-                } catch (IOException e) {
-                    logger.warn(
-                            "Failed to close a socket which was accepted while its server socket is being closed",
-                            e);
-                }
-                return;
-            }
-
-            // create the socket add it to the buffer and fire the event
-            buffer.add(new AioSocketChannel(channel, null, ch));
-            pipeline.fireInboundBufferUpdated();
+            // Create a new Netty channel from a JDK channel and trigger events.
+            pipeline.fireMessageReceived(new AioSocketChannel(channel, null, ch));
             pipeline.fireChannelReadSuspended();
         }
 
         @Override
-        protected void failed0(Throwable t, AioServerSocketChannel channel) {
+        protected void failed0(AioServerSocketChannel channel, Throwable t, Void attachment) {
             channel.acceptInProgress = false;
             boolean asyncClosed = false;
             if (t instanceof AsynchronousCloseException) {

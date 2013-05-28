@@ -15,17 +15,17 @@
  */
 package io.netty.channel.socket.oio;
 
-import io.netty.buffer.BufType;
-import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.MessageBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.MessageList;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
@@ -59,11 +59,13 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(OioDatagramChannel.class);
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, true);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(true);
 
     private final MulticastSocket socket;
     private final DatagramChannelConfig config;
     private final java.net.DatagramPacket tmpPacket = new java.net.DatagramPacket(EmptyArrays.EMPTY_BYTES, 0);
+
+    private RecvByteBufAllocator.Handle allocHandle;
 
     private static MulticastSocket newSocket() {
         try {
@@ -199,13 +201,17 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
-        int packetSize = config().getReceivePacketSize();
-        ByteBuf data = alloc().heapBuffer(packetSize);
-        boolean free = true;
+    protected int doReadMessages(MessageList<Object> buf) throws Exception {
+        DatagramChannelConfig config = config();
+        RecvByteBufAllocator.Handle allocHandle = this.allocHandle;
+        if (allocHandle == null) {
+            this.allocHandle = allocHandle = config.getRecvByteBufAllocator().newHandle();
+        }
 
+        ByteBuf data = config.getAllocator().heapBuffer(allocHandle.guess());
+        boolean free = true;
         try {
-            tmpPacket.setData(data.array(), data.arrayOffset(), packetSize);
+            tmpPacket.setData(data.array(), data.arrayOffset(), data.capacity());
             socket.receive(tmpPacket);
 
             InetSocketAddress remoteAddr = (InetSocketAddress) tmpPacket.getSocketAddress();
@@ -213,7 +219,9 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
                 remoteAddr = remoteAddress();
             }
 
-            buf.add(new DatagramPacket(data.writerIndex(tmpPacket.getLength()), localAddress(), remoteAddr));
+            int readBytes = tmpPacket.getLength();
+            allocHandle.record(readBytes);
+            buf.add(new DatagramPacket(data.writerIndex(readBytes), localAddress(), remoteAddr));
             free = false;
             return 1;
         } catch (SocketTimeoutException e) {
@@ -235,8 +243,8 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected void doWriteMessages(MessageBuf<Object> buf) throws Exception {
-        final Object o = buf.poll();
+    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
+        final Object o = msgs.get(index);
         final Object m;
         final ByteBuf data;
         final SocketAddress remoteAddress;
@@ -255,7 +263,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
         } else if (m instanceof ByteBuf) {
             data = (ByteBuf) m;
         } else {
-            BufUtil.release(buf.remove());
+            ByteBufUtil.release(o);
             throw new ChannelException("unsupported message type: " + StringUtil.simpleClassName(o));
         }
 
@@ -272,8 +280,9 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
                 tmpPacket.setData(tmp);
             }
             socket.send(tmpPacket);
+            return 1;
         } finally {
-            BufUtil.release(o);
+            ByteBufUtil.release(o);
         }
     }
 

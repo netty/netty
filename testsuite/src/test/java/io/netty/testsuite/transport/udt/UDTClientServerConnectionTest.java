@@ -15,14 +15,14 @@
  */
 package io.netty.testsuite.transport.udt;
 
-import static org.junit.Assert.*;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.MessageList;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -33,12 +33,13 @@ import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.util.CharsetUtil;
-
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.Assert.*;
 
 /**
  * Verify UDT connect/disconnect life cycle.
@@ -136,7 +137,7 @@ public class UDTClientServerConnectionTest {
     }
 
     static class ClientHandler extends
-            ChannelInboundMessageHandlerAdapter<String> {
+            ChannelInboundHandlerAdapter {
 
         static final Logger log = LoggerFactory.getLogger(ClientHandler.class);
 
@@ -169,9 +170,11 @@ public class UDTClientServerConnectionTest {
         }
 
         @Override
-        public void messageReceived(final ChannelHandlerContext ctx,
-                final String msg) throws Exception {
-            log.info("Client received: " + msg);
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            for (int i = 0; i < msgs.size(); i ++) {
+                log.info("Client received: " + msgs.get(i));
+            }
+            msgs.releaseAllAndRecycle();
         }
     }
 
@@ -282,7 +285,7 @@ public class UDTClientServerConnectionTest {
     }
 
     static class ServerHandler extends
-            ChannelInboundMessageHandlerAdapter<String> {
+            ChannelInboundHandlerAdapter {
 
         static final Logger log = LoggerFactory.getLogger(ServerHandler.class);
 
@@ -320,9 +323,11 @@ public class UDTClientServerConnectionTest {
         }
 
         @Override
-        public void messageReceived(final ChannelHandlerContext ctx,
-                final String message) throws Exception {
-            log.info("Server received: " + message);
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            for (int i = 0; i < msgs.size(); i ++) {
+                log.info("Server received: " + msgs.get(i));
+            }
+            msgs.releaseAllAndRecycle();
         }
     }
 

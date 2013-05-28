@@ -15,12 +15,11 @@
  */
 package io.netty.example.socksproxy;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 
 
-public final class DirectClientHandler extends ChannelInboundByteHandlerAdapter {
+public final class DirectClientHandler extends ChannelInboundHandlerAdapter {
     private static final String name = "DIRECT_CLIENT_HANDLER";
 
     public static String getName() {
@@ -41,9 +40,5 @@ public final class DirectClientHandler extends ChannelInboundByteHandlerAdapter 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable throwable) throws Exception {
         cb.onFailure(ctx, throwable);
-    }
-
-    @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf byteBuf) throws Exception {
     }
 }

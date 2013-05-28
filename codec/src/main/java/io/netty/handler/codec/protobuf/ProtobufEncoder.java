@@ -19,10 +19,10 @@ import com.google.protobuf.Message;
 import com.google.protobuf.MessageLite;
 import com.google.protobuf.MessageLiteOrBuilder;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.MessageList;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.MessageToMessageEncoder;
@@ -58,10 +58,9 @@ import static io.netty.buffer.Unpooled.*;
  */
 @Sharable
 public class ProtobufEncoder extends MessageToMessageEncoder<MessageLiteOrBuilder> {
-
     @Override
-    protected void encode(ChannelHandlerContext ctx, MessageLiteOrBuilder msg, MessageBuf<Object> out)
-            throws Exception {
+    protected void encode(
+            ChannelHandlerContext ctx, MessageLiteOrBuilder msg, MessageList<Object> out) throws Exception {
         if (msg instanceof MessageLite) {
             out.add(wrappedBuffer(((MessageLite) msg).toByteArray()));
             return;

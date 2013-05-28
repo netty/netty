@@ -18,8 +18,9 @@ package io.netty.channel.socket;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelStateHandler;
+import io.netty.channel.RecvByteBufAllocator;
 
 import java.net.Socket;
 import java.net.StandardSocketOptions;
@@ -149,7 +150,7 @@ public interface SocketChannelConfig extends ChannelConfig {
      * Sets whether the channel should not close itself when its remote peer shuts down output to
      * make the connection half-closed.  If {@code true} the connection is not closed when the
      * remote peer shuts down output. Instead,
-     * {@link ChannelStateHandler#userEventTriggered(ChannelHandlerContext, Object)}
+     * {@link ChannelInboundHandler#userEventTriggered(ChannelHandlerContext, Object)}
      * is invoked with a {@link ChannelInputShutdownEvent} object. If {@code false}, the connection
      * is closed automatically.
      */
@@ -165,8 +166,8 @@ public interface SocketChannelConfig extends ChannelConfig {
     SocketChannelConfig setAllocator(ByteBufAllocator allocator);
 
     @Override
-    SocketChannelConfig setAutoRead(boolean autoRead);
+    SocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator);
 
     @Override
-    SocketChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type);
+    SocketChannelConfig setAutoRead(boolean autoRead);
 }

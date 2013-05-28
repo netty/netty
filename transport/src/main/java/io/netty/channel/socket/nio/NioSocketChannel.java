@@ -15,7 +15,6 @@
  */
 package io.netty.channel.socket.nio;
 
-import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
@@ -23,6 +22,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
+import io.netty.channel.FileRegion;
 import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
@@ -35,13 +35,14 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.nio.channels.WritableByteChannel;
 
 /**
  * {@link io.netty.channel.socket.SocketChannel} which uses NIO selector based implementation.
  */
 public class NioSocketChannel extends AbstractNioByteChannel implements io.netty.channel.socket.SocketChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.BYTE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioSocketChannel.class);
 
@@ -257,5 +258,35 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         }
 
         return writtenBytes;
+    }
+
+    @Override
+    protected long doWriteFileRegion(FileRegion region, boolean lastSpin) throws Exception {
+        if (javaChannel() instanceof WritableByteChannel) {
+            WritableByteChannel wch = javaChannel();
+            long localWrittenBytes = region.transferTo(wch, region.transfered());
+            if (localWrittenBytes > 0 || lastSpin) {
+                // check if the region was written complete. If not set OP_WRITE so the eventloop
+                // will write the rest once writable again
+                if (region.transfered() < region.count()) {
+                    final SelectionKey key = selectionKey();
+                    final int interestOps = key.interestOps();
+                    if ((interestOps & SelectionKey.OP_WRITE) == 0) {
+                        key.interestOps(interestOps | SelectionKey.OP_WRITE);
+                    }
+                }
+            } else {
+                final SelectionKey key = selectionKey();
+                final int interestOps = key.interestOps();
+                // Wrote the region completely - clear OP_WRITE.
+                if ((interestOps & SelectionKey.OP_WRITE) != 0) {
+                    key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
+                }
+            }
+            return localWrittenBytes;
+        } else {
+            throw new UnsupportedOperationException("Underlying Channel is not of instance "
+                    + WritableByteChannel.class);
+        }
     }
 }

@@ -67,7 +67,7 @@ public class SnappyTest {
         assertEquals("Copy was not decoded correctly", expected, out);
     }
 
-    @Test(expected = CompressionException.class)
+    @Test(expected = DecompressionException.class)
     public void testDecodeCopyWithTinyOffset() throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
             0x0b, // preamble length
@@ -80,7 +80,7 @@ public class SnappyTest {
         snappy.decode(in, out);
     }
 
-    @Test(expected = CompressionException.class)
+    @Test(expected = DecompressionException.class)
     public void testDecodeCopyWithOffsetBeforeChunk() throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
             0x0a, // preamble length
@@ -93,7 +93,7 @@ public class SnappyTest {
         snappy.decode(in, out);
     }
 
-    @Test(expected = CompressionException.class)
+    @Test(expected = DecompressionException.class)
     public void testDecodeWithOverlyLongPreamble() throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
             -0x80, -0x80, -0x80, -0x80, 0x7f, // preamble length
@@ -187,7 +187,7 @@ public class SnappyTest {
         validateChecksum(maskChecksum(0x37c55159), input);
     }
 
-    @Test(expected = CompressionException.class)
+    @Test(expected = DecompressionException.class)
     public void testValidateChecksumFails() {
         ByteBuf input = Unpooled.wrappedBuffer(new byte[] {
                 'y', 't', 't', 'e', 'n'

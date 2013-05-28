@@ -35,17 +35,25 @@ public class ChannelOption<T> extends UniqueName {
 
     private static final ConcurrentMap<String, Boolean> names = PlatformDependent.newConcurrentHashMap();
 
-    public static final ChannelOption<ByteBufAllocator> ALLOCATOR = new ChannelOption<ByteBufAllocator>("ALLOCATOR");
+    public static final ChannelOption<ByteBufAllocator> ALLOCATOR =
+            new ChannelOption<ByteBufAllocator>("ALLOCATOR");
+    public static final ChannelOption<RecvByteBufAllocator> RCVBUF_ALLOCATOR =
+            new ChannelOption<RecvByteBufAllocator>("RCVBUF_ALLOCATOR");
+
     public static final ChannelOption<Integer> CONNECT_TIMEOUT_MILLIS =
             new ChannelOption<Integer>("CONNECT_TIMEOUT_MILLIS");
     public static final ChannelOption<Integer> WRITE_SPIN_COUNT =
             new ChannelOption<Integer>("WRITE_SPIN_COUNT");
+    public static final ChannelOption<Integer> WRITE_BUFFER_HIGH_WATER_MARK =
+            new ChannelOption<Integer>("WRITE_BUFFER_HIGH_WATER_MARK");
+    public static final ChannelOption<Integer> WRITE_BUFFER_LOW_WATER_MARK =
+            new ChannelOption<Integer>("WRITE_BUFFER_LOW_WATER_MARK");
+
     public static final ChannelOption<Boolean> ALLOW_HALF_CLOSURE =
             new ChannelOption<Boolean>("ALLOW_HALF_CLOSURE");
     public static final ChannelOption<Boolean> AUTO_READ =
             new ChannelOption<Boolean>("AUTO_READ");
-    public static final ChannelOption<ChannelConfig.ChannelHandlerByteBufType> DEFAULT_HANDLER_BYTEBUF_TYPE =
-            new ChannelOption<ChannelConfig.ChannelHandlerByteBufType>("DEFAULT_HANDLER_BYTEBUF_TYPE");
+
     public static final ChannelOption<Boolean> SO_BROADCAST =
             new ChannelOption<Boolean>("SO_BROADCAST");
     public static final ChannelOption<Boolean> SO_KEEPALIVE =
@@ -73,9 +81,6 @@ public class ChannelOption<T> extends UniqueName {
             new ChannelOption<Integer>("IP_MULTICAST_TTL");
     public static final ChannelOption<Boolean> IP_MULTICAST_LOOP_DISABLED =
             new ChannelOption<Boolean>("IP_MULTICAST_LOOP_DISABLED");
-
-    public static final ChannelOption<Integer> UDP_RECEIVE_PACKET_SIZE =
-            new ChannelOption<Integer>("UDP_RECEIVE_PACKET_SIZE");
 
     public static final ChannelOption<Boolean> TCP_NODELAY =
             new ChannelOption<Boolean>("TCP_NODELAY");

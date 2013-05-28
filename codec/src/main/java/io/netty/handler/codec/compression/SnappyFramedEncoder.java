@@ -15,10 +15,10 @@
  */
 package io.netty.handler.codec.compression;
 
-import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ByteToByteEncoder;
+import io.netty.handler.codec.MessageToByteEncoder;
 
 import static io.netty.handler.codec.compression.Snappy.*;
 
@@ -27,7 +27,7 @@ import static io.netty.handler.codec.compression.Snappy.*;
  *
  * See http://code.google.com/p/snappy/source/browse/trunk/framing_format.txt
  */
-public class SnappyFramedEncoder extends ByteToByteEncoder {
+public class SnappyFramedEncoder extends MessageToByteEncoder<ByteBuf> {
     /**
      * The minimum amount that we'll consider actually attempting to compress.
      * This value is preamble + the minimum length our Snappy service will
@@ -99,7 +99,7 @@ public class SnappyFramedEncoder extends ByteToByteEncoder {
         if (chunkLength >>> 24 != 0) {
             throw new CompressionException("compressed data too large: " + chunkLength);
         }
-        out.setMedium(lengthIdx, BufUtil.swapMedium(chunkLength));
+        out.setMedium(lengthIdx, ByteBufUtil.swapMedium(chunkLength));
     }
 
     /**
@@ -109,7 +109,7 @@ public class SnappyFramedEncoder extends ByteToByteEncoder {
      * @param chunkLength The length to write
      */
     private static void writeChunkLength(ByteBuf out, int chunkLength) {
-        out.writeMedium(BufUtil.swapMedium(chunkLength));
+        out.writeMedium(ByteBufUtil.swapMedium(chunkLength));
     }
 
     /**
@@ -119,6 +119,6 @@ public class SnappyFramedEncoder extends ByteToByteEncoder {
      * @param out The output buffer to write the checksum to
      */
     private static void calculateAndWriteChecksum(ByteBuf slice, ByteBuf out) {
-        out.writeInt(BufUtil.swapInt(calculateChecksum(slice)));
+        out.writeInt(ByteBufUtil.swapInt(calculateChecksum(slice)));
     }
 }

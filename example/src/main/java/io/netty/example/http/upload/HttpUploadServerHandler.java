@@ -15,13 +15,13 @@
  */
 package io.netty.example.http.upload;
 
-import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MessageList;
 import io.netty.handler.codec.http.Cookie;
 import io.netty.handler.codec.http.CookieDecoder;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -62,7 +62,7 @@ import java.util.logging.Logger;
 import static io.netty.buffer.Unpooled.*;
 import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 
-public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter<Object> {
+public class HttpUploadServerHandler extends ChannelInboundHandlerAdapter {
 
     private static final Logger logger = Logger.getLogger(HttpUploadServerHandler.class.getName());
 
@@ -96,110 +96,114 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof HttpRequest) {
-            HttpRequest request = this.request = (HttpRequest) msg;
-            URI uri = new URI(request.getUri());
-            if (!uri.getPath().startsWith("/form")) {
-                // Write Menu
-                writeMenu(ctx);
-                return;
-            }
-            responseContent.setLength(0);
-            responseContent.append("WELCOME TO THE WILD WILD WEB SERVER\r\n");
-            responseContent.append("===================================\r\n");
-
-            responseContent.append("VERSION: " + request.getProtocolVersion().text() + "\r\n");
-
-            responseContent.append("REQUEST_URI: " + request.getUri() + "\r\n\r\n");
-            responseContent.append("\r\n\r\n");
-
-            // new getMethod
-            List<Entry<String, String>> headers = request.headers().entries();
-            for (Entry<String, String> entry : headers) {
-                responseContent.append("HEADER: " + entry.getKey() + '=' + entry.getValue() + "\r\n");
-            }
-            responseContent.append("\r\n\r\n");
-
-            // new getMethod
-            Set<Cookie> cookies;
-            String value = request.headers().get(COOKIE);
-            if (value == null) {
-                cookies = Collections.emptySet();
-            } else {
-                cookies = CookieDecoder.decode(value);
-            }
-            for (Cookie cookie : cookies) {
-                responseContent.append("COOKIE: " + cookie.toString() + "\r\n");
-            }
-            responseContent.append("\r\n\r\n");
-
-            QueryStringDecoder decoderQuery = new QueryStringDecoder(request.getUri());
-            Map<String, List<String>> uriAttributes = decoderQuery.parameters();
-            for (Entry<String, List<String>> attr: uriAttributes.entrySet()) {
-                for (String attrVal: attr.getValue()) {
-                    responseContent.append("URI: " + attr.getKey() + '=' + attrVal + "\r\n");
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        for (int i = 0; i < msgs.size(); i++) {
+            Object msg = msgs.get(i);
+            if (msg instanceof HttpRequest) {
+                HttpRequest request = this.request = (HttpRequest) msg;
+                URI uri = new URI(request.getUri());
+                if (!uri.getPath().startsWith("/form")) {
+                    // Write Menu
+                    writeMenu(ctx);
+                    return;
                 }
-            }
-            responseContent.append("\r\n\r\n");
+                responseContent.setLength(0);
+                responseContent.append("WELCOME TO THE WILD WILD WEB SERVER\r\n");
+                responseContent.append("===================================\r\n");
 
-            // if GET Method: should not try to create a HttpPostRequestDecoder
-            try {
-                decoder = new HttpPostRequestDecoder(factory, request);
-            } catch (ErrorDataDecoderException e1) {
-                e1.printStackTrace();
-                responseContent.append(e1.getMessage());
-                writeResponse(ctx.channel());
-                ctx.channel().close();
-                return;
-            } catch (IncompatibleDataDecoderException e1) {
-                // GET Method: should not try to create a HttpPostRequestDecoder
-                // So OK but stop here
-                responseContent.append(e1.getMessage());
-                responseContent.append("\r\n\r\nEND OF GET CONTENT\r\n");
-                writeResponse(ctx.channel());
-                return;
-            }
+                responseContent.append("VERSION: " + request.getProtocolVersion().text() + "\r\n");
 
-            readingChunks = HttpHeaders.isTransferEncodingChunked(request);
-            responseContent.append("Is Chunked: " + readingChunks + "\r\n");
-            responseContent.append("IsMultipart: " + decoder.isMultipart() + "\r\n");
-            if (readingChunks) {
-                // Chunk version
-                responseContent.append("Chunks: ");
-                readingChunks = true;
-            }
-        }
+                responseContent.append("REQUEST_URI: " + request.getUri() + "\r\n\r\n");
+                responseContent.append("\r\n\r\n");
 
-        // check if the decoder was constructed before
-        // if not it handles the form get
-        if (decoder != null) {
-            if (msg instanceof HttpContent) {
-                // New chunk is received
-                HttpContent chunk = (HttpContent) msg;
+                // new getMethod
+                List<Entry<String, String>> headers = request.headers().entries();
+                for (Entry<String, String> entry : headers) {
+                    responseContent.append("HEADER: " + entry.getKey() + '=' + entry.getValue() + "\r\n");
+                }
+                responseContent.append("\r\n\r\n");
+
+                // new getMethod
+                Set<Cookie> cookies;
+                String value = request.headers().get(COOKIE);
+                if (value == null) {
+                    cookies = Collections.emptySet();
+                } else {
+                    cookies = CookieDecoder.decode(value);
+                }
+                for (Cookie cookie : cookies) {
+                    responseContent.append("COOKIE: " + cookie.toString() + "\r\n");
+                }
+                responseContent.append("\r\n\r\n");
+
+                QueryStringDecoder decoderQuery = new QueryStringDecoder(request.getUri());
+                Map<String, List<String>> uriAttributes = decoderQuery.parameters();
+                for (Entry<String, List<String>> attr: uriAttributes.entrySet()) {
+                    for (String attrVal: attr.getValue()) {
+                        responseContent.append("URI: " + attr.getKey() + '=' + attrVal + "\r\n");
+                    }
+                }
+                responseContent.append("\r\n\r\n");
+
+                // if GET Method: should not try to create a HttpPostRequestDecoder
                 try {
-                    decoder.offer(chunk);
+                    decoder = new HttpPostRequestDecoder(factory, request);
                 } catch (ErrorDataDecoderException e1) {
                     e1.printStackTrace();
                     responseContent.append(e1.getMessage());
                     writeResponse(ctx.channel());
                     ctx.channel().close();
                     return;
-                }
-                responseContent.append('o');
-                // example of reading chunk by chunk (minimize memory usage due to
-                // Factory)
-                readHttpDataChunkByChunk();
-                // example of reading only if at the end
-                if (chunk instanceof LastHttpContent) {
-                    readHttpDataAllReceive(ctx.channel());
+                } catch (IncompatibleDataDecoderException e1) {
+                    // GET Method: should not try to create a HttpPostRequestDecoder
+                    // So OK but stop here
+                    responseContent.append(e1.getMessage());
+                    responseContent.append("\r\n\r\nEND OF GET CONTENT\r\n");
                     writeResponse(ctx.channel());
-                    readingChunks = false;
+                    return;
+                }
 
-                    reset();
+                readingChunks = HttpHeaders.isTransferEncodingChunked(request);
+                responseContent.append("Is Chunked: " + readingChunks + "\r\n");
+                responseContent.append("IsMultipart: " + decoder.isMultipart() + "\r\n");
+                if (readingChunks) {
+                    // Chunk version
+                    responseContent.append("Chunks: ");
+                    readingChunks = true;
+                }
+            }
+
+            // check if the decoder was constructed before
+            // if not it handles the form get
+            if (decoder != null) {
+                if (msg instanceof HttpContent) {
+                    // New chunk is received
+                    HttpContent chunk = (HttpContent) msg;
+                    try {
+                        decoder.offer(chunk);
+                    } catch (ErrorDataDecoderException e1) {
+                        e1.printStackTrace();
+                        responseContent.append(e1.getMessage());
+                        writeResponse(ctx.channel());
+                        ctx.channel().close();
+                        return;
+                    }
+                    responseContent.append('o');
+                    // example of reading chunk by chunk (minimize memory usage due to
+                    // Factory)
+                    readHttpDataChunkByChunk();
+                    // example of reading only if at the end
+                    if (chunk instanceof LastHttpContent) {
+                        readHttpDataAllReceive(ctx.channel());
+                        writeResponse(ctx.channel());
+                        readingChunks = false;
+
+                        reset();
+                    }
                 }
             }
         }
+        msgs.releaseAllAndRecycle();
     }
 
     private void reset() {

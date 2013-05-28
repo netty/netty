@@ -15,23 +15,23 @@
  */
 package io.netty.handler.codec.protobuf;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.embedded.EmbeddedChannel;
+import org.junit.Before;
+import org.junit.Test;
+
 import static io.netty.buffer.Unpooled.*;
 import static org.hamcrest.core.Is.*;
 import static org.hamcrest.core.IsNull.*;
 import static org.junit.Assert.*;
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.embedded.EmbeddedByteChannel;
-
-import org.junit.Before;
-import org.junit.Test;
 
 public class ProtobufVarint32FrameDecoderTest {
 
-    private EmbeddedByteChannel ch;
+    private EmbeddedChannel ch;
 
     @Before
     public void setUp() {
-        ch = new EmbeddedByteChannel(new ProtobufVarint32FrameDecoder());
+        ch = new EmbeddedChannel(new ProtobufVarint32FrameDecoder());
     }
 
     @Test

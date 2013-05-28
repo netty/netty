@@ -15,7 +15,7 @@
  */
 package io.netty.handler.stream;
 
-import io.netty.buffer.MessageBuf;
+import io.netty.channel.MessageList;
 
 import java.util.Queue;
 
@@ -23,6 +23,6 @@ import java.util.Queue;
  * {@link ChunkedInput} which reads its chunks and transfer it to a {@link Queue}
  *
  */
-public interface ChunkedMessageInput<T> extends ChunkedInput<MessageBuf<T>> {
+public interface ChunkedMessageInput<T> extends ChunkedInput<MessageList<T>> {
 
 }

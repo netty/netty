@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.NetUtil;
 
 import java.io.IOException;
@@ -170,12 +171,23 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
     }
 
     @Override
+    public SctpServerChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
+        super.setRecvByteBufAllocator(allocator);
+        return this;
+    }
+
+    @Override
     public SctpServerChannelConfig setAutoRead(boolean autoRead) {
         return (SctpServerChannelConfig) super.setAutoRead(autoRead);
     }
 
     @Override
-    public SctpServerChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type) {
-        return (SctpServerChannelConfig) super.setDefaultHandlerByteBufType(type);
+    public SctpServerChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
+        return (SctpServerChannelConfig) super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
+    }
+
+    @Override
+    public SctpServerChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
+        return (SctpServerChannelConfig) super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
     }
 }

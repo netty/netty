@@ -18,6 +18,7 @@ package io.netty.channel.rxtx;
 import gnu.io.SerialPort;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
+import io.netty.channel.RecvByteBufAllocator;
 
 /**
  * A configuration class for RXTX device connections.
@@ -268,8 +269,8 @@ public interface RxtxChannelConfig extends ChannelConfig {
     RxtxChannelConfig setAllocator(ByteBufAllocator allocator);
 
     @Override
-    RxtxChannelConfig setAutoRead(boolean autoRead);
+    RxtxChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator);
 
     @Override
-    RxtxChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type);
+    RxtxChannelConfig setAutoRead(boolean autoRead);
 }

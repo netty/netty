@@ -26,14 +26,12 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Queue;
 
 
 /**
@@ -50,7 +48,6 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf imp
     private final int maxNumComponents;
 
     private boolean freed;
-    private Queue<ByteBuf> suspendedDeallocations;
 
     public DefaultCompositeByteBuf(ByteBufAllocator alloc, boolean direct, int maxNumComponents) {
         super(Integer.MAX_VALUE);
@@ -1202,11 +1199,7 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf imp
 
         void freeIfNecessary() {
             // Unwrap so that we can free slices, too.
-            if (suspendedDeallocations == null) {
-                buf.release(); // We should not get a NPE here. If so, it must be a bug.
-            } else {
-                suspendedDeallocations.add(buf);
-            }
+            buf.release(); // We should not get a NPE here. If so, it must be a bug.
         }
     }
 
@@ -1457,36 +1450,11 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf imp
         }
 
         freed = true;
-        resumeIntermediaryDeallocations();
         for (Component c: components) {
             c.freeIfNecessary();
         }
 
         leak.close();
-    }
-
-    @Override
-    public CompositeByteBuf suspendIntermediaryDeallocations() {
-        ensureAccessible();
-        if (suspendedDeallocations == null) {
-            suspendedDeallocations = new ArrayDeque<ByteBuf>(2);
-        }
-        return this;
-    }
-
-    @Override
-    public CompositeByteBuf resumeIntermediaryDeallocations() {
-        if (suspendedDeallocations == null) {
-            return this;
-        }
-
-        Queue<ByteBuf> suspendedDeallocations = this.suspendedDeallocations;
-        this.suspendedDeallocations = null;
-
-        for (ByteBuf buf: suspendedDeallocations) {
-            buf.release();
-        }
-        return this;
     }
 
     @Override
