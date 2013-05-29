@@ -16,20 +16,20 @@
 package io.netty.example.qotm;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.CharsetUtil;
 
-public class QuoteOfTheMomentClientHandler extends ChannelInboundMessageHandlerAdapter<DatagramPacket> {
+public class QuoteOfTheMomentClientHandler extends ChannelInboundHandlerAdapter {
 
     @Override
-    public void messageReceived(
-            ChannelHandlerContext ctx, DatagramPacket msg)
-            throws Exception {
-        String response = msg.content().toString(CharsetUtil.UTF_8);
-        if (response.startsWith("QOTM: ")) {
-            System.out.println("Quote of the Moment: " + response.substring(6));
-            ctx.close();
+    public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+        for (int i = index; i < length; i++) {
+            String response = ((DatagramPacket) msgs[i]).content().toString(CharsetUtil.UTF_8);
+            if (response.startsWith("QOTM: ")) {
+                System.out.println("Quote of the Moment: " + response.substring(6));
+                ctx.close();
+            }
         }
     }
 

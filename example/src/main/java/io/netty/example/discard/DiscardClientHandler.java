@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -27,7 +27,7 @@ import java.util.logging.Logger;
 /**
  * Handles a client-side channel.
  */
-public class DiscardClientHandler extends ChannelInboundByteHandlerAdapter {
+public class DiscardClientHandler extends ChannelInboundHandlerAdapter {
 
     private static final Logger logger = Logger.getLogger(
             DiscardClientHandler.class.getName());
@@ -57,10 +57,8 @@ public class DiscardClientHandler extends ChannelInboundByteHandlerAdapter {
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in)
-            throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
         // Server is supposed to send nothing, but if it sends something, discard it.
-        in.clear();
     }
 
     @Override
@@ -77,15 +75,9 @@ public class DiscardClientHandler extends ChannelInboundByteHandlerAdapter {
     long counter;
 
     private void generateTraffic() {
-        // Fill the outbound buffer up to 64KiB
-        ByteBuf out = ctx.nextOutboundByteBuffer();
-        while (out.readableBytes() < 65536) {
-            out.writeBytes(content, 0, content.readableBytes());
-        }
-
         // Flush the outbound buffer to the socket.
         // Once flushed, generate the same amount of traffic again.
-        ctx.flush().addListener(trafficGenerator);
+        ctx.write(content.duplicate()).addListener(trafficGenerator);
     }
 
     private final ChannelFutureListener trafficGenerator = new ChannelFutureListener() {
