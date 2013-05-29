@@ -24,7 +24,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.FileRegion;
 
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -102,15 +101,9 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
     }
 
     @Override
-    public void flush(final ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object[] msgs, int index, int length, ChannelPromise promise) throws Exception {
         scheduleTimeout(ctx, promise);
-        ctx.flush(promise);
-    }
-
-    @Override
-    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise promise) throws Exception {
-        scheduleTimeout(ctx, promise);
-        super.sendFile(ctx, region, promise);
+        super.write(ctx, msgs, index, length, promise);
     }
 
     private void scheduleTimeout(final ChannelHandlerContext ctx, final ChannelPromise future) {

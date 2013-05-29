@@ -144,9 +144,9 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
         lastReadTime = System.currentTimeMillis();
-        ctx.fireInboundBufferUpdated();
+        ctx.fireMessageReceived(msgs, index, length);
     }
 
     private void initialize(ChannelHandlerContext ctx) {

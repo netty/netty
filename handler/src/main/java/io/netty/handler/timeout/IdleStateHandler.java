@@ -25,7 +25,6 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.FileRegion;
 import io.netty.util.concurrent.EventExecutor;
 
 import java.net.SocketAddress;
@@ -251,10 +250,10 @@ public class IdleStateHandler extends ChannelInboundHandlerAdapter implements Ch
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
         lastReadTime = System.currentTimeMillis();
         firstReaderIdleEvent = firstAllIdleEvent = true;
-        ctx.fireInboundBufferUpdated();
+        ctx.fireMessageReceived(msgs, index, length);
     }
 
     @Override
@@ -263,8 +262,7 @@ public class IdleStateHandler extends ChannelInboundHandlerAdapter implements Ch
     }
 
     @Override
-
-    public void flush(final ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object[] msgs, int index, int length, ChannelPromise promise) throws Exception {
         promise.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
@@ -272,8 +270,7 @@ public class IdleStateHandler extends ChannelInboundHandlerAdapter implements Ch
                 firstWriterIdleEvent = firstAllIdleEvent = true;
             }
         });
-
-        ctx.flush(promise);
+        ctx.write(msgs, index, length, promise);
     }
 
     @Override
@@ -300,18 +297,6 @@ public class IdleStateHandler extends ChannelInboundHandlerAdapter implements Ch
     @Override
     public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         ctx.deregister(promise);
-    }
-
-    @Override
-    public void sendFile(ChannelHandlerContext ctx, FileRegion region, ChannelPromise promise) throws Exception {
-        promise.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                lastWriteTime = System.currentTimeMillis();
-                firstWriterIdleEvent = firstAllIdleEvent = true;
-            }
-        });
-        ctx.sendFile(region, promise);
     }
 
     private void initialize(ChannelHandlerContext ctx) {

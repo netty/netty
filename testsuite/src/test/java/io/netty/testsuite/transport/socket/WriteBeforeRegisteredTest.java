@@ -45,11 +45,6 @@ public class WriteBeforeRegisteredTest extends AbstractClientSocketTest {
     private static class TestHandler extends ChannelInboundHandlerAdapter {
 
         @Override
-        public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-            ctx.fireInboundBufferUpdated();
-        }
-
-        @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             cause.printStackTrace();
         }
