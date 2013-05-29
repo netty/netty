@@ -17,10 +17,9 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.BufType;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
@@ -34,7 +33,7 @@ import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public class SocketStringEchoTest extends AbstractSocketTest {
 
@@ -136,7 +135,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         }
     }
 
-    static class StringEchoHandler extends ChannelInboundMessageHandlerAdapter<String> {
+    static class StringEchoHandler extends ChannelInboundHandlerAdapter {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
@@ -148,16 +147,18 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx,
-                String msg) throws Exception {
-            assertEquals(data[counter], msg);
+        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+            for (int i = index; i < length; i++) {
+                String msg = (String) msgs[i];
+                assertEquals(data[counter], msg);
 
-            if (channel.parent() != null) {
-                String delimiter = random.nextBoolean() ? "\r\n" : "\n";
-                channel.write(msg + delimiter);
+                if (channel.parent() != null) {
+                    String delimiter = random.nextBoolean() ? "\r\n" : "\n";
+                    channel.write(msg + delimiter);
+                }
+
+                counter ++;
             }
-
-            counter ++;
         }
 
         @Override

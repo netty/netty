@@ -21,8 +21,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelHandlerUtil;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
@@ -199,7 +198,7 @@ public class SocketEchoTest extends AbstractSocketTest {
         }
     }
 
-    private static class EchoHandler extends ChannelInboundByteHandlerAdapter {
+    private static class EchoHandler extends ChannelInboundHandlerAdapter {
         private final int maxInboundBufferSize;
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
@@ -210,33 +209,29 @@ public class SocketEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return ChannelHandlerUtil.allocate(ctx, 0, maxInboundBufferSize);
-        }
-
-        @Override
         public void channelActive(ChannelHandlerContext ctx)
                 throws Exception {
             channel = ctx.channel();
         }
 
         @Override
-        public void inboundBufferUpdated(
-                ChannelHandlerContext ctx, ByteBuf in)
-                throws Exception {
-            byte[] actual = new byte[in.readableBytes()];
-            in.readBytes(actual);
+        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+            for (int a = index; a < length; a++) {
+                ByteBuf in = (ByteBuf) msgs[a];
+                byte[] actual = new byte[in.readableBytes()];
+                in.readBytes(actual);
 
-            int lastIdx = counter;
-            for (int i = 0; i < actual.length; i ++) {
-                assertEquals(data[i + lastIdx], actual[i]);
+                int lastIdx = counter;
+                for (int i = 0; i < actual.length; i ++) {
+                    assertEquals(data[i + lastIdx], actual[i]);
+                }
+
+                if (channel.parent() != null) {
+                    channel.write(Unpooled.wrappedBuffer(actual));
+                }
+
+                counter += actual.length;
             }
-
-            if (channel.parent() != null) {
-                channel.write(Unpooled.wrappedBuffer(actual));
-            }
-
-            counter += actual.length;
         }
 
         @Override

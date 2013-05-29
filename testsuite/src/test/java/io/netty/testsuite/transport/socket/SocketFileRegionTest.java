@@ -20,7 +20,8 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.FileRegion;
 import org.junit.Test;
@@ -69,10 +70,11 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         out.write(data);
         out.close();
 
-        ChannelInboundByteHandlerAdapter ch = new ChannelInboundByteHandlerAdapter() {
+        ChannelInboundHandler ch = new ChannelInboundHandlerAdapter() {
+
             @Override
-            public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-                in.clear();
+            public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+                // discard
             }
 
             @Override
@@ -91,9 +93,9 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         FileRegion region = new DefaultFileRegion(new FileInputStream(file).getChannel(),
                 0L, file.length());
         if (voidPromise) {
-            assertEquals(cc.voidPromise(), cc.sendFile(region, cc.voidPromise()));
+            assertEquals(cc.voidPromise(), cc.write(region, cc.voidPromise()));
         } else {
-            assertNotEquals(cc.voidPromise(), cc.sendFile(region));
+            assertNotEquals(cc.voidPromise(), cc.write(region));
         }
         while (sh.counter < data.length) {
             if (sh.exception.get() != null) {
@@ -120,7 +122,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         }
     }
 
-    private static class TestHandler extends ChannelInboundByteHandlerAdapter {
+    private static class TestHandler extends ChannelInboundHandlerAdapter {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
@@ -132,17 +134,18 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         }
 
         @Override
-        public void inboundBufferUpdated(
-                ChannelHandlerContext ctx, ByteBuf in)
-                throws Exception {
-            byte[] actual = new byte[in.readableBytes()];
-            in.readBytes(actual);
+        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+            for (int a = index; a < length; a++) {
+                ByteBuf in = (ByteBuf) msgs[a];
+                byte[] actual = new byte[in.readableBytes()];
+                in.readBytes(actual);
 
-            int lastIdx = counter;
-            for (int i = 0; i < actual.length; i ++) {
-                assertEquals(data[i + lastIdx], actual[i]);
+                int lastIdx = counter;
+                for (int i = 0; i < actual.length; i ++) {
+                    assertEquals(data[i + lastIdx], actual[i]);
+                }
+                counter += actual.length;
             }
-            counter += actual.length;
         }
 
         @Override

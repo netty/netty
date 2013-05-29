@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.socket.DatagramPacket;
 import org.junit.Test;
 
@@ -27,6 +27,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public class DatagramUnicastTest extends AbstractDatagramTest {
 
@@ -38,21 +39,20 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
     public void testSimpleSend(Bootstrap sb, Bootstrap cb) throws Throwable {
         final CountDownLatch latch = new CountDownLatch(1);
 
-        sb.handler(new ChannelInboundMessageHandlerAdapter<DatagramPacket>() {
+        sb.handler(new ChannelInboundHandlerAdapter() {
             @Override
-            public void messageReceived(
-                    ChannelHandlerContext ctx,
-                    DatagramPacket msg) throws Exception {
-                assertEquals(1, msg.content().readInt());
+            public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+                if (length > 1) {
+                    throw new AssertionError();
+                }
+                assertEquals(1, ((DatagramPacket) msgs[index]).content().readInt());
                 latch.countDown();
             }
         });
 
-        cb.handler(new ChannelInboundMessageHandlerAdapter<DatagramPacket>() {
+        cb.handler(new ChannelInboundHandlerAdapter() {
             @Override
-            public void messageReceived(
-                    ChannelHandlerContext ctx,
-                    DatagramPacket msg) throws Exception {
+            public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
                 // Nothing will be sent.
             }
         });

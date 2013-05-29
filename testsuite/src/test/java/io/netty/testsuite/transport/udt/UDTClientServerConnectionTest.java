@@ -20,7 +20,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.group.ChannelGroup;
@@ -136,7 +136,7 @@ public class UDTClientServerConnectionTest {
     }
 
     static class ClientHandler extends
-            ChannelInboundMessageHandlerAdapter<String> {
+            ChannelInboundHandlerAdapter {
 
         static final Logger log = LoggerFactory.getLogger(ClientHandler.class);
 
@@ -169,9 +169,10 @@ public class UDTClientServerConnectionTest {
         }
 
         @Override
-        public void messageReceived(final ChannelHandlerContext ctx,
-                final String msg) throws Exception {
-            log.info("Client received: " + msg);
+        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+            for (int i = index; i < length; i++) {
+                log.info("Client received: " + msgs[i]);
+            }
         }
     }
 
@@ -282,7 +283,7 @@ public class UDTClientServerConnectionTest {
     }
 
     static class ServerHandler extends
-            ChannelInboundMessageHandlerAdapter<String> {
+            ChannelInboundHandlerAdapter {
 
         static final Logger log = LoggerFactory.getLogger(ServerHandler.class);
 
@@ -320,9 +321,10 @@ public class UDTClientServerConnectionTest {
         }
 
         @Override
-        public void messageReceived(final ChannelHandlerContext ctx,
-                final String message) throws Exception {
-            log.info("Server received: " + message);
+        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+            for (int i = index; i < length; i++) {
+                log.info("Server received: " + msgs[i]);
+            }
         }
     }
 

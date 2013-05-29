@@ -22,8 +22,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.spdy.SpdyConstants;
@@ -38,6 +37,7 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public class SocketSpdyEchoTest extends AbstractSocketTest {
 
@@ -230,13 +230,17 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         }
     }
 
-    private static class SpdyEchoTestServerHandler extends ChannelInboundMessageHandlerAdapter<Object> {
+    private static class SpdyEchoTestServerHandler extends ChannelInboundHandlerAdapter {
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-            ByteBufUtil.retain(msg);
-            ctx.write(msg);
+        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+            Object[] echoMsgs = new Object[length];
+            System.arraycopy(msgs, index, echoMsgs, 0, length);
+            for (Object msg: echoMsgs) {
+                ByteBufUtil.retain(msg);
+            }
+            ctx.write(echoMsgs);
         }
 
         @Override
@@ -247,7 +251,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         }
     }
 
-    private static class SpdyEchoTestClientHandler extends ChannelInboundByteHandlerAdapter {
+    private static class SpdyEchoTestClientHandler extends ChannelInboundHandlerAdapter {
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         final ByteBuf frames;
         volatile int counter;
@@ -257,16 +261,19 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-            byte[] actual = new byte[in.readableBytes()];
-            in.readBytes(actual);
+        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+            for (int a = index; a < length; a++) {
+                ByteBuf in = (ByteBuf) msgs[a];
+                byte[] actual = new byte[in.readableBytes()];
+                in.readBytes(actual);
 
-            int lastIdx = counter;
-            for (int i = 0; i < actual.length; i ++) {
-                assertEquals(frames.getByte(ignoredBytes + i + lastIdx), actual[i]);
+                int lastIdx = counter;
+                for (int i = 0; i < actual.length; i ++) {
+                    assertEquals(frames.getByte(ignoredBytes + i + lastIdx), actual[i]);
+                }
+
+                counter += actual.length;
             }
-
-            counter += actual.length;
         }
 
         @Override
