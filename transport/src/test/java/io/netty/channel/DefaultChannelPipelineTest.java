@@ -60,7 +60,8 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+            public void messageReceived(
+                    ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
                 // Swallow.
             }
         });
@@ -142,21 +143,21 @@ public class DefaultChannelPipelineTest {
 
     private static final class StringInboundHandler extends ChannelInboundHandlerAdapter {
         boolean called;
-        
+
         @Override
         public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
             called = true;
             Object[] out = new Object[length];
             int outSize = 0;
             for (int i = index; i < index + length; i ++) {
-            	Object m = msgs[i];
-            	if (!(m instanceof String)) {
-            		out[outSize ++] = m;
-            	}
+                Object m = msgs[i];
+                if (!(m instanceof String)) {
+                    out[outSize ++] = m;
+                }
             }
-            
+
             if (outSize > 0) {
-            	ctx.fireMessageReceived(out, 0, outSize);
+                ctx.fireMessageReceived(out, 0, outSize);
             }
         }
     }

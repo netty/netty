@@ -44,9 +44,9 @@ public class NioDatagramChannelTest {
                         .option(ChannelOption.SO_BROADCAST, true)
                         .handler(new ChannelInboundHandlerAdapter() {
                             @Override
-							public void messageReceived(
-									ChannelHandlerContext ctx, Object[] msgs,
-									int index, int length) throws Exception {
+                            public void messageReceived(
+                                    ChannelHandlerContext ctx, Object[] msgs,
+                                    int index, int length) throws Exception {
                                 // noop
                             }
                         });

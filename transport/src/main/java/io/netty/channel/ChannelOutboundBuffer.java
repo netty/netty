@@ -39,7 +39,6 @@ final class ChannelOutboundBuffer {
     private int[] messageIndexes;
     private int[] messageLengths;
 
-
     private int head;
     private int tail;
 

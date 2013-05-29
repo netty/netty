@@ -39,7 +39,6 @@ public abstract class AbstractEventLoopTest {
         ServerBootstrap bootstrap = new ServerBootstrap();
         ChannelFuture future = bootstrap.channel(newChannel()).group(group)
                 .childHandler(new ChannelInitializer<SocketChannel>() {
-
                     @Override
                     public void initChannel(SocketChannel ch) throws Exception {
                     }
@@ -64,10 +63,9 @@ public abstract class AbstractEventLoopTest {
     private static final class TestChannelHandler extends ChannelDuplexHandler { }
 
     private static final class TestChannelHandler2 extends ChannelDuplexHandler {
-    	
         @Override
-		public void messageReceived(ChannelHandlerContext ctx, Object[] msgs,
-				int index, int length) throws Exception { }
+        public void messageReceived(
+                ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception { }
     }
 
     protected abstract EventLoopGroup newEventLoopGroup();

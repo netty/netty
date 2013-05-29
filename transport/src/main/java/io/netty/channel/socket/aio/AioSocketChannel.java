@@ -241,8 +241,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
     @Override
     protected int doWrite(Object[] msgs, int index, int length) throws Exception {
-    	throw new Error("FIXME");
-    	/*
+        throw new Error("FIXME");
+        /*
         if (inDoFlushByteBuffer || writeInProgress != NO_WRITE_IN_PROGRESS) {
             return index;
         }
@@ -315,8 +315,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
     @Override
     protected void doBeginRead() {
-    	throw new Error("FIXME");
-    	/*
+        throw new Error("FIXME");
+        /*
         if (inDoBeginRead) {
             readAgain = true;
             return;
@@ -384,8 +384,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
         @Override
         protected void completed0(T result, AioSocketChannel channel) {
-        	throw new Error("FIXME");
-        	/*
+            throw new Error("FIXME");
+            /*
             channel.writeInProgress = NO_WRITE_IN_PROGRESS;
 
             ByteBuf buf = channel.unsafe().headContext().outboundByteBuffer();
@@ -443,8 +443,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
         @Override
         protected void completed0(T result, AioSocketChannel channel) {
-        	throw new Error("FIXME");
-        	/*
+            throw new Error("FIXME");
+            /*
             channel.readInProgress = false;
 
             if (channel.inputShutdown) {

@@ -111,9 +111,9 @@ public class LocalTransportThreadModelTest2 {
         }
 
         @Override
-		public void messageReceived(ChannelHandlerContext ctx, Object[] msgs,
-				int index, int length) throws Exception {
-        	count.addAndGet(length);
+        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs,
+                int index, int length) throws Exception {
+            count.addAndGet(length);
         }
     }
 }

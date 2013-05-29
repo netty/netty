@@ -164,11 +164,11 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     }
 
     @Override
-	protected int doWrite(Object[] msgs, int index, int length) throws Exception {
-    	throw new UnsupportedOperationException();
-	}
+    protected int doWrite(Object[] msgs, int index, int length) throws Exception {
+        throw new UnsupportedOperationException();
+    }
 
-	@Override
+    @Override
     protected Runnable doRegister() throws Exception {
         Runnable task = super.doRegister();
         if (ch == null) {
@@ -188,7 +188,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
             channel.acceptInProgress = false;
 
             ChannelPipeline pipeline = channel.pipeline();
-            
+
             // Create a new Netty channel from a JDK channel and trigger events.
             pipeline.fireMessageReceived(new AioSocketChannel(channel, null, ch));
             pipeline.fireChannelReadSuspended();

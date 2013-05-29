@@ -91,13 +91,11 @@ public class LocalChannelRegistryTest {
     }
 
     static class TestHandler extends ChannelInboundHandlerAdapter {
-    	
         @Override
-		public void messageReceived(ChannelHandlerContext ctx, Object[] msgs,
-				int index, int length) throws Exception {
-        	for (int i = index; i < index + length; i ++) {
-        		logger.info(String.format("Received mesage: %s", msgs[i]));
-        	}
+        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+            for (int i = index; i < index + length; i ++) {
+                logger.info(String.format("Received mesage: %s", msgs[i]));
+            }
         }
     }
 }

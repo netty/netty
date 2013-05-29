@@ -137,7 +137,6 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 byteBuf.release();
             }
         }
-
     }
 
     @Override
