@@ -203,7 +203,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel
         }
 
         // wrote the message queue completely - clear OP_WRITE.
-        if (index + 1 == length) {
+        if (length == 1) {
             if ((interestOps & OP_WRITE) != 0) {
                 key.interestOps(interestOps & ~OP_WRITE);
             }
