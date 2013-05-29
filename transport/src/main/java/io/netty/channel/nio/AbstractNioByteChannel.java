@@ -61,7 +61,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             }
 
             final ChannelPipeline pipeline = pipeline();
-            // TODO: calculate size as in 3.x
+            // FIXME: calculate size as in 3.x
             final ByteBuf byteBuf = alloc().ioBuffer();
             try {
                 boolean closed = false;
