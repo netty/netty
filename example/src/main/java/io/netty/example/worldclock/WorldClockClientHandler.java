@@ -17,7 +17,7 @@ package io.netty.example.worldclock;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.example.worldclock.WorldClockProtocol.Continent;
 import io.netty.example.worldclock.WorldClockProtocol.LocalTime;
 import io.netty.example.worldclock.WorldClockProtocol.LocalTimes;
@@ -34,7 +34,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
-public class WorldClockClientHandler extends ChannelInboundMessageHandlerAdapter<LocalTimes> {
+public class WorldClockClientHandler extends ChannelInboundHandlerAdapter {
 
     private static final Logger logger = Logger.getLogger(
             WorldClockClientHandler.class.getName());
@@ -95,8 +95,10 @@ public class WorldClockClientHandler extends ChannelInboundMessageHandlerAdapter
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, LocalTimes msg) throws Exception {
-        answer.add(msg);
+    public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+        for (int i = index; i < length; i++) {
+            answer.add((LocalTimes) msgs[i]);
+        }
     }
 
     @Override
