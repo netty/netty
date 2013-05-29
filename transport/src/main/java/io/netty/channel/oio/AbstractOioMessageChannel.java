@@ -19,6 +19,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 
 import java.io.IOException;
+import java.net.Socket;
 
 /**
  * Abstract base class for OIO which reads and writes objects from/to a Socket
@@ -86,7 +87,8 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
     protected abstract int doReadMessages(Object[] buf, int index) throws Exception;
 
     /**
-     * Write messages to the underlying {@link java.net.Socket}.
+     * Write messages to the underlying {@link Socket}.
+     *
      * @param msg           Object to write
      * @return written      the amount of written messages
      * @throws Exception    thrown if an error accour

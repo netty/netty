@@ -15,7 +15,6 @@
  */
 package io.netty.channel.socket.aio;
 
-import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
@@ -52,7 +51,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class AioSocketChannel extends AbstractAioChannel implements SocketChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.BYTE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private static final CompletionHandler<Void, AioSocketChannel> CONNECT_HANDLER  = new ConnectHandler();
     private static final CompletionHandler<Integer, AioSocketChannel> WRITE_HANDLER = new WriteHandler<Integer>();
@@ -249,7 +248,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     }
 
     @Override
-    protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
+    protected int doWrite(Object[] msgs, int index, int length) throws Exception {
         if (inDoFlushByteBuffer || writeInProgress != NO_WRITE_IN_PROGRESS) {
             return;
         }

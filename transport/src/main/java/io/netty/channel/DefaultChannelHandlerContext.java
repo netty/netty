@@ -673,18 +673,23 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         return write(msgs, 0, msgs.length, promise);
     }
 
+
     @Override
     public ChannelFuture write(final Object[] msgs, final int index, final int length, final ChannelPromise promise) {
+    	return findContextOutbound().invokeWrite(msgs, index, length, promise);
+    }
+    
+    private ChannelFuture invokeWrite(final Object[] msgs, final int index, final int length, final ChannelPromise promise) {
         validateFuture(promise, true);
 
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            invokeWrite(msgs, index, length, promise);
+            invokeWrite0(msgs, index, length, promise);
         } else {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    invokeWrite(msgs, index, length, promise);
+                    invokeWrite0(msgs, index, length, promise);
                 }
             });
         }
@@ -692,7 +697,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         return promise;
     }
 
-    private void invokeWrite(Object[] msgs, int index, int length, ChannelPromise promise) {
+    private void invokeWrite0(Object[] msgs, int index, int length, ChannelPromise promise) {
         Channel channel = channel();
         if (!channel.isActive() && !channel.isRegistered()) {
             promise.setFailure(new ClosedChannelException());
