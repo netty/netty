@@ -15,8 +15,6 @@
  */
 package io.netty.channel.socket.aio;
 
-import io.netty.buffer.BufType;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPipeline;
@@ -45,7 +43,7 @@ import java.nio.channels.AsynchronousSocketChannel;
  */
 public class AioServerSocketChannel extends AbstractAioChannel implements ServerSocketChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private static final AcceptHandler ACCEPT_HANDLER = new AcceptHandler();
     private static final InternalLogger logger =
@@ -166,6 +164,11 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     }
 
     @Override
+	protected int doWrite(Object[] msgs, int index, int length) throws Exception {
+    	throw new UnsupportedOperationException();
+	}
+
+	@Override
     protected Runnable doRegister() throws Exception {
         Runnable task = super.doRegister();
         if (ch == null) {
@@ -185,22 +188,9 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
             channel.acceptInProgress = false;
 
             ChannelPipeline pipeline = channel.pipeline();
-            MessageBuf<Object> buffer = pipeline.inboundMessageBuffer();
-
-            if (buffer.refCnt() == 0) {
-                try {
-                    ch.close();
-                } catch (IOException e) {
-                    logger.warn(
-                            "Failed to close a socket which was accepted while its server socket is being closed",
-                            e);
-                }
-                return;
-            }
-
-            // create the socket add it to the buffer and fire the event
-            buffer.add(new AioSocketChannel(channel, null, ch));
-            pipeline.fireInboundBufferUpdated();
+            
+            // Create a new Netty channel from a JDK channel and trigger events.
+            pipeline.fireMessageReceived(new AioSocketChannel(channel, null, ch));
             pipeline.fireChannelReadSuspended();
         }
 

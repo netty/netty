@@ -15,33 +15,25 @@
  */
 package io.netty.channel.socket.aio;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFlushPromiseNotifier;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.aio.AbstractAioChannel;
 import io.netty.channel.aio.AioCompletionHandler;
 import io.netty.channel.aio.AioEventLoopGroup;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.CompletionHandler;
 import java.nio.channels.InterruptedByTimeoutException;
-import java.nio.channels.WritableByteChannel;
-import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -249,8 +241,10 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
     @Override
     protected int doWrite(Object[] msgs, int index, int length) throws Exception {
+    	throw new Error("FIXME");
+    	/*
         if (inDoFlushByteBuffer || writeInProgress != NO_WRITE_IN_PROGRESS) {
-            return;
+            return index;
         }
 
         inDoFlushByteBuffer = true;
@@ -309,15 +303,20 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         } finally {
             inDoFlushByteBuffer = false;
         }
+        */
     }
 
+    /*
     @Override
     protected void doFlushFileRegion(FlushTask task) throws Exception {
         task.region().transferTo(new WritableByteChannelAdapter(task), 0);
     }
+    */
 
     @Override
     protected void doBeginRead() {
+    	throw new Error("FIXME");
+    	/*
         if (inDoBeginRead) {
             readAgain = true;
             return;
@@ -378,12 +377,15 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         } finally {
             inDoBeginRead = false;
         }
+        */
     }
 
     private static final class WriteHandler<T extends Number> extends AioCompletionHandler<T, AioSocketChannel> {
 
         @Override
         protected void completed0(T result, AioSocketChannel channel) {
+        	throw new Error("FIXME");
+        	/*
             channel.writeInProgress = NO_WRITE_IN_PROGRESS;
 
             ByteBuf buf = channel.unsafe().headContext().outboundByteBuffer();
@@ -419,6 +421,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             if (buf.isReadable()) {
                 channel.unsafe().flushNow();
             }
+            */
         }
 
         @Override
@@ -440,6 +443,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
         @Override
         protected void completed0(T result, AioSocketChannel channel) {
+        	throw new Error("FIXME");
+        	/*
             channel.readInProgress = false;
 
             if (channel.inputShutdown) {
@@ -499,6 +504,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                     pipeline.fireChannelReadSuspended();
                 }
             }
+            */
         }
 
         @Override
@@ -539,6 +545,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         return config;
     }
 
+    /*
     private final class WritableByteChannelAdapter implements WritableByteChannel {
         private final FlushTask task;
         private long written;
@@ -599,5 +606,5 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             javaChannel().close();
         }
     }
-
+    */
 }
