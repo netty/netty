@@ -20,9 +20,7 @@ import com.yammer.metrics.core.Meter;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelHandlerUtil;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
-import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -32,7 +30,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  * traffic between the echo client and server by sending the first message to
  * the server on activation.
  */
-public class EchoByteHandler extends ChannelInboundByteHandlerAdapter {
+public class EchoByteHandler extends ChannelInboundHandlerAdapter {
 
     private static final InternalLogger log = InternalLoggerFactory.getInstance(EchoByteHandler.class);
 
@@ -62,25 +60,21 @@ public class EchoByteHandler extends ChannelInboundByteHandlerAdapter {
                 .toStringOptions());
 
         ctx.write(message);
-
-        ctx.flush();
     }
 
     @Override
-    public void inboundBufferUpdated(final ChannelHandlerContext ctx,
-            final ByteBuf in) {
+    public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+        Object[] buffers = new Object[length];
+        System.arraycopy(msgs, index, buffers, 0, length);
 
-        if (meter != null) {
-            meter.mark(in.readableBytes());
+        for (Object msg: buffers) {
+            ByteBuf buf = (ByteBuf) msg;
+            if (meter != null) {
+                meter.mark(buf.readableBytes());
+            }
+            buf.retain();
         }
-
-        final ByteBuf out = ctx.nextOutboundByteBuffer();
-
-        out.discardReadBytes(); // FIXME
-
-        out.writeBytes(in);
-
-        ctx.flush();
+        ctx.write(buffers);
     }
 
     @Override
@@ -90,11 +84,5 @@ public class EchoByteHandler extends ChannelInboundByteHandlerAdapter {
         log.error("exception : {}", e.getMessage());
 
         ctx.close();
-    }
-
-    @Override
-    public ByteBuf newInboundBuffer(final ChannelHandlerContext ctx) throws Exception {
-        return ChannelHandlerUtil.allocate(ctx,
-                ctx.channel().config().getOption(ChannelOption.SO_RCVBUF));
     }
 }
