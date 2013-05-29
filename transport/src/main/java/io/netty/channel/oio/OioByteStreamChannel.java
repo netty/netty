@@ -17,10 +17,12 @@ package io.netty.channel.oio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.FileRegion;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.channels.Channels;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.WritableByteChannel;
 
@@ -93,9 +95,8 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
         buf.readBytes(os, buf.readableBytes());
     }
 
-    /*
     @Override
-    protected void doFlushFileRegion(FlushTask task) throws Exception {
+    protected void doWriteFileRegion(FileRegion region) throws Exception {
         OutputStream os = this.os;
         if (os == null) {
             throw new NotYetConnectedException();
@@ -106,22 +107,18 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
 
         long written = 0;
         for (;;) {
-            long localWritten = task.region().transferTo(outChannel, written);
+            long localWritten = region.transferTo(outChannel, written);
             if (localWritten == -1) {
-                checkEOF(task.region(), written);
-                task.setSuccess();
+                checkEOF(region);
                 return;
             }
             written += localWritten;
-            task.setProgress(written);
 
-            if (written >= task.region().count()) {
-                task.setSuccess();
+            if (written >= region.count()) {
                 return;
             }
         }
     }
-    */
 
     @Override
     protected void doClose() throws Exception {

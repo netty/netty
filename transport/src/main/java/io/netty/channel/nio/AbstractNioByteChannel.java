@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.FileRegion;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 
 import java.io.IOException;
@@ -155,6 +156,22 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             if (!buf.isReadable()) {
                 return index + 1;
             }
+        } else if (msg instanceof FileRegion) {
+            FileRegion region = (FileRegion) msg;
+
+            for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
+                long localFlushedAmount = doWriteFileRegion(region, i == 0);
+                if (localFlushedAmount == -1) {
+                    checkEOF(region);
+                    return index + 1;
+                }
+                if (localFlushedAmount > 0) {
+                    break;
+                }
+            }
+            if (region.transfered() >= region.count()) {
+                return index +1;
+            }
         } else {
             throw new UnsupportedOperationException("Not support writing of message " + msg);
         }
@@ -162,101 +179,8 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         return index;
     }
 
-    /*
-    private void doWriteFileRegion(final FileRegion region) throws Exception {
-        if (javaChannel() instanceof WritableByteChannel) {
-            try {
-                for (;;) {
-                    long localWrittenBytes = task.region().transferTo(wch, writtenBytes);
-                    if (localWrittenBytes == 0) {
-                        // reschedule for write once the channel is writable again
-                        eventLoop().executeWhenWritable(
-                                AbstractNioByteChannel.this, this);
-                        return;
-                    } else if (localWrittenBytes == -1) {
-                        checkEOF(task.region(), writtenBytes);
-                        task.setSuccess();
-                        return;
-                    } else {
-                        writtenBytes += localWrittenBytes;
-                        task.setProgress(writtenBytes);
 
-                        if (writtenBytes >= task.region().count()) {
-                            task.setSuccess();
-                            return;
-                        }
-                    }
-                }
-            } catch (Throwable cause) {
-                task.setFailure(cause);
-            }
-        } else {
-            throw new UnsupportedOperationException("Underlying Channel is not of instance "
-                    + WritableByteChannel.class);
-        }
-    }
-
-    private final class TransferTask implements NioTask<SelectableChannel> {
-        private long writtenBytes;
-        private final FileRegion re;
-        private final WritableByteChannel wch;
-
-        TransferTask(FlushTask task, WritableByteChannel wch) {
-            this.task = task;
-            this.wch = wch;
-        }
-
-        void transfer() {
-            try {
-                for (;;) {
-                    long localWrittenBytes = task.region().transferTo(wch, writtenBytes);
-                    if (localWrittenBytes == 0) {
-                        // reschedule for write once the channel is writable again
-                        eventLoop().executeWhenWritable(
-                                AbstractNioByteChannel.this, this);
-                        return;
-                    } else if (localWrittenBytes == -1) {
-                        checkEOF(task.region(), writtenBytes);
-                        task.setSuccess();
-                        return;
-                    } else {
-                        writtenBytes += localWrittenBytes;
-                        task.setProgress(writtenBytes);
-
-                        if (writtenBytes >= task.region().count()) {
-                            task.setSuccess();
-                            return;
-                        }
-                    }
-                }
-            } catch (Throwable cause) {
-                task.setFailure(cause);
-            }
-        }
-
-        @Override
-        public void channelReady(SelectableChannel ch, SelectionKey key) throws Exception {
-            transfer();
-        }
-
-        @Override
-        public void channelUnregistered(SelectableChannel ch, Throwable cause) throws Exception {
-            if (cause != null) {
-                task.setFailure(cause);
-                return;
-            }
-
-            if (writtenBytes < task.region().count()) {
-                if (!isOpen()) {
-                    task.setFailure(new ClosedChannelException());
-                } else {
-                    task.setFailure(new IllegalStateException(
-                            "Channel was unregistered before the region could be fully written"));
-                }
-            }
-        }
-    }
-    */
+    protected abstract long doWriteFileRegion(FileRegion region, boolean lastSpin) throws Exception;
 
     /**
      * Read bytes into the given {@link ByteBuf} and return the amount.

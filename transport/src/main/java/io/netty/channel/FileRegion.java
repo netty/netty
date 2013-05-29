@@ -60,6 +60,11 @@ public interface FileRegion extends ReferenceCounted {
     long position();
 
     /**
+     * Return the bytes which was transfered already
+     */
+    long transfered();
+
+    /**
      * Returns the number of bytes to transfer.
      */
     long count();

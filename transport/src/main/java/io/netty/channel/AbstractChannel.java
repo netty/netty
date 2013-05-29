@@ -848,11 +848,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     protected abstract int doWrite(Object[] msgs, int index, int length) throws Exception;
 
-    protected static void checkEOF(FileRegion region, long writtenBytes) throws IOException {
-        if (writtenBytes < region.count()) {
+    protected static void checkEOF(FileRegion region) throws IOException {
+        if (region.transfered() < region.count()) {
             throw new EOFException("Expected to be able to write "
                     + region.count() + " bytes, but only wrote "
-                    + writtenBytes);
+                    + region.transfered());
         }
     }
 
