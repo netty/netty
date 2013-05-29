@@ -260,10 +260,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                         if (buf.refCnt() == 0) {
                             return index + 1;
                         }
-                        // Ensure the readerIndex of the buffer is 0 before beginning an async write.
-                        // Otherwise, JDK can write into a wrong region of the buffer when a handler calls
-                        // discardReadBytes() later, modifying the readerIndex and the writerIndex unexpectedly.
-                        buf.discardReadBytes();
 
                         writeInProgress = WRITE_IN_PROGRESS;
                         if (buf.nioBufferCount() == 1) {
@@ -338,14 +334,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 }
 
                 ByteBuf byteBuf = alloc().buffer();
-
-                // Ensure the readerIndex of the buffer is 0 before beginning an async read.
-                // Otherwise, JDK can read into a wrong region of the buffer when a handler calls
-                // discardReadBytes() later, modifying the readerIndex and the writerIndex unexpectedly.
-                // See https://github.com/netty/netty/issues/1377
-                byteBuf.discardReadBytes();
-
-                expandReadBuffer(byteBuf);
 
                 readInProgress = true;
                 if (byteBuf.nioBufferCount() == 1) {
