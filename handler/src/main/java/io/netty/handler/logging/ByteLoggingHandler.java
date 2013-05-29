@@ -17,13 +17,10 @@ package io.netty.handler.logging;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelHandlerUtil;
-import io.netty.channel.ChannelInboundByteHandler;
-import io.netty.channel.ChannelOutboundByteHandler;
 import io.netty.channel.ChannelPromise;
 
 public class ByteLoggingHandler
-        extends LoggingHandler implements ChannelInboundByteHandler, ChannelOutboundByteHandler {
+        extends LoggingHandler {
 
     private static final String NEWLINE = String.format("%n");
 
@@ -108,45 +105,26 @@ public class ByteLoggingHandler
     }
 
     @Override
-    public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ChannelHandlerUtil.allocate(ctx);
+    public void write(ChannelHandlerContext ctx, Object[] msgs, int index, int length, ChannelPromise promise) throws Exception {
+        log(ctx, "WRITE", msgs, index, length);
+        ctx.write(msgs, index, length, promise);
     }
 
     @Override
-    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-        ctx.inboundByteBuffer().discardSomeReadBytes();
+    public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+        log(ctx, "RECEIVED", msgs, index, length);
+        ctx.fireMessageReceived(msgs, index, length);
     }
 
-    @Override
-    public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ChannelHandlerUtil.allocate(ctx);
-    }
-
-    @Override
-    public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-        ctx.outboundByteBuffer().discardSomeReadBytes();
-    }
-
-    @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx)
-            throws Exception {
-        ByteBuf buf = ctx.inboundByteBuffer();
+    private void log(ChannelHandlerContext ctx, String message, Object[] msgs, int index, int length) {
         if (logger.isEnabled(internalLevel)) {
-            logger.log(internalLevel, format(ctx, formatBuffer("RECEIVED", buf)));
+            for (int i = index; i < length; i++) {
+                Object msg = msgs[i];
+                if (msg instanceof ByteBuf) {
+                    logger.log(internalLevel, format(ctx, formatBuffer(message, (ByteBuf) msg)));
+                }
+            }
         }
-        ctx.nextInboundByteBuffer().writeBytes(buf);
-        ctx.fireInboundBufferUpdated();
-    }
-
-    @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise promise)
-            throws Exception {
-        ByteBuf buf = ctx.outboundByteBuffer();
-        if (logger.isEnabled(internalLevel)) {
-            logger.log(internalLevel, format(ctx, formatBuffer("WRITE", buf)));
-        }
-        ctx.nextOutboundByteBuffer().writeBytes(buf);
-        ctx.flush(promise);
     }
 
     protected String formatBuffer(String message, ByteBuf buf) {

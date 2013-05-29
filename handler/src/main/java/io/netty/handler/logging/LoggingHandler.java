@@ -233,16 +233,4 @@ public class LoggingHandler extends ChannelDuplexHandler {
     public void read(ChannelHandlerContext ctx) {
         ctx.read();
     }
-
-    @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise promise)
-            throws Exception {
-        ctx.flush(promise);
-    }
-
-    @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx)
-            throws Exception {
-        ctx.fireInboundBufferUpdated();
-    }
 }
