@@ -179,7 +179,14 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         return index;
     }
 
-
+    /**
+     * Write a {@link FileRegion}
+     *
+     * @param region        the {@link FileRegion} from which the bytes should be written
+     * @param lastSpin      {@code true} if this is the last write try
+     * @return amount       the amount of written bytes
+     * @throws Exception    thrown if an error accour
+     */
     protected abstract long doWriteFileRegion(FileRegion region, boolean lastSpin) throws Exception;
 
     /**

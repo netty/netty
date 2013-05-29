@@ -15,7 +15,6 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.socket.SocketChannelConfig;
 
@@ -62,12 +61,6 @@ import java.util.Map;
  * socket as explained in {@link SocketChannelConfig}.
  */
 public interface ChannelConfig {
-
-    enum ChannelHandlerByteBufType {
-        HEAP,
-        DIRECT,
-        PREFER_DIRECT
-    }
 
     /**
      * Return all set {@link ChannelOption}'s.
@@ -169,23 +162,4 @@ public interface ChannelConfig {
      * need to call it at all. The default value is {@code true}.
      */
     ChannelConfig setAutoRead(boolean autoRead);
-
-    /**
-     * Returns the {@link ChannelHandlerByteBufType} which is used to determine what kind of {@link ByteBuf} will
-     * be created by the {@link ChannelInboundByteHandler#newInboundBuffer(ChannelHandlerContext)} and
-     * {@link ChannelOutboundByteHandler#newOutboundBuffer(ChannelHandlerContext)} methods.
-     * <p>
-     * The implementation of {@link ChannelInboundByteHandler} or {@link ChannelOutboundByteHandler} may still return
-     * another {@link ByteBuf} if it depends on a special type.
-     *
-     * The default is {@link ChannelHandlerByteBufType#PREFER_DIRECT}.
-     */
-    ChannelHandlerByteBufType getDefaultHandlerByteBufType();
-
-    /**
-     * Sets the {@link ChannelHandlerByteBufType} which is used to determine what kind of {@link ByteBuf} will
-     * be created by the {@link ChannelInboundByteHandler#newInboundBuffer(ChannelHandlerContext)} and
-     * {@link ChannelOutboundByteHandler#newOutboundBuffer(ChannelHandlerContext)} methods.
-     */
-    ChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type);
 }
