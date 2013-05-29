@@ -17,8 +17,6 @@ package io.netty.channel.sctp.nio;
 
 import com.sun.nio.sctp.SctpChannel;
 import com.sun.nio.sctp.SctpServerChannel;
-import io.netty.buffer.BufType;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
@@ -46,7 +44,7 @@ import java.util.Set;
  */
 public class NioSctpServerChannel extends AbstractNioMessageChannel
         implements io.netty.channel.sctp.SctpServerChannel {
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private static SctpServerChannel newSocket() {
         try {
@@ -135,12 +133,12 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
+    protected int doReadMessages(Object[] buf, int index) throws Exception {
         SctpChannel ch = javaChannel().accept();
         if (ch == null) {
             return 0;
         }
-        buf.add(new NioSctpChannel(this, null, ch));
+        buf[index] = new NioSctpChannel(this, null, ch);
         return 1;
     }
 
@@ -217,7 +215,7 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected int doWriteMessages(MessageBuf<Object> buf, boolean lastSpin) throws Exception {
+    protected int doWriteMessages(Object[] msg, int index, int length, boolean lastSpin) throws Exception {
         throw new UnsupportedOperationException();
     }
 }

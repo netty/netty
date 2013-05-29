@@ -19,9 +19,7 @@ import com.sun.nio.sctp.Association;
 import com.sun.nio.sctp.MessageInfo;
 import com.sun.nio.sctp.NotificationHandler;
 import com.sun.nio.sctp.SctpChannel;
-import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
@@ -62,7 +60,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(OioSctpChannel.class);
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private final SctpChannel ch;
     private final SctpChannelConfig config;
@@ -166,7 +164,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
+    protected int doReadMessages(Object[] buf, int index) throws Exception {
         if (!readSelector.isOpen()) {
             return 0;
         }
@@ -183,6 +181,10 @@ public class OioSctpChannel extends AbstractOioMessageChannel
         Set<SelectionKey> reableKeys = readSelector.selectedKeys();
         try {
             for (SelectionKey ignored : reableKeys) {
+                if (index == buf.length) {
+                    // No space left in the array
+                    return 0;
+                }
                 ByteBuf buffer = alloc().directBuffer(config().getReceiveBufferSize());
                 boolean free = true;
 
@@ -194,7 +196,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                     }
 
                     data.flip();
-                    buf.add(new SctpMessage(messageInfo, buffer.writerIndex(buffer.writerIndex() + data.remaining())));
+                    buf[index++] = new SctpMessage(messageInfo, buffer.writerIndex(buffer.writerIndex() + data.remaining()));
                     free = false;
                     readMessages ++;
                 } catch (Throwable cause) {
@@ -213,17 +215,30 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected void doWriteMessages(MessageBuf<Object> buf) throws Exception {
+    protected int doWriteMessages(Object[] msg, int index, int length) throws Exception {
         if (!writeSelector.isOpen()) {
-            return;
+            return 0;
         }
         final int selectedKeys = writeSelector.select(SO_TIMEOUT);
         if (selectedKeys > 0) {
             final Set<SelectionKey> writableKeys = writeSelector.selectedKeys();
-            for (SelectionKey ignored : writableKeys) {
-                SctpMessage packet = (SctpMessage) buf.poll();
+            if (writableKeys.isEmpty()) {
+                return 0;
+            }
+            Iterator<SelectionKey> writableKeysIt = writableKeys.iterator();
+            int written = 0;
+
+            for (;;) {
+                if (written == length) {
+                    // all written
+                    return written;
+                }
+                writableKeysIt.next();
+                writableKeysIt.remove();
+
+                SctpMessage packet = (SctpMessage) msg[index++];
                 if (packet == null) {
-                    return;
+                    return written;
                 }
                 try {
                     ByteBuf data = packet.content();
@@ -243,12 +258,16 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                     mi.streamNumber(packet.streamIdentifier());
 
                     ch.send(nioData, mi);
+                    written++;
                 } finally {
                     packet.release();
                 }
+                if (!writableKeysIt.hasNext()) {
+                    return written;
+                }
             }
-            writableKeys.clear();
         }
+        return 0;
     }
 
     @Override

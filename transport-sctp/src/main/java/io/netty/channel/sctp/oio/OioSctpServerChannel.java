@@ -17,8 +17,6 @@ package io.netty.channel.sctp.oio;
 
 import com.sun.nio.sctp.SctpChannel;
 import com.sun.nio.sctp.SctpServerChannel;
-import io.netty.buffer.BufType;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
@@ -53,7 +51,7 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(OioSctpServerChannel.class);
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private static SctpServerChannel newServerSocket() {
         try {
@@ -189,7 +187,7 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
+    protected int doReadMessages(Object[] buf, int index) throws Exception {
         if (!isActive()) {
             return -1;
         }
@@ -198,16 +196,20 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
         try {
             final int selectedKeys = selector.select(SO_TIMEOUT);
             if (selectedKeys > 0) {
-                final Set<SelectionKey> selectionKeys = selector.selectedKeys();
-                for (SelectionKey key : selectionKeys) {
-                   if (key.isAcceptable()) {
-                       s = sch.accept();
-                       if (s != null) {
-                           buf.add(new OioSctpChannel(this, null, s));
-                       }
-                   }
+                final Iterator<SelectionKey> selectionKeys = selector.selectedKeys().iterator();
+                for (;;) {
+                    SelectionKey key = selectionKeys.next();
+                    selectionKeys.remove();
+                    if (key.isAcceptable()) {
+                        s = sch.accept();
+                        if (s != null) {
+                            buf[index++] = new OioSctpChannel(this, null, s);
+                        }
+                    }
+                    if (!selectionKeys.hasNext() || buf.length == index) {
+                        return selectedKeys;
+                    }
                 }
-                return selectedKeys;
             }
 
         } catch (Throwable t) {
@@ -291,7 +293,7 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected void doWriteMessages(MessageBuf<Object> buf) throws Exception {
+    protected int doWriteMessages(Object[] msg, int index, int length) throws Exception {
         throw new UnsupportedOperationException();
     }
 }
