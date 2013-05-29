@@ -41,10 +41,6 @@ public class DefaultChannnelGroupTest {
             public void channelActive(ChannelHandlerContext ctx) {
                 allChannels.add(ctx.channel());
             }
-
-            @Override
-            public void inboundBufferUpdated(ChannelHandlerContext ctx) {
-            }
         });
         b.channel(NioServerSocketChannel.class);
 

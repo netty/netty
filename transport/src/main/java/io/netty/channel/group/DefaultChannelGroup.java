@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.FileRegion;
 import io.netty.channel.ServerChannel;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -242,26 +241,31 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     }
 
     @Override
-    public ChannelGroupFuture sendFile(FileRegion region) {
-        if (region == null) {
-            throw new NullPointerException("region");
+    public ChannelGroupFuture write(Object[] messages) {
+        if (messages == null) {
+            throw new NullPointerException("messages");
         }
-
-        Map<Integer, ChannelFuture> futures = new LinkedHashMap<Integer, ChannelFuture>(size());
-        for (Channel c: nonServerChannels.values()) {
-            ByteBufUtil.retain(region);
-            futures.put(c.id(), c.sendFile(region));
-        }
-
-        ByteBufUtil.release(region);
-        return new DefaultChannelGroupFuture(this, futures, executor);
+        return write(messages, 0, messages.length);
     }
 
     @Override
-    public ChannelGroupFuture flush() {
+    public ChannelGroupFuture write(Object[] messages, int index, int length) {
+        if (messages == null) {
+            throw new NullPointerException("messages");
+        }
+
         Map<Integer, ChannelFuture> futures = new LinkedHashMap<Integer, ChannelFuture>(size());
         for (Channel c: nonServerChannels.values()) {
-            futures.put(c.id(), c.flush());
+            Object[] messagesCopy = new Object[length];
+            System.arraycopy(messages, index, messagesCopy, 0, length);
+            for (Object m: messagesCopy) {
+                ByteBufUtil.retain(m);
+            }
+            futures.put(c.id(), c.write(messagesCopy));
+        }
+
+        for (int i = index; i < index + length; i ++) {
+            ByteBufUtil.release(messages[i]);
         }
 
         return new DefaultChannelGroupFuture(this, futures, executor);
