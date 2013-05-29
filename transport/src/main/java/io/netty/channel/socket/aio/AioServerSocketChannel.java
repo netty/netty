@@ -35,6 +35,7 @@ import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
+import java.nio.channels.CompletionHandler;
 
 /**
  * {@link ServerSocketChannel} implementation which uses NIO2.
@@ -45,7 +46,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
-    private static final AcceptHandler ACCEPT_HANDLER = new AcceptHandler();
+    private final CompletionHandler<AsynchronousSocketChannel, Void> acceptHandler = new AcceptHandler(this);
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(AioServerSocketChannel.class);
 
@@ -136,7 +137,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
         }
 
         acceptInProgress = true;
-        javaChannel().accept(this, ACCEPT_HANDLER);
+        javaChannel().accept(null, acceptHandler);
     }
 
     @Override
@@ -180,11 +181,15 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
         return task;
     }
 
-    private static final class AcceptHandler
-            extends AioCompletionHandler<AsynchronousSocketChannel, AioServerSocketChannel> {
+    private final class AcceptHandler
+            extends AioCompletionHandler<AioServerSocketChannel, AsynchronousSocketChannel, Void> {
+
+        AcceptHandler(AioServerSocketChannel channel) {
+            super(channel);
+        }
 
         @Override
-        protected void completed0(AsynchronousSocketChannel ch, AioServerSocketChannel channel) {
+        protected void completed0(AioServerSocketChannel channel, AsynchronousSocketChannel ch, Void attachment) {
             channel.acceptInProgress = false;
 
             ChannelPipeline pipeline = channel.pipeline();
@@ -195,7 +200,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
         }
 
         @Override
-        protected void failed0(Throwable t, AioServerSocketChannel channel) {
+        protected void failed0(AioServerSocketChannel channel, Throwable t, Void attachment) {
             channel.acceptInProgress = false;
             boolean asyncClosed = false;
             if (t instanceof AsynchronousCloseException) {

@@ -15,25 +15,31 @@
  */
 package io.netty.channel.socket.aio;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFlushPromiseNotifier;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.aio.AbstractAioChannel;
 import io.netty.channel.aio.AioCompletionHandler;
 import io.netty.channel.aio.AioEventLoopGroup;
+import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.CompletionHandler;
 import java.nio.channels.InterruptedByTimeoutException;
+import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -45,11 +51,11 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
-    private static final CompletionHandler<Void, AioSocketChannel> CONNECT_HANDLER  = new ConnectHandler();
-    private static final CompletionHandler<Integer, AioSocketChannel> WRITE_HANDLER = new WriteHandler<Integer>();
-    private static final CompletionHandler<Integer, AioSocketChannel> READ_HANDLER = new ReadHandler<Integer>();
-    private static final CompletionHandler<Long, AioSocketChannel> GATHERING_WRITE_HANDLER = new WriteHandler<Long>();
-    private static final CompletionHandler<Long, AioSocketChannel> SCATTERING_READ_HANDLER = new ReadHandler<Long>();
+    private final CompletionHandler<Void, Void> connectHandler  = new ConnectHandler(this);
+    private final CompletionHandler<Integer, ByteBuf> writeHandler = new WriteHandler<Integer>(this);
+    private final CompletionHandler<Integer, ByteBuf> readHandler = new ReadHandler<Integer>(this);
+    private final CompletionHandler<Long, ByteBuf> gatheringWriteHandler = new WriteHandler<Long>(this);
+    private final CompletionHandler<Long, ByteBuf> scatteringReadHandler = new ReadHandler<Long>(this);
 
     private static AsynchronousSocketChannel newSocket(AsynchronousChannelGroup group) {
         try {
@@ -70,7 +76,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     private static final int NO_WRITE_IN_PROGRESS = 0;
     private static final int WRITE_IN_PROGRESS = 1;
     private static final int WRITE_FAILED = -2;
-
     private int writeInProgress;
     private boolean inDoFlushByteBuffer;
 
@@ -179,7 +184,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             }
         }
 
-        javaChannel().connect(remoteAddress, this, CONNECT_HANDLER);
+        javaChannel().connect(remoteAddress, null, connectHandler);
     }
 
     @Override
@@ -241,8 +246,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
     @Override
     protected int doWrite(Object[] msgs, int index, int length) throws Exception {
-        throw new Error("FIXME");
-        /*
         if (inDoFlushByteBuffer || writeInProgress != NO_WRITE_IN_PROGRESS) {
             return index;
         }
@@ -250,60 +253,63 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         inDoFlushByteBuffer = true;
 
         try {
-            if (buf.isReadable()) {
-                for (;;) {
-                    if (buf.refCnt() == 0) {
-                        break;
-                    }
-                    // Ensure the readerIndex of the buffer is 0 before beginning an async write.
-                    // Otherwise, JDK can write into a wrong region of the buffer when a handler calls
-                    // discardReadBytes() later, modifying the readerIndex and the writerIndex unexpectedly.
-                    buf.discardReadBytes();
+            for (int i = index; i < length; i++) {
+                ByteBuf buf = (ByteBuf) msgs[i];
+                if (buf.isReadable()) {
+                    for (;;) {
+                        if (buf.refCnt() == 0) {
+                            return index + 1;
+                        }
+                        // Ensure the readerIndex of the buffer is 0 before beginning an async write.
+                        // Otherwise, JDK can write into a wrong region of the buffer when a handler calls
+                        // discardReadBytes() later, modifying the readerIndex and the writerIndex unexpectedly.
+                        buf.discardReadBytes();
 
-                    writeInProgress = WRITE_IN_PROGRESS;
-                    if (buf.nioBufferCount() == 1) {
-                        javaChannel().write(
-                                buf.nioBuffer(), config.getWriteTimeout(), TimeUnit.MILLISECONDS, this, WRITE_HANDLER);
-                    } else {
-                        ByteBuffer[] buffers = buf.nioBuffers(buf.readerIndex(), buf.readableBytes());
-                        if (buffers.length == 1) {
+                        writeInProgress = WRITE_IN_PROGRESS;
+                        if (buf.nioBufferCount() == 1) {
                             javaChannel().write(
-                                    buffers[0], config.getWriteTimeout(), TimeUnit.MILLISECONDS, this, WRITE_HANDLER);
+                                    buf.nioBuffer(), config.getWriteTimeout(), TimeUnit.MILLISECONDS, buf, writeHandler);
                         } else {
-                            javaChannel().write(
-                                    buffers, 0, buffers.length, config.getWriteTimeout(), TimeUnit.MILLISECONDS,
-                                    this, GATHERING_WRITE_HANDLER);
+                            ByteBuffer[] buffers = buf.nioBuffers(buf.readerIndex(), buf.readableBytes());
+                            if (buffers.length == 1) {
+                                javaChannel().write(
+                                        buffers[0], config.getWriteTimeout(), TimeUnit.MILLISECONDS, buf, writeHandler);
+                            } else {
+                                javaChannel().write(
+                                        buffers, 0, buffers.length, config.getWriteTimeout(), TimeUnit.MILLISECONDS,
+                                        buf, gatheringWriteHandler);
+                            }
                         }
-                    }
 
-                    if (writeInProgress != NO_WRITE_IN_PROGRESS) {
-                        if (writeInProgress == WRITE_FAILED) {
-                            // failed because of an exception so reset state and break out of the loop now
-                            // See #1242
-                            writeInProgress = NO_WRITE_IN_PROGRESS;
-                            break;
+                        if (writeInProgress != NO_WRITE_IN_PROGRESS) {
+                            if (writeInProgress == WRITE_FAILED) {
+                                // failed because of an exception so reset state and break out of the loop now
+                                // See #1242
+                                writeInProgress = NO_WRITE_IN_PROGRESS;
+                                return index + 1;
+                            }
+                            // JDK decided to write data (or notify handler) later.
+                            buf.suspendIntermediaryDeallocations();
+                            return 0;
                         }
-                        // JDK decided to write data (or notify handler) later.
-                        buf.suspendIntermediaryDeallocations();
-                        break;
-                    }
 
-                    // JDK performed the write operation immediately and notified the handler.
-                    // We know this because we set asyncWriteInProgress to false in the handler.
-                    if (!buf.isReadable()) {
-                        // There's nothing left in the buffer. No need to retry writing.
-                        break;
-                    }
+                        // JDK performed the write operation immediately and notified the handler.
+                        // We know this because we set asyncWriteInProgress to false in the handler.
+                        if (!buf.isReadable()) {
+                            // There's nothing left in the buffer. No need to retry writing.
+                            return index + 1;
+                        }
 
-                    // There's more to write. Continue the loop.
+                        // There's more to write. Continue the loop.
+                    }
+                } else {
+                    flushFutureNotifier.notifyFlushFutures();
                 }
-            } else {
-                flushFutureNotifier.notifyFlushFutures();
             }
         } finally {
             inDoFlushByteBuffer = false;
         }
-        */
+        return 0;
     }
 
     /*
@@ -315,8 +321,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
     @Override
     protected void doBeginRead() {
-        throw new Error("FIXME");
-        /*
         if (inDoBeginRead) {
             readAgain = true;
             return;
@@ -333,7 +337,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                     break;
                 }
 
-                ByteBuf byteBuf = pipeline().inboundByteBuffer();
+                ByteBuf byteBuf = alloc().buffer();
 
                 // Ensure the readerIndex of the buffer is 0 before beginning an async read.
                 // Otherwise, JDK can read into a wrong region of the buffer when a handler calls
@@ -348,16 +352,16 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                     // Get a ByteBuffer view on the ByteBuf
                     ByteBuffer buffer = byteBuf.nioBuffer(byteBuf.writerIndex(), byteBuf.writableBytes());
                     javaChannel().read(
-                            buffer, config.getReadTimeout(), TimeUnit.MILLISECONDS, this, READ_HANDLER);
+                            buffer, config.getReadTimeout(), TimeUnit.MILLISECONDS, byteBuf, readHandler);
                 } else {
                     ByteBuffer[] buffers = byteBuf.nioBuffers(byteBuf.writerIndex(), byteBuf.writableBytes());
                     if (buffers.length == 1) {
                         javaChannel().read(
-                                buffers[0], config.getReadTimeout(), TimeUnit.MILLISECONDS, this, READ_HANDLER);
+                                buffers[0], config.getReadTimeout(), TimeUnit.MILLISECONDS, byteBuf, readHandler);
                     } else {
                         javaChannel().read(
                                 buffers, 0, buffers.length, config.getReadTimeout(), TimeUnit.MILLISECONDS,
-                                this, SCATTERING_READ_HANDLER);
+                                byteBuf, scatteringReadHandler);
                     }
                 }
 
@@ -377,55 +381,62 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         } finally {
             inDoBeginRead = false;
         }
-        */
     }
 
-    private static final class WriteHandler<T extends Number> extends AioCompletionHandler<T, AioSocketChannel> {
+    private static final class WriteHandler<T extends Number> extends AioCompletionHandler<AioSocketChannel, T, ByteBuf> {
+        WriteHandler(AioSocketChannel channel) {
+            super(channel);
+        }
 
         @Override
-        protected void completed0(T result, AioSocketChannel channel) {
-            throw new Error("FIXME");
-            /*
+        protected void completed0(AioSocketChannel channel, T result, ByteBuf buf) {
             channel.writeInProgress = NO_WRITE_IN_PROGRESS;
-
-            ByteBuf buf = channel.unsafe().headContext().outboundByteBuffer();
             if (buf.refCnt() == 0) {
                 return;
             }
 
-            buf.resumeIntermediaryDeallocations();
+            boolean release = true;
+            try {
+                buf.resumeIntermediaryDeallocations();
 
-            int writtenBytes = result.intValue();
-            if (writtenBytes > 0) {
-                // Update the readerIndex with the amount of read bytes
-                buf.readerIndex(buf.readerIndex() + writtenBytes);
+                int writtenBytes = result.intValue();
+                if (writtenBytes > 0) {
+                    // Update the readerIndex with the amount of read bytes
+                    buf.readerIndex(buf.readerIndex() + writtenBytes);
+                }
+
+                if (channel.inDoFlushByteBuffer) {
+                    // JDK performed the write operation immediately and notified this handler immediately.
+                    // doFlushByteBuffer() will do subsequent write operations if necessary for us.
+                    return;
+                }
+
+                // Update the write counter and notify flush futures only when the handler is called outside of
+                // unsafe().flushNow() because flushNow() will do that for us.
+                ChannelFlushPromiseNotifier notifier = channel.flushFutureNotifier;
+                notifier.increaseWriteCounter(writtenBytes);
+                notifier.notifyFlushFutures();
+
+                // Stop flushing if disconnected.
+                if (!channel.isActive()) {
+                    return;
+                }
+
+                if (buf.isReadable()) {
+                    release = false;
+                    channel.unsafe().flushNow();
+                }
+            } finally {
+                 if (release) {
+                     buf.release();
+                 }
             }
-
-            if (channel.inDoFlushByteBuffer) {
-                // JDK performed the write operation immediately and notified this handler immediately.
-                // doFlushByteBuffer() will do subsequent write operations if necessary for us.
-                return;
-            }
-
-            // Update the write counter and notify flush futures only when the handler is called outside of
-            // unsafe().flushNow() because flushNow() will do that for us.
-            ChannelFlushPromiseNotifier notifier = channel.flushFutureNotifier;
-            notifier.increaseWriteCounter(writtenBytes);
-            notifier.notifyFlushFutures();
-
-            // Stop flushing if disconnected.
-            if (!channel.isActive()) {
-                return;
-            }
-
-            if (buf.isReadable()) {
-                channel.unsafe().flushNow();
-            }
-            */
         }
 
         @Override
-        protected void failed0(Throwable cause, AioSocketChannel channel) {
+        protected void failed0(AioSocketChannel channel, Throwable cause, ByteBuf buf) {
+            buf.release();
+
             channel.writeInProgress = WRITE_FAILED;
             channel.flushFutureNotifier.notifyFlushFutures(cause);
 
@@ -439,12 +450,15 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         }
     }
 
-    private static final class ReadHandler<T extends Number> extends AioCompletionHandler<T, AioSocketChannel> {
+    private final class ReadHandler<T extends Number> extends AioCompletionHandler<AioSocketChannel, T, ByteBuf> {
+
+        ReadHandler(AioSocketChannel channel) {
+            super(channel);
+        }
 
         @Override
-        protected void completed0(T result, AioSocketChannel channel) {
-            throw new Error("FIXME");
-            /*
+        protected void completed0(AioSocketChannel channel, T result, ByteBuf byteBuf) {
+
             channel.readInProgress = false;
 
             if (channel.inputShutdown) {
@@ -454,61 +468,64 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             }
 
             final ChannelPipeline pipeline = channel.pipeline();
-            final ByteBuf byteBuf = pipeline.inboundByteBuffer();
-
-            boolean closed = false;
-            boolean read = false;
-            boolean firedChannelReadSuspended = false;
             try {
-                int localReadAmount = result.intValue();
-                if (localReadAmount > 0) {
-                    // Set the writerIndex of the buffer correctly to the
-                    // current writerIndex + read amount of bytes.
-                    //
-                    // This is needed as the ByteBuffer and the ByteBuf does not share
-                    // each others index
-                    byteBuf.writerIndex(byteBuf.writerIndex() + localReadAmount);
+                boolean closed = false;
+                boolean read = false;
+                boolean firedChannelReadSuspended = false;
+                try {
+                    int localReadAmount = result.intValue();
+                    if (localReadAmount > 0) {
+                       // Set the writerIndex of the buffer correctly to the
+                        // current writerIndex + read amount of bytes.
+                        //
+                        // This is needed as the ByteBuffer and the ByteBuf does not share
+                        // each others index
+                        byteBuf.writerIndex(byteBuf.writerIndex() + localReadAmount);
 
-                    read = true;
-                } else if (localReadAmount < 0) {
-                    closed = true;
-                }
-            } catch (Throwable t) {
-                if (read) {
-                    read = false;
-                    pipeline.fireInboundBufferUpdated();
-                }
-
-                if (!closed && channel.isOpen()) {
-                    firedChannelReadSuspended = true;
-                    pipeline.fireChannelReadSuspended();
-                }
-
-                pipeline.fireExceptionCaught(t);
-            } finally {
-                if (read) {
-                    pipeline.fireInboundBufferUpdated();
-                }
-
-                // Double check because fireInboundBufferUpdated() might have triggered the closure by a user handler.
-                if (closed || !channel.isOpen()) {
-                    channel.inputShutdown = true;
-                    if (channel.isOpen()) {
-                        if (channel.config().isAllowHalfClosure()) {
-                            pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
-                        } else {
-                            channel.unsafe().close(channel.unsafe().voidPromise());
-                        }
+                        read = true;
+                    } else if (localReadAmount < 0) {
+                        closed = true;
                     }
-                } else if (!firedChannelReadSuspended) {
-                    pipeline.fireChannelReadSuspended();
+                } catch (Throwable t) {
+                    if (read) {
+                        read = false;
+                        pipeline.fireMessageReceived(byteBuf);
+                    }
+
+                    if (!closed && isOpen()) {
+                        firedChannelReadSuspended = true;
+                        pipeline.fireChannelReadSuspended();
+                    }
+
+                    pipeline.fireExceptionCaught(t);
+                } finally {
+                    if (read) {
+                        pipeline.fireMessageReceived(byteBuf);
+                    }
+
+                    // Double check because fireInboundBufferUpdated() might have triggered the closure by a user handler.
+                    if (closed || !channel.isOpen()) {
+                        channel.inputShutdown = true;
+                        if (isOpen()) {
+                            if (channel.config().isAllowHalfClosure()) {
+                                pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+                            } else {
+                                channel.unsafe().close(channel.unsafe().voidPromise());
+                            }
+                        }
+                    } else if (!firedChannelReadSuspended) {
+                        pipeline.fireChannelReadSuspended();
+                    }
                 }
+            } finally {
+                byteBuf.release();
             }
-            */
         }
 
         @Override
-        protected void failed0(Throwable t, AioSocketChannel channel) {
+        protected void failed0(AioSocketChannel channel, Throwable t, ByteBuf buf) {
+            buf.release();
+
             channel.readInProgress = false;
             if (t instanceof ClosedChannelException) {
                 channel.inputShutdown = true;
@@ -527,15 +544,18 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         }
     }
 
-    private static final class ConnectHandler extends AioCompletionHandler<Void, AioSocketChannel> {
+    private static final class ConnectHandler extends AioCompletionHandler<AioSocketChannel, Void, Void> {
+        ConnectHandler(AioSocketChannel channel) {
+            super(channel);
+        }
 
         @Override
-        protected void completed0(Void result, AioSocketChannel channel) {
+        protected void completed0(AioSocketChannel channel, Void result, Void attachment) {
             ((DefaultAioUnsafe) channel.unsafe()).connectSuccess();
         }
 
         @Override
-        protected void failed0(Throwable exc, AioSocketChannel channel) {
+        protected void failed0(AioSocketChannel channel, Throwable exc, Void attachment) {
             ((DefaultAioUnsafe) channel.unsafe()).connectFailed(exc);
         }
     }
