@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MessageList;
 import io.netty.channel.udt.UdtMessage;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.util.internal.logging.InternalLogger;
@@ -70,17 +71,13 @@ public class EchoMessageHandler extends
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
-        Object[] udtMessages = new Object[length];
-        System.arraycopy(msgs, index, udtMessages, 0, length);
-
-        for (Object msg: udtMessages) {
-            UdtMessage udtMsg = (UdtMessage) msg;
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        for (int i = 0; i < msgs.size(); i ++) {
+            UdtMessage udtMsg = (UdtMessage) msgs.get(i);
             if (meter != null) {
                 meter.mark(udtMsg.content().readableBytes());
             }
-            udtMsg.retain();
         }
-        ctx.write(udtMessages);
+        ctx.write(msgs);
     }
 }

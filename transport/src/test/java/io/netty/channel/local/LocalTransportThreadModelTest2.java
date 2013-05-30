@@ -22,6 +22,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MessageList;
 import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -111,9 +112,8 @@ public class LocalTransportThreadModelTest2 {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs,
-                int index, int length) throws Exception {
-            count.addAndGet(length);
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            count.addAndGet(msgs.size());
         }
     }
 }

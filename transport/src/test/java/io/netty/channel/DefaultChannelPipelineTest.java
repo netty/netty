@@ -60,8 +60,7 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void messageReceived(
-                    ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+            public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
                 // Swallow.
             }
         });
@@ -145,19 +144,18 @@ public class DefaultChannelPipelineTest {
         boolean called;
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
             called = true;
-            Object[] out = new Object[length];
-            int outSize = 0;
-            for (int i = index; i < index + length; i ++) {
-                Object m = msgs[i];
+            MessageList<Object> out = new MessageList<Object>();
+            for (int i = 0; i < msgs.size(); i ++) {
+                Object m = msgs.get(i);
                 if (!(m instanceof String)) {
-                    out[outSize ++] = m;
+                    out.add(m);
                 }
             }
 
-            if (outSize > 0) {
-                ctx.fireMessageReceived(out, 0, outSize);
+            if (!out.isEmpty()) {
+                ctx.fireMessageReceived(out);
             }
         }
     }

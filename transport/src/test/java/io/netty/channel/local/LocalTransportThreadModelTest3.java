@@ -24,6 +24,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MessageList;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutorGroup;
@@ -71,7 +72,7 @@ public class LocalTransportThreadModelTest3 {
                         ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                             @Override
                             public void messageReceived(
-                                    ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+                                    ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
                                 // Discard
                             }
                         });
@@ -295,16 +296,15 @@ public class LocalTransportThreadModelTest3 {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs,
-                int index, int length) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
             if (inbound) {
                 events.add(EventType.MESSAGE_RECEIVED);
             }
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object[] msgs, int index,
-                int length, ChannelPromise promise) throws Exception {
+        public void write(
+                ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
             if (!inbound) {
                 events.add(EventType.WRITE);
             }

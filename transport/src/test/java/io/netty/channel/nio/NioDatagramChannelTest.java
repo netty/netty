@@ -19,6 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.MessageList;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
@@ -45,8 +46,7 @@ public class NioDatagramChannelTest {
                         .handler(new ChannelInboundHandlerAdapter() {
                             @Override
                             public void messageReceived(
-                                    ChannelHandlerContext ctx, Object[] msgs,
-                                    int index, int length) throws Exception {
+                                    ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
                                 // noop
                             }
                         });

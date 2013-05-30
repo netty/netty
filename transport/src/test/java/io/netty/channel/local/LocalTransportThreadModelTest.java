@@ -263,9 +263,9 @@ public class LocalTransportThreadModelTest {
                 ch.eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
-                        Object[] msgs = new Object[end - start];
+                        MessageList<Object> msgs = new MessageList<Object>(end - start);
                         for (int j = start; j < end; j ++) {
-                            msgs[j - start] = Integer.valueOf(j);
+                            msgs.add(Integer.valueOf(j));
                         }
                         ch.pipeline().fireMessageReceived(msgs);
                     }
@@ -303,9 +303,9 @@ public class LocalTransportThreadModelTest {
                 ch.pipeline().context(h6).executor().execute(new Runnable() {
                     @Override
                     public void run() {
-                        Object[] msgs = new Object[end - start];
+                        MessageList<Object> msgs = new MessageList<Object>(end - start);
                         for (int j = start; j < end; j ++) {
-                            msgs[j - start] = Integer.valueOf(j);
+                            msgs.add(Integer.valueOf(j));
                         }
 
                         ch.pipeline().write(msgs);
@@ -361,17 +361,15 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
             inboundThreadNames.add(Thread.currentThread().getName());
-            ctx.fireMessageReceived(msgs, index, length);
+            ctx.fireMessageReceived(msgs);
         }
 
         @Override
-        public void write(
-                ChannelHandlerContext ctx,
-                Object[] msgs, int index, int length, ChannelPromise future) throws Exception {
+        public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise future) throws Exception {
             outboundThreadNames.add(Thread.currentThread().getName());
-            ctx.write(msgs, index, length, future);
+            ctx.write(msgs, future);
         }
 
         @Override
@@ -395,7 +393,7 @@ public class LocalTransportThreadModelTest {
         private volatile Thread t;
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
             Thread t = this.t;
             if (t == null) {
                 this.t = Thread.currentThread();
@@ -403,10 +401,10 @@ public class LocalTransportThreadModelTest {
                 Assert.assertSame(t, Thread.currentThread());
             }
 
-            ByteBuf out = ctx.alloc().buffer(length * 4);
+            ByteBuf out = ctx.alloc().buffer(msgs.size() * 4);
 
-            for (int i = index; i < index + length; i ++) {
-                int m = ((Integer) msgs[i]).intValue();
+            for (int i = 0; i < msgs.size(); i ++) {
+                int m = ((Integer) msgs.get(i)).intValue();
                 int expected = inCnt ++;
                 Assert.assertEquals(expected, m);
                 out.writeInt(m);
@@ -416,23 +414,22 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void write(
-            ChannelHandlerContext ctx,
-            Object[] msgs, int index, int length, ChannelPromise future) throws Exception {
+        public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise future) throws Exception {
             Assert.assertSame(t, Thread.currentThread());
 
             // Don't let the write request go to the server-side channel - just swallow.
             boolean swallow = this == ctx.pipeline().first();
 
-            for (int i = index; i < index + length; i ++) {
-                ByteBuf m = (ByteBuf) msgs[i];
-                Object[] out = new Object[m.readableBytes() / 4];
-                for (int j = 0; j < out.length; j ++) {
+            for (int i = 0; i < msgs.size(); i ++) {
+                ByteBuf m = (ByteBuf) msgs.get(i);
+                int count = m.readableBytes() / 4;
+                MessageList<Integer> out = new MessageList<Integer>(count);
+                for (int j = 0; j < count; j ++) {
                     int actual = m.readInt();
                     int expected = outCnt ++;
                     Assert.assertEquals(expected, actual);
                     if (!swallow) {
-                        out[j] = actual;
+                        out.add(actual);
                     }
                 }
                 m.release();
@@ -465,7 +462,7 @@ public class LocalTransportThreadModelTest {
         private volatile Thread t;
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
             Thread t = this.t;
             if (t == null) {
                 this.t = Thread.currentThread();
@@ -473,14 +470,15 @@ public class LocalTransportThreadModelTest {
                 Assert.assertSame(t, Thread.currentThread());
             }
 
-            for (int i = index; i < index + length; i ++) {
-                ByteBuf m = (ByteBuf) msgs[i];
-                Object[] out = new Object[m.readableBytes() / 4];
-                for (int j = 0; j < out.length; j ++) {
+            for (int i = 0; i < msgs.size(); i ++) {
+                ByteBuf m = (ByteBuf) msgs.get(i);
+                int count = m.readableBytes() / 4;
+                MessageList<Integer> out = new MessageList<Integer>(count);
+                for (int j = 0; j < count; j ++) {
                     int actual = m.readInt();
                     int expected = inCnt ++;
                     Assert.assertEquals(expected, actual);
-                    out[j] = actual;
+                    out.add(actual);
                 }
                 m.release();
                 ctx.fireMessageReceived(out);
@@ -489,13 +487,12 @@ public class LocalTransportThreadModelTest {
 
         @Override
         public void write(
-                ChannelHandlerContext ctx,
-                Object[] msgs, int index, int length, ChannelPromise promise) throws Exception {
+                ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
             Assert.assertSame(t, Thread.currentThread());
 
-            ByteBuf out = ctx.alloc().buffer(length * 4);
-            for (int i = index; i < index + length; i ++) {
-                int m = (Integer) msgs[i];
+            ByteBuf out = ctx.alloc().buffer(msgs.size() * 4);
+            for (int i = 0; i < msgs.size(); i ++) {
+                int m = (Integer) msgs.get(i);
                 int expected = outCnt ++;
                 Assert.assertEquals(expected, m);
                 out.writeInt(m);
@@ -524,7 +521,7 @@ public class LocalTransportThreadModelTest {
         private volatile Thread t;
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
             Thread t = this.t;
             if (t == null) {
                 this.t = Thread.currentThread();
@@ -532,26 +529,25 @@ public class LocalTransportThreadModelTest {
                 Assert.assertSame(t, Thread.currentThread());
             }
 
-            for (int i = index; i < index + length; i ++) {
-                int actual = (Integer) msgs[i];
+            for (int i = 0; i < msgs.size(); i ++) {
+                int actual = (Integer) msgs.get(i);
                 int expected = inCnt ++;
                 Assert.assertEquals(expected, actual);
             }
-            ctx.fireMessageReceived(msgs, index, length);
+            ctx.fireMessageReceived(msgs);
         }
 
         @Override
         public void write(
-                ChannelHandlerContext ctx,
-                Object[] msgs, int index, int length, ChannelPromise promise) throws Exception {
+                ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
             Assert.assertSame(t, Thread.currentThread());
 
-            for (int i = index; i < index + length; i ++) {
-                int actual = (Integer) msgs[i];
+            for (int i = 0; i < msgs.size(); i ++) {
+                int actual = (Integer) msgs.get(i);
                 int expected = outCnt ++;
                 Assert.assertEquals(expected, actual);
             }
-            ctx.write(msgs, index, length, promise);
+            ctx.write(msgs, promise);
         }
 
         @Override
@@ -574,7 +570,7 @@ public class LocalTransportThreadModelTest {
         private volatile Thread t;
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
             Thread t = this.t;
             if (t == null) {
                 this.t = Thread.currentThread();
@@ -582,8 +578,8 @@ public class LocalTransportThreadModelTest {
                 Assert.assertSame(t, Thread.currentThread());
             }
 
-            for (int i = index; i < index + length; i ++) {
-                int actual = (Integer) msgs[i];
+            for (int i = 0; i < msgs.size(); i ++) {
+                int actual = (Integer) msgs.get(i);
                 int expected = inCnt ++;
                 Assert.assertEquals(expected, actual);
             }
@@ -591,16 +587,15 @@ public class LocalTransportThreadModelTest {
 
         @Override
         public void write(
-                ChannelHandlerContext ctx,
-                Object[] msgs, int index, int length, ChannelPromise promise) throws Exception {
+                ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
             Assert.assertSame(t, Thread.currentThread());
 
-            for (int i = index; i < index + length; i ++) {
-                int actual = (Integer) msgs[i];
+            for (int i = 0; i < msgs.size(); i ++) {
+                int actual = (Integer) msgs.get(i);
                 int expected = outCnt ++;
                 Assert.assertEquals(expected, actual);
             }
-            ctx.write(msgs, index, length, promise);
+            ctx.write(msgs, promise);
         }
 
         @Override

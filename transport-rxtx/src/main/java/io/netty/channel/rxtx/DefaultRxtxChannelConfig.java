@@ -195,9 +195,4 @@ final class DefaultRxtxChannelConfig extends DefaultChannelConfig implements Rxt
     public RxtxChannelConfig setAutoRead(boolean autoRead) {
         return (RxtxChannelConfig) super.setAutoRead(autoRead);
     }
-
-    @Override
-    public RxtxChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type) {
-        return (RxtxChannelConfig) super.setDefaultHandlerByteBufType(type);
-    }
 }

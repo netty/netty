@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MessageList;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Test;
@@ -92,9 +93,9 @@ public class LocalChannelRegistryTest {
 
     static class TestHandler extends ChannelInboundHandlerAdapter {
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
-            for (int i = index; i < index + length; i ++) {
-                logger.info(String.format("Received mesage: %s", msgs[i]));
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            for (int i = 0; i < msgs.size(); i ++) {
+                logger.info(String.format("Received mesage: %s", msgs.get(i)));
             }
         }
     }
