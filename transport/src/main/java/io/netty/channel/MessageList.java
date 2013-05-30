@@ -281,11 +281,6 @@ public final class MessageList<T> {
         return (MessageList<U>) this;
     }
 
-    @SuppressWarnings("unchecked")
-    public <U> MessageList<U> cast(@SuppressWarnings("UnusedParameters") Class<U> type) {
-        return (MessageList<U>) this;
-    }
-
     public T[] array() {
         return elements;
     }
@@ -365,7 +360,7 @@ public final class MessageList<T> {
         return initialCapacity;
     }
 
-    @SuppressWarnings({"unchecked", "SuspiciousArrayCast"})
+    @SuppressWarnings({ "unchecked", "SuspiciousArrayCast" })
     private T[] newArray(int initialCapacity) {
         return (T[]) new Object[initialCapacity];
     }
