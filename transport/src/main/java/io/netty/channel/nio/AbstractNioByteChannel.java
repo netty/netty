@@ -20,6 +20,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.FileRegion;
+import io.netty.channel.MessageList;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 
 import java.io.IOException;
@@ -141,8 +142,8 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     }
 
     @Override
-    protected int doWrite(Object[] msgs, int index, int length) throws Exception {
-        Object msg = msgs[index];
+    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
+        Object msg = msgs.get(index);
 
         if (msg instanceof ByteBuf) {
             ByteBuf buf = (ByteBuf) msg;
@@ -154,7 +155,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             }
             // We may could optimize this to write multiple buffers at once (scattering)
             if (!buf.isReadable()) {
-                return index + 1;
+                return 1;
             }
         } else if (msg instanceof FileRegion) {
             FileRegion region = (FileRegion) msg;
@@ -163,14 +164,14 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 long localFlushedAmount = doWriteFileRegion(region, i == 0);
                 if (localFlushedAmount == -1) {
                     checkEOF(region);
-                    return index + 1;
+                    return 1;
                 }
                 if (localFlushedAmount > 0) {
                     break;
                 }
             }
             if (region.transfered() >= region.count()) {
-                return index +1;
+                return 1;
             }
         } else {
             throw new UnsupportedOperationException("Not support writing of message " + msg);

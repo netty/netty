@@ -172,10 +172,7 @@ public interface ChannelHandlerContext
     ChannelHandlerContext fireMessageReceived(Object msg);
 
     @Override
-    ChannelHandlerContext fireMessageReceived(Object... msgs);
-
-    @Override
-    ChannelHandlerContext fireMessageReceived(Object[] msgs, int index, int length);
+    ChannelHandlerContext fireMessageReceived(MessageList<?> msgs);
 
     @Override
     ChannelHandlerContext fireChannelReadSuspended();

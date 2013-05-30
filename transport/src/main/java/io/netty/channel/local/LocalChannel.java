@@ -24,6 +24,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
+import io.netty.channel.MessageList;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 
@@ -261,7 +262,7 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected int doWrite(final Object[] msgs, final int index, final int length) throws Exception {
+    protected int doWrite(final MessageList<Object> msgs, final int index) throws Exception {
         if (state < 2) {
             throw new NotYetConnectedException();
         }
@@ -272,25 +273,26 @@ public class LocalChannel extends AbstractChannel {
         final LocalChannel peer = this.peer;
         final ChannelPipeline peerPipeline = peer.pipeline();
         final EventLoop peerLoop = peer.eventLoop();
+        final int size = msgs.size();
 
         if (peerLoop == eventLoop()) {
-            for (int i = index; i < index + length; i ++) {
-                peer.inboundBuffer.add(msgs[i]);
+            for (int i = index; i < size; i ++) {
+                peer.inboundBuffer.add(msgs.get(i));
             }
             finishPeerRead(peer, peerPipeline);
         } else {
             peerLoop.execute(new Runnable() {
                 @Override
                 public void run() {
-                    for (int i = index; i < index + length; i++) {
-                        peer.inboundBuffer.add(msgs[i]);
+                    for (int i = index; i < size; i++) {
+                        peer.inboundBuffer.add(msgs.get(i));
                     }
                     finishPeerRead(peer, peerPipeline);
                 }
             });
         }
 
-        return -1;
+        return size - index;
     }
 
     private static void finishPeerRead(LocalChannel peer, ChannelPipeline peerPipeline) {

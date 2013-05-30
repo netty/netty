@@ -592,10 +592,7 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
     ChannelPipeline fireMessageReceived(Object msg);
 
     @Override
-    ChannelPipeline fireMessageReceived(Object... msgs);
-
-    @Override
-    ChannelPipeline fireMessageReceived(Object[] msgs, int index, int length);
+    ChannelPipeline fireMessageReceived(MessageList<?> msgs);
 
     @Override
     ChannelPipeline fireChannelReadSuspended();

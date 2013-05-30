@@ -24,6 +24,7 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.MessageList;
 import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
@@ -197,7 +198,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected int doReadMessages(Object[] buf, int index) throws Exception {
+    protected int doReadMessages(MessageList<Object> buf) throws Exception {
         int packetSize = config().getReceivePacketSize();
         ByteBuf data = alloc().heapBuffer(packetSize);
         boolean free = true;
@@ -211,7 +212,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
                 remoteAddr = remoteAddress();
             }
 
-            buf[index] = new DatagramPacket(data.writerIndex(tmpPacket.getLength()), localAddress(), remoteAddr);
+            buf.add(new DatagramPacket(data.writerIndex(tmpPacket.getLength()), localAddress(), remoteAddr));
             free = false;
             return 1;
         } catch (SocketTimeoutException e) {
@@ -233,8 +234,8 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected int doWriteMessages(Object[] msg, int index, int l) throws Exception {
-        final Object o = msg[index];
+    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
+        final Object o = msgs.get(index);
         final Object m;
         final ByteBuf data;
         final SocketAddress remoteAddress;

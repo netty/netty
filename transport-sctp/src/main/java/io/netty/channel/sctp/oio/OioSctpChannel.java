@@ -25,6 +25,7 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.MessageList;
 import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.sctp.DefaultSctpChannelConfig;
 import io.netty.channel.sctp.SctpChannelConfig;
@@ -164,7 +165,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected int doReadMessages(Object[] buf, int index) throws Exception {
+    protected int doReadMessages(MessageList<Object> buf) throws Exception {
         if (!readSelector.isOpen()) {
             return 0;
         }
@@ -181,10 +182,6 @@ public class OioSctpChannel extends AbstractOioMessageChannel
         Set<SelectionKey> reableKeys = readSelector.selectedKeys();
         try {
             for (SelectionKey ignored : reableKeys) {
-                if (index == buf.length) {
-                    // No space left in the array
-                    return 0;
-                }
                 ByteBuf buffer = alloc().directBuffer(config().getReceiveBufferSize());
                 boolean free = true;
 
@@ -196,7 +193,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                     }
 
                     data.flip();
-                    buf[index++] = new SctpMessage(messageInfo, buffer.writerIndex(buffer.writerIndex() + data.remaining()));
+                    buf.add(new SctpMessage(messageInfo, buffer.writerIndex(buffer.writerIndex() + data.remaining())));
                     free = false;
                     readMessages ++;
                 } catch (Throwable cause) {
@@ -215,7 +212,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected int doWriteMessages(Object[] msg, int index, int length) throws Exception {
+    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
         if (!writeSelector.isOpen()) {
             return 0;
         }
@@ -227,6 +224,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
             }
             Iterator<SelectionKey> writableKeysIt = writableKeys.iterator();
             int written = 0;
+            int length = msgs.size() - index;
 
             for (;;) {
                 if (written == length) {
@@ -236,7 +234,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                 writableKeysIt.next();
                 writableKeysIt.remove();
 
-                SctpMessage packet = (SctpMessage) msg[index++];
+                SctpMessage packet = (SctpMessage) msgs.get(index ++);
                 if (packet == null) {
                     return written;
                 }
@@ -258,7 +256,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                     mi.streamNumber(packet.streamIdentifier());
 
                     ch.send(nioData, mi);
-                    written++;
+                    written ++;
                 } finally {
                     packet.release();
                 }
@@ -267,6 +265,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                 }
             }
         }
+
         return 0;
     }
 

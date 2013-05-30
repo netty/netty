@@ -71,16 +71,17 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    protected int doWrite(Object[] msgs, int index, int length) throws Exception {
+    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
         throw new UnsupportedOperationException();
     }
 
     private final class DefaultServerUnsafe extends AbstractUnsafe {
         @Override
-        public void write(Object[] msgs, int index, int length, ChannelPromise promise) {
+        public void write(MessageList<?> msgs, ChannelPromise promise) {
             reject(promise);
-            for (int i = index; i < index + length; i ++) {
-                ByteBufUtil.release(msgs[i]);
+            int size = msgs.size();
+            for (int i = 0; i < size; i ++) {
+                ByteBufUtil.release(msgs.get(i));
             }
         }
 

@@ -15,8 +15,10 @@
  */
 package io.netty.channel.socket.oio;
 
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.MessageList;
 import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.util.internal.logging.InternalLogger;
@@ -153,7 +155,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected int doReadMessages(Object[] buf, int index) throws Exception {
+    protected int doReadMessages(MessageList<Object> buf) throws Exception {
         if (socket.isClosed()) {
             return -1;
         }
@@ -162,7 +164,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
             Socket s = socket.accept();
             try {
                 if (s != null) {
-                    buf[index] = new OioSocketChannel(this, null, s);
+                    buf.add(new OioSocketChannel(this, null, s));
                     return 1;
                 }
             } catch (Throwable t) {
@@ -182,7 +184,11 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected int doWriteMessages(Object[] msg, int index, int length) throws Exception {
+    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
+        int size = msgs.size();
+        for (int i = index; i < size; i ++) {
+            ByteBufUtil.release(msgs.get(i));
+        }
         throw new UnsupportedOperationException();
     }
 

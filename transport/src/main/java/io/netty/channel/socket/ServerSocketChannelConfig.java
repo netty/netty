@@ -93,7 +93,4 @@ public interface ServerSocketChannelConfig extends ChannelConfig {
 
     @Override
     ServerSocketChannelConfig setAutoRead(boolean autoRead);
-
-    @Override
-    ServerSocketChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type);
 }

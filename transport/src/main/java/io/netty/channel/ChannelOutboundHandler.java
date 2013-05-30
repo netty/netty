@@ -84,6 +84,5 @@ public interface ChannelOutboundHandler extends ChannelHandler {
      * @param promise           the {@link ChannelPromise} to notify once the operation completes
      * @throws Exception        thrown if an error accour
      */
-    void write(
-            ChannelHandlerContext ctx, Object[] msgs, int index, int length, ChannelPromise promise) throws Exception;
+    void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception;
 }

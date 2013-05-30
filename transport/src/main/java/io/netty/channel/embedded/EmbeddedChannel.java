@@ -27,6 +27,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
+import io.netty.channel.MessageList;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -277,11 +278,12 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    protected int doWrite(Object[] msgs, int index, int length) throws Exception {
-        for (int i = index; i < index + length; i ++) {
-            lastOutboundBuffer.add(msgs[i]);
+    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
+        int size = msgs.size();
+        for (int i = index; i < size; i ++) {
+            lastOutboundBuffer.add(msgs.get(i));
         }
-        return -1;
+        return size - index;
     }
 
     private class DefaultUnsafe extends AbstractUnsafe {
@@ -293,9 +295,10 @@ public class EmbeddedChannel extends AbstractChannel {
 
     private final class LastInboundHandler extends ChannelInboundHandlerAdapter {
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
-            for (int i = index; i < index + length; i ++) {
-                lastInboundBuffer.add(msgs[i]);
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            int size = msgs.size();
+            for (int i = 0; i < size; i ++) {
+                lastInboundBuffer.add(msgs.get(i));
             }
         }
 

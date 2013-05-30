@@ -15,9 +15,9 @@
  */
 package io.netty.channel.nio;
 
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.MessageList;
 
 import java.io.IOException;
 import java.nio.channels.SelectableChannel;
@@ -42,9 +42,6 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
     }
 
     private final class NioMessageUnsafe extends AbstractNioUnsafe {
-        // maximal read is 16 messages at once
-        private final Object[] msgBuf = new Object[16];
-
         @Override
         public void read() {
             assert eventLoop().inEventLoop();
@@ -61,77 +58,70 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             boolean closed = false;
             boolean read = false;
             boolean firedChannelReadSuspended = false;
-            int index = 0;
-            try {
-                loop: for (;;) {
-                    try {
-                        for (;;) {
-                            int localRead = doReadMessages(msgBuf, index);
-                            if (localRead > 0) {
-                                index += localRead;
-                                read = true;
-                            } else if (localRead == 0) {
-                                break loop;
-                            } else if (localRead < 0) {
-                                closed = true;
-                                break loop;
-                            }
-                            if (!config().isAutoRead()) {
-                                break loop;
-                            }
-                        }
-                    } catch (Throwable t) {
-                        if (read) {
-                            read = false;
-                            pipeline.fireMessageReceived(msgBuf, 0, index);
-                        }
-
-                        if (t instanceof IOException) {
+            MessageList<Object> msgBuf = new MessageList<Object>();
+            loop: for (;;) {
+                try {
+                    for (;;) {
+                        int localRead = doReadMessages(msgBuf);
+                        if (localRead > 0) {
+                            read = true;
+                        } else if (localRead == 0) {
+                            break loop;
+                        } else if (localRead < 0) {
                             closed = true;
-                        } else if (!closed) {
-                            firedChannelReadSuspended = true;
-                            pipeline.fireChannelReadSuspended();
+                            break loop;
                         }
-
-                        pipeline().fireExceptionCaught(t);
-
-                        // break the loop now
-                        break;
-                    } finally {
-                        if (read) {
-                            pipeline.fireMessageReceived(msgBuf, 0, index);
-                        }
-                        if (closed && isOpen()) {
-                            close(voidPromise());
-                        } else if (!firedChannelReadSuspended) {
-                            pipeline.fireChannelReadSuspended();
+                        if (!config().isAutoRead()) {
+                            break loop;
                         }
                     }
-                }
-            } finally {
-                for (int i = 0; i < index; i++) {
-                    ByteBufUtil.release(msgBuf[i]);
+                } catch (Throwable t) {
+                    if (read) {
+                        read = false;
+                        pipeline.fireMessageReceived(msgBuf);
+                    }
+
+                    if (t instanceof IOException) {
+                        closed = true;
+                    } else if (!closed) {
+                        firedChannelReadSuspended = true;
+                        pipeline.fireChannelReadSuspended();
+                    }
+
+                    pipeline().fireExceptionCaught(t);
+
+                    // break the loop now
+                    break;
+                } finally {
+                    if (read) {
+                        pipeline.fireMessageReceived(msgBuf);
+                    }
+                    if (closed && isOpen()) {
+                        close(voidPromise());
+                    } else if (!firedChannelReadSuspended) {
+                        pipeline.fireChannelReadSuspended();
+                    }
                 }
             }
         }
     }
 
     @Override
-    protected int doWrite(Object[] msgs, int index, int length) throws Exception {
+    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
         final int writeSpinCount = config().getWriteSpinCount() - 1;
         for (int i = writeSpinCount; i >= 0; i --) {
-            int written = doWriteMessages(msgs, index, length, i == 0);
+            int written = doWriteMessages(msgs, index, i == 0);
             if (written > 0) {
-                return index + written;
+                return written;
             }
         }
-        return index;
+        return 0;
     }
 
     /**
      * Read messages into the given array and return the amount which was read.
      */
-    protected abstract int doReadMessages(Object[] buf, int index) throws Exception;
+    protected abstract int doReadMessages(MessageList<Object> buf) throws Exception;
 
     /**
      * Write messages to the underlying {@link java.nio.channels.Channel}.
@@ -140,5 +130,5 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
      * @return written      the amount of written messages
      * @throws Exception    thrown if an error accour
      */
-    protected abstract int doWriteMessages(Object[] msg, int index, int length, boolean lastSpin) throws Exception;
+    protected abstract int doWriteMessages(MessageList<Object> msg, int index, boolean lastSpin) throws Exception;
 }

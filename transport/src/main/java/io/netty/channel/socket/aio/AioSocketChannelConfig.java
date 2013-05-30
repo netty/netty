@@ -111,7 +111,4 @@ public interface AioSocketChannelConfig extends SocketChannelConfig {
 
     @Override
     AioSocketChannelConfig setAutoRead(boolean autoRead);
-
-    @Override
-    AioSocketChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type);
 }

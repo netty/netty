@@ -158,10 +158,4 @@ public class DefaultOioSocketChannelConfig extends DefaultSocketChannelConfig im
         super.setAutoRead(autoRead);
         return this;
     }
-
-    @Override
-    public OioSocketChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type) {
-        super.setDefaultHandlerByteBufType(type);
-        return this;
-    }
 }

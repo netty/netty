@@ -228,7 +228,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
         /**
          * Schedules a write operation.
          */
-        void write(Object[] msgs, int index, int length, ChannelPromise promise);
+        void write(MessageList<?> msgs, ChannelPromise promise);
 
         /**
          * Flush out all data now.

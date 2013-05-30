@@ -24,6 +24,7 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MessageList;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.AttributeKey;
@@ -228,9 +229,10 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
 
         @Override
         @SuppressWarnings("unchecked")
-        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) {
-            for (int i = 0; i < index + length; i ++) {
-                Channel child = (Channel) msgs[i];
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) {
+            int size = msgs.size();
+            for (int i = 0; i < size; i ++) {
+                Channel child = (Channel) msgs.get(i);
                 child.pipeline().addLast(childHandler);
 
                 for (Entry<ChannelOption<?>, Object> e: childOptions) {

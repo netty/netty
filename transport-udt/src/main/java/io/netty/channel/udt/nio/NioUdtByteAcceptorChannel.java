@@ -18,6 +18,7 @@ package io.netty.channel.udt.nio;
 import com.barchart.udt.TypeUDT;
 import com.barchart.udt.nio.SocketChannelUDT;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.MessageList;
 
 /**
  * Byte Channel Acceptor for UDT Streams.
@@ -31,13 +32,12 @@ public class NioUdtByteAcceptorChannel extends NioUdtAcceptorChannel {
     }
 
     @Override
-    protected int doReadMessages(Object[] buf, int index) throws Exception {
+    protected int doReadMessages(MessageList<Object> buf) throws Exception {
         final SocketChannelUDT channelUDT = javaChannel().accept();
         if (channelUDT == null) {
             return 0;
         } else {
-            buf[index] = new NioUdtByteConnectorChannel(this, channelUDT.socketUDT()
-                    .id(), channelUDT);
+            buf.add(new NioUdtByteConnectorChannel(this, channelUDT.socketUDT().id(), channelUDT));
             return 1;
         }
     }
@@ -46,5 +46,4 @@ public class NioUdtByteAcceptorChannel extends NioUdtAcceptorChannel {
     public ChannelMetadata metadata() {
         return METADATA;
     }
-
 }

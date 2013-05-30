@@ -24,6 +24,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MessageList;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutorGroup;
@@ -57,7 +58,7 @@ public class LocalTransportThreadModelTest {
               public void initChannel(LocalChannel ch) throws Exception {
                   ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                     @Override
-                    public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) {
+                    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) {
                         // Discard
                     }
                   });

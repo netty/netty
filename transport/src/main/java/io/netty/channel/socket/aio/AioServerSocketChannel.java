@@ -20,6 +20,7 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
+import io.netty.channel.MessageList;
 import io.netty.channel.aio.AbstractAioChannel;
 import io.netty.channel.aio.AioCompletionHandler;
 import io.netty.channel.aio.AioEventLoopGroup;
@@ -165,7 +166,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
     }
 
     @Override
-    protected int doWrite(Object[] msgs, int index, int length) throws Exception {
+    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
         throw new UnsupportedOperationException();
     }
 
@@ -181,7 +182,7 @@ public class AioServerSocketChannel extends AbstractAioChannel implements Server
         return task;
     }
 
-    private final class AcceptHandler
+    private static final class AcceptHandler
             extends AioCompletionHandler<AioServerSocketChannel, AsynchronousSocketChannel, Void> {
 
         AcceptHandler(AioServerSocketChannel channel) {

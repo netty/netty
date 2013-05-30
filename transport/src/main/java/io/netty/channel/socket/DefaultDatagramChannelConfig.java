@@ -16,7 +16,6 @@
 package io.netty.channel.socket;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
@@ -384,10 +383,5 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
     @Override
     public DatagramChannelConfig setAutoRead(boolean autoRead) {
         return (DatagramChannelConfig) super.setAutoRead(autoRead);
-    }
-
-    @Override
-    public DatagramChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type) {
-        return (DatagramChannelConfig) super.setDefaultHandlerByteBufType(type);
     }
 }

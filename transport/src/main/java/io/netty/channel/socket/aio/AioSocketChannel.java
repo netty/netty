@@ -23,6 +23,7 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
+import io.netty.channel.MessageList;
 import io.netty.channel.aio.AbstractAioChannel;
 import io.netty.channel.aio.AioCompletionHandler;
 import io.netty.channel.aio.AioEventLoopGroup;
@@ -245,7 +246,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     }
 
     @Override
-    protected int doWrite(Object[] msgs, int index, int length) throws Exception {
+    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
         if (inDoFlushByteBuffer || writeInProgress != NO_WRITE_IN_PROGRESS) {
             return index;
         }
@@ -253,8 +254,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         inDoFlushByteBuffer = true;
 
         try {
-            for (int i = index; i < length; i++) {
-                ByteBuf buf = (ByteBuf) msgs[i];
+            for (int i = index; i < msgs.size(); i++) {
+                ByteBuf buf = (ByteBuf) msgs.get(i);
                 if (buf.isReadable()) {
                     for (;;) {
                         if (buf.refCnt() == 0) {

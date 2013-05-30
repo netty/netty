@@ -17,20 +17,15 @@ package io.netty.channel.oio;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.MessageList;
 
 import java.io.IOException;
-import java.net.Socket;
 
 /**
  * Abstract base class for OIO which reads and writes objects from/to a Socket
  */
 public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
-    // maximal read is 16 messages at once
-    private final Object[] msgBuf = new Object[16];
 
-    /**
-     * @see AbstractOioChannel#AbstractOioChannel(Channel, Integer)
-     */
     protected AbstractOioMessageChannel(Channel parent, Integer id) {
         super(parent, id);
     }
@@ -41,9 +36,9 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
         boolean closed = false;
         boolean read = false;
         boolean firedChannelReadSuspended = false;
-        int localReadAmount = 0;
+        MessageList<Object> msgs = new MessageList<Object>();
         try {
-            localReadAmount = doReadMessages(msgBuf, 0);
+            int localReadAmount = doReadMessages(msgs);
             if (localReadAmount > 0) {
                 read = true;
             } else if (localReadAmount < 0) {
@@ -52,7 +47,7 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
         } catch (Throwable t) {
             if (read) {
                 read = false;
-                pipeline.fireMessageReceived(msgBuf, 0, localReadAmount);
+                pipeline.fireMessageReceived(msgs);
             }
             firedChannelReadSuspended = true;
             pipeline.fireChannelReadSuspended();
@@ -62,7 +57,7 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
             }
         } finally {
             if (read) {
-                pipeline.fireMessageReceived(msgBuf, 0, localReadAmount);
+                pipeline.fireMessageReceived(msgs);
             }
             if (!firedChannelReadSuspended) {
                 pipeline.fireChannelReadSuspended();
@@ -73,25 +68,8 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
         }
     }
 
-    @Override
-    protected int doWrite(Object[] msgs, int index, int length) throws Exception {
-        int written = doWriteMessages(msgs, index, length);
-        if (written > 0) {
-            return index + written;
-        }
-        return index;
-    }
     /**
      * Read messages into the given array and return the amount which was read.
      */
-    protected abstract int doReadMessages(Object[] buf, int index) throws Exception;
-
-    /**
-     * Write messages to the underlying {@link Socket}.
-     *
-     * @param msg           Object to write
-     * @return written      the amount of written messages
-     * @throws Exception    thrown if an error accour
-     */
-    protected abstract int doWriteMessages(Object[] msg, int index, int length) throws Exception;
+    protected abstract int doReadMessages(MessageList<Object> msgs) throws Exception;
 }

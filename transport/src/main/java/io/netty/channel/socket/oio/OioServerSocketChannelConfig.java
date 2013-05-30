@@ -72,7 +72,4 @@ public interface OioServerSocketChannelConfig extends ServerSocketChannelConfig 
 
     @Override
     OioServerSocketChannelConfig setAutoRead(boolean autoRead);
-
-    @Override
-    OioServerSocketChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type);
 }

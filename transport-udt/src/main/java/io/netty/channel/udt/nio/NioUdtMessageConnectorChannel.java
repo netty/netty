@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.MessageList;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.udt.DefaultUdtChannelConfig;
 import io.netty.channel.udt.UdtChannel;
@@ -140,7 +141,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected int doReadMessages(Object[] buf, int index) throws Exception {
+    protected int doReadMessages(MessageList<Object> buf) throws Exception {
 
         final int maximumMessageSize = config.getReceiveBufferSize();
 
@@ -162,15 +163,15 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel
         }
 
         // delivers a message
-        buf[index] = new UdtMessage(byteBuf);
+        buf.add(new UdtMessage(byteBuf));
 
         return 1;
     }
 
     @Override
-    protected int doWriteMessages(Object[] msg, int index, int length, boolean lastSpin) throws Exception {
+    protected int doWriteMessages(MessageList<Object> msgs, int index, boolean lastSpin) throws Exception {
         // expects a message
-        final UdtMessage message = (UdtMessage) msg[index];
+        final UdtMessage message = (UdtMessage) msgs.get(index);
 
         final ByteBuf byteBuf = message.content();
 
@@ -203,7 +204,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel
         }
 
         // wrote the message queue completely - clear OP_WRITE.
-        if (length == 1) {
+        if (index + 1 == msgs.size()) {
             if ((interestOps & OP_WRITE) != 0) {
                 key.interestOps(interestOps & ~OP_WRITE);
             }

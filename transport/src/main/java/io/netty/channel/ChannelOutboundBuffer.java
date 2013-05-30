@@ -30,14 +30,11 @@ final class ChannelOutboundBuffer {
     private static final int MIN_INITIAL_CAPACITY = 8;
 
     ChannelPromise currentPromise;
-    Object[] currentMessages;
-    int currentMessageStart;
-    int currentMessageEnd;
+    MessageList<Object> currentMessages;
+    int currentMessageIndex;
 
     private ChannelPromise[] promises;
-    private Object[][] messages;
-    private int[] messageIndexes;
-    private int[] messageLengths;
+    private MessageList<Object>[] messages;
 
     private int head;
     private int tail;
@@ -46,6 +43,7 @@ final class ChannelOutboundBuffer {
         this(MIN_INITIAL_CAPACITY << 1);
     }
 
+    @SuppressWarnings("unchecked")
     ChannelOutboundBuffer(int initialCapacity) {
         if (initialCapacity < 0) {
             throw new IllegalArgumentException("initialCapacity: " + initialCapacity + " (expected: >= 0)");
@@ -69,17 +67,14 @@ final class ChannelOutboundBuffer {
         }
 
         promises = new ChannelPromise[initialCapacity];
-        messages = new Object[initialCapacity][];
-        messageIndexes = new int[initialCapacity];
-        messageLengths = new int[initialCapacity];
+        messages = new MessageList[initialCapacity];
     }
 
-    void add(Object[] msgs, int index, int length, ChannelPromise promise) {
+    @SuppressWarnings("unchecked")
+    void add(MessageList<?> msgs, ChannelPromise promise) {
         int tail = this.tail;
         promises[tail] = promise;
-        messages[tail] = msgs;
-        messageIndexes[tail] = index;
-        messageLengths[tail] = length;
+        messages[tail] = (MessageList<Object>) msgs;
 
         if ((this.tail = tail + 1 & promises.length - 1) == head) {
             doubleCapacity();
@@ -102,20 +97,11 @@ final class ChannelOutboundBuffer {
         System.arraycopy(promises, 0, a1, r, p);
         promises = a1;
 
-        Object[][] a2 = new Object[newCapacity][];
+        @SuppressWarnings("unchecked")
+        MessageList<Object>[] a2 = new MessageList[newCapacity];
         System.arraycopy(messages, p, a2, 0, r);
         System.arraycopy(messages, 0, a2, r, p);
         messages = a2;
-
-        int[] a3 = new int[newCapacity];
-        System.arraycopy(messageIndexes, p, a3, 0, r);
-        System.arraycopy(messageIndexes, 0, a3, r, p);
-        messageIndexes = a3;
-
-        int[] a4 = new int[newCapacity];
-        System.arraycopy(messageLengths, p, a4, 0, r);
-        System.arraycopy(messageLengths, 0, a4, r, p);
-        messageLengths = a4;
 
         head = 0;
         tail = n;
@@ -132,8 +118,7 @@ final class ChannelOutboundBuffer {
 
         currentPromise = e;
         currentMessages = messages[h];
-        currentMessageStart = messageIndexes[h];
-        currentMessageEnd = currentMessageStart + messageLengths[h];
+        currentMessageIndex = 0;
 
         promises[h] = null;
         messages[h] = null;
@@ -173,8 +158,8 @@ final class ChannelOutboundBuffer {
                 }
             }
             // release all failed messages
-            for (int i = currentMessageStart; i < currentMessageEnd; i++) {
-                ByteBufUtil.release(currentMessages[i]);
+            for (int i = currentMessageIndex; i < currentMessages.size(); i++) {
+                ByteBufUtil.release(currentMessages.get(i));
             }
         } while(next());
     }

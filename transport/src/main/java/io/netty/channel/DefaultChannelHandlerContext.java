@@ -21,7 +21,6 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
 
 import java.net.SocketAddress;
-import java.nio.channels.ClosedChannelException;
 
 import static io.netty.channel.DefaultChannelPipeline.*;
 
@@ -343,19 +342,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (msg == null) {
             throw new NullPointerException("msg");
         }
-        return fireMessageReceived(new Object[] { msg }, 0, 1);
+        return fireMessageReceived(new MessageList<Object>(msg));
     }
 
     @Override
-    public ChannelHandlerContext fireMessageReceived(Object... msgs) {
-        if (msgs == null) {
-            throw new NullPointerException("msgs");
-        }
-        return fireMessageReceived(msgs, 0, msgs.length);
-    }
-
-    @Override
-    public ChannelHandlerContext fireMessageReceived(final Object[] msgs, final int index, final int length) {
+    public ChannelHandlerContext fireMessageReceived(final MessageList<?> msgs) {
         if (msgs == null) {
             throw new NullPointerException("msgs");
         }
@@ -363,22 +354,22 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         final DefaultChannelHandlerContext next = findContextInbound();
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            next.invokeMessageReceived(msgs, index, length);
+            next.invokeMessageReceived(msgs);
         } else {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    next.invokeMessageReceived(msgs, index, length);
+                    next.invokeMessageReceived(msgs);
                 }
             });
         }
         return this;
     }
 
-    private void invokeMessageReceived(Object[] msgs, int index, int length) {
+    private void invokeMessageReceived(MessageList<?> msgs) {
         ChannelInboundHandler handler = (ChannelInboundHandler) handler();
         try {
-            handler.messageReceived(this, msgs, index, length);
+            handler.messageReceived(this, msgs.cast());
         } catch (Throwable t) {
             notifyHandlerException(t);
         }
@@ -449,13 +440,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public ChannelFuture write(Object[] msgs) {
+    public ChannelFuture write(MessageList<?> msgs) {
         return write(msgs, newPromise());
-    }
-
-    @Override
-    public ChannelFuture write(Object[] msgs, int index, int length) {
-        return write(msgs, index, length, newPromise());
     }
 
     @Override
@@ -662,34 +648,25 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (msg == null) {
             throw new NullPointerException("msg");
         }
-        return write(new Object[] { msg }, 0, 1, promise);
+        return write(new MessageList<Object>(msg));
     }
 
     @Override
-    public ChannelFuture write(Object[] msgs, ChannelPromise promise) {
-        if (msgs == null) {
-            throw new NullPointerException("msgs");
-        }
-        return write(msgs, 0, msgs.length, promise);
+    public ChannelFuture write(MessageList<?> msgs, ChannelPromise promise) {
+        return findContextOutbound().invokeWrite(msgs, promise);
     }
 
-    @Override
-    public ChannelFuture write(final Object[] msgs, final int index, final int length, final ChannelPromise promise) {
-        return findContextOutbound().invokeWrite(msgs, index, length, promise);
-    }
-
-    private ChannelFuture invokeWrite(
-            final Object[] msgs, final int index, final int length, final ChannelPromise promise) {
+    private ChannelFuture invokeWrite(final MessageList<?> msgs, final ChannelPromise promise) {
         validateFuture(promise, true);
 
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            invokeWrite0(msgs, index, length, promise);
+            invokeWrite0(msgs, promise);
         } else {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    invokeWrite0(msgs, index, length, promise);
+                    invokeWrite0(msgs, promise);
                 }
             });
         }
@@ -697,16 +674,10 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         return promise;
     }
 
-    private void invokeWrite0(Object[] msgs, int index, int length, ChannelPromise promise) {
-        Channel channel = channel();
-        if (!channel.isActive() && !channel.isRegistered()) {
-            promise.setFailure(new ClosedChannelException());
-            return;
-        }
-
+    private void invokeWrite0(MessageList<?> msgs, ChannelPromise promise) {
         ChannelOutboundHandler handler = (ChannelOutboundHandler) handler();
         try {
-            handler.write(this, msgs, index, length, promise);
+            handler.write(this, msgs.cast(), promise);
         } catch (Throwable t) {
             notifyHandlerException(t);
         }

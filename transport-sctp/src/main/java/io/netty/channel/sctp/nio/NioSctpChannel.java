@@ -25,6 +25,7 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.MessageList;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.sctp.DefaultSctpChannelConfig;
 import io.netty.channel.sctp.SctpChannelConfig;
@@ -258,7 +259,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     }
 
     @Override
-    protected int doReadMessages(Object[] buf, int index) throws Exception {
+    protected int doReadMessages(MessageList<Object> buf) throws Exception {
         SctpChannel ch = javaChannel();
         ByteBuf buffer = alloc().directBuffer(config().getReceiveBufferSize());
         boolean free = true;
@@ -270,7 +271,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
             }
 
             data.flip();
-            buf[index] = new SctpMessage(messageInfo, buffer.writerIndex(buffer.writerIndex() + data.remaining()));
+            buf.add(new SctpMessage(messageInfo, buffer.writerIndex(buffer.writerIndex() + data.remaining())));
             free = false;
             return 1;
         } catch (Throwable cause) {
@@ -284,8 +285,8 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     }
 
     @Override
-    protected int doWriteMessages(Object[] msgs, int index, int length, boolean lastSpin) throws Exception {
-        SctpMessage packet = (SctpMessage) msgs[index];
+    protected int doWriteMessages(MessageList<Object> msgs, int index, boolean lastSpin) throws Exception {
+        SctpMessage packet = (SctpMessage) msgs.get(index);
         ByteBuf data = packet.content();
         int dataLen = data.readableBytes();
         ByteBuffer nioData;
@@ -322,7 +323,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         // packet was written free up buffer
         packet.release();
 
-        if (length == 1) {
+        if (index + 1 == msgs.size()) {
             // Wrote the outbound buffer completely - clear OP_WRITE.
             if ((interestOps & SelectionKey.OP_WRITE) != 0) {
                 key.interestOps(interestOps & ~SelectionKey.OP_WRITE);

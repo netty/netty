@@ -21,6 +21,7 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.FileRegion;
+import io.netty.channel.MessageList;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 
 import java.io.IOException;
@@ -155,18 +156,18 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
     }
 
     @Override
-    protected int doWrite(Object[] msgs, int index, int length) throws Exception {
-        Object msg = msgs[index];
+    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
+        Object msg = msgs.get(index);
         if (msg instanceof ByteBuf) {
             ByteBuf buf = (ByteBuf) msg;
             while (buf.isReadable()) {
                 doWriteBytes(buf);
             }
-            return index + 1;
+            return 1;
         } else if (msg instanceof FileRegion) {
             FileRegion region = (FileRegion) msg;
             doWriteFileRegion(region);
-            return index + 1;
+            return 1;
         } else {
             throw new UnsupportedOperationException();
         }

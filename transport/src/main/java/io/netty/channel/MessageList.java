@@ -57,6 +57,10 @@ public final class MessageList<T> {
         return size;
     }
 
+    public int capacity() {
+        return elements.length;
+    }
+
     public boolean isEmpty() {
         return size == 0;
     }

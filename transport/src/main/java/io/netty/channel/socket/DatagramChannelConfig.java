@@ -179,7 +179,4 @@ public interface DatagramChannelConfig extends ChannelConfig {
 
     @Override
     DatagramChannelConfig setAutoRead(boolean autoRead);
-
-    @Override
-    DatagramChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type);
 }

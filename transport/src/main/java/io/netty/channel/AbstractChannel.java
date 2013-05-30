@@ -241,13 +241,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelFuture write(Object[] msgs) {
+    public ChannelFuture write(MessageList<?> msgs) {
         return pipeline.write(msgs);
-    }
-
-    @Override
-    public ChannelFuture write(Object[] msgs, int index, int length) {
-        return pipeline.write(msgs, index, length);
     }
 
     @Override
@@ -291,13 +286,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelFuture write(Object[] msgs, ChannelPromise promise) {
-        return pipeline.write(new Object[]{msgs}, promise);
-    }
-
-    @Override
-    public ChannelFuture write(Object[] msgs, int index, int length, ChannelPromise promise) {
-        return pipeline.write(msgs, index, length, promise);
+    public ChannelFuture write(MessageList<?> msgs, ChannelPromise promise) {
+        return pipeline.write(msgs, promise);
     }
 
     @Override
@@ -669,8 +659,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public void write(Object[] msgs, int index, int length, ChannelPromise promise) {
-            outboundBuffer.add(msgs, index, length, promise);
+        public void write(MessageList<?> msgs, ChannelPromise promise) {
+            outboundBuffer.add(msgs, promise);
             flush();
         }
 
@@ -713,12 +703,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         promise = outboundBuffer.currentPromise;
                     }
 
-                    final Object[] messages = outboundBuffer.currentMessages;
-                    int start = outboundBuffer.currentMessageStart;
-                    int end = outboundBuffer.currentMessageEnd;
-                    outboundBuffer.currentMessageStart = start = doWrite(messages, start, end - start);
-
-                    if (start < 0 || start >= end) {
+                    MessageList<Object> messages = outboundBuffer.currentMessages;
+                    int messageIndex = outboundBuffer.currentMessageIndex;
+                    int messageCount = messages.size();
+                    int writtenMessages = doWrite(messages, messageIndex);
+                    outboundBuffer.currentMessageIndex = messageIndex += writtenMessages;
+                    if (messageIndex >= messageCount) {
                         promise.trySuccess();
                         if (!outboundBuffer.next()) {
                             break;
@@ -844,9 +834,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      *
      * Sub-classes may override this as this implementation will just thrown an {@link UnsupportedOperationException}
      *
-     * @return the next index or {@code -1} if succeeded to write all messages
+     * @return the number of written messages
      */
-    protected abstract int doWrite(Object[] msgs, int index, int length) throws Exception;
+    protected abstract int doWrite(MessageList<Object> msgs, int index) throws Exception;
 
     protected static void checkEOF(FileRegion region) throws IOException {
         if (region.transfered() < region.count()) {

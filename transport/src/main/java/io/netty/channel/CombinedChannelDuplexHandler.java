@@ -143,8 +143,8 @@ public class CombinedChannelDuplexHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
-        inboundHandler.messageReceived(ctx, msgs, index, length);
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        inboundHandler.messageReceived(ctx, msgs);
     }
 
     @Override
@@ -183,8 +183,7 @@ public class CombinedChannelDuplexHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void write(
-            ChannelHandlerContext ctx, Object[] msgs, int index, int length, ChannelPromise promise) throws Exception {
-        outboundHandler.write(ctx, msgs, index, length, promise);
+    public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
+        outboundHandler.write(ctx, msgs, promise);
     }
 }
