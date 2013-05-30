@@ -142,7 +142,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
             heapArenas = null;
         }
 
-        if (nHeapArena > 0) {
+        if (nDirectArena > 0) {
             directArenas = newArenaArray(nDirectArena);
             for (int i = 0; i < directArenas.length; i ++) {
                 directArenas[i] = new PoolArena.DirectArena(this, pageSize, maxOrder, pageShifts, chunkSize);
