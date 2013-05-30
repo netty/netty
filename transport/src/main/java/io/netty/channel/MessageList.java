@@ -33,10 +33,19 @@ public final class MessageList<T> {
         this(DEFAULT_INITIAL_CAPACITY);
     }
 
-    @SuppressWarnings({"unchecked", "SuspiciousArrayCast"})
+    public MessageList(T value) {
+        if (value == null) {
+            throw new NullPointerException("value");
+        }
+
+        elements = newArray(MIN_INITIAL_CAPACITY);
+        elements[0] = value;
+        size = 1;
+    }
+
     public MessageList(int initialCapacity) {
         initialCapacity = normalizeCapacity(initialCapacity);
-        elements = (T[]) new Object[initialCapacity];
+        elements = newArray(initialCapacity);
     }
 
     private MessageList(T[] elements, int size) {
@@ -329,8 +338,7 @@ public final class MessageList<T> {
             return;
         }
 
-        @SuppressWarnings({"unchecked", "SuspiciousArrayCast"})
-        T[] newElements = (T[]) new Object[normalizeCapacity(capacity)];
+        T[] newElements = newArray(normalizeCapacity(capacity));
         System.arraycopy(elements, 0, newElements, 0, size);
         elements = newElements;
     }
@@ -351,6 +359,11 @@ public final class MessageList<T> {
             }
         }
         return initialCapacity;
+    }
+
+    @SuppressWarnings({"unchecked", "SuspiciousArrayCast"})
+    private T[] newArray(int initialCapacity) {
+        return (T[]) new Object[initialCapacity];
     }
 
     private void checkExclusive(int index) {
