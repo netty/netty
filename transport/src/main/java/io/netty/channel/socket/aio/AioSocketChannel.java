@@ -265,7 +265,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                         writeInProgress = WRITE_IN_PROGRESS;
                         if (buf.nioBufferCount() == 1) {
                             javaChannel().write(
-                                    buf.nioBuffer(), config.getWriteTimeout(), TimeUnit.MILLISECONDS, buf, writeHandler);
+                                    buf.nioBuffer(), config.getWriteTimeout(), TimeUnit.MILLISECONDS,
+                                    buf, writeHandler);
                         } else {
                             ByteBuffer[] buffers = buf.nioBuffers(buf.readerIndex(), buf.readableBytes());
                             if (buffers.length == 1) {
@@ -372,7 +373,9 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         }
     }
 
-    private static final class WriteHandler<T extends Number> extends AioCompletionHandler<AioSocketChannel, T, ByteBuf> {
+    private static final class WriteHandler<T extends Number>
+            extends AioCompletionHandler<AioSocketChannel, T, ByteBuf> {
+
         WriteHandler(AioSocketChannel channel) {
             super(channel);
         }
@@ -492,7 +495,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                         pipeline.fireMessageReceived(byteBuf);
                     }
 
-                    // Double check because fireInboundBufferUpdated() might have triggered the closure by a user handler.
+                    // Double check because fireInboundBufferUpdated() might have triggered
+                    // the closure by a user handler.
                     if (closed || !channel.isOpen()) {
                         channel.inputShutdown = true;
                         if (isOpen()) {

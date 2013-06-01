@@ -64,79 +64,74 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
             final ChannelPipeline pipeline = pipeline();
             // FIXME: calculate size as in 3.x
-            final ByteBuf byteBuf = alloc().ioBuffer();
+            final ByteBuf byteBuf = alloc().ioBuffer(1024);
+            boolean closed = false;
+            boolean read = false;
+            boolean firedChannelReadSuspended = false;
             try {
-                boolean closed = false;
-                boolean read = false;
-                boolean firedChannelReadSuspended = false;
-                try {
-                    expandReadBuffer(byteBuf);
-                    loop: for (;;) {
-                        int localReadAmount = doReadBytes(byteBuf);
-                        if (localReadAmount > 0) {
-                            read = true;
-                        } else if (localReadAmount < 0) {
-                            closed = true;
-                            break;
-                        }
-
-                        switch (expandReadBuffer(byteBuf)) {
-                        case 0:
-                            // Read all - stop reading.
-                            break loop;
-                        case 1:
-                            // Keep reading until everything is read.
-                            break;
-                        case 2:
-                            // Let the inbound handler drain the buffer and continue reading.
-                            if (read) {
-                                read = false;
-                                pipeline.fireMessageReceived(byteBuf);
-                                // clear the buffer after the event was fired
-                                byteBuf.clear();
-                            }
-                            if (!config().isAutoRead()) {
-                                // stop reading until next Channel.read() call
-                                // See https://github.com/netty/netty/issues/1363
-                                break loop;
-                            }
-                        }
-                    }
-                } catch (Throwable t) {
-                    if (read) {
-                        read = false;
-                        pipeline.fireMessageReceived(byteBuf);
-                    }
-
-                    if (t instanceof IOException) {
+                expandReadBuffer(byteBuf);
+                loop: for (;;) {
+                    int localReadAmount = doReadBytes(byteBuf);
+                    if (localReadAmount > 0) {
+                        read = true;
+                    } else if (localReadAmount < 0) {
                         closed = true;
-                    } else if (!closed) {
-                        firedChannelReadSuspended = true;
-                        pipeline.fireChannelReadSuspended();
-                    }
-                    pipeline().fireExceptionCaught(t);
-                } finally {
-                    if (read) {
-                        pipeline.fireMessageReceived(byteBuf);
+                        break;
                     }
 
-                    if (closed) {
-                        setInputShutdown();
-                        if (isOpen()) {
-                            if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
-                                key.interestOps(key.interestOps() & ~readInterestOp);
-                                pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
-                            } else {
-                                close(voidPromise());
-                            }
+                    switch (expandReadBuffer(byteBuf)) {
+                    case 0:
+                        // Read all - stop reading.
+                        break loop;
+                    case 1:
+                        // Keep reading until everything is read.
+                        break;
+                    case 2:
+                        // Let the inbound handler drain the buffer and continue reading.
+                        if (read) {
+                            read = false;
+                            pipeline.fireMessageReceived(byteBuf);
+                            // clear the buffer after the event was fired
+                            byteBuf.clear();
                         }
-                    } else if (!firedChannelReadSuspended) {
-                        pipeline.fireChannelReadSuspended();
+                        if (!config().isAutoRead()) {
+                            // stop reading until next Channel.read() call
+                            // See https://github.com/netty/netty/issues/1363
+                            break loop;
+                        }
                     }
                 }
+            } catch (Throwable t) {
+                if (read) {
+                    read = false;
+                    pipeline.fireMessageReceived(byteBuf);
+                }
+
+                if (t instanceof IOException) {
+                    closed = true;
+                } else if (!closed) {
+                    firedChannelReadSuspended = true;
+                    pipeline.fireChannelReadSuspended();
+                }
+                pipeline().fireExceptionCaught(t);
             } finally {
-                // release the buffer back to the pool
-                byteBuf.release();
+                if (read) {
+                    pipeline.fireMessageReceived(byteBuf);
+                }
+
+                if (closed) {
+                    setInputShutdown();
+                    if (isOpen()) {
+                        if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
+                            key.interestOps(key.interestOps() & ~readInterestOp);
+                            pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+                        } else {
+                            close(voidPromise());
+                        }
+                    }
+                } else if (!firedChannelReadSuspended) {
+                    pipeline.fireChannelReadSuspended();
+                }
             }
         }
     }
@@ -155,6 +150,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             }
             // We may could optimize this to write multiple buffers at once (scattering)
             if (!buf.isReadable()) {
+                buf.release();
                 return 1;
             }
         } else if (msg instanceof FileRegion) {

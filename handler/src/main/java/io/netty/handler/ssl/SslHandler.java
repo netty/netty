@@ -25,6 +25,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundByteHandler;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundByteHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -70,7 +71,7 @@ import java.util.regex.Pattern;
  * <p>
  * Beside using the handshake {@link ChannelFuture} to get notified about the completation of the handshake it's
  * also possible to detect it by implement the
- * {@link io.netty.channel.ChannelInboundHandler#userEventTriggered(ChannelHandlerContext, Object)}
+ * {@link ChannelInboundHandler#userEventTriggered(ChannelHandlerContext, Object)}
  * method and check for a {@link SslHandshakeCompletionEvent}.
  *
  * <h3>Handshake</h3>

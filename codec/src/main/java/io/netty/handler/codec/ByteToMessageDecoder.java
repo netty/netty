@@ -16,13 +16,13 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandler;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MessageList;
 
 /**
- * {@link ChannelInboundByteHandler} which decodes bytes in a stream-like fashion from one {@link ByteBuf} to an other
+ * {@link ChannelInboundHandlerAdapter} which decodes bytes in a stream-like fashion from one {@link ByteBuf} to an other
  * Message type.
  *
  * For example here is an implementation which reads all readable bytes from
@@ -31,22 +31,22 @@ import io.netty.channel.ChannelInboundByteHandlerAdapter;
  * <pre>
  *     public class SquareDecoder extends {@link ByteToMessageDecoder} {
  *         {@code @Override}
- *         public void decode({@link ChannelHandlerContext} ctx, {@link ByteBuf} in, {@link MessageBuf} out)
+ *         public void decode({@link ChannelHandlerContext} ctx, {@link ByteBuf} in, {@link MessageList} out)
  *                 throws {@link Exception} {
  *             out.add(in.readBytes(in.readableBytes()));
  *         }
  *     }
  * </pre>
  */
-public abstract class ByteToMessageDecoder
-    extends ChannelInboundByteHandlerAdapter {
+public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter {
 
+    private ByteBuf cumulation;
     private volatile boolean singleDecode;
     private boolean decodeWasNull;
 
     /**
-     * If set then only one message is decoded on each {@link #inboundBufferUpdated(ChannelHandlerContext)} call.
-     * This may be useful if you need to do some protocol upgrade and want to make sure nothing is mixed up.
+     * If set then only one message is decoded on each {@link #messageReceived(ChannelHandlerContext, MessageList)}
+     * call. This may be useful if you need to do some protocol upgrade and want to make sure nothing is mixed up.
      *
      * Default is {@code false} as this has performance impacts.
      */
@@ -56,7 +56,7 @@ public abstract class ByteToMessageDecoder
 
     /**
      * If {@code true} then only one message is decoded on each
-     * {@link #inboundBufferUpdated(ChannelHandlerContext)} call.
+     * {@link #messageReceived(ChannelHandlerContext, MessageList)} call.
      *
      * Default is {@code false} as this has performance impacts.
      */
@@ -65,8 +65,52 @@ public abstract class ByteToMessageDecoder
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-        callDecode(ctx, in);
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        try {
+            int size = msgs.size();
+            for (int i = 0; i < size; i ++) {
+                Object m = msgs.get(i);
+                if (m instanceof ByteBuf) {
+                    ByteBuf data = (ByteBuf) m;
+                    if (cumulation == null) {
+                        try {
+                            callDecode(ctx, data, msgs);
+                        } finally {
+                            if (data.isReadable()) {
+                                cumulation = data;
+                            } else {
+                                data.release();
+                            }
+                        }
+                    } else {
+                        try {
+                            cumulation.writeBytes(data);
+                            callDecode(ctx, cumulation, msgs);
+                        } finally {
+                            if (!cumulation.isReadable()) {
+                                cumulation.release();
+                                cumulation = null;
+                            }
+                            data.release();
+                        }
+                    }
+                } else {
+                    msgs.add(m);
+                }
+            }
+
+            msgs.remove(0, size);
+        } catch (DecoderException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new DecoderException(e);
+        }
+
+        if (!msgs.isEmpty()) {
+            ctx.fireMessageReceived(msgs);
+        } else {
+            decodeWasNull = true;
+        }
     }
 
     @Override
@@ -82,35 +126,35 @@ public abstract class ByteToMessageDecoder
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        OutputMessageBuf out = OutputMessageBuf.get();
         try {
-            ByteBuf in = ctx.inboundByteBuffer();
-            if (in.isReadable()) {
-                callDecode(ctx, in);
+            MessageList<Object> out = new MessageList<Object>();
+            if (cumulation != null) {
+                callDecode(ctx, cumulation, out);
+                decodeLast(ctx, cumulation, out);
+            } else {
+                decodeLast(ctx, Unpooled.EMPTY_BUFFER, out);
             }
-            decodeLast(ctx, in, out);
-        } catch (CodecException e) {
+        } catch (DecoderException e) {
             throw e;
-        } catch (Throwable cause) {
-            throw new DecoderException(cause);
+        } catch (Exception e) {
+            throw new DecoderException(e);
         } finally {
-            if (out.drainToNextInbound(ctx)) {
-                ctx.fireInboundBufferUpdated();
+            if (cumulation != null) {
+                cumulation.release();
+                cumulation = null;
             }
+
             ctx.fireChannelInactive();
         }
     }
 
-    protected void callDecode(ChannelHandlerContext ctx, ByteBuf in) {
-        boolean wasNull = false;
-        OutputMessageBuf out = OutputMessageBuf.get();
+    protected void callDecode(ChannelHandlerContext ctx, ByteBuf in, MessageList<Object> out) {
         try {
             while (in.isReadable()) {
                 int outSize = out.size();
                 int oldInputLength = in.readableBytes();
                 decode(ctx, in, out);
                 if (outSize == out.size()) {
-                    wasNull = true;
                     if (oldInputLength == in.readableBytes()) {
                         break;
                     } else {
@@ -118,7 +162,6 @@ public abstract class ByteToMessageDecoder
                     }
                 }
 
-                wasNull = false;
                 if (oldInputLength == in.readableBytes()) {
                     throw new IllegalStateException(
                          "decode() did not read anything but decoded a message.");
@@ -132,15 +175,6 @@ public abstract class ByteToMessageDecoder
             throw e;
         } catch (Throwable cause) {
             throw new DecoderException(cause);
-        } finally {
-            if (out.drainToNextInbound(ctx)) {
-                decodeWasNull = false;
-                ctx.fireInboundBufferUpdated();
-            } else {
-                if (wasNull) {
-                    decodeWasNull = true;
-                }
-            }
         }
     }
 
@@ -151,20 +185,20 @@ public abstract class ByteToMessageDecoder
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link ByteToByteDecoder} belongs to
      * @param in            the {@link ByteBuf} from which to read data
-     * @param out           the {@link MessageBuf} to which decoded messages should be added
+     * @param out           the {@link MessageList} to which decoded messages should be added
 
      * @throws Exception    is thrown if an error accour
      */
-    protected abstract void decode(ChannelHandlerContext ctx, ByteBuf in, MessageBuf<Object> out) throws Exception;
+    protected abstract void decode(ChannelHandlerContext ctx, ByteBuf in, MessageList<Object> out) throws Exception;
 
     /**
      * Is called one last time when the {@link ChannelHandlerContext} goes in-active. Which means the
      * {@link #channelInactive(ChannelHandlerContext)} was triggered.
      *
-     * By default this will just call {@link #decode(ChannelHandlerContext, ByteBuf, MessageBuf)} but sub-classes may
+     * By default this will just call {@link #decode(ChannelHandlerContext, ByteBuf, MessageList)} but sub-classes may
      * override this for some special cleanup operation.
      */
-    protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, MessageBuf<Object> out) throws Exception {
+    protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, MessageList<Object> out) throws Exception {
         decode(ctx, in, out);
     }
 }

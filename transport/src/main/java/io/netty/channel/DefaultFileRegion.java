@@ -35,7 +35,6 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
     private final long count;
     private long transfered;
 
-
     /**
      * Create a new instance
      *

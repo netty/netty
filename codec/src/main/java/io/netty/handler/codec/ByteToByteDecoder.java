@@ -18,6 +18,8 @@ package io.netty.handler.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundByteHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MessageList;
 
 /**
  * {@link ChannelInboundByteHandlerAdapter} which decodes bytes in a stream-like fashion from one {@link ByteBuf} to an
@@ -42,13 +44,14 @@ import io.netty.channel.ChannelInboundByteHandlerAdapter;
  *     }
  * </pre>
  */
-public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter {
+public abstract class ByteToByteDecoder extends ChannelInboundHandlerAdapter {
 
+    private ByteBuf cumulation;
     private volatile boolean singleDecode;
 
     /**
-     * If set then only one message is decoded on each {@link #inboundBufferUpdated(ChannelHandlerContext)} call.
-     * This may be useful if you need to do some protocol upgrade and want to make sure nothing is mixed up.
+     * If set then only one message is decoded on each {@link #messageReceived(ChannelHandlerContext, MessageList)}
+     * call. * This may be useful if you need to do some protocol upgrade and want to make sure nothing is mixed up.
      *
      * Default is {@code false} as this has performance impacts.
      */
@@ -58,7 +61,7 @@ public abstract class ByteToByteDecoder extends ChannelInboundByteHandlerAdapter
 
     /**
      * If {@code true} then only one message is decoded on each
-     * {@link #inboundBufferUpdated(ChannelHandlerContext)} call.
+     * {@link #messageReceived(ChannelHandlerContext, MessageList)} call.
      *
      * Default is {@code false} as this has performance impacts.
      */

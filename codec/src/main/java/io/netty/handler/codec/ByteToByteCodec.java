@@ -18,9 +18,8 @@ package io.netty.handler.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandler;
-import io.netty.channel.ChannelOutboundByteHandler;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.MessageList;
 
 /**
  * A Codec for on-the-fly encoding/decoding of bytes.
@@ -52,9 +51,7 @@ import io.netty.channel.ChannelPromise;
  *     }
  * </pre>
  */
-public abstract class ByteToByteCodec
-        extends ChannelDuplexHandler
-        implements ChannelInboundByteHandler, ChannelOutboundByteHandler {
+public abstract class ByteToByteCodec extends ChannelDuplexHandler {
 
     private final ByteToByteEncoder encoder = new ByteToByteEncoder() {
         @Override
@@ -78,34 +75,13 @@ public abstract class ByteToByteCodec
     };
 
     @Override
-    public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return decoder.newInboundBuffer(ctx);
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        decoder.messageReceived(ctx, msgs);
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-        decoder.inboundBufferUpdated(ctx);
-    }
-
-    @Override
-    public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return encoder.newOutboundBuffer(ctx);
-    }
-
-    @Override
-    public void flush(
-            ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        encoder.flush(ctx, promise);
-    }
-
-    @Override
-    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-        decoder.discardInboundReadBytes(ctx);
-    }
-
-    @Override
-    public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-        encoder.discardOutboundReadBytes(ctx);
+    public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
+        encoder.write(ctx, msgs, promise);
     }
 
     /**

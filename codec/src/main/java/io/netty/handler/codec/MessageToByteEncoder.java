@@ -16,13 +16,15 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.MessageList;
+import io.netty.util.internal.TypeParameterMatcher;
 
 
 /**
- * {@link ChannelOutboundMessageHandlerAdapter} which encodes message in a stream-like fashion from one message to an
+ * {@link ChannelOutboundHandlerAdapter} which encodes message in a stream-like fashion from one message to an
  * {@link ByteBuf}.
  *
  *
@@ -38,27 +40,62 @@ import io.netty.channel.ChannelOutboundMessageHandlerAdapter;
  *     }
  * </pre>
  */
-public abstract class MessageToByteEncoder<I> extends ChannelOutboundMessageHandlerAdapter<I> {
+public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdapter {
 
-    protected MessageToByteEncoder() { }
+    private final TypeParameterMatcher matcher;
+
+    protected MessageToByteEncoder() {
+        matcher = TypeParameterMatcher.find(this, MessageToByteEncoder.class, "I");
+    }
 
     protected MessageToByteEncoder(Class<? extends I> outboundMessageType) {
-        super(outboundMessageType);
+        matcher = TypeParameterMatcher.get(outboundMessageType);
+    }
+
+    public boolean acceptOutboundMessage(Object msg) throws Exception {
+        return matcher.match(msg);
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, I msg) throws Exception {
+    public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
         try {
-            encode(ctx, msg, ctx.nextOutboundByteBuffer());
+            ByteBuf out = null;
+            int size = msgs.size();
+            for (int i = 0; i < size; i ++) {
+                Object m = msgs.get(i);
+                if (acceptOutboundMessage(m)) {
+                    @SuppressWarnings("unchecked")
+                    I cast = (I) m;
+                    if (out == null) {
+                        out = ctx.alloc().buffer();
+                    }
+                    encode(ctx, cast, out);
+                } else {
+                    if (out.isReadable()) {
+                        msgs.add(out);
+                        out = null;
+                    }
+
+                    msgs.add(m);
+                }
+            }
+
+            if (out.isReadable()) {
+                msgs.add(out);
+            }
+
+            msgs.remove(0, size);
         } catch (CodecException e) {
             throw e;
         } catch (Exception e) {
-            throw new CodecException(e);
+            throw new EncoderException(e);
         }
+
+        ctx.write(msgs, promise);
     }
 
     /**
-     * Encode a message into a {@link ByteBuf}. This method will be called till the {@link MessageBuf} has
+     * Encode a message into a {@link ByteBuf}. This method will be called till the {@link MessageList} has
      * nothing left.
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link MessageToByteEncoder} belongs to

@@ -25,6 +25,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.MessageList;
 import io.netty.util.concurrent.EventExecutor;
 
 import java.net.SocketAddress;
@@ -250,10 +251,10 @@ public class IdleStateHandler extends ChannelInboundHandlerAdapter implements Ch
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
         lastReadTime = System.currentTimeMillis();
         firstReaderIdleEvent = firstAllIdleEvent = true;
-        ctx.fireMessageReceived(msgs, index, length);
+        ctx.fireMessageReceived(msgs);
     }
 
     @Override
@@ -262,7 +263,7 @@ public class IdleStateHandler extends ChannelInboundHandlerAdapter implements Ch
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object[] msgs, int index, int length, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
         promise.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
@@ -270,7 +271,7 @@ public class IdleStateHandler extends ChannelInboundHandlerAdapter implements Ch
                 firstWriterIdleEvent = firstAllIdleEvent = true;
             }
         });
-        ctx.write(msgs, index, length, promise);
+        ctx.write(msgs, promise);
     }
 
     @Override
