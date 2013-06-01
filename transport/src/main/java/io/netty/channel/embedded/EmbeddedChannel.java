@@ -142,7 +142,9 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     public boolean writeInbound(Object... msgs) {
         ensureOpen();
-        pipeline().fireMessageReceived(msgs);
+        MessageList<Object> list = new MessageList<Object>(msgs.length);
+        list.add(msgs);
+        pipeline().fireMessageReceived(list);
         runPendingTasks();
         checkException();
         return !lastInboundBuffer.isEmpty();
@@ -156,7 +158,9 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     public boolean writeOutbound(Object... msgs) {
         ensureOpen();
-        ChannelFuture future = write(msgs);
+        MessageList<Object> list = new MessageList<Object>(msgs.length);
+        list.add(msgs);
+        ChannelFuture future = write(list);
         assert future.isDone();
         if (future.cause() != null) {
             recordException(future.cause());

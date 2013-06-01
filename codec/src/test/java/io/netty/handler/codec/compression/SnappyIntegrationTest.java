@@ -123,9 +123,9 @@ public class SnappyIntegrationTest {
             ByteBuf compressed = (ByteBuf) encoder.readOutbound();
             assertThat(compressed, is(notNullValue()));
             assertThat(compressed, is(not(in)));
-            decoder.writeInbound(compressed);
+            decoder.writeInbound(compressed.retain());
             assertFalse(compressed.isReadable());
-            compressed.discardReadBytes();
+            compressed.release();
             ByteBuf decompressed = (ByteBuf) decoder.readInbound();
             assertEquals(in, decompressed);
         } finally {
