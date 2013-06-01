@@ -17,11 +17,11 @@ package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufIndexFinder;
-import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
-import io.netty.channel.embedded.EmbeddedByteChannel;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MessageList;
+import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -30,7 +30,7 @@ public class ReplayingDecoderTest {
 
     @Test
     public void testLineProtocol() {
-        EmbeddedByteChannel ch = new EmbeddedByteChannel(new LineDecoder());
+        EmbeddedChannel ch = new EmbeddedChannel(new LineDecoder());
 
         // Ordinary input
         ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 'A' }));
@@ -56,7 +56,7 @@ public class ReplayingDecoderTest {
         }
 
         @Override
-        protected void decode(ChannelHandlerContext ctx, ByteBuf in, MessageBuf<Object> out) {
+        protected void decode(ChannelHandlerContext ctx, ByteBuf in, MessageList<Object> out) {
             ByteBuf msg = in.readBytes(in.bytesBefore(ByteBufIndexFinder.LF));
             in.skipBytes(1);
             out.add(msg);
@@ -65,7 +65,7 @@ public class ReplayingDecoderTest {
 
     @Test
     public void testReplacement() throws Exception {
-        EmbeddedByteChannel ch = new EmbeddedByteChannel(new BloatedLineDecoder());
+        EmbeddedChannel ch = new EmbeddedChannel(new BloatedLineDecoder());
 
         // "AB" should be forwarded to LineDecoder by BloatedLineDecoder.
         ch.writeInbound(Unpooled.wrappedBuffer(new byte[]{'A', 'B'}));
@@ -79,10 +79,11 @@ public class ReplayingDecoderTest {
         assertNull(ch.readInbound());
     }
 
-    private static final class BloatedLineDecoder extends ChannelInboundByteHandlerAdapter {
+    private static final class BloatedLineDecoder extends ChannelInboundHandlerAdapter {
         @Override
-        protected void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
             ctx.pipeline().replace(this, "less-bloated", new LineDecoder());
+            ctx.pipeline().fireMessageReceived(msgs);
         }
     }
 
@@ -90,7 +91,7 @@ public class ReplayingDecoderTest {
     public void testSingleDecode() throws Exception {
         LineDecoder decoder = new LineDecoder();
         decoder.setSingleDecode(true);
-        EmbeddedByteChannel ch = new EmbeddedByteChannel(decoder);
+        EmbeddedChannel ch = new EmbeddedChannel(decoder);
 
         // "C\n" should be appended to "AB" so that LineDecoder decodes it correctly.
         ch.writeInbound(Unpooled.wrappedBuffer(new byte[]{'C', '\n' , 'B', '\n'}));

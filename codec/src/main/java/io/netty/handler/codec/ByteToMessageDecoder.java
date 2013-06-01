@@ -90,6 +90,8 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                             if (!cumulation.isReadable()) {
                                 cumulation.release();
                                 cumulation = null;
+                            } else {
+                                cumulation.discardSomeReadBytes();
                             }
                             data.release();
                         }
@@ -126,8 +128,8 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        MessageList<Object> out = new MessageList<Object>();
         try {
-            MessageList<Object> out = new MessageList<Object>();
             if (cumulation != null) {
                 callDecode(ctx, cumulation, out);
                 decodeLast(ctx, cumulation, out);
@@ -142,6 +144,10 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             if (cumulation != null) {
                 cumulation.release();
                 cumulation = null;
+            }
+
+            if (!out.isEmpty()) {
+                ctx.fireMessageReceived(out);
             }
 
             ctx.fireChannelInactive();

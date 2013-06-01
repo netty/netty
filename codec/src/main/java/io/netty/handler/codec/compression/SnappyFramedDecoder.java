@@ -18,7 +18,8 @@ package io.netty.handler.codec.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ByteToByteDecoder;
+import io.netty.channel.MessageList;
+import io.netty.handler.codec.ByteToMessageDecoder;
 
 import java.util.Arrays;
 
@@ -35,7 +36,7 @@ import static io.netty.handler.codec.compression.Snappy.*;
  * use the {@link #SnappyFramedDecoder(boolean)} constructor with the argument
  * set to {@code true}.
  */
-public class SnappyFramedDecoder extends ByteToByteDecoder {
+public class SnappyFramedDecoder extends ByteToMessageDecoder {
     enum ChunkType {
         STREAM_IDENTIFIER,
         COMPRESSED_DATA,
@@ -75,7 +76,7 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, MessageList<Object> out) throws Exception {
         if (corrupted) {
             in.skipBytes(in.readableBytes());
             return;
@@ -151,7 +152,7 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
                     } else {
                         in.skipBytes(4);
                     }
-                    out.writeBytes(in, chunkLength - 4);
+                    out.add(in.readSlice(chunkLength - 4));
                     break;
                 case COMPRESSED_DATA:
                     if (!started) {
@@ -164,20 +165,20 @@ public class SnappyFramedDecoder extends ByteToByteDecoder {
 
                     in.skipBytes(4);
                     int checksum = ByteBufUtil.swapInt(in.readInt());
+                    ByteBuf uncompressed = ctx.alloc().buffer(0);
                     if (validateChecksums) {
                         int oldWriterIndex = in.writerIndex();
-                        int uncompressedStart = out.writerIndex();
                         try {
                             in.writerIndex(in.readerIndex() + chunkLength - 4);
-                            snappy.decode(in, out);
+                            snappy.decode(in, uncompressed);
                         } finally {
                             in.writerIndex(oldWriterIndex);
                         }
-                        int uncompressedLength = out.writerIndex() - uncompressedStart;
-                        validateChecksum(checksum, out, uncompressedStart, uncompressedLength);
+                        validateChecksum(checksum, uncompressed, 0, uncompressed.writerIndex());
                     } else {
-                        snappy.decode(in.readSlice(chunkLength - 4), out);
+                        snappy.decode(in.readSlice(chunkLength - 4), uncompressed);
                     }
+                    out.add(uncompressed);
                     snappy.reset();
                     break;
             }

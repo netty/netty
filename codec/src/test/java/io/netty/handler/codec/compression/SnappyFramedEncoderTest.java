@@ -17,18 +17,18 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.embedded.EmbeddedByteChannel;
+import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 
 public class SnappyFramedEncoderTest {
-    private EmbeddedByteChannel channel;
+    private EmbeddedChannel channel;
 
     @Before
     public void setUp() {
-        channel = new EmbeddedByteChannel(new SnappyFramedEncoder());
+        channel = new EmbeddedChannel(new SnappyFramedEncoder());
     }
 
     @Test

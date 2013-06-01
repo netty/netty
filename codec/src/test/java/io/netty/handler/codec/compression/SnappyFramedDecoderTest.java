@@ -17,18 +17,18 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.embedded.EmbeddedByteChannel;
+import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 
 public class SnappyFramedDecoderTest {
-    private EmbeddedByteChannel channel;
+    private EmbeddedChannel channel;
 
     @Before
     public void initChannel() {
-        channel = new EmbeddedByteChannel(new SnappyFramedDecoder());
+        channel = new EmbeddedChannel(new SnappyFramedDecoder());
     }
 
     @Test(expected = CompressionException.class)
@@ -132,7 +132,7 @@ public class SnappyFramedDecoderTest {
 
     @Test(expected = CompressionException.class)
     public void testInvalidChecksumThrowsException() throws Exception {
-        EmbeddedByteChannel channel = new EmbeddedByteChannel(new SnappyFramedDecoder(true));
+        EmbeddedChannel channel = new EmbeddedChannel(new SnappyFramedDecoder(true));
 
         // checksum here is presented as 0
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
@@ -145,7 +145,7 @@ public class SnappyFramedDecoderTest {
 
     @Test
     public void testInvalidChecksumDoesNotThrowException() throws Exception {
-        EmbeddedByteChannel channel = new EmbeddedByteChannel(new SnappyFramedDecoder(true));
+        EmbeddedChannel channel = new EmbeddedChannel(new SnappyFramedDecoder(true));
 
         // checksum here is presented as -1568496083 (little endian)
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {

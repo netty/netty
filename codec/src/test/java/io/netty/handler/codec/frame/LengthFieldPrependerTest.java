@@ -17,7 +17,7 @@ package io.netty.handler.codec.frame;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.IncompleteFlushException;
-import io.netty.channel.embedded.EmbeddedByteChannel;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.util.CharsetUtil;
 import org.junit.Before;
@@ -38,28 +38,28 @@ public class LengthFieldPrependerTest {
 
     @Test
     public void testPrependLength() throws Exception {
-        final EmbeddedByteChannel ch = new EmbeddedByteChannel(new LengthFieldPrepender(4));
+        final EmbeddedChannel ch = new EmbeddedChannel(new LengthFieldPrepender(4));
         ch.writeOutbound(msg);
-        assertThat(ch.readOutbound(), is(wrappedBuffer(new byte[]{0, 0, 0, 1, 'A'})));
+        assertThat((ByteBuf) ch.readOutbound(), is(wrappedBuffer(new byte[]{0, 0, 0, 1, 'A'})));
     }
 
     @Test
     public void testPrependLengthIncludesLengthFieldLength() throws Exception {
-        final EmbeddedByteChannel ch = new EmbeddedByteChannel(new LengthFieldPrepender(4, true));
+        final EmbeddedChannel ch = new EmbeddedChannel(new LengthFieldPrepender(4, true));
         ch.writeOutbound(msg);
-        assertThat(ch.readOutbound(), is(wrappedBuffer(new byte[]{0, 0, 0, 5, 'A'})));
+        assertThat((ByteBuf) ch.readOutbound(), is(wrappedBuffer(new byte[]{0, 0, 0, 5, 'A'})));
     }
 
     @Test
     public void testPrependAdjustedLength() throws Exception {
-        final EmbeddedByteChannel ch = new EmbeddedByteChannel(new LengthFieldPrepender(4, -1));
+        final EmbeddedChannel ch = new EmbeddedChannel(new LengthFieldPrepender(4, -1));
         ch.writeOutbound(msg);
-        assertThat(ch.readOutbound(), is(wrappedBuffer(new byte[]{0, 0, 0, 0, 'A'})));
+        assertThat((ByteBuf) ch.readOutbound(), is(wrappedBuffer(new byte[]{0, 0, 0, 0, 'A'})));
     }
 
     @Test
     public void testAdjustedLengthLessThanZero() throws Exception {
-        final EmbeddedByteChannel ch = new EmbeddedByteChannel(new LengthFieldPrepender(4, -2));
+        final EmbeddedChannel ch = new EmbeddedChannel(new LengthFieldPrepender(4, -2));
         try {
             ch.writeOutbound(msg);
             fail(IncompleteFlushException.class.getSimpleName() + " must be raised.");

@@ -71,7 +71,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
                     }
                     encode(ctx, cast, out);
                 } else {
-                    if (out.isReadable()) {
+                    if (out != null && out.isReadable()) {
                         msgs.add(out);
                         out = null;
                     }
@@ -80,7 +80,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
                 }
             }
 
-            if (out.isReadable()) {
+            if (out != null && out.isReadable()) {
                 msgs.add(out);
             }
 
