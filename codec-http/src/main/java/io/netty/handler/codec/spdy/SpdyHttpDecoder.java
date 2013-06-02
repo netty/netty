@@ -16,8 +16,8 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.MessageList;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -91,7 +91,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyDataOrControlFr
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, SpdyDataOrControlFrame msg, MessageBuf<Object> out)
+    protected void decode(ChannelHandlerContext ctx, SpdyDataOrControlFrame msg, MessageList<Object> out)
             throws Exception {
         if (msg instanceof SpdySynStreamFrame) {
 

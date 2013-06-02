@@ -19,8 +19,10 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.MessageList;
+import io.netty.channel.MessageListProcessor;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -89,14 +91,14 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, WebSocketFrame frame) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, WebSocketFrame frame, MessageList<Object> out) throws Exception {
         if (frame instanceof CloseWebSocketFrame) {
             WebSocketServerHandshaker handshaker = getHandshaker(ctx);
             frame.retain();
             handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
             return;
         }
-        super.messageReceived(ctx, frame);
+        super.decode(ctx, frame, out);    //To change body of overridden methods use File | Settings | File Templates.
     }
 
     @Override
@@ -119,12 +121,22 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     }
 
     static ChannelHandler forbiddenHttpRequestResponder() {
-        return new ChannelInboundMessageHandlerAdapter<FullHttpRequest>() {
+        return new ChannelInboundHandlerAdapter() {
             @Override
-            public void messageReceived(ChannelHandlerContext ctx, FullHttpRequest msg) throws Exception {
-                FullHttpResponse response =
-                        new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.FORBIDDEN);
-                ctx.channel().write(response);
+            public void messageReceived(final ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+                msgs.forEach(0, msgs.size(), new MessageListProcessor<Object>() {
+                    @Override
+                    public int process(MessageList<Object> messages, int index, Object value) throws Exception {
+                        if (value instanceof FullHttpRequest) {
+                            FullHttpResponse response =
+                                    new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.FORBIDDEN);
+                            ctx.channel().write(response);
+                            messages.remove(index);
+                        }
+                        return 1;
+                    }
+                });
+                ctx.fireMessageReceived(msgs);
             }
         };
     }

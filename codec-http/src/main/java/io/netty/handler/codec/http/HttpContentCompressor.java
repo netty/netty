@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.channel.embedded.EmbeddedByteChannel;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.util.internal.StringUtil;
@@ -119,7 +119,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
 
         return new Result(
                 targetContentEncoding,
-                new EmbeddedByteChannel(ZlibCodecFactory.newZlibEncoder(
+                new EmbeddedChannel(ZlibCodecFactory.newZlibEncoder(
                         wrapper, compressionLevel, windowBits, memLevel)));
     }
 

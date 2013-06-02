@@ -17,6 +17,7 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.MessageList;
 import io.netty.handler.codec.http.HttpHeaders;
 
 import java.net.URI;
@@ -127,12 +128,12 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, WebSocketFrame frame) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, WebSocketFrame frame, MessageList<Object> out) throws Exception {
         if (handleCloseFrames && frame instanceof CloseWebSocketFrame) {
             ctx.close();
             return;
         }
-        super.messageReceived(ctx, frame);
+        super.decode(ctx, frame, out);
     }
 
     @Override

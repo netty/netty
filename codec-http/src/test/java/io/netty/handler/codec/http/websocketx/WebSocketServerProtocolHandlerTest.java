@@ -20,6 +20,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.MessageList;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -143,9 +144,9 @@ public class WebSocketServerProtocolHandlerTest {
         final Queue<FullHttpResponse> responses = new ArrayDeque<FullHttpResponse>();
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object[] msgs, int index, int length, ChannelPromise promise) throws Exception {
-            for (int i = index; i < length; i++) {
-                responses.add((FullHttpResponse) msgs[i]);
+        public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
+            for (int i = 0; i < msgs.size(); i++) {
+                responses.add((FullHttpResponse) msgs.get(i));
             }
             promise.setSuccess();
         }
@@ -155,9 +156,9 @@ public class WebSocketServerProtocolHandlerTest {
         private String content;
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
-            assertEquals(1, length);
-            content = "processed: " + ((TextWebSocketFrame) msgs[index]).text();
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            assertEquals(1, msgs.size());
+            content = "processed: " + ((TextWebSocketFrame) msgs.get(0)).text();
 
         }
 
