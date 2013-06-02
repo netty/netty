@@ -84,6 +84,12 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                         }
                     } else {
                         try {
+                            if (cumulation.writerIndex() > cumulation.maxCapacity() - data.readableBytes()) {
+                                ByteBuf oldCumulation = cumulation;
+                                cumulation = ctx.alloc().buffer(oldCumulation.readableBytes() + data.readableBytes());
+                                cumulation.writeBytes(oldCumulation);
+                                oldCumulation.release();
+                            }
                             cumulation.writeBytes(data);
                             callDecode(ctx, cumulation, msgs);
                         } finally {

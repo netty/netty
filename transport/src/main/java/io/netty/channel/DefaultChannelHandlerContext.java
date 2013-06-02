@@ -648,7 +648,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (msg == null) {
             throw new NullPointerException("msg");
         }
-        return write(new MessageList<Object>(msg));
+        return write(new MessageList<Object>(msg), promise);
     }
 
     @Override

@@ -18,6 +18,7 @@ package io.netty.handler.codec.frame;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.IncompleteFlushException;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.util.CharsetUtil;
 import org.junit.Before;
@@ -62,8 +63,8 @@ public class LengthFieldPrependerTest {
         final EmbeddedChannel ch = new EmbeddedChannel(new LengthFieldPrepender(4, -2));
         try {
             ch.writeOutbound(msg);
-            fail(IncompleteFlushException.class.getSimpleName() + " must be raised.");
-        } catch (IncompleteFlushException e) {
+            fail(EncoderException.class.getSimpleName() + " must be raised.");
+        } catch (EncoderException e) {
             // Expected
         }
     }

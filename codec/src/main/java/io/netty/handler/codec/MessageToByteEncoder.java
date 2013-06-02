@@ -85,7 +85,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
             }
 
             msgs.remove(0, size);
-        } catch (CodecException e) {
+        } catch (EncoderException e) {
             throw e;
         } catch (Exception e) {
             throw new EncoderException(e);

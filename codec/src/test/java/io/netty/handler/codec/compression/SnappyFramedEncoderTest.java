@@ -16,6 +16,7 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Before;
@@ -83,7 +84,17 @@ public class SnappyFramedEncoderTest {
              0x01, 0x09, 0x00, 0x00, 0x2d, -0x5a, -0x7e, -0x5e, 'n', 'e', 't', 't', 'y',
              0x01, 0x09, 0x00, 0x00, 0x2d, -0x5a, -0x7e, -0x5e, 'n', 'e', 't', 't', 'y',
         });
-        assertEquals(expected, channel.readOutbound());
+        
+        CompositeByteBuf actual = Unpooled.compositeBuffer();
+        for (;;) {
+            ByteBuf m = (ByteBuf) channel.readOutbound();
+            if (m == null) {
+                break;
+            }
+            actual.addComponent(m);
+            actual.writerIndex(actual.writerIndex() + m.readableBytes());
+        }
+        assertEquals(expected, actual);
         in.release();
     }
 
