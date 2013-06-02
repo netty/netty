@@ -23,6 +23,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.MessageList;
 import io.netty.channel.sctp.SctpChannel;
 import io.netty.handler.codec.sctp.SctpInboundByteStreamHandler;
 import io.netty.handler.codec.sctp.SctpMessageCompletionHandler;
@@ -53,22 +54,12 @@ public class SctpEchoTest extends AbstractSctpTest {
     }
 
     public void testSimpleEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, Integer.MAX_VALUE);
+        testSimpleEcho0(sb, cb);
     }
 
-    @Test
-    public void testSimpleEchoWithBoundedBuffer() throws Throwable {
-        Assume.assumeTrue(TestUtils.isSctpSupported());
-        run();
-    }
-
-    public void testSimpleEchoWithBoundedBuffer(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, 4096);
-    }
-
-    private static void testSimpleEcho0(ServerBootstrap sb, Bootstrap cb, int maxInboundBufferSize) throws Throwable {
-        final EchoHandler sh = new EchoHandler(maxInboundBufferSize);
-        final EchoHandler ch = new EchoHandler(maxInboundBufferSize);
+    private static void testSimpleEcho0(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        final EchoHandler sh = new EchoHandler();
+        final EchoHandler ch = new EchoHandler();
 
         sb.childHandler(new ChannelInitializer<SctpChannel>() {
             @Override
@@ -149,14 +140,9 @@ public class SctpEchoTest extends AbstractSctpTest {
     }
 
     private static class EchoHandler extends ChannelInboundHandlerAdapter {
-        private final int maxInboundBufferSize;
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
-
-        EchoHandler(int maxInboundBufferSize) {
-            this.maxInboundBufferSize = maxInboundBufferSize;
-        }
 
         @Override
         public void channelActive(ChannelHandlerContext ctx)
@@ -165,9 +151,9 @@ public class SctpEchoTest extends AbstractSctpTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
-            for (int a = index; a < length; a++) {
-                ByteBuf in = (ByteBuf) msgs[a];
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            for (int j = 0; j < msgs.size(); j ++) {
+                ByteBuf in = (ByteBuf) msgs.get(j);
                 byte[] actual = new byte[in.readableBytes()];
                 in.readBytes(actual);
 

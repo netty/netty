@@ -15,8 +15,6 @@
  */
 package io.netty.testsuite.transport.socket;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -25,20 +23,21 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.MessageList;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.testsuite.util.BogusSslContextFactory;
 import io.netty.util.concurrent.Future;
+import org.junit.Test;
 
+import javax.net.ssl.SSLEngine;
 import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import javax.net.ssl.SSLEngine;
-
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 public class SocketSslEchoTest extends AbstractSocketTest {
 
@@ -180,9 +179,9 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
-            for (int a = index; a < length; a++) {
-                ByteBuf in = (ByteBuf) msgs[a];
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            for (int j = 0; j < msgs.size(); j ++) {
+                ByteBuf in = (ByteBuf) msgs.get(j);
                 byte[] actual = new byte[in.readableBytes()];
                 in.readBytes(actual);
 

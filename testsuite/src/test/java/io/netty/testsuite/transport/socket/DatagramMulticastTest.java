@@ -21,6 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.MessageList;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.oio.OioDatagramChannel;
@@ -32,7 +33,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
 
 public class DatagramMulticastTest extends AbstractDatagramTest {
 
@@ -46,7 +46,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
 
         sb.handler(new ChannelInboundHandlerAdapter() {
             @Override
-            public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+            public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
                 // Nothing will be sent.
             }
         });
@@ -98,12 +98,12 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         private volatile boolean fail;
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
-            if (done || length > 1) {
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            if (done || msgs.size() != 1) {
                 fail = true;
             }
 
-            assertEquals(1, ((DatagramPacket) msgs[index]).content().readInt());
+            assertEquals(1, ((DatagramPacket) msgs.get(0)).content().readInt());
             latch.countDown();
 
             // mark the handler as done as we only are supposed to receive one message

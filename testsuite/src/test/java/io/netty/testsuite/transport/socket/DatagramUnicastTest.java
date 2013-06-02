@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MessageList;
 import io.netty.channel.socket.DatagramPacket;
 import org.junit.Test;
 
@@ -27,7 +28,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
 
 public class DatagramUnicastTest extends AbstractDatagramTest {
 
@@ -41,18 +41,16 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
 
         sb.handler(new ChannelInboundHandlerAdapter() {
             @Override
-            public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
-                if (length > 1) {
-                    throw new AssertionError();
-                }
-                assertEquals(1, ((DatagramPacket) msgs[index]).content().readInt());
+            public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+                assertEquals(1, msgs.size());
+                assertEquals(1, ((DatagramPacket) msgs.get(0)).content().readInt());
                 latch.countDown();
             }
         });
 
         cb.handler(new ChannelInboundHandlerAdapter() {
             @Override
-            public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+            public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
                 // Nothing will be sent.
             }
         });

@@ -23,6 +23,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MessageList;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.DefaultThreadFactory;
@@ -94,6 +95,13 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
             });
         }
 
+
+        @Override
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            for (int i = 0; i < msgs.size(); i ++) {
+                ((ByteBuf) msgs.get(i)).release();
+            }
+        }
 
         public void check() throws InterruptedException {
             latch.await();

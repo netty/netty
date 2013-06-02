@@ -31,7 +31,7 @@ import java.util.Map;
  * only <strong>complete</strong> {@link SctpMessage}s will be forwarded to the next
  * {@link ChannelInboundMessageHandler}.
  */
-public class SctpMessageCompletionHandler extends ChannelInboundMessageHandlerAdapter<SctpMessage> {
+public class SctpMessageCompletionHandler extends MessageToMessageDecoder<SctpMessage> {
     private final Map<Integer, ByteBuf> fragments = new HashMap<Integer, ByteBuf>();
     private boolean assembled;
 

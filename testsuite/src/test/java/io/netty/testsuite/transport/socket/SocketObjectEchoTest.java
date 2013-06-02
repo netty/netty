@@ -21,6 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.MessageList;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
@@ -31,7 +32,7 @@ import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 public class SocketObjectEchoTest extends AbstractSocketTest {
 
@@ -148,9 +149,9 @@ public class SocketObjectEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
-            for (int i = index; i < length; i++) {
-                String msg = (String) msgs[i];
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            for (int i = 0; i < msgs.size(); i ++) {
+                String msg = (String) msgs.get(i);
                 assertEquals(data[counter], msg);
 
                 if (channel.parent() != null) {

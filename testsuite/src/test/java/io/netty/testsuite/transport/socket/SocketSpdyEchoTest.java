@@ -18,12 +18,12 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.MessageList;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.spdy.SpdyConstants;
 import io.netty.handler.codec.spdy.SpdyFrameDecoder;
@@ -37,7 +37,6 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
 
 public class SocketSpdyEchoTest extends AbstractSocketTest {
 
@@ -234,13 +233,8 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
-            Object[] echoMsgs = new Object[length];
-            System.arraycopy(msgs, index, echoMsgs, 0, length);
-            for (Object msg: echoMsgs) {
-                ByteBufUtil.retain(msg);
-            }
-            ctx.write(echoMsgs);
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            ctx.write(msgs);
         }
 
         @Override
@@ -261,9 +255,9 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
-            for (int a = index; a < length; a++) {
-                ByteBuf in = (ByteBuf) msgs[a];
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            for (int j = 0; j < msgs.size(); j ++) {
+                ByteBuf in = (ByteBuf) msgs.get(j);
                 byte[] actual = new byte[in.readableBytes()];
                 in.readBytes(actual);
 

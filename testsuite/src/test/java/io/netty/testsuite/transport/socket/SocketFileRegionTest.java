@@ -24,6 +24,7 @@ import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.FileRegion;
+import io.netty.channel.MessageList;
 import org.junit.Test;
 
 import java.io.File;
@@ -73,7 +74,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         ChannelInboundHandler ch = new ChannelInboundHandlerAdapter() {
 
             @Override
-            public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+            public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
                 // discard
             }
 
@@ -90,8 +91,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         Channel sc = sb.bind().sync().channel();
 
         Channel cc = cb.connect().sync().channel();
-        FileRegion region = new DefaultFileRegion(new FileInputStream(file).getChannel(),
-                0L, file.length());
+        FileRegion region = new DefaultFileRegion(new FileInputStream(file).getChannel(), 0L, file.length());
         if (voidPromise) {
             assertEquals(cc.voidPromise(), cc.write(region, cc.voidPromise()));
         } else {
@@ -134,9 +134,9 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
-            for (int a = index; a < length; a++) {
-                ByteBuf in = (ByteBuf) msgs[a];
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            for (int j = 0; j < msgs.size(); j ++) {
+                ByteBuf in = (ByteBuf) msgs.get(j);
                 byte[] actual = new byte[in.readableBytes()];
                 in.readBytes(actual);
 

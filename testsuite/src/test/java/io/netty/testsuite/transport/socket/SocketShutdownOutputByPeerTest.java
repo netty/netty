@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.MessageList;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.SocketChannel;
 import org.junit.Test;
@@ -127,9 +128,9 @@ public class SocketShutdownOutputByPeerTest extends AbstractServerSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
-            for (int i = index; i < length; i++) {
-                queue.offer(((ByteBuf) msgs[i]).readByte());
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            for (int i = 0; i < msgs.size(); i ++) {
+                queue.offer(((ByteBuf) msgs.get(i)).readByte());
             }
         }
 

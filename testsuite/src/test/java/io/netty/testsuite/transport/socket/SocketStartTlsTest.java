@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.MessageList;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.string.StringDecoder;
@@ -159,9 +160,9 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
-            for (int i = index; i < length; i++) {
-                String msg = (String) msgs[i];
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            for (int i = 0; i < msgs.size(); i ++) {
+                String msg = (String) msgs.get(i);
                 if ("StartTlsResponse".equals(msg)) {
                     ctx.pipeline().addAfter("logger", "ssl", sslHandler);
                     handshakeFuture = sslHandler.handshakeFuture();
@@ -204,9 +205,9 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
-            for (int i = index; i < length; i++) {
-               String msg = (String) msgs[i];
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            for (int i = 0; i < msgs.size(); i ++) {
+               String msg = (String) msgs.get(i);
                if ("StartTlsRequest".equals(msg)) {
                     ctx.pipeline().addAfter("logger", "ssl", sslHandler);
                     ctx.write("StartTlsResponse\n");

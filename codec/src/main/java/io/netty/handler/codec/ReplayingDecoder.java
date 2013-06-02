@@ -370,6 +370,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
         }
     }
 
+    @Override
     protected void callDecode(ChannelHandlerContext ctx, ByteBuf in, MessageList<Object> out) {
         replayable.setCumulation(in);
         try {

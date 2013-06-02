@@ -23,6 +23,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.MessageList;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.FixedLengthFrameDecoder;
 import org.junit.Test;
@@ -31,7 +32,7 @@ import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 public class SocketFixedLengthEchoTest extends AbstractSocketTest {
 
@@ -135,9 +136,9 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
-            for (int a = index; a < length; a++) {
-                ByteBuf msg = (ByteBuf) msgs[a];
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            for (int j = 0; j < msgs.size(); j ++) {
+                ByteBuf msg = (ByteBuf) msgs.get(j);
                 assertEquals(1024, msg.readableBytes());
 
                 byte[] actual = new byte[msg.readableBytes()];
