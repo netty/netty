@@ -38,31 +38,18 @@ import io.netty.channel.MessageList;
 public class FixedLengthFrameDecoder extends ByteToMessageDecoder {
 
     private final int frameLength;
-    private final boolean allocateFullBuffer;
-
-    /**
-     * Calls {@link #FixedLengthFrameDecoder(int, boolean)} with {@code false}
-     */
-    public FixedLengthFrameDecoder(int frameLength) {
-        this(frameLength, false);
-    }
 
     /**
      * Creates a new instance.
      *
-     * @param frameLength
-     *        the length of the frame
-     * @param allocateFullBuffer
-     *        {@code true} if the cumulative {@link ByteBuf} should use the
-     *        {@link #frameLength} as its initial size
+     * @param frameLength the length of the frame
      */
-    public FixedLengthFrameDecoder(int frameLength, boolean allocateFullBuffer) {
+    public FixedLengthFrameDecoder(int frameLength) {
         if (frameLength <= 0) {
             throw new IllegalArgumentException(
                     "frameLength must be a positive integer: " + frameLength);
         }
         this.frameLength = frameLength;
-        this.allocateFullBuffer = allocateFullBuffer;
     }
 
     @Override
