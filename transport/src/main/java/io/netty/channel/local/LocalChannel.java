@@ -52,7 +52,7 @@ public class LocalChannel extends AbstractChannel {
     };
 
     private final ChannelConfig config = new DefaultChannelConfig(this);
-    private final Queue<Object> inboundBuffer = new ArrayDeque<Object>();
+    private final Queue<MessageList<Object>> inboundBuffer = new ArrayDeque<MessageList<Object>>();
     private final Runnable readTask = new Runnable() {
         @Override
         public void run() {
@@ -239,7 +239,7 @@ public class LocalChannel extends AbstractChannel {
         }
 
         ChannelPipeline pipeline = pipeline();
-        Queue<Object> inboundBuffer = this.inboundBuffer;
+        Queue<MessageList<Object>> inboundBuffer = this.inboundBuffer;
         if (inboundBuffer.isEmpty()) {
             readInProgress = true;
             return;
@@ -249,9 +249,13 @@ public class LocalChannel extends AbstractChannel {
         if (stackDepth < MAX_READER_STACK_DEPTH) {
             READER_STACK_DEPTH.set(stackDepth + 1);
             try {
-                Object[] messages = inboundBuffer.toArray();
-                inboundBuffer.clear();
-                pipeline.fireMessageReceived(messages);
+                for (;;) {
+                    MessageList<Object> received = inboundBuffer.poll();
+                    if (received == null) {
+                        break;
+                    }
+                    pipeline.fireMessageReceived(received);
+                }
                 pipeline.fireChannelReadSuspended();
             } finally {
                 READER_STACK_DEPTH.set(stackDepth);
@@ -276,17 +280,13 @@ public class LocalChannel extends AbstractChannel {
         final int size = msgs.size();
 
         if (peerLoop == eventLoop()) {
-            for (int i = index; i < size; i ++) {
-                peer.inboundBuffer.add(msgs.get(i));
-            }
+            peer.inboundBuffer.add(msgs);
             finishPeerRead(peer, peerPipeline);
         } else {
             peerLoop.execute(new Runnable() {
                 @Override
                 public void run() {
-                    for (int i = index; i < size; i++) {
-                        peer.inboundBuffer.add(msgs.get(i));
-                    }
+                    peer.inboundBuffer.add(msgs);
                     finishPeerRead(peer, peerPipeline);
                 }
             });
@@ -298,9 +298,13 @@ public class LocalChannel extends AbstractChannel {
     private static void finishPeerRead(LocalChannel peer, ChannelPipeline peerPipeline) {
         if (peer.readInProgress) {
             peer.readInProgress = false;
-            Object[] messages = peer.inboundBuffer.toArray();
-            peer.inboundBuffer.clear();
-            peerPipeline.fireMessageReceived(messages);
+            for (;;) {
+                MessageList<Object> received = peer.inboundBuffer.poll();
+                if (received == null) {
+                    break;
+                }
+                peerPipeline.fireMessageReceived(received);
+            }
             peerPipeline.fireChannelReadSuspended();
         }
     }
