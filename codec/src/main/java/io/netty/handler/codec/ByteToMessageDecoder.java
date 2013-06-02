@@ -40,7 +40,7 @@ import io.netty.channel.MessageList;
  */
 public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter {
 
-    private ByteBuf cumulation;
+    protected ByteBuf cumulation;
     private volatile boolean singleDecode;
     private boolean decodeWasNull;
 

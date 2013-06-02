@@ -83,7 +83,7 @@ public abstract class AbstractCompatibleMarshallingDecoderTest {
         ByteBuf buffer = input(testBytes);
         ByteBuf slice = buffer.readSlice(2);
 
-        ch.writeInbound(slice);
+        ch.writeInbound(slice.retain());
         ch.writeInbound(buffer);
         assertTrue(ch.finish());
 
