@@ -31,7 +31,7 @@ public class SnappyFramedDecoderTest {
         channel = new EmbeddedChannel(new SnappyFramedDecoder());
     }
 
-    @Test(expected = CompressionException.class)
+    @Test(expected = DecompressionException.class)
     public void testReservedUnskippableChunkTypeCausesError() throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
             0x03, 0x01, 0x00, 0x00, 0x00
@@ -40,7 +40,7 @@ public class SnappyFramedDecoderTest {
         channel.writeInbound(in);
     }
 
-    @Test(expected = CompressionException.class)
+    @Test(expected = DecompressionException.class)
     public void testInvalidStreamIdentifierLength() throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
             -0x80, 0x05, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
@@ -49,7 +49,7 @@ public class SnappyFramedDecoderTest {
         channel.writeInbound(in);
     }
 
-    @Test(expected = CompressionException.class)
+    @Test(expected = DecompressionException.class)
     public void testInvalidStreamIdentifierValue() throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
             -0x80, 0x06, 0x00, 0x00, 's', 'n', 'e', 't', 't', 'y'
@@ -58,7 +58,7 @@ public class SnappyFramedDecoderTest {
         channel.writeInbound(in);
     }
 
-    @Test(expected = CompressionException.class)
+    @Test(expected = DecompressionException.class)
     public void testReservedSkippableBeforeStreamIdentifier() throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
             -0x7f, 0x06, 0x00, 0x00, 's', 'n', 'e', 't', 't', 'y'
@@ -67,7 +67,7 @@ public class SnappyFramedDecoderTest {
         channel.writeInbound(in);
     }
 
-    @Test(expected = CompressionException.class)
+    @Test(expected = DecompressionException.class)
     public void testUncompressedDataBeforeStreamIdentifier() throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
             0x01, 0x05, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
@@ -76,7 +76,7 @@ public class SnappyFramedDecoderTest {
         channel.writeInbound(in);
     }
 
-    @Test(expected = CompressionException.class)
+    @Test(expected = DecompressionException.class)
     public void testCompressedDataBeforeStreamIdentifier() throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
             0x00, 0x05, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
@@ -130,7 +130,7 @@ public class SnappyFramedDecoderTest {
     // The following two tests differ in only the checksum provided for the literal
     // uncompressed string "netty"
 
-    @Test(expected = CompressionException.class)
+    @Test(expected = DecompressionException.class)
     public void testInvalidChecksumThrowsException() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new SnappyFramedDecoder(true));
 

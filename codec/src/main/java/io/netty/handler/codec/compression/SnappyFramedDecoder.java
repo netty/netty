@@ -69,7 +69,7 @@ public class SnappyFramedDecoder extends ByteToMessageDecoder {
      * @param validateChecksums
      *        If true, the checksum field will be validated against the actual
      *        uncompressed data, and if the checksums do not match, a suitable
-     *        {@link CompressionException} will be thrown
+     *        {@link DecompressionException} will be thrown
      */
     public SnappyFramedDecoder(boolean validateChecksums) {
         this.validateChecksums = validateChecksums;
@@ -98,7 +98,7 @@ public class SnappyFramedDecoder extends ByteToMessageDecoder {
             switch (chunkType) {
                 case STREAM_IDENTIFIER:
                     if (chunkLength != SNAPPY.length) {
-                        throw new CompressionException("Unexpected length of stream identifier: " + chunkLength);
+                        throw new DecompressionException("Unexpected length of stream identifier: " + chunkLength);
                     }
 
                     if (inSize < 4 + SNAPPY.length) {
@@ -109,7 +109,7 @@ public class SnappyFramedDecoder extends ByteToMessageDecoder {
                     in.skipBytes(4).readBytes(identifier);
 
                     if (!Arrays.equals(identifier, SNAPPY)) {
-                        throw new CompressionException("Unexpected stream identifier contents. Mismatched snappy " +
+                        throw new DecompressionException("Unexpected stream identifier contents. Mismatched snappy " +
                                 "protocol version?");
                     }
 
@@ -117,7 +117,7 @@ public class SnappyFramedDecoder extends ByteToMessageDecoder {
                     break;
                 case RESERVED_SKIPPABLE:
                     if (!started) {
-                        throw new CompressionException("Received RESERVED_SKIPPABLE tag before STREAM_IDENTIFIER");
+                        throw new DecompressionException("Received RESERVED_SKIPPABLE tag before STREAM_IDENTIFIER");
                     }
 
                     if (inSize < 4 + chunkLength) {
@@ -131,14 +131,14 @@ public class SnappyFramedDecoder extends ByteToMessageDecoder {
                     // The spec mandates that reserved unskippable chunks must immediately
                     // return an error, as we must assume that we cannot decode the stream
                     // correctly
-                    throw new CompressionException(
+                    throw new DecompressionException(
                             "Found reserved unskippable chunk type: 0x" + Integer.toHexString(chunkTypeVal));
                 case UNCOMPRESSED_DATA:
                     if (!started) {
-                        throw new CompressionException("Received UNCOMPRESSED_DATA tag before STREAM_IDENTIFIER");
+                        throw new DecompressionException("Received UNCOMPRESSED_DATA tag before STREAM_IDENTIFIER");
                     }
                     if (chunkLength > 65536 + 4) {
-                        throw new CompressionException("Received UNCOMPRESSED_DATA larger than 65540 bytes");
+                        throw new DecompressionException("Received UNCOMPRESSED_DATA larger than 65540 bytes");
                     }
 
                     if (inSize < 4 + chunkLength) {
@@ -152,11 +152,11 @@ public class SnappyFramedDecoder extends ByteToMessageDecoder {
                     } else {
                         in.skipBytes(4);
                     }
-                    out.add(in.readSlice(chunkLength - 4));
+                    out.add(in.readSlice(chunkLength - 4).retain());
                     break;
                 case COMPRESSED_DATA:
                     if (!started) {
-                        throw new CompressionException("Received COMPRESSED_DATA tag before STREAM_IDENTIFIER");
+                        throw new DecompressionException("Received COMPRESSED_DATA tag before STREAM_IDENTIFIER");
                     }
 
                     if (inSize < 4 + chunkLength) {

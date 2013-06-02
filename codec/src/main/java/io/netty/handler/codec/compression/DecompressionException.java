@@ -15,39 +15,39 @@
  */
 package io.netty.handler.codec.compression;
 
-import io.netty.handler.codec.EncoderException;
+import io.netty.handler.codec.DecoderException;
 
 /**
- * An {@link EncoderException} that is raised when compression failed.
+ * A {@link DecoderException} that is raised when decompression failed.
  */
-public class CompressionException extends EncoderException {
+public class DecompressionException extends DecoderException {
 
-    private static final long serialVersionUID = 5603413481274811897L;
+    private static final long serialVersionUID = 3546272712208105199L;
 
     /**
      * Creates a new instance.
      */
-    public CompressionException() {
+    public DecompressionException() {
     }
 
     /**
      * Creates a new instance.
      */
-    public CompressionException(String message, Throwable cause) {
+    public DecompressionException(String message, Throwable cause) {
         super(message, cause);
     }
 
     /**
      * Creates a new instance.
      */
-    public CompressionException(String message) {
+    public DecompressionException(String message) {
         super(message);
     }
 
     /**
      * Creates a new instance.
      */
-    public CompressionException(Throwable cause) {
+    public DecompressionException(Throwable cause) {
         super(cause);
     }
 }

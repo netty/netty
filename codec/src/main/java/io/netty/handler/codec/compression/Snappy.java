@@ -381,7 +381,7 @@ public class Snappy {
             }
 
             if (byteIndex >= 4) {
-                throw new CompressionException("Preamble is greater than 4 bytes");
+                throw new DecompressionException("Preamble is greater than 4 bytes");
             }
         }
 
@@ -452,7 +452,7 @@ public class Snappy {
      * @param out The output buffer to write to
      * @return The number of bytes appended to the output buffer, or -1 to indicate
      *     "try again later"
-     * @throws CompressionException If the read offset is invalid
+     * @throws DecompressionException If the read offset is invalid
      */
     private static int decodeCopyWith1ByteOffset(byte tag, ByteBuf in, ByteBuf out, int writtenSoFar) {
         if (!in.isReadable()) {
@@ -494,7 +494,7 @@ public class Snappy {
      *     the length and part of the offset
      * @param in The input buffer to read from
      * @param out The output buffer to write to
-     * @throws CompressionException If the read offset is invalid
+     * @throws DecompressionException If the read offset is invalid
      * @return The number of bytes appended to the output buffer, or -1 to indicate
      *     "try again later"
      */
@@ -540,7 +540,7 @@ public class Snappy {
      * @param out The output buffer to write to
      * @return The number of bytes appended to the output buffer, or -1 to indicate
      *     "try again later"
-     * @throws CompressionException If the read offset is invalid
+     * @throws DecompressionException If the read offset is invalid
      */
     private static int decodeCopyWith4ByteOffset(byte tag, ByteBuf in, ByteBuf out, int writtenSoFar) {
         if (in.readableBytes() < 4) {
@@ -580,19 +580,19 @@ public class Snappy {
      *
      * @param offset The offset extracted from the compressed reference
      * @param chunkSizeSoFar The number of bytes read so far from this chunk
-     * @throws CompressionException if the offset is invalid
+     * @throws DecompressionException if the offset is invalid
      */
     private static void validateOffset(int offset, int chunkSizeSoFar) {
         if (offset > Short.MAX_VALUE) {
-            throw new CompressionException("Offset exceeds maximum permissible value");
+            throw new DecompressionException("Offset exceeds maximum permissible value");
         }
 
         if (offset <= 0) {
-            throw new CompressionException("Offset is less than minimum permissible value");
+            throw new DecompressionException("Offset is less than minimum permissible value");
         }
 
         if (offset > chunkSizeSoFar) {
-            throw new CompressionException("Offset exceeds size of chunk");
+            throw new DecompressionException("Offset exceeds size of chunk");
         }
     }
 
@@ -636,7 +636,7 @@ public class Snappy {
      *
      * @param expectedChecksum The checksum decoded from the stream to compare against
      * @param data The input data to calculate the CRC32 checksum of
-     * @throws CompressionException If the calculated and supplied checksums do not match
+     * @throws DecompressionException If the calculated and supplied checksums do not match
      */
     static void validateChecksum(int expectedChecksum, ByteBuf data) {
         validateChecksum(expectedChecksum, data, data.readerIndex(), data.readableBytes());
@@ -649,12 +649,12 @@ public class Snappy {
      *
      * @param expectedChecksum The checksum decoded from the stream to compare against
      * @param data The input data to calculate the CRC32 checksum of
-     * @throws CompressionException If the calculated and supplied checksums do not match
+     * @throws DecompressionException If the calculated and supplied checksums do not match
      */
     static void validateChecksum(int expectedChecksum, ByteBuf data, int offset, int length) {
         final int actualChecksum = calculateChecksum(data, offset, length);
         if (actualChecksum != expectedChecksum) {
-            throw new CompressionException(
+            throw new DecompressionException(
                     "mismatching checksum: " + Integer.toHexString(actualChecksum) +
                             " (expected: " + Integer.toHexString(expectedChecksum) + ')');
         }
