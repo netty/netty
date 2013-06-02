@@ -33,18 +33,18 @@ public class JZlibTest {
         chEncoder.writeOutbound(data.copy());
         assertTrue(chEncoder.finish());
 
-        byte[] deflatedData = ((ByteBuf) chEncoder.readOutbound()).array();
+        ByteBuf deflatedData = (ByteBuf) chEncoder.readOutbound();
 
         EmbeddedChannel chDecoderZlib = new EmbeddedChannel(new JZlibDecoder(ZlibWrapper.ZLIB));
 
-        chDecoderZlib.writeInbound(Unpooled.wrappedBuffer(deflatedData));
+        chDecoderZlib.writeInbound(deflatedData.copy());
         assertTrue(chDecoderZlib.finish());
 
         assertEquals(data, chDecoderZlib.readInbound());
 
         EmbeddedChannel chDecoderZlibOrNone = new EmbeddedChannel(new JZlibDecoder(ZlibWrapper.ZLIB_OR_NONE));
 
-        chDecoderZlibOrNone.writeInbound(Unpooled.wrappedBuffer(deflatedData));
+        chDecoderZlibOrNone.writeInbound(deflatedData);
         assertTrue(chDecoderZlibOrNone.finish());
 
         assertEquals(data, chDecoderZlibOrNone.readInbound());
@@ -59,11 +59,11 @@ public class JZlibTest {
         chEncoder.writeOutbound(data.copy());
         assertTrue(chEncoder.finish());
 
-        byte[] deflatedData = ((ByteBuf) chEncoder.readOutbound()).array();
+        ByteBuf deflatedData = (ByteBuf) chEncoder.readOutbound();
 
         EmbeddedChannel chDecoderZlibNone = new EmbeddedChannel(new JZlibDecoder(ZlibWrapper.NONE));
 
-        chDecoderZlibNone.writeInbound(Unpooled.wrappedBuffer(deflatedData));
+        chDecoderZlibNone.writeInbound(deflatedData.copy());
         assertTrue(chDecoderZlibNone.finish());
 
         assertEquals(data, chDecoderZlibNone.readInbound());
@@ -71,7 +71,7 @@ public class JZlibTest {
         EmbeddedChannel chDecoderZlibOrNone =
             new EmbeddedChannel(new JZlibDecoder(ZlibWrapper.ZLIB_OR_NONE));
 
-        chDecoderZlibOrNone.writeInbound(Unpooled.wrappedBuffer(deflatedData));
+        chDecoderZlibOrNone.writeInbound(deflatedData);
         assertTrue(chDecoderZlibOrNone.finish());
 
         assertEquals(data, chDecoderZlibOrNone.readInbound());
@@ -86,11 +86,11 @@ public class JZlibTest {
         chEncoder.writeOutbound(data.copy());
         assertTrue(chEncoder.finish());
 
-        byte[] deflatedData = ((ByteBuf) chEncoder.readOutbound()).array();
+        ByteBuf deflatedData = (ByteBuf) chEncoder.readOutbound();
 
         EmbeddedChannel chDecoderGZip = new EmbeddedChannel(new JZlibDecoder(ZlibWrapper.GZIP));
 
-        chDecoderGZip.writeInbound(Unpooled.wrappedBuffer(deflatedData));
+        chDecoderGZip.writeInbound(deflatedData.copy());
         assertTrue(chDecoderGZip.finish());
 
         assertEquals(data, chDecoderGZip.readInbound());
@@ -98,7 +98,7 @@ public class JZlibTest {
         EmbeddedChannel chDecoderZlibOrNone =
             new EmbeddedChannel(new JZlibDecoder(ZlibWrapper.ZLIB_OR_NONE));
 
-        chDecoderZlibOrNone.writeInbound(Unpooled.wrappedBuffer(deflatedData));
+        chDecoderZlibOrNone.writeInbound(deflatedData);
         assertTrue(chDecoderZlibOrNone.finish());
 
         assertEquals(data, chDecoderZlibOrNone.readInbound());

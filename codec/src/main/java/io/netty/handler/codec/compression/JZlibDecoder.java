@@ -91,14 +91,13 @@ public class JZlibDecoder extends ZlibDecoder {
         try {
             // Configure input.
             int inputLength = in.readableBytes();
-            boolean inHasArray = in.hasArray();
             z.avail_in = inputLength;
-            if (inHasArray) {
+            if (in.hasArray()) {
                 z.next_in = in.array();
                 z.next_in_index = in.arrayOffset() + in.readerIndex();
             } else {
                 byte[] array = new byte[inputLength];
-                in.readBytes(array);
+                in.getBytes(in.readerIndex(), array);
                 z.next_in = array;
                 z.next_in_index = 0;
             }
@@ -106,20 +105,21 @@ public class JZlibDecoder extends ZlibDecoder {
 
             // Configure output.
             int maxOutputLength = inputLength << 1;
-            ByteBuf compressed = ctx.alloc().heapBuffer(maxOutputLength);
-            z.next_out = compressed.array();
+            ByteBuf decompressed = ctx.alloc().heapBuffer(maxOutputLength);
 
             try {
                 loop: for (;;) {
                     z.avail_out = maxOutputLength;
-                    z.next_out_index = compressed.arrayOffset() + compressed.writerIndex();
+                    decompressed.ensureWritable(maxOutputLength);
+                    z.next_out = decompressed.array();
+                    z.next_out_index = decompressed.arrayOffset() + decompressed.writerIndex();
                     int oldNextOutIndex = z.next_out_index;
 
                     // Decompress 'in' into 'out'
                     int resultCode = z.inflate(JZlib.Z_SYNC_FLUSH);
                     int outputLength = z.next_out_index - oldNextOutIndex;
                     if (outputLength > 0) {
-                        compressed.writerIndex(compressed.writerIndex() + outputLength);
+                        decompressed.writerIndex(decompressed.writerIndex() + outputLength);
                     }
 
                     switch (resultCode) {
@@ -149,14 +149,11 @@ public class JZlibDecoder extends ZlibDecoder {
                     }
                 }
             } finally {
-                if (inHasArray) {
-                    in.skipBytes(z.next_in_index - oldNextInIndex);
-                }
-
-                if (compressed.isReadable()) {
-                    out.add(compressed);
+                in.skipBytes(z.next_in_index - oldNextInIndex);
+                if (decompressed.isReadable()) {
+                    out.add(decompressed);
                 } else {
-                    compressed.release();
+                    decompressed.release();
                 }
             }
         } finally {
