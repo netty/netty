@@ -80,7 +80,6 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerA
         ctx.write(msgs, promise);
     }
 
-
     /**
      * Encode from one message to an other. This method will be called till either the {@link MessageList} has nothing
      * left or till this method returns {@code null}.

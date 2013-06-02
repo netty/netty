@@ -118,6 +118,8 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN> extends Cha
         return outboundMsgMatcher.match(msg);
     }
 
-    protected abstract void encode(ChannelHandlerContext ctx, OUTBOUND_IN msg, MessageList<Object> out) throws Exception;
-    protected abstract void decode(ChannelHandlerContext ctx, INBOUND_IN msg, MessageList<Object> out) throws Exception;
+    protected abstract void encode(ChannelHandlerContext ctx, OUTBOUND_IN msg, MessageList<Object> out)
+            throws Exception;
+    protected abstract void decode(ChannelHandlerContext ctx, INBOUND_IN msg, MessageList<Object> out)
+            throws Exception;
 }

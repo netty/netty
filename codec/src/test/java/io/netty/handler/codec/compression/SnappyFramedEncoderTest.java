@@ -84,7 +84,7 @@ public class SnappyFramedEncoderTest {
              0x01, 0x09, 0x00, 0x00, 0x2d, -0x5a, -0x7e, -0x5e, 'n', 'e', 't', 't', 'y',
              0x01, 0x09, 0x00, 0x00, 0x2d, -0x5a, -0x7e, -0x5e, 'n', 'e', 't', 't', 'y',
         });
-        
+
         CompositeByteBuf actual = Unpooled.compositeBuffer();
         for (;;) {
             ByteBuf m = (ByteBuf) channel.readOutbound();
