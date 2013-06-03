@@ -16,10 +16,10 @@
 package io.netty.example.http.websocketx.html5;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.SingleMessageChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 
-public class CustomTextFrameHandler extends ChannelInboundMessageHandlerAdapter<TextWebSocketFrame> {
+public class CustomTextFrameHandler extends SingleMessageChannelInboundHandler<TextWebSocketFrame> {
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, TextWebSocketFrame frame) throws Exception {
