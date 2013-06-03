@@ -18,6 +18,7 @@ package io.netty.handler.logging;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.MessageList;
 
 public class ByteLoggingHandler
         extends LoggingHandler {
@@ -105,21 +106,21 @@ public class ByteLoggingHandler
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object[] msgs, int index, int length, ChannelPromise promise) throws Exception {
-        log(ctx, "WRITE", msgs, index, length);
-        ctx.write(msgs, index, length, promise);
+    public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
+        log(ctx, "WRITE", msgs);
+        ctx.write(msgs, promise);
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
-        log(ctx, "RECEIVED", msgs, index, length);
-        ctx.fireMessageReceived(msgs, index, length);
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        log(ctx, "RECEIVED", msgs);
+        ctx.fireMessageReceived(msgs);
     }
 
-    private void log(ChannelHandlerContext ctx, String message, Object[] msgs, int index, int length) {
+    private void log(ChannelHandlerContext ctx, String message, MessageList<Object> msgs) {
         if (logger.isEnabled(internalLevel)) {
-            for (int i = index; i < length; i++) {
-                Object msg = msgs[i];
+            for (int i = 0; i < msgs.size(); i++) {
+                Object msg = msgs.get(i);
                 if (msg instanceof ByteBuf) {
                     logger.log(internalLevel, format(ctx, formatBuffer(message, (ByteBuf) msg)));
                 }

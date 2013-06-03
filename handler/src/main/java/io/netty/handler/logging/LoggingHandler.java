@@ -298,7 +298,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, MessageList <Object> msgs, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
         logMessages(ctx, "WRITE", msgs);
         ctx.write(msgs, promise);
     }
@@ -311,7 +311,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
                 if (msg instanceof ByteBuf) {
                     logger.log(internalLevel, format(ctx, formatBuffer(message, (ByteBuf) msg)));
                 } else {
-
+                    // ignore
                 }
             }
         }

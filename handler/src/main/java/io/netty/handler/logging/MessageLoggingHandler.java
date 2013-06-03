@@ -17,6 +17,7 @@ package io.netty.handler.logging;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.MessageList;
 
 public class MessageLoggingHandler extends LoggingHandler {
 
@@ -43,38 +44,39 @@ public class MessageLoggingHandler extends LoggingHandler {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object[] msgs, int index, int length, ChannelPromise promise) throws Exception {
-        log("WRITE", msgs, index, length);
-        ctx.write(msgs, index, length, promise);
+    public void write(ChannelHandlerContext ctx, MessageList<Object> msgs,  ChannelPromise promise) throws Exception {
+        log("WRITE", msgs);
+        ctx.write(msgs);
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
-        log("RECEIVED", msgs, index, length);
-        ctx.fireMessageReceived(msgs, index, length);
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        log("RECEIVED", msgs);
+        ctx.fireMessageReceived(msgs);
     }
 
-    private void log(String message, Object[] msgs, int index, int length) {
+    private void log(String message, MessageList<Object> msgs) {
         if (logger.isEnabled(internalLevel)) {
-            logger.log(internalLevel, formatBuffer(message, msgs, index, length));
+            logger.log(internalLevel, formatBuffer(message, msgs));
         }
     }
 
-    protected String formatBuffer(String message, Object[] msgs, int index, int length) {
-        return message + '(' + length + "): " + contentToString(msgs, index, length);
+    protected String formatBuffer(String message, MessageList<Object> msgs) {
+        return message + '(' + msgs.size() + "): " + contentToString(msgs);
     }
 
-    private static String contentToString(Object[] msgs, int index, int length) {
-        if (length == 0) {
+    private static String contentToString(MessageList<Object> msgs) {
+        if (msgs.isEmpty()) {
             return "[]";
         }
         StringBuilder sb = new StringBuilder();
         sb.append('[');
-        for (int i = index; i < length; i++) {
-            Object msg = msgs[i];
+        int size = msgs.size();
+        for (int i = 0; i < size; i++) {
+            Object msg = msgs.get(i);
             sb.append(msg);
 
-            if (i + 1 < length) {
+            if (i + 1 < size) {
                 sb.append(", ");
             }
         }
