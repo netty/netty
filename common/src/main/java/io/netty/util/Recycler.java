@@ -89,7 +89,7 @@ public abstract class Recycler<T> {
         }
 
         void push(T o) {
-            if (map.containsKey(o)) {
+            if (map.put(o, Boolean.TRUE) != null) {
                 throw new IllegalStateException("recycled already");
             }
             deque.addLast(o);
