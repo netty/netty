@@ -62,7 +62,7 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
 
             return;
         }
-        
+
         if (!msgs.isEmpty()) {
             pipeline.fireMessageReceived(msgs);
         } else {

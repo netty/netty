@@ -96,7 +96,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                     return;
                 }
             }
-            
+
             if (!msgBuf.isEmpty()) {
                 pipeline.fireMessageReceived(msgBuf);
             } else {
