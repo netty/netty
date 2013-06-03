@@ -16,6 +16,7 @@
 
 package io.netty.channel;
 
+import io.netty.buffer.ByteBufUtil;
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
 import io.netty.util.Signal;
@@ -55,6 +56,13 @@ public final class MessageList<T> {
     public static boolean recycle(MessageList<?> o) {
         o.clear();
         return RECYCLER.recycle(o, o.handle);
+    }
+
+    public static boolean releaseAndRecycle(MessageList<?> o) {
+        for (int i = 0; i< o.size(); i++) {
+            ByteBufUtil.release(o.get(i));
+        }
+        return recycle(o);
     }
 
     private final Handle handle;
