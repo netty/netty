@@ -15,10 +15,10 @@
  */
 package io.netty.example.sctp;
 
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MessageList;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -40,12 +40,7 @@ public class SctpEchoServerHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
-        Object[] echoMsgs = new Object[length];
-        System.arraycopy(msgs, index, echoMsgs, 0, length);
-        for (Object msg: echoMsgs) {
-            ByteBufUtil.retain(msg);
-        }
-        ctx.write(echoMsgs);
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        ctx.write(msgs.copy());
     }
 }

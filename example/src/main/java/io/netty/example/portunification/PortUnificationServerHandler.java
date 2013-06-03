@@ -17,13 +17,14 @@ package io.netty.example.portunification;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.MessageList;
 import io.netty.example.factorial.BigIntegerDecoder;
 import io.netty.example.factorial.FactorialServerHandler;
 import io.netty.example.factorial.NumberEncoder;
 import io.netty.example.http.snoop.HttpSnoopServerHandler;
 import io.netty.example.securechat.SecureChatSslContextFactory;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.http.HttpContentCompressor;
@@ -37,7 +38,7 @@ import javax.net.ssl.SSLEngine;
  * Manipulates the current pipeline dynamically to switch protocols or enable
  * SSL or GZIP.
  */
-public class PortUnificationServerHandler extends ChannelInboundByteHandlerAdapter {
+public class PortUnificationServerHandler extends ByteToMessageDecoder {
 
     private final boolean detectSsl;
     private final boolean detectGzip;
@@ -52,7 +53,7 @@ public class PortUnificationServerHandler extends ChannelInboundByteHandlerAdapt
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, MessageList<Object> out) throws Exception {
         // Will use the first five bytes to detect a protocol.
         if (in.readableBytes() < 5) {
             return;

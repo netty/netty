@@ -18,6 +18,7 @@ package io.netty.example.qotm;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MessageList;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.CharsetUtil;
 
@@ -44,9 +45,10 @@ public class QuoteOfTheMomentServerHandler extends ChannelInboundHandlerAdapter 
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
-        for (int i = index; i < length; i++) {
-            DatagramPacket packet = (DatagramPacket) msgs[i];
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        MessageList<DatagramPacket> packets = msgs.cast();
+        for (int i = 0; i < packets.size(); i++) {
+            DatagramPacket packet = packets.get(i);
             System.err.println(packet);
             if ("QOTM?".equals(packet.content().toString(CharsetUtil.UTF_8))) {
                 ctx.write(new DatagramPacket(

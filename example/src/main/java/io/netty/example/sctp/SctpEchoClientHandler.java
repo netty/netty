@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MessageList;
 import io.netty.channel.sctp.SctpMessage;
 
 import java.util.logging.Level;
@@ -56,13 +57,8 @@ public class SctpEchoClientHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
-        Object[] echoMsgs = new Object[length];
-        System.arraycopy(msgs, index, echoMsgs, 0, length);
-        for (Object msg: echoMsgs) {
-            ByteBufUtil.retain(msg);
-        }
-        ctx.write(echoMsgs);
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> messages) throws Exception {
+        ctx.write(messages.copy());
     }
 
     @Override

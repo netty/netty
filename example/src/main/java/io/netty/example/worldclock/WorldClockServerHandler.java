@@ -17,6 +17,7 @@ package io.netty.example.worldclock;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MessageList;
 import io.netty.example.worldclock.WorldClockProtocol.Continent;
 import io.netty.example.worldclock.WorldClockProtocol.DayOfWeek;
 import io.netty.example.worldclock.WorldClockProtocol.LocalTime;
@@ -37,11 +38,10 @@ public class WorldClockServerHandler extends ChannelInboundHandlerAdapter {
             WorldClockServerHandler.class.getName());
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
-        int a = 0;
-        Object[] locationsArray = new Object[length];
-        for (int i = index; i < length; i++) {
-            Locations locations = (Locations) msgs[i];
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        int size = msgs.size();
+        for (int i = 0; i < size; i++) {
+            Locations locations = (Locations) msgs.get(i);
             long currentTime = System.currentTimeMillis();
 
             LocalTimes.Builder builder = LocalTimes.newBuilder();
@@ -61,9 +61,13 @@ public class WorldClockServerHandler extends ChannelInboundHandlerAdapter {
                         setSecond(calendar.get(SECOND)).build());
             }
 
-            locationsArray[a++] = builder.build();
+            msgs.add(builder.build());
         }
-        ctx.write(locationsArray);
+
+        msgs.remove(0, size);
+        if (!msgs.isEmpty()) {
+            ctx.write(msgs);
+        }
     }
 
     @Override

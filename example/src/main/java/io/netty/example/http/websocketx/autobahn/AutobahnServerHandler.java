@@ -19,7 +19,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MessageList;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -46,17 +47,27 @@ import static io.netty.handler.codec.http.HttpVersion.*;
 /**
  * Handles handshakes and messages
  */
-public class AutobahnServerHandler extends ChannelInboundMessageHandlerAdapter<Object> {
+public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
     private static final Logger logger = Logger.getLogger(AutobahnServerHandler.class.getName());
 
     private WebSocketServerHandshaker handshaker;
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof FullHttpRequest) {
-            handleHttpRequest(ctx, (FullHttpRequest) msg);
-        } else if (msg instanceof WebSocketFrame) {
-            handleWebSocketFrame(ctx, (WebSocketFrame) msg);
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        int size = msgs.size();
+
+        for (int i = 0; i < msgs.size(); i++) {
+            Object msg = msgs.get(i);
+            if (msg instanceof FullHttpRequest) {
+                handleHttpRequest(ctx, (FullHttpRequest) msg);
+            } else if (msg instanceof WebSocketFrame) {
+                handleWebSocketFrame(ctx, (WebSocketFrame) msg, msgs);
+            }
+        }
+
+        msgs.remove(0, size);
+        if (!msgs.isEmpty()) {
+            ctx.write(msgs);
         }
     }
 
@@ -84,7 +95,7 @@ public class AutobahnServerHandler extends ChannelInboundMessageHandlerAdapter<O
         }
     }
 
-    private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame) {
+    private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame, MessageList<Object> out) {
         if (logger.isLoggable(Level.FINE)) {
             logger.fine(String.format(
                     "Channel %s received %s", ctx.channel().id(), frame.getClass().getSimpleName()));
@@ -93,26 +104,18 @@ public class AutobahnServerHandler extends ChannelInboundMessageHandlerAdapter<O
         if (frame instanceof CloseWebSocketFrame) {
             handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame.retain());
         } else if (frame instanceof PingWebSocketFrame) {
-            ctx.nextOutboundMessageBuffer().add(
-                    new PongWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.content().retain()));
+            out.add(new PongWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.content().retain()));
         } else if (frame instanceof TextWebSocketFrame) {
-            ctx.nextOutboundMessageBuffer().add(frame.retain());
+            out.add(frame.retain());
         } else if (frame instanceof BinaryWebSocketFrame) {
-            ctx.nextOutboundMessageBuffer().add(frame.retain());
+            out.add(frame.retain());
         } else if (frame instanceof ContinuationWebSocketFrame) {
-            ctx.nextOutboundMessageBuffer().add(frame.retain());
+            out.add(frame.retain());
         } else if (frame instanceof PongWebSocketFrame) {
             // Ignore
         } else {
             throw new UnsupportedOperationException(String.format("%s frame types not supported", frame.getClass()
                     .getName()));
-        }
-    }
-
-    @Override
-    public void endMessageReceived(ChannelHandlerContext ctx) throws Exception {
-        if (handshaker != null) {
-            ctx.flush().addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
         }
     }
 

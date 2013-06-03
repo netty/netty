@@ -18,6 +18,7 @@ package io.netty.example.worldclock;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MessageList;
 import io.netty.example.worldclock.WorldClockProtocol.Continent;
 import io.netty.example.worldclock.WorldClockProtocol.LocalTime;
 import io.netty.example.worldclock.WorldClockProtocol.LocalTimes;
@@ -95,9 +96,9 @@ public class WorldClockClientHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
-        for (int i = index; i < length; i++) {
-            answer.add((LocalTimes) msgs[i]);
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        for (int i = 0; i < msgs.size(); i++) {
+            answer.add((LocalTimes) msgs.get(i));
         }
     }
 
