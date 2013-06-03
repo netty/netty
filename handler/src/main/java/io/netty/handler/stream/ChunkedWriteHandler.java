@@ -15,7 +15,7 @@
  */
 package io.netty.handler.stream;
 
-import io.netty.buffer.MessageBuf;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
@@ -23,10 +23,10 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelHandlerUtil;
-import io.netty.channel.ChannelOutboundMessageHandler;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.MessageList;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -65,12 +65,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  * call {@link #resumeTransfer()}.
  */
 public class ChunkedWriteHandler
-        extends ChannelDuplexHandler implements ChannelOutboundMessageHandler<Object> {
+        extends ChannelDuplexHandler {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(ChunkedWriteHandler.class);
 
-    private final MessageBuf<Object> queue = Unpooled.messageBuffer();
+    private final MessageList<Object> queue = new MessageList<Object>();
     private final int maxPendingWrites;
     private volatile ChannelHandlerContext ctx;
     private final AtomicInteger pendingWrites = new AtomicInteger();
@@ -86,11 +86,6 @@ public class ChunkedWriteHandler
                     "maxPendingWrites: " + maxPendingWrites + " (expected: > 0)");
         }
         this.maxPendingWrites = maxPendingWrites;
-    }
-
-    @Override
-    public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return queue;
     }
 
     @Override
@@ -142,16 +137,12 @@ public class ChunkedWriteHandler
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
+        queue.add(msgs.array(), 0, msgs.size());
         queue.add(promise);
         if (isWritable() || !ctx.channel().isActive()) {
             doFlush(ctx);
         }
-    }
-
-    @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-        ctx.fireInboundBufferUpdated();
     }
 
     @Override
@@ -168,7 +159,12 @@ public class ChunkedWriteHandler
             Object currentEvent = this.currentEvent;
 
             if (this.currentEvent == null) {
-                currentEvent = queue.poll();
+                if (queue.isEmpty()) {
+                    currentEvent = null;
+                } else {
+                    currentEvent = queue.get(0);
+                    queue.remove(0);
+                }
             } else {
                 this.currentEvent = null;
             }
@@ -213,108 +209,120 @@ public class ChunkedWriteHandler
             discard(ctx, null);
             return;
         }
-        while (isWritable()) {
-            if (currentEvent == null) {
-                currentEvent = queue.poll();
-            }
-
-            if (currentEvent == null) {
-                break;
-            }
-
-            final Object currentEvent = this.currentEvent;
-            if (currentEvent instanceof ChannelPromise) {
-                this.currentEvent = null;
-                ctx.flush((ChannelPromise) currentEvent);
-            } else if (currentEvent instanceof ChunkedInput) {
-                final ChunkedInput<?> chunks = (ChunkedInput<?>) currentEvent;
-                boolean read;
-                boolean endOfInput;
-                boolean suspend;
-                try {
-                    read = readChunk(ctx, chunks);
-                    endOfInput = chunks.isEndOfInput();
-
-                    if (!read) {
-                        // No need to suspend when reached at the end.
-                        suspend = !endOfInput;
+        int lastIndex = 0;
+        int index = 0;
+        try {
+            for (; index < queue.size() && isWritable(); index++) {
+                if (currentEvent == null) {
+                    if (queue.size() < index) {
+                        currentEvent = null;
                     } else {
-                        suspend = false;
+                        currentEvent = queue.get(index);
                     }
-                } catch (final Throwable t) {
-                    this.currentEvent = null;
+                }
 
-                    if (ctx.executor().inEventLoop()) {
-                        ctx.fireExceptionCaught(t);
-                    } else {
-                        ctx.executor().execute(new Runnable() {
+                if (currentEvent == null) {
+                    break;
+                }
+
+                final Object currentEvent = this.currentEvent;
+                if (currentEvent instanceof ChannelPromise) {
+                    this.currentEvent = null;
+                    ctx.write(queue.copy(lastIndex, index), (ChannelPromise) currentEvent);
+                    lastIndex = index;
+                } else if (currentEvent instanceof ChunkedInput) {
+                    MessageList<Object> out = new MessageList<Object>();
+                    final ChunkedInput<?> chunks = (ChunkedInput<?>) currentEvent;
+                    boolean read;
+                    boolean endOfInput;
+                    boolean suspend;
+                    try {
+                        read = readChunk(ctx, chunks, out);
+                        endOfInput = chunks.isEndOfInput();
+
+                        if (!read) {
+                            // No need to suspend when reached at the end.
+                            suspend = !endOfInput;
+                        } else {
+                            suspend = false;
+                        }
+                    } catch (final Throwable t) {
+                        this.currentEvent = null;
+
+                        if (ctx.executor().inEventLoop()) {
+                            ctx.fireExceptionCaught(t);
+                        } else {
+                            ctx.executor().execute(new Runnable() {
+                                @Override
+                                public void run() {
+                                    ctx.fireExceptionCaught(t);
+                                }
+                            });
+                        }
+
+                        closeInput(chunks);
+                        break;
+                    }
+
+                    if (suspend) {
+                        // ChunkedInput.nextChunk() returned null and it has
+                        // not reached at the end of input. Let's wait until
+                        // more chunks arrive. Nothing to write or notify.
+                        break;
+                    }
+
+                    pendingWrites.incrementAndGet();
+                    ChannelFuture f = ctx.write(out);
+                    if (endOfInput) {
+                        this.currentEvent = null;
+
+                        // Register a listener which will close the input once the write is complete.
+                        // This is needed because the Chunk may have some resource bound that can not
+                        // be closed before its not written.
+                        //
+                        // See https://github.com/netty/netty/issues/303
+                        f.addListener(new ChannelFutureListener() {
                             @Override
-                            public void run() {
-                                ctx.fireExceptionCaught(t);
+                            public void operationComplete(ChannelFuture future) throws Exception {
+                                pendingWrites.decrementAndGet();
+                                closeInput(chunks);
+                            }
+                        });
+                    } else if (isWritable()) {
+                        f.addListener(new ChannelFutureListener() {
+                            @Override
+                            public void operationComplete(ChannelFuture future) throws Exception {
+                                pendingWrites.decrementAndGet();
+                                if (!future.isSuccess()) {
+                                    closeInput((ChunkedInput<?>) currentEvent);
+                                }
+                            }
+                        });
+                    } else {
+                        f.addListener(new ChannelFutureListener() {
+                            @Override
+                            public void operationComplete(ChannelFuture future) throws Exception {
+                                pendingWrites.decrementAndGet();
+                                if (!future.isSuccess()) {
+                                    closeInput((ChunkedInput<?>) currentEvent);
+                                } else if (isWritable()) {
+                                    resumeTransfer();
+                                }
                             }
                         });
                     }
-
-                    closeInput(chunks);
-                    break;
-                }
-
-                if (suspend) {
-                    // ChunkedInput.nextChunk() returned null and it has
-                    // not reached at the end of input. Let's wait until
-                    // more chunks arrive. Nothing to write or notify.
-                    break;
-                }
-
-                pendingWrites.incrementAndGet();
-                ChannelFuture f = ctx.flush();
-                if (endOfInput) {
-                    this.currentEvent = null;
-
-                    // Register a listener which will close the input once the write is complete.
-                    // This is needed because the Chunk may have some resource bound that can not
-                    // be closed before its not written.
-                    //
-                    // See https://github.com/netty/netty/issues/303
-                    f.addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            pendingWrites.decrementAndGet();
-                            closeInput(chunks);
-                        }
-                    });
-                } else if (isWritable()) {
-                    f.addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            pendingWrites.decrementAndGet();
-                            if (!future.isSuccess()) {
-                                closeInput((ChunkedInput<?>) currentEvent);
-                            }
-                        }
-                    });
                 } else {
-                    f.addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            pendingWrites.decrementAndGet();
-                            if (!future.isSuccess()) {
-                                closeInput((ChunkedInput<?>) currentEvent);
-                            } else if (isWritable()) {
-                                resumeTransfer();
-                            }
-                        }
-                    });
+                    ctx.write(currentEvent);
+                    this.currentEvent = null;
                 }
-            } else {
-                ChannelHandlerUtil.addToNextOutboundBuffer(ctx, currentEvent);
-                this.currentEvent = null;
-            }
 
-            if (!channel.isActive()) {
-                discard(ctx, new ClosedChannelException());
-                return;
+                if (!channel.isActive()) {
+                    discard(ctx, new ClosedChannelException());
+                    return;
+                }
             }
+        } finally {
+            queue.remove(0, index);
         }
     }
 
@@ -326,11 +334,15 @@ public class ChunkedWriteHandler
      * @throws Exception    if something goes wrong
      */
     @SuppressWarnings("unchecked")
-    protected boolean readChunk(ChannelHandlerContext ctx, ChunkedInput<?> chunks) throws Exception {
+    protected boolean readChunk(ChannelHandlerContext ctx, ChunkedInput<?> chunks, MessageList<Object> out)
+            throws Exception {
         if (chunks instanceof ChunkedByteInput) {
-            return ((ChunkedByteInput) chunks).readChunk(ctx.nextOutboundByteBuffer());
+            ByteBuf buf = Unpooled.buffer();
+            boolean done = ((ChunkedByteInput) chunks).readChunk(buf);
+            out.add(buf);
+            return done;
         } else if (chunks instanceof ChunkedMessageInput) {
-            return ((ChunkedMessageInput<Object>) chunks).readChunk(ctx.nextOutboundMessageBuffer());
+            return ((ChunkedMessageInput<Object>) chunks).readChunk(out);
         } else {
             throw new IllegalArgumentException("ChunkedInput instance " + chunks + " not supported");
         }
