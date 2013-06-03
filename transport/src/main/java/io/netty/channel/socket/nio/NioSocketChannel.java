@@ -266,21 +266,23 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             WritableByteChannel wch = javaChannel();
             long localWrittenBytes = region.transferTo(wch, region.transfered());
             if (localWrittenBytes > 0 || lastSpin) {
+                // check if the region was written complete. If not set OP_WRITE so the eventloop
+                // will write the rest once writable again
+                if (region.transfered() < region.count()) {
+                    final SelectionKey key = selectionKey();
+                    final int interestOps = key.interestOps();
+                    if ((interestOps & SelectionKey.OP_WRITE) == 0) {
+                        key.interestOps(interestOps | SelectionKey.OP_WRITE);
+                    }
+                }
+            } else {
                 final SelectionKey key = selectionKey();
                 final int interestOps = key.interestOps();
                 // Wrote the region completely - clear OP_WRITE.
                 if ((interestOps & SelectionKey.OP_WRITE) != 0) {
                     key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
                 }
-            } else {
-                if (region.transfered() >= region.count()) {
-                    final SelectionKey key = selectionKey();
-                    final int interestOps = key.interestOps();
-                    // Wrote the region completely - clear OP_WRITE.
-                    if ((interestOps & SelectionKey.OP_WRITE) != 0) {
-                        key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
-                    }
-                }
+
             }
             return localWrittenBytes;
         } else {
