@@ -22,7 +22,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.MessageList;
-import io.netty.channel.MessageListProcessor;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -124,18 +123,15 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
         return new ChannelInboundHandlerAdapter() {
             @Override
             public void messageReceived(final ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-                msgs.forEach(0, msgs.size(), new MessageListProcessor<Object>() {
-                    @Override
-                    public int process(MessageList<Object> messages, int index, Object value) throws Exception {
-                        if (value instanceof FullHttpRequest) {
-                            FullHttpResponse response =
-                                    new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.FORBIDDEN);
-                            ctx.channel().write(response);
-                            messages.remove(index);
-                        }
-                        return 1;
+                for (int i = 0; i < msgs.size(); i++) {
+                    Object msg = msgs.get(i);
+                    if (msg instanceof FullHttpRequest) {
+                        FullHttpResponse response =
+                                new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.FORBIDDEN);
+                        ctx.channel().write(response);
+                        msgs.remove(i--);
                     }
-                });
+                }
                 ctx.fireMessageReceived(msgs);
             }
         };
