@@ -146,7 +146,7 @@ public class DefaultChannelPipelineTest {
         @Override
         public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
             called = true;
-            MessageList<Object> out = new MessageList<Object>();
+            MessageList<Object> out = MessageList.newInstance();
             for (int i = 0; i < msgs.size(); i ++) {
                 Object m = msgs.get(i);
                 if (!(m instanceof String)) {
@@ -154,8 +154,11 @@ public class DefaultChannelPipelineTest {
                 }
             }
 
+            MessageList.recycle(msgs);
             if (!out.isEmpty()) {
                 ctx.fireMessageReceived(out);
+            } else {
+                MessageList.recycle(out);
             }
         }
     }

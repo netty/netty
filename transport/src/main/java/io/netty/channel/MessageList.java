@@ -16,6 +16,8 @@
 
 package io.netty.channel;
 
+import io.netty.util.Recycler;
+import io.netty.util.Recycler.Handle;
 import io.netty.util.Signal;
 import io.netty.util.internal.PlatformDependent;
 
@@ -26,29 +28,51 @@ public final class MessageList<T> {
     private static final int DEFAULT_INITIAL_CAPACITY = 8;
     private static final int MIN_INITIAL_CAPACITY = 4;
 
+    private static final Recycler<MessageList<?>> RECYCLER = new Recycler<MessageList<?>>() {
+        @Override
+        protected MessageList<?> newObject(Handle handle) {
+            return new MessageList<Object>(handle);
+        }
+    };
+
+    public static <T> MessageList<T> newInstance() {
+        return newInstance(DEFAULT_INITIAL_CAPACITY);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> MessageList<T> newInstance(int minCapacity) {
+        MessageList<T> ret = (MessageList<T>) RECYCLER.get();
+        ret.ensureCapacity(minCapacity);
+        return ret;
+    }
+
+    public static <T> MessageList<T> newInstance(T value) {
+        MessageList<T> ret = newInstance(MIN_INITIAL_CAPACITY);
+        ret.add(value);
+        return ret;
+    }
+
+    public static boolean recycle(MessageList<?> o) {
+        o.clear();
+        return RECYCLER.recycle(o, o.handle);
+    }
+
+    private final Handle handle;
     private T[] elements;
     private int size;
 
-    public MessageList() {
-        this(DEFAULT_INITIAL_CAPACITY);
+    MessageList(Handle handle) {
+        this(handle, DEFAULT_INITIAL_CAPACITY);
     }
 
-    public MessageList(T value) {
-        if (value == null) {
-            throw new NullPointerException("value");
-        }
-
-        elements = newArray(MIN_INITIAL_CAPACITY);
-        elements[0] = value;
-        size = 1;
-    }
-
-    public MessageList(int initialCapacity) {
+    MessageList(Handle handle, int initialCapacity) {
+        this.handle = handle;
         initialCapacity = normalizeCapacity(initialCapacity);
         elements = newArray(initialCapacity);
     }
 
-    private MessageList(T[] elements, int size) {
+    private MessageList(Handle handle, T[] elements, int size) {
+        this.handle = handle;
         this.elements = elements;
         this.size = size;
     }
@@ -264,13 +288,18 @@ public final class MessageList<T> {
         size = newSize;
     }
 
+    public void clear() {
+        Arrays.fill(elements, 0, size, null);
+        size = 0;
+    }
+
     public MessageList<T> copy() {
-        return new MessageList<T>(elements.clone(), size);
+        return new MessageList<T>(handle, elements.clone(), size);
     }
 
     public MessageList<T> copy(int index, int length) {
         checkRange(index, length);
-        MessageList<T> copy = new MessageList<T>(length);
+        MessageList<T> copy = new MessageList<T>(handle, length);
         System.arraycopy(elements, index, copy.elements, 0, length);
         copy.size = length;
         return copy;

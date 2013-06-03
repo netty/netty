@@ -165,7 +165,7 @@ public class LocalServerChannel extends AbstractServerChannel {
             inboundBuffer.add(child);
             if (acceptInProgress) {
                 acceptInProgress = false;
-                MessageList<Object> messages = new MessageList<Object>();
+                MessageList<Object> messages = MessageList.newInstance();
                 for (;;) {
                     Object m = inboundBuffer.poll();
                     if (m == null) {

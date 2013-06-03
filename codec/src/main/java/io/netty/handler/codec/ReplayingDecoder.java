@@ -33,7 +33,7 @@ import io.netty.util.internal.StringUtil;
  * implement the {@code decode()} and {@code decodeLast()} methods just like
  * all required bytes were received already, rather than checking the
  * availability of the required bytes.  For example, the following
- * {@link ByteToByteDecoder} implementation:
+ * {@link ByteToMessageDecoder} implementation:
  * <pre>
  * public class IntegerHeaderFrameDecoder extends {@link ByteToMessageDecoder}&lt;{@link ByteBuf}&gt; {
  *
@@ -229,7 +229,7 @@ import io.netty.util.internal.StringUtil;
  * <p>
  * If you are going to write a protocol multiplexer, you will probably want to
  * replace a {@link ReplayingDecoder} (protocol detector) with another
- * {@link ReplayingDecoder}, {@link ByteToByteDecoder}, {@link ByteToMessageDecoder} or {@link MessageToMessageDecoder}
+ * {@link ReplayingDecoder}, {@link ByteToMessageDecoder} or {@link MessageToMessageDecoder}
  * (actual protocol decoder).
  * It is not possible to achieve this simply by calling
  * {@link ChannelPipeline#replace(ChannelHandler, String, ChannelHandler)}, but
@@ -344,7 +344,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        MessageList<Object> out = new MessageList<Object>();
+        MessageList<Object> out = MessageList.newInstance();
         try {
             replayable.terminate();
             callDecode(ctx, internalBuffer(), out);
@@ -364,6 +364,8 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
 
             if (!out.isEmpty()) {
                 ctx.fireMessageReceived(out);
+            } else {
+                MessageList.recycle(out);
             }
 
             ctx.fireChannelInactive();

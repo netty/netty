@@ -34,37 +34,47 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
     protected void doRead() {
         final ChannelPipeline pipeline = pipeline();
         boolean closed = false;
-        boolean read = false;
-        boolean firedChannelReadSuspended = false;
-        MessageList<Object> msgs = new MessageList<Object>();
+        MessageList<Object> msgs = MessageList.newInstance();
         try {
             int localReadAmount = doReadMessages(msgs);
-            if (localReadAmount > 0) {
-                read = true;
-            } else if (localReadAmount < 0) {
+            if (localReadAmount < 0) {
                 closed = true;
             }
         } catch (Throwable t) {
-            if (read) {
-                read = false;
+            if (!msgs.isEmpty()) {
                 pipeline.fireMessageReceived(msgs);
+            } else {
+                MessageList.recycle(msgs);
             }
-            firedChannelReadSuspended = true;
-            pipeline.fireChannelReadSuspended();
-            pipeline.fireExceptionCaught(t);
+
             if (t instanceof IOException) {
-                unsafe().close(unsafe().voidPromise());
+                closed = true;
             }
-        } finally {
-            if (read) {
-                pipeline.fireMessageReceived(msgs);
-            }
-            if (!firedChannelReadSuspended) {
+
+            pipeline().fireExceptionCaught(t);
+            if (closed) {
+                if (isOpen()) {
+                    unsafe().close(unsafe().voidPromise());
+                }
+            } else {
                 pipeline.fireChannelReadSuspended();
             }
-            if (closed && isOpen()) {
+
+            return;
+        }
+        
+        if (!msgs.isEmpty()) {
+            pipeline.fireMessageReceived(msgs);
+        } else {
+            MessageList.recycle(msgs);
+        }
+
+        if (closed) {
+            if (isOpen()) {
                 unsafe().close(unsafe().voidPromise());
             }
+        } else {
+            pipeline.fireChannelReadSuspended();
         }
     }
 

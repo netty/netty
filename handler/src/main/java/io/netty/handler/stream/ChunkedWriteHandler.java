@@ -23,7 +23,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.MessageList;
@@ -70,7 +69,7 @@ public class ChunkedWriteHandler
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(ChunkedWriteHandler.class);
 
-    private final MessageList<Object> queue = new MessageList<Object>();
+    private final MessageList<Object> queue = MessageList.newInstance();
     private final int maxPendingWrites;
     private volatile ChannelHandlerContext ctx;
     private final AtomicInteger pendingWrites = new AtomicInteger();
@@ -231,7 +230,7 @@ public class ChunkedWriteHandler
                     ctx.write(queue.copy(lastIndex, index), (ChannelPromise) currentEvent);
                     lastIndex = index;
                 } else if (currentEvent instanceof ChunkedInput) {
-                    MessageList<Object> out = new MessageList<Object>();
+                    MessageList<Object> out = MessageList.newInstance();
                     final ChunkedInput<?> chunks = (ChunkedInput<?>) currentEvent;
                     boolean read;
                     boolean endOfInput;

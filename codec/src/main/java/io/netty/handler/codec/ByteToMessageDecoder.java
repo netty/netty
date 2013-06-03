@@ -134,7 +134,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        MessageList<Object> out = new MessageList<Object>();
+        MessageList<Object> out = MessageList.newInstance();
         try {
             if (cumulation != null) {
                 callDecode(ctx, cumulation, out);
@@ -154,6 +154,8 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
 
             if (!out.isEmpty()) {
                 ctx.fireMessageReceived(out);
+            } else {
+                MessageList.recycle(out);
             }
 
             ctx.fireChannelInactive();

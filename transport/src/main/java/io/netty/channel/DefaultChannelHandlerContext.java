@@ -342,7 +342,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (msg == null) {
             throw new NullPointerException("msg");
         }
-        return fireMessageReceived(new MessageList<Object>(msg));
+        return fireMessageReceived(MessageList.newInstance(msg));
     }
 
     @Override
@@ -648,7 +648,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (msg == null) {
             throw new NullPointerException("msg");
         }
-        return write(new MessageList<Object>(msg), promise);
+        return write(MessageList.newInstance(msg), promise);
     }
 
     @Override

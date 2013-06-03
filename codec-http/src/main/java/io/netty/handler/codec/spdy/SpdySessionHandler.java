@@ -83,7 +83,7 @@ public class SpdySessionHandler
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> in) throws Exception {
         boolean handled = false;
-        MessageList<Object> out = new MessageList<Object>();
+        MessageList<Object> out = MessageList.newInstance();
         for (int i = 0 ; i < in.size(); i++) {
             Object msg = in.get(i);
             if (msg == null) {
@@ -95,7 +95,7 @@ public class SpdySessionHandler
                 // lastGoodStreamId.
                 if (handled) {
                     ctx.fireMessageReceived(out);
-                    out = new MessageList<Object>();
+                    out = MessageList.newInstance();
                 }
             }
 
@@ -103,8 +103,11 @@ public class SpdySessionHandler
             handled = true;
         }
 
+        MessageList.recycle(in);
         if (out.isEmpty()) {
             ctx.fireMessageReceived(out);
+        } else {
+            MessageList.recycle(out);
         }
     }
 
@@ -398,7 +401,7 @@ public class SpdySessionHandler
                     return;
                 }
 
-                updateSendWindowSize(ctx, streamID, deltaWindowSize, out);
+                updateSendWindowSize(streamID, deltaWindowSize, out);
             }
         }
 
@@ -421,7 +424,7 @@ public class SpdySessionHandler
 
     @Override
     public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
-        MessageList<Object> out = new MessageList<Object>();
+        MessageList<Object> out = MessageList.newInstance();
         for (int i = 0; i < msgs.size(); i++) {
             Object msg = msgs.get(i);
             if (msg == null) {
@@ -440,7 +443,7 @@ public class SpdySessionHandler
                     handleOutboundMessage(ctx, msg, out);
                 } catch (SpdyProtocolException e) {
                     if (e == PROTOCOL_EXCEPTION) {
-                        // on the case of PROTOCOL_EXCEPTION faile the promise directly
+                        // on the case of PROTOCOL_EXCEPTION, fail the promise directly
                         // See #1211
                         promise.setFailure(PROTOCOL_EXCEPTION);
                         return;
@@ -450,6 +453,8 @@ public class SpdySessionHandler
                 out.add(msg);
             }
         }
+
+        MessageList.recycle(msgs);
         ctx.write(out, promise);
     }
 
@@ -660,7 +665,7 @@ public class SpdySessionHandler
     private void issueSessionError(
             ChannelHandlerContext ctx, SpdySessionStatus status) {
 
-        sendGoAwayFrame(ctx, status).addListener(ChannelFutureListener.CLOSE);;
+        sendGoAwayFrame(ctx, status).addListener(ChannelFutureListener.CLOSE);
     }
 
     /*
@@ -784,8 +789,7 @@ public class SpdySessionHandler
         }
     }
 
-    private void updateSendWindowSize(ChannelHandlerContext ctx, final int streamID, int deltaWindowSize,
-                                      MessageList<Object> out) {
+    private void updateSendWindowSize(final int streamID, int deltaWindowSize, MessageList<Object> out) {
         synchronized (flowControlLock) {
             int newWindowSize = spdySession.updateSendWindowSize(streamID, deltaWindowSize);
 

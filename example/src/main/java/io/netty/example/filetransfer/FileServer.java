@@ -96,7 +96,7 @@ public class FileServer {
         @Override
         public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> messages) throws Exception {
             MessageList<String> msgs = messages.cast();
-            MessageList<Object> out = new MessageList<Object>();
+            MessageList<Object> out = MessageList.newInstance();
 
             for (int i = 0; i < msgs.size(); i++) {
                 String msg = msgs.get(i);
@@ -114,6 +114,8 @@ public class FileServer {
                     out.add("File not found: " + file + '\n');
                 }
             }
+
+            MessageList.recycle(msgs);
             ctx.write(out);
         }
 

@@ -56,18 +56,15 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
 
             final ChannelPipeline pipeline = pipeline();
             boolean closed = false;
-            boolean read = false;
-            boolean firedChannelReadSuspended = false;
-            MessageList<Object> msgBuf = new MessageList<Object>();
+            MessageList<Object> msgBuf = MessageList.newInstance();
             loop: for (;;) {
                 try {
                     for (;;) {
                         int localRead = doReadMessages(msgBuf);
-                        if (localRead > 0) {
-                            read = true;
-                        } else if (localRead == 0) {
+                        if (localRead == 0) {
                             break loop;
-                        } else if (localRead < 0) {
+                        }
+                        if (localRead < 0) {
                             closed = true;
                             break loop;
                         }
@@ -76,32 +73,42 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                         }
                     }
                 } catch (Throwable t) {
-                    if (read) {
-                        read = false;
+                    if (!msgBuf.isEmpty()) {
                         pipeline.fireMessageReceived(msgBuf);
+                    } else {
+                        MessageList.recycle(msgBuf);
                     }
 
                     if (t instanceof IOException) {
                         closed = true;
-                    } else if (!closed) {
-                        firedChannelReadSuspended = true;
-                        pipeline.fireChannelReadSuspended();
                     }
 
                     pipeline().fireExceptionCaught(t);
-
-                    // break the loop now
-                    break;
-                } finally {
-                    if (read) {
-                        pipeline.fireMessageReceived(msgBuf);
-                    }
-                    if (closed && isOpen()) {
-                        close(voidPromise());
-                    } else if (!firedChannelReadSuspended) {
+                    if (closed) {
+                        if (isOpen()) {
+                            close(voidPromise());
+                        }
+                    } else {
                         pipeline.fireChannelReadSuspended();
                     }
+
+                    // break the loop now
+                    return;
                 }
+            }
+            
+            if (!msgBuf.isEmpty()) {
+                pipeline.fireMessageReceived(msgBuf);
+            } else {
+                MessageList.recycle(msgBuf);
+            }
+
+            if (closed) {
+                if (isOpen()) {
+                    close(voidPromise());
+                }
+            } else {
+                pipeline.fireChannelReadSuspended();
             }
         }
     }

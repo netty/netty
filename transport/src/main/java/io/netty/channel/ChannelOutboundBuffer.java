@@ -158,8 +158,12 @@ final class ChannelOutboundBuffer {
                 }
             }
             // release all failed messages
-            for (int i = currentMessageIndex; i < currentMessages.size(); i++) {
-                ByteBufUtil.release(currentMessages.get(i));
+            try {
+                for (int i = currentMessageIndex; i < currentMessages.size(); i++) {
+                    ByteBufUtil.release(currentMessages.get(i));
+                }
+            } finally {
+                MessageList.recycle(currentMessages);
             }
         } while(next());
     }

@@ -263,7 +263,7 @@ public class LocalTransportThreadModelTest {
                 ch.eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
-                        MessageList<Object> msgs = new MessageList<Object>(end - start);
+                        MessageList<Object> msgs = MessageList.newInstance(end - start);
                         for (int j = start; j < end; j ++) {
                             msgs.add(Integer.valueOf(j));
                         }
@@ -303,7 +303,7 @@ public class LocalTransportThreadModelTest {
                 ch.pipeline().context(h6).executor().execute(new Runnable() {
                     @Override
                     public void run() {
-                        MessageList<Object> msgs = new MessageList<Object>(end - start);
+                        MessageList<Object> msgs = MessageList.newInstance(end - start);
                         for (int j = start; j < end; j ++) {
                             msgs.add(Integer.valueOf(j));
                         }
@@ -423,7 +423,7 @@ public class LocalTransportThreadModelTest {
             for (int i = 0; i < msgs.size(); i ++) {
                 ByteBuf m = (ByteBuf) msgs.get(i);
                 int count = m.readableBytes() / 4;
-                MessageList<Integer> out = new MessageList<Integer>(count);
+                MessageList<Integer> out = MessageList.newInstance(count);
                 for (int j = 0; j < count; j ++) {
                     int actual = m.readInt();
                     int expected = outCnt ++;
@@ -473,7 +473,7 @@ public class LocalTransportThreadModelTest {
             for (int i = 0; i < msgs.size(); i ++) {
                 ByteBuf m = (ByteBuf) msgs.get(i);
                 int count = m.readableBytes() / 4;
-                MessageList<Integer> out = new MessageList<Integer>(count);
+                MessageList<Integer> out = MessageList.newInstance(count);
                 for (int j = 0; j < count; j ++) {
                     int actual = m.readInt();
                     int expected = inCnt ++;
