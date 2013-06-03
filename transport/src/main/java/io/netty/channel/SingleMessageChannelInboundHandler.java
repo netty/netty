@@ -60,8 +60,9 @@ public abstract class SingleMessageChannelInboundHandler<I> extends ChannelInbou
                 if (acceptInboundMessage(msg)) {
                     if (!messageList.isEmpty()) {
                         ctx.fireMessageReceived(messageList);
-                        messageList.clear();
+                        messageList = MessageList.newInstance();
                     }
+
                     @SuppressWarnings("unchecked")
                     I imsg = (I) msg;
                     messageReceived(ctx, imsg);
