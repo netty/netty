@@ -17,6 +17,7 @@ package io.netty.example.discard;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MessageList;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -30,7 +31,7 @@ public class DiscardServerHandler extends ChannelInboundHandlerAdapter {
             DiscardServerHandler.class.getName());
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
         // Discard the received data silently.
     }
 

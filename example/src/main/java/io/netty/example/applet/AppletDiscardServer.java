@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MessageList;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -75,9 +76,10 @@ public class AppletDiscardServer extends JApplet {
     private static final class DiscardServerHandler extends ChannelInboundHandlerAdapter {
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object[] msgs, int index, int length) throws Exception {
-            for (int i = index; i < length; i++) {
-                System.out.println("Received: " + ((ByteBuf) msgs[i]).toString(CharsetUtil.UTF_8));
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            MessageList<ByteBuf> bufs = msgs.cast();
+            for (int i = 0; i < bufs.size(); i++) {
+                System.out.println("Received: " + bufs.get(i).toString(CharsetUtil.UTF_8));
             }
         }
 
