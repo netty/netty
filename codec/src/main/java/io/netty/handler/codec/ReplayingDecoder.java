@@ -319,29 +319,6 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
         return oldState;
     }
 
-    /**
-     * Returns the actual number of readable bytes in the internal cumulative
-     * buffer of this decoder. You usually do not need to rely on this value
-     * to write a decoder. Use it only when you muse use it at your own risk.
-     * This method is a shortcut to {@link #internalBuffer() internalBuffer().readableBytes()}.
-     */
-    protected int actualReadableBytes() {
-        return internalBuffer().readableBytes();
-    }
-
-    /**
-     * Returns the internal cumulative buffer of this decoder. You usually
-     * do not need to access the internal buffer directly to write a decoder.
-     * Use it only when you must use it at your own risk.
-     */
-    protected ByteBuf internalBuffer() {
-        if (cumulation != null) {
-            return cumulation;
-        } else {
-            return Unpooled.EMPTY_BUFFER;
-        }
-    }
-
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         MessageList<Object> out = MessageList.newInstance();

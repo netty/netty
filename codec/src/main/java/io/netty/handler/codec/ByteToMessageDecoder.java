@@ -64,6 +64,29 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
         return singleDecode;
     }
 
+    /**
+     * Returns the actual number of readable bytes in the internal cumulative
+     * buffer of this decoder. You usually do not need to rely on this value
+     * to write a decoder. Use it only when you muse use it at your own risk.
+     * This method is a shortcut to {@link #internalBuffer() internalBuffer().readableBytes()}.
+     */
+    protected int actualReadableBytes() {
+        return internalBuffer().readableBytes();
+    }
+
+    /**
+     * Returns the internal cumulative buffer of this decoder. You usually
+     * do not need to access the internal buffer directly to write a decoder.
+     * Use it only when you must use it at your own risk.
+     */
+    protected ByteBuf internalBuffer() {
+        if (cumulation != null) {
+            return cumulation;
+        } else {
+            return Unpooled.EMPTY_BUFFER;
+        }
+    }
+
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
         try {
@@ -197,7 +220,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      * {@link ByteBuf} has nothing to read anymore, till nothing was read from the input {@link ByteBuf} or till
      * this method returns {@code null}.
      *
-     * @param ctx           the {@link ChannelHandlerContext} which this {@link ByteToByteDecoder} belongs to
+     * @param ctx           the {@link ChannelHandlerContext} which this {@link ByteToMessageDecoder} belongs to
      * @param in            the {@link ByteBuf} from which to read data
      * @param out           the {@link MessageList} to which decoded messages should be added
 
