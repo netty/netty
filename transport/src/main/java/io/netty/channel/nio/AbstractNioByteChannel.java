@@ -49,6 +49,8 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         return new NioByteUnsafe();
     }
 
+    private static final ThreadLocal<ByteBuf> PREALLOCATION = new ThreadLocal<ByteBuf>();
+
     private final class NioByteUnsafe extends AbstractNioUnsafe {
         @Override
         public void read() {
@@ -63,60 +65,50 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             }
 
             final ChannelPipeline pipeline = pipeline();
-            // FIXME: calculate size as in 3.x
-            final ByteBuf byteBuf = alloc().ioBuffer(1024);
-            boolean closed = false;
-            boolean read = false;
-            boolean firedChannelReadSuspended = false;
-            try {
-                expandReadBuffer(byteBuf);
-                loop: for (;;) {
-                    int localReadAmount = doReadBytes(byteBuf);
-                    if (localReadAmount > 0) {
-                        read = true;
-                    } else if (localReadAmount < 0) {
-                        closed = true;
-                        break;
-                    }
 
-                    switch (expandReadBuffer(byteBuf)) {
-                    case 0:
-                        // Read all - stop reading.
-                        break loop;
-                    case 1:
-                        // Keep reading until everything is read.
-                        break;
-                    case 2:
-                        // Let the inbound handler drain the buffer and continue reading.
-                        if (read) {
-                            read = false;
-                            pipeline.fireMessageReceived(byteBuf);
-                            // clear the buffer after the event was fired
-                            byteBuf.clear();
-                        }
-                        if (!config().isAutoRead()) {
-                            // stop reading until next Channel.read() call
-                            // See https://github.com/netty/netty/issues/1363
-                            break loop;
-                        }
-                    }
+            ByteBuf byteBuf = PREALLOCATION.get();
+            if (byteBuf != null) {
+                int index = byteBuf.writerIndex();
+                // Align the next writerIndex by 64 bytes to avoid cache contention.
+                if ((index & 63) != 0) {
+                    index = (index & 0xFFFFFFC0) + 64;
+                }
+
+                // Release the buffer and get a new one if the writable bytes are less than 1 KiB.
+                if (index > byteBuf.capacity() - 1024) {
+                    byteBuf.release();
+                    byteBuf = null;
+                } else {
+                    byteBuf.setIndex(index, index);
+                }
+            }
+
+            if (byteBuf == null) {
+                byteBuf = alloc().ioBuffer(1048576 * 4);
+                PREALLOCATION.set(byteBuf);
+            }
+            
+            boolean closed = false;
+            Throwable exception = null;
+            try {
+                int localReadAmount = doReadBytes(byteBuf);
+                if (localReadAmount < 0) {
+                    closed = true;
                 }
             } catch (Throwable t) {
-                if (read) {
-                    read = false;
-                    pipeline.fireMessageReceived(byteBuf);
+                exception = t;
+            } finally {
+                if (byteBuf.isReadable()) {
+                    ByteBuf slice = byteBuf.readSlice(byteBuf.readableBytes());
+                    pipeline.fireMessageReceived(slice.retain());
                 }
 
-                if (t instanceof IOException) {
-                    closed = true;
-                } else if (!closed) {
-                    firedChannelReadSuspended = true;
-                    pipeline.fireChannelReadSuspended();
-                }
-                pipeline().fireExceptionCaught(t);
-            } finally {
-                if (read) {
-                    pipeline.fireMessageReceived(byteBuf);
+                if (exception != null) {
+                    if (exception instanceof IOException) {
+                        closed = true;
+                    }
+
+                    pipeline().fireExceptionCaught(exception);
                 }
 
                 if (closed) {
@@ -129,7 +121,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                             close(voidPromise());
                         }
                     }
-                } else if (!firedChannelReadSuspended) {
+                } else {
                     pipeline.fireChannelReadSuspended();
                 }
             }

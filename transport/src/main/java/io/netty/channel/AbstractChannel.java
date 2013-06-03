@@ -320,35 +320,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return unsafe;
     }
 
-    // 0 - not expanded because the buffer is writable
-    // 1 - expanded because the buffer was not writable
-    // 2 - could not expand because the buffer was at its maximum although the buffer is not writable.
-    protected static int expandReadBuffer(ByteBuf byteBuf) {
-        final int writerIndex = byteBuf.writerIndex();
-        final int capacity = byteBuf.capacity();
-        if (capacity != writerIndex) {
-            return 0;
-        }
-
-        final int maxCapacity = byteBuf.maxCapacity();
-        if (capacity == maxCapacity) {
-            return 2;
-        }
-
-        // FIXME: Magic number
-        final int increment = 4096;
-
-        if (writerIndex + increment > maxCapacity) {
-            // Expand to maximum capacity.
-            byteBuf.capacity(maxCapacity);
-        } else {
-            // Expand by the increment.
-            byteBuf.ensureWritable(increment);
-        }
-
-        return 1;
-    }
-
     /**
      * Create a new {@link AbstractUnsafe} instance which will be used for the life-time of the {@link Channel}
      */
