@@ -57,9 +57,13 @@ public class LocalChannel extends AbstractChannel {
         @Override
         public void run() {
             ChannelPipeline pipeline = pipeline();
-            Object[] messages = inboundBuffer.toArray();
-            inboundBuffer.clear();
-            pipeline.fireMessageReceived(messages);
+            for (;;) {
+                MessageList<Object> m = inboundBuffer.poll();
+                if (m == null) {
+                    break;
+                }
+                pipeline.fireMessageReceived(m);
+            }
             pipeline.fireChannelReadSuspended();
         }
     };
@@ -266,7 +270,7 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected int doWrite(final MessageList<Object> msgs, final int index) throws Exception {
+    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
         if (state < 2) {
             throw new NotYetConnectedException();
         }
@@ -279,14 +283,17 @@ public class LocalChannel extends AbstractChannel {
         final EventLoop peerLoop = peer.eventLoop();
         final int size = msgs.size();
 
+        // Use a copy because the original msgs will be recycled by AbstractChannel.
+        final MessageList<Object> msgsCopy = msgs.copy();
+
         if (peerLoop == eventLoop()) {
-            peer.inboundBuffer.add(msgs);
+            peer.inboundBuffer.add(msgsCopy);
             finishPeerRead(peer, peerPipeline);
         } else {
             peerLoop.execute(new Runnable() {
                 @Override
                 public void run() {
-                    peer.inboundBuffer.add(msgs);
+                    peer.inboundBuffer.add(msgsCopy);
                     finishPeerRead(peer, peerPipeline);
                 }
             });
