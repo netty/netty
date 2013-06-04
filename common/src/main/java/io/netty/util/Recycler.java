@@ -44,14 +44,6 @@ public abstract class Recycler<T> {
         return o;
     }
 
-    public final boolean recycle(T o) {
-        if (!(o instanceof Recyclable)) {
-            return false;
-        } else {
-            return recycle(o, ((Recyclable) o).recyclerHandle());
-        }
-    }
-
     public final boolean recycle(T o, Handle handle) {
         @SuppressWarnings("unchecked")
         Stack<T> stack = (Stack<T>) handle;

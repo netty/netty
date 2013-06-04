@@ -57,6 +57,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             final ChannelPipeline pipeline = pipeline();
             boolean closed = false;
             MessageList<Object> msgBuf = MessageList.newInstance();
+            Throwable exception = null;
             loop: for (;;) {
                 try {
                     for (;;) {
@@ -73,34 +74,19 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                         }
                     }
                 } catch (Throwable t) {
-                    if (!msgBuf.isEmpty()) {
-                        pipeline.fireMessageReceived(msgBuf);
-                    } else {
-                        MessageList.recycle(msgBuf);
-                    }
-
-                    if (t instanceof IOException) {
-                        closed = true;
-                    }
-
-                    pipeline().fireExceptionCaught(t);
-                    if (closed) {
-                        if (isOpen()) {
-                            close(voidPromise());
-                        }
-                    } else {
-                        pipeline.fireChannelReadSuspended();
-                    }
-
-                    // break the loop now
-                    return;
+                    exception = t;
+                    break;
                 }
             }
 
-            if (!msgBuf.isEmpty()) {
-                pipeline.fireMessageReceived(msgBuf);
-            } else {
-                MessageList.recycle(msgBuf);
+            pipeline.fireMessageReceived(msgBuf);
+
+            if (exception != null) {
+                if (exception instanceof IOException) {
+                    closed = true;
+                }
+
+                pipeline().fireExceptionCaught(exception);
             }
 
             if (closed) {

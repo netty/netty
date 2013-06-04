@@ -142,8 +142,7 @@ public class ChunkedWriteHandler
         for (int i = 0; i  < msgs.size(); i++) {
             queue.add(msgs.get(i));
         }
-        MessageList.recycle(msgs);
-
+        msgs.recycle();
         queue.add(promise);
         if (isWritable() || !ctx.channel().isActive()) {
             doFlush(ctx);
@@ -325,8 +324,9 @@ public class ChunkedWriteHandler
      * @throws Exception    if something goes wrong
      */
     @SuppressWarnings("unchecked")
-    protected boolean readChunk(ChannelHandlerContext ctx, ChunkedInput<?> chunks, MessageList<Object> out)
-            throws Exception {
+    protected boolean readChunk(
+            @SuppressWarnings("UnusedParameters") ChannelHandlerContext ctx,
+            ChunkedInput<?> chunks, MessageList<Object> out) throws Exception {
         if (chunks instanceof ChunkedByteInput) {
             ByteBuf buf = Unpooled.buffer();
             boolean done = ((ChunkedByteInput) chunks).readChunk(buf);

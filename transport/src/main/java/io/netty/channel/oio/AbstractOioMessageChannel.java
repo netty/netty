@@ -35,38 +35,24 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
         final ChannelPipeline pipeline = pipeline();
         boolean closed = false;
         MessageList<Object> msgs = MessageList.newInstance();
+        Throwable exception = null;
         try {
             int localReadAmount = doReadMessages(msgs);
             if (localReadAmount < 0) {
                 closed = true;
             }
         } catch (Throwable t) {
-            if (!msgs.isEmpty()) {
-                pipeline.fireMessageReceived(msgs);
-            } else {
-                MessageList.recycle(msgs);
-            }
+            exception = t;
+        }
 
-            if (t instanceof IOException) {
+        pipeline.fireMessageReceived(msgs);
+
+        if (exception != null) {
+            if (exception instanceof IOException) {
                 closed = true;
             }
 
-            pipeline().fireExceptionCaught(t);
-            if (closed) {
-                if (isOpen()) {
-                    unsafe().close(unsafe().voidPromise());
-                }
-            } else {
-                pipeline.fireChannelReadSuspended();
-            }
-
-            return;
-        }
-
-        if (!msgs.isEmpty()) {
-            pipeline.fireMessageReceived(msgs);
-        } else {
-            MessageList.recycle(msgs);
+            pipeline().fireExceptionCaught(exception);
         }
 
         if (closed) {

@@ -16,7 +16,6 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -339,12 +338,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                 cumulation = null;
             }
 
-            if (!out.isEmpty()) {
-                ctx.fireMessageReceived(out);
-            } else {
-                MessageList.recycle(out);
-            }
-
+            ctx.fireMessageReceived(out);
             ctx.fireChannelInactive();
         }
     }

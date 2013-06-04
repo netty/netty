@@ -115,7 +115,7 @@ public class FileServer {
                 }
             }
 
-            MessageList.recycle(msgs);
+            msgs.recycle();
             ctx.write(out);
         }
 

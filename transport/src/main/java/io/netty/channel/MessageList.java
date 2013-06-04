@@ -53,42 +53,51 @@ public final class MessageList<T> {
         return ret;
     }
 
-    public static boolean recycle(MessageList<?> o) {
-        o.clear();
-        return RECYCLER.recycle(o, o.handle);
-    }
-
     public MessageList<T> retainAll() {
-        return retainAll(1);
+        int size = this.size;
+        for (int i = 0; i < size; i ++) {
+            ByteBufUtil.retain(elements[i]);
+        }
+        return this;
     }
 
-    public MessageList<T> retainAll(int retain) {
-        for (int i = 0; i< size(); i++) {
-            ByteBufUtil.retain(get(i), retain);
+    public MessageList<T> retainAll(int increment) {
+        int size = this.size;
+        for (int i = 0; i < size; i ++) {
+            ByteBufUtil.retain(elements[i], increment);
         }
         return this;
     }
 
     public boolean releaseAll() {
-        return releaseAll(1);
+        boolean releasedAll = true;
+        int size = this.size;
+        for (int i = 0; i < size; i++) {
+            releasedAll &= ByteBufUtil.release(elements[i]);
+        }
+        return releasedAll;
     }
 
-    public boolean releaseAll(int release) {
+    public boolean releaseAll(int decrement) {
         boolean releasedAll = true;
-        for (int i = 0; i< size(); i++) {
-            if(!ByteBufUtil.release(get(i), release)) {
-                releasedAll = false;
-            }
+        int size = this.size;
+        for (int i = 0; i < size; i++) {
+            releasedAll &= ByteBufUtil.release(elements[i], decrement);
         }
         return releasedAll;
     }
 
     public boolean releaseAndRecycle() {
-        return releaseAndRecycle(1);
+        return releaseAll() && recycle();
     }
 
-    public boolean releaseAndRecycle(int release) {
-        return releaseAll(release) && recycle(this);
+    public boolean releaseAndRecycle(int decrement) {
+        return releaseAll(decrement) && recycle();
+    }
+
+    public boolean recycle() {
+        clear();
+        return RECYCLER.recycle(this, handle);
     }
 
     private final Handle handle;

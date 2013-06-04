@@ -163,7 +163,7 @@ final class ChannelOutboundBuffer {
                     ByteBufUtil.release(currentMessages.get(i));
                 }
             } finally {
-                MessageList.recycle(currentMessages);
+                currentMessages.recycle();
             }
         } while(next());
     }

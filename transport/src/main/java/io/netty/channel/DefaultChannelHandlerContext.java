@@ -351,6 +351,10 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             throw new NullPointerException("msgs");
         }
 
+        if (msgs.isEmpty()) {
+            msgs.recycle();
+        }
+
         final DefaultChannelHandlerContext next = findContextInbound();
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {

@@ -103,12 +103,8 @@ public class SpdySessionHandler
             handled = true;
         }
 
-        MessageList.recycle(in);
-        if (out.isEmpty()) {
-            ctx.fireMessageReceived(out);
-        } else {
-            MessageList.recycle(out);
-        }
+        in.recycle();
+        ctx.fireMessageReceived(out);
     }
 
     private void handleInboundMessage(ChannelHandlerContext ctx, Object msg, MessageList<Object> out) throws Exception {
@@ -454,7 +450,7 @@ public class SpdySessionHandler
             }
         }
 
-        MessageList.recycle(msgs);
+        msgs.recycle();
         ctx.write(out, promise);
     }
 

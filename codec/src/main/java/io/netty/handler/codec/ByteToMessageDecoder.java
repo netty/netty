@@ -175,12 +175,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 cumulation = null;
             }
 
-            if (!out.isEmpty()) {
-                ctx.fireMessageReceived(out);
-            } else {
-                MessageList.recycle(out);
-            }
-
+            ctx.fireMessageReceived(out);
             ctx.fireChannelInactive();
         }
     }

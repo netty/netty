@@ -71,11 +71,7 @@ public abstract class SingleMessageChannelInboundHandler<I> extends ChannelInbou
                 }
             }
         } finally {
-            if (!messageList.isEmpty()) {
-                ctx.fireMessageReceived(messageList);
-            } else {
-                MessageList.recycle(messageList);
-            }
+            ctx.fireMessageReceived(messageList);
         }
     }
 

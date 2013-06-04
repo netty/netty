@@ -154,12 +154,8 @@ public class DefaultChannelPipelineTest {
                 }
             }
 
-            MessageList.recycle(msgs);
-            if (!out.isEmpty()) {
-                ctx.fireMessageReceived(out);
-            } else {
-                MessageList.recycle(out);
-            }
+            msgs.recycle();
+            ctx.fireMessageReceived(out);
         }
     }
 
