@@ -67,7 +67,7 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         clientHandler.check();
     }
 
-    private static class BufWriterHandler extends ChannelInboundHandlerAdapter{
+    private static class BufWriterHandler extends ChannelInboundHandlerAdapter {
 
         private final Random random = new Random();
         private final CountDownLatch latch = new CountDownLatch(1);
@@ -94,7 +94,6 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
                 }
             });
         }
-
 
         @Override
         public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {

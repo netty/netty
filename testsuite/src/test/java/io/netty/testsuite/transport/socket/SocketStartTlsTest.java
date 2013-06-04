@@ -143,7 +143,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
     }
 
-    private class StartTlsClientHandler extends ChannelInboundHandlerAdapter{
+    private class StartTlsClientHandler extends ChannelInboundHandlerAdapter {
         private final SslHandler sslHandler;
         private Future<Channel> handshakeFuture;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
@@ -189,7 +189,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
     }
 
-    private class StartTlsServerHandler extends ChannelInboundHandlerAdapter{
+    private class StartTlsServerHandler extends ChannelInboundHandlerAdapter {
         private final SslHandler sslHandler;
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
