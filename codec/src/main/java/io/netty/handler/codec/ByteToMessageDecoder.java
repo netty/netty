@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.MessageList;
+import io.netty.util.internal.StringUtil;
 
 /**
  * {@link ChannelInboundHandlerAdapter} which decodes bytes in a stream-like fashion from one {@link ByteBuf} to an
@@ -195,8 +196,9 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 }
 
                 if (oldInputLength == in.readableBytes()) {
-                    throw new IllegalStateException(
-                         "decode() did not read anything but decoded a message.");
+                    throw new DecoderException(
+                            StringUtil.simpleClassName(getClass()) +
+                            ".decode() did not read anything but decoded a message.");
                 }
 
                 if (isSingleDecode()) {

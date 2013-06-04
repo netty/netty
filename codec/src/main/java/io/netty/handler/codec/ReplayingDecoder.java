@@ -356,7 +356,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                     decode(ctx, replayable, out);
                     if (outSize == out.size()) {
                         if (oldInputLength == in.readableBytes() && oldState == state) {
-                            throw new IllegalStateException(
+                            throw new DecoderException(
                                     StringUtil.simpleClassName(getClass()) + ".decode() must consume the inbound " +
                                     "data or change its state if it did not decode anything.");
                         } else {
@@ -379,7 +379,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                 }
 
                 if (oldReaderIndex == in.readerIndex() && oldState == state) {
-                    throw new IllegalStateException(
+                    throw new DecoderException(
                            StringUtil.simpleClassName(getClass()) + ".decode() method must consume the inbound data " +
                            "or change its state if it decoded something.");
                 }
