@@ -58,11 +58,37 @@ public final class MessageList<T> {
         return RECYCLER.recycle(o, o.handle);
     }
 
-    public static boolean releaseAndRecycle(MessageList<?> o) {
-        for (int i = 0; i< o.size(); i++) {
-            ByteBufUtil.release(o.get(i));
+    public MessageList<T> retainAll() {
+        return retainAll(1);
+    }
+
+    public MessageList<T> retainAll(int retain) {
+        for (int i = 0; i< size(); i++) {
+            ByteBufUtil.retain(get(i), retain);
         }
-        return recycle(o);
+        return this;
+    }
+
+    public boolean releaseAll() {
+        return releaseAll(1);
+    }
+
+    public boolean releaseAll(int release) {
+        boolean releasedAll = true;
+        for (int i = 0; i< size(); i++) {
+            if(!ByteBufUtil.release(get(i), release)) {
+                releasedAll = false;
+            }
+        }
+        return releasedAll;
+    }
+
+    public boolean releaseAndRecycle() {
+        return releaseAndRecycle(1);
+    }
+
+    public boolean releaseAndRecycle(int release) {
+        return releaseAll(release) && recycle(this);
     }
 
     private final Handle handle;
