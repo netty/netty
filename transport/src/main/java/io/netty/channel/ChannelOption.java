@@ -35,11 +35,11 @@ public class ChannelOption<T> extends UniqueName {
 
     private static final ConcurrentMap<String, Boolean> names = PlatformDependent.newConcurrentHashMap();
 
-    public static final ChannelOption<ByteBufAllocator> ALLOCATOR = 
+    public static final ChannelOption<ByteBufAllocator> ALLOCATOR =
             new ChannelOption<ByteBufAllocator>("ALLOCATOR");
     public static final ChannelOption<RecvByteBufAllocator> RCVBUF_ALLOCATOR =
             new ChannelOption<RecvByteBufAllocator>("RCVBUF_ALLOCATOR");
-    
+
     public static final ChannelOption<Integer> CONNECT_TIMEOUT_MILLIS =
             new ChannelOption<Integer>("CONNECT_TIMEOUT_MILLIS");
     public static final ChannelOption<Integer> WRITE_SPIN_COUNT =
@@ -48,7 +48,7 @@ public class ChannelOption<T> extends UniqueName {
             new ChannelOption<Boolean>("ALLOW_HALF_CLOSURE");
     public static final ChannelOption<Boolean> AUTO_READ =
             new ChannelOption<Boolean>("AUTO_READ");
-    
+
     public static final ChannelOption<Boolean> SO_BROADCAST =
             new ChannelOption<Boolean>("SO_BROADCAST");
     public static final ChannelOption<Boolean> SO_KEEPALIVE =

@@ -282,7 +282,6 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                 if ((interestOps & SelectionKey.OP_WRITE) != 0) {
                     key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
                 }
-
             }
             return localWrittenBytes;
         } else {

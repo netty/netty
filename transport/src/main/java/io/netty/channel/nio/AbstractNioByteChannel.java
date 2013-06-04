@@ -53,7 +53,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
     private final class NioByteUnsafe extends AbstractNioUnsafe {
         private RecvByteBufAllocator.Handle allocHandle;
-        
+
         @Override
         public void read() {
             assert eventLoop().inEventLoop();

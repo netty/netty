@@ -150,7 +150,7 @@ public interface ChannelConfig {
      * to allocate buffers.
      */
     ChannelConfig setAllocator(ByteBufAllocator allocator);
-    
+
     /**
      * Returns {@link RecvByteBufAllocator} which is used for the channel
      * to allocate receive buffers.
@@ -162,7 +162,7 @@ public interface ChannelConfig {
      * to allocate receive buffers.
      */
     ChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator);
-    
+
     /**
      * Returns {@code true} if and only if {@link ChannelHandlerContext#read()} will be invoked automatically so that
      * a user application doesn't need to call it at all. The default value is {@code true}.

@@ -36,7 +36,7 @@ public interface RecvByteBufAllocator {
          * enough not to waste its space.
          */
         ByteBuf allocate(ByteBufAllocator alloc);
-        
+
         /**
          * Similar to {@link #allocate(ByteBufAllocator)} except that it does not allocate anything but just tells the
          * capacity.

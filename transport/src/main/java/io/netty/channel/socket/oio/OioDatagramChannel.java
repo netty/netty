@@ -64,7 +64,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     private final MulticastSocket socket;
     private final DatagramChannelConfig config;
     private final java.net.DatagramPacket tmpPacket = new java.net.DatagramPacket(EmptyArrays.EMPTY_BYTES, 0);
-    
+
     private RecvByteBufAllocator.Handle allocHandle;
 
     private static MulticastSocket newSocket() {
@@ -207,7 +207,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
         if (allocHandle == null) {
             this.allocHandle = allocHandle = config.getRecvByteBufAllocator().newHandle();
         }
-        
+
         ByteBuf data = config.getAllocator().heapBuffer(allocHandle.guess());
         boolean free = true;
         try {

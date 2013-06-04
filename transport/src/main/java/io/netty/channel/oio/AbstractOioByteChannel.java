@@ -149,7 +149,6 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                 pipeline.fireChannelReadSuspended();
             }
         }
-
     }
 
     @Override

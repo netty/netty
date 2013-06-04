@@ -90,7 +90,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
             if (buf != null && buf.isReadable()) {
                 out.add(buf);
             }
-            
+
             success = true;
         } catch (EncoderException e) {
             throw e;

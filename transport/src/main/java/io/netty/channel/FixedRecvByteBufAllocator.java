@@ -24,15 +24,15 @@ import io.netty.buffer.ByteBufAllocator;
  * size prediction.  This predictor ignores the feed back from the I/O thread.
  */
 public class FixedRecvByteBufAllocator implements RecvByteBufAllocator {
-    
+
     private static final class HandleImpl implements Handle {
-        
+
         private final int bufferSize;
-        
+
         HandleImpl(int bufferSize) {
             this.bufferSize = bufferSize;
         }
-        
+
         @Override
         public ByteBuf allocate(ByteBufAllocator alloc) {
             return alloc.ioBuffer(bufferSize);
@@ -58,7 +58,7 @@ public class FixedRecvByteBufAllocator implements RecvByteBufAllocator {
             throw new IllegalArgumentException(
                     "bufferSize must greater than 0: " + bufferSize);
         }
-        
+
         handle = new HandleImpl(bufferSize);
     }
 

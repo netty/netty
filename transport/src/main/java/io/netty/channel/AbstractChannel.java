@@ -684,7 +684,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                             break;
                         }
                     }
-                    
+
                     int writtenMessages = doWrite(messages, messageIndex);
                     outboundBuffer.currentMessageIndex = messageIndex += writtenMessages;
                     if (messageIndex >= messageCount) {

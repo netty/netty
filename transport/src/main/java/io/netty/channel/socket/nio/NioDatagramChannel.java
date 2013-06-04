@@ -64,7 +64,7 @@ public final class NioDatagramChannel
     private final DatagramChannelConfig config;
     private final Map<InetAddress, List<MembershipKey>> memberships =
             new HashMap<InetAddress, List<MembershipKey>>();
-    
+
     private RecvByteBufAllocator.Handle allocHandle;
 
     private static DatagramChannel newSocket() {
@@ -216,11 +216,11 @@ public final class NioDatagramChannel
             if (remoteAddress == null) {
                 return 0;
             }
-            
+
             int readBytes = nioData.position();
             data.writerIndex(data.writerIndex() + readBytes);
             allocHandle.record(readBytes);
-            
+
             buf.add(new DatagramPacket(data, localAddress(), remoteAddress));
             free = false;
             return 1;

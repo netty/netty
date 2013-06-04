@@ -32,7 +32,7 @@ import java.util.List;
  * returning the same prediction.
  */
 public class AdaptiveRecvByteBufAllocator implements RecvByteBufAllocator {
-    
+
     static final int DEFAULT_MINIMUM = 64;
     static final int DEFAULT_INITIAL = 1024;
     static final int DEFAULT_MAXIMUM = 65536;
@@ -68,7 +68,7 @@ public class AdaptiveRecvByteBufAllocator implements RecvByteBufAllocator {
             SIZE_TABLE[i] = sizeTable.get(i);
         }
     }
-    
+
     public static final AdaptiveRecvByteBufAllocator DEFAULT = new AdaptiveRecvByteBufAllocator();
 
     private static int getSizeTableIndex(final int size) {
@@ -95,22 +95,22 @@ public class AdaptiveRecvByteBufAllocator implements RecvByteBufAllocator {
 
         throw new Error("shouldn't reach here; please file a bug report.");
     }
-    
+
     private static final class HandleImpl implements Handle {
         private final int minIndex;
         private final int maxIndex;
         private int index;
         private int nextReceiveBufferSize;
         private boolean decreaseNow;
-        
+
         HandleImpl(int minIndex, int maxIndex, int initial) {
             this.minIndex = minIndex;
             this.maxIndex = maxIndex;
-            
+
             index = getSizeTableIndex(initial);
             nextReceiveBufferSize = SIZE_TABLE[index];
         }
-        
+
         @Override
         public ByteBuf allocate(ByteBufAllocator alloc) {
             return alloc.ioBuffer(nextReceiveBufferSize);
@@ -138,7 +138,7 @@ public class AdaptiveRecvByteBufAllocator implements RecvByteBufAllocator {
             }
         }
     }
-    
+
     private final int minIndex;
     private final int maxIndex;
     private final int initial;
@@ -183,7 +183,7 @@ public class AdaptiveRecvByteBufAllocator implements RecvByteBufAllocator {
         } else {
             this.maxIndex = maxIndex;
         }
-        
+
         this.initial = initial;
     }
 
