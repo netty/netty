@@ -159,6 +159,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 }
             }
             if (region.transfered() >= region.count()) {
+                region.release();
                 return 1;
             }
         } else {
