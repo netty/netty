@@ -92,7 +92,11 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter
 
     @Override
     public MessageList<Object> bufferedInboundMessages() {
-        return MessageList.<Object>newInstance(internalBuffer());
+        ByteBuf buf = internalBuffer();
+        if (buf.isReadable()) {
+            return MessageList.<Object>newInstance(buf);
+        }
+        return MessageList.newInstance();
     }
 
     @Override
