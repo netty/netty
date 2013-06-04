@@ -13,9 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.handler.codec.spdy;
 
-public interface SpdyDataOrControlFrame {
+/**
+ * A SPDY Protocol Frame
+ */
+public interface SpdyFrame {
     // Tag interface
 }

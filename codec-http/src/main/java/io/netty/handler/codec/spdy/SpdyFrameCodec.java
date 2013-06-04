@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -28,7 +28,7 @@ import io.netty.channel.CombinedChannelDuplexHandler;
  */
 public final class SpdyFrameCodec
         extends CombinedChannelDuplexHandler
-        implements ChannelInboundByteHandler, ChannelOutboundMessageHandler<SpdyDataOrControlFrame> {
+        implements ChannelInboundByteHandler, ChannelOutboundMessageHandler<SpdyFrame> {
 
     /**
      * Creates a new instance with the specified {@code version} and
@@ -71,7 +71,7 @@ public final class SpdyFrameCodec
     }
 
     @Override
-    public MessageBuf<SpdyDataOrControlFrame> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
+    public MessageBuf<SpdyFrame> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return encoder().newOutboundBuffer(ctx);
     }
 }

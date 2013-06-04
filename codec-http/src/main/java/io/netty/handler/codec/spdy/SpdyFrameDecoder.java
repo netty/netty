@@ -25,7 +25,7 @@ import io.netty.handler.codec.TooLongFrameException;
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
 /**
- * Decodes {@link ByteBuf}s into SPDY Data and Control Frames.
+ * Decodes {@link ByteBuf}s into SPDY Frames.
  */
 public class SpdyFrameDecoder extends ByteToMessageDecoder {
 
@@ -37,7 +37,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
 
     private State state;
     private SpdySettingsFrame spdySettingsFrame;
-    private SpdyHeaderBlock spdyHeaderBlock;
+    private SpdyHeadersFrame spdyHeadersFrame;
 
     // SPDY common header fields
     private byte flags;
@@ -221,12 +221,12 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
 
         case READ_HEADER_BLOCK_FRAME:
             try {
-                spdyHeaderBlock = readHeaderBlockFrame(buffer);
-                if (spdyHeaderBlock != null) {
+                spdyHeadersFrame = readHeaderBlockFrame(buffer);
+                if (spdyHeadersFrame != null) {
                     if (length == 0) {
                         state = State.READ_COMMON_HEADER;
-                        Object frame = spdyHeaderBlock;
-                        spdyHeaderBlock = null;
+                        Object frame = spdyHeadersFrame;
+                        spdyHeadersFrame = null;
                         out.add(frame);
                         return;
                     }
@@ -247,15 +247,15 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
                 decodeHeaderBlock(buffer.readSlice(compressedBytes));
             } catch (Exception e) {
                 state = State.FRAME_ERROR;
-                spdyHeaderBlock = null;
+                spdyHeadersFrame = null;
                 decompressed = null;
                 ctx.fireExceptionCaught(e);
                 return;
             }
 
-            if (spdyHeaderBlock != null && spdyHeaderBlock.isInvalid()) {
-                Object frame = spdyHeaderBlock;
-                spdyHeaderBlock = null;
+            if (spdyHeadersFrame != null && spdyHeadersFrame.isInvalid()) {
+                Object frame = spdyHeadersFrame;
+                spdyHeadersFrame = null;
                 decompressed = null;
                 if (length == 0) {
                     state = State.READ_COMMON_HEADER;
@@ -265,8 +265,8 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
             }
 
             if (length == 0) {
-                Object frame = spdyHeaderBlock;
-                spdyHeaderBlock = null;
+                Object frame = spdyHeadersFrame;
+                spdyHeadersFrame = null;
                 state = State.READ_COMMON_HEADER;
                 out.add(frame);
                 return;
@@ -436,7 +436,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
         }
     }
 
-    private SpdyHeaderBlock readHeaderBlockFrame(ByteBuf buffer) {
+    private SpdyHeadersFrame readHeaderBlockFrame(ByteBuf buffer) {
         int minLength;
         int streamID;
         switch (type) {
@@ -567,7 +567,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
         headerBlockDecompressor.setInput(buffer);
         headerBlockDecompressor.decode(decompressed);
 
-        if (spdyHeaderBlock == null) {
+        if (spdyHeadersFrame == null) {
             // Only decompressing data to keep decompression context in sync
             decompressed = null;
             return;
@@ -582,7 +582,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
             }
             numHeaders = readLengthField();
             if (numHeaders < 0) {
-                spdyHeaderBlock.setInvalid();
+                spdyHeadersFrame.setInvalid();
                 return;
             }
         }
@@ -601,7 +601,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
 
             // Recipients of a zero-length name must issue a stream error
             if (nameLength <= 0) {
-                spdyHeaderBlock.setInvalid();
+                spdyHeadersFrame.setInvalid();
                 return;
             }
             headerSize += nameLength;
@@ -621,8 +621,8 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
             String name = new String(nameBytes, "UTF-8");
 
             // Check for identically named headers
-            if (spdyHeaderBlock.headers().contains(name)) {
-                spdyHeaderBlock.setInvalid();
+            if (spdyHeadersFrame.headers().contains(name)) {
+                spdyHeadersFrame.setInvalid();
                 return;
             }
 
@@ -636,17 +636,17 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
 
             // Recipients of illegal value fields must issue a stream error
             if (valueLength < 0) {
-                spdyHeaderBlock.setInvalid();
+                spdyHeadersFrame.setInvalid();
                 return;
             }
 
             // SPDY/3 allows zero-length (empty) header values
             if (valueLength == 0) {
                 if (version < 3) {
-                    spdyHeaderBlock.setInvalid();
+                    spdyHeadersFrame.setInvalid();
                     return;
                 } else {
-                    spdyHeaderBlock.headers().add(name, "");
+                    spdyHeadersFrame.headers().add(name, "");
                     numHeaders --;
                     this.headerSize = headerSize;
                     continue;
@@ -678,16 +678,16 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
                 if (index < valueBytes.length && valueBytes[index + 1] == (byte) 0) {
                     // Received multiple, in-sequence NULL characters
                     // Recipients of illegal value fields must issue a stream error
-                    spdyHeaderBlock.setInvalid();
+                    spdyHeadersFrame.setInvalid();
                     return;
                 }
                 String value = new String(valueBytes, offset, index - offset, "UTF-8");
 
                 try {
-                    spdyHeaderBlock.headers().add(name, value);
+                    spdyHeadersFrame.headers().add(name, value);
                 } catch (IllegalArgumentException e) {
                     // Name contains NULL or non-ascii characters
-                    spdyHeaderBlock.setInvalid();
+                    spdyHeadersFrame.setInvalid();
                     return;
                 }
                 index ++;
