@@ -15,40 +15,42 @@
  */
 package io.netty.handler.codec.spdy;
 
-import io.netty.util.internal.StringUtil;
-
 /**
- * The default {@link SpdyPingFrame} implementation.
+ * The default {@link SpdyStreamFrame} implementation.
  */
-public class DefaultSpdyPingFrame implements SpdyPingFrame {
+public abstract class DefaultSpdyStreamFrame implements SpdyStreamFrame {
 
-    private int id;
+    private int streamId;
+    private boolean last;
 
     /**
      * Creates a new instance.
      *
-     * @param id the unique ID of this frame
+     * @param streamId the Stream-ID of this frame
      */
-    public DefaultSpdyPingFrame(int id) {
-        setId(id);
+    protected DefaultSpdyStreamFrame(int streamId) {
+        setStreamId(streamId);
     }
 
-    public int getId() {
-        return id;
+    public int getStreamId() {
+        return streamId;
     }
 
-    public SpdyPingFrame setId(int id) {
-        this.id = id;
+    public SpdyStreamFrame setStreamId(int streamId) {
+        if (streamId <= 0) {
+            throw new IllegalArgumentException(
+                    "Stream-ID must be positive: " + streamId);
+        }
+        this.streamId = streamId;
         return this;
     }
 
-    @Override
-    public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append(getClass().getSimpleName());
-        buf.append(StringUtil.NEWLINE);
-        buf.append("--> ID = ");
-        buf.append(getId());
-        return buf.toString();
+    public boolean isLast() {
+        return last;
+    }
+
+    public SpdyStreamFrame setLast(boolean last) {
+        this.last = last;
+        return this;
     }
 }

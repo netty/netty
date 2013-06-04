@@ -266,7 +266,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
         int streamID = SpdyHttpHeaders.getStreamId(httpResponse);
         SpdyHttpHeaders.removeStreamId(httpResponse);
 
-        // The Connection, Keep-Alive, Proxy-Connection, and Transfer-ENcoding
+        // The Connection, Keep-Alive, Proxy-Connection, and Transfer-Encoding
         // headers are not valid and MUST not be sent.
         httpResponse.headers().remove(HttpHeaders.Names.CONNECTION);
         httpResponse.headers().remove("Keep-Alive");

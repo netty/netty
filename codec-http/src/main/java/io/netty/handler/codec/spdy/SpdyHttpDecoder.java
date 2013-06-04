@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -37,7 +37,7 @@ import java.util.Map;
  * Decodes {@link SpdySynStreamFrame}s, {@link SpdySynReplyFrame}s,
  * and {@link SpdyDataFrame}s into {@link FullHttpRequest}s and {@link FullHttpResponse}s.
  */
-public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyDataOrControlFrame> {
+public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
 
     private final int spdyVersion;
     private final int maxContentLength;
@@ -91,7 +91,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyDataOrControlFr
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, SpdyDataOrControlFrame msg, MessageList<Object> out)
+    protected void decode(ChannelHandlerContext ctx, SpdyFrame msg, MessageList<Object> out)
             throws Exception {
         if (msg instanceof SpdySynStreamFrame) {
 
@@ -252,7 +252,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyDataOrControlFr
         }
     }
 
-    private static FullHttpRequest createHttpRequest(int spdyVersion, SpdyHeaderBlock requestFrame)
+    private static FullHttpRequest createHttpRequest(int spdyVersion, SpdyHeadersFrame requestFrame)
             throws Exception {
         // Create the first line of the request from the name/value pairs
         HttpMethod  method      = SpdyHeaders.getMethod(spdyVersion, requestFrame);
@@ -287,7 +287,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyDataOrControlFr
         return req;
     }
 
-    private static FullHttpResponse createHttpResponse(int spdyVersion, SpdyHeaderBlock responseFrame)
+    private static FullHttpResponse createHttpResponse(int spdyVersion, SpdyHeadersFrame responseFrame)
             throws Exception {
         // Create the first line of the response from the name/value pairs
         HttpResponseStatus status = SpdyHeaders.getStatus(spdyVersion, responseFrame);
