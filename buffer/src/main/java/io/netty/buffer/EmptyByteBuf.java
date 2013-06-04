@@ -801,16 +801,6 @@ public final class EmptyByteBuf implements ByteBuf {
     }
 
     @Override
-    public ByteBuf suspendIntermediaryDeallocations() {
-        return this;
-    }
-
-    @Override
-    public ByteBuf resumeIntermediaryDeallocations() {
-        return this;
-    }
-
-    @Override
     public int hashCode() {
         return 0;
     }

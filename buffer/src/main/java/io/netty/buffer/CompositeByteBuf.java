@@ -388,12 +388,6 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
     CompositeByteBuf writeZero(int length);
 
     @Override
-    CompositeByteBuf suspendIntermediaryDeallocations();
-
-    @Override
-    CompositeByteBuf resumeIntermediaryDeallocations();
-
-    @Override
     CompositeByteBuf retain(int increment);
 
     @Override

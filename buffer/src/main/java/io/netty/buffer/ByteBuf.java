@@ -1878,23 +1878,6 @@ public interface ByteBuf extends ReferenceCounted, Comparable<ByteBuf> {
     String toString(int index, int length, Charset charset);
 
     /**
-     * Suspends the intermediary deallocation of the internal memory block of this buffer until asked via
-     * {@link #resumeIntermediaryDeallocations()}. An intermediary deallocation is usually made when the capacity of
-     * a buffer changes.
-     *
-     * @throws UnsupportedOperationException if this buffer is derived
-     */
-    ByteBuf suspendIntermediaryDeallocations();
-
-    /**
-     * Resumes the intermediary deallocation of the internal memory block of this buffer, suspended by
-     * {@link #suspendIntermediaryDeallocations()}.
-     *
-     * @throws UnsupportedOperationException if this buffer is derived
-     */
-    ByteBuf resumeIntermediaryDeallocations();
-
-    /**
      * Returns a hash code which was calculated from the content of this
      * buffer.  If there's a byte array which is
      * {@linkplain #equals(Object) equal to} this array, both arrays should

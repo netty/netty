@@ -287,7 +287,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                                 return index + 1;
                             }
                             // JDK decided to write data (or notify handler) later.
-                            buf.suspendIntermediaryDeallocations();
                             return 0;
                         }
 
@@ -389,8 +388,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
             boolean release = true;
             try {
-                buf.resumeIntermediaryDeallocations();
-
                 int writtenBytes = result.intValue();
                 if (writtenBytes > 0) {
                     // Update the readerIndex with the amount of read bytes

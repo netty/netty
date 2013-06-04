@@ -26,7 +26,7 @@ import java.util.List;
 
 
 /**
- * Creates a new {@link ByteBuf} or a new {@link MessageBuf} by allocating new space or by wrapping
+ * Creates a new {@link ByteBuf} by allocating new space or by wrapping
  * or copying existing byte arrays, byte buffers and a string.
  *
  * <h3>Use static import</h3>

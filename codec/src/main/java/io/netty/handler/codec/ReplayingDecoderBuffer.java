@@ -920,16 +920,6 @@ final class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
-    public ByteBuf suspendIntermediaryDeallocations() {
-        throw new UnreplayableOperationException();
-    }
-
-    @Override
-    public ByteBuf resumeIntermediaryDeallocations() {
-        throw new UnreplayableOperationException();
-    }
-
-    @Override
     public ByteBuf unwrap() {
         throw new UnreplayableOperationException();
     }
