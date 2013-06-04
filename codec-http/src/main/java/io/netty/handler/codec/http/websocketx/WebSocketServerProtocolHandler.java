@@ -19,6 +19,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.MessageList;
@@ -43,7 +44,7 @@ import static io.netty.handler.codec.http.HttpVersion.*;
  * to the <tt>io.netty.example.http.websocketx.server.WebSocketServer</tt> example.
  *
  * To know once a handshake was done you can intercept the
- * {@link io.netty.channel.ChannelInboundHandler#userEventTriggered(ChannelHandlerContext, Object)} and check if the event was of type
+ * {@link ChannelInboundHandler#userEventTriggered(ChannelHandlerContext, Object)} and check if the event was of type
  * {@link ServerHandshakeStateEvent#HANDSHAKE_COMPLETE}.
  */
 public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
@@ -97,7 +98,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
             handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
             return;
         }
-        super.decode(ctx, frame, out);    //To change body of overridden methods use File | Settings | File Templates.
+        super.decode(ctx, frame, out);
     }
 
     @Override

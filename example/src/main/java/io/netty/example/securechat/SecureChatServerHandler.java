@@ -32,7 +32,7 @@ import java.util.logging.Logger;
 /**
  * Handles a server-side channel.
  */
-public class SecureChatServerHandler extends ChannelInboundHandlerAdapter{
+public class SecureChatServerHandler extends ChannelInboundHandlerAdapter {
 
     private static final Logger logger = Logger.getLogger(
             SecureChatServerHandler.class.getName());

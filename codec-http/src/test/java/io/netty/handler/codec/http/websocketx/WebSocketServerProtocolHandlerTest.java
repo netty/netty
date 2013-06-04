@@ -43,12 +43,12 @@ import static org.junit.Assert.*;
 public class WebSocketServerProtocolHandlerTest {
 
     private final Queue<FullHttpResponse> responses = new ArrayDeque<FullHttpResponse>();
-    
+
     @Before
     public void setUp() {
         responses.clear();
     }
-    
+
     @Test
     public void testHttpUpgradeRequest() throws Exception {
         EmbeddedChannel ch = createChannel(new MockOutboundHandler());
@@ -111,7 +111,7 @@ public class WebSocketServerProtocolHandlerTest {
         CustomTextFrameHandler customTextFrameHandler = new CustomTextFrameHandler();
         EmbeddedChannel ch = createChannel(customTextFrameHandler);
         writeUpgradeRequest(ch);
-        
+
         if (ch.pipeline().context(HttpRequestDecoder.class) != null) {
             // Removing the HttpRequestDecoder because we are writing a TextWebSocketFrame and thus
             // decoding is not neccessary.
@@ -147,7 +147,8 @@ public class WebSocketServerProtocolHandlerTest {
     private class MockOutboundHandler extends ChannelOutboundHandlerAdapter {
 
         @Override
-        public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
+        public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise)
+                throws Exception {
             for (int i = 0; i < msgs.size(); i++) {
                 responses.add((FullHttpResponse) msgs.get(i));
             }
@@ -162,7 +163,6 @@ public class WebSocketServerProtocolHandlerTest {
         public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
             assertEquals(1, msgs.size());
             content = "processed: " + ((TextWebSocketFrame) msgs.get(0)).text();
-
         }
 
         String getContent() {

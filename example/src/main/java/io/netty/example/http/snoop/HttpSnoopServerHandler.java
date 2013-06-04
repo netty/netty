@@ -137,7 +137,6 @@ public class HttpSnoopServerHandler extends ChannelInboundHandlerAdapter {
                 return writeResponse(ctx, trailer, out);
             }
         }
-        
         return true;
     }
 
@@ -188,7 +187,7 @@ public class HttpSnoopServerHandler extends ChannelInboundHandlerAdapter {
 
         // Write the response.
         out.add(response);
-        
+
         return keepAlive;
     }
 

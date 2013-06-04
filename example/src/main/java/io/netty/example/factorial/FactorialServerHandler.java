@@ -50,7 +50,7 @@ public class FactorialServerHandler extends ChannelInboundHandlerAdapter {
             factorial = factorial.multiply(msg);
             ctx.write(factorial);
         }
-
+        msgs.recycle();
     }
 
     @Override

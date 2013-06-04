@@ -16,7 +16,6 @@
 package io.netty.channel.sctp;
 
 import com.sun.nio.sctp.SctpServerChannel;
-import com.sun.nio.sctp.SctpStandardSocketOptions.*;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;

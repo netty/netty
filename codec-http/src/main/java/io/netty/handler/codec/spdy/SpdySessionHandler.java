@@ -454,8 +454,8 @@ public class SpdySessionHandler
         ctx.write(out, promise);
     }
 
-    private void handleOutboundMessage(ChannelHandlerContext ctx, Object msg, MessageList<Object> out) throws Exception {
-
+    private void handleOutboundMessage(ChannelHandlerContext ctx, Object msg, MessageList<Object> out)
+            throws Exception {
         if (msg instanceof SpdyDataFrame) {
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
@@ -686,7 +686,7 @@ public class SpdySessionHandler
         if (fireMessageReceived) {
             in.add(spdyRstStreamFrame);
             ctx.fireMessageReceived(in);
-            while(!in.isEmpty()) {
+            while (!in.isEmpty()) {
                 in.remove(0);
             }
         }

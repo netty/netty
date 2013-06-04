@@ -209,7 +209,7 @@ public class ChunkedWriteHandler
             return;
         }
         MessageList<Object> messages = MessageList.newInstance();
-        while(isWritable()) {
+        while (isWritable()) {
             if (currentEvent == null) {
                 currentEvent = queue.poll();
             }

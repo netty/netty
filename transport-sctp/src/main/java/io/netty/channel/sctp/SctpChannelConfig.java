@@ -104,7 +104,7 @@ public interface SctpChannelConfig extends ChannelConfig {
 
     @Override
     SctpChannelConfig setAllocator(ByteBufAllocator allocator);
-    
+
     @Override
     SctpChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator);
 

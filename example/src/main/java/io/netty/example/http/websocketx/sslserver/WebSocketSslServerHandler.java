@@ -64,7 +64,6 @@ public class WebSocketSslServerHandler extends ChannelInboundHandlerAdapter {
                 handleWebSocketFrame(ctx, (WebSocketFrame) msg);
             }
         }
-
     }
 
     private void handleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {

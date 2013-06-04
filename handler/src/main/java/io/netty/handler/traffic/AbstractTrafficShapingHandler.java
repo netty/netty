@@ -272,7 +272,8 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, final MessageList<Object> msgs, final ChannelPromise promise) throws Exception {
+    public void write(final ChannelHandlerContext ctx, final MessageList<Object> msgs, final ChannelPromise promise)
+            throws Exception {
         long curtime = System.currentTimeMillis();
         long size = 0;
         for (int i = 0; i < msgs.size(); i++) {

@@ -52,14 +52,12 @@ public class SctpInboundByteStreamHandler extends MessageToMessageDecoder<SctpMe
         return msg.protocolIdentifier() == protocolIdentifier && msg.streamIdentifier() == streamIdentifier;
     }
 
-    
     @Override
     protected void decode(ChannelHandlerContext ctx, SctpMessage msg, MessageList<Object> out) throws Exception {
         if (!msg.isComplete()) {
             throw new CodecException(String.format("Received SctpMessage is not complete, please add %s in the " +
                     "pipeline before this handler", SctpMessageCompletionHandler.class.getSimpleName()));
         }
-        
         out.add(msg.content());
     }
 }

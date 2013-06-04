@@ -32,8 +32,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  * between the echo peers by sending the first message to the other peer on
  * activation.
  */
-public class EchoMessageHandler extends
-        ChannelInboundHandlerAdapter{
+public class EchoMessageHandler extends ChannelInboundHandlerAdapter {
 
     private static final InternalLogger log = InternalLoggerFactory.getInstance(EchoMessageHandler.class);
 
