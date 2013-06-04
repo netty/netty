@@ -75,84 +75,81 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
         final ChannelPipeline pipeline = pipeline();
 
         // TODO: calculate size as in 3.x
-        final ByteBuf byteBuf = alloc().ioBuffer();
+        ByteBuf byteBuf = alloc().buffer();
+        boolean closed = false;
+        boolean read = false;
+        boolean firedInboundBufferSuspeneded = false;
         try {
-            boolean closed = false;
-            boolean read = false;
-            boolean firedInboundBufferSuspeneded = false;
-            try {
-                for (;;) {
-                    int localReadAmount = doReadBytes(byteBuf);
-                    if (localReadAmount > 0) {
-                        read = true;
-                    } else if (localReadAmount < 0) {
-                        closed = true;
-                    }
-
-                    final int available = available();
-                    if (available <= 0) {
-                        break;
-                    }
-
-                    if (!byteBuf.isWritable()) {
-                        final int capacity = byteBuf.capacity();
-                        final int maxCapacity = byteBuf.maxCapacity();
-                        if (capacity == maxCapacity) {
-                           if (read) {
-                                read = false;
-                                pipeline.fireMessageReceived(byteBuf);
-                                byteBuf.clear();
-                            }
-                        } else {
-                            final int writerIndex = byteBuf.writerIndex();
-                            if (writerIndex + available > maxCapacity) {
-                                byteBuf.capacity(maxCapacity);
-                            } else {
-                                byteBuf.ensureWritable(available);
-                            }
-                        }
-                    }
-                    if (!config().isAutoRead()) {
-                        // stop reading until next Channel.read() call
-                        // See https://github.com/netty/netty/issues/1363
-                        break;
-                    }
-                }
-            } catch (Throwable t) {
-                if (read) {
-                    read = false;
-                    pipeline.fireMessageReceived(byteBuf);
-                }
-
-                if (t instanceof IOException) {
+            for (;;) {
+                int localReadAmount = doReadBytes(byteBuf);
+                if (localReadAmount > 0) {
+                    read = true;
+                } else if (localReadAmount < 0) {
                     closed = true;
-                    pipeline.fireExceptionCaught(t);
-                } else {
-                    firedInboundBufferSuspeneded = true;
-                    pipeline.fireChannelReadSuspended();
-                    pipeline.fireExceptionCaught(t);
-                    unsafe().close(voidPromise());
                 }
-            } finally {
-                if (read) {
-                    pipeline.fireMessageReceived(byteBuf);
+
+                final int available = available();
+                if (available <= 0) {
+                    break;
                 }
-                if (closed) {
-                    inputShutdown = true;
-                    if (isOpen()) {
-                        if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
-                            pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+
+                if (!byteBuf.isWritable()) {
+                    final int capacity = byteBuf.capacity();
+                    final int maxCapacity = byteBuf.maxCapacity();
+                    if (capacity == maxCapacity) {
+                        if (read) {
+                            read = false;
+                            pipeline.fireMessageReceived(byteBuf);
+                            byteBuf = alloc().buffer();
+                        }
+                    } else {
+                        final int writerIndex = byteBuf.writerIndex();
+                        if (writerIndex + available > maxCapacity) {
+                            byteBuf.capacity(maxCapacity);
                         } else {
-                            unsafe().close(unsafe().voidPromise());
+                            byteBuf.ensureWritable(available);
                         }
                     }
-                } else if (!firedInboundBufferSuspeneded) {
-                    pipeline.fireChannelReadSuspended();
+                }
+                if (!config().isAutoRead()) {
+                    // stop reading until next Channel.read() call
+                    // See https://github.com/netty/netty/issues/1363
+                    break;
                 }
             }
+        } catch (Throwable t) {
+            if (read) {
+                read = false;
+                pipeline.fireMessageReceived(byteBuf);
+            }
+
+            if (t instanceof IOException) {
+                closed = true;
+                pipeline.fireExceptionCaught(t);
+            } else {
+                firedInboundBufferSuspeneded = true;
+                pipeline.fireChannelReadSuspended();
+                pipeline.fireExceptionCaught(t);
+                unsafe().close(voidPromise());
+            }
         } finally {
-            byteBuf.release();
+            if (read) {
+                pipeline.fireMessageReceived(byteBuf);
+            }
+            if (closed) {
+                inputShutdown = true;
+                if (isOpen()) {
+                    if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
+                        pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+                    } else {
+                        unsafe().close(unsafe().voidPromise());
+                    }
+                }
+            } else if (!firedInboundBufferSuspeneded) {
+                pipeline.fireChannelReadSuspended();
+            }
         }
+
     }
 
     @Override
@@ -163,10 +160,12 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
             while (buf.isReadable()) {
                 doWriteBytes(buf);
             }
+            buf.release();
             return 1;
         } else if (msg instanceof FileRegion) {
             FileRegion region = (FileRegion) msg;
             doWriteFileRegion(region);
+            region.release();
             return 1;
         } else {
             throw new UnsupportedOperationException();
@@ -196,5 +195,11 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
      */
     protected abstract void doWriteBytes(ByteBuf buf) throws Exception;
 
+    /**
+     * Write the data which is hold by the {@link FileRegion} to the underlying Socket.
+     *
+     * @param region        the {@link FileRegion} which holds the data to transfer
+     * @throws Exception    is thrown if an error accoured
+     */
     protected abstract void doWriteFileRegion(FileRegion region) throws Exception;
 }
