@@ -16,6 +16,7 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
@@ -58,40 +59,51 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
 
     @Override
     public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
+        MessageList<Object> out = MessageList.newInstance();
+        boolean success = false;
         try {
-            ByteBuf out = null;
+            ByteBuf buf = null;
             int size = msgs.size();
             for (int i = 0; i < size; i ++) {
                 Object m = msgs.get(i);
                 if (acceptOutboundMessage(m)) {
                     @SuppressWarnings("unchecked")
                     I cast = (I) m;
-                    if (out == null) {
-                        out = ctx.alloc().buffer();
+                    if (buf == null) {
+                        buf = ctx.alloc().buffer();
                     }
-                    encode(ctx, cast, out);
+                    try {
+                        encode(ctx, cast, buf);
+                    } finally {
+                        ByteBufUtil.release(cast);
+                    }
                 } else {
-                    if (out != null && out.isReadable()) {
-                        msgs.add(out);
-                        out = null;
+                    if (buf != null && buf.isReadable()) {
+                        out.add(buf);
+                        buf = null;
                     }
 
-                    msgs.add(m);
+                    out.add(m);
                 }
             }
 
-            if (out != null && out.isReadable()) {
-                msgs.add(out);
+            if (buf != null && buf.isReadable()) {
+                out.add(buf);
             }
-
-            msgs.remove(0, size);
+            
+            success = true;
         } catch (EncoderException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (Throwable e) {
             throw new EncoderException(e);
+        } finally {
+            msgs.recycle();
+            if (success) {
+                ctx.write(out, promise);
+            } else {
+                out.releaseAllAndRecycle();
+            }
         }
-
-        ctx.write(msgs, promise);
     }
 
     /**

@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec;
 
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
@@ -57,6 +58,8 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerA
 
     @Override
     public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
+        MessageList<Object> out = MessageList.newInstance();
+        boolean success = false;
         try {
             int size = msgs.size();
             for (int i = 0; i < size; i ++) {
@@ -64,20 +67,28 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerA
                 if (acceptOutboundMessage(m)) {
                     @SuppressWarnings("unchecked")
                     I cast = (I) m;
-                    encode(ctx, cast, msgs); // TODO: Protect msgs from encode() modifying it.
+                    try {
+                        encode(ctx, cast, out);
+                    } finally {
+                        ByteBufUtil.release(cast);
+                    }
                 } else {
-                    msgs.add(m);
+                    out.add(m);
                 }
             }
-
-            msgs.remove(0, size);
+            success = true;
         } catch (CodecException e) {
             throw e;
-        } catch (Exception e) {
-            throw new EncoderException(e);
+        } catch (Throwable t) {
+            throw new EncoderException(t);
+        } finally {
+            msgs.recycle();
+            if (success) {
+                ctx.write(out, promise);
+            } else {
+                out.releaseAllAndRecycle();
+            }
         }
-
-        ctx.write(msgs, promise);
     }
 
     /**

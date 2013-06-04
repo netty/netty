@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec;
 
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.MessageList;
@@ -57,6 +58,7 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAd
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        MessageList<Object> out = MessageList.newInstance();
         try {
             int size = msgs.size();
             for (int i = 0; i < size; i ++) {
@@ -64,20 +66,23 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAd
                 if (acceptInboundMessage(m)) {
                     @SuppressWarnings("unchecked")
                     I cast = (I) m;
-                    decode(ctx, cast, msgs);
+                    try {
+                        decode(ctx, cast, out);
+                    } finally {
+                        ByteBufUtil.release(cast);
+                    }
                 } else {
-                    msgs.add(m);
+                    out.add(m);
                 }
             }
-
-            msgs.remove(0, size);
         } catch (DecoderException e) {
             throw e;
         } catch (Exception e) {
             throw new DecoderException(e);
+        } finally {
+            msgs.recycle();
+            ctx.fireMessageReceived(out);
         }
-
-        ctx.fireMessageReceived(msgs);
     }
 
     /**

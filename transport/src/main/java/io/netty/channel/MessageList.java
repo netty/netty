@@ -87,7 +87,7 @@ public final class MessageList<T> {
         return releasedAll;
     }
 
-    public boolean releaseAndRecycle() {
+    public boolean releaseAllAndRecycle() {
         return releaseAll() && recycle();
     }
 
