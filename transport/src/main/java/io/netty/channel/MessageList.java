@@ -88,10 +88,10 @@ public final class MessageList<T> {
     }
 
     public boolean releaseAllAndRecycle() {
-        return releaseAll() && recycle();
+        return releaseAllAndRecycle(1);
     }
 
-    public boolean releaseAndRecycle(int decrement) {
+    public boolean releaseAllAndRecycle(int decrement) {
         return releaseAll(decrement) && recycle();
     }
 
