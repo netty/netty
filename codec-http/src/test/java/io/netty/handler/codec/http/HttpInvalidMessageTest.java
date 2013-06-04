@@ -109,9 +109,10 @@ public class HttpInvalidMessageTest {
         ByteBuf buf = Unpooled.wrappedBuffer(data);
         for (int i = 0; i < 4096; i ++) {
             buf.setIndex(0, data.length);
-            ch.writeInbound(buf);
+            ch.writeInbound(buf.retain());
             ch.checkException();
             assertNull(ch.readInbound());
         }
+        buf.release();
     }
 }

@@ -90,6 +90,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        MessageList<Object> out = MessageList.newInstance();
         try {
             int size = msgs.size();
             for (int i = 0; i < size; i ++) {
@@ -97,12 +98,12 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 if (m instanceof ByteBuf) {
                     ByteBuf data = (ByteBuf) m;
                     if (cumulation == null) {
+                        cumulation = data;
                         try {
-                            callDecode(ctx, data, msgs);
+                            callDecode(ctx, data, out);
                         } finally {
-                            if (data.isReadable()) {
-                                cumulation = data;
-                            } else {
+                            if (!data.isReadable()) {
+                                cumulation = null;
                                 data.release();
                             }
                         }
@@ -115,7 +116,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                                 oldCumulation.release();
                             }
                             cumulation.writeBytes(data);
-                            callDecode(ctx, cumulation, msgs);
+                            callDecode(ctx, cumulation, out);
                         } finally {
                             if (!cumulation.isReadable()) {
                                 cumulation.release();
@@ -127,21 +128,19 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                         }
                     }
                 } else {
-                    msgs.add(m);
+                    out.add(m);
                 }
             }
-
-            msgs.remove(0, size);
         } catch (DecoderException e) {
             throw e;
-        } catch (Exception e) {
-            throw new DecoderException(e);
-        }
-
-        if (!msgs.isEmpty()) {
-            ctx.fireMessageReceived(msgs);
-        } else {
-            decodeWasNull = true;
+        } catch (Throwable t) {
+            throw new DecoderException(t);
+        } finally {
+            if (msgs.isEmpty()) {
+                decodeWasNull = true;
+            }
+            msgs.recycle();
+            ctx.fireMessageReceived(out);
         }
     }
 

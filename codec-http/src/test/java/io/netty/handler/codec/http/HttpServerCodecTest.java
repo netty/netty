@@ -35,7 +35,8 @@ public class HttpServerCodecTest {
         EmbeddedChannel decoderEmbedder = new EmbeddedChannel(httpServerCodec);
 
         int totalContentLength = maxChunkSize * 5;
-        decoderEmbedder.writeInbound(Unpooled.copiedBuffer("PUT /test HTTP/1.1\r\n" +
+        decoderEmbedder.writeInbound(Unpooled.copiedBuffer(
+                "PUT /test HTTP/1.1\r\n" +
                 "Content-Length: " + totalContentLength + "\r\n" +
                 "\r\n", CharsetUtil.UTF_8));
 

@@ -115,8 +115,8 @@ public class HttpContentEncoderTest {
     }
 
     /**
-     * If the length of the content is unknown, {@link HttpContentEncoder} should not skip encoding even if the
-     * actual length is turned out to be 0.
+     * If the length of the content is unknown, {@link HttpContentEncoder} should not skip encoding the content
+     * even if the actual length is turned out to be 0.
      */
     @Test
     public void testEmptySplitContent() throws Exception {
@@ -128,7 +128,7 @@ public class HttpContentEncoderTest {
 
         ch.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT);
         HttpContent chunk = (HttpContent) ch.readOutbound();
-        assertThat(chunk.content().isReadable(), is(false));
+        assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("0"));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
         assertThat(ch.readOutbound(), is(nullValue()));
     }
