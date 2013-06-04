@@ -52,16 +52,17 @@ public class HttpSnoopServerHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        MessageList<Object> out = MessageList.newInstance();
         int size = msgs.size();
         try {
             for (int i = 0; i < size; i ++) {
-                if (!messageReceived(ctx, msgs.get(i), msgs)) {
+                if (!messageReceived(ctx, msgs.get(i), out)) {
                     break;
                 }
             }
         } finally {
-            msgs.remove(0, size);
-            ctx.write(msgs);
+            msgs.releaseAllAndRecycle();
+            ctx.write(out);
         }
     }
 

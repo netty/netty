@@ -353,6 +353,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
         if (msgs.isEmpty()) {
             msgs.recycle();
+            return this;
         }
 
         final DefaultChannelHandlerContext next = findContextInbound();

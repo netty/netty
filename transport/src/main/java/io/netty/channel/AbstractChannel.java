@@ -677,6 +677,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     MessageList<Object> messages = outboundBuffer.currentMessages;
                     int messageIndex = outboundBuffer.currentMessageIndex;
                     int messageCount = messages.size();
+                    if (messageCount == 0) {
+                        messages.recycle();
+                        promise.trySuccess();
+                        if (!outboundBuffer.next()) {
+                            break;
+                        }
+                    }
+                    
                     int writtenMessages = doWrite(messages, messageIndex);
                     outboundBuffer.currentMessageIndex = messageIndex += writtenMessages;
                     if (messageIndex >= messageCount) {
