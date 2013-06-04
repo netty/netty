@@ -83,7 +83,6 @@ class WebSocketServerProtocolHandshakeHandler
                         WebSocketServerProtocolHandler.forbiddenHttpRequestResponder());
             }
         }
-
     }
 
     private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
