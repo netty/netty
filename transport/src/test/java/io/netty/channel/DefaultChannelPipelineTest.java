@@ -326,6 +326,131 @@ public class DefaultChannelPipelineTest {
         removeLatch.await();
     }
 
+    @Test(timeout = 100000)
+    public void testRemoveAndForwardInbound() throws Exception {
+        final BufferedTestHandler handler1 = new BufferedTestHandler();
+        final BufferedTestHandler handler2 = new BufferedTestHandler();
+
+        setUp(handler1, handler2);
+
+        self.eventLoop().submit(new Runnable() {
+            @Override
+            public void run() {
+                ChannelPipeline p = self.pipeline();
+                handler1.inboundBuffer.add(8);
+                assertEquals(8, handler1.inboundBuffer.get(0));
+                assertTrue(handler2.inboundBuffer.isEmpty());
+                p.remove(handler1);
+                assertEquals(1, handler2.inboundBuffer.size());
+                assertEquals(8, handler2.inboundBuffer.get(0));
+                assertFalse(handler1.inboundBuffer.recycle());
+            }
+        }).sync();
+    }
+
+    @Test(timeout = 10000)
+    public void testRemoveAndForwardOutbound() throws Exception {
+        final BufferedTestHandler handler1 = new BufferedTestHandler();
+        final BufferedTestHandler handler2 = new BufferedTestHandler();
+
+        setUp(handler1, handler2);
+
+        self.eventLoop().submit(new Runnable() {
+            @Override
+            public void run() {
+                ChannelPipeline p = self.pipeline();
+                handler2.outboundBuffer.add(8);
+                assertEquals(8, handler2.outboundBuffer.get(0));
+                assertTrue(handler1.outboundBuffer.isEmpty());
+                p.remove(handler2);
+                assertEquals(1, handler1.outboundBuffer.size());
+                assertEquals(8, handler1.outboundBuffer.get(0));
+                assertFalse(handler2.outboundBuffer.recycle());
+            }
+        }).sync();
+    }
+
+    @Test(timeout = 10000)
+    public void testReplaceAndForwardOutbound() throws Exception {
+        final BufferedTestHandler handler1 = new BufferedTestHandler();
+        final BufferedTestHandler handler2 = new BufferedTestHandler();
+
+        setUp(handler1);
+
+        self.eventLoop().submit(new Runnable() {
+            @Override
+            public void run() {
+                ChannelPipeline p = self.pipeline();
+                handler1.outboundBuffer.add(8);
+                assertEquals(8, handler1.outboundBuffer.get(0));
+                assertTrue(handler2.outboundBuffer.isEmpty());
+                p.replace(handler1, "handler2", handler2);
+                assertEquals(8, handler2.outboundBuffer.get(0));
+                assertFalse(handler1.outboundBuffer.recycle());
+            }
+        }).sync();
+    }
+
+    @Test(timeout = 10000)
+    public void testReplaceAndForwardInboundAndOutbound() throws Exception {
+        final BufferedTestHandler handler1 = new BufferedTestHandler();
+        final BufferedTestHandler handler2 = new BufferedTestHandler();
+
+        setUp(handler1);
+
+        self.eventLoop().submit(new Runnable() {
+            @Override
+            public void run() {
+                ChannelPipeline p = self.pipeline();
+                handler1.inboundBuffer.add(8);
+                handler1.outboundBuffer.add(8);
+
+                assertEquals(8, handler1.inboundBuffer.get(0));
+                assertEquals(8, handler1.outboundBuffer.get(0));
+                assertTrue(handler2.inboundBuffer.isEmpty());
+                assertTrue(handler2.outboundBuffer.isEmpty());
+
+                p.replace(handler1, "handler2", handler2);
+                assertEquals(8, handler2.outboundBuffer.get(0));
+                assertEquals(8, handler2.inboundBuffer.get(0));
+
+                assertFalse(handler1.inboundBuffer.recycle());
+                assertFalse(handler1.outboundBuffer.recycle());
+            }
+        }).sync();
+    }
+
+    @Test(timeout = 10000)
+    public void testRemoveAndForwardInboundOutbound() throws Exception {
+        final BufferedTestHandler handler1 = new BufferedTestHandler();
+        final BufferedTestHandler handler2 = new BufferedTestHandler();
+        final BufferedTestHandler handler3 = new BufferedTestHandler();
+
+        setUp(handler1, handler2, handler3);
+
+        self.eventLoop().submit(new Runnable() {
+            @Override
+            public void run() {
+                ChannelPipeline p = self.pipeline();
+                handler2.inboundBuffer.add(8);
+                handler2.outboundBuffer.add(8);
+
+                assertEquals(8, handler2.inboundBuffer.get(0));
+                assertEquals(8, handler2.outboundBuffer.get(0));
+
+                assertEquals(0, handler1.outboundBuffer.size());
+                assertEquals(0, handler3.inboundBuffer.size());
+
+                p.remove(handler2);
+                assertEquals(8, handler3.inboundBuffer.get(0));
+                assertEquals(8, handler1.outboundBuffer.get(0));
+
+                assertFalse(handler2.inboundBuffer.recycle());
+                assertFalse(handler2.outboundBuffer.recycle());
+            }
+        }).sync();
+    }
+
     private static int next(DefaultChannelHandlerContext ctx) {
         DefaultChannelHandlerContext next = ctx.next;
         if (next == null) {
@@ -370,6 +495,39 @@ public class DefaultChannelPipelineTest {
 
     @Sharable
     private static class TestHandler extends ChannelDuplexHandler { }
+
+    private static class BufferedTestHandler extends ChannelDuplexHandler
+            implements BufferedChannelInboundHandler, BufferedChannelOutboundHandler {
+        final MessageList<Object> inboundBuffer = MessageList.newInstance();
+        final MessageList<Object> outboundBuffer = MessageList.newInstance();
+
+        @Override
+        public MessageList<Object> bufferedInboundMessages() {
+            return inboundBuffer;
+        }
+
+        @Override
+        public MessageList<Object> bufferedOutboundMessages() {
+            return outboundBuffer;
+        }
+
+        @Override
+        public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise)
+                throws Exception {
+            for (int i = 0; i < msgs.size(); i++) {
+                outboundBuffer.add(msgs.get(i));
+            }
+            msgs.recycle();
+        }
+
+        @Override
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            for (int i = 0; i < msgs.size(); i++) {
+                inboundBuffer.add(msgs.get(i));
+            }
+            msgs.recycle();
+        }
+    }
 
     /** Test handler to validate life-cycle aware behavior. */
     private static final class LifeCycleAwareTestHandler extends ChannelHandlerAdapter {
