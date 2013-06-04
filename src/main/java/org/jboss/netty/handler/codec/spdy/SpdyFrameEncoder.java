@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -30,7 +30,7 @@ import java.util.Set;
 import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
 /**
- * Encodes a SPDY Data or Control Frame into a {@link ChannelBuffer}.
+ * Encodes a SPDY Frame into a {@link ChannelBuffer}.
  */
 public class SpdyFrameEncoder implements ChannelDownstreamHandler {
 
@@ -39,31 +39,12 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
     private final SpdyHeaderBlockCompressor headerBlockCompressor;
 
     /**
-     * Creates a new instance with the default {@code version (2)},
-     * {@code compressionLevel (6)}, {@code windowBits (15)},
-     * and {@code memLevel (8)}.
-     */
-    @Deprecated
-    public SpdyFrameEncoder() {
-        this(2, 6, 15, 8);
-    }
-
-    /**
      * Creates a new instance with the specified {@code version} and the
      * default {@code compressionLevel (6)}, {@code windowBits (15)},
      * and {@code memLevel (8)}.
      */
     public SpdyFrameEncoder(int version) {
         this(version, 6, 15, 8);
-    }
-
-    /**
-     * Creates a new instance with the default {@code version (2)} and the
-     * specified parameters.
-     */
-    @Deprecated
-    public SpdyFrameEncoder(int compressionLevel, int windowBits, int memLevel) {
-        this(2, compressionLevel, windowBits, memLevel);
     }
 
     /**
@@ -255,17 +236,6 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
             return;
         }
 
-        if (msg instanceof SpdyNoOpFrame) {
-
-            ChannelBuffer frame = ChannelBuffers.buffer(
-                    ByteOrder.BIG_ENDIAN, SPDY_HEADER_SIZE);
-            frame.writeShort(version | 0x8000);
-            frame.writeShort(SPDY_NOOP_FRAME);
-            frame.writeInt(0);
-            Channels.write(ctx, e.getFuture(), frame, e.getRemoteAddress());
-            return;
-        }
-
         if (msg instanceof SpdyPingFrame) {
 
             SpdyPingFrame spdyPingFrame = (SpdyPingFrame) msg;
@@ -360,7 +330,7 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
         }
     }
 
-    private static ChannelBuffer encodeHeaderBlock(int version, SpdyHeaderBlock headerFrame)
+    private static ChannelBuffer encodeHeaderBlock(int version, SpdyHeadersFrame headerFrame)
             throws Exception {
         Set<String> names = headerFrame.getHeaderNames();
         int numHeaders = names.size();

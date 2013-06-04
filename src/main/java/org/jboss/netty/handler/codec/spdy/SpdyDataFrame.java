@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -19,54 +19,9 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 
 /**
- * A SPDY Protocol Data Frame
+ * A SPDY Protocol DATA Frame
  */
-public interface SpdyDataFrame {
-
-    /**
-     * @deprecated Use {@link #getStreamId()} instead.
-     */
-    @Deprecated
-    int getStreamID();
-
-    /**
-     * Returns the Stream-ID of this frame.
-     */
-    int getStreamId();
-
-    /**
-     * @deprecated Use {@link #setStreamId(int)} instead.
-     */
-    @Deprecated
-    void setStreamID(int streamID);
-
-    /**
-     * Sets the Stream-ID of this frame.  The Stream-ID must be positive.
-     */
-    void setStreamId(int streamID);
-
-    /**
-     * Returns {@code true} if this frame is the last frame to be transmitted
-     * on the stream.
-     */
-    boolean isLast();
-
-    /**
-     * Sets if this frame is the last frame to be transmitted on the stream.
-     */
-    void setLast(boolean last);
-
-    /**
-     * @deprecated Removed from SPDY specification.
-     */
-    @Deprecated
-    boolean isCompressed();
-
-    /**
-     * @deprecated Removed from SPDY specification.
-     */
-    @Deprecated
-    void setCompressed(boolean compressed);
+public interface SpdyDataFrame extends SpdyStreamFrame {
 
     /**
      * Returns the data payload of this frame.  If there is no data payload

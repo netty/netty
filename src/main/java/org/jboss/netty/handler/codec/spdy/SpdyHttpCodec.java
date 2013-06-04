@@ -33,14 +33,6 @@ public class SpdyHttpCodec implements ChannelUpstreamHandler, ChannelDownstreamH
     /**
      * Creates a new instance with the specified decoder options.
      */
-    @Deprecated
-    public SpdyHttpCodec(int maxContentLength) {
-        this(2, maxContentLength);
-    }
-
-    /**
-     * Creates a new instance with the specified decoder options.
-     */
     public SpdyHttpCodec(int version, int maxContentLength) {
         decoder = new SpdyHttpDecoder(version, maxContentLength);
         encoder = new SpdyHttpEncoder(version);

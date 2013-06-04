@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,15 +16,9 @@
 package org.jboss.netty.handler.codec.spdy;
 
 /**
- * A SPDY Protocol WINDOW_UPDATE Control Frame
+ * A SPDY Protocol WINDOW_UPDATE Frame
  */
-public interface SpdyWindowUpdateFrame {
-
-    /**
-     * @deprecated Use {@link #getStreamId()} instead.
-     */
-    @Deprecated
-    int getStreamID();
+public interface SpdyWindowUpdateFrame extends SpdyFrame {
 
     /**
      * Returns the Stream-ID of this frame.
@@ -32,12 +26,7 @@ public interface SpdyWindowUpdateFrame {
     int getStreamId();
 
     /**
-     * Use {@link #setStreamId(int)} instead.
-     */
-    void setStreamID(int streamId);
-
-    /**
-     * Sets the Stream-ID of this frame.  The Stream-ID must be positive.
+     * Sets the Stream-ID of this frame.  The Stream-ID cannot be negative.
      */
     void setStreamId(int streamId);
 

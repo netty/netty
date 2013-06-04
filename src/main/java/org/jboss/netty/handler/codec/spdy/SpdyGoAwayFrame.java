@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,26 +16,14 @@
 package org.jboss.netty.handler.codec.spdy;
 
 /**
- * A SPDY Protocol GOAWAY Control Frame
+ * A SPDY Protocol GOAWAY Frame
  */
-public interface SpdyGoAwayFrame {
-
-    /**
-     * @deprecated Use {@link #getLastGoodStreamId()} instead.
-     */
-    @Deprecated
-    int getLastGoodStreamID();
+public interface SpdyGoAwayFrame extends SpdyFrame {
 
     /**
      * Returns the Last-good-stream-ID of this frame.
      */
     int getLastGoodStreamId();
-
-    /**
-     * @deprecated Use {@link #setLastGoodStreamId(int)} instead.
-     */
-    @Deprecated
-    void setLastGoodStreamID(int lastGoodStreamId);
 
     /**
      * Sets the Last-good-stream-ID of this frame.  The Last-good-stream-ID

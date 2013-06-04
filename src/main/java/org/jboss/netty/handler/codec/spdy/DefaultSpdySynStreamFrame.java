@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -20,63 +20,29 @@ import org.jboss.netty.util.internal.StringUtil;
 /**
  * The default {@link SpdySynStreamFrame} implementation.
  */
-public class DefaultSpdySynStreamFrame extends DefaultSpdyHeaderBlock
+public class DefaultSpdySynStreamFrame extends DefaultSpdyHeadersFrame
         implements SpdySynStreamFrame {
 
-    private int streamId;
     private int associatedToStreamId;
     private byte priority;
-    private boolean last;
     private boolean unidirectional;
 
     /**
      * Creates a new instance.
      *
-     * @param streamID             the Stream-ID of this frame
+     * @param streamId             the Stream-ID of this frame
      * @param associatedToStreamId the Associated-To-Stream-ID of this frame
      * @param priority             the priority of the stream
      */
     public DefaultSpdySynStreamFrame(
-            int streamID, int associatedToStreamId, byte priority) {
-        setStreamId(streamID);
+            int streamId, int associatedToStreamId, byte priority) {
+        super(streamId);
         setAssociatedToStreamId(associatedToStreamId);
         setPriority(priority);
     }
 
-    @Deprecated
-    public int getStreamID() {
-        return getStreamId();
-    }
-
-    public int getStreamId() {
-        return streamId;
-    }
-
-    @Deprecated
-    public void setStreamID(int streamId) {
-        setStreamId(streamId);
-    }
-
-    public void setStreamId(int streamId) {
-        if (streamId <= 0) {
-            throw new IllegalArgumentException(
-                    "Stream-ID must be positive: " + streamId);
-        }
-        this.streamId = streamId;
-    }
-
-    @Deprecated
-    public int getAssociatedToStreamID() {
-        return getAssociatedToStreamId();
-    }
-
     public int getAssociatedToStreamId() {
         return associatedToStreamId;
-    }
-
-    @Deprecated
-    public void setAssociatedToStreamID(int associatedToStreamId) {
-        setAssociatedToStreamId(associatedToStreamId);
     }
 
     public void setAssociatedToStreamId(int associatedToStreamId) {
@@ -100,14 +66,6 @@ public class DefaultSpdySynStreamFrame extends DefaultSpdyHeaderBlock
         this.priority = priority;
     }
 
-    public boolean isLast() {
-        return last;
-    }
-
-    public void setLast(boolean last) {
-        this.last = last;
-    }
-
     public boolean isUnidirectional() {
         return unidirectional;
     }
@@ -127,15 +85,15 @@ public class DefaultSpdySynStreamFrame extends DefaultSpdyHeaderBlock
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Stream-ID = ");
-        buf.append(streamId);
+        buf.append(getStreamId());
         buf.append(StringUtil.NEWLINE);
         if (associatedToStreamId != 0) {
             buf.append("--> Associated-To-Stream-ID = ");
-            buf.append(associatedToStreamId);
+            buf.append(getAssociatedToStreamId());
             buf.append(StringUtil.NEWLINE);
         }
         buf.append("--> Priority = ");
-        buf.append(priority);
+        buf.append(getPriority());
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Headers:");
         buf.append(StringUtil.NEWLINE);

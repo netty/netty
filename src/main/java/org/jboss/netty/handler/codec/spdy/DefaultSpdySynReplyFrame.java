@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -20,11 +20,8 @@ import org.jboss.netty.util.internal.StringUtil;
 /**
  * The default {@link SpdySynReplyFrame} implementation.
  */
-public class DefaultSpdySynReplyFrame extends DefaultSpdyHeaderBlock
+public class DefaultSpdySynReplyFrame extends DefaultSpdyHeadersFrame
         implements SpdySynReplyFrame {
-
-    private int streamId;
-    private boolean last;
 
     /**
      * Creates a new instance.
@@ -32,37 +29,7 @@ public class DefaultSpdySynReplyFrame extends DefaultSpdyHeaderBlock
      * @param streamId the Stream-ID of this frame
      */
     public DefaultSpdySynReplyFrame(int streamId) {
-        setStreamId(streamId);
-    }
-
-    @Deprecated
-    public int getStreamID() {
-        return getStreamId();
-    }
-
-    public int getStreamId() {
-        return streamId;
-    }
-
-    @Deprecated
-    public void setStreamID(int streamId) {
-        setStreamId(streamId);
-    }
-
-    public void setStreamId(int streamId) {
-        if (streamId <= 0) {
-            throw new IllegalArgumentException(
-                    "Stream-ID must be positive: " + streamId);
-        }
-        this.streamId = streamId;
-    }
-
-    public boolean isLast() {
-        return last;
-    }
-
-    public void setLast(boolean last) {
-        this.last = last;
+        super(streamId);
     }
 
     @Override
@@ -74,7 +41,7 @@ public class DefaultSpdySynReplyFrame extends DefaultSpdyHeaderBlock
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Stream-ID = ");
-        buf.append(streamId);
+        buf.append(getStreamId());
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Headers:");
         buf.append(StringUtil.NEWLINE);

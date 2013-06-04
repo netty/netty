@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -59,26 +59,10 @@ public final class SpdyHttpHeaders {
     }
 
     /**
-     * @deprecated Use {@link #removeStreamId(HttpMessage)} instead.
-     */
-    @Deprecated
-    public static void removeStreamID(HttpMessage message) {
-        removeStreamId(message);
-    }
-
-    /**
      * Removes the {@code "X-SPDY-Stream-ID"} header.
      */
     public static void removeStreamId(HttpMessage message) {
         message.removeHeader(Names.STREAM_ID);
-    }
-
-    /**
-     * @deprecated Use {@link #getStreamId(HttpMessage)} instead.
-     */
-    @Deprecated
-    public static int getStreamID(HttpMessage message) {
-        return getStreamId(message);
     }
 
     /**
@@ -89,26 +73,10 @@ public final class SpdyHttpHeaders {
     }
 
     /**
-     * @deprecated Use {@link #setStreamId(HttpMessage, int)} instead.
-     */
-    @Deprecated
-    public static void setStreamID(HttpMessage message, int streamId) {
-        setStreamId(message, streamId);
-    }
-
-    /**
      * Sets the {@code "X-SPDY-Stream-ID"} header.
      */
     public static void setStreamId(HttpMessage message, int streamId) {
         HttpHeaders.setIntHeader(message, Names.STREAM_ID, streamId);
-    }
-
-    /**
-     * @deprecated Use {@link #removeAssociatedToStreamId(HttpMessage)} instead.
-     */
-    @Deprecated
-    public static void removeAssociatedToStreamID(HttpMessage message) {
-        removeAssociatedToStreamId(message);
     }
 
     /**
@@ -119,14 +87,6 @@ public final class SpdyHttpHeaders {
     }
 
     /**
-     * @deprecated Use {@link #getAssociatedToStreamId(HttpMessage)} instead.
-     */
-    @Deprecated
-    public static int getAssociatedToStreamID(HttpMessage message) {
-        return getAssociatedToStreamId(message);
-    }
-
-    /**
      * Returns the value of the {@code "X-SPDY-Associated-To-Stream-ID"} header.
      *
      * @return the header value or {@code 0} if there is no such header or
@@ -134,14 +94,6 @@ public final class SpdyHttpHeaders {
      */
     public static int getAssociatedToStreamId(HttpMessage message) {
         return HttpHeaders.getIntHeader(message, Names.ASSOCIATED_TO_STREAM_ID, 0);
-    }
-
-    /**
-     * @deprecated Use {@link #setAssociatedToStreamId(HttpMessage, int)} instead.
-     */
-    @Deprecated
-    public static void setAssociatedToStreamID(HttpMessage message, int associatedToStreamId) {
-        setAssociatedToStreamId(message, associatedToStreamId);
     }
 
     /**

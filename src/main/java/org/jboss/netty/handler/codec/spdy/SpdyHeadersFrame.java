@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,41 +15,86 @@
  */
 package org.jboss.netty.handler.codec.spdy;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 /**
- * A SPDY Protocol HEADERS Control Frame
+ * A SPDY Protocol HEADERS Frame
  */
-public interface SpdyHeadersFrame extends SpdyHeaderBlock {
+public interface SpdyHeadersFrame extends SpdyStreamFrame {
 
     /**
-     * @deprecated Use {@link #getStreamId()} instead.
+     * Returns {@code true} if this header block is invalid.
+     * A RST_STREAM frame with code PROTOCOL_ERROR should be sent.
      */
-    @Deprecated
-    int getStreamID();
+    boolean isInvalid();
 
     /**
-     * Returns the Stream-ID of this frame.
+     * Marks this header block as invalid.
      */
-    int getStreamId();
+    void setInvalid();
 
     /**
-     * @deprecated Use {@link #setStreamId(int)} instead.
+     * Returns the header value with the specified header name.  If there is
+     * more than one header value for the specified header name, the first
+     * value is returned.
+     *
+     * @return the header value or {@code null} if there is no such header
      */
-    @Deprecated
-    void setStreamID(int streamId);
+    String getHeader(String name);
 
     /**
-     * Sets the Stream-ID of this frame.  The Stream-ID must be positive.
+     * Returns the header values with the specified header name.
+     *
+     * @return the {@link List} of header values.  An empty list if there is no
+     *         such header.
      */
-    void setStreamId(int streamId);
+    List<String> getHeaders(String name);
 
     /**
-     * Returns {@code true} if this frame is the last frame to be transmitted
-     * on the stream.
+     * Returns all header names and values that this block contains.
+     *
+     * @return the {@link List} of the header name-value pairs.  An empty list
+     *         if there is no header in this message.
      */
-    boolean isLast();
+    List<Map.Entry<String, String>> getHeaders();
 
     /**
-     * Sets if this frame is the last frame to be transmitted on the stream.
+     * Returns {@code true} if and only if there is a header with the specified
+     * header name.
      */
-    void setLast(boolean last);
+    boolean containsHeader(String name);
+
+    /**
+     * Returns the {@link Set} of all header names that this block contains.
+     */
+    Set<String> getHeaderNames();
+
+    /**
+     * Adds a new header with the specified name and value.
+     */
+    void addHeader(String name, Object value);
+
+    /**
+     * Sets a new header with the specified name and value.  If there is an
+     * existing header with the same name, the existing header is removed.
+     */
+    void setHeader(String name, Object value);
+
+    /**
+     * Sets a new header with the specified name and values.  If there is an
+     * existing header with the same name, the existing header is removed.
+     */
+    void setHeader(String name, Iterable<?> values);
+
+    /**
+     * Removes the header with the specified name.
+     */
+    void removeHeader(String name);
+
+    /**
+     * Removes all headers from this block.
+     */
+    void clearHeaders();
 }

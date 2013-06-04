@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,17 +15,20 @@
  */
 package org.jboss.netty.handler.codec.spdy;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.jboss.netty.util.internal.StringUtil;
 
 /**
  * The default {@link SpdyHeadersFrame} implementation.
  */
-public class DefaultSpdyHeadersFrame extends DefaultSpdyHeaderBlock
+public class DefaultSpdyHeadersFrame extends DefaultSpdyStreamFrame
         implements SpdyHeadersFrame {
 
-    private int streamId;
-    private boolean last;
+    private boolean invalid;
+    private final SpdyHeaders headers = new SpdyHeaders();
 
     /**
      * Creates a new instance.
@@ -33,37 +36,55 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyHeaderBlock
      * @param streamId the Stream-ID of this frame
      */
     public DefaultSpdyHeadersFrame(int streamId) {
-        setStreamId(streamId);
+        super(streamId);
     }
 
-    @Deprecated
-    public int getStreamID() {
-        return getStreamId();
+    public boolean isInvalid() {
+        return invalid;
     }
 
-    public int getStreamId() {
-        return streamId;
+    public void setInvalid() {
+        invalid = true;
     }
 
-    @Deprecated
-    public void setStreamID(int streamId) {
-        setStreamId(streamId);
+    public void addHeader(final String name, final Object value) {
+        headers.addHeader(name, value);
     }
 
-    public void setStreamId(int streamId) {
-        if (streamId <= 0) {
-            throw new IllegalArgumentException(
-                    "Stream-ID must be positive: " + streamId);
-        }
-        this.streamId = streamId;
+    public void setHeader(final String name, final Object value) {
+        headers.setHeader(name, value);
     }
 
-    public boolean isLast() {
-        return last;
+    public void setHeader(final String name, final Iterable<?> values) {
+        headers.setHeader(name, values);
     }
 
-    public void setLast(boolean last) {
-        this.last = last;
+    public void removeHeader(final String name) {
+        headers.removeHeader(name);
+    }
+
+    public void clearHeaders() {
+        headers.clearHeaders();
+    }
+
+    public String getHeader(final String name) {
+        return headers.getHeader(name);
+    }
+
+    public List<String> getHeaders(final String name) {
+        return headers.getHeaders(name);
+    }
+
+    public List<Map.Entry<String, String>> getHeaders() {
+        return headers.getHeaders();
+    }
+
+    public boolean containsHeader(final String name) {
+        return headers.containsHeader(name);
+    }
+
+    public Set<String> getHeaderNames() {
+        return headers.getHeaderNames();
     }
 
     @Override
@@ -75,7 +96,7 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyHeaderBlock
         buf.append(')');
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Stream-ID = ");
-        buf.append(streamId);
+        buf.append(getStreamId());
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Headers:");
         buf.append(StringUtil.NEWLINE);
@@ -84,5 +105,15 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyHeaderBlock
         // Remove the last newline.
         buf.setLength(buf.length() - StringUtil.NEWLINE.length());
         return buf.toString();
+    }
+
+    protected void appendHeaders(StringBuilder buf) {
+        for (Map.Entry<String, String> e: getHeaders()) {
+            buf.append("    ");
+            buf.append(e.getKey());
+            buf.append(": ");
+            buf.append(e.getValue());
+            buf.append(StringUtil.NEWLINE);
+        }
     }
 }

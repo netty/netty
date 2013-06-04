@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -28,11 +28,6 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
 
     private boolean clear;
     private final Map<Integer, Setting> settingsMap = new TreeMap<Integer, Setting>();
-
-    @Deprecated
-    public Set<Integer> getIDs() {
-        return getIds();
-    }
 
     public Set<Integer> getIds() {
         return settingsMap.keySet();
@@ -76,11 +71,6 @@ public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
         if (settingsMap.containsKey(key)) {
             settingsMap.remove(key);
         }
-    }
-
-    @Deprecated
-    public boolean persistValue(int id) {
-        return isPersistValue(id);
     }
 
     public boolean isPersistValue(int id) {
