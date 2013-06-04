@@ -83,7 +83,7 @@ public final class HttpClientCodec
     }
 
     private Decoder decoder() {
-        return (Decoder) stateHandler();
+        return (Decoder) inboundHandler();
     }
 
     private final class Encoder extends HttpRequestEncoder {

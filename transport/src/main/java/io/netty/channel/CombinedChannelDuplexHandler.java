@@ -90,11 +90,11 @@ public class CombinedChannelDuplexHandler extends ChannelDuplexHandler
         }
     }
 
-    protected final ChannelInboundHandler stateHandler() {
+    protected final ChannelInboundHandler inboundHandler() {
         return inboundHandler;
     }
 
-    protected final ChannelOutboundHandler operationHandler() {
+    protected final ChannelOutboundHandler outboundHandler() {
         return outboundHandler;
     }
 
