@@ -343,7 +343,6 @@ public class DefaultChannelPipelineTest {
                 p.remove(handler1);
                 assertEquals(1, handler2.inboundBuffer.size());
                 assertEquals(8, handler2.inboundBuffer.get(0));
-                assertFalse(handler1.inboundBuffer.recycle());
             }
         }).sync();
     }
@@ -365,7 +364,6 @@ public class DefaultChannelPipelineTest {
                 p.remove(handler2);
                 assertEquals(1, handler1.outboundBuffer.size());
                 assertEquals(8, handler1.outboundBuffer.get(0));
-                assertFalse(handler2.outboundBuffer.recycle());
             }
         }).sync();
     }
@@ -386,7 +384,6 @@ public class DefaultChannelPipelineTest {
                 assertTrue(handler2.outboundBuffer.isEmpty());
                 p.replace(handler1, "handler2", handler2);
                 assertEquals(8, handler2.outboundBuffer.get(0));
-                assertFalse(handler1.outboundBuffer.recycle());
             }
         }).sync();
     }
@@ -413,9 +410,6 @@ public class DefaultChannelPipelineTest {
                 p.replace(handler1, "handler2", handler2);
                 assertEquals(8, handler2.outboundBuffer.get(0));
                 assertEquals(8, handler2.inboundBuffer.get(0));
-
-                assertFalse(handler1.inboundBuffer.recycle());
-                assertFalse(handler1.outboundBuffer.recycle());
             }
         }).sync();
     }
@@ -444,9 +438,6 @@ public class DefaultChannelPipelineTest {
                 p.remove(handler2);
                 assertEquals(8, handler3.inboundBuffer.get(0));
                 assertEquals(8, handler1.outboundBuffer.get(0));
-
-                assertFalse(handler2.inboundBuffer.recycle());
-                assertFalse(handler2.outboundBuffer.recycle());
             }
         }).sync();
     }
