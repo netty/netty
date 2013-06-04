@@ -16,7 +16,6 @@
 package io.netty.example.echo;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -57,9 +56,6 @@ public class EchoClientHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-        for (int i = 0; i < msgs.size(); i++) {
-            ByteBufUtil.retain(msgs.get(i));
-        }
         ctx.write(msgs);
     }
 
