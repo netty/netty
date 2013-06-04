@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -46,18 +46,6 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
     private final int spdyVersion;
     private final int maxContentLength;
     private final Map<Integer, HttpMessage> messageMap;
-
-    /**
-     * Creates a new instance for the SPDY/2 protocol
-     *
-     * @param maxContentLength the maximum length of the message content.
-     *        If the length of the message content exceeds this value,
-     *        a {@link TooLongFrameException} will be raised.
-     */
-    @Deprecated
-    public SpdyHttpDecoder(int maxContentLength) {
-        this(2, maxContentLength);
-    }
 
     /**
      * Creates a new instance.
@@ -274,7 +262,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
         return null;
     }
 
-    private static HttpRequest createHttpRequest(int spdyVersion, SpdyHeaderBlock requestFrame)
+    private static HttpRequest createHttpRequest(int spdyVersion, SpdyHeadersFrame requestFrame)
             throws Exception {
         // Create the first line of the request from the name/value pairs
         HttpMethod  method      = SpdyHeaders.getMethod(spdyVersion, requestFrame);
@@ -309,7 +297,7 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
         return httpRequest;
     }
 
-    private static HttpResponse createHttpResponse(int spdyVersion, SpdyHeaderBlock responseFrame)
+    private static HttpResponse createHttpResponse(int spdyVersion, SpdyHeadersFrame responseFrame)
             throws Exception {
         // Create the first line of the response from the name/value pairs
         HttpResponseStatus status = SpdyHeaders.getStatus(spdyVersion, responseFrame);

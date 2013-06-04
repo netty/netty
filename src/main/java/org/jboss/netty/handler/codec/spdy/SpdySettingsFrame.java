@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -18,9 +18,9 @@ package org.jboss.netty.handler.codec.spdy;
 import java.util.Set;
 
 /**
- * A SPDY Protocol SETTINGS Control Frame
+ * A SPDY Protocol SETTINGS Frame
  */
-public interface SpdySettingsFrame {
+public interface SpdySettingsFrame extends SpdyFrame {
 
     int SETTINGS_UPLOAD_BANDWIDTH               = 1;
     int SETTINGS_DOWNLOAD_BANDWIDTH             = 2;
@@ -30,12 +30,6 @@ public interface SpdySettingsFrame {
     int SETTINGS_DOWNLOAD_RETRANS_RATE          = 6;
     int SETTINGS_INITIAL_WINDOW_SIZE            = 7;
     int SETTINGS_CLIENT_CERTIFICATE_VECTOR_SIZE = 8;
-
-    /**
-     * @deprecated Use {@link #getIds()} instead.
-     */
-    @Deprecated
-    Set<Integer> getIDs();
 
     /**
      * Returns a {@code Set} of the setting IDs.
@@ -70,15 +64,9 @@ public interface SpdySettingsFrame {
 
     /**
      * Removes the value of the setting ID.
-     * Removes all persistance information for the setting.
+     * Removes all persistence information for the setting.
      */
     void removeValue(int id);
-
-    /**
-     * @deprecated Use {@link #isPersistValue(int)} instead.
-     */
-    @Deprecated
-    boolean persistValue(int id);
 
     /**
      * Returns {@code true} if this setting should be persisted.

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -55,18 +55,8 @@ public class DefaultSpdyGoAwayFrame implements SpdyGoAwayFrame {
         setStatus(status);
     }
 
-    @Deprecated
-    public int getLastGoodStreamID() {
-        return getLastGoodStreamId();
-    }
-
     public int getLastGoodStreamId() {
         return lastGoodStreamId;
-    }
-
-    @Deprecated
-    public void setLastGoodStreamID(int lastGoodStreamId) {
-        setLastGoodStreamId(lastGoodStreamId);
     }
 
     public void setLastGoodStreamId(int lastGoodStreamId) {
@@ -91,10 +81,10 @@ public class DefaultSpdyGoAwayFrame implements SpdyGoAwayFrame {
         buf.append(getClass().getSimpleName());
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Last-good-stream-ID = ");
-        buf.append(lastGoodStreamId);
+        buf.append(getLastGoodStreamId());
         buf.append(StringUtil.NEWLINE);
         buf.append("--> Status: ");
-        buf.append(status.toString());
+        buf.append(getStatus().toString());
         return buf.toString();
     }
 }

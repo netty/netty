@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,8 +16,8 @@
 package org.jboss.netty.handler.codec.spdy;
 
 /**
- * A SPDY Protocol NOOP Control Frame
+ * A SPDY Protocol Frame
  */
-public interface SpdyNoOpFrame {
+public interface SpdyFrame {
     // Tag interface
 }

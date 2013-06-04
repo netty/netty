@@ -129,14 +129,6 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
     private volatile int currentStreamID;
 
     /**
-     * Creates a new instance for the SPDY/2 protocol
-     */
-     @Deprecated
-    public SpdyHttpEncoder() {
-         this(2);
-    }
-
-    /**
      * Creates a new instance.
      *
      * @param version the protocol version
@@ -333,7 +325,7 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
         int streamID = SpdyHttpHeaders.getStreamId(httpResponse);
         SpdyHttpHeaders.removeStreamId(httpResponse);
 
-        // The Connection, Keep-Alive, Proxy-Connection, and Transfer-ENcoding
+        // The Connection, Keep-Alive, Proxy-Connection, and Transfer-Encoding
         // headers are not valid and MUST not be sent.
         httpResponse.removeHeader(HttpHeaders.Names.CONNECTION);
         httpResponse.removeHeader("Keep-Alive");

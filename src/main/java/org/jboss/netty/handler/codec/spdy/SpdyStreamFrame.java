@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,12 +16,28 @@
 package org.jboss.netty.handler.codec.spdy;
 
 /**
- * The default {@link SpdyNoOpFrame} implementation.
+ * A SPDY Protocol Frame that is associated with an individual SPDY Stream
  */
-public class DefaultSpdyNoOpFrame implements SpdyNoOpFrame {
+public interface SpdyStreamFrame extends SpdyFrame {
 
-    @Override
-    public String toString() {
-        return getClass().getSimpleName();
-    }
+    /**
+     * Returns the Stream-ID of this frame.
+     */
+    int getStreamId();
+
+    /**
+     * Sets the Stream-ID of this frame.  The Stream-ID must be positive.
+     */
+    void setStreamId(int streamId);
+
+    /**
+     * Returns {@code true} if this frame is the last frame to be transmitted
+     * on the stream.
+     */
+    boolean isLast();
+
+    /**
+     * Sets if this frame is the last frame to be transmitted on the stream.
+     */
+    void setLast(boolean last);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -30,17 +30,6 @@ public class SpdyFrameCodec implements ChannelUpstreamHandler,
 
     private final SpdyFrameDecoder decoder;
     private final SpdyFrameEncoder encoder;
-
-    /**
-     * Creates a new instance with the default decoder and encoder options
-     * ({@code version (2)}, {@code maxChunkSize (8192)},
-     * {@code maxHeaderSize (16384)}, {@code compressionLevel (6)},
-     * {@code windowBits (15)}, and {@code memLevel (8)}).
-     */
-    @Deprecated
-    public SpdyFrameCodec() {
-        this(2);
-    }
 
     /**
      * Creates a new instance with the specified {@code version} and
