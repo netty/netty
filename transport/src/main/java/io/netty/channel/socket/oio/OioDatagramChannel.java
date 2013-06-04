@@ -25,6 +25,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.MessageList;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
@@ -63,6 +64,8 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     private final MulticastSocket socket;
     private final DatagramChannelConfig config;
     private final java.net.DatagramPacket tmpPacket = new java.net.DatagramPacket(EmptyArrays.EMPTY_BYTES, 0);
+    
+    private RecvByteBufAllocator.Handle allocHandle;
 
     private static MulticastSocket newSocket() {
         try {
@@ -199,12 +202,16 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
 
     @Override
     protected int doReadMessages(MessageList<Object> buf) throws Exception {
-        int packetSize = config().getReceivePacketSize();
-        ByteBuf data = alloc().heapBuffer(packetSize);
+        DatagramChannelConfig config = config();
+        RecvByteBufAllocator.Handle allocHandle = this.allocHandle;
+        if (allocHandle == null) {
+            this.allocHandle = allocHandle = config.getRecvByteBufAllocator().newHandle();
+        }
+        
+        ByteBuf data = config.getAllocator().heapBuffer(allocHandle.guess());
         boolean free = true;
-
         try {
-            tmpPacket.setData(data.array(), data.arrayOffset(), packetSize);
+            tmpPacket.setData(data.array(), data.arrayOffset(), data.capacity());
             socket.receive(tmpPacket);
 
             InetSocketAddress remoteAddr = (InetSocketAddress) tmpPacket.getSocketAddress();
@@ -212,7 +219,9 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
                 remoteAddr = remoteAddress();
             }
 
-            buf.add(new DatagramPacket(data.writerIndex(tmpPacket.getLength()), localAddress(), remoteAddr));
+            int readBytes = tmpPacket.getLength();
+            allocHandle.record(readBytes);
+            buf.add(new DatagramPacket(data.writerIndex(readBytes), localAddress(), remoteAddr));
             free = false;
             return 1;
         } catch (SocketTimeoutException e) {

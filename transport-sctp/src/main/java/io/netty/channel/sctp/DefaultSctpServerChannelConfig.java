@@ -16,10 +16,12 @@
 package io.netty.channel.sctp;
 
 import com.sun.nio.sctp.SctpServerChannel;
+import com.sun.nio.sctp.SctpStandardSocketOptions.*;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.NetUtil;
 
 import java.io.IOException;
@@ -167,6 +169,12 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
     @Override
     public SctpServerChannelConfig setAllocator(ByteBufAllocator allocator) {
         return (SctpServerChannelConfig) super.setAllocator(allocator);
+    }
+
+    @Override
+    public SctpServerChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
+        super.setRecvByteBufAllocator(allocator);
+        return this;
     }
 
     @Override

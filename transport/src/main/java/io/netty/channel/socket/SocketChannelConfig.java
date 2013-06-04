@@ -20,6 +20,7 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.RecvByteBufAllocator;
 
 import java.net.Socket;
 import java.net.StandardSocketOptions;
@@ -163,6 +164,9 @@ public interface SocketChannelConfig extends ChannelConfig {
 
     @Override
     SocketChannelConfig setAllocator(ByteBufAllocator allocator);
+
+    @Override
+    SocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator);
 
     @Override
     SocketChannelConfig setAutoRead(boolean autoRead);

@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.RecvByteBufAllocator;
 
 /**
  * A {@link ChannelConfig} for a {@link UdtServerChannel}.
@@ -52,6 +53,9 @@ public interface UdtServerChannelConfig extends UdtChannelConfig {
 
     @Override
     UdtServerChannelConfig setAllocator(ByteBufAllocator allocator);
+
+    @Override
+    UdtServerChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator);
 
     @Override
     UdtServerChannelConfig setAutoRead(boolean autoRead);

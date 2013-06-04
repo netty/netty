@@ -21,10 +21,15 @@ import com.barchart.udt.nio.ChannelUDT;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.RecvByteBufAllocator;
 
 import java.io.IOException;
 import java.util.Map;
 
+import static io.netty.channel.ChannelOption.SO_LINGER;
+import static io.netty.channel.ChannelOption.SO_RCVBUF;
+import static io.netty.channel.ChannelOption.SO_REUSEADDR;
+import static io.netty.channel.ChannelOption.SO_SNDBUF;
 import static io.netty.channel.udt.UdtChannelOption.*;
 
 /**
@@ -246,6 +251,12 @@ public class DefaultUdtChannelConfig extends DefaultChannelConfig implements
     @Override
     public UdtChannelConfig setAllocator(ByteBufAllocator allocator) {
         super.setAllocator(allocator);
+        return this;
+    }
+
+    @Override
+    public UdtChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
+        super.setRecvByteBufAllocator(allocator);
         return this;
     }
 

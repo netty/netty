@@ -22,11 +22,14 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
 import java.util.Map;
 
+import static io.netty.channel.ChannelOption.SO_RCVBUF;
+import static io.netty.channel.ChannelOption.SO_SNDBUF;
 import static io.netty.channel.sctp.SctpChannelOption.*;
 
 /**
@@ -183,6 +186,12 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
     @Override
     public SctpChannelConfig setAllocator(ByteBufAllocator allocator) {
         return (SctpChannelConfig) super.setAllocator(allocator);
+    }
+
+    @Override
+    public SctpChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
+        super.setRecvByteBufAllocator(allocator);
+        return this;
     }
 
     @Override

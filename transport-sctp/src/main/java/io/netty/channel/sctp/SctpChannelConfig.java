@@ -15,10 +15,10 @@
  */
 package io.netty.channel.sctp;
 
+import com.sun.nio.sctp.SctpStandardSocketOptions.InitMaxStreams;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
-
-import static com.sun.nio.sctp.SctpStandardSocketOptions.*;
+import io.netty.channel.RecvByteBufAllocator;
 
 /**
  * A {@link ChannelConfig} for a {@link SctpChannel}.
@@ -104,6 +104,9 @@ public interface SctpChannelConfig extends ChannelConfig {
 
     @Override
     SctpChannelConfig setAllocator(ByteBufAllocator allocator);
+    
+    @Override
+    SctpChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator);
 
     @Override
     SctpChannelConfig setAutoRead(boolean autoRead);

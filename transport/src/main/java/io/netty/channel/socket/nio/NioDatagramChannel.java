@@ -25,6 +25,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.MessageList;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
@@ -63,6 +64,8 @@ public final class NioDatagramChannel
     private final DatagramChannelConfig config;
     private final Map<InetAddress, List<MembershipKey>> memberships =
             new HashMap<InetAddress, List<MembershipKey>>();
+    
+    private RecvByteBufAllocator.Handle allocHandle;
 
     private static DatagramChannel newSocket() {
         try {
@@ -199,7 +202,12 @@ public final class NioDatagramChannel
     @Override
     protected int doReadMessages(MessageList<Object> buf) throws Exception {
         DatagramChannel ch = javaChannel();
-        ByteBuf data = alloc().directBuffer(config().getReceivePacketSize());
+        DatagramChannelConfig config = config();
+        RecvByteBufAllocator.Handle allocHandle = this.allocHandle;
+        if (allocHandle == null) {
+            this.allocHandle = allocHandle = config.getRecvByteBufAllocator().newHandle();
+        }
+        ByteBuf data = allocHandle.allocate(config.getAllocator());
         boolean free = true;
         try {
             ByteBuffer nioData = data.nioBuffer(data.writerIndex(), data.writableBytes());
@@ -208,8 +216,11 @@ public final class NioDatagramChannel
             if (remoteAddress == null) {
                 return 0;
             }
-
-            data.writerIndex(data.writerIndex() + nioData.position());
+            
+            int readBytes = nioData.position();
+            data.writerIndex(data.writerIndex() + readBytes);
+            allocHandle.record(readBytes);
+            
             buf.add(new DatagramPacket(data, localAddress(), remoteAddress));
             free = false;
             return 1;

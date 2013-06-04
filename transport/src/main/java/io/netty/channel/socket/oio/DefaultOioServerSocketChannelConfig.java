@@ -18,6 +18,7 @@ package io.netty.channel.socket.oio;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
 
@@ -122,6 +123,12 @@ public class DefaultOioServerSocketChannelConfig extends DefaultServerSocketChan
     @Override
     public OioServerSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
         super.setAllocator(allocator);
+        return this;
+    }
+
+    @Override
+    public OioServerSocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
+        super.setRecvByteBufAllocator(allocator);
         return this;
     }
 

@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -350,6 +351,12 @@ final class DefaultAioSocketChannelConfig extends DefaultChannelConfig
     @Override
     public AioSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
         return (AioSocketChannelConfig) super.setAllocator(allocator);
+    }
+
+    @Override
+    public AioSocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
+        super.setRecvByteBufAllocator(allocator);
+        return this;
     }
 
     @Override

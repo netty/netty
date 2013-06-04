@@ -18,6 +18,7 @@ package io.netty.channel.rxtx;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.RecvByteBufAllocator;
 
 import java.util.Map;
 
@@ -189,6 +190,12 @@ final class DefaultRxtxChannelConfig extends DefaultChannelConfig implements Rxt
     @Override
     public RxtxChannelConfig setAllocator(ByteBufAllocator allocator) {
         return (RxtxChannelConfig) super.setAllocator(allocator);
+    }
+
+    @Override
+    public RxtxChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
+        super.setRecvByteBufAllocator(allocator);
+        return this;
     }
 
     @Override

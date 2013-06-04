@@ -31,11 +31,13 @@ import static io.netty.channel.ChannelOption.*;
 public class DefaultChannelConfig implements ChannelConfig {
 
     private static final ByteBufAllocator DEFAULT_ALLOCATOR = PooledByteBufAllocator.DEFAULT;
+    private static final RecvByteBufAllocator DEFAULT_RCVBUF_ALLOCATOR = AdaptiveRecvByteBufAllocator.DEFAULT;
     private static final int DEFAULT_CONNECT_TIMEOUT = 30000;
 
     protected final Channel channel;
 
     private volatile ByteBufAllocator allocator = DEFAULT_ALLOCATOR;
+    private volatile RecvByteBufAllocator rcvBufAllocator = DEFAULT_RCVBUF_ALLOCATOR;
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
     private volatile int writeSpinCount = 16;
     private volatile boolean autoRead = true;
@@ -49,7 +51,7 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(null, CONNECT_TIMEOUT_MILLIS, WRITE_SPIN_COUNT, ALLOCATOR, AUTO_READ);
+        return getOptions(null, CONNECT_TIMEOUT_MILLIS, WRITE_SPIN_COUNT, ALLOCATOR, AUTO_READ, RCVBUF_ALLOCATOR);
     }
 
     protected Map<ChannelOption<?>, Object> getOptions(
@@ -96,6 +98,9 @@ public class DefaultChannelConfig implements ChannelConfig {
         if (option == ALLOCATOR) {
             return (T) getAllocator();
         }
+        if (option == RCVBUF_ALLOCATOR) {
+            return (T) getRecvByteBufAllocator();
+        }
         if (option == AUTO_READ) {
             return (T) Boolean.valueOf(isAutoRead());
         }
@@ -113,6 +118,8 @@ public class DefaultChannelConfig implements ChannelConfig {
             setWriteSpinCount((Integer) value);
         } else if (option == ALLOCATOR) {
             setAllocator((ByteBufAllocator) value);
+        } else if (option == RCVBUF_ALLOCATOR) {
+            setRecvByteBufAllocator((RecvByteBufAllocator) value);
         } else if (option == AUTO_READ) {
             setAutoRead((Boolean) value);
         } else {
@@ -170,6 +177,20 @@ public class DefaultChannelConfig implements ChannelConfig {
             throw new NullPointerException("allocator");
         }
         this.allocator = allocator;
+        return this;
+    }
+
+    @Override
+    public RecvByteBufAllocator getRecvByteBufAllocator() {
+        return rcvBufAllocator;
+    }
+
+    @Override
+    public ChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
+        if (allocator == null) {
+            throw new NullPointerException("allocator");
+        }
+        rcvBufAllocator = allocator;
         return this;
     }
 

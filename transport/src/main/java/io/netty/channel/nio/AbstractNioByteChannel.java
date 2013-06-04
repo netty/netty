@@ -17,10 +17,12 @@ package io.netty.channel.nio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.FileRegion;
 import io.netty.channel.MessageList;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 
 import java.io.IOException;
@@ -49,14 +51,15 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         return new NioByteUnsafe();
     }
 
-    private static final ThreadLocal<ByteBuf> PREALLOCATION = new ThreadLocal<ByteBuf>();
-
     private final class NioByteUnsafe extends AbstractNioUnsafe {
+        private RecvByteBufAllocator.Handle allocHandle;
+        
         @Override
         public void read() {
             assert eventLoop().inEventLoop();
             final SelectionKey key = selectionKey();
-            if (!config().isAutoRead()) {
+            final ChannelConfig config = config();
+            if (!config.isAutoRead()) {
                 int interestOps = key.interestOps();
                 if ((interestOps & readInterestOp) != 0) {
                     // only remove readInterestOp if needed
@@ -66,28 +69,12 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
             final ChannelPipeline pipeline = pipeline();
 
-            ByteBuf byteBuf = PREALLOCATION.get();
-            if (byteBuf != null) {
-                int index = byteBuf.writerIndex();
-                // Align the next writerIndex by 64 bytes to avoid cache contention.
-                if ((index & 63) != 0) {
-                    index = (index & 0xFFFFFFC0) + 64;
-                }
-
-                // Release the buffer and get a new one if the writable bytes are less than 1 KiB.
-                if (index > byteBuf.capacity() - 1024) {
-                    byteBuf.release();
-                    byteBuf = null;
-                } else {
-                    byteBuf.setIndex(index, index);
-                }
+            RecvByteBufAllocator.Handle allocHandle = this.allocHandle;
+            if (allocHandle == null) {
+                this.allocHandle = allocHandle = config.getRecvByteBufAllocator().newHandle();
             }
 
-            if (byteBuf == null) {
-                byteBuf = alloc().ioBuffer(1048576 * 4);
-                PREALLOCATION.set(byteBuf);
-            }
-            
+            ByteBuf byteBuf = allocHandle.allocate(config.getAllocator());
             boolean closed = false;
             Throwable exception = null;
             try {
@@ -98,9 +85,12 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             } catch (Throwable t) {
                 exception = t;
             } finally {
-                if (byteBuf.isReadable()) {
-                    ByteBuf slice = byteBuf.readSlice(byteBuf.readableBytes());
-                    pipeline.fireMessageReceived(slice.retain());
+                int readBytes = byteBuf.readableBytes();
+                allocHandle.record(readBytes);
+                if (readBytes != 0) {
+                    pipeline.fireMessageReceived(byteBuf);
+                } else {
+                    byteBuf.release();
                 }
 
                 if (exception != null) {
