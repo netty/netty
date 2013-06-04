@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -22,7 +22,6 @@ import io.netty.channel.CombinedChannelDuplexHandler;
  */
 public final class SpdyHttpCodec
         extends CombinedChannelDuplexHandler<SpdyHttpDecoder, SpdyHttpEncoder> {
-
     /**
      * Creates a new instance with the specified decoder options.
      */

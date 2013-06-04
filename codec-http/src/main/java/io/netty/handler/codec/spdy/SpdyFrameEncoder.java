@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -29,9 +29,9 @@ import java.util.Set;
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
 /**
- * Encodes a SPDY Data or Control Frame into a {@link ByteBuf}.
+ * Encodes a SPDY Frame into a {@link ByteBuf}.
  */
-public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyDataOrControlFrame> {
+public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyFrame> {
 
     private final int version;
     private volatile boolean finished;
@@ -76,7 +76,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyDataOrControlFram
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, SpdyDataOrControlFrame msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, SpdyFrame msg, ByteBuf out) throws Exception {
         if (msg instanceof SpdyDataFrame) {
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
@@ -202,13 +202,6 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyDataOrControlFram
                 out.writeInt(spdySettingsFrame.getValue(id));
             }
 
-        } else if (msg instanceof SpdyNoOpFrame) {
-
-            out.ensureWritable(SPDY_HEADER_SIZE);
-            out.writeShort(version | 0x8000);
-            out.writeShort(SPDY_NOOP_FRAME);
-            out.writeInt(0);
-
         } else if (msg instanceof SpdyPingFrame) {
 
             SpdyPingFrame spdyPingFrame = (SpdyPingFrame) msg;
@@ -285,7 +278,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyDataOrControlFram
         }
     }
 
-    private static ByteBuf encodeHeaderBlock(int version, SpdyHeaderBlock headerFrame)
+    private static ByteBuf encodeHeaderBlock(int version, SpdyHeadersFrame headerFrame)
             throws Exception {
         Set<String> names = headerFrame.headers().names();
         int numHeaders = names.size();
