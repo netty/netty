@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.MessageList;
 import io.netty.channel.ServerChannel;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -241,33 +242,18 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     }
 
     @Override
-    public ChannelGroupFuture write(Object[] messages) {
-        if (messages == null) {
-            throw new NullPointerException("messages");
-        }
-        return write(messages, 0, messages.length);
-    }
-
-    @Override
-    public ChannelGroupFuture write(Object[] messages, int index, int length) {
+    public ChannelGroupFuture write(MessageList<Object> messages) {
         if (messages == null) {
             throw new NullPointerException("messages");
         }
 
         Map<Integer, ChannelFuture> futures = new LinkedHashMap<Integer, ChannelFuture>(size());
         for (Channel c: nonServerChannels.values()) {
-            Object[] messagesCopy = new Object[length];
-            System.arraycopy(messages, index, messagesCopy, 0, length);
-            for (Object m: messagesCopy) {
-                ByteBufUtil.retain(m);
-            }
+            MessageList<Object> messagesCopy = messages.retainAll().copy();
             futures.put(c.id(), c.write(messagesCopy));
         }
 
-        for (int i = index; i < index + length; i ++) {
-            ByteBufUtil.release(messages[i]);
-        }
-
+        messages.releaseAllAndRecycle();
         return new DefaultChannelGroupFuture(this, futures, executor);
     }
 
