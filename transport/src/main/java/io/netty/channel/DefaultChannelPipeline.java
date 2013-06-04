@@ -316,14 +316,14 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         synchronized (this) {
             if (!ctx.channel().isRegistered() || ctx.executor().inEventLoop()) {
-                remove0(ctx);
+                remove0(ctx, true);
                 return ctx;
             } else {
                future = ctx.executor().submit(new Runnable() {
                    @Override
                    public void run() {
                        synchronized (DefaultChannelPipeline.this) {
-                           remove0(ctx);
+                           remove0(ctx, true);
                        }
                    }
                });
@@ -339,13 +339,15 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         return context;
     }
 
-    void remove0(DefaultChannelHandlerContext ctx) {
+    void remove0(DefaultChannelHandlerContext ctx, boolean foward) {
         DefaultChannelHandlerContext prev = ctx.prev;
         DefaultChannelHandlerContext next = ctx.next;
         prev.next = next;
         next.prev = prev;
         name2ctx.remove(ctx.name());
-
+        if (foward) {
+            ctx.forwardBufferedMessages();
+        }
         callHandlerRemoved(ctx);
     }
 

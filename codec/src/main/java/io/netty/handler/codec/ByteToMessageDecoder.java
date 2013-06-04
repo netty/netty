@@ -17,6 +17,7 @@ package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.BufferedChannelInboundHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.MessageList;
@@ -39,7 +40,8 @@ import io.netty.util.internal.StringUtil;
  *     }
  * </pre>
  */
-public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter {
+public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter
+        implements BufferedChannelInboundHandler {
 
     protected ByteBuf cumulation;
     private volatile boolean singleDecode;
@@ -86,6 +88,11 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
         } else {
             return Unpooled.EMPTY_BUFFER;
         }
+    }
+
+    @Override
+    public MessageList<Object> bufferedInboundMessages() {
+        return MessageList.<Object>newInstance(internalBuffer());
     }
 
     @Override

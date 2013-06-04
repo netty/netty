@@ -119,11 +119,53 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
     }
 
+    void forwardBufferedMessages() {
+        if (executor().inEventLoop()) {
+            // forward buffered messages and recycle the MessageList
+            if (handler() instanceof BufferedChannelInboundHandler) {
+                MessageList<Object> msgs = ((BufferedChannelInboundHandler) handler()).bufferedInboundMessages();
+                if (msgs.isEmpty()) {
+                    msgs.recycle();
+                } else {
+                    MessageList<Object> copy = msgs.copy();
+                    msgs.recycle();
+                    fireMessageReceived(copy);
+                }
+            }
+            if (handler() instanceof BufferedChannelOutboundHandler) {
+                MessageList<Object> msgs = ((BufferedChannelOutboundHandler) handler()).bufferedOutboundMessages();
+                if (msgs.isEmpty()) {
+                    msgs.recycle();
+                } else {
+                    MessageList<Object> copy = msgs.copy();
+                    msgs.recycle();
+                    write(copy);
+                }
+            }
+        } else {
+           executor().execute(new Runnable() {
+               @Override
+               public void run() {
+                   forwardBufferedMessages();
+               }
+           });
+        }
+    }
+
     private void teardown0() {
         DefaultChannelHandlerContext prev = this.prev;
         if (prev != null) {
             synchronized (pipeline) {
-                pipeline.remove0(this);
+
+                pipeline.remove0(this, false);
+
+                // Release all messages and recycle the MessageList
+                if (handler() instanceof BufferedChannelInboundHandler) {
+                    ((BufferedChannelInboundHandler) handler()).bufferedInboundMessages().releaseAllAndRecycle();
+                }
+                if (handler() instanceof BufferedChannelOutboundHandler) {
+                    ((BufferedChannelOutboundHandler) handler()).bufferedOutboundMessages().releaseAllAndRecycle();
+                }
             }
             prev.teardown();
         }
