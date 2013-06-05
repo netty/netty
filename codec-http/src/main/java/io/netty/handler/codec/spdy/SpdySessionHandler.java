@@ -495,27 +495,11 @@ public class SpdySessionHandler
                     int dataLength = spdyDataFrame.content().readableBytes();
                     int sendWindowSize = spdySession.getSendWindowSize(streamID);
 
-                    if (sendWindowSize >= dataLength) {
-                        // Window size is large enough to send entire data frame
-                        spdySession.updateSendWindowSize(streamID, -1 * dataLength);
-
-                        // The transfer window size is pre-decremented when sending a data frame downstream.
-                        // Close the stream on write failures that leaves the transfer window in a corrupt state.
-                        //
-                        // This is never sent because on write failure the connection will be closed
-                        // immediately.  Commenting out just in case I misunderstood it - T
-                        //
-                        //final ChannelHandlerContext context = ctx;
-                        //e.getFuture().addListener(new ChannelFutureListener() {
-                        //    @Override
-                        //    public void operationComplete(ChannelFuture future) throws Exception {
-                        //        if (!future.isSuccess()) {
-                        //            issueStreamError(context, streamID, SpdyStreamStatus.INTERNAL_ERROR);
-                        //        }
-                        //    }
-                        //});
-
-                    } else if (sendWindowSize > 0) {
+                    if (sendWindowSize <= 0) {
+                        // Stream is stalled -- enqueue Data frame and return
+                        spdySession.putPendingWrite(streamID, spdyDataFrame);
+                        return;
+                    } else if (sendWindowSize < dataLength) {
                         // Stream is not stalled but we cannot send the entire frame
                         spdySession.updateSendWindowSize(streamID, -1 * sendWindowSize);
 
@@ -546,9 +530,24 @@ public class SpdySessionHandler
                         ctx.nextOutboundMessageBuffer().add(partialDataFrame);
                         return;
                     } else {
-                        // Stream is stalled -- enqueue Data frame and return
-                        spdySession.putPendingWrite(streamID, spdyDataFrame);
-                        return;
+                        // Window size is large enough to send entire data frame
+                        spdySession.updateSendWindowSize(streamID, -1 * dataLength);
+
+                        // The transfer window size is pre-decremented when sending a data frame downstream.
+                        // Close the stream on write failures that leaves the transfer window in a corrupt state.
+                        //
+                        // This is never sent because on write failure the connection will be closed
+                        // immediately.  Commenting out just in case I misunderstood it - T
+                        //
+                        //final ChannelHandlerContext context = ctx;
+                        //e.getFuture().addListener(new ChannelFutureListener() {
+                        //    @Override
+                        //    public void operationComplete(ChannelFuture future) throws Exception {
+                        //        if (!future.isSuccess()) {
+                        //            issueStreamError(context, streamID, SpdyStreamStatus.INTERNAL_ERROR);
+                        //        }
+                        //    }
+                        //});
                     }
                 }
             }
