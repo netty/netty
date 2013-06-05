@@ -40,6 +40,7 @@ public class WorldClockServerHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
         int size = msgs.size();
+        MessageList<Object> out = MessageList.newInstance(size);
         for (int i = 0; i < size; i++) {
             Locations locations = (Locations) msgs.get(i);
             long currentTime = System.currentTimeMillis();
@@ -64,10 +65,8 @@ public class WorldClockServerHandler extends ChannelInboundHandlerAdapter {
             msgs.add(builder.build());
         }
 
-        msgs.remove(0, size);
-        if (!msgs.isEmpty()) {
-            ctx.write(msgs);
-        }
+        msgs.recycle();
+        ctx.write(out);
     }
 
     @Override

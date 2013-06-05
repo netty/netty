@@ -55,6 +55,7 @@ public class QuoteOfTheMomentServerHandler extends ChannelInboundHandlerAdapter 
                         Unpooled.copiedBuffer("QOTM: " + nextQuote(), CharsetUtil.UTF_8), packet.sender()));
             }
         }
+        msgs.releaseAllAndRecycle();
     }
 
     @Override

@@ -63,6 +63,7 @@ public class HttpSnoopClientHandler extends ChannelInboundHandlerAdapter {
                 }
             }
         }
+        msgs.releaseAllAndRecycle();
     }
 
     @Override

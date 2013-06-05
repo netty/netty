@@ -27,6 +27,7 @@ public class LocalEchoClientHandler extends ChannelInboundHandlerAdapter {
             // Print as received
             System.out.println(msgs.get(i));
         }
+        msgs.releaseAllAndRecycle();
     }
 
     @Override

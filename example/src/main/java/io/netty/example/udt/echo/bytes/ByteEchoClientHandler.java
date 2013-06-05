@@ -64,7 +64,7 @@ public class ByteEchoClientHandler extends ChannelInboundHandlerAdapter {
             ByteBuf buf = buffers.get(i);
             meter.mark(buf.readableBytes());
         }
-        ctx.write(msgs);
+        ctx.write(buffers);
     }
 
     @Override

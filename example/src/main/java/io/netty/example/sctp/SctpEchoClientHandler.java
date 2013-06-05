@@ -58,7 +58,7 @@ public class SctpEchoClientHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> messages) throws Exception {
-        ctx.write(messages.copy());
+        ctx.write(messages);
     }
 
     @Override

@@ -33,6 +33,7 @@ public class QuoteOfTheMomentClientHandler extends ChannelInboundHandlerAdapter 
                 ctx.close();
             }
         }
+        msgs.releaseAllAndRecycle();
     }
 
     @Override

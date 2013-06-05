@@ -88,7 +88,7 @@ public class WebSocketClientHandler extends ChannelInboundHandlerAdapter {
                 handshaker.finishHandshake(ch, (FullHttpResponse) msg);
                 System.out.println("WebSocket Client connected!");
                 handshakeFuture.setSuccess();
-                return;
+                continue;
             }
 
             if (msg instanceof FullHttpResponse) {
@@ -108,6 +108,7 @@ public class WebSocketClientHandler extends ChannelInboundHandlerAdapter {
                 ch.close();
             }
         }
+        msgs.releaseAllAndRecycle();
     }
 
     @Override

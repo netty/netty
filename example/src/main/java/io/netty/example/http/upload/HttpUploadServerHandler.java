@@ -203,6 +203,7 @@ public class HttpUploadServerHandler extends ChannelInboundHandlerAdapter {
                 }
             }
         }
+        msgs.releaseAllAndRecycle();
     }
 
     private void reset() {

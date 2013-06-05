@@ -64,6 +64,7 @@ public class WebSocketSslServerHandler extends ChannelInboundHandlerAdapter {
                 handleWebSocketFrame(ctx, (WebSocketFrame) msg);
             }
         }
+        msgs.releaseAllAndRecycle();
     }
 
     private void handleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
@@ -112,13 +113,11 @@ public class WebSocketSslServerHandler extends ChannelInboundHandlerAdapter {
 
         // Check for closing frame
         if (frame instanceof CloseWebSocketFrame) {
-            frame.retain();
-            handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
+            handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame.retain());
             return;
         }
         if (frame instanceof PingWebSocketFrame) {
-            frame.content().retain();
-            ctx.channel().write(new PongWebSocketFrame(frame.content()));
+            ctx.channel().write(new PongWebSocketFrame(frame.content().retain()));
             return;
         }
         if (!(frame instanceof TextWebSocketFrame)) {

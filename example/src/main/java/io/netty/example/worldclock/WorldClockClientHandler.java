@@ -100,6 +100,7 @@ public class WorldClockClientHandler extends ChannelInboundHandlerAdapter {
         for (int i = 0; i < msgs.size(); i++) {
             answer.add((LocalTimes) msgs.get(i));
         }
+        msgs.recycle();
     }
 
     @Override

@@ -52,6 +52,7 @@ public class UptimeClientHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
         // Discard received data
+        msgs.releaseAllAndRecycle();
     }
 
     @Override

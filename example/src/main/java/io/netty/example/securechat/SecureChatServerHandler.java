@@ -80,6 +80,7 @@ public class SecureChatServerHandler extends ChannelInboundHandlerAdapter {
                 ctx.close();
             }
         }
+        msgs.releaseAllAndRecycle();
     }
 
     @Override

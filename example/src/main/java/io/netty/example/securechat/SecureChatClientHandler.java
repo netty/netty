@@ -35,6 +35,7 @@ public class SecureChatClientHandler extends ChannelInboundHandlerAdapter {
         for (int i = 0; i < msgs.size(); i++) {
             System.err.println(msgs.get(i));
         }
+        msgs.releaseAllAndRecycle();
     }
 
     @Override

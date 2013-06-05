@@ -67,6 +67,6 @@ public class ByteEchoPeerHandler extends ChannelInboundHandlerAdapter {
             ByteBuf buf = buffers.get(i);
             meter.mark(buf.readableBytes());
         }
-        ctx.write(msgs);
+        ctx.write(buffers);
     }
 }

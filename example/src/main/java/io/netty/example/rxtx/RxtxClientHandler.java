@@ -36,6 +36,7 @@ public class RxtxClientHandler extends ChannelInboundHandlerAdapter {
                 System.out.println("Serial port responded with not-OK: " + msg);
             }
         }
+        msgs.releaseAllAndRecycle();
         ctx.close();
     }
 }

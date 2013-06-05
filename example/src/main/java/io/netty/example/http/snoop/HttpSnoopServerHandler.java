@@ -71,7 +71,7 @@ public class HttpSnoopServerHandler extends ChannelInboundHandlerAdapter {
             HttpRequest request = this.request = (HttpRequest) msg;
 
             if (is100ContinueExpected(request)) {
-                send100Continue(ctx, out);
+                send100Continue(out);
             }
 
             buf.setLength(0);
@@ -191,7 +191,7 @@ public class HttpSnoopServerHandler extends ChannelInboundHandlerAdapter {
         return keepAlive;
     }
 
-    private static void send100Continue(ChannelHandlerContext ctx, MessageList<Object> out) {
+    private static void send100Continue(MessageList<Object> out) {
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, CONTINUE);
         out.add(response);
     }

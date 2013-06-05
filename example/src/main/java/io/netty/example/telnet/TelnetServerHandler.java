@@ -72,6 +72,7 @@ public class TelnetServerHandler extends ChannelInboundHandlerAdapter {
                 future.addListener(ChannelFutureListener.CLOSE);
             }
         }
+        msgs.releaseAllAndRecycle();
     }
 
     @Override

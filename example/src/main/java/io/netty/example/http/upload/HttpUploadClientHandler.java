@@ -76,6 +76,7 @@ public class HttpUploadClientHandler extends ChannelInboundHandlerAdapter {
                 }
             }
         }
+        msgs.releaseAllAndRecycle();
     }
 
     @Override

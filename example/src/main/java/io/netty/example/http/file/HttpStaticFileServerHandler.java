@@ -111,25 +111,25 @@ public class HttpStaticFileServerHandler extends ChannelInboundHandlerAdapter {
             FullHttpRequest request = requests.get(i);
             if (!request.getDecoderResult().isSuccess()) {
                 sendError(ctx, BAD_REQUEST);
-                return;
+                continue;
             }
 
             if (request.getMethod() != GET) {
                 sendError(ctx, METHOD_NOT_ALLOWED);
-                return;
+                continue;
             }
 
             final String uri = request.getUri();
             final String path = sanitizeUri(uri);
             if (path == null) {
                 sendError(ctx, FORBIDDEN);
-                return;
+                continue;
             }
 
             File file = new File(path);
             if (file.isHidden() || !file.exists()) {
                 sendError(ctx, NOT_FOUND);
-                return;
+                continue;
             }
 
             if (file.isDirectory()) {
@@ -138,12 +138,12 @@ public class HttpStaticFileServerHandler extends ChannelInboundHandlerAdapter {
                 } else {
                     sendRedirect(ctx, uri + '/');
                 }
-                return;
+                continue;
             }
 
             if (!file.isFile()) {
                 sendError(ctx, FORBIDDEN);
-                return;
+                continue;
             }
 
             // Cache Validation
@@ -158,7 +158,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundHandlerAdapter {
                 long fileLastModifiedSeconds = file.lastModified() / 1000;
                 if (ifModifiedSinceDateSeconds == fileLastModifiedSeconds) {
                     sendNotModified(ctx);
-                    return;
+                    continue;
                 }
             }
 
@@ -167,7 +167,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundHandlerAdapter {
                 raf = new RandomAccessFile(file, "r");
             } catch (FileNotFoundException fnfe) {
                 sendError(ctx, NOT_FOUND);
-                return;
+                continue;
             }
             long fileLength = raf.length();
 
@@ -191,6 +191,7 @@ public class HttpStaticFileServerHandler extends ChannelInboundHandlerAdapter {
                 writeFuture.addListener(ChannelFutureListener.CLOSE);
             }
         }
+        msgs.releaseAllAndRecycle();
     }
 
     @Override
