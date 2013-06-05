@@ -797,18 +797,6 @@ final class UnreleasableByteBuf implements ByteBuf {
     }
 
     @Override
-    public ByteBuf suspendIntermediaryDeallocations() {
-        buf.suspendIntermediaryDeallocations();
-        return this;
-    }
-
-    @Override
-    public ByteBuf resumeIntermediaryDeallocations() {
-        buf.resumeIntermediaryDeallocations();
-        return this;
-    }
-
-    @Override
     public int hashCode() {
         return buf.hashCode();
     }
@@ -836,11 +824,6 @@ final class UnreleasableByteBuf implements ByteBuf {
     @Override
     public ByteBuf retain() {
         return this;
-    }
-
-    @Override
-    public BufType type() {
-        return buf.type();
     }
 
     @Override

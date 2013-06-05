@@ -19,8 +19,9 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.MessageList;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.oio.OioDatagramChannel;
@@ -43,11 +44,9 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
     public void testMulticast(Bootstrap sb, Bootstrap cb) throws Throwable {
         MulticastTestHandler mhandler = new MulticastTestHandler();
 
-        sb.handler(new ChannelInboundMessageHandlerAdapter<DatagramPacket>() {
+        sb.handler(new ChannelInboundHandlerAdapter() {
             @Override
-            public void messageReceived(
-                    ChannelHandlerContext ctx,
-                    DatagramPacket msg) throws Exception {
+            public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
                 // Nothing will be sent.
             }
         });
@@ -92,19 +91,19 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         cc.close().awaitUninterruptibly();
     }
 
-    private static final class MulticastTestHandler extends ChannelInboundMessageHandlerAdapter<DatagramPacket> {
+    private static final class MulticastTestHandler extends ChannelInboundHandlerAdapter {
         private final CountDownLatch latch = new CountDownLatch(1);
 
         private boolean done;
         private volatile boolean fail;
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
-            if (done) {
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            if (done || msgs.size() != 1) {
                 fail = true;
             }
 
-            assertEquals(1, msg.content().readInt());
+            assertEquals(1, ((DatagramPacket) msgs.get(0)).content().readInt());
             latch.countDown();
 
             // mark the handler as done as we only are supposed to receive one message

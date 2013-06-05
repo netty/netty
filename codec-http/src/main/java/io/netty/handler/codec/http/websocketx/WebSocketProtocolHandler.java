@@ -17,12 +17,12 @@ package io.netty.handler.codec.http.websocketx;
 
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.MessageList;
+import io.netty.handler.codec.MessageToMessageDecoder;
 
-abstract class WebSocketProtocolHandler  extends ChannelInboundMessageHandlerAdapter<WebSocketFrame> {
-
+abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocketFrame> {
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, WebSocketFrame frame) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, WebSocketFrame frame, MessageList<Object> out) throws Exception {
         if (frame instanceof PingWebSocketFrame) {
             frame.content().retain();
             ctx.channel().write(new PongWebSocketFrame(frame.content()));
@@ -33,8 +33,7 @@ abstract class WebSocketProtocolHandler  extends ChannelInboundMessageHandlerAda
             return;
         }
 
-        frame.retain();
-        ctx.nextInboundMessageBuffer().add(frame);
+        out.add(frame.retain());
     }
 
     @Override

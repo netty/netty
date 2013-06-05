@@ -17,6 +17,7 @@ package io.netty.channel.socket.aio;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.SocketChannelConfig;
 
 import java.nio.channels.InterruptedByTimeoutException;
@@ -110,8 +111,8 @@ public interface AioSocketChannelConfig extends SocketChannelConfig {
     AioSocketChannelConfig setAllocator(ByteBufAllocator allocator);
 
     @Override
-    AioSocketChannelConfig setAutoRead(boolean autoRead);
+    AioSocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator);
 
     @Override
-    AioSocketChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type);
+    AioSocketChannelConfig setAutoRead(boolean autoRead);
 }

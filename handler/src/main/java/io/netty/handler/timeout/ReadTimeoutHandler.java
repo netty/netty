@@ -19,8 +19,9 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelStateHandlerAdapter;
+import io.netty.channel.MessageList;
 
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -61,7 +62,7 @@ import java.util.concurrent.TimeUnit;
  * @see WriteTimeoutHandler
  * @see IdleStateHandler
  */
-public class ReadTimeoutHandler extends ChannelStateHandlerAdapter {
+public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
 
     private final long timeoutMillis;
 
@@ -144,9 +145,9 @@ public class ReadTimeoutHandler extends ChannelStateHandlerAdapter {
     }
 
     @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
         lastReadTime = System.currentTimeMillis();
-        ctx.fireInboundBufferUpdated();
+        ctx.fireMessageReceived(msgs);
     }
 
     private void initialize(ChannelHandlerContext ctx) {

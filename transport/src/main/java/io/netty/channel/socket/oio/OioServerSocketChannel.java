@@ -15,10 +15,10 @@
  */
 package io.netty.channel.socket.oio;
 
-import io.netty.buffer.BufType;
-import io.netty.buffer.MessageBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.MessageList;
 import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.util.internal.logging.InternalLogger;
@@ -44,7 +44,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(OioServerSocketChannel.class);
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private static ServerSocket newServerSocket() {
         try {
@@ -155,7 +155,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
+    protected int doReadMessages(MessageList<Object> buf) throws Exception {
         if (socket.isClosed()) {
             return -1;
         }
@@ -184,6 +184,15 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     }
 
     @Override
+    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
+        int size = msgs.size();
+        for (int i = index; i < size; i ++) {
+            ByteBufUtil.release(msgs.get(i));
+        }
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     protected void doConnect(
             SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         throw new UnsupportedOperationException();
@@ -196,11 +205,6 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
 
     @Override
     protected void doDisconnect() throws Exception {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected void doWriteMessages(MessageBuf<Object> buf) throws Exception {
         throw new UnsupportedOperationException();
     }
 }

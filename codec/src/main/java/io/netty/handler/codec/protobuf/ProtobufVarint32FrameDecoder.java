@@ -17,8 +17,8 @@ package io.netty.handler.codec.protobuf;
 
 import com.google.protobuf.CodedInputStream;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.MessageList;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.CorruptedFrameException;
 
@@ -43,7 +43,7 @@ public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
     //      (just like LengthFieldBasedFrameDecoder)
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, MessageBuf<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, MessageList<Object> out) throws Exception {
         in.markReaderIndex();
         final byte[] buf = new byte[5];
         for (int i = 0; i < buf.length; i ++) {

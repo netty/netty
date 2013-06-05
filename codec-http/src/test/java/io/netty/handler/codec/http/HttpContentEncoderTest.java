@@ -19,9 +19,8 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.embedded.EmbeddedByteChannel;
-import io.netty.channel.embedded.EmbeddedMessageChannel;
-import io.netty.handler.codec.ByteToByteEncoder;
+import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpHeaders.Values;
 import io.netty.util.CharsetUtil;
@@ -35,9 +34,9 @@ public class HttpContentEncoderTest {
     private static final class TestEncoder extends HttpContentEncoder {
         @Override
         protected Result beginEncode(HttpResponse headers, String acceptEncoding) {
-            return new Result("test", new EmbeddedByteChannel(new ByteToByteEncoder() {
+            return new Result("test", new EmbeddedChannel(new MessageToByteEncoder<ByteBuf>() {
                 @Override
-                protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) {
+                protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
                     out.writeBytes(String.valueOf(in.readableBytes()).getBytes(CharsetUtil.US_ASCII));
                     in.skipBytes(in.readableBytes());
                 }
@@ -47,7 +46,7 @@ public class HttpContentEncoderTest {
 
     @Test
     public void testSplitContent() throws Exception {
-        EmbeddedMessageChannel ch = new EmbeddedMessageChannel(new TestEncoder());
+        EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
         ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
 
         ch.writeOutbound(new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK));
@@ -71,7 +70,7 @@ public class HttpContentEncoderTest {
 
     @Test
     public void testChunkedContent() throws Exception {
-        EmbeddedMessageChannel ch = new EmbeddedMessageChannel(new TestEncoder());
+        EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
         ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
 
         HttpResponse res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
@@ -98,7 +97,7 @@ public class HttpContentEncoderTest {
 
     @Test
     public void testFullContent() throws Exception {
-        EmbeddedMessageChannel ch = new EmbeddedMessageChannel(new TestEncoder());
+        EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
         ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
 
         FullHttpResponse res = new DefaultFullHttpResponse(
@@ -116,12 +115,12 @@ public class HttpContentEncoderTest {
     }
 
     /**
-     * If the length of the content is unknown, {@link HttpContentEncoder} should not skip encoding even if the
-     * actual length is turned out to be 0.
+     * If the length of the content is unknown, {@link HttpContentEncoder} should not skip encoding the content
+     * even if the actual length is turned out to be 0.
      */
     @Test
     public void testEmptySplitContent() throws Exception {
-        EmbeddedMessageChannel ch = new EmbeddedMessageChannel(new TestEncoder());
+        EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
         ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
 
         ch.writeOutbound(new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK));
@@ -129,7 +128,7 @@ public class HttpContentEncoderTest {
 
         ch.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT);
         HttpContent chunk = (HttpContent) ch.readOutbound();
-        assertThat(chunk.content().isReadable(), is(false));
+        assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("0"));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
         assertThat(ch.readOutbound(), is(nullValue()));
     }
@@ -139,7 +138,7 @@ public class HttpContentEncoderTest {
      */
     @Test
     public void testEmptyFullContent() throws Exception {
-        EmbeddedMessageChannel ch = new EmbeddedMessageChannel(new TestEncoder());
+        EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
         ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
 
         FullHttpResponse res = new DefaultFullHttpResponse(
@@ -162,7 +161,7 @@ public class HttpContentEncoderTest {
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 
-    private static void assertEncodedResponse(EmbeddedMessageChannel ch) {
+    private static void assertEncodedResponse(EmbeddedChannel ch) {
         Object o = ch.readOutbound();
         assertThat(o, is(instanceOf(HttpResponse.class)));
 

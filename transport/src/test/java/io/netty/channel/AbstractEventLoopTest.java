@@ -39,7 +39,6 @@ public abstract class AbstractEventLoopTest {
         ServerBootstrap bootstrap = new ServerBootstrap();
         ChannelFuture future = bootstrap.channel(newChannel()).group(group)
                 .childHandler(new ChannelInitializer<SocketChannel>() {
-
                     @Override
                     public void initChannel(SocketChannel ch) throws Exception {
                     }
@@ -61,27 +60,11 @@ public abstract class AbstractEventLoopTest {
         assertSame(executor, future.channel().pipeline().context(TestChannelHandler2.class).executor());
     }
 
-    private static final class TestChannelHandler extends ChannelDuplexHandler {
-        @Override
-        public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-            ctx.flush(promise);
-        }
-
-        @Override
-        public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-            ctx.fireInboundBufferUpdated();
-        }
-    }
+    private static final class TestChannelHandler extends ChannelDuplexHandler { }
 
     private static final class TestChannelHandler2 extends ChannelDuplexHandler {
         @Override
-        public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-            ctx.flush(promise);
-        }
-
-        @Override
-        public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-        }
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception { }
     }
 
     protected abstract EventLoopGroup newEventLoopGroup();

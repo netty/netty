@@ -16,7 +16,8 @@
 package io.netty.example.securechat;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MessageList;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -24,14 +25,17 @@ import java.util.logging.Logger;
 /**
  * Handles a client-side channel.
  */
-public class SecureChatClientHandler extends ChannelInboundMessageHandlerAdapter<String> {
+public class SecureChatClientHandler extends ChannelInboundHandlerAdapter {
 
     private static final Logger logger = Logger.getLogger(
             SecureChatClientHandler.class.getName());
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
-        System.err.println(msg);
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        for (int i = 0; i < msgs.size(); i++) {
+            System.err.println(msgs.get(i));
+        }
+        msgs.releaseAllAndRecycle();
     }
 
     @Override

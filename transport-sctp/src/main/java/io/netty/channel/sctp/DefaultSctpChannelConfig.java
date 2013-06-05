@@ -19,15 +19,17 @@ package io.netty.channel.sctp;
 import com.sun.nio.sctp.SctpChannel;
 import com.sun.nio.sctp.SctpStandardSocketOptions;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
 import java.util.Map;
 
+import static io.netty.channel.ChannelOption.SO_RCVBUF;
+import static io.netty.channel.ChannelOption.SO_SNDBUF;
 import static io.netty.channel.sctp.SctpChannelOption.*;
 
 /**
@@ -187,12 +189,13 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
     }
 
     @Override
-    public SctpChannelConfig setAutoRead(boolean autoRead) {
-        return (SctpChannelConfig) super.setAutoRead(autoRead);
+    public SctpChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
+        super.setRecvByteBufAllocator(allocator);
+        return this;
     }
 
     @Override
-    public SctpChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type) {
-        return (SctpChannelConfig) super.setDefaultHandlerByteBufType(type);
+    public SctpChannelConfig setAutoRead(boolean autoRead) {
+        return (SctpChannelConfig) super.setAutoRead(autoRead);
     }
 }

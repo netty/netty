@@ -16,16 +16,13 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandler;
-import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.MessageList;
 import io.netty.util.internal.TypeParameterMatcher;
 
-public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler
-        implements ChannelInboundByteHandler, ChannelOutboundMessageHandler<I> {
+public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
 
     private final TypeParameterMatcher outboundMsgMatcher;
     private final MessageToByteEncoder<I> encoder  = new MessageToByteEncoder<I>() {
@@ -42,12 +39,12 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler
 
     private final ByteToMessageDecoder decoder = new ByteToMessageDecoder() {
         @Override
-        public void decode(ChannelHandlerContext ctx, ByteBuf in, MessageBuf<Object> out) throws Exception {
+        public void decode(ChannelHandlerContext ctx, ByteBuf in, MessageList<Object> out) throws Exception {
             ByteToMessageCodec.this.decode(ctx, in, out);
         }
 
         @Override
-        protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, MessageBuf<Object> out) throws Exception {
+        protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, MessageList<Object> out) throws Exception {
             ByteToMessageCodec.this.decodeLast(ctx, in, out);
         }
     };
@@ -60,38 +57,23 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler
         outboundMsgMatcher = TypeParameterMatcher.get(outboundMessageType);
     }
 
-    @Override
-    public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return decoder.newInboundBuffer(ctx);
-    }
-
-    @Override
-    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-        decoder.discardInboundReadBytes(ctx);
-    }
-
-    @Override
-    public MessageBuf<I> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return encoder.newOutboundBuffer(ctx);
-    }
-
-    @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-        decoder.inboundBufferUpdated(ctx);
-    }
-
-    @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        encoder.flush(ctx, promise);
-    }
-
     public boolean acceptOutboundMessage(Object msg) throws Exception {
         return outboundMsgMatcher.match(msg);
     }
 
+    @Override
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        decoder.messageReceived(ctx, msgs);
+    }
+
+    @Override
+    public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
+        encoder.write(ctx, msgs, promise);
+    }
+
     protected abstract void encode(ChannelHandlerContext ctx, I msg, ByteBuf out) throws Exception;
-    protected abstract void decode(ChannelHandlerContext ctx, ByteBuf in, MessageBuf<Object> out) throws Exception;
-    protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, MessageBuf<Object> out) throws Exception {
+    protected abstract void decode(ChannelHandlerContext ctx, ByteBuf in, MessageList<Object> out) throws Exception;
+    protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, MessageList<Object> out) throws Exception {
         decode(ctx, in, out);
     }
 }

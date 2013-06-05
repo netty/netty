@@ -15,18 +15,16 @@
  */
 package io.netty.bootstrap;
 
-import io.netty.buffer.MessageBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandler;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelStateHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MessageList;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.AttributeKey;
@@ -212,8 +210,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
         return new Entry[size];
     }
 
-    private static class ServerBootstrapAcceptor
-            extends ChannelStateHandlerAdapter implements ChannelInboundMessageHandler<Channel> {
+    private static class ServerBootstrapAcceptor extends ChannelInboundHandlerAdapter {
 
         private final EventLoopGroup childGroup;
         private final ChannelHandler childHandler;
@@ -231,20 +228,11 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
         }
 
         @Override
-        public MessageBuf<Channel> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return Unpooled.messageBuffer();
-        }
-
-        @Override
         @SuppressWarnings("unchecked")
-        public void inboundBufferUpdated(ChannelHandlerContext ctx) {
-            MessageBuf<Channel> in = ctx.inboundMessageBuffer();
-            for (;;) {
-                Channel child = in.poll();
-                if (child == null) {
-                    break;
-                }
-
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) {
+            int size = msgs.size();
+            for (int i = 0; i < size; i ++) {
+                Channel child = (Channel) msgs.get(i);
                 child.pipeline().addLast(childHandler);
 
                 for (Entry<ChannelOption<?>, Object> e: childOptions) {

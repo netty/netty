@@ -15,8 +15,8 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFlushPromiseNotifier;
@@ -25,10 +25,10 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandlerUtil;
 import io.netty.channel.ChannelInboundByteHandler;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundByteHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.ChannelStateHandler;
 import io.netty.channel.FileRegion;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
@@ -71,7 +71,7 @@ import java.util.regex.Pattern;
  * <p>
  * Beside using the handshake {@link ChannelFuture} to get notified about the completation of the handshake it's
  * also possible to detect it by implement the
- * {@link ChannelStateHandler#userEventTriggered(ChannelHandlerContext, Object)}
+ * {@link ChannelInboundHandler#userEventTriggered(ChannelHandlerContext, Object)}
  * method and check for a {@link SslHandshakeCompletionEvent}.
  *
  * <h3>Handshake</h3>
@@ -799,7 +799,7 @@ public class SslHandler
         if (packetLength == -1) {
             // Bad data - discard the buffer and raise an exception.
             NotSslRecordException e = new NotSslRecordException(
-                    "not an SSL/TLS record: " + BufUtil.hexDump(in));
+                    "not an SSL/TLS record: " + ByteBufUtil.hexDump(in));
             in.skipBytes(in.readableBytes());
             ctx.fireExceptionCaught(e);
             setHandshakeFailure(e);

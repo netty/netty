@@ -17,13 +17,14 @@ package io.netty.example.qotm;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MessageList;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.CharsetUtil;
 
 import java.util.Random;
 
-public class QuoteOfTheMomentServerHandler extends ChannelInboundMessageHandlerAdapter<DatagramPacket> {
+public class QuoteOfTheMomentServerHandler extends ChannelInboundHandlerAdapter {
 
     private static final Random random = new Random();
 
@@ -44,12 +45,17 @@ public class QuoteOfTheMomentServerHandler extends ChannelInboundMessageHandlerA
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
-        System.err.println(msg);
-        if ("QOTM?".equals(msg.content().toString(CharsetUtil.UTF_8))) {
-            ctx.write(new DatagramPacket(
-                    Unpooled.copiedBuffer("QOTM: " + nextQuote(), CharsetUtil.UTF_8), msg.sender()));
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        MessageList<DatagramPacket> packets = msgs.cast();
+        for (int i = 0; i < packets.size(); i++) {
+            DatagramPacket packet = packets.get(i);
+            System.err.println(packet);
+            if ("QOTM?".equals(packet.content().toString(CharsetUtil.UTF_8))) {
+                ctx.write(new DatagramPacket(
+                        Unpooled.copiedBuffer("QOTM: " + nextQuote(), CharsetUtil.UTF_8), packet.sender()));
+            }
         }
+        msgs.releaseAllAndRecycle();
     }
 
     @Override

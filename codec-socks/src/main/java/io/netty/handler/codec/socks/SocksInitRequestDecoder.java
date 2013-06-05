@@ -16,8 +16,8 @@
 package io.netty.handler.codec.socks;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.MessageList;
 import io.netty.handler.codec.ReplayingDecoder;
 
 import java.util.ArrayList;
@@ -44,7 +44,7 @@ public class SocksInitRequestDecoder extends ReplayingDecoder<SocksInitRequestDe
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf, MessageBuf<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf, MessageList<Object> out) throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
                 version = SocksProtocolVersion.fromByte(byteBuf.readByte());

@@ -316,14 +316,4 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
     public long memoryAddress() {
         throw new UnsupportedOperationException();
     }
-
-    @Override
-    public ByteBuf suspendIntermediaryDeallocations() {
-        return this;
-    }
-
-    @Override
-    public ByteBuf resumeIntermediaryDeallocations() {
-        return this;
-    }
 }

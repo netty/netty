@@ -19,9 +19,10 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MessageList;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Test;
@@ -70,8 +71,7 @@ public class LocalChannelRegistryTest {
                 @Override
                 public void run() {
                     // Send a message event up the pipeline.
-                    cc.pipeline().inboundMessageBuffer().add("Hello, World");
-                    cc.pipeline().fireInboundBufferUpdated();
+                    cc.pipeline().fireMessageReceived("Hello, World");
                     latch.countDown();
                 }
             });
@@ -91,10 +91,12 @@ public class LocalChannelRegistryTest {
         }
     }
 
-    static class TestHandler extends ChannelInboundMessageHandlerAdapter<String> {
+    static class TestHandler extends ChannelInboundHandlerAdapter {
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
-            logger.info(String.format("Received mesage: %s", msg));
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            for (int i = 0; i < msgs.size(); i ++) {
+                logger.info(String.format("Received mesage: %s", msgs.get(i)));
+            }
         }
     }
 }

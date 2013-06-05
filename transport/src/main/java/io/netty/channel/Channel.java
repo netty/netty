@@ -15,8 +15,6 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.ServerSocketChannel;
@@ -114,22 +112,6 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
     ChannelMetadata metadata();
 
     /**
-     * Return the last {@link ByteBuf} of the {@link ChannelPipeline} which belongs to this {@link Channel}.
-     *
-     * This method may throw an {@link NoSuchBufferException} if you try to access this buffer and the
-     * {@link ChannelPipeline} does not contain any {@link ByteBuf}.
-     */
-    ByteBuf outboundByteBuffer();
-
-    /**
-     * Return the last {@link MessageBuf} of the {@link ChannelPipeline} which belongs to this {@link Channel}.
-     *
-     * This method may throw an {@link NoSuchBufferException} if you try to access this buffer and the
-     * {@link ChannelPipeline} does not contain any {@link MessageBuf}.
-     */
-    <T> MessageBuf<T> outboundMessageBuffer();
-
-    /**
      * Returns the local address where this channel is bound to.  The returned
      * {@link SocketAddress} is supposed to be down-cast into more concrete
      * type such as {@link InetSocketAddress} to retrieve the detailed
@@ -172,7 +154,6 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
      * are only provided to implement the actual transport, and must be invoked from an I/O thread except for the
      * following methods:
      * <ul>
-     *   <li>{@link #headContext()}</li>
      *   <li>{@link #localAddress()}</li>
      *   <li>{@link #remoteAddress()}</li>
      *   <li>{@link #closeForcibly()}</li>
@@ -181,11 +162,6 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
      * </ul>
      */
     interface Unsafe {
-        /**
-         * Return the internal {@link ChannelHandlerContext} that is placed before all user handlers.
-         */
-        ChannelHandlerContext headContext();
-
         /**
          * Return the {@link SocketAddress} to which is bound local or
          * {@code null} if none.
@@ -250,22 +226,14 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
         void beginRead();
 
         /**
-         * Flush out all data that was buffered in the buffer of the {@link #headContext()} and was not
-         * flushed out yet. After that is done the {@link ChannelFuture} will get notified
+         * Schedules a write operation.
          */
-        void flush(ChannelPromise promise);
+        void write(MessageList<?> msgs, ChannelPromise promise);
 
         /**
          * Flush out all data now.
          */
         void flushNow();
-
-        /**
-         * Send a {@link FileRegion} to the remote peer and notify the {@link ChannelPromise} once it completes
-         * or an error was detected. Once the {@link FileRegion} was transfered or an error was thrown it will
-         * automaticly call {@link FileRegion#release()}.
-         */
-        void sendFile(FileRegion region, ChannelPromise promise);
 
         /**
          * Return a special ChannelPromise which can be reused and passed to the operations in {@link Unsafe}.

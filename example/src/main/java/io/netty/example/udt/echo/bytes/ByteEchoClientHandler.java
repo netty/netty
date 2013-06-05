@@ -20,9 +20,8 @@ import com.yammer.metrics.core.Meter;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelHandlerUtil;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
-import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MessageList;
 import io.netty.channel.udt.nio.NioUdtProvider;
 
 import java.util.concurrent.TimeUnit;
@@ -34,7 +33,7 @@ import java.util.logging.Logger;
  * traffic between the echo client and server by sending the first message to
  * the server on activation.
  */
-public class ByteEchoClientHandler extends ChannelInboundByteHandlerAdapter {
+public class ByteEchoClientHandler extends ChannelInboundHandlerAdapter {
 
     private static final Logger log = Logger.getLogger(ByteEchoClientHandler.class.getName());
 
@@ -58,13 +57,14 @@ public class ByteEchoClientHandler extends ChannelInboundByteHandlerAdapter {
     }
 
     @Override
-    public void inboundBufferUpdated(final ChannelHandlerContext ctx,
-            final ByteBuf in) {
-        meter.mark(in.readableBytes());
-        final ByteBuf out = ctx.nextOutboundByteBuffer();
-        out.discardReadBytes();
-        out.writeBytes(in);
-        ctx.flush();
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        MessageList<ByteBuf> buffers = msgs.cast();
+
+        for (int i = 0; i < buffers.size(); i++) {
+            ByteBuf buf = buffers.get(i);
+            meter.mark(buf.readableBytes());
+        }
+        ctx.write(buffers);
     }
 
     @Override
@@ -72,13 +72,6 @@ public class ByteEchoClientHandler extends ChannelInboundByteHandlerAdapter {
             final Throwable cause) {
         log.log(Level.WARNING, "close the connection when an exception is raised", cause);
         ctx.close();
-    }
-
-    @Override
-    public ByteBuf newInboundBuffer(final ChannelHandlerContext ctx)
-            throws Exception {
-        return ChannelHandlerUtil.allocate(ctx,
-                ctx.channel().config().getOption(ChannelOption.SO_RCVBUF));
     }
 
 }

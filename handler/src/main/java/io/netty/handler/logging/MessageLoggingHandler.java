@@ -15,17 +15,11 @@
  */
 package io.netty.handler.logging;
 
-import io.netty.buffer.BufUtil;
-import io.netty.buffer.MessageBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandler;
-import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.MessageList;
 
-public class MessageLoggingHandler
-        extends LoggingHandler
-        implements ChannelInboundMessageHandler<Object>, ChannelOutboundMessageHandler<Object> {
+public class MessageLoggingHandler extends LoggingHandler {
 
     public MessageLoggingHandler() { }
 
@@ -50,54 +44,42 @@ public class MessageLoggingHandler
     }
 
     @Override
-    public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return Unpooled.messageBuffer();
+    public void write(ChannelHandlerContext ctx, MessageList<Object> msgs,  ChannelPromise promise) throws Exception {
+        log("WRITE", msgs);
+        ctx.write(msgs);
     }
 
     @Override
-    public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return Unpooled.messageBuffer();
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        log("RECEIVED", msgs);
+        ctx.fireMessageReceived(msgs);
     }
 
-    @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx)
-            throws Exception {
-        MessageBuf<Object> buf = ctx.inboundMessageBuffer();
+    private void log(String message, MessageList<Object> msgs) {
         if (logger.isEnabled(internalLevel)) {
-            logger.log(internalLevel, format(ctx, formatBuffer("RECEIVED", buf)));
+            logger.log(internalLevel, formatBuffer(message, msgs));
         }
-
-        MessageBuf<Object> out = ctx.nextInboundMessageBuffer();
-        for (;;) {
-            Object o = buf.poll();
-            if (o == null) {
-                break;
-            }
-            out.add(o);
-        }
-        ctx.fireInboundBufferUpdated();
     }
 
-    @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise promise)
-            throws Exception {
-        MessageBuf<Object> buf = ctx.outboundMessageBuffer();
-        if (logger.isEnabled(internalLevel)) {
-            logger.log(internalLevel, format(ctx, formatBuffer("WRITE", buf)));
-        }
-
-        MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
-        for (;;) {
-            Object o = buf.poll();
-            if (o == null) {
-                break;
-            }
-            out.add(o);
-        }
-        ctx.flush(promise);
+    protected String formatBuffer(String message, MessageList<Object> msgs) {
+        return message + '(' + msgs.size() + "): " + contentToString(msgs);
     }
 
-    protected String formatBuffer(String message, MessageBuf<Object> buf) {
-        return message + '(' + buf.size() + "): " + BufUtil.contentToString(buf);
+    private static String contentToString(MessageList<Object> msgs) {
+        if (msgs.isEmpty()) {
+            return "[]";
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append('[');
+        int size = msgs.size();
+        for (int i = 0; i < size; i++) {
+            Object msg = msgs.get(i);
+            sb.append(msg);
+
+            if (i + 1 < size) {
+                sb.append(", ");
+            }
+        }
+        return sb.append(']').toString();
     }
 }

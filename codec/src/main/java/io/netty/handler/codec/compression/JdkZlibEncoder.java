@@ -255,10 +255,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
             deflater.end();
         }
 
-        ctx.nextOutboundByteBuffer().writeBytes(footer);
-        ctx.flush(promise);
-
-        return promise;
+        return ctx.write(footer, promise);
     }
 
     @Override

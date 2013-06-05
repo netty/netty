@@ -16,8 +16,9 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
-import io.netty.channel.embedded.EmbeddedMessageChannel;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MessageList;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Test;
@@ -99,7 +100,7 @@ public class SpdySessionHandlerTest {
     }
 
     private static void testSpdySessionHandler(int version, boolean server) {
-        EmbeddedMessageChannel sessionHandler = new EmbeddedMessageChannel(
+        EmbeddedChannel sessionHandler = new EmbeddedChannel(
                 new SpdySessionHandler(version, server), new EchoHandler(closeSignal, server));
 
         while (sessionHandler.readOutbound() != null) {
@@ -278,7 +279,7 @@ public class SpdySessionHandlerTest {
 
     // Echo Handler opens 4 half-closed streams on session connection
     // and then sets the number of concurrent streams to 3
-    private static class EchoHandler extends ChannelInboundMessageHandlerAdapter<Object> {
+    private static class EchoHandler extends ChannelInboundHandlerAdapter {
         private final int closeSignal;
         private final boolean server;
 
@@ -309,35 +310,38 @@ public class SpdySessionHandlerTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-            if (msg instanceof SpdyDataFrame ||
-                    msg instanceof SpdyPingFrame ||
-                    msg instanceof SpdyHeadersFrame) {
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> messages) throws Exception {
+            for (int i = 0; i < messages.size(); i++) {
+                Object msg = messages.get(i);
+                if (msg instanceof SpdyDataFrame ||
+                        msg instanceof SpdyPingFrame ||
+                        msg instanceof SpdyHeadersFrame) {
 
-                ctx.write(msg);
-                return;
-            }
-
-            if (msg instanceof SpdySynStreamFrame) {
-
-                SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
-                if (!spdySynStreamFrame.isUnidirectional()) {
-                    int streamID = spdySynStreamFrame.getStreamId();
-                    SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamID);
-                    spdySynReplyFrame.setLast(spdySynStreamFrame.isLast());
-                    for (Map.Entry<String, String> entry: spdySynStreamFrame.headers()) {
-                        spdySynReplyFrame.headers().add(entry.getKey(), entry.getValue());
-                    }
-
-                    ctx.write(spdySynReplyFrame);
+                    ctx.write(msg);
+                    return;
                 }
-                return;
-            }
 
-            if (msg instanceof SpdySettingsFrame) {
-                SpdySettingsFrame spdySettingsFrame = (SpdySettingsFrame) msg;
-                if (spdySettingsFrame.isSet(closeSignal)) {
-                    ctx.close();
+                if (msg instanceof SpdySynStreamFrame) {
+
+                    SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
+                    if (!spdySynStreamFrame.isUnidirectional()) {
+                        int streamID = spdySynStreamFrame.getStreamId();
+                        SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamID);
+                        spdySynReplyFrame.setLast(spdySynStreamFrame.isLast());
+                        for (Map.Entry<String, String> entry: spdySynStreamFrame.headers()) {
+                            spdySynReplyFrame.headers().add(entry.getKey(), entry.getValue());
+                        }
+
+                        ctx.write(spdySynReplyFrame);
+                    }
+                    return;
+                }
+
+                if (msg instanceof SpdySettingsFrame) {
+                    SpdySettingsFrame spdySettingsFrame = (SpdySettingsFrame) msg;
+                    if (spdySettingsFrame.isSet(closeSignal)) {
+                        ctx.close();
+                    }
                 }
             }
         }

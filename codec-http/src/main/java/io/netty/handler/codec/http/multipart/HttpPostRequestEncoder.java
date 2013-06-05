@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
+import io.netty.channel.MessageList;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpContent;
@@ -943,7 +943,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
      *             if the encoding is in error
      */
     @Override
-    public boolean readChunk(MessageBuf<HttpContent> buffer) throws ErrorDataEncoderException {
+    public boolean readChunk(MessageList<HttpContent> buffer) throws ErrorDataEncoderException {
         if (isLastChunkSent) {
             return false;
         } else {

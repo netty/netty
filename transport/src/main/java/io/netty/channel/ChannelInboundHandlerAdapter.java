@@ -17,17 +17,17 @@ package io.netty.channel;
 
 
 /**
- * Abstract base class for {@link ChannelStateHandler} implementations which provide
+ * Abstract base class for {@link ChannelInboundHandler} implementations which provide
  * implementations of all of their methods.
  *
  * This implementation just forward the operation to the next {@link ChannelHandler} in the
  * {@link ChannelPipeline}. Sub-classes may override a method implementation to change this.
  */
-public abstract class ChannelStateHandlerAdapter extends ChannelHandlerAdapter implements ChannelStateHandler {
+public class ChannelInboundHandlerAdapter extends ChannelHandlerAdapter implements ChannelInboundHandler {
 
     /**
      * Calls {@link ChannelHandlerContext#fireChannelRegistered()} to forward
-     * to the next {@link ChannelStateHandler} in the {@link ChannelPipeline}.
+     * to the next {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
@@ -38,7 +38,7 @@ public abstract class ChannelStateHandlerAdapter extends ChannelHandlerAdapter i
 
     /**
      * Calls {@link ChannelHandlerContext#fireChannelUnregistered()} to forward
-     * to the next {@link ChannelStateHandler} in the {@link ChannelPipeline}.
+     * to the next {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
@@ -49,7 +49,7 @@ public abstract class ChannelStateHandlerAdapter extends ChannelHandlerAdapter i
 
     /**
      * Calls {@link ChannelHandlerContext#fireChannelActive()} to forward
-     * to the next {@link ChannelStateHandler} in the {@link ChannelPipeline}.
+     * to the next {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
@@ -60,7 +60,7 @@ public abstract class ChannelStateHandlerAdapter extends ChannelHandlerAdapter i
 
     /**
      * Calls {@link ChannelHandlerContext#fireChannelInactive()} to forward
-     * to the next {@link ChannelStateHandler} in the {@link ChannelPipeline}.
+     * to the next {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
@@ -79,6 +79,11 @@ public abstract class ChannelStateHandlerAdapter extends ChannelHandlerAdapter i
         ctx.fireChannelReadSuspended();
     }
 
+    @Override
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        ctx.fireMessageReceived(msgs);
+    }
+
     /**
      * Calls {@link ChannelHandlerContext#fireUserEventTriggered(Object)} to forward
      * to the next {@link ChannelHandler} in the {@link ChannelPipeline}.
@@ -86,8 +91,7 @@ public abstract class ChannelStateHandlerAdapter extends ChannelHandlerAdapter i
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt)
-            throws Exception {
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         ctx.fireUserEventTriggered(evt);
     }
 }

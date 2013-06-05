@@ -17,6 +17,7 @@ package io.netty.channel.socket.oio;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ServerSocketChannelConfig;
 
 
@@ -71,8 +72,8 @@ public interface OioServerSocketChannelConfig extends ServerSocketChannelConfig 
     OioServerSocketChannelConfig setAllocator(ByteBufAllocator allocator);
 
     @Override
-    OioServerSocketChannelConfig setAutoRead(boolean autoRead);
+    OioServerSocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator);
 
     @Override
-    OioServerSocketChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type);
+    OioServerSocketChannelConfig setAutoRead(boolean autoRead);
 }
