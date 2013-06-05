@@ -44,6 +44,8 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     protected ByteBuf cumulation;
     private volatile boolean singleDecode;
     private boolean decodeWasNull;
+    private MessageList<Object> out;
+    private boolean removed;
 
     /**
      * If set then only one message is decoded on each {@link #messageReceived(ChannelHandlerContext, MessageList)}
@@ -90,9 +92,15 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
 
     @Override
     public final void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        removed = true;
         ByteBuf buf = internalBuffer();
         if (buf.isReadable()) {
-            ctx.fireMessageReceived(buf);
+            if (out == null) {
+                ctx.fireMessageReceived(buf);
+            } else {
+                out.add(buf.copy());
+            }
+            buf.clear();
         }
         handlerRemoved0();
     }
@@ -105,11 +113,16 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-        MessageList<Object> out = MessageList.newInstance();
+        out = MessageList.newInstance();
         try {
             int size = msgs.size();
             for (int i = 0; i < size; i ++) {
                 Object m = msgs.get(i);
+                // handler was removed in the loop
+                if (removed) {
+                    out.add(m);
+                    continue;
+                }
                 if (m instanceof ByteBuf) {
                     ByteBuf data = (ByteBuf) m;
                     if (cumulation == null) {
@@ -151,7 +164,17 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
         } catch (Throwable t) {
             throw new DecoderException(t);
         } finally {
-            if (msgs.isEmpty()) {
+            // release the cumulation if the handler was removed while messages are processed
+            if (removed) {
+                if (cumulation != null) {
+                    cumulation.release();
+                    cumulation = null;
+                }
+                removed = false;
+            }
+            MessageList<Object> out = this.out;
+            this.out = null;
+            if (out.isEmpty()) {
                 decodeWasNull = true;
             }
             msgs.recycle();
