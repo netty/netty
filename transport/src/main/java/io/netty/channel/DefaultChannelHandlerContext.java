@@ -119,57 +119,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         }
     }
 
-    void forwardBufferedMessages(final DefaultChannelHandlerContext forwardPrev,
-                                 final DefaultChannelHandlerContext forwardNext) {
-        // forward buffered messages and recycle the MessageList
-        if (handler() instanceof BufferedChannelInboundHandler) {
-            MessageList<Object> msgs = ((BufferedChannelInboundHandler) handler()).bufferedInboundMessages();
-            if (msgs.isEmpty()) {
-                msgs.recycle();
-            } else {
-                final MessageList<Object> copy = msgs.copy();
-                msgs.recycle();
-
-                final DefaultChannelHandlerContext next = findContextInboundInclusive(forwardNext);
-                EventExecutor executor = next.executor();
-                if (executor.inEventLoop()) {
-                    next.invokeMessageReceived(copy);
-                } else {
-                    executor.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            next.invokeMessageReceived(copy);
-                        }
-                    });
-                }
-            }
-        }
-        if (handler() instanceof BufferedChannelOutboundHandler) {
-            MessageList<Object> msgs = ((BufferedChannelOutboundHandler) handler()).bufferedOutboundMessages();
-            if (msgs.isEmpty()) {
-                msgs.recycle();
-            } else {
-                MessageList<Object> copy = msgs.copy();
-                msgs.recycle();
-                findContextOutboundInclusive(forwardPrev).invokeWrite(copy, newPromise());
-            }
-        }
-    }
-
     private void teardown0() {
         DefaultChannelHandlerContext prev = this.prev;
         if (prev != null) {
             synchronized (pipeline) {
-
                 pipeline.remove0(this, false);
-
-                // Release all messages and recycle the MessageList
-                if (handler() instanceof BufferedChannelInboundHandler) {
-                    ((BufferedChannelInboundHandler) handler()).bufferedInboundMessages().releaseAllAndRecycle();
-                }
-                if (handler() instanceof BufferedChannelOutboundHandler) {
-                    ((BufferedChannelOutboundHandler) handler()).bufferedOutboundMessages().releaseAllAndRecycle();
-                }
             }
             prev.teardown();
         }
@@ -838,20 +792,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             ctx = ctx.prev;
         } while (!(ctx.handler() instanceof ChannelOutboundHandler));
         return ctx;
-    }
-
-    private static DefaultChannelHandlerContext findContextOutboundInclusive(DefaultChannelHandlerContext ctx) {
-        if (ctx.handler() instanceof ChannelOutboundHandler) {
-            return ctx;
-        }
-        return ctx.findContextOutbound();
-    }
-
-    private static DefaultChannelHandlerContext findContextInboundInclusive(DefaultChannelHandlerContext ctx) {
-        if (ctx.handler() instanceof ChannelInboundHandler) {
-            return ctx;
-        }
-        return ctx.findContextInbound();
     }
 
     @Override

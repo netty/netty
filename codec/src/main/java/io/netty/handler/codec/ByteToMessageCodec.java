@@ -16,14 +16,13 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.BufferedChannelInboundHandler;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.MessageList;
 import io.netty.util.internal.TypeParameterMatcher;
 
-public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler implements BufferedChannelInboundHandler {
+public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
 
     private final TypeParameterMatcher outboundMsgMatcher;
     private final MessageToByteEncoder<I> encoder  = new MessageToByteEncoder<I>() {
@@ -70,11 +69,6 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler impleme
     @Override
     public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
         encoder.write(ctx, msgs, promise);
-    }
-
-    @Override
-    public MessageList<Object> bufferedInboundMessages() {
-        return decoder.bufferedInboundMessages();
     }
 
     protected abstract void encode(ChannelHandlerContext ctx, I msg, ByteBuf out) throws Exception;

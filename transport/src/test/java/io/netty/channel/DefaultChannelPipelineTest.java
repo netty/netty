@@ -487,20 +487,9 @@ public class DefaultChannelPipelineTest {
     @Sharable
     private static class TestHandler extends ChannelDuplexHandler { }
 
-    private static class BufferedTestHandler extends ChannelDuplexHandler
-            implements BufferedChannelInboundHandler, BufferedChannelOutboundHandler {
+    private static class BufferedTestHandler extends ChannelDuplexHandler {
         final MessageList<Object> inboundBuffer = MessageList.newInstance();
         final MessageList<Object> outboundBuffer = MessageList.newInstance();
-
-        @Override
-        public MessageList<Object> bufferedInboundMessages() {
-            return inboundBuffer;
-        }
-
-        @Override
-        public MessageList<Object> bufferedOutboundMessages() {
-            return outboundBuffer;
-        }
 
         @Override
         public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise)
@@ -517,6 +506,16 @@ public class DefaultChannelPipelineTest {
                 inboundBuffer.add(msgs.get(i));
             }
             msgs.recycle();
+        }
+
+        @Override
+        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+            if (!inboundBuffer.isEmpty()) {
+                ctx.fireMessageReceived(inboundBuffer);
+            }
+            if (!outboundBuffer.isEmpty()) {
+                ctx.write(outboundBuffer);
+            }
         }
     }
 

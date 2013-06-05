@@ -21,13 +21,10 @@ import java.net.SocketAddress;
  *  Combines a {@link ChannelInboundHandler} and a {@link ChannelOutboundHandler} into one {@link ChannelHandler}.
  *
  */
-public class CombinedChannelDuplexHandler extends ChannelDuplexHandler
-        implements BufferedChannelInboundHandler, BufferedChannelOutboundHandler {
+public class CombinedChannelDuplexHandler extends ChannelDuplexHandler {
 
     private ChannelInboundHandler inboundHandler;
     private ChannelOutboundHandler outboundHandler;
-    private MessageList<Object> inboundBuffer;
-    private MessageList<Object> outboundBuffer;
 
     /**
      * Creates a new uninitialized instance. A class that extends this handler must invoke
@@ -55,13 +52,6 @@ public class CombinedChannelDuplexHandler extends ChannelDuplexHandler
         validate(inboundHandler, outboundHandler);
         this.inboundHandler = inboundHandler;
         this.outboundHandler = outboundHandler;
-
-        if (!(inboundHandler instanceof BufferedChannelInboundHandler)) {
-            inboundBuffer = MessageList.newInstance();
-        }
-        if (!(outboundHandler instanceof BufferedChannelOutboundHandler)) {
-            outboundBuffer = MessageList.newInstance();
-        }
     }
 
     @SuppressWarnings("InstanceofIncompatibleInterface")
@@ -195,21 +185,5 @@ public class CombinedChannelDuplexHandler extends ChannelDuplexHandler
     @Override
     public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
         outboundHandler.write(ctx, msgs, promise);
-    }
-
-    @Override
-    public MessageList<Object> bufferedInboundMessages() {
-        if (inboundBuffer == null) {
-           return ((BufferedChannelInboundHandler) inboundHandler).bufferedInboundMessages();
-        }
-        return inboundBuffer;
-    }
-
-    @Override
-    public MessageList<Object> bufferedOutboundMessages() {
-        if (outboundBuffer == null) {
-            return ((BufferedChannelOutboundHandler) outboundHandler).bufferedOutboundMessages();
-        }
-        return outboundBuffer;
     }
 }

@@ -345,7 +345,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         prev.next = next;
         next.prev = prev;
         name2ctx.remove(ctx.name());
-        callHandlerRemoved(ctx, prev, next, forward);
+        callHandlerRemoved(ctx);
     }
 
     @Override
@@ -442,11 +442,15 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
         name2ctx.put(newName, newCtx);
 
+        // update the reference to the replacement so forward of buffered content will work correctly
+        oldCtx.prev = newCtx;
+        oldCtx.next = newCtx;
+
         // Invoke newHandler.handlerAdded() first (i.e. before oldHandler.handlerRemoved() is invoked)
         // because callHandlerRemoved() will trigger inboundBufferUpdated() or flush() on newHandler and those
         // event handlers must be called after handlerAdded().
         callHandlerAdded(newCtx);
-        callHandlerRemoved(oldCtx, newCtx, newCtx, true);
+        callHandlerRemoved(oldCtx);
     }
 
     private static void checkMultiplicity(ChannelHandlerContext ctx) {
@@ -501,30 +505,20 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private void callHandlerRemoved(final DefaultChannelHandlerContext ctx, final DefaultChannelHandlerContext ctxPrev,
-                                    final DefaultChannelHandlerContext ctxNext, final boolean forward) {
+    private void callHandlerRemoved(final DefaultChannelHandlerContext ctx) {
         if (ctx.channel().isRegistered() && !ctx.executor().inEventLoop()) {
             ctx.executor().execute(new Runnable() {
                 @Override
                 public void run() {
-                    callHandlerRemoved0(ctx, ctxPrev, ctxNext, forward);
+                    callHandlerRemoved0(ctx);
                 }
             });
             return;
         }
-        callHandlerRemoved0(ctx, ctxPrev, ctxNext, forward);
+        callHandlerRemoved0(ctx);
     }
 
-    private void callHandlerRemoved0(final DefaultChannelHandlerContext ctx, DefaultChannelHandlerContext ctxPrev,
-                                     DefaultChannelHandlerContext ctxNext, boolean forward) {
-        if (forward) {
-            try {
-                ctx.forwardBufferedMessages(ctxPrev, ctxNext);
-            } catch (Throwable t) {
-                fireExceptionCaught(new ChannelPipelineException(
-                        "failed to forward buffer content of " + ctx.handler().getClass().getName(), t));
-            }
-        }
+    private void callHandlerRemoved0(final DefaultChannelHandlerContext ctx) {
         // Notify the complete removal.
         try {
             ctx.handler().handlerRemoved(ctx);

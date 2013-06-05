@@ -17,7 +17,6 @@ package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.BufferedChannelInboundHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.MessageList;
@@ -40,8 +39,7 @@ import io.netty.util.internal.StringUtil;
  *     }
  * </pre>
  */
-public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter
-        implements BufferedChannelInboundHandler {
+public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter {
 
     protected ByteBuf cumulation;
     private volatile boolean singleDecode;
@@ -70,7 +68,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter
     /**
      * Returns the actual number of readable bytes in the internal cumulative
      * buffer of this decoder. You usually do not need to rely on this value
-     * to write a decoder. Use it only when you muse use it at your own risk.
+     * to write a decoder. Use it only when you must use it at your own risk.
      * This method is a shortcut to {@link #internalBuffer() internalBuffer().readableBytes()}.
      */
     protected int actualReadableBytes() {
@@ -91,13 +89,19 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter
     }
 
     @Override
-    public MessageList<Object> bufferedInboundMessages() {
+    public final void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         ByteBuf buf = internalBuffer();
         if (buf.isReadable()) {
-            return MessageList.<Object>newInstance(buf);
+            ctx.fireMessageReceived(buf);
         }
-        return MessageList.newInstance();
+        handlerRemoved0();
     }
+
+    /**
+     * Gets called after the {@link ByteToMessageDecoder} was removed from the actual context and it doesn't handle
+     * events anymore.
+     */
+    protected void  handlerRemoved0() throws Exception { }
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
