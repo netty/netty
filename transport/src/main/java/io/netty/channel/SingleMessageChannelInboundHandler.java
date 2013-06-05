@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.ByteBufUtil;
 import io.netty.util.internal.TypeParameterMatcher;
 
 /**
@@ -71,6 +72,7 @@ public abstract class SingleMessageChannelInboundHandler<I> extends ChannelInbou
                 }
             }
         } finally {
+            msgs.recycle();
             ctx.fireMessageReceived(messageList);
         }
     }
