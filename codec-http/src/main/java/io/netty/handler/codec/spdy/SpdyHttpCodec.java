@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -28,7 +28,7 @@ import io.netty.handler.codec.http.HttpObject;
  */
 public final class SpdyHttpCodec
         extends CombinedChannelDuplexHandler
-        implements ChannelInboundMessageHandler<SpdyDataOrControlFrame>, ChannelOutboundMessageHandler<HttpObject> {
+        implements ChannelInboundMessageHandler<SpdyFrame>, ChannelOutboundMessageHandler<HttpObject> {
 
     /**
      * Creates a new instance with the specified decoder options.
@@ -46,7 +46,7 @@ public final class SpdyHttpCodec
     }
 
     @Override
-    public MessageBuf<SpdyDataOrControlFrame> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
+    public MessageBuf<SpdyFrame> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
         return decoder().newInboundBuffer(ctx);
     }
 
