@@ -54,24 +54,21 @@ public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-        int size = msgs.size();
-
+        MessageList<Object> out = MessageList.newInstance(msgs.size());
         for (int i = 0; i < msgs.size(); i++) {
             Object msg = msgs.get(i);
             if (msg instanceof FullHttpRequest) {
                 handleHttpRequest(ctx, (FullHttpRequest) msg);
             } else if (msg instanceof WebSocketFrame) {
-                handleWebSocketFrame(ctx, (WebSocketFrame) msg, msgs);
+                handleWebSocketFrame(ctx, (WebSocketFrame) msg, out);
             }
         }
-
-        msgs.remove(0, size);
-        if (!msgs.isEmpty()) {
-            ctx.write(msgs);
-        }
+        msgs.recycle();
+        ctx.write(out);
     }
 
-    private void handleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
+    private void handleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest req)
+            throws Exception {
         // Handle a bad request.
         if (!req.getDecoderResult().isSuccess()) {
             sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST));
@@ -102,16 +99,17 @@ public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
         }
 
         if (frame instanceof CloseWebSocketFrame) {
-            handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame.retain());
+            handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
         } else if (frame instanceof PingWebSocketFrame) {
-            out.add(new PongWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.content().retain()));
+            out.add(new PongWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.content()));
         } else if (frame instanceof TextWebSocketFrame) {
-            out.add(frame.retain());
+            out.add(frame);
         } else if (frame instanceof BinaryWebSocketFrame) {
-            out.add(frame.retain());
+            out.add(frame);
         } else if (frame instanceof ContinuationWebSocketFrame) {
-            out.add(frame.retain());
+            out.add(frame);
         } else if (frame instanceof PongWebSocketFrame) {
+            frame.release();
             // Ignore
         } else {
             throw new UnsupportedOperationException(String.format("%s frame types not supported", frame.getClass()
