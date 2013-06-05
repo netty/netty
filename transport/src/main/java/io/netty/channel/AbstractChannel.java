@@ -682,6 +682,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         promise.trySuccess();
                         if (!outboundBuffer.next()) {
                             break;
+                        } else {
+                            continue;
                         }
                     }
 
