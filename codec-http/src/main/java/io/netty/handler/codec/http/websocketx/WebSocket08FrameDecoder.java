@@ -175,7 +175,8 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
                         }
 
                         // check for reserved control frame opcodes
-                        if (!(frameOpcode == OPCODE_CLOSE || frameOpcode == OPCODE_PING || frameOpcode == OPCODE_PONG)) {
+                        if (!(frameOpcode == OPCODE_CLOSE || frameOpcode == OPCODE_PING
+                                || frameOpcode == OPCODE_PONG)) {
                             protocolViolation(ctx, "control frame using reserved opcode " + frameOpcode);
                             return;
                         }
@@ -189,7 +190,8 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
                         }
                     } else { // data frame
                         // check for reserved data frame opcodes
-                        if (!(frameOpcode == OPCODE_CONT || frameOpcode == OPCODE_TEXT || frameOpcode == OPCODE_BINARY)) {
+                        if (!(frameOpcode == OPCODE_CONT || frameOpcode == OPCODE_TEXT
+                                || frameOpcode == OPCODE_BINARY)) {
                             protocolViolation(ctx, "data frame using reserved opcode " + frameOpcode);
                             return;
                         }
@@ -202,7 +204,8 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 
                         // check opcode vs message fragmentation state 2/2
                         if (fragmentedFramesCount != 0 && frameOpcode != OPCODE_CONT && frameOpcode != OPCODE_PING) {
-                            protocolViolation(ctx, "received non-continuation data frame while inside fragmented message");
+                            protocolViolation(ctx,
+                                    "received non-continuation data frame while inside fragmented message");
                             return;
                         }
                     }
