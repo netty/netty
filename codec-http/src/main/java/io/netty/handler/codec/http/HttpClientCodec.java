@@ -41,7 +41,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * @see HttpServerCodec
  */
 public final class HttpClientCodec
-        extends CombinedChannelDuplexHandler {
+        extends CombinedChannelDuplexHandler<HttpResponseDecoder, HttpRequestEncoder> {
 
     /** A queue that is used for correlating a request and a response. */
     private final Queue<HttpMethod> queue = new ArrayDeque<HttpMethod>();
@@ -62,11 +62,11 @@ public final class HttpClientCodec
     }
 
     public void setSingleDecode(boolean singleDecode) {
-        decoder().setSingleDecode(singleDecode);
+        inboundHandler().setSingleDecode(singleDecode);
     }
 
     public boolean isSingleDecode() {
-        return decoder().isSingleDecode();
+        return inboundHandler().isSingleDecode();
     }
 
     /**
@@ -80,10 +80,6 @@ public final class HttpClientCodec
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse) {
         init(new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize), new Encoder());
         this.failOnMissingResponse = failOnMissingResponse;
-    }
-
-    private Decoder decoder() {
-        return (Decoder) inboundHandler();
     }
 
     private final class Encoder extends HttpRequestEncoder {

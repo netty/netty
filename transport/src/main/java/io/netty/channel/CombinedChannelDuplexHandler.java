@@ -21,10 +21,11 @@ import java.net.SocketAddress;
  *  Combines a {@link ChannelInboundHandler} and a {@link ChannelOutboundHandler} into one {@link ChannelHandler}.
  *
  */
-public class CombinedChannelDuplexHandler extends ChannelDuplexHandler {
+public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O extends ChannelOutboundHandler>
+        extends ChannelDuplexHandler {
 
-    private ChannelInboundHandler inboundHandler;
-    private ChannelOutboundHandler outboundHandler;
+    private I inboundHandler;
+    private O outboundHandler;
 
     /**
      * Creates a new uninitialized instance. A class that extends this handler must invoke
@@ -36,7 +37,7 @@ public class CombinedChannelDuplexHandler extends ChannelDuplexHandler {
     /**
      * Creates a new instance that combines the specified two handlers into one.
      */
-    public CombinedChannelDuplexHandler(ChannelInboundHandler inboundHandler, ChannelOutboundHandler outboundHandler) {
+    public CombinedChannelDuplexHandler(I inboundHandler, O outboundHandler) {
         init(inboundHandler, outboundHandler);
     }
 
@@ -48,14 +49,14 @@ public class CombinedChannelDuplexHandler extends ChannelDuplexHandler {
      * @throws IllegalArgumentException if the specified handlers cannot be combined into one due to a conflict
      *                                  in the type hierarchy
      */
-    protected final void init(ChannelInboundHandler inboundHandler, ChannelOutboundHandler outboundHandler) {
+    protected final void init(I inboundHandler, O outboundHandler) {
         validate(inboundHandler, outboundHandler);
         this.inboundHandler = inboundHandler;
         this.outboundHandler = outboundHandler;
     }
 
     @SuppressWarnings("InstanceofIncompatibleInterface")
-    private void validate(ChannelInboundHandler inboundHandler, ChannelOutboundHandler outboundHandler) {
+    private void validate(I inboundHandler, O outboundHandler) {
         if (this.inboundHandler != null) {
             throw new IllegalStateException(
                     "init() can not be invoked if " + CombinedChannelDuplexHandler.class.getSimpleName() +
@@ -80,11 +81,11 @@ public class CombinedChannelDuplexHandler extends ChannelDuplexHandler {
         }
     }
 
-    protected final ChannelInboundHandler inboundHandler() {
+    protected final I inboundHandler() {
         return inboundHandler;
     }
 
-    protected final ChannelOutboundHandler outboundHandler() {
+    protected final O outboundHandler() {
         return outboundHandler;
     }
 

@@ -25,7 +25,7 @@ import io.netty.channel.CombinedChannelDuplexHandler;
  * @see HttpClientCodec
  */
 public final class HttpServerCodec
-        extends CombinedChannelDuplexHandler {
+        extends CombinedChannelDuplexHandler<HttpRequestDecoder, HttpResponseEncoder> {
 
     /**
      * Creates a new instance with the default decoder options
