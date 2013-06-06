@@ -42,6 +42,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     // Lazily instantiated tasks used to trigger events to a handler with different executor.
     private Runnable invokeChannelReadSuspendedTask;
     private Runnable invokeRead0Task;
+    private Runnable invokeChannelWritableStateChangedTask;
 
     @SuppressWarnings("unchecked")
     DefaultChannelHandlerContext(
@@ -404,6 +405,35 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private void invokeChannelReadSuspended() {
         try {
             ((ChannelInboundHandler) handler()).channelReadSuspended(this);
+        } catch (Throwable t) {
+            notifyHandlerException(t);
+        }
+    }
+
+    @Override
+    public ChannelHandlerContext fireChannelWritableStateChanged() {
+        final DefaultChannelHandlerContext next = findContextInbound();
+        EventExecutor executor = next.executor();
+        if (executor.inEventLoop()) {
+            next.invokeChannelWritableStateChanged();
+        } else {
+            Runnable task = next.invokeChannelWritableStateChangedTask;
+            if (task == null) {
+                next.invokeChannelWritableStateChangedTask = task = new Runnable() {
+                    @Override
+                    public void run() {
+                        next.invokeChannelReadSuspended();
+                    }
+                };
+            }
+            executor.execute(task);
+        }
+        return this;
+    }
+
+    private void invokeChannelWritableStateChanged() {
+        try {
+            ((ChannelInboundHandler) handler()).channelWritableStateChanged(this);
         } catch (Throwable t) {
             notifyHandlerException(t);
         }

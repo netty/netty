@@ -70,7 +70,7 @@ public class ChannelInboundHandlerAdapter extends ChannelHandlerAdapter implemen
     }
     /**
      * Calls {@link ChannelHandlerContext#fireChannelReadSuspended()} to forward
-     * to the next {@link ChannelHandler} in the {@link ChannelPipeline}.
+     * to the next {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
@@ -79,6 +79,12 @@ public class ChannelInboundHandlerAdapter extends ChannelHandlerAdapter implemen
         ctx.fireChannelReadSuspended();
     }
 
+    /**
+     * Calls {@link ChannelHandlerContext#fireMessageReceived(MessageList)} to forward
+     * to the next {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
+     *
+     * Sub-classes may override this method to change behavior.
+     */
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
         ctx.fireMessageReceived(msgs);
@@ -86,12 +92,23 @@ public class ChannelInboundHandlerAdapter extends ChannelHandlerAdapter implemen
 
     /**
      * Calls {@link ChannelHandlerContext#fireUserEventTriggered(Object)} to forward
-     * to the next {@link ChannelHandler} in the {@link ChannelPipeline}.
+     * to the next {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         ctx.fireUserEventTriggered(evt);
+    }
+
+    /**
+     * Calls {@link ChannelHandlerContext#fireChannelWritableStateChanged()} to forward
+     * to the next {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
+     *
+     * Sub-classes may override this method to change behavior.
+     */
+    @Override
+    public void channelWritableStateChanged(ChannelHandlerContext ctx) throws Exception {
+        ctx.fireChannelWritableStateChanged();
     }
 }

@@ -44,6 +44,11 @@ public class ChannelOption<T> extends UniqueName {
             new ChannelOption<Integer>("CONNECT_TIMEOUT_MILLIS");
     public static final ChannelOption<Integer> WRITE_SPIN_COUNT =
             new ChannelOption<Integer>("WRITE_SPIN_COUNT");
+    public static final ChannelOption<Integer> WRITE_BUFFER_HIGH_WATER_MARK =
+            new ChannelOption<Integer>("WRITE_BUFFER_HIGH_WATER_MARK");
+    public static final ChannelOption<Integer> WRITE_BUFFER_LOW_WATER_MARK =
+            new ChannelOption<Integer>("WRITE_BUFFER_LOW_WATER_MARK");
+
     public static final ChannelOption<Boolean> ALLOW_HALF_CLOSURE =
             new ChannelOption<Boolean>("ALLOW_HALF_CLOSURE");
     public static final ChannelOption<Boolean> AUTO_READ =

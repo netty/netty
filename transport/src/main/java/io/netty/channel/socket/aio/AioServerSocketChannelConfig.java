@@ -230,4 +230,16 @@ final class AioServerSocketChannelConfig extends DefaultChannelConfig implements
         super.setAutoRead(autoRead);
         return this;
     }
+
+    @Override
+    public AioServerSocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
+        super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
+        return this;
+    }
+
+    @Override
+    public AioServerSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
+        super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
+        return this;
+    }
 }

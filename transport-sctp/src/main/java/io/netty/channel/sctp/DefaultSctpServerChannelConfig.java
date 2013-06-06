@@ -180,4 +180,14 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
     public SctpServerChannelConfig setAutoRead(boolean autoRead) {
         return (SctpServerChannelConfig) super.setAutoRead(autoRead);
     }
+
+    @Override
+    public SctpServerChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
+        return (SctpServerChannelConfig) super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
+    }
+
+    @Override
+    public SctpServerChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
+        return (SctpServerChannelConfig) super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
+    }
 }

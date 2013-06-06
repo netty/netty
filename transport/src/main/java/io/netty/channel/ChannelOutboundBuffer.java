@@ -23,6 +23,8 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
 final class ChannelOutboundBuffer {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelOutboundBuffer.class);
@@ -32,23 +34,31 @@ final class ChannelOutboundBuffer {
     ChannelPromise currentPromise;
     MessageList<Object> currentMessages;
     int currentMessageIndex;
+    private int currentMessageListSize;
 
     private ChannelPromise[] promises;
     private MessageList<Object>[] messages;
 
     private int head;
     private int tail;
+    private final AbstractChannel channel;
 
-    ChannelOutboundBuffer() {
-        this(MIN_INITIAL_CAPACITY << 1);
+    private int writeBufferSize;
+
+    private static final AtomicIntegerFieldUpdater<ChannelOutboundBuffer> CHANNEL_WRITABLE_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(ChannelOutboundBuffer.class, "channelWritable");
+    @SuppressWarnings("unused")
+    private volatile int channelWritable = 1;
+
+    ChannelOutboundBuffer(AbstractChannel channel) {
+        this(channel, MIN_INITIAL_CAPACITY << 1);
     }
 
     @SuppressWarnings("unchecked")
-    ChannelOutboundBuffer(int initialCapacity) {
+    ChannelOutboundBuffer(AbstractChannel channel, int initialCapacity) {
         if (initialCapacity < 0) {
             throw new IllegalArgumentException("initialCapacity: " + initialCapacity + " (expected: >= 0)");
         }
-
         // Find the best power of two to hold elements.
         // Tests "<=" because arrays aren't kept full.
         if (initialCapacity >= MIN_INITIAL_CAPACITY) {
@@ -68,6 +78,7 @@ final class ChannelOutboundBuffer {
 
         promises = new ChannelPromise[initialCapacity];
         messages = new MessageList[initialCapacity];
+        this.channel = channel;
     }
 
     @SuppressWarnings("unchecked")
@@ -78,6 +89,37 @@ final class ChannelOutboundBuffer {
 
         if ((this.tail = tail + 1 & promises.length - 1) == head) {
             doubleCapacity();
+        }
+
+        incrementWriteBufferSize(messageListSize(msgs));
+    }
+
+    private void incrementWriteBufferSize(int size) {
+        if (size == 0) {
+            return;
+        }
+        int newWriteBufferSize = writeBufferSize += size;
+        int highWaterMark = channel.config().getWriteBufferHighWaterMark();
+
+        if (newWriteBufferSize > highWaterMark) {
+            if (CHANNEL_WRITABLE_UPDATER.compareAndSet(this, 1, 0)) {
+                channel.pipeline().fireChannelWritableStateChanged();
+            }
+        }
+    }
+
+    private void decrementWriteBufferSize(int size) {
+        if (size == 0) {
+            return;
+        }
+        int newWriteBufferSize =  writeBufferSize -= size;
+        int lowWaterMark = channel.config().getWriteBufferLowWaterMark();
+
+        if (newWriteBufferSize == 0 || newWriteBufferSize < lowWaterMark) {
+
+            if (CHANNEL_WRITABLE_UPDATER.compareAndSet(this, 0, 1)) {
+                channel.pipeline().fireChannelWritableStateChanged();
+            }
         }
     }
 
@@ -108,9 +150,13 @@ final class ChannelOutboundBuffer {
     }
 
     boolean next() {
+        decrementWriteBufferSize(currentMessageListSize);
+
         int h = head;
+
         ChannelPromise e = promises[h]; // Element is null if deque empty
         if (e == null) {
+            currentMessageListSize = 0;
             currentPromise = null;
             currentMessages = null;
             return false;
@@ -119,12 +165,25 @@ final class ChannelOutboundBuffer {
         currentPromise = e;
         currentMessages = messages[h];
         currentMessageIndex = 0;
+        currentMessageListSize = messageListSize(currentMessages);
 
         promises[h] = null;
         messages[h] = null;
 
         head = h + 1 & promises.length - 1;
         return true;
+    }
+
+    private int messageListSize(MessageList<?> messages) {
+        int size = 0;
+        for (int i = 0; i < messages.size(); i++) {
+            size += channel.calculateMessageSize(messages.get(i));
+        }
+        return size;
+    }
+
+    boolean isChannelWritable() {
+        return CHANNEL_WRITABLE_UPDATER.get(this) == 1;
     }
 
     int size() {
@@ -160,7 +219,8 @@ final class ChannelOutboundBuffer {
             // release all failed messages
             try {
                 for (int i = currentMessageIndex; i < currentMessages.size(); i++) {
-                    ByteBufUtil.release(currentMessages.get(i));
+                    Object msg = currentMessages.get(i);
+                    ByteBufUtil.release(msg);
                 }
             } finally {
                 currentMessages.recycle();

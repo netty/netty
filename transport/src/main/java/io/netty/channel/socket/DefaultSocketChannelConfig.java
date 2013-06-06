@@ -16,6 +16,7 @@
 package io.netty.channel.socket;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
@@ -302,5 +303,15 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public SocketChannelConfig setAutoRead(boolean autoRead) {
         return (SocketChannelConfig) super.setAutoRead(autoRead);
+    }
+
+    @Override
+    public SocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
+        return (SocketChannelConfig) super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
+    }
+
+    @Override
+    public SocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
+        return (SocketChannelConfig) super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
     }
 }

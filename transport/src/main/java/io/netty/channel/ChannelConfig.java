@@ -174,4 +174,36 @@ public interface ChannelConfig {
      * need to call it at all. The default value is {@code true}.
      */
     ChannelConfig setAutoRead(boolean autoRead);
+
+    /**
+     * Returns the high water mark of the write buffer.  If the number of bytes
+     * queued in the write buffer exceeds this value, {@link Channel#isWritable()}
+     * will start to return {@code false}.
+     */
+    int getWriteBufferHighWaterMark();
+
+    /**
+     * Sets the high water mark of the write buffer.  If the number of bytes
+     * queued in the write buffer exceeds this value, {@link Channel#isWritable()}
+     * will start to return {@code false}.
+     */
+    ChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
+
+    /**
+     * Returns the low water mark of the write buffer.  Once the number of bytes
+     * queued in the write buffer exceeded the
+     * {@linkplain #setWriteBufferHighWaterMark(int) high water mark} and then
+     * dropped down below this value, {@link Channel#isWritable()} will start to return
+     * {@code true} again.
+     */
+    int getWriteBufferLowWaterMark();
+
+    /**
+     * Sets the low water mark of the write buffer.  Once the number of bytes
+     * queued in the write buffer exceeded the
+     * {@linkplain #setWriteBufferHighWaterMark(int) high water mark} and then
+     * dropped down below this value, {@link Channel#isWritable()} will start toreturn
+     * {@code true} again.
+     */
+    ChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
 }

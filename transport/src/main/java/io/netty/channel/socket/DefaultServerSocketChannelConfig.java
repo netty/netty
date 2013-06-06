@@ -169,4 +169,14 @@ public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
     public ServerSocketChannelConfig setAutoRead(boolean autoRead) {
         return (ServerSocketChannelConfig) super.setAutoRead(autoRead);
     }
+
+    @Override
+    public ServerSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
+        return (ServerSocketChannelConfig) super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
+    }
+
+    @Override
+    public ServerSocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
+        return (ServerSocketChannelConfig) super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
+    }
 }

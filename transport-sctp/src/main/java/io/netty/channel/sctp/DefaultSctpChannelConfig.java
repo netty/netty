@@ -28,8 +28,6 @@ import io.netty.util.internal.PlatformDependent;
 import java.io.IOException;
 import java.util.Map;
 
-import static io.netty.channel.ChannelOption.SO_RCVBUF;
-import static io.netty.channel.ChannelOption.SO_SNDBUF;
 import static io.netty.channel.sctp.SctpChannelOption.*;
 
 /**
@@ -197,5 +195,15 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
     @Override
     public SctpChannelConfig setAutoRead(boolean autoRead) {
         return (SctpChannelConfig) super.setAutoRead(autoRead);
+    }
+
+    @Override
+    public SctpChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
+        return (SctpChannelConfig) super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
+    }
+
+    @Override
+    public SctpChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
+        return (SctpChannelConfig) super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
     }
 }

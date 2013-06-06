@@ -596,4 +596,7 @@ public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundI
 
     @Override
     ChannelPipeline fireChannelReadSuspended();
+
+    @Override
+    ChannelPipeline fireChannelWritableStateChanged();
 }

@@ -202,4 +202,14 @@ final class DefaultRxtxChannelConfig extends DefaultChannelConfig implements Rxt
     public RxtxChannelConfig setAutoRead(boolean autoRead) {
         return (RxtxChannelConfig) super.setAutoRead(autoRead);
     }
+
+    @Override
+    public RxtxChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
+        return (RxtxChannelConfig) super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
+    }
+
+    @Override
+    public RxtxChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
+        return (RxtxChannelConfig) super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
+    }
 }

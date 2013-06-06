@@ -372,4 +372,14 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
     public DatagramChannelConfig setAutoRead(boolean autoRead) {
         return (DatagramChannelConfig) super.setAutoRead(autoRead);
     }
+
+    @Override
+    public DatagramChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
+        return (DatagramChannelConfig) super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
+    }
+
+    @Override
+    public DatagramChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
+        return (DatagramChannelConfig) super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
+    }
 }

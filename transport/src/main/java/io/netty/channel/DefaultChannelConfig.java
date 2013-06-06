@@ -41,6 +41,8 @@ public class DefaultChannelConfig implements ChannelConfig {
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
     private volatile int writeSpinCount = 16;
     private volatile boolean autoRead = true;
+    private volatile int writeBufferHighWaterMark = 64 * 1024;
+    private volatile int writeBufferLowWaterMark = 32 * 1024;
 
     public DefaultChannelConfig(Channel channel) {
         if (channel == null) {
@@ -206,6 +208,48 @@ public class DefaultChannelConfig implements ChannelConfig {
         if (autoRead && !oldAutoRead) {
             channel.read();
         }
+        return this;
+    }
+
+    @Override
+    public int getWriteBufferHighWaterMark() {
+        return writeBufferHighWaterMark;
+    }
+
+    @Override
+    public ChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
+        if (writeBufferHighWaterMark < getWriteBufferLowWaterMark()) {
+            throw new IllegalArgumentException(
+                    "writeBufferHighWaterMark cannot be less than " +
+                            "writeBufferLowWaterMark (" + getWriteBufferLowWaterMark() + "): " +
+                            writeBufferHighWaterMark);
+        }
+        if (writeBufferHighWaterMark < 0) {
+            throw new IllegalArgumentException(
+                    "writeBufferHighWaterMark must be >= 0");
+        }
+        this.writeBufferHighWaterMark = writeBufferHighWaterMark;
+        return this;
+    }
+
+    @Override
+    public int getWriteBufferLowWaterMark() {
+        return writeBufferLowWaterMark;
+    }
+
+    @Override
+    public ChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
+        if (writeBufferLowWaterMark > getWriteBufferHighWaterMark()) {
+            throw new IllegalArgumentException(
+                    "writeBufferLowWaterMark cannot be greater than " +
+                            "writeBufferHighWaterMark (" + getWriteBufferHighWaterMark() + "): " +
+                            writeBufferLowWaterMark);
+        }
+        if (writeBufferLowWaterMark < 0) {
+            throw new IllegalArgumentException(
+                    "writeBufferLowWaterMark must be >= 0");
+        }
+        this.writeBufferLowWaterMark = writeBufferLowWaterMark;
         return this;
     }
 }

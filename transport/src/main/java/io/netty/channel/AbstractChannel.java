@@ -17,6 +17,7 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
@@ -76,7 +77,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final Integer id;
     private final Unsafe unsafe;
     private final DefaultChannelPipeline pipeline;
-    private final ChannelOutboundBuffer outboundBuffer = new ChannelOutboundBuffer();
+    private final ChannelOutboundBuffer outboundBuffer = new ChannelOutboundBuffer(this);
     private final ChannelFuture succeededFuture = new SucceededChannelFuture(this, null);
     private final VoidChannelPromise voidPromise = new VoidChannelPromise(this, true);
     private final VoidChannelPromise unsafeVoidPromise = new VoidChannelPromise(this, false);
@@ -130,6 +131,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 allChannels.remove(id());
             }
         });
+    }
+
+    @Override
+    public boolean isWritable() {
+        return outboundBuffer.isChannelWritable();
     }
 
     @Override
@@ -826,6 +832,20 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     + region.count() + " bytes, but only wrote "
                     + region.transfered());
         }
+    }
+
+    /**
+     * Calculate the number of bytes a message takes up in memory. Sub-classes may override this if they use different
+     * messages then {@link ByteBuf} or {@link ByteBufHolder}. If the size can not be calculated 0 should be returned.
+     */
+    protected int calculateMessageSize(Object message) {
+        if (message instanceof ByteBuf) {
+            return ((ByteBuf) message).readableBytes();
+        }
+        if (message instanceof ByteBufHolder) {
+            return ((ByteBufHolder) message).content().readableBytes();
+        }
+        return 0;
     }
 
     /**

@@ -796,6 +796,12 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
+    public ChannelPipeline fireChannelWritableStateChanged() {
+        head.fireChannelWritableStateChanged();
+        return this;
+    }
+
+    @Override
     public ChannelFuture bind(SocketAddress localAddress) {
         return tail.bind(localAddress);
     }
@@ -930,6 +936,9 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void channelReadSuspended(ChannelHandlerContext ctx) throws Exception { }
+
+        @Override
+        public void channelWritableStateChanged(ChannelHandlerContext ctx) throws Exception { }
 
         @Override
         public void handlerAdded(ChannelHandlerContext ctx) throws Exception { }

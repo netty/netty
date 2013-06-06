@@ -144,6 +144,8 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
      */
     ChannelFuture closeFuture();
 
+    boolean isWritable();
+
     /**
      * Returns an <em>internal-use-only</em> object that provides unsafe operations.
      */
