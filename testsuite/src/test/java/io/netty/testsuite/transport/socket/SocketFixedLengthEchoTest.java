@@ -155,6 +155,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
 
                 counter += actual.length;
             }
+            msgs.releaseAllAndRecycle();
         }
 
         @Override

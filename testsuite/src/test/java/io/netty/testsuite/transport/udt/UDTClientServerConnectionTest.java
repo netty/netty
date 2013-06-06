@@ -174,6 +174,7 @@ public class UDTClientServerConnectionTest {
             for (int i = 0; i < msgs.size(); i ++) {
                 log.info("Client received: " + msgs.get(i));
             }
+            msgs.releaseAllAndRecycle();
         }
     }
 
@@ -326,6 +327,7 @@ public class UDTClientServerConnectionTest {
             for (int i = 0; i < msgs.size(); i ++) {
                 log.info("Server received: " + msgs.get(i));
             }
+            msgs.releaseAllAndRecycle();
         }
     }
 

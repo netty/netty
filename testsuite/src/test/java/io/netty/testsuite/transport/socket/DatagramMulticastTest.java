@@ -48,6 +48,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
             @Override
             public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
                 // Nothing will be sent.
+                msgs.releaseAllAndRecycle();
             }
         });
 
@@ -104,6 +105,8 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
             }
 
             assertEquals(1, ((DatagramPacket) msgs.get(0)).content().readInt());
+            msgs.releaseAllAndRecycle();
+
             latch.countDown();
 
             // mark the handler as done as we only are supposed to receive one message

@@ -135,6 +135,9 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
         } finally {
             if (read) {
                 pipeline.fireMessageReceived(byteBuf);
+            } else {
+                // nothing read into the buffer so release it
+                byteBuf.release();
             }
             if (closed) {
                 inputShutdown = true;

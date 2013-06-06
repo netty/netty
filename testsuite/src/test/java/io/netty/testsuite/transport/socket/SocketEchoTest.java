@@ -210,6 +210,7 @@ public class SocketEchoTest extends AbstractSocketTest {
 
                 counter += actual.length;
             }
+            msgs.releaseAllAndRecycle();
         }
 
         @Override

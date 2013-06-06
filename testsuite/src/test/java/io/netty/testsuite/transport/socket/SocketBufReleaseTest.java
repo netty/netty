@@ -97,9 +97,7 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
 
         @Override
         public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-            for (int i = 0; i < msgs.size(); i ++) {
-                ((ByteBuf) msgs.get(i)).release();
-            }
+            msgs.releaseAllAndRecycle();
         }
 
         public void check() throws InterruptedException {

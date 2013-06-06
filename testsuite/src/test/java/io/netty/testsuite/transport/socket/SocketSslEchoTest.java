@@ -196,6 +196,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
                 counter += actual.length;
             }
+            msgs.releaseAllAndRecycle();
         }
 
         @Override

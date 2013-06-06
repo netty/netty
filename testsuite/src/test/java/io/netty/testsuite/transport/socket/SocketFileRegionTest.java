@@ -76,6 +76,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
             @Override
             public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
                 // discard
+                msgs.releaseAllAndRecycle();
             }
 
             @Override
@@ -146,6 +147,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
                 }
                 counter += actual.length;
             }
+            msgs.releaseAllAndRecycle();
         }
 
         @Override

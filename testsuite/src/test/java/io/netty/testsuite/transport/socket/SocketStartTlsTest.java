@@ -175,6 +175,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
                 assertTrue(handshakeFuture.isSuccess());
                 ctx.close();
             }
+            msgs.releaseAllAndRecycle();
         }
 
         @Override
@@ -217,6 +218,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
                assertEquals("EncryptedRequest", msg);
                ctx.write("EncryptedResponse\n");
             }
+            msgs.releaseAllAndRecycle();
         }
 
         @Override

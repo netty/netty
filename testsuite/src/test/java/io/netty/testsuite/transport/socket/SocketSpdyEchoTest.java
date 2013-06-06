@@ -268,6 +268,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
 
                 counter += actual.length;
             }
+            msgs.releaseAllAndRecycle();
         }
 
         @Override

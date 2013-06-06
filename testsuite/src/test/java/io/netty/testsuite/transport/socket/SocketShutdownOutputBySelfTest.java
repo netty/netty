@@ -91,6 +91,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
             for (int i = 0; i < msgs.size(); i ++) {
                 queue.offer(((ByteBuf) msgs.get(i)).readByte());
             }
+            msgs.releaseAllAndRecycle();
         }
     }
 }

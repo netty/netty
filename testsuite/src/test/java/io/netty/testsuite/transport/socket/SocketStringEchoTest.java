@@ -160,6 +160,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
 
                 counter ++;
             }
+            msgs.releaseAllAndRecycle();
         }
 
         @Override
