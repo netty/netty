@@ -83,8 +83,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final VoidChannelPromise unsafeVoidPromise = new VoidChannelPromise(this, false);
     private final CloseFuture closeFuture = new CloseFuture(this);
 
-    protected final ChannelFlushPromiseNotifier flushFutureNotifier = new ChannelFlushPromiseNotifier();
-
     private volatile SocketAddress localAddress;
     private volatile SocketAddress remoteAddress;
     private volatile EventLoop eventLoop;
@@ -554,7 +552,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     closedChannelException = new ClosedChannelException();
                 }
 
-                flushFutureNotifier.notifyFlushFutures(closedChannelException);
+                // fail all queued messages
+                if (outboundBuffer.next()) {
+                    outboundBuffer.fail(closedChannelException);
+                }
 
                 if (wasActive && !isActive()) {
                     invokeLater(new Runnable() {
