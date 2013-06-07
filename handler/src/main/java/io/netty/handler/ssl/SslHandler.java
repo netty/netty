@@ -318,7 +318,7 @@ public class SslHandler
                 engine.closeOutbound();
                 future.addListener(closeNotifyWriteListener);
                 try {
-                    write(ctx, MessageList.newInstance(), future);
+                    write(ctx, MessageList.<Object>newInstance(Unpooled.EMPTY_BUFFER), future);
                 } catch (Exception e) {
                     if (!future.tryFailure(e)) {
                         logger.warn("flush() raised a masked exception.", e);
@@ -385,13 +385,16 @@ public class SslHandler
             ctx.write(msgs, promise);
             return;
         }
-        ByteBuf buf = ctx.alloc().buffer();
         for (int i = 0; i < msgs.size(); i++) {
             ByteBuf msg = (ByteBuf) msgs.get(i);
-            buf.writeBytes(msg);
+            ChannelPromise cp;
+            if (i + 1 == msgs.size()) {
+                cp = promise;
+            } else {
+                cp = ctx.newPromise();
+            }
+            pendingUnencryptedWrites.add(new PendingWrite(msg, cp));
         }
-        msgs.releaseAllAndRecycle();
-        pendingUnencryptedWrites.add(new PendingWrite(buf, promise));
         flush0(ctx);
     }
 
@@ -532,7 +535,7 @@ public class SslHandler
                         }
                         // try to flush now just in case as there may be pending write tasks
                         flush0(ctx);
-                        return;
+                        break;
                     default:
                         throw new IllegalStateException("Unknown handshake status: " + result.getHandshakeStatus());
                 }
@@ -947,7 +950,7 @@ public class SslHandler
         engine.closeOutbound();
 
         ChannelPromise closeNotifyFuture = ctx.newPromise().addListener(closeNotifyWriteListener);
-        write(ctx, MessageList.newInstance(), closeNotifyFuture);
+        write(ctx, MessageList.<Object>newInstance(Unpooled.EMPTY_BUFFER), closeNotifyFuture);
         safeClose(ctx, closeNotifyFuture, promise);
     }
 
