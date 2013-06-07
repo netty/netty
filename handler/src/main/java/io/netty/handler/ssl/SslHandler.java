@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFlushPromiseNotifier;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -49,7 +48,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SocketChannel;
-import java.nio.channels.WritableByteChannel;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.Executor;
@@ -177,11 +175,9 @@ public class SslHandler
     private volatile ChannelHandlerContext ctx;
     private final SSLEngine engine;
     private final Executor delegatedTaskExecutor;
-    private final ChannelFlushPromiseNotifier flushFutureNotifier = new ChannelFlushPromiseNotifier(true);
 
     private final boolean startTls;
     private boolean sentFirstMessage;
-    private WritableByteChannel bufferChannel;
 
     private final LazyChannelPromise handshakePromise = new LazyChannelPromise();
     private final LazyChannelPromise sslCloseFuture = new LazyChannelPromise();
@@ -497,9 +493,7 @@ public class SslHandler
         }
     }
 
-    private ChannelFuture flushNonAppData0(ChannelHandlerContext ctx) throws SSLException {
-
-        ChannelFuture future = null;
+    private void flushNonAppData0(ChannelHandlerContext ctx) throws SSLException {
         boolean unwrapLater = false;
         ByteBuf out = null;
         try {
@@ -510,7 +504,7 @@ public class SslHandler
                 SSLEngineResult result = wrap(engine, Unpooled.EMPTY_BUFFER, out);
 
                 if (result.bytesProduced() > 0) {
-                    future = ctx.write(out);
+                    ctx.write(out);
                     out = null;
                 }
 
@@ -527,15 +521,18 @@ public class SslHandler
                         continue;
                     case FINISHED:
                         setHandshakeSuccess();
-                        runDelegatedTasks();
-                        continue;
+                        // try to flush now just in case as there may be pending write tasks
+                        flush0(ctx);
+                        return;
                     case NOT_HANDSHAKING:
                         // Workaround for TLS False Start problem reported at:
                         // https://github.com/netty/netty/issues/1108#issuecomment-14266970
                         if (internalBuffer().isReadable()) {
                             unwrapLater = true;
                         }
-                        break;
+                        // try to flush now just in case as there may be pending write tasks
+                        flush0(ctx);
+                        return;
                     default:
                         throw new IllegalStateException("Unknown handshake status: " + result.getHandshakeStatus());
                 }
@@ -548,10 +545,6 @@ public class SslHandler
             if (unwrapLater) {
                 decode0(ctx);
             }
-            if (future == null) {
-                future = ctx.newSucceededFuture();
-            }
-            return future;
         } catch (SSLException e) {
             setHandshakeFailure(e);
             throw e;
