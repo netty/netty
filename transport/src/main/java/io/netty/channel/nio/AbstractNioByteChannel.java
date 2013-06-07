@@ -156,7 +156,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             throw new UnsupportedOperationException("Not support writing of message " + msg);
         }
 
-        return index;
+        return 0;
     }
 
     /**
