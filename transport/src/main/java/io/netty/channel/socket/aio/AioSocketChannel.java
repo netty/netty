@@ -17,7 +17,6 @@ package io.netty.channel.socket.aio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFlushPromiseNotifier;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPipeline;
@@ -74,11 +73,9 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     private boolean inDoBeginRead;
     private boolean readAgain;
 
-    private static final int NO_WRITE_IN_PROGRESS = 0;
-    private static final int WRITE_IN_PROGRESS = 1;
-    private static final int WRITE_FAILED = -2;
-    private int writeInProgress;
-    private boolean inDoFlushByteBuffer;
+    private Exception writeException;
+    private boolean writeInProgress;
+    private boolean inDoWrite;
 
     /**
      * Create a new instance which has not yet attached an {@link AsynchronousSocketChannel}. The
@@ -247,74 +244,62 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
     @Override
     protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
-        if (inDoFlushByteBuffer || writeInProgress != NO_WRITE_IN_PROGRESS) {
-            return index;
+        if (inDoWrite || writeInProgress) {
+            return 0;
         }
-
-        inDoFlushByteBuffer = true;
+        inDoWrite = true;
 
         try {
-            for (int i = index; i < msgs.size(); i++) {
-                ByteBuf buf = (ByteBuf) msgs.get(i);
-                if (buf.isReadable()) {
-                    for (;;) {
-                        if (buf.refCnt() == 0) {
-                            return index + 1;
-                        }
-
-                        writeInProgress = WRITE_IN_PROGRESS;
-                        if (buf.nioBufferCount() == 1) {
+            ByteBuf buf = (ByteBuf) msgs.get(index);
+            if (buf.isReadable()) {
+                for (;;) {
+                    checkWriteException();
+                    writeInProgress = true;
+                    if (buf.nioBufferCount() == 1) {
+                        javaChannel().write(
+                                buf.nioBuffer(), config.getWriteTimeout(), TimeUnit.MILLISECONDS,
+                                buf, writeHandler);
+                    } else {
+                        ByteBuffer[] buffers = buf.nioBuffers(buf.readerIndex(), buf.readableBytes());
+                        if (buffers.length == 1) {
                             javaChannel().write(
-                                    buf.nioBuffer(), config.getWriteTimeout(), TimeUnit.MILLISECONDS,
-                                    buf, writeHandler);
+                                    buffers[0], config.getWriteTimeout(), TimeUnit.MILLISECONDS, buf, writeHandler);
                         } else {
-                            ByteBuffer[] buffers = buf.nioBuffers(buf.readerIndex(), buf.readableBytes());
-                            if (buffers.length == 1) {
-                                javaChannel().write(
-                                        buffers[0], config.getWriteTimeout(), TimeUnit.MILLISECONDS, buf, writeHandler);
-                            } else {
-                                javaChannel().write(
-                                        buffers, 0, buffers.length, config.getWriteTimeout(), TimeUnit.MILLISECONDS,
-                                        buf, gatheringWriteHandler);
-                            }
+                            javaChannel().write(
+                                    buffers, 0, buffers.length, config.getWriteTimeout(), TimeUnit.MILLISECONDS,
+                                    buf, gatheringWriteHandler);
                         }
-
-                        if (writeInProgress != NO_WRITE_IN_PROGRESS) {
-                            if (writeInProgress == WRITE_FAILED) {
-                                // failed because of an exception so reset state and break out of the loop now
-                                // See #1242
-                                writeInProgress = NO_WRITE_IN_PROGRESS;
-                                return index + 1;
-                            }
-                            // JDK decided to write data (or notify handler) later.
-                            return 0;
-                        }
-
-                        // JDK performed the write operation immediately and notified the handler.
-                        // We know this because we set asyncWriteInProgress to false in the handler.
-                        if (!buf.isReadable()) {
-                            // There's nothing left in the buffer. No need to retry writing.
-                            return index + 1;
-                        }
-
-                        // There's more to write. Continue the loop.
                     }
-                } else {
-                    flushFutureNotifier.notifyFlushFutures();
+
+                    if (writeInProgress) {
+                        checkWriteException();
+                        // JDK decided to write data (or notify handler) later.
+                        return 0;
+                    }
+
+                    // JDK performed the write operation immediately and notified the handler.
+                    // We know this because we set asyncWriteInProgress to false in the handler.
+                    if (!buf.isReadable()) {
+                        // There's nothing left in the buffer. No need to retry writing.
+                        return 1;
+                    }
+
+                    // There's more to write. Continue the loop.
                 }
             }
         } finally {
-            inDoFlushByteBuffer = false;
+            inDoWrite = false;
         }
-        return 0;
+        return 1;
     }
 
-    /*
-    @Override
-    protected void doFlushFileRegion(FlushTask task) throws Exception {
-        task.region().transferTo(new WritableByteChannelAdapter(task), 0);
+    private void checkWriteException() throws Exception {
+        if (writeException != null) {
+            Exception e = writeException;
+            writeException = null;
+            throw e;
+        }
     }
-    */
 
     @Override
     protected void doBeginRead() {
@@ -381,11 +366,8 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
         @Override
         protected void completed0(AioSocketChannel channel, T result, ByteBuf buf) {
-            channel.writeInProgress = NO_WRITE_IN_PROGRESS;
-            if (buf.refCnt() == 0) {
-                return;
-            }
-
+            channel.writeException = null;
+            channel.writeInProgress = false;
             boolean release = true;
             try {
                 int writtenBytes = result.intValue();
@@ -393,31 +375,21 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                     // Update the readerIndex with the amount of read bytes
                     buf.readerIndex(buf.readerIndex() + writtenBytes);
                 }
-
-                if (channel.inDoFlushByteBuffer) {
-                    // JDK performed the write operation immediately and notified this handler immediately.
-                    // doFlushByteBuffer() will do subsequent write operations if necessary for us.
-                    return;
-                }
-
-                // Update the write counter and notify flush futures only when the handler is called outside of
-                // unsafe().flushNow() because flushNow() will do that for us.
-                ChannelFlushPromiseNotifier notifier = channel.flushFutureNotifier;
-                notifier.increaseWriteCounter(writtenBytes);
-                notifier.notifyFlushFutures();
-
-                // Stop flushing if disconnected.
-                if (!channel.isActive()) {
-                    return;
-                }
-
                 if (buf.isReadable()) {
+                    // something left in the buffer so not release it
                     release = false;
-                    channel.unsafe().flushNow();
                 }
             } finally {
                  if (release) {
                      buf.release();
+                 }
+                 if (channel.inDoWrite) {
+                     // JDK performed the write operation immediately and notified this handler immediately.
+                     // doWrite(...) will do subsequent write operations if necessary for us.
+                 } else {
+                     // trigger flush so doWrite(..) is called again. This will either trigger a new write to the
+                     // channel or remove the empty bytebuf (which was written completely before) from the MessageList.
+                     channel.unsafe().flushNow();
                  }
             }
         }
@@ -426,8 +398,13 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         protected void failed0(AioSocketChannel channel, Throwable cause, ByteBuf buf) {
             buf.release();
 
-            channel.writeInProgress = WRITE_FAILED;
-            channel.flushFutureNotifier.notifyFlushFutures(cause);
+            if (cause instanceof Exception) {
+                channel.writeException = (Exception) cause;
+            } else {
+                channel.writeException = new IOException(cause);
+            }
+
+            channel.writeInProgress = false;
 
             // Check if the exception was raised because of an InterruptedByTimeoutException which means that the
             // write timeout was hit. In that case we should close the channel as it may be unusable anyway.
@@ -435,6 +412,12 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
             // See http://openjdk.java.net/projects/nio/javadoc/java/nio/channels/AsynchronousSocketChannel.html
             if (cause instanceof InterruptedByTimeoutException) {
                 channel.unsafe().close(channel.unsafe().voidPromise());
+            }
+
+            if (!channel.inDoWrite) {
+                // trigger flushNow() so the Throwable is thrown in doWrite(...). This will make sure that all
+                // queued MessageLists are failed.
+                channel.unsafe().flushNow();
             }
         }
     }
@@ -447,7 +430,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
 
         @Override
         protected void completed0(AioSocketChannel channel, T result, ByteBuf byteBuf) {
-
             channel.readInProgress = false;
 
             if (channel.inputShutdown) {
