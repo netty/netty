@@ -456,6 +456,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 return;
             }
 
+            boolean release = true;
             final ChannelPipeline pipeline = channel.pipeline();
             try {
                 boolean closed = false;
@@ -478,6 +479,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                 } catch (Throwable t) {
                     if (read) {
                         read = false;
+                        release = false;
                         pipeline.fireMessageReceived(byteBuf);
                     }
 
@@ -489,6 +491,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                     pipeline.fireExceptionCaught(t);
                 } finally {
                     if (read) {
+                        release = false;
                         pipeline.fireMessageReceived(byteBuf);
                     }
 
@@ -508,7 +511,9 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                     }
                 }
             } finally {
-                byteBuf.release();
+                if (release) {
+                    byteBuf.release();
+                }
             }
         }
 
