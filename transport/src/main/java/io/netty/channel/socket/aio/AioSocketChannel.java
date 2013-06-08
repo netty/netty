@@ -22,6 +22,7 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
+import io.netty.channel.FileRegion;
 import io.netty.channel.MessageList;
 import io.netty.channel.aio.AbstractAioChannel;
 import io.netty.channel.aio.AioCompletionHandler;
@@ -39,6 +40,7 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.CompletionHandler;
 import java.nio.channels.InterruptedByTimeoutException;
+import java.nio.channels.WritableByteChannel;
 import java.util.concurrent.TimeUnit;
 
 
@@ -56,7 +58,6 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     private final CompletionHandler<Integer, ByteBuf> readHandler = new ReadHandler<Integer>(this);
     private final CompletionHandler<Long, ByteBuf> gatheringWriteHandler = new WriteHandler<Long>(this);
     private final CompletionHandler<Long, ByteBuf> scatteringReadHandler = new ReadHandler<Long>(this);
-
     private static AsynchronousSocketChannel newSocket(AsynchronousChannelGroup group) {
         try {
             return AsynchronousSocketChannel.open(group);
@@ -76,6 +77,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     private Exception writeException;
     private boolean writeInProgress;
     private boolean inDoWrite;
+    private boolean fileRegionDone;
 
     /**
      * Create a new instance which has not yet attached an {@link AsynchronousSocketChannel}. The
@@ -250,51 +252,88 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         inDoWrite = true;
 
         try {
-            ByteBuf buf = (ByteBuf) msgs.get(index);
-            if (buf.isReadable()) {
-                for (;;) {
-                    checkWriteException();
-                    writeInProgress = true;
-                    if (buf.nioBufferCount() == 1) {
-                        javaChannel().write(
-                                buf.nioBuffer(), config.getWriteTimeout(), TimeUnit.MILLISECONDS,
-                                buf, writeHandler);
-                    } else {
-                        ByteBuffer[] buffers = buf.nioBuffers(buf.readerIndex(), buf.readableBytes());
-                        if (buffers.length == 1) {
-                            javaChannel().write(
-                                    buffers[0], config.getWriteTimeout(), TimeUnit.MILLISECONDS, buf, writeHandler);
-                        } else {
-                            javaChannel().write(
-                                    buffers, 0, buffers.length, config.getWriteTimeout(), TimeUnit.MILLISECONDS,
-                                    buf, gatheringWriteHandler);
-                        }
-                    }
-
-                    if (writeInProgress) {
-                        checkWriteException();
-                        // JDK decided to write data (or notify handler) later.
-                        return 0;
-                    }
-
-                    // JDK performed the write operation immediately and notified the handler.
-                    // We know this because we set asyncWriteInProgress to false in the handler.
-                    if (!buf.isReadable()) {
-                        // There's nothing left in the buffer. No need to retry writing.
-                        return 1;
-                    }
-
-                    // There's more to write. Continue the loop.
+            Object msg = msgs.get(index);
+            if (msg instanceof ByteBuf) {
+                if (doWriteBuffer((ByteBuf) msg)) {
+                    return 1;
                 }
+                return 0;
+            }
+            if (msg instanceof FileRegion) {
+                if (doWriteFileRegion((FileRegion) msg)) {
+                    return 1;
+                }
+                return 0;
             }
         } finally {
             inDoWrite = false;
         }
-        return 1;
+        return 0;
+    }
+
+    private boolean doWriteBuffer(ByteBuf buf) throws Exception {
+        if (buf.isReadable()) {
+            for (;;) {
+                checkWriteException();
+                writeInProgress = true;
+                if (buf.nioBufferCount() == 1) {
+                    javaChannel().write(
+                            buf.nioBuffer(), config.getWriteTimeout(), TimeUnit.MILLISECONDS,
+                            buf, writeHandler);
+                } else {
+                    ByteBuffer[] buffers = buf.nioBuffers(buf.readerIndex(), buf.readableBytes());
+                    if (buffers.length == 1) {
+                        javaChannel().write(
+                                buffers[0], config.getWriteTimeout(), TimeUnit.MILLISECONDS, buf, writeHandler);
+                    } else {
+                        javaChannel().write(
+                                buffers, 0, buffers.length, config.getWriteTimeout(), TimeUnit.MILLISECONDS,
+                                buf, gatheringWriteHandler);
+                    }
+                }
+
+                if (writeInProgress) {
+                    // JDK decided to write data (or notify handler) later.
+                    return false;
+                }
+                checkWriteException();
+
+                // JDK performed the write operation immediately and notified the handler.
+                // We know this because we set asyncWriteInProgress to false in the handler.
+                if (!buf.isReadable()) {
+                    // There's nothing left in the buffer. No need to retry writing.
+                    return true;
+                }
+
+                // There's more to write. Continue the loop.
+            }
+        }
+        return true;
+    }
+
+    private boolean doWriteFileRegion(FileRegion region) throws Exception {
+        checkWriteException();
+
+        if (fileRegionDone) {
+            // fileregion was complete in the CompletionHandler
+            fileRegionDone = false;
+            // was written complete
+            return true;
+        }
+
+        WritableByteChannelAdapter byteChannel = new WritableByteChannelAdapter(region);
+        region.transferTo(byteChannel, 0);
+
+        // check if the FileRegion is already complete. This may be the case if all could be written directly
+        if (byteChannel.written >= region.count()) {
+            return true;
+        }
+        return false;
     }
 
     private void checkWriteException() throws Exception {
         if (writeException != null) {
+            fileRegionDone = false;
             Exception e = writeException;
             writeException = null;
             throw e;
@@ -357,6 +396,14 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         }
     }
 
+    private void setWriteException(Throwable cause) {
+        if (cause instanceof Exception) {
+            writeException = (Exception) cause;
+        } else {
+            writeException = new IOException(cause);
+        }
+    }
+
     private static final class WriteHandler<T extends Number>
             extends AioCompletionHandler<AioSocketChannel, T, ByteBuf> {
 
@@ -397,13 +444,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         @Override
         protected void failed0(AioSocketChannel channel, Throwable cause, ByteBuf buf) {
             buf.release();
-
-            if (cause instanceof Exception) {
-                channel.writeException = (Exception) cause;
-            } else {
-                channel.writeException = new IOException(cause);
-            }
-
+            channel.setWriteException(cause);
             channel.writeInProgress = false;
 
             // Check if the exception was raised because of an InterruptedByTimeoutException which means that the
@@ -542,54 +583,18 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         return config;
     }
 
-    /*
     private final class WritableByteChannelAdapter implements WritableByteChannel {
-        private final FlushTask task;
+        private final FileRegionWriteHandler handler = new FileRegionWriteHandler();
+        private final FileRegion region;
         private long written;
 
-        public WritableByteChannelAdapter(FlushTask task) {
-            this.task = task;
+        public WritableByteChannelAdapter(FileRegion region) {
+            this.region = region;
         }
 
         @Override
         public int write(final ByteBuffer src) {
-            javaChannel().write(src, AioSocketChannel.this, new AioCompletionHandler<Integer, Channel>() {
-
-                @Override
-                public void completed0(Integer result, Channel attachment) {
-                    try {
-                        if (result == 0) {
-                            javaChannel().write(src, AioSocketChannel.this, this);
-                            return;
-                        }
-                        if (result == -1) {
-                            checkEOF(task.region(), written);
-                            task.setSuccess();
-                            return;
-                        }
-                        written += result;
-
-                        task.setProgress(written);
-
-                        if (written >= task.region().count()) {
-                            task.setSuccess();
-                            return;
-                        }
-                        if (src.hasRemaining()) {
-                            javaChannel().write(src, AioSocketChannel.this, this);
-                        } else {
-                            task.region().transferTo(WritableByteChannelAdapter.this, written);
-                        }
-                    } catch (Throwable cause) {
-                        task.setFailure(cause);
-                    }
-                }
-
-                @Override
-                public void failed0(Throwable exc, Channel attachment) {
-                    task.setFailure(exc);
-                }
-            });
+            javaChannel().write(src, src, handler);
             return 0;
         }
 
@@ -602,6 +607,62 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
         public void close() throws IOException {
             javaChannel().close();
         }
+
+        private final class FileRegionWriteHandler extends AioCompletionHandler<AioSocketChannel, Integer, ByteBuffer> {
+
+            FileRegionWriteHandler() {
+                super(AioSocketChannel.this);
+            }
+
+            @Override
+            public void completed0(AioSocketChannel channel, Integer result, ByteBuffer src) {
+                try {
+                    assert !fileRegionDone;
+
+                    if (result == -1) {
+                        checkEOF(region);
+                        // mark the region as done and release it
+                        fileRegionDone = true;
+                        region.release();
+                        return;
+                    }
+
+                    written += result;
+
+                    if (written >= region.count()) {
+                        channel.writeInProgress = false;
+
+                        // mark the region as done and release it
+                        fileRegionDone = true;
+                        region.release();
+                        return;
+                    }
+                    if (src.hasRemaining()) {
+                        // something left in the buffer trigger a write again
+                        javaChannel().write(src, src, this);
+                    } else {
+                        // everything was written out of the src buffer, so trigger a new transfer with new data
+                        region.transferTo(WritableByteChannelAdapter.this, written);
+                    }
+                } catch (Throwable cause) {
+                    failed0(channel, cause, src);
+                }
+            }
+
+            @Override
+            public void failed0(AioSocketChannel channel, Throwable cause, ByteBuffer src) {
+                assert !fileRegionDone;
+
+                // mark the region as done and release it
+                fileRegionDone = true;
+                region.release();
+                channel.setWriteException(cause);
+                if (!inDoWrite) {
+                    // not executed as part of the doWrite(...) so trigger flushNow() to make sure the doWrite(...)
+                    // will be called again and so rethrow the exception
+                    channel.unsafe().flushNow();
+                }
+            }
+        }
     }
-    */
 }
