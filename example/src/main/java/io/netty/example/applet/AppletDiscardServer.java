@@ -81,6 +81,7 @@ public class AppletDiscardServer extends JApplet {
             for (int i = 0; i < bufs.size(); i++) {
                 System.out.println("Received: " + bufs.get(i).toString(CharsetUtil.UTF_8));
             }
+            msgs.releaseAllAndRecycle();
         }
 
         @Override
