@@ -41,10 +41,24 @@ public class DnsTest {
 			String name = domains[i % domains.length];
 			if (name.indexOf('/') > -1 || isIPAddress(name)) {
 				off++;
-				continue;
 			}
 			Future<ByteBuf> future = DnsExchangeFactory.lookup(name);
 			future.get();
+			// Bottom code works, not top
+			/*DnsQuery query = new DnsQuery(5);
+			query.addQuestion(new Question(name, Resource.TYPE_A));
+			ByteBuf buf = Unpooled.buffer(512);
+			DnsQueryEncoder.encodeHeader(query.getHeader(), buf);
+			List<Question> questions = query.getQuestions();
+			for (Question question : questions) {
+				DnsQueryEncoder.encodeQuestion(question, buf);
+			}
+			DatagramSocket socket = new DatagramSocket(53);
+			DatagramPacket packet = new DatagramPacket(buf.array(), buf.writerIndex(), InetAddress.getByAddress(new byte[] {(byte)192, (byte)168, 1, 1}), 53);
+			socket.send(packet);
+			DatagramPacket resp = new DatagramPacket(new byte[512], 512);
+			socket.receive(resp);
+			socket.close();*/
 			System.out.println(i - off);
 		}
 	}

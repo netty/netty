@@ -40,7 +40,7 @@ public class DnsCallback<E> implements Callable<E> {
 
 	public DnsCallback(int id, int... types) {
 		if (types == null) {
-			throw new NullPointerException("Types must contain one valid resource type.");
+			throw new NullPointerException("Argument 'types' must contain one valid resource type.");
 		}
 		callbacks.put(this.id = id, this);
 		this.types = types;
