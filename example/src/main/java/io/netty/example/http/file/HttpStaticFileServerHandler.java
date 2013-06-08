@@ -28,6 +28,7 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.stream.ChunkedFile;
 import io.netty.util.CharsetUtil;
 
@@ -179,12 +180,15 @@ public class HttpStaticFileServerHandler extends ChannelInboundHandlerAdapter {
                 response.headers().set(CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
             }
 
+            MessageList<Object> out = MessageList.newInstance();
             // Write the initial line and the header.
-            ctx.write(response);
-
+            out.add(response);
             // Write the content.
-            ChannelFuture writeFuture = ctx.write(new ChunkedFile(raf, 0, fileLength, 8192));
+            out.add(new ChunkedFile(raf, 0, fileLength, 8192));
+            // Write the end marker
+            out.add(LastHttpContent.EMPTY_LAST_CONTENT);
 
+            ChannelFuture writeFuture = ctx.write(out);
             // Decide whether to close the connection or not.
             if (!isKeepAlive(request)) {
                 // Close the connection when the whole content is written out.
