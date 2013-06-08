@@ -62,7 +62,7 @@ public class WorldClockServerHandler extends ChannelInboundHandlerAdapter {
                         setSecond(calendar.get(SECOND)).build());
             }
 
-            msgs.add(builder.build());
+            out.add(builder.build());
         }
 
         msgs.recycle();
