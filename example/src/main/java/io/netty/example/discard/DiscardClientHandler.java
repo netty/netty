@@ -58,6 +58,11 @@ public class DiscardClientHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        content.release();
+    }
+
+    @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
         // Server is supposed to send nothing, but if it sends something, discard it.
         msgs.releaseAllAndRecycle();
@@ -79,7 +84,7 @@ public class DiscardClientHandler extends ChannelInboundHandlerAdapter {
     private void generateTraffic() {
         // Flush the outbound buffer to the socket.
         // Once flushed, generate the same amount of traffic again.
-        ctx.write(content.duplicate()).addListener(trafficGenerator);
+        ctx.write(content.duplicate().retain()).addListener(trafficGenerator);
     }
 
     private final ChannelFutureListener trafficGenerator = new ChannelFutureListener() {
