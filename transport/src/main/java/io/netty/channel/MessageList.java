@@ -137,32 +137,34 @@ public final class MessageList<T> {
         return elements[index];
     }
 
-    public void set(int index, T value) {
+    public MessageList<T> set(int index, T value) {
         checkExclusive(index);
         if (value == null) {
             throw new NullPointerException("value");
         }
         elements[index] = value;
+        return this;
     }
 
-    public void set(int index, T[] src) {
+    public MessageList<T> set(int index, T[] src) {
         if (src == null) {
             throw new NullPointerException("src");
         }
         set(index, src, 0, src.length);
+        return this;
     }
 
-    public void set(int index, T[] src, int srcIdx, int srcLen) {
+    public MessageList<T> set(int index, T[] src, int srcIdx, int srcLen) {
         checkElements(src, srcIdx, srcLen);
 
         if (srcLen == 0) {
             remove(index);
-            return;
+            return this;
         }
 
         if (srcLen == 1) {
             set(index, src[srcIdx]);
-            return;
+            return this;
         }
 
         checkExclusive(index);
@@ -173,17 +175,18 @@ public final class MessageList<T> {
         System.arraycopy(elements, index + 1, elements, index + srcLen, oldSize - (index + 1));
         System.arraycopy(src, srcIdx, elements, index, srcLen);
         size = newSize;
+        return this;
     }
 
-    public void set(int index, int length, T value) {
+    public MessageList<T> set(int index, int length, T value) {
         if (length == 0) {
             add(index, value);
-            return;
+            return this;
         }
 
         if (length == 1) {
             set(index, value);
-            return;
+            return this;
         }
 
         checkRange(index, length);
@@ -198,24 +201,25 @@ public final class MessageList<T> {
         System.arraycopy(elements, nextElemIdx, elements, index + 1, oldSize - nextElemIdx);
         Arrays.fill(elements, newSize, oldSize, null);
         size = newSize;
+        return this;
     }
 
-    public void set(int index, int length, T[] src) {
+    public MessageList<T> set(int index, int length, T[] src) {
         if (src == null) {
             throw new NullPointerException("src");
         }
-        set(index, length, src, 0, src.length);
+        return set(index, length, src, 0, src.length);
     }
 
-    public void set(int index, int length, T[] src, int srcIdx, int srcLen) {
+    public MessageList<T> set(int index, int length, T[] src, int srcIdx, int srcLen) {
         if (length == 0) {
             add(index, src, srcIdx, srcLen);
-            return;
+            return this;
         }
 
         if (length == 1) {
             set(index, src, srcIdx, srcLen);
-            return;
+            return this;
         }
 
         checkRange(index, length);
@@ -241,9 +245,10 @@ public final class MessageList<T> {
             System.arraycopy(src, srcIdx, elements, index, srcLen);
             size = newSize;
         }
+        return this;
     }
 
-    public void add(T value) {
+    public MessageList<T> add(T value) {
         if (value == null) {
             throw new NullPointerException("value");
         }
@@ -252,16 +257,18 @@ public final class MessageList<T> {
         ensureCapacity(newSize);
         elements[oldSize] = value;
         size = newSize;
+        return this;
     }
 
-    public void add(T[] src) {
+    public MessageList<T> add(T[] src) {
         if (src == null) {
             throw new NullPointerException("src");
         }
         add(src, 0, src.length);
+        return this;
     }
 
-    public void add(T[] src, int srcIdx, int srcLen) {
+    public MessageList<T> add(T[] src, int srcIdx, int srcLen) {
         checkElements(src, srcIdx, srcLen);
 
         int oldSize = size;
@@ -269,9 +276,10 @@ public final class MessageList<T> {
         ensureCapacity(newSize);
         System.arraycopy(src, srcIdx, elements, oldSize, srcLen);
         size = newSize;
+        return this;
     }
 
-    public void add(int index, T value) {
+    public MessageList<T> add(int index, T value) {
         checkInclusive(index);
 
         if (value == null) {
@@ -284,21 +292,23 @@ public final class MessageList<T> {
         System.arraycopy(elements, index, elements, index + 1, oldSize - index);
         elements[index] = value;
         size = newSize;
+        return this;
     }
 
-    public void add(int index, T[] src) {
+    public MessageList<T> add(int index, T[] src) {
         if (src == null) {
             throw new NullPointerException("src");
         }
         add(index, src, 0, src.length);
+        return this;
     }
 
-    public void add(int index, T[] src, int srcIdx, int srcLen) {
+    public MessageList<T> add(int index, T[] src, int srcIdx, int srcLen) {
         checkInclusive(index);
         checkElements(src, srcIdx, srcLen);
 
         if (srcLen == 0) {
-            return;
+            return this;
         }
 
         int oldSize = size;
@@ -307,21 +317,23 @@ public final class MessageList<T> {
         System.arraycopy(elements, index, elements, index + srcLen, oldSize - index);
         System.arraycopy(src, srcIdx, elements, index, srcLen);
         size = newSize;
+        return this;
     }
 
-    public void remove(int index) {
+    public MessageList<T> remove(int index) {
         checkExclusive(index);
         int oldSize = size;
         int newSize = oldSize - 1;
         System.arraycopy(elements, index + 1, elements, index, newSize - index);
         elements[newSize] = null;
         size = newSize;
+        return this;
     }
 
-    public void remove(int index, int length) {
+    public MessageList<T> remove(int index, int length) {
         checkRange(index, length);
         if (length == 0) {
-            return;
+            return this;
         }
 
         int oldSize = size;
@@ -329,11 +341,13 @@ public final class MessageList<T> {
         System.arraycopy(elements, index + length, elements, index, newSize - index);
         Arrays.fill(elements, newSize, oldSize, null);
         size = newSize;
+        return this;
     }
 
-    public void clear() {
+    public MessageList<T> clear() {
         Arrays.fill(elements, 0, size, null);
         size = 0;
+        return this;
     }
 
     public MessageList<T> copy() {
