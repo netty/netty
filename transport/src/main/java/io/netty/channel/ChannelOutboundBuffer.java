@@ -216,14 +216,16 @@ final class ChannelOutboundBuffer {
                     logger.warn("Promise done already:", cause);
                 }
             }
-            // release all failed messages
-            try {
-                for (int i = currentMessageIndex; i < currentMessages.size(); i++) {
-                    Object msg = currentMessages.get(i);
-                    ByteBufUtil.release(msg);
+            if (currentMessages != null) {
+                // release all failed messages
+                try {
+                    for (int i = currentMessageIndex; i < currentMessages.size(); i++) {
+                        Object msg = currentMessages.get(i);
+                        ByteBufUtil.release(msg);
+                    }
+                } finally {
+                    currentMessages.recycle();
                 }
-            } finally {
-                currentMessages.recycle();
             }
         } while(next());
     }
