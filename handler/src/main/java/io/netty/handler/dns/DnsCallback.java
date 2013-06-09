@@ -24,6 +24,11 @@ public class DnsCallback<E> implements Callable<E> {
 				for (int n = 0; n < types.length; n++) {
 					if (types[n] == resource.type()) {
 						callback.complete(types[n], resource.content());
+						try {
+							ResourceCache.submitRecord(resource.name(), resource.type(), resource.timeToLive(), callback.call());
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
 						return;
 					}
 				}
@@ -42,16 +47,20 @@ public class DnsCallback<E> implements Callable<E> {
 		if (types == null) {
 			throw new NullPointerException("Argument 'types' must contain one valid resource type.");
 		}
-		callbacks.put(this.id = id, this);
+		callbacks.put(this.id = id, this); // Assuming we can't complete 65536 requests before we cycle back to this id
 		this.types = types;
 	}
 
 	@Override
 	public E call() throws InterruptedException {
-		while (result == DEFAULT) {
-			Thread.sleep(1);
+		if (result == DEFAULT) {
+			synchronized (this) {
+				if (result == DEFAULT) {
+					wait(DnsExchangeFactory.REQUEST_TIMEOUT);
+				}
+			}
 		}
-		return result;
+		return result == DEFAULT ? null : result;
 	}
 
 	public int id() {
@@ -75,6 +84,9 @@ public class DnsCallback<E> implements Callable<E> {
 			result = (E) content;
 			break;
 
+		}
+		synchronized (this) {
+			notify();
 		}
 	}
 

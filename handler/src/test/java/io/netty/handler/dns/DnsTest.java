@@ -26,7 +26,7 @@ public class DnsTest {
 	public static final int TOTAL = 500;
 
 	public static void main(String[] args) throws InterruptedException, IOException, ExecutionException {
-		String[] domains = new String[TOTAL * 10];
+		String[] domains = new String[TOTAL / 10];
 		BufferedReader in = new BufferedReader(new FileReader("C:\\Users\\Mohamed\\Desktop\\top.txt"));
 		String str = null;
 		int i = 0;
