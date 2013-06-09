@@ -30,7 +30,7 @@ public class DnsExchangeFactory {
 
 	public static final long REQUEST_TIMEOUT = 2000;
 
-	private static final EventExecutorGroup executor = new DefaultEventExecutorGroup(4);
+	private static final EventExecutorGroup executor = new DefaultEventExecutorGroup(1);
 	private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsExchangeFactory.class);
 	private static final List<byte[]> dnsServers = new ArrayList<byte[]>();
 	private static final Map<byte[], Channel> dnsServerChannels = new HashMap<byte[], Channel>();

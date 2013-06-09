@@ -20,30 +20,25 @@ public class ResourceCache {
 	public static <E> List<E> getRecords(String name, int type) {
 		Map<Integer, List<Record<?>>> records = recordCache.get(name);
 		List<E> results = new ArrayList<E>();
-		if (records == null) {
+		if (records == null || records.isEmpty()) {
 			return results;
 		}
-		if (records.isEmpty()) {
+		List<Record<?>> subresults = records.get(type);
+		if (subresults == null || subresults.isEmpty()) {
 			return results;
 		}
-		for (Iterator<Map.Entry<Integer, List<Record<?>>>> iter = records.entrySet().iterator(); iter.hasNext(); ) {
-			Map.Entry<Integer, List<Record<?>>> entry = iter.next();
-			if (type == entry.getKey()) {
-				List<Record<?>> subresults = entry.getValue();
-				if (subresults.isEmpty())
-					break;
-				for (Iterator<Record<?>> recIt = subresults.iterator(); recIt.hasNext(); ) {
-					Record<?> record = recIt.next();
-					if (System.currentTimeMillis() > record.expiration) {
-						recIt.remove();
-					}
-					results.add((E) record.content());
-				}
-				break;
+		for (Iterator<Record<?>> iter = subresults.iterator(); iter.hasNext(); ) {
+			Record<?> record = iter.next();
+			if (System.currentTimeMillis() > record.expiration) {
+				iter.remove();
+			} else {
+				results.add((E) record.content());
 			}
 		}
 		return results;
 	}
+
+	static int count = 0;
 
 	public static <E> void submitRecord(String name, int type, long ttl, E content) {
 		Map<Integer, List<Record<?>>> records = recordCache.get(name);
@@ -64,7 +59,7 @@ public class ResourceCache {
 
 		public Record(E content, long ttl) {
 			this.content = content;
-			expiration = System.currentTimeMillis() + ttl;
+			expiration = System.currentTimeMillis() + ttl * 1000l;
 		}
 
 		public long expiration() {
