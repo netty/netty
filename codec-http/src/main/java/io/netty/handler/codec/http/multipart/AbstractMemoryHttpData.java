@@ -210,11 +210,19 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         int length = byteBuf.readableBytes();
         FileOutputStream outputStream = new FileOutputStream(dest);
         FileChannel fileChannel = outputStream.getChannel();
-        ByteBuffer byteBuffer = byteBuf.nioBuffer();
         int written = 0;
-        while (written < length) {
-            written += fileChannel.write(byteBuffer);
+        if (byteBuf.nioBufferCount() == 1) {
+            ByteBuffer byteBuffer = byteBuf.nioBuffer();
+            while (written < length) {
+                written += fileChannel.write(byteBuffer);
+            }
+        } else {
+            ByteBuffer[] byteBuffers = byteBuf.nioBuffers();
+            while (written < length) {
+                written += fileChannel.write(byteBuffers);
+            }
         }
+
         fileChannel.force(false);
         fileChannel.close();
         outputStream.close();
