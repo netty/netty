@@ -136,6 +136,14 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
         return this;
     }
 
+    /**
+     * Return the configured {@link EventLoopGroup} which will be used for the child channels or {@code null}
+     * if non is configured yet.
+     */
+    public EventLoopGroup childGroup() {
+        return childGroup;
+    }
+
     @Override
     void init(Channel channel) throws Exception {
         final Map<ChannelOption<?>, Object> options = options();
