@@ -26,6 +26,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
@@ -51,6 +52,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioEventLoop.class);
 
     private static final int CLEANUP_INTERVAL = 256; // XXX Hard-coded value, but won't need customization.
+    private static final boolean DISABLE_KEYSET_OPTIMIZATION =
+            SystemPropertyUtil.getBoolean("io.netty.noKeySetOptimization", false);
 
     private static final int MIN_PREMATURE_SELECTOR_RETURNS = 3;
     private static final int SELECTOR_AUTO_REBUILD_THRESHOLD;
@@ -81,6 +84,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         SELECTOR_AUTO_REBUILD_THRESHOLD = selectorAutoRebuildThreshold;
 
         if (logger.isDebugEnabled()) {
+            logger.debug("io.netty.noKeySetOptimization: {}", DISABLE_KEYSET_OPTIMIZATION);
             logger.debug("io.netty.selectorAutoRebuildThreshold: {}", SELECTOR_AUTO_REBUILD_THRESHOLD);
         }
     }
@@ -89,6 +93,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
      * The NIO {@link Selector}.
      */
     Selector selector;
+    private SelectedSelectionKeySet selectedKeys;
 
     private final SelectorProvider provider;
 
@@ -115,11 +120,40 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     }
 
     private Selector openSelector() {
+        final Selector selector;
         try {
-            return provider.openSelector();
+            selector = provider.openSelector();
         } catch (IOException e) {
             throw new ChannelException("failed to open a new selector", e);
         }
+
+        if (DISABLE_KEYSET_OPTIMIZATION) {
+            return selector;
+        }
+
+        try {
+            SelectedSelectionKeySet selectedKeySet = new SelectedSelectionKeySet();
+
+            Class<?> selectorImplClass =
+                    Class.forName("sun.nio.ch.SelectorImpl", false, ClassLoader.getSystemClassLoader());
+            selectorImplClass.isAssignableFrom(selector.getClass());
+            Field selectedKeysField = selectorImplClass.getDeclaredField("selectedKeys");
+            Field publicSelectedKeysField = selectorImplClass.getDeclaredField("publicSelectedKeys");
+
+            selectedKeysField.setAccessible(true);
+            publicSelectedKeysField.setAccessible(true);
+
+            selectedKeysField.set(selector, selectedKeySet);
+            publicSelectedKeysField.set(selector, selectedKeySet);
+
+            selectedKeys = selectedKeySet;
+            logger.trace("Instrumented an optimized java.util.Set into: {}", selector);
+        } catch (Throwable t) {
+            selectedKeys = null;
+            logger.trace("Failed to instrument an optimized java.util.Set into: {}", selector, t);
+        }
+
+        return selector;
     }
 
     @Override
@@ -319,7 +353,12 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 cancelledKeys = 0;
 
                 final long ioStartTime = System.nanoTime();
-                processSelectedKeys();
+                needsToSelectAgain = false;
+                if (selectedKeys != null) {
+                    processSelectedKeysOptimized(selectedKeys.flip());
+                } else {
+                    processSelectedKeysPlain(selector.selectedKeys());
+                }
                 final long ioTime = System.nanoTime() - ioStartTime;
 
                 final int ioRatio = this.ioRatio;
@@ -372,9 +411,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         return task;
     }
 
-    private void processSelectedKeys() {
-        needsToSelectAgain = false;
-        Set<SelectionKey> selectedKeys = selector.selectedKeys();
+    private void processSelectedKeysPlain(Set<SelectionKey> selectedKeys) {
         // check if the set is empty and if so just return to not create garbage by
         // creating a new Iterator every time even if there is nothing to process.
         // See https://github.com/netty/netty/issues/597
@@ -410,6 +447,29 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 } else {
                     i = selectedKeys.iterator();
                 }
+            }
+        }
+    }
+
+    private void processSelectedKeysOptimized(SelectionKey[] selectedKeys) {
+        for (int i = 0;; i ++) {
+            final SelectionKey k = selectedKeys[i];
+            if (k == null) {
+                break;
+            }
+
+            final Object a = k.attachment();
+
+            if (a instanceof AbstractNioChannel) {
+                processSelectedKey(k, (AbstractNioChannel) a);
+            } else {
+                @SuppressWarnings("unchecked")
+                NioTask<SelectableChannel> task = (NioTask<SelectableChannel>) a;
+                processSelectedKey(k, task);
+            }
+
+            if (needsToSelectAgain) {
+                selectAgain();
             }
         }
     }
@@ -583,6 +643,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                             selectCnt);
 
                     rebuildSelector();
+                    selector = this.selector;
 
                     // Select again to populate selectedKeys.
                     selector.selectNow();
