@@ -133,7 +133,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public boolean isWritable() {
-        return outboundBuffer.isChannelWritable();
+        return outboundBuffer.getWritable();
     }
 
     @Override

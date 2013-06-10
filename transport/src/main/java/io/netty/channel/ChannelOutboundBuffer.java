@@ -43,12 +43,13 @@ final class ChannelOutboundBuffer {
     private int tail;
     private final AbstractChannel channel;
 
-    private int writeBufferSize;
+    private int pendingOutboundBytes;
 
-    private static final AtomicIntegerFieldUpdater<ChannelOutboundBuffer> CHANNEL_WRITABLE_UPDATER =
-            AtomicIntegerFieldUpdater.newUpdater(ChannelOutboundBuffer.class, "channelWritable");
+    private static final AtomicIntegerFieldUpdater<ChannelOutboundBuffer> WRITABLE_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(ChannelOutboundBuffer.class, "writable");
+
     @SuppressWarnings("unused")
-    private volatile int channelWritable = 1;
+    private volatile int writable = 1;
 
     ChannelOutboundBuffer(AbstractChannel channel) {
         this(channel, MIN_INITIAL_CAPACITY << 1);
@@ -91,33 +92,35 @@ final class ChannelOutboundBuffer {
             doubleCapacity();
         }
 
-        incrementWriteBufferSize(messageListSize(msgs));
+        incrementPendingOutboundBytes(messageListSize(msgs));
     }
 
-    private void incrementWriteBufferSize(int size) {
+    private void incrementPendingOutboundBytes(int size) {
         if (size == 0) {
             return;
         }
-        int newWriteBufferSize = writeBufferSize += size;
+
+        int newWriteBufferSize = pendingOutboundBytes += size;
         int highWaterMark = channel.config().getWriteBufferHighWaterMark();
 
         if (newWriteBufferSize > highWaterMark) {
-            if (CHANNEL_WRITABLE_UPDATER.compareAndSet(this, 1, 0)) {
+            if (WRITABLE_UPDATER.compareAndSet(this, 1, 0)) {
                 channel.pipeline().fireChannelWritableStateChanged();
             }
         }
     }
 
-    private void decrementWriteBufferSize(int size) {
+    private void decrementPendingOutboundBytes(int size) {
         if (size == 0) {
             return;
         }
-        int newWriteBufferSize =  writeBufferSize -= size;
+
+        int newWriteBufferSize =  pendingOutboundBytes -= size;
         int lowWaterMark = channel.config().getWriteBufferLowWaterMark();
 
         if (newWriteBufferSize == 0 || newWriteBufferSize < lowWaterMark) {
 
-            if (CHANNEL_WRITABLE_UPDATER.compareAndSet(this, 0, 1)) {
+            if (WRITABLE_UPDATER.compareAndSet(this, 0, 1)) {
                 channel.pipeline().fireChannelWritableStateChanged();
             }
         }
@@ -150,7 +153,7 @@ final class ChannelOutboundBuffer {
     }
 
     boolean next() {
-        decrementWriteBufferSize(currentMessageListSize);
+        decrementPendingOutboundBytes(currentMessageListSize);
 
         int h = head;
 
@@ -182,8 +185,8 @@ final class ChannelOutboundBuffer {
         return size;
     }
 
-    boolean isChannelWritable() {
-        return CHANNEL_WRITABLE_UPDATER.get(this) == 1;
+    boolean getWritable() {
+        return WRITABLE_UPDATER.get(this) == 1;
     }
 
     int size() {
