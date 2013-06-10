@@ -20,7 +20,7 @@ import io.netty.channel.CombinedChannelDuplexHandler;
 /**
  * A combination of {@link SpdyFrameDecoder} and {@link SpdyFrameEncoder}.
  */
-public final class SpdyFrameCodec extends CombinedChannelDuplexHandler {
+public final class SpdyFrameCodec extends CombinedChannelDuplexHandler<SpdyFrameDecoder, SpdyFrameEncoder> {
 
     /**
      * Creates a new instance with the specified {@code version} and

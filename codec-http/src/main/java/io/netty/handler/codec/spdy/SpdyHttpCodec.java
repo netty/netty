@@ -21,7 +21,7 @@ import io.netty.channel.CombinedChannelDuplexHandler;
  * A combination of {@link SpdyHttpDecoder} and {@link SpdyHttpEncoder}
  */
 public final class SpdyHttpCodec
-        extends CombinedChannelDuplexHandler {
+        extends CombinedChannelDuplexHandler<SpdyHttpDecoder, SpdyHttpEncoder> {
 
     /**
      * Creates a new instance with the specified decoder options.

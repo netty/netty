@@ -62,8 +62,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
 
     private final SctpChannelConfig config;
 
-    @SuppressWarnings("rawtypes")
-    private final NotificationHandler notificationHandler;
+    private final NotificationHandler<?> notificationHandler;
 
     private static SctpChannel newSctpChannel() {
         try {
