@@ -41,6 +41,6 @@ public class SctpOutboundByteStreamHandler extends MessageToMessageEncoder<ByteB
 
     @Override
     protected void encode(ChannelHandlerContext ctx, ByteBuf msg, MessageList<Object> out) throws Exception {
-        out.add(new SctpMessage(streamIdentifier, protocolIdentifier, msg));
+        out.add(new SctpMessage(streamIdentifier, protocolIdentifier, msg.retain()));
     }
 }
