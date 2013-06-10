@@ -36,10 +36,16 @@ public final class MessageList<T> {
         }
     };
 
+    /**
+     * Create a new empty {@link MessageList} instance
+     */
     public static <T> MessageList<T> newInstance() {
         return newInstance(DEFAULT_INITIAL_CAPACITY);
     }
 
+    /**
+     * Create a new empty {@link MessageList} instance with the given capacity.
+     */
     @SuppressWarnings("unchecked")
     public static <T> MessageList<T> newInstance(int minCapacity) {
         MessageList<T> ret = (MessageList<T>) RECYCLER.get();
@@ -47,12 +53,18 @@ public final class MessageList<T> {
         return ret;
     }
 
+    /**
+     * Create a new {@link MessageList} instance which holds the given value
+     */
     public static <T> MessageList<T> newInstance(T value) {
         MessageList<T> ret = newInstance(MIN_INITIAL_CAPACITY);
         ret.add(value);
         return ret;
     }
 
+    /**
+     * Call {@link ByteBufUtil#retain(Object)} on all messages in this {@link MessageList} and return itself.
+     */
     public MessageList<T> retainAll() {
         int size = this.size;
         for (int i = 0; i < size; i ++) {
@@ -61,6 +73,9 @@ public final class MessageList<T> {
         return this;
     }
 
+    /**
+     * Call {@link ByteBufUtil#retain(Object), int} on all messages in this {@link MessageList} and return itself.
+     */
     public MessageList<T> retainAll(int increment) {
         int size = this.size;
         for (int i = 0; i < size; i ++) {
@@ -69,6 +84,10 @@ public final class MessageList<T> {
         return this;
     }
 
+    /**
+     * Call {@link ByteBufUtil#release(Object)} on all messages in this {@link MessageList} and return {@code true}
+     * if all messages were released.
+     */
     public boolean releaseAll() {
         boolean releasedAll = true;
         int size = this.size;
@@ -78,6 +97,10 @@ public final class MessageList<T> {
         return releasedAll;
     }
 
+    /**
+     * Call {@link ByteBufUtil#release(Object, int)} on all messages in this {@link MessageList} and return
+     * {@code true} if all messages were released.
+     */
     public boolean releaseAll(int decrement) {
         boolean releasedAll = true;
         int size = this.size;
@@ -87,14 +110,25 @@ public final class MessageList<T> {
         return releasedAll;
     }
 
+    /**
+     * Short-cut for calling {@link #releaseAll()} and {@link #recycle()}. Returns {@code true} if both return
+     * {@code true}.
+     */
     public boolean releaseAllAndRecycle() {
         return releaseAll() && recycle();
     }
 
+    /**
+     * Short-cut for calling {@link #releaseAll(int)} and {@link #recycle()}. Returns {@code true} if both return
+     * {@code true}.
+     */
     public boolean releaseAllAndRecycle(int decrement) {
         return releaseAll(decrement) && recycle();
     }
 
+    /**
+     * Clear and recycle this instance.
+     */
     public boolean recycle() {
         clear();
         return RECYCLER.recycle(this, handle);
@@ -120,23 +154,32 @@ public final class MessageList<T> {
         this.size = size;
     }
 
+    /**
+     * Return the current size of this {@link MessageList} and so how many messages it holds.
+     */
     public int size() {
         return size;
     }
 
-    public int capacity() {
-        return elements.length;
-    }
-
+    /**
+     * Return {@code true} if this {@link MessageList} is empty and so contains no messages.
+     */
     public boolean isEmpty() {
         return size == 0;
     }
 
+    /**
+     * Return the message on the given index. This method will throw an {@link IndexOutOfBoundsException} if there is
+     * no message stored in the given index.
+     */
     public T get(int index) {
         checkExclusive(index);
         return elements[index];
     }
 
+    /**
+     * Add the message to this {@link MessageList} and return itself.
+     */
     public MessageList<T> add(T value) {
         if (value == null) {
             throw new NullPointerException("value");
@@ -149,6 +192,9 @@ public final class MessageList<T> {
         return this;
     }
 
+    /**
+     * Add the messages contained in the array to this {@link MessageList} and return itself.
+     */
     public MessageList<T> add(T[] src) {
         if (src == null) {
             throw new NullPointerException("src");
@@ -156,6 +202,10 @@ public final class MessageList<T> {
         return add(src, 0, src.length);
     }
 
+    /**
+     * Add the messages contained in the array, using the given src index and src length, to this {@link MessageList}
+     * and return itself.
+     */
     public MessageList<T> add(T[] src, int srcIdx, int srcLen) {
         checkElements(src, srcIdx, srcLen);
 
@@ -167,24 +217,41 @@ public final class MessageList<T> {
         return this;
     }
 
+    /**
+     * Add the messages contained in the given {@link MessageList} to this {@link MessageList} and return itself.
+     */
     public MessageList<T> add(MessageList<T> src) {
         return add(src, 0, src.size());
     }
 
+    /**
+     * Add the messages contained in the given {@link MessageList}, using the given src index and src length, to this
+     * {@link MessageList} and return itself.
+     */
     public MessageList<T> add(MessageList<T>  src, int srcIdx, int srcLen) {
         return add(src.elements, srcIdx, srcLen);
     }
 
+    /**
+     * Clear all messages and return itself.
+     */
     public MessageList<T> clear() {
         Arrays.fill(elements, 0, size, null);
         size = 0;
         return this;
     }
 
+    /**
+     * Create a new copy all messages of this {@link MessageList} and return it.
+     */
     public MessageList<T> copy() {
         return new MessageList<T>(handle, elements.clone(), size);
     }
 
+    /**
+     * Create a new copy all messages of this {@link MessageList}, starting at the given index and using the given len,
+     * and return it.
+     */
     public MessageList<T> copy(int index, int length) {
         checkRange(index, length);
         MessageList<T> copy = new MessageList<T>(handle, length);
