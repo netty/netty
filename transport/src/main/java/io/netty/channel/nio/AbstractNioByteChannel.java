@@ -125,6 +125,10 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
         if (msg instanceof ByteBuf) {
             ByteBuf buf = (ByteBuf) msg;
+            if (!buf.isReadable()) {
+                buf.release();
+                return 1;
+            }
             boolean done = false;
             for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
                 int localFlushedAmount = doWriteBytes(buf, i == 0);
