@@ -178,5 +178,5 @@ public interface ChannelHandlerContext
     ChannelHandlerContext fireChannelReadSuspended();
 
     @Override
-    ChannelHandlerContext fireChannelWritableStateChanged();
+    ChannelHandlerContext fireChannelWritabilityChanged();
 }

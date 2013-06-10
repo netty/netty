@@ -65,5 +65,5 @@ public interface ChannelInboundHandler extends ChannelHandler {
      * Gets called once the writable state of a {@link Channel} changed. You can check the state with
      * {@link Channel#isWritable()}.
      */
-    void channelWritableStateChanged(ChannelHandlerContext ctx) throws Exception;
+    void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception;
 }

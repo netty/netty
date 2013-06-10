@@ -411,11 +411,11 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public ChannelHandlerContext fireChannelWritableStateChanged() {
+    public ChannelHandlerContext fireChannelWritabilityChanged() {
         final DefaultChannelHandlerContext next = findContextInbound();
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            next.invokeChannelWritableStateChanged();
+            next.invokeChannelWritabilityChanged();
         } else {
             Runnable task = next.invokeChannelWritableStateChangedTask;
             if (task == null) {
@@ -431,9 +431,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         return this;
     }
 
-    private void invokeChannelWritableStateChanged() {
+    private void invokeChannelWritabilityChanged() {
         try {
-            ((ChannelInboundHandler) handler()).channelWritableStateChanged(this);
+            ((ChannelInboundHandler) handler()).channelWritabilityChanged(this);
         } catch (Throwable t) {
             notifyHandlerException(t);
         }

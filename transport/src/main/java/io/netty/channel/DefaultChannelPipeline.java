@@ -796,8 +796,8 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelPipeline fireChannelWritableStateChanged() {
-        head.fireChannelWritableStateChanged();
+    public ChannelPipeline fireChannelWritabilityChanged() {
+        head.fireChannelWritabilityChanged();
         return this;
     }
 
@@ -938,7 +938,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         public void channelReadSuspended(ChannelHandlerContext ctx) throws Exception { }
 
         @Override
-        public void channelWritableStateChanged(ChannelHandlerContext ctx) throws Exception { }
+        public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception { }
 
         @Override
         public void handlerAdded(ChannelHandlerContext ctx) throws Exception { }

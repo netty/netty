@@ -92,8 +92,8 @@ interface ChannelInboundInvoker {
     ChannelInboundInvoker fireChannelReadSuspended();
 
     /**
-     * Triggers an {@link ChannelInboundHandler#channelWritableStateChanged(ChannelHandlerContext)}
+     * Triggers an {@link ChannelInboundHandler#channelWritabilityChanged(ChannelHandlerContext)}
      * event to the next {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
      */
-    ChannelInboundInvoker fireChannelWritableStateChanged();
+    ChannelInboundInvoker fireChannelWritabilityChanged();
 }

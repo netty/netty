@@ -105,7 +105,7 @@ final class ChannelOutboundBuffer {
 
         if (newWriteBufferSize > highWaterMark) {
             if (WRITABLE_UPDATER.compareAndSet(this, 1, 0)) {
-                channel.pipeline().fireChannelWritableStateChanged();
+                channel.pipeline().fireChannelWritabilityChanged();
             }
         }
     }
@@ -121,7 +121,7 @@ final class ChannelOutboundBuffer {
         if (newWriteBufferSize == 0 || newWriteBufferSize < lowWaterMark) {
 
             if (WRITABLE_UPDATER.compareAndSet(this, 0, 1)) {
-                channel.pipeline().fireChannelWritableStateChanged();
+                channel.pipeline().fireChannelWritabilityChanged();
             }
         }
     }
