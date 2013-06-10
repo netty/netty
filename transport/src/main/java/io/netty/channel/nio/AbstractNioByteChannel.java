@@ -143,7 +143,6 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             }
         } else if (msg instanceof FileRegion) {
             FileRegion region = (FileRegion) msg;
-
             boolean done = false;
             for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
                 long localFlushedAmount = doWriteFileRegion(region, i == 0);
