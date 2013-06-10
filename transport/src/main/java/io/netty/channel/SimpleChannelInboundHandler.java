@@ -58,7 +58,7 @@ public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandl
         try {
             for (int i = 0; i < size; i++) {
                 Object msg = msgs.get(i);
-                if (acceptInboundMessage(msg)) {
+                if (!ctx.isRemoved() && acceptInboundMessage(msg)) {
                     if (!unaccepted.isEmpty()) {
                         ctx.fireMessageReceived(unaccepted);
                         unaccepted = MessageList.newInstance();

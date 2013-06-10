@@ -522,6 +522,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         // Notify the complete removal.
         try {
             ctx.handler().handlerRemoved(ctx);
+            ctx.setRemoved();
         } catch (Throwable t) {
             fireExceptionCaught(new ChannelPipelineException(
                     ctx.handler().getClass().getName() + ".handlerRemoved() has thrown an exception.", t));
