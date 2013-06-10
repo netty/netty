@@ -71,7 +71,7 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     @Override
     protected ByteBuffer newInternalNioBuffer(ByteBuffer memory) {
-        return memory;
+        return memory.duplicate();
     }
 
     @Override
