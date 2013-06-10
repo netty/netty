@@ -58,6 +58,6 @@ public class SctpInboundByteStreamHandler extends MessageToMessageDecoder<SctpMe
             throw new CodecException(String.format("Received SctpMessage is not complete, please add %s in the " +
                     "pipeline before this handler", SctpMessageCompletionHandler.class.getSimpleName()));
         }
-        out.add(msg.content());
+        out.add(msg.content().retain());
     }
 }
