@@ -14,6 +14,7 @@
 
 package io.netty.buffer;
 
+import io.netty.util.Recycler;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -26,8 +27,23 @@ import java.nio.channels.ScatteringByteChannel;
 
 final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
 
-    PooledHeapByteBuf(int maxCapacity) {
-        super(maxCapacity);
+    private static final Recycler<PooledHeapByteBuf> RECYCLER = new Recycler<PooledHeapByteBuf>() {
+        @Override
+        protected PooledHeapByteBuf newObject(Handle handle) {
+            return new PooledHeapByteBuf(handle, Integer.MAX_VALUE);
+        }
+    };
+
+    static PooledHeapByteBuf newInstance(int maxCapacity) {
+        if (maxCapacity == Integer.MAX_VALUE) {
+            return RECYCLER.get();
+        } else {
+            return new PooledHeapByteBuf(null, maxCapacity);
+        }
+    }
+
+    private PooledHeapByteBuf(Recycler.Handle recyclerHandle, int maxCapacity) {
+        super(recyclerHandle, maxCapacity);
     }
 
     @Override
@@ -257,5 +273,10 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
     @Override
     protected ByteBuffer newInternalNioBuffer(byte[] memory) {
         return ByteBuffer.wrap(memory);
+    }
+
+    @Override
+    protected Recycler<?> recycler() {
+        return RECYCLER;
     }
 }
