@@ -88,7 +88,7 @@ public final class MessageList<T> {
     }
 
     public boolean releaseAllAndRecycle() {
-        return releaseAllAndRecycle(1);
+        return releaseAll() && recycle();
     }
 
     public boolean releaseAllAndRecycle(int decrement) {
@@ -158,13 +158,11 @@ public final class MessageList<T> {
         checkElements(src, srcIdx, srcLen);
 
         if (srcLen == 0) {
-            remove(index);
-            return this;
+            return remove(index);
         }
 
         if (srcLen == 1) {
-            set(index, src[srcIdx]);
-            return this;
+            return set(index, src[srcIdx]);
         }
 
         checkExclusive(index);
@@ -180,13 +178,11 @@ public final class MessageList<T> {
 
     public MessageList<T> set(int index, int length, T value) {
         if (length == 0) {
-            add(index, value);
-            return this;
+            return add(index, value);
         }
 
         if (length == 1) {
-            set(index, value);
-            return this;
+            return set(index, value);
         }
 
         checkRange(index, length);
@@ -213,13 +209,11 @@ public final class MessageList<T> {
 
     public MessageList<T> set(int index, int length, T[] src, int srcIdx, int srcLen) {
         if (length == 0) {
-            add(index, src, srcIdx, srcLen);
-            return this;
+            return add(index, src, srcIdx, srcLen);
         }
 
         if (length == 1) {
-            set(index, src, srcIdx, srcLen);
-            return this;
+            return set(index, src, srcIdx, srcLen);
         }
 
         checkRange(index, length);
@@ -264,8 +258,7 @@ public final class MessageList<T> {
         if (src == null) {
             throw new NullPointerException("src");
         }
-        add(src, 0, src.length);
-        return this;
+        return add(src, 0, src.length);
     }
 
     public MessageList<T> add(T[] src, int srcIdx, int srcLen) {
@@ -299,8 +292,7 @@ public final class MessageList<T> {
         if (src == null) {
             throw new NullPointerException("src");
         }
-        add(index, src, 0, src.length);
-        return this;
+        return add(index, src, 0, src.length);
     }
 
     public MessageList<T> add(int index, T[] src, int srcIdx, int srcLen) {
