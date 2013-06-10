@@ -30,6 +30,8 @@ public final class ResourceLeakDetector<T> {
 
     private static final boolean DISABLED = SystemPropertyUtil.getBoolean("io.netty.noResourceLeakDetection", false);
 
+    public static final boolean ENABLED = !DISABLED;
+
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ResourceLeakDetector.class);
 
     static {
