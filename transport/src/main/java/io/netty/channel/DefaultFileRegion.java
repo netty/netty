@@ -84,7 +84,7 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
             return 0L;
         }
 
-        long written =  file.transferTo(this.position + position, count, target);
+        long written = file.transferTo(this.position + position, count, target);
         if (written > 0) {
             transfered += written;
         }
