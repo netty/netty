@@ -116,10 +116,10 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             int size = msgs.size();
             for (int i = 0; i < size; i ++) {
                 Object m = msgs.get(i);
-                // handler was removed in the loop
+                // handler was removed in the loop so now copy over all remaining messages
                 if (ctx.isRemoved()) {
-                    out.add(m);
-                    continue;
+                    out.add(msgs, i, size - i);
+                    return;
                 }
                 if (m instanceof ByteBuf) {
                     ByteBuf data = (ByteBuf) m;

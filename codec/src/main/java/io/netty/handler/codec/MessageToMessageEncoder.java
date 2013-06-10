@@ -63,8 +63,13 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerA
         try {
             int size = msgs.size();
             for (int i = 0; i < size; i ++) {
+                // handler was removed in the loop so now copy over all remaining messages
+                if (ctx.isRemoved()) {
+                    out.add(msgs, i, size - i);
+                    break;
+                }
                 Object m = msgs.get(i);
-                if (!ctx.isRemoved() && acceptOutboundMessage(m)) {
+                if (acceptOutboundMessage(m)) {
                     @SuppressWarnings("unchecked")
                     I cast = (I) m;
                     try {

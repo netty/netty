@@ -167,6 +167,14 @@ public final class MessageList<T> {
         return this;
     }
 
+    public MessageList<T> add(MessageList<T> src) {
+        return add(src, 0, src.size());
+    }
+
+    public MessageList<T> add(MessageList<T>  src, int srcIdx, int srcLen) {
+        return add(src.elements, srcIdx, srcLen);
+    }
+
     public MessageList<T> clear() {
         Arrays.fill(elements, 0, size, null);
         size = 0;
@@ -188,10 +196,6 @@ public final class MessageList<T> {
     @SuppressWarnings("unchecked")
     public <U> MessageList<U> cast() {
         return (MessageList<U>) this;
-    }
-
-    public T[] array() {
-        return elements;
     }
 
     public boolean forEach(MessageListProcessor<? super T> proc) {

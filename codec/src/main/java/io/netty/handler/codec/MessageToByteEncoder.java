@@ -65,8 +65,16 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
             ByteBuf buf = null;
             int size = msgs.size();
             for (int i = 0; i < size; i ++) {
+                // handler was removed in the loop so now copy over all remaining messages
+                if (ctx.isRemoved()) {
+                    if (buf != null && buf.isReadable())  {
+                        out.add(buf);
+                    }
+                    out.add(msgs, i, size - i);
+                    break;
+                }
                 Object m = msgs.get(i);
-                if (!ctx.isRemoved() && acceptOutboundMessage(m)) {
+                if (acceptOutboundMessage(m)) {
                     @SuppressWarnings("unchecked")
                     I cast = (I) m;
                     if (buf == null) {
