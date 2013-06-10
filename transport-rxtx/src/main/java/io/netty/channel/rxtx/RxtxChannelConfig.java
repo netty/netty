@@ -259,6 +259,16 @@ public interface RxtxChannelConfig extends ChannelConfig {
      */
     RxtxChannelConfig setWaitTimeMillis(int waitTimeMillis);
 
+    /**
+     * Sets the maximal time (in ms) to block while try to read from the serial port. Default is 1000ms
+     */
+    RxtxChannelConfig setReadTimeout(int readTimout);
+
+    /**
+     * Return the maximal time (in ms) to block and wait for something to be ready to read.
+     */
+    int getReadTimeout();
+
     @Override
     RxtxChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
 

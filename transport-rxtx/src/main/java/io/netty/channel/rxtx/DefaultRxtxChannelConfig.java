@@ -36,6 +36,7 @@ final class DefaultRxtxChannelConfig extends DefaultChannelConfig implements Rxt
     private volatile Databits databits = Databits.DATABITS_8;
     private volatile Paritybit paritybit = Paritybit.NONE;
     private volatile int waitTime;
+    private volatile int readTimeout = 1000;
 
     public DefaultRxtxChannelConfig(RxtxChannel channel) {
         super(channel);
@@ -70,6 +71,9 @@ final class DefaultRxtxChannelConfig extends DefaultChannelConfig implements Rxt
         if (option == WAIT_TIME) {
             return (T) Integer.valueOf(getWaitTimeMillis());
         }
+        if (option == READ_TIMEOUT) {
+            return (T) Integer.valueOf(getReadTimeout());
+        }
         return super.getOption(option);
     }
 
@@ -91,6 +95,8 @@ final class DefaultRxtxChannelConfig extends DefaultChannelConfig implements Rxt
             setParitybit((Paritybit) value);
         } else if (option == WAIT_TIME) {
             setWaitTimeMillis((Integer) value);
+        } else if (option == READ_TIMEOUT) {
+            setReadTimeout((Integer) value);
         } else {
             return super.setOption(option, value);
         }
@@ -175,6 +181,20 @@ final class DefaultRxtxChannelConfig extends DefaultChannelConfig implements Rxt
         }
         waitTime = waitTimeMillis;
         return this;
+    }
+
+    @Override
+    public RxtxChannelConfig setReadTimeout(int readTimeout) {
+        if (readTimeout < 0) {
+            throw new IllegalArgumentException("readTime must be >= 0");
+        }
+        this.readTimeout = readTimeout;
+        return this;
+    }
+
+    @Override
+    public int getReadTimeout() {
+        return readTimeout;
     }
 
     @Override
