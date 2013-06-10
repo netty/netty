@@ -137,111 +137,6 @@ public final class MessageList<T> {
         return elements[index];
     }
 
-    public MessageList<T> set(int index, T value) {
-        checkExclusive(index);
-        if (value == null) {
-            throw new NullPointerException("value");
-        }
-        elements[index] = value;
-        return this;
-    }
-
-    public MessageList<T> set(int index, T[] src) {
-        if (src == null) {
-            throw new NullPointerException("src");
-        }
-        set(index, src, 0, src.length);
-        return this;
-    }
-
-    public MessageList<T> set(int index, T[] src, int srcIdx, int srcLen) {
-        checkElements(src, srcIdx, srcLen);
-
-        if (srcLen == 0) {
-            return remove(index);
-        }
-
-        if (srcLen == 1) {
-            return set(index, src[srcIdx]);
-        }
-
-        checkExclusive(index);
-
-        int oldSize = size;
-        int newSize = oldSize + srcLen - 1;
-        ensureCapacity(newSize);
-        System.arraycopy(elements, index + 1, elements, index + srcLen, oldSize - (index + 1));
-        System.arraycopy(src, srcIdx, elements, index, srcLen);
-        size = newSize;
-        return this;
-    }
-
-    public MessageList<T> set(int index, int length, T value) {
-        if (length == 0) {
-            return add(index, value);
-        }
-
-        if (length == 1) {
-            return set(index, value);
-        }
-
-        checkRange(index, length);
-        if (value == null) {
-            throw new NullPointerException("value");
-        }
-
-        elements[index] = value;
-        int nextElemIdx = index + length;
-        int oldSize = size;
-        int newSize = oldSize - length + 1;
-        System.arraycopy(elements, nextElemIdx, elements, index + 1, oldSize - nextElemIdx);
-        Arrays.fill(elements, newSize, oldSize, null);
-        size = newSize;
-        return this;
-    }
-
-    public MessageList<T> set(int index, int length, T[] src) {
-        if (src == null) {
-            throw new NullPointerException("src");
-        }
-        return set(index, length, src, 0, src.length);
-    }
-
-    public MessageList<T> set(int index, int length, T[] src, int srcIdx, int srcLen) {
-        if (length == 0) {
-            return add(index, src, srcIdx, srcLen);
-        }
-
-        if (length == 1) {
-            return set(index, src, srcIdx, srcLen);
-        }
-
-        checkRange(index, length);
-        checkElements(src, srcIdx, srcLen);
-
-        if (srcLen == length) {
-            System.arraycopy(src, srcIdx, elements, index, length);
-        } else if (srcLen < length) {
-            int remainderIdx = index + length;
-            int oldSize = size;
-            int newSize = oldSize - (length - srcLen);
-            System.arraycopy(src, srcIdx, elements, index, srcLen);
-            System.arraycopy(elements, remainderIdx, elements, index + srcLen, oldSize - remainderIdx);
-            Arrays.fill(elements, newSize, oldSize, null);
-            size = newSize;
-        } else {
-            int remainderIdx = index + length;
-            int oldSize = size;
-            int newSize = oldSize + srcLen - length;
-            ensureCapacity(newSize);
-            // 0 [1 2] 3 4 5 -> 0 [1 2 3] 3 4 5
-            System.arraycopy(elements, remainderIdx, elements, index + srcLen, oldSize - remainderIdx);
-            System.arraycopy(src, srcIdx, elements, index, srcLen);
-            size = newSize;
-        }
-        return this;
-    }
-
     public MessageList<T> add(T value) {
         if (value == null) {
             throw new NullPointerException("value");
@@ -268,70 +163,6 @@ public final class MessageList<T> {
         int newSize = oldSize + srcLen;
         ensureCapacity(newSize);
         System.arraycopy(src, srcIdx, elements, oldSize, srcLen);
-        size = newSize;
-        return this;
-    }
-
-    public MessageList<T> add(int index, T value) {
-        checkInclusive(index);
-
-        if (value == null) {
-            throw new NullPointerException("value");
-        }
-
-        int oldSize = size;
-        int newSize = oldSize + 1;
-        ensureCapacity(newSize);
-        System.arraycopy(elements, index, elements, index + 1, oldSize - index);
-        elements[index] = value;
-        size = newSize;
-        return this;
-    }
-
-    public MessageList<T> add(int index, T[] src) {
-        if (src == null) {
-            throw new NullPointerException("src");
-        }
-        return add(index, src, 0, src.length);
-    }
-
-    public MessageList<T> add(int index, T[] src, int srcIdx, int srcLen) {
-        checkInclusive(index);
-        checkElements(src, srcIdx, srcLen);
-
-        if (srcLen == 0) {
-            return this;
-        }
-
-        int oldSize = size;
-        int newSize = oldSize + srcLen;
-        ensureCapacity(newSize);
-        System.arraycopy(elements, index, elements, index + srcLen, oldSize - index);
-        System.arraycopy(src, srcIdx, elements, index, srcLen);
-        size = newSize;
-        return this;
-    }
-
-    public MessageList<T> remove(int index) {
-        checkExclusive(index);
-        int oldSize = size;
-        int newSize = oldSize - 1;
-        System.arraycopy(elements, index + 1, elements, index, newSize - index);
-        elements[newSize] = null;
-        size = newSize;
-        return this;
-    }
-
-    public MessageList<T> remove(int index, int length) {
-        checkRange(index, length);
-        if (length == 0) {
-            return this;
-        }
-
-        int oldSize = size;
-        int newSize = oldSize - length;
-        System.arraycopy(elements, index + length, elements, index, newSize - index);
-        Arrays.fill(elements, newSize, oldSize, null);
         size = newSize;
         return this;
     }
@@ -445,12 +276,6 @@ public final class MessageList<T> {
 
     private void checkExclusive(int index) {
         if (index >= size) {
-            throw new IndexOutOfBoundsException(String.valueOf(index));
-        }
-    }
-
-    private void checkInclusive(int index) {
-        if (index > size) {
             throw new IndexOutOfBoundsException(String.valueOf(index));
         }
     }

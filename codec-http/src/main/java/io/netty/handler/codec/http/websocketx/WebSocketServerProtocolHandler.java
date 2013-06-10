@@ -23,6 +23,7 @@ import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.MessageList;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -121,19 +122,13 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     }
 
     static ChannelHandler forbiddenHttpRequestResponder() {
-        return new ChannelInboundHandlerAdapter() {
+        return new SimpleChannelInboundHandler<FullHttpRequest>() {
             @Override
-            public void messageReceived(final ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-                for (int i = 0; i < msgs.size(); i++) {
-                    Object msg = msgs.get(i);
-                    if (msg instanceof FullHttpRequest) {
-                        FullHttpResponse response =
-                                new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.FORBIDDEN);
-                        ctx.channel().write(response);
-                        msgs.remove(i--);
-                    }
-                }
-                ctx.fireMessageReceived(msgs);
+            protected void messageReceived(ChannelHandlerContext ctx, FullHttpRequest msg) throws Exception {
+                msg.release();
+                FullHttpResponse response =
+                        new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.FORBIDDEN);
+                ctx.channel().write(response);
             }
         };
     }
