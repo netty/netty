@@ -684,10 +684,8 @@ public class SpdySessionHandler
         ctx.write(spdyRstStreamFrame);
         if (fireMessageReceived) {
             in.add(spdyRstStreamFrame);
-            ctx.fireMessageReceived(in);
-            while (!in.isEmpty()) {
-                in.remove(0);
-            }
+            ctx.fireMessageReceived(in.copy());
+            in.clear();
         }
     }
 
