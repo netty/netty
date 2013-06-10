@@ -516,7 +516,7 @@ public class SpdySessionHandler
                         //    }
                         //});
 
-                        ctx.nextOutboundMessageBuffer().add(partialDataFrame);
+                        ctx.write(partialDataFrame);
                         return;
                     } else {
                         // Window size is large enough to send entire data frame
