@@ -16,8 +16,6 @@
 
 package io.netty.util;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
@@ -64,19 +62,32 @@ public abstract class Recycler<T> {
     public interface Handle { }
 
     static final class Stack<T> implements Handle {
+
+        private static final int INITIAL_CAPACITY = 256;
+
         final Recycler<T> parent;
         final Thread thread;
-        private final Deque<T> deque = new ArrayDeque<T>();
-        private final Map<T, Boolean> map = new IdentityHashMap<T, Boolean>();
+        private T[] elements;
+        private int size;
+        private final Map<T, Boolean> map = new IdentityHashMap<T, Boolean>(INITIAL_CAPACITY);
 
+        @SuppressWarnings({ "unchecked", "SuspiciousArrayCast" })
         Stack(Recycler<T> parent, Thread thread) {
             this.parent = parent;
             this.thread = thread;
+            elements = newArray(INITIAL_CAPACITY);
         }
 
         T pop() {
-            T ret = deque.pollLast();
+            int size = this.size;
+            if (size == 0) {
+                return null;
+            }
+            size --;
+            T ret = elements[size];
+            elements[size] = null;
             map.remove(ret);
+            this.size = size;
             return ret;
         }
 
@@ -84,7 +95,21 @@ public abstract class Recycler<T> {
             if (map.put(o, Boolean.TRUE) != null) {
                 throw new IllegalStateException("recycled already");
             }
-            deque.addLast(o);
+
+            int size = this.size;
+            if (size == elements.length) {
+                T[] newElements = newArray(size << 1);
+                System.arraycopy(elements, 0, newElements, 0, size);
+                elements = newElements;
+            }
+
+            elements[size] = o;
+            this.size = size + 1;
+        }
+
+        @SuppressWarnings({ "unchecked", "SuspiciousArrayCast" })
+        private static <T> T[] newArray(int length) {
+            return (T[]) new Object[length];
         }
     }
 }
