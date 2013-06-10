@@ -210,22 +210,25 @@ final class ChannelOutboundBuffer {
     }
 
     void fail(Throwable cause) {
-        do {
-            if (currentPromise != null) {
-                if (!currentPromise.tryFailure(cause)) {
-                    logger.warn("Promise done already:", cause);
-                }
+        if (currentPromise == null) {
+            if (!next()) {
+                return;
             }
-            if (currentMessages != null) {
-                // release all failed messages
-                try {
-                    for (int i = currentMessageIndex; i < currentMessages.size(); i++) {
-                        Object msg = currentMessages.get(i);
-                        ByteBufUtil.release(msg);
-                    }
-                } finally {
-                    currentMessages.recycle();
+        }
+
+        do {
+            if (!currentPromise.tryFailure(cause)) {
+                logger.warn("Promise done already:", cause);
+            }
+
+            // Release all failed messages.
+            try {
+                for (int i = currentMessageIndex; i < currentMessages.size(); i++) {
+                    Object msg = currentMessages.get(i);
+                    ByteBufUtil.release(msg);
                 }
+            } finally {
+                currentMessages.recycle();
             }
         } while(next());
     }
