@@ -35,7 +35,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
-import java.nio.channels.WritableByteChannel;
 
 /**
  * {@link io.netty.channel.socket.SocketChannel} which uses NIO selector based implementation.
@@ -231,62 +230,16 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     protected int doWriteBytes(ByteBuf buf, boolean lastSpin) throws Exception {
         final int expectedWrittenBytes = buf.readableBytes();
         final int writtenBytes = buf.readBytes(javaChannel(), expectedWrittenBytes);
-
-        if (writtenBytes >= expectedWrittenBytes) {
-            final SelectionKey key = selectionKey();
-            final int interestOps = key.interestOps();
-            // Wrote the outbound buffer completely - clear OP_WRITE.
-            if ((interestOps & SelectionKey.OP_WRITE) != 0) {
-                key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
-            }
-        } else {
-            // Wrote something or nothing.
-            // a) If wrote something, the caller will not retry.
-            //    - Set OP_WRITE so that the event loop calls flushForcibly() later.
-            // b) If wrote nothing:
-            //    1) If 'lastSpin' is false, the caller will call this method again real soon.
-            //       - Do not update OP_WRITE.
-            //    2) If 'lastSpin' is true, the caller will not retry.
-            //       - Set OP_WRITE so that the event loop calls flushForcibly() later.
-            if (writtenBytes > 0 || lastSpin) {
-                final SelectionKey key = selectionKey();
-                final int interestOps = key.interestOps();
-                if ((interestOps & SelectionKey.OP_WRITE) == 0) {
-                    key.interestOps(interestOps | SelectionKey.OP_WRITE);
-                }
-            }
-        }
-
+        updateOpWrite(expectedWrittenBytes, writtenBytes, lastSpin);
         return writtenBytes;
     }
 
     @Override
     protected long doWriteFileRegion(FileRegion region, boolean lastSpin) throws Exception {
-        if (javaChannel() instanceof WritableByteChannel) {
-            WritableByteChannel wch = javaChannel();
-            long localWrittenBytes = region.transferTo(wch, region.transfered());
-            if (localWrittenBytes > 0 || lastSpin) {
-                // check if the region was written complete. If not set OP_WRITE so the eventloop
-                // will write the rest once writable again
-                if (region.transfered() < region.count()) {
-                    final SelectionKey key = selectionKey();
-                    final int interestOps = key.interestOps();
-                    if ((interestOps & SelectionKey.OP_WRITE) == 0) {
-                        key.interestOps(interestOps | SelectionKey.OP_WRITE);
-                    }
-                }
-            } else {
-                final SelectionKey key = selectionKey();
-                final int interestOps = key.interestOps();
-                // Wrote the region completely - clear OP_WRITE.
-                if ((interestOps & SelectionKey.OP_WRITE) != 0) {
-                    key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
-                }
-            }
-            return localWrittenBytes;
-        } else {
-            throw new UnsupportedOperationException("Underlying Channel is not of instance "
-                    + WritableByteChannel.class);
-        }
+        final long position = region.transfered();
+        final long expectedWrittenBytes = region.count() - position;
+        final long writtenBytes = region.transferTo(javaChannel(), position);
+        updateOpWrite(expectedWrittenBytes, writtenBytes, lastSpin);
+        return writtenBytes;
     }
 }

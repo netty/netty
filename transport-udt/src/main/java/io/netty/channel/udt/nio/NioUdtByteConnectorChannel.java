@@ -31,7 +31,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.channels.SelectionKey;
 
 import static java.nio.channels.SelectionKey.*;
 
@@ -143,25 +142,10 @@ public class NioUdtByteConnectorChannel extends AbstractNioByteChannel
     }
 
     @Override
-    protected int doWriteBytes(final ByteBuf byteBuf, final boolean lastSpin)
-            throws Exception {
-        final int pendingBytes = byteBuf.readableBytes();
-        final int writtenBytes = byteBuf.readBytes(javaChannel(), pendingBytes);
-        final SelectionKey key = selectionKey();
-        final int interestOps = key.interestOps();
-        if (writtenBytes >= pendingBytes) {
-            // wrote the buffer completely - clear OP_WRITE.
-            if ((interestOps & OP_WRITE) != 0) {
-                key.interestOps(interestOps & ~OP_WRITE);
-            }
-        } else {
-            // wrote partial or nothing - ensure OP_WRITE
-            if (writtenBytes > 0 || lastSpin) {
-                if ((interestOps & OP_WRITE) == 0) {
-                    key.interestOps(interestOps | OP_WRITE);
-                }
-            }
-        }
+    protected int doWriteBytes(final ByteBuf byteBuf, final boolean lastSpin) throws Exception {
+        final int expectedWrittenBytes = byteBuf.readableBytes();
+        final int writtenBytes = byteBuf.readBytes(javaChannel(), expectedWrittenBytes);
+        updateOpWrite(expectedWrittenBytes, writtenBytes, lastSpin);
         return writtenBytes;
     }
 

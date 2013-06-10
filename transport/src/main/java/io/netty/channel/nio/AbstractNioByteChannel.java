@@ -24,6 +24,7 @@ import io.netty.channel.FileRegion;
 import io.netty.channel.MessageList;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
 import java.nio.channels.SelectableChannel;
@@ -124,36 +125,43 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
         if (msg instanceof ByteBuf) {
             ByteBuf buf = (ByteBuf) msg;
+            boolean done = false;
             for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
                 int localFlushedAmount = doWriteBytes(buf, i == 0);
-                if (localFlushedAmount > 0 || !buf.isReadable()) {
+                if (localFlushedAmount == 0) {
+                    break;
+                }
+                if (!buf.isReadable()) {
+                    done = true;
                     break;
                 }
             }
             // We may could optimize this to write multiple buffers at once (scattering)
-            if (!buf.isReadable()) {
+            if (done) {
                 buf.release();
                 return 1;
             }
         } else if (msg instanceof FileRegion) {
             FileRegion region = (FileRegion) msg;
 
+            boolean done = false;
             for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
                 long localFlushedAmount = doWriteFileRegion(region, i == 0);
-                if (localFlushedAmount == -1) {
-                    checkEOF(region);
-                    return 1;
+                if (localFlushedAmount == 0) {
+                    break;
                 }
-                if (localFlushedAmount > 0) {
+                if (region.transfered() >= region.count()) {
+                    done = true;
                     break;
                 }
             }
-            if (region.transfered() >= region.count()) {
+
+            if (done) {
                 region.release();
                 return 1;
             }
         } else {
-            throw new UnsupportedOperationException("Not support writing of message " + msg);
+            throw new UnsupportedOperationException("unsupported message type: " + StringUtil.simpleClassName(msg));
         }
 
         return 0;
@@ -183,4 +191,26 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
      */
     protected abstract int doWriteBytes(ByteBuf buf, boolean lastSpin) throws Exception;
 
+    protected void updateOpWrite(long expectedWrittenBytes, long writtenBytes, boolean lastSpin) {
+        if (writtenBytes >= expectedWrittenBytes) {
+            final SelectionKey key = selectionKey();
+            final int interestOps = key.interestOps();
+            // Wrote the outbound buffer completely - clear OP_WRITE.
+            if ((interestOps & SelectionKey.OP_WRITE) != 0) {
+                key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
+            }
+        } else {
+            // 1) Wrote nothing: buffer is full obviously - set OP_WRITE
+            // 2) Wrote partial data:
+            //    a) lastSpin is false: no need to set OP_WRITE because the caller will try again immediately.
+            //    b) lastSpin is true: set OP_WRITE because the caller will not try again.
+            if (writtenBytes == 0 || lastSpin) {
+                final SelectionKey key = selectionKey();
+                final int interestOps = key.interestOps();
+                if ((interestOps & SelectionKey.OP_WRITE) == 0) {
+                    key.interestOps(interestOps | SelectionKey.OP_WRITE);
+                }
+            }
+        }
+    }
 }
