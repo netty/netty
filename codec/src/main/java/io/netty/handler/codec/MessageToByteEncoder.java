@@ -66,7 +66,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
             int size = msgs.size();
             for (int i = 0; i < size; i ++) {
                 Object m = msgs.get(i);
-                if (acceptOutboundMessage(m)) {
+                if (!ctx.isRemoved() && acceptOutboundMessage(m)) {
                     @SuppressWarnings("unchecked")
                     I cast = (I) m;
                     if (buf == null) {

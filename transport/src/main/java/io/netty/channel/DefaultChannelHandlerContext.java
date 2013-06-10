@@ -33,6 +33,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private final DefaultChannelPipeline pipeline;
     private final String name;
     private final ChannelHandler handler;
+    private boolean removed;
 
     // Will be set to null if no child executor should be used, otherwise it will be set to the
     // child executor.
@@ -827,5 +828,14 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public ChannelPromise voidPromise() {
         return channel.voidPromise();
+    }
+
+    void setRemoved() {
+        removed = true;
+    }
+
+    @Override
+    public boolean isRemoved() {
+        return removed;
     }
 }

@@ -63,7 +63,7 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAd
             int size = msgs.size();
             for (int i = 0; i < size; i ++) {
                 Object m = msgs.get(i);
-                if (acceptInboundMessage(m)) {
+                if (!ctx.isRemoved() && acceptInboundMessage(m)) {
                     @SuppressWarnings("unchecked")
                     I cast = (I) m;
                     try {

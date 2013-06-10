@@ -150,6 +150,13 @@ public interface ChannelHandlerContext
      */
     ChannelHandler handler();
 
+    /**
+     * Return {@code true} if the {@link ChannelHandler} which belongs to this {@link ChannelHandler} was removed
+     * from the {@link ChannelPipeline}. Note that this method is only meant to be called from with in the
+     * {@link EventLoop}.
+     */
+    boolean isRemoved();
+
     @Override
     ChannelHandlerContext fireChannelRegistered();
 

@@ -45,7 +45,6 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     private volatile boolean singleDecode;
     private boolean decodeWasNull;
     private MessageList<Object> out;
-    private boolean removed;
 
     /**
      * If set then only one message is decoded on each {@link #messageReceived(ChannelHandlerContext, MessageList)}
@@ -92,7 +91,6 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
 
     @Override
     public final void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        removed = true;
         ByteBuf buf = internalBuffer();
         if (buf.isReadable()) {
             if (out == null) {
@@ -119,7 +117,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             for (int i = 0; i < size; i ++) {
                 Object m = msgs.get(i);
                 // handler was removed in the loop
-                if (removed) {
+                if (ctx.isRemoved()) {
                     out.add(m);
                     continue;
                 }
@@ -165,12 +163,11 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             throw new DecoderException(t);
         } finally {
             // release the cumulation if the handler was removed while messages are processed
-            if (removed) {
+            if (ctx.isRemoved()) {
                 if (cumulation != null) {
                     cumulation.release();
                     cumulation = null;
                 }
-                removed = false;
             }
             MessageList<Object> out = this.out;
             this.out = null;
