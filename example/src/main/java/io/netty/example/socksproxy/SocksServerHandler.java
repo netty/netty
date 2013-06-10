@@ -17,7 +17,7 @@ package io.netty.example.socksproxy;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.SingleMessageChannelInboundHandler;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.socks.SocksAuthResponse;
 import io.netty.handler.codec.socks.SocksAuthScheme;
 import io.netty.handler.codec.socks.SocksAuthStatus;
@@ -29,7 +29,7 @@ import io.netty.handler.codec.socks.SocksRequest;
 
 
 @ChannelHandler.Sharable
-public final class SocksServerHandler extends SingleMessageChannelInboundHandler<SocksRequest> {
+public final class SocksServerHandler extends SimpleChannelInboundHandler<SocksRequest> {
     private static final String name = "SOCKS_SERVER_HANDLER";
 
     public static String getName() {

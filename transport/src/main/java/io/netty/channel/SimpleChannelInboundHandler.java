@@ -15,7 +15,6 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ByteBufUtil;
 import io.netty.util.internal.TypeParameterMatcher;
 
 /**
@@ -25,7 +24,7 @@ import io.netty.util.internal.TypeParameterMatcher;
  *
  * <pre>
  *     public class StringHandler extends
- *             {@link SingleMessageChannelInboundHandler}&lt;{@link String}&gt; {
+ *             {@link SimpleChannelInboundHandler}&lt;{@link String}&gt; {
  *
  *         {@code @Override}
  *         public void messageReceived({@link ChannelHandlerContext} ctx, {@link String} message)
@@ -36,15 +35,15 @@ import io.netty.util.internal.TypeParameterMatcher;
  * </pre>
  *
  */
-public abstract class SingleMessageChannelInboundHandler<I> extends ChannelInboundHandlerAdapter {
+public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandlerAdapter {
 
     private final TypeParameterMatcher matcher;
 
-    protected SingleMessageChannelInboundHandler() {
-        matcher = TypeParameterMatcher.find(this, SingleMessageChannelInboundHandler.class, "I");
+    protected SimpleChannelInboundHandler() {
+        matcher = TypeParameterMatcher.find(this, SimpleChannelInboundHandler.class, "I");
     }
 
-    protected SingleMessageChannelInboundHandler(Class<? extends I> inboundMessageType) {
+    protected SimpleChannelInboundHandler(Class<? extends I> inboundMessageType) {
         matcher = TypeParameterMatcher.get(inboundMessageType);
     }
 
@@ -54,33 +53,34 @@ public abstract class SingleMessageChannelInboundHandler<I> extends ChannelInbou
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-        MessageList<Object> messageList = MessageList.newInstance();
+        MessageList<Object> unaccepted = MessageList.newInstance();
+        int size = msgs.size();
         try {
-            for (int i = 0; i < msgs.size(); i++) {
+            for (int i = 0; i < size; i++) {
                 Object msg = msgs.get(i);
                 if (acceptInboundMessage(msg)) {
-                    if (!messageList.isEmpty()) {
-                        ctx.fireMessageReceived(messageList);
-                        messageList = MessageList.newInstance();
+                    if (!unaccepted.isEmpty()) {
+                        ctx.fireMessageReceived(unaccepted);
+                        unaccepted = MessageList.newInstance();
                     }
 
                     @SuppressWarnings("unchecked")
                     I imsg = (I) msg;
                     messageReceived(ctx, imsg);
                 } else {
-                    messageList.add(msg);
+                    unaccepted.add(msg);
                 }
             }
         } finally {
             msgs.recycle();
-            ctx.fireMessageReceived(messageList);
+            ctx.fireMessageReceived(unaccepted);
         }
     }
 
     /**
      * Is called for each message of type {@link I}.
      *
-     * @param ctx           the {@link ChannelHandlerContext} which this {@link SingleMessageChannelInboundHandler}
+     * @param ctx           the {@link ChannelHandlerContext} which this {@link SimpleChannelInboundHandler}
      *                      belongs to
      * @param msg           the message to handle
      * @throws Exception    is thrown if an error accour

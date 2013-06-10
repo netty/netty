@@ -19,7 +19,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.MessageList;
-import io.netty.channel.SingleMessageChannelInboundHandler;
+import io.netty.channel.SimpleChannelInboundHandler;
 
 import java.math.BigInteger;
 import java.util.concurrent.BlockingQueue;
@@ -34,7 +34,7 @@ import java.util.logging.Logger;
  * to create a new handler instance whenever you create a new channel and insert
  * this handler to avoid a race condition.
  */
-public class FactorialClientHandler extends SingleMessageChannelInboundHandler<BigInteger> {
+public class FactorialClientHandler extends SimpleChannelInboundHandler<BigInteger> {
 
     private static final Logger logger = Logger.getLogger(
             FactorialClientHandler.class.getName());

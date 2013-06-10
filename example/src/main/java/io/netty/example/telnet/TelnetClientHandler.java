@@ -17,7 +17,7 @@ package io.netty.example.telnet;
 
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.SingleMessageChannelInboundHandler;
+import io.netty.channel.SimpleChannelInboundHandler;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -26,7 +26,7 @@ import java.util.logging.Logger;
  * Handles a client-side channel.
  */
 @Sharable
-public class TelnetClientHandler extends SingleMessageChannelInboundHandler<String> {
+public class TelnetClientHandler extends SimpleChannelInboundHandler<String> {
 
     private static final Logger logger = Logger.getLogger(
             TelnetClientHandler.class.getName());
