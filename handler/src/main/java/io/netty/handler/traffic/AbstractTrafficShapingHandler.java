@@ -266,7 +266,8 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
 
     @Override
     public void read(ChannelHandlerContext ctx) {
-        if (!ctx.attr(READ_SUSPENDED).get()) {
+        Boolean suspended = ctx.attr(READ_SUSPENDED).get();
+        if (suspended == null || Boolean.FALSE.equals(suspended)) {
             ctx.read();
         }
     }
