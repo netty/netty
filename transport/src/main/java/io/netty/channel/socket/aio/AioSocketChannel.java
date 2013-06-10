@@ -30,6 +30,7 @@ import io.netty.channel.aio.AioEventLoopGroup;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -58,6 +59,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     private final CompletionHandler<Integer, ByteBuf> readHandler = new ReadHandler<Integer>(this);
     private final CompletionHandler<Long, ByteBuf> gatheringWriteHandler = new WriteHandler<Long>(this);
     private final CompletionHandler<Long, ByteBuf> scatteringReadHandler = new ReadHandler<Long>(this);
+
     private static AsynchronousSocketChannel newSocket(AsynchronousChannelGroup group) {
         try {
             return AsynchronousSocketChannel.open(group);
@@ -74,7 +76,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     private boolean inDoBeginRead;
     private boolean readAgain;
 
-    private Exception writeException;
+    private Throwable writeException;
     private boolean writeInProgress;
     private boolean inDoWrite;
     private boolean fileRegionDone;
@@ -334,9 +336,9 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     private void checkWriteException() throws Exception {
         if (writeException != null) {
             fileRegionDone = false;
-            Exception e = writeException;
+            Throwable e = writeException;
             writeException = null;
-            throw e;
+            PlatformDependent.throwException(e);
         }
     }
 
@@ -397,11 +399,7 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
     }
 
     private void setWriteException(Throwable cause) {
-        if (cause instanceof Exception) {
-            writeException = (Exception) cause;
-        } else {
-            writeException = new IOException(cause);
-        }
+        writeException = cause;
     }
 
     private static final class WriteHandler<T extends Number>
@@ -427,17 +425,18 @@ public class AioSocketChannel extends AbstractAioChannel implements SocketChanne
                     release = false;
                 }
             } finally {
-                 if (release) {
-                     buf.release();
-                 }
-                 if (channel.inDoWrite) {
-                     // JDK performed the write operation immediately and notified this handler immediately.
-                     // doWrite(...) will do subsequent write operations if necessary for us.
-                 } else {
-                     // trigger flush so doWrite(..) is called again. This will either trigger a new write to the
-                     // channel or remove the empty bytebuf (which was written completely before) from the MessageList.
-                     channel.unsafe().flushNow();
-                 }
+                if (release) {
+                    buf.release();
+                }
+
+                if (channel.inDoWrite) {
+                    // JDK performed the write operation immediately and notified this handler immediately.
+                    // doWrite(...) will do subsequent write operations if necessary for us.
+                } else {
+                    // trigger flush so doWrite(..) is called again. This will either trigger a new write to the
+                    // channel or remove the empty bytebuf (which was written completely before) from the MessageList.
+                    channel.unsafe().flushNow();
+                }
             }
         }
 
