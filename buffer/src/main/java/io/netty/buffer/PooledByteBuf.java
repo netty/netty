@@ -16,7 +16,9 @@
 
 package io.netty.buffer;
 
+import io.netty.util.Recycler;
 import io.netty.util.ResourceLeak;
+import io.netty.util.ResourceLeakDetector;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -24,6 +26,7 @@ import java.nio.ByteOrder;
 abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
 
     private final ResourceLeak leak;
+    private final Recycler.Handle recyclerHandle;
 
     protected PoolChunk<T> chunk;
     protected long handle;
@@ -34,9 +37,10 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
 
     private ByteBuffer tmpNioBuf;
 
-    protected PooledByteBuf(int maxCapacity) {
+    protected PooledByteBuf(Recycler.Handle recyclerHandle, int maxCapacity) {
         super(maxCapacity);
         leak = leakDetector.open(this);
+        this.recyclerHandle = recyclerHandle;
     }
 
     void init(PoolChunk<T> chunk, long handle, int offset, int length, int maxLength) {
@@ -141,9 +145,24 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
             this.handle = -1;
             memory = null;
             chunk.arena.free(chunk, handle);
-            leak.close();
+            if (ResourceLeakDetector.ENABLED) {
+                leak.close();
+            } else {
+                recycle();
+            }
         }
     }
+
+    @SuppressWarnings("unchecked")
+    private void recycle() {
+        Recycler.Handle recyclerHandle = this.recyclerHandle;
+        if (recyclerHandle != null) {
+            setRefCnt(1);
+            ((Recycler<Object>) recycler()).recycle(this, recyclerHandle);
+        }
+    }
+
+    protected abstract Recycler<?> recycler();
 
     protected final int idx(int index) {
         return offset + index;

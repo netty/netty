@@ -345,7 +345,7 @@ abstract class PoolArena<T> {
 
         @Override
         protected PooledByteBuf<byte[]> newByteBuf(int maxCapacity) {
-            return new PooledHeapByteBuf(maxCapacity);
+            return PooledHeapByteBuf.newInstance(maxCapacity);
         }
 
         @Override
@@ -385,9 +385,9 @@ abstract class PoolArena<T> {
         @Override
         protected PooledByteBuf<ByteBuffer> newByteBuf(int maxCapacity) {
             if (HAS_UNSAFE) {
-                return new PooledUnsafeDirectByteBuf(maxCapacity);
+                return PooledUnsafeDirectByteBuf.newInstance(maxCapacity);
             } else {
-                return new PooledDirectByteBuf(maxCapacity);
+                return PooledDirectByteBuf.newInstance(maxCapacity);
             }
         }
 

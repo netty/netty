@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+import io.netty.util.Recycler;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -30,10 +31,26 @@ import java.nio.channels.ScatteringByteChannel;
 final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     private static final boolean NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
+
+    private static final Recycler<PooledUnsafeDirectByteBuf> RECYCLER = new Recycler<PooledUnsafeDirectByteBuf>() {
+        @Override
+        protected PooledUnsafeDirectByteBuf newObject(Handle handle) {
+            return new PooledUnsafeDirectByteBuf(handle, Integer.MAX_VALUE);
+        }
+    };
+
+    static PooledUnsafeDirectByteBuf newInstance(int maxCapacity) {
+        if (maxCapacity == Integer.MAX_VALUE) {
+            return RECYCLER.get();
+        } else {
+            return new PooledUnsafeDirectByteBuf(null, maxCapacity);
+        }
+    }
+
     private long memoryAddress;
 
-    PooledUnsafeDirectByteBuf(int maxCapacity) {
-        super(maxCapacity);
+    private PooledUnsafeDirectByteBuf(Recycler.Handle recyclerHandle, int maxCapacity) {
+        super(recyclerHandle, maxCapacity);
     }
 
     @Override
@@ -317,5 +334,10 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     private long addr(int index) {
         return memoryAddress + index;
+    }
+
+    @Override
+    protected Recycler<?> recycler() {
+        return RECYCLER;
     }
 }
