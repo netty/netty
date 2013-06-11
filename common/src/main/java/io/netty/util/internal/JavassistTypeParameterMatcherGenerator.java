@@ -46,7 +46,7 @@ public final class JavassistTypeParameterMatcherGenerator {
         classPool.appendClassPath(pathname);
     }
 
-    static TypeParameterMatcher generate(Class<?> type) {
+    public static TypeParameterMatcher generate(Class<?> type) {
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         if (classLoader == null) {
             classLoader = ClassLoader.getSystemClassLoader();
@@ -54,7 +54,7 @@ public final class JavassistTypeParameterMatcherGenerator {
         return generate(type, classLoader);
     }
 
-    static TypeParameterMatcher generate(Class<?> type, ClassLoader classLoader) {
+    public static TypeParameterMatcher generate(Class<?> type, ClassLoader classLoader) {
         final String typeName = typeName(type);
         final String className = "io.netty.util.internal.__matchers__." + typeName + "Matcher";
         try {
