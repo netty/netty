@@ -35,16 +35,14 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     private static final Recycler<PooledUnsafeDirectByteBuf> RECYCLER = new Recycler<PooledUnsafeDirectByteBuf>() {
         @Override
         protected PooledUnsafeDirectByteBuf newObject(Handle handle) {
-            return new PooledUnsafeDirectByteBuf(handle, Integer.MAX_VALUE);
+            return new PooledUnsafeDirectByteBuf(handle, 0);
         }
     };
 
     static PooledUnsafeDirectByteBuf newInstance(int maxCapacity) {
-        if (maxCapacity == Integer.MAX_VALUE) {
-            return RECYCLER.get();
-        } else {
-            return new PooledUnsafeDirectByteBuf(null, maxCapacity);
-        }
+        PooledUnsafeDirectByteBuf buf = RECYCLER.get();
+        buf.maxCapacity(maxCapacity);
+        return buf;
     }
 
     private long memoryAddress;
