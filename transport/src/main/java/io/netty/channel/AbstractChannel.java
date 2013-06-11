@@ -18,6 +18,7 @@ package io.netty.channel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
@@ -696,9 +697,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         }
                     }
 
-                    // Make sure the promise has not been cancelled yet.
-                    if (!promise.setUncancellable()) {
-                        messages.releaseAllAndRecycle();
+                    // Make sure the promise has not been cancelled.
+                    if (promise.isCancelled()) {
+                        // If cancelled, release all unwritten messages and recycle.
+                        for (int i = messageIndex; i < messageCount; i ++) {
+                            ByteBufUtil.release(messages.get(i));
+                        }
+                        messages.recycle();
                         if (!outboundBuffer.next()) {
                             break;
                         } else {
