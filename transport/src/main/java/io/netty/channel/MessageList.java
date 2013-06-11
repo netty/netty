@@ -23,11 +23,14 @@ import io.netty.util.Signal;
 import io.netty.util.internal.PlatformDependent;
 
 import java.util.Arrays;
+import java.util.ConcurrentModificationException;
+import java.util.Iterator;
 
-public final class MessageList<T> {
+public final class MessageList<T> implements Iterable<T> {
 
     private static final int DEFAULT_INITIAL_CAPACITY = 8;
     private static final int MIN_INITIAL_CAPACITY = 4;
+    private int modifications;
 
     private static final Recycler<MessageList<?>> RECYCLER = new Recycler<MessageList<?>>() {
         @Override
@@ -50,6 +53,7 @@ public final class MessageList<T> {
     public static <T> MessageList<T> newInstance(int minCapacity) {
         MessageList<T> ret = (MessageList<T>) RECYCLER.get();
         ret.ensureCapacity(minCapacity);
+        ret.modifications = 0;
         return ret;
     }
 
@@ -184,6 +188,7 @@ public final class MessageList<T> {
         if (value == null) {
             throw new NullPointerException("value");
         }
+        modifications++;
         int oldSize = size;
         int newSize = oldSize + 1;
         ensureCapacity(newSize);
@@ -209,6 +214,7 @@ public final class MessageList<T> {
     public MessageList<T> add(T[] src, int srcIdx, int srcLen) {
         checkElements(src, srcIdx, srcLen);
 
+        modifications++;
         int oldSize = size;
         int newSize = oldSize + srcLen;
         ensureCapacity(newSize);
@@ -236,6 +242,7 @@ public final class MessageList<T> {
      * Clear all messages and return itself.
      */
     public MessageList<T> clear() {
+        modifications++;
         Arrays.fill(elements, 0, size, null);
         size = 0;
         return this;
@@ -312,6 +319,11 @@ public final class MessageList<T> {
         return true;
     }
 
+    @Override
+    public Iterator<T> iterator() {
+        return new MessageListIterator();
+    }
+
     private void ensureCapacity(int capacity) {
         if (elements.length >= capacity) {
             return;
@@ -366,6 +378,39 @@ public final class MessageList<T> {
             if (src[i] == null) {
                 throw new NullPointerException("src[" + i + ']');
             }
+        }
+    }
+
+    private final class MessageListIterator implements Iterator<T> {
+        private int index;
+        private int expectedModifications = modifications;
+
+        private void checkConcurrentModifications() {
+            if (expectedModifications != modifications) {
+                throw new ConcurrentModificationException();
+            }
+            if (index > size) {
+                throw new ConcurrentModificationException();
+            }
+        }
+
+        @Override
+        public boolean hasNext() {
+            return index < size;
+        }
+
+        @Override
+        public T next() {
+            checkConcurrentModifications();
+            if (hasNext()) {
+                return elements[index++];
+            }
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void remove() {
+           throw new UnsupportedOperationException("Read-Only");
         }
     }
 }
