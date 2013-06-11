@@ -97,4 +97,26 @@ public class WebSocketFrameAggregator extends MessageToMessageDecoder<WebSocketF
         // handler in the chain
         out.add(msg.retain());
     }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        super.channelInactive(ctx);
+
+        // release current frame if it is not null as it may be a left-over
+        if (currentFrame != null) {
+            currentFrame.release();
+            currentFrame = null;
+        }
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        super.handlerRemoved(ctx);
+        // release current frane if it is not null as it may be a left-over as there is not much more we can do in
+        // this case
+        if (currentFrame != null) {
+            currentFrame.release();
+            currentFrame = null;
+        }
+    }
 }
