@@ -205,11 +205,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
      */
     protected abstract int doWriteBytes(ByteBuf buf, boolean lastSpin) throws Exception;
 
-    protected long doWriteBytes(MessageList<ByteBuf> bufs, int index, boolean lastSpin) throws Exception {
-        return doWriteBytes(bufs.get(index), lastSpin);
-    }
-
-    protected void updateOpWrite(long expectedWrittenBytes, long writtenBytes, boolean lastSpin) {
+    protected final void updateOpWrite(long expectedWrittenBytes, long writtenBytes, boolean lastSpin) {
         if (writtenBytes >= expectedWrittenBytes) {
             final SelectionKey key = selectionKey();
             final int interestOps = key.interestOps();
