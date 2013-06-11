@@ -23,6 +23,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.FileRegion;
 import io.netty.channel.MessageList;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
 
@@ -156,22 +157,30 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
 
     @Override
     protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
-        Object msg = msgs.get(index);
-        if (msg instanceof ByteBuf) {
-            ByteBuf buf = (ByteBuf) msg;
-            while (buf.isReadable()) {
-                doWriteBytes(buf);
+        int size = msgs.size();
+        int writeIndex = index;
+        for (;;) {
+            if (writeIndex >= size) {
+                break;
             }
-            buf.release();
-            return 1;
-        } else if (msg instanceof FileRegion) {
-            FileRegion region = (FileRegion) msg;
-            doWriteFileRegion(region);
-            region.release();
-            return 1;
-        } else {
-            throw new UnsupportedOperationException();
+            Object msg = msgs.get(writeIndex);
+            if (msg instanceof ByteBuf) {
+                ByteBuf buf = (ByteBuf) msg;
+                while (buf.isReadable()) {
+                    doWriteBytes(buf);
+                }
+                buf.release();
+                writeIndex++;
+            } else if (msg instanceof FileRegion) {
+                FileRegion region = (FileRegion) msg;
+                doWriteFileRegion(region);
+                region.release();
+                writeIndex++;
+            } else {
+                throw new UnsupportedOperationException("unsupported message type: " + StringUtil.simpleClassName(msg));
+            }
         }
+        return writeIndex - index;
     }
 
     /**
