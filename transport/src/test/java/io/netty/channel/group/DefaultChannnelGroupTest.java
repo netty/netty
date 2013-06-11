@@ -22,6 +22,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import org.junit.Test;
 
 public class DefaultChannnelGroupTest {
@@ -32,7 +33,7 @@ public class DefaultChannnelGroupTest {
         EventLoopGroup bossGroup = new NioEventLoopGroup();
         EventLoopGroup workerGroup = new NioEventLoopGroup();
 
-        final ChannelGroup allChannels = new DefaultChannelGroup();
+        final ChannelGroup allChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
         ServerBootstrap b = new ServerBootstrap();
         b.group(bossGroup, workerGroup);

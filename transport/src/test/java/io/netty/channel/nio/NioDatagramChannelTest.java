@@ -23,6 +23,7 @@ import io.netty.channel.MessageList;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -36,7 +37,7 @@ public class NioDatagramChannelTest {
      */
     @Test
     public void testBindMultiple() {
-        DefaultChannelGroup channelGroup = new DefaultChannelGroup();
+        DefaultChannelGroup channelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
         NioEventLoopGroup group = new NioEventLoopGroup();
         try {
             for (int i = 0; i < 100; i++) {
