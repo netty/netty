@@ -976,7 +976,16 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf imp
 
     @Override
     public int nioBufferCount() {
-        return components.size();
+        if (components.size() == 1) {
+            return components.get(0).buf.nioBufferCount();
+        } else {
+            int count = 0;
+            for (int i = 0; i <  components.size(); i++) {
+                Component c = components.get(i);
+                count+=  c.buf.nioBufferCount();
+            }
+            return count;
+        }
     }
 
     @Override
