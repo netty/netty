@@ -62,6 +62,11 @@ public abstract class AbstractOioChannel extends AbstractChannel {
                 return;
             }
 
+            if (!promise.setUncancellable()) {
+                close(voidPromise());
+                return;
+            }
+
             try {
                 boolean wasActive = isActive();
                 doConnect(remoteAddress, localAddress);
@@ -75,8 +80,8 @@ public abstract class AbstractOioChannel extends AbstractChannel {
                     newT.setStackTrace(t.getStackTrace());
                     t = newT;
                 }
-                promise.setFailure(t);
                 closeIfClosed();
+                promise.setFailure(t);
             }
         }
     }
