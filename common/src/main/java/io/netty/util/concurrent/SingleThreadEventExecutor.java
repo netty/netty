@@ -45,9 +45,6 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(SingleThreadEventExecutor.class);
 
-    static final ThreadLocal<SingleThreadEventExecutor> CURRENT_EVENT_LOOP =
-            new ThreadLocal<SingleThreadEventExecutor>();
-
     private static final int ST_NOT_STARTED = 1;
     private static final int ST_STARTED = 2;
     private static final int ST_SHUTTING_DOWN = 3;
@@ -60,13 +57,6 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
             // Do nothing.
         }
     };
-
-    /**
-     * Return the {@link SingleThreadEventExecutor} which belongs the current {@link Thread}.
-     */
-    public static SingleThreadEventExecutor currentEventLoop() {
-        return CURRENT_EVENT_LOOP.get();
-    }
 
     private final EventExecutorGroup parent;
     private final Queue<Runnable> taskQueue;
@@ -105,7 +95,6 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         thread = threadFactory.newThread(new Runnable() {
             @Override
             public void run() {
-                CURRENT_EVENT_LOOP.set(SingleThreadEventExecutor.this);
                 boolean success = false;
                 updateLastExecutionTime();
                 try {
