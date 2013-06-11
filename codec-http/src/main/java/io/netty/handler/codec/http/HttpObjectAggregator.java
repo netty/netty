@@ -211,7 +211,29 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
     }
 
     @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        super.channelInactive(ctx);
+
+        // release current message if it is not null as it may be a left-over
+        if (currentMessage != null) {
+            currentMessage.release();
+            currentMessage = null;
+        }
+    }
+
+    @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        super.handlerRemoved(ctx);
+        // release current message if it is not null as it may be a left-over as there is not much more we can do in
+        // this case
+        if (currentMessage != null) {
+            currentMessage.release();
+            currentMessage = null;
+        }
     }
 }
