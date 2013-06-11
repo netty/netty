@@ -35,6 +35,11 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     }
 
     @Override
+    public boolean inEventLoop() {
+        return inEventLoop(Thread.currentThread());
+    }
+
+    @Override
     public Iterator<EventExecutor> iterator() {
         return new EventExecutorIterator();
     }
