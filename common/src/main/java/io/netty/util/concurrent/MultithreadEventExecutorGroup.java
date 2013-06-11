@@ -31,6 +31,8 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
 
     private final EventExecutor[] children;
     private final AtomicInteger childIndex = new AtomicInteger();
+    private final AtomicInteger terminatedChildren = new AtomicInteger();
+    private final Promise<?> terminationFuture = new DefaultPromise(GlobalEventExecutor.INSTANCE);
 
     /**
      * Create a new instance.
@@ -77,6 +79,19 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
                 }
             }
         }
+
+        final FutureListener<Object> terminationListener = new FutureListener<Object>() {
+            @Override
+            public void operationComplete(Future<Object> future) throws Exception {
+                if (terminatedChildren.incrementAndGet() == children.length) {
+                    terminationFuture.setSuccess(null);
+                }
+            }
+        };
+
+        for (EventExecutor e: children) {
+            e.terminationFuture().addListener(terminationListener);
+        }
     }
 
     protected ThreadFactory newDefaultThreadFactory() {
@@ -119,10 +134,16 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
             ThreadFactory threadFactory, Object... args) throws Exception;
 
     @Override
-    public void shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+    public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
         for (EventExecutor l: children) {
             l.shutdownGracefully(quietPeriod, timeout, unit);
         }
+        return terminationFuture();
+    }
+
+    @Override
+    public Future<?> terminationFuture() {
+        return terminationFuture;
     }
 
     @Override

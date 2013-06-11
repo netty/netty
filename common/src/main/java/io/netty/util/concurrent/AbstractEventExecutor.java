@@ -45,8 +45,8 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     }
 
     @Override
-    public void shutdownGracefully() {
-        shutdownGracefully(2, 15, TimeUnit.SECONDS);
+    public Future<?> shutdownGracefully() {
+        return shutdownGracefully(2, 15, TimeUnit.SECONDS);
     }
 
     /**

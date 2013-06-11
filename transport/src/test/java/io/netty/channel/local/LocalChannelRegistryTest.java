@@ -88,6 +88,9 @@ public class LocalChannelRegistryTest {
             assertNull(String.format(
                     "Expected null, got channel '%s' for local address '%s'",
                     LocalChannelRegistry.get(addr), addr), LocalChannelRegistry.get(addr));
+
+            serverGroup.terminationFuture().sync();
+            clientGroup.terminationFuture().sync();
         }
     }
 

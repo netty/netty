@@ -36,7 +36,7 @@ public class NioDatagramChannelTest {
      * Test try to reproduce issue #1335
      */
     @Test
-    public void testBindMultiple() {
+    public void testBindMultiple() throws Exception {
         DefaultChannelGroup channelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
         NioEventLoopGroup group = new NioEventLoopGroup();
         try {
@@ -57,8 +57,8 @@ public class NioDatagramChannelTest {
             }
             Assert.assertEquals(100, channelGroup.size());
         } finally {
-            channelGroup.close().syncUninterruptibly();
-            group.shutdownGracefully();
+            channelGroup.close().sync();
+            group.shutdownGracefully().sync();
         }
     }
 }

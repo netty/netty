@@ -67,22 +67,22 @@ abstract class CompleteChannelPromise extends CompleteChannelFuture implements C
     }
 
     @Override
-    public ChannelPromise addListener(GenericFutureListener<? extends Future<Void>> listener) {
+    public ChannelPromise addListener(GenericFutureListener<? extends Future<? super Void>> listener) {
         return (ChannelPromise) super.addListener(listener);
     }
 
     @Override
-    public ChannelPromise addListeners(GenericFutureListener<? extends Future<Void>>... listeners) {
+    public ChannelPromise addListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
         return (ChannelPromise) super.addListeners(listeners);
     }
 
     @Override
-    public ChannelPromise removeListener(GenericFutureListener<? extends Future<Void>> listener) {
+    public ChannelPromise removeListener(GenericFutureListener<? extends Future<? super Void>> listener) {
         return (ChannelPromise) super.removeListener(listener);
     }
 
     @Override
-    public ChannelPromise removeListeners(GenericFutureListener<? extends Future<Void>>... listeners) {
+    public ChannelPromise removeListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
         return (ChannelPromise) super.removeListeners(listeners);
     }
 

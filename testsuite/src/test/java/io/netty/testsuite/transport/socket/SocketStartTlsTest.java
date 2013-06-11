@@ -55,8 +55,8 @@ public class SocketStartTlsTest extends AbstractSocketTest {
     }
 
     @AfterClass
-    public static void shutdownExecutor() {
-        executor.shutdownGracefully();
+    public static void shutdownExecutor() throws Exception {
+        executor.shutdownGracefully().sync();
     }
 
     @Test(timeout = 30000)

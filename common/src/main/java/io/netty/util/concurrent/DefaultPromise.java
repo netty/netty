@@ -113,7 +113,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     @Override
-    public Promise<V> addListener(GenericFutureListener<? extends Future<V>> listener) {
+    public Promise<V> addListener(GenericFutureListener<? extends Future<? super V>> listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
         }
@@ -146,12 +146,12 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     @Override
-    public Promise<V> addListeners(GenericFutureListener<? extends Future<V>>... listeners) {
+    public Promise<V> addListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
         if (listeners == null) {
             throw new NullPointerException("listeners");
         }
 
-        for (GenericFutureListener<? extends Future<V>> l: listeners) {
+        for (GenericFutureListener<? extends Future<? super V>> l: listeners) {
             if (l == null) {
                 break;
             }
@@ -161,7 +161,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     @Override
-    public Promise<V> removeListener(GenericFutureListener<? extends Future<V>> listener) {
+    public Promise<V> removeListener(GenericFutureListener<? extends Future<? super V>> listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
         }
@@ -184,12 +184,12 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     @Override
-    public Promise<V> removeListeners(GenericFutureListener<? extends Future<V>>... listeners) {
+    public Promise<V> removeListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
         if (listeners == null) {
             throw new NullPointerException("listeners");
         }
 
-        for (GenericFutureListener<? extends Future<V>> l: listeners) {
+        for (GenericFutureListener<? extends Future<? super V>> l: listeners) {
             if (l == null) {
                 break;
             }

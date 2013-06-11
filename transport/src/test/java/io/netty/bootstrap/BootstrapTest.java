@@ -74,6 +74,8 @@ public class BootstrapTest {
         } finally {
             groupA.shutdownGracefully();
             groupB.shutdownGracefully();
+            groupA.terminationFuture().sync();
+            groupB.terminationFuture().sync();
         }
     }
 
@@ -120,6 +122,8 @@ public class BootstrapTest {
         } finally {
             groupA.shutdownGracefully();
             groupB.shutdownGracefully();
+            groupA.terminationFuture().sync();
+            groupB.terminationFuture().sync();
         }
     }
 

@@ -17,7 +17,12 @@ package io.netty.channel;
 
 
 import io.netty.util.concurrent.AbstractEventExecutorGroup;
+import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.GlobalEventExecutor;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ReadOnlyIterator;
@@ -28,6 +33,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
@@ -43,6 +49,18 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
             Collections.newSetFromMap(PlatformDependent.<ThreadPerChannelEventLoop, Boolean>newConcurrentHashMap());
     final Queue<ThreadPerChannelEventLoop> idleChildren = new ConcurrentLinkedQueue<ThreadPerChannelEventLoop>();
     private final ChannelException tooManyChannels;
+
+    private volatile boolean shuttingDown;
+    private final Promise<?> terminationFuture = new DefaultPromise<Void>(GlobalEventExecutor.INSTANCE);
+    private final FutureListener<Object> childTerminationListener = new FutureListener<Object>() {
+        @Override
+        public void operationComplete(Future<Object> future) throws Exception {
+            // Inefficient, but works.
+            if (isTerminated()) {
+                terminationFuture.setSuccess(null);
+            }
+        }
+    };
 
     /**
      * Create a new {@link ThreadPerChannelEventLoopGroup} with no limit in place.
@@ -117,23 +135,44 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
     }
 
     @Override
-    public void shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+    public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+        shuttingDown = true;
+
         for (EventLoop l: activeChildren) {
             l.shutdownGracefully(quietPeriod, timeout, unit);
         }
         for (EventLoop l: idleChildren) {
             l.shutdownGracefully(quietPeriod, timeout, unit);
         }
+
+        // Notify the future if there was no children.
+        if (isTerminated()) {
+            terminationFuture.trySuccess(null);
+        }
+
+        return terminationFuture();
+    }
+
+    @Override
+    public Future<?> terminationFuture() {
+        return terminationFuture;
     }
 
     @Override
     @Deprecated
     public void shutdown() {
+        shuttingDown = true;
+
         for (EventLoop l: activeChildren) {
             l.shutdown();
         }
         for (EventLoop l: idleChildren) {
             l.shutdown();
+        }
+
+        // Notify the future if there was no children.
+        if (isTerminated()) {
+            terminationFuture.trySuccess(null);
         }
     }
 
@@ -237,12 +276,17 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
     }
 
     private EventLoop nextChild() throws Exception {
+        if (shuttingDown) {
+            throw new RejectedExecutionException("shutting down");
+        }
+
         ThreadPerChannelEventLoop loop = idleChildren.poll();
         if (loop == null) {
             if (maxChannels > 0 && activeChildren.size() >= maxChannels) {
                 throw tooManyChannels;
             }
             loop = newChild(childArgs);
+            loop.terminationFuture().addListener(childTerminationListener);
         }
         activeChildren.add(loop);
         return loop;
