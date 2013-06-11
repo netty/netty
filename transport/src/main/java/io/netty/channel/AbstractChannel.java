@@ -684,6 +684,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     MessageList<Object> messages = outboundBuffer.currentMessages;
                     int messageIndex = outboundBuffer.currentMessageIndex;
                     int messageCount = messages.size();
+
+                    // Make sure the message list is not empty.
                     if (messageCount == 0) {
                         messages.recycle();
                         promise.trySuccess();
@@ -694,6 +696,17 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         }
                     }
 
+                    // Make sure the promise has not been cancelled yet.
+                    if (!promise.setUncancellable()) {
+                        messages.releaseAllAndRecycle();
+                        if (!outboundBuffer.next()) {
+                            break;
+                        } else {
+                            continue;
+                        }
+                    }
+
+                    // Write the messages.
                     int writtenMessages = doWrite(messages, messageIndex);
                     outboundBuffer.currentMessageIndex = messageIndex += writtenMessages;
                     if (messageIndex >= messageCount) {
