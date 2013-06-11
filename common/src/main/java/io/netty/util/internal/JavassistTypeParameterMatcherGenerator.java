@@ -18,18 +18,33 @@ package io.netty.util.internal;
 
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import javassist.ClassClassPath;
+import javassist.ClassPath;
 import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.Modifier;
+import javassist.NotFoundException;
 
 import java.lang.reflect.Method;
 
-final class JavassistTypeParameterMatcherGenerator {
+public final class JavassistTypeParameterMatcherGenerator {
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(JavassistTypeParameterMatcherGenerator.class);
 
     private static final ClassPool classPool = new ClassPool(true);
+
+    static {
+        classPool.appendClassPath(new ClassClassPath(JavassistTypeParameterMatcherGenerator.class));
+    }
+
+    public void appendClassPath(ClassPath classpath) {
+        classPool.appendClassPath(classpath);
+    }
+
+    public void appendClassPath(String pathname) throws NotFoundException {
+        classPool.appendClassPath(pathname);
+    }
 
     static TypeParameterMatcher generate(Class<?> type) {
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
