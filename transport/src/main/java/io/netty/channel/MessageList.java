@@ -25,12 +25,12 @@ import io.netty.util.internal.PlatformDependent;
 import java.util.Arrays;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 public final class MessageList<T> implements Iterable<T> {
 
     private static final int DEFAULT_INITIAL_CAPACITY = 8;
     private static final int MIN_INITIAL_CAPACITY = 4;
-    private int modifications;
 
     private static final Recycler<MessageList<?>> RECYCLER = new Recycler<MessageList<?>>() {
         @Override
@@ -141,6 +141,7 @@ public final class MessageList<T> implements Iterable<T> {
     private final Handle handle;
     private T[] elements;
     private int size;
+    private int modifications;
 
     MessageList(Handle handle) {
         this(handle, DEFAULT_INITIAL_CAPACITY);
@@ -405,7 +406,7 @@ public final class MessageList<T> implements Iterable<T> {
             if (hasNext()) {
                 return elements[index++];
             }
-            throw new UnsupportedOperationException();
+            throw new NoSuchElementException();
         }
 
         @Override
