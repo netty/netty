@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * The result of an asynchronous operation.
  */
+@SuppressWarnings("ClassNameSameAsAncestorName")
 public interface Future<V> extends java.util.concurrent.Future<V> {
 
     /**
@@ -29,6 +30,11 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
      * successfully.
      */
     boolean isSuccess();
+
+    /**
+     * returns {@code true} if and only if the operation can be cancelled via {@link #cancel(boolean)}.
+     */
+    boolean isCancellable();
 
     /**
      * Returns the cause of the failed I/O operation if the I/O operation has

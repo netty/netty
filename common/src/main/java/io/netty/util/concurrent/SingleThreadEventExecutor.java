@@ -27,7 +27,6 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -35,7 +34,6 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -829,18 +827,13 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         }
     }
 
+    @SuppressWarnings("ComparableImplementedButEqualsNotOverridden")
     private static final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFuture<V> {
-
-        @SuppressWarnings("rawtypes")
-        private static final AtomicIntegerFieldUpdater<ScheduledFutureTask> uncancellableUpdater =
-                AtomicIntegerFieldUpdater.newUpdater(ScheduledFutureTask.class, "uncancellable");
 
         private final long id = nextTaskId.getAndIncrement();
         private long deadlineNanos;
         /* 0 - no repeat, >0 - repeat at fixed rate, <0 - repeat with fixed delay */
         private final long periodNanos;
-        @SuppressWarnings("UnusedDeclaration")
-        private volatile int uncancellable;
 
         ScheduledFutureTask(SingleThreadEventExecutor executor, Runnable runnable, V result, long nanoTime) {
             this(executor, Executors.callable(runnable, result), nanoTime);
@@ -905,27 +898,17 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         }
 
         @Override
-        public int hashCode() {
-            return super.hashCode();
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            return super.equals(obj);
-        }
-
-        @Override
         public void run() {
             assert executor().inEventLoop();
             try {
                 if (periodNanos == 0) {
-                    if (setUncancellable()) {
+                    if (setUncancellableInternal()) {
                         V result = task.call();
                         setSuccessInternal(result);
                     }
                 } else {
                     // check if is done as it may was cancelled
-                    if (!isDone()) {
+                    if (!isCancelled()) {
                         task.call();
                         if (!executor().isShutdown()) {
                             long p = periodNanos;
@@ -934,7 +917,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
                             } else {
                                 deadlineNanos = nanoTime() - p;
                             }
-                            if (!isDone()) {
+                            if (!isCancelled()) {
                                 executor().delayedTaskQueue.add(this);
                             }
                         }
@@ -943,28 +926,6 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
             } catch (Throwable cause) {
                 setFailureInternal(cause);
             }
-        }
-
-        @Override
-        public boolean isCancelled() {
-            if (cause() instanceof CancellationException) {
-                return true;
-            }
-            return false;
-        }
-
-        @Override
-        public  boolean cancel(boolean mayInterruptIfRunning) {
-            if (!isDone()) {
-                if (setUncancellable()) {
-                    return tryFailureInternal(new CancellationException());
-                }
-            }
-            return false;
-        }
-
-        private boolean setUncancellable() {
-            return uncancellableUpdater.compareAndSet(this, 0, 1);
         }
     }
 
