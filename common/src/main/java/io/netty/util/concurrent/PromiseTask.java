@@ -20,6 +20,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.RunnableFuture;
 
 class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
+
     protected final Callable<V> task;
 
     PromiseTask(EventExecutor executor, Runnable runnable, V result) {
@@ -32,12 +33,12 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
     }
 
     @Override
-    public int hashCode() {
+    public final int hashCode() {
         return System.identityHashCode(this);
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public final boolean equals(Object obj) {
         return this == obj;
     }
 
@@ -52,7 +53,7 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
     }
 
     @Override
-    public Promise<V> setFailure(Throwable cause) {
+    public final Promise<V> setFailure(Throwable cause) {
         throw new IllegalStateException();
     }
 
@@ -62,7 +63,7 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
     }
 
     @Override
-    public boolean tryFailure(Throwable cause) {
+    public final boolean tryFailure(Throwable cause) {
         return false;
     }
 
@@ -71,7 +72,7 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
     }
 
     @Override
-    public Promise<V> setSuccess(V result) {
+    public final Promise<V> setSuccess(V result) {
         throw new IllegalStateException();
     }
 
@@ -81,11 +82,20 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
     }
 
     @Override
-    public boolean trySuccess(V result) {
+    public final boolean trySuccess(V result) {
         return false;
     }
 
     protected final boolean trySuccessInternal(V result) {
         return super.trySuccess(result);
+    }
+
+    @Override
+    public final boolean setUncancellable() {
+        throw new IllegalStateException();
+    }
+
+    protected final boolean setUncancellableInternal() {
+        return super.setUncancellable();
     }
 }

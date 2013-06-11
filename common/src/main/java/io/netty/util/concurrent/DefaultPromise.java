@@ -20,6 +20,7 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.TimeUnit.*;
@@ -38,6 +39,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         }
     };
     private static final Signal SUCCESS = new Signal(DefaultPromise.class.getName() + ".SUCCESS");
+    private static final Signal UNCANCELLABLE = new Signal(DefaultPromise.class.getName() + ".UNCANCELLABLE");
     private final EventExecutor executor;
 
     private volatile Object result;
@@ -70,14 +72,32 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     @Override
+    public boolean isCancelled() {
+        return isCancelled0(result);
+    }
+
+    private static boolean isCancelled0(Object result) {
+        return result instanceof CauseHolder && ((CauseHolder) result).cause instanceof CancellationException;
+    }
+
+    @Override
+    public boolean isCancellable() {
+        return result == null;
+    }
+
+    @Override
     public boolean isDone() {
-        return result != null;
+        return isDone0(result);
+    }
+
+    private static boolean isDone0(Object result) {
+        return result != null && result != UNCANCELLABLE;
     }
 
     @Override
     public boolean isSuccess() {
         Object result = this.result;
-        if (result == null) {
+        if (result == null || result == UNCANCELLABLE) {
             return false;
         }
         return !(result instanceof CauseHolder);
@@ -85,9 +105,9 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     @Override
     public Throwable cause() {
-        Object cause = result;
-        if (cause instanceof CauseHolder) {
-            return ((CauseHolder) cause).cause;
+        Object result = this.result;
+        if (result instanceof CauseHolder) {
+            return ((CauseHolder) result).cause;
         }
         return null;
     }
@@ -387,6 +407,47 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             return true;
         }
         return false;
+    }
+
+    @Override
+    public boolean cancel(boolean mayInterruptIfRunning) {
+        Object result = this.result;
+        if (isDone0(result) || result == UNCANCELLABLE) {
+            return false;
+        }
+
+        synchronized (this) {
+            // Allow only once.
+            result = this.result;
+            if (isDone0(result) || result == UNCANCELLABLE) {
+                return false;
+            }
+
+            this.result = new CauseHolder(new CancellationException());
+            if (hasWaiters()) {
+                notifyAll();
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public boolean setUncancellable() {
+        Object result = this.result;
+        if (isDone0(result)) {
+            return isCancelled0(result);
+        }
+
+        synchronized (this) {
+            // Allow only once.
+            result = this.result;
+            if (isDone0(result)) {
+                return isCancelled0(result);
+            }
+
+            this.result = UNCANCELLABLE;
+        }
+        return true;
     }
 
     private boolean setFailure0(Throwable cause) {
