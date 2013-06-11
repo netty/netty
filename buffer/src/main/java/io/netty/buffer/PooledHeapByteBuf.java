@@ -30,16 +30,14 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
     private static final Recycler<PooledHeapByteBuf> RECYCLER = new Recycler<PooledHeapByteBuf>() {
         @Override
         protected PooledHeapByteBuf newObject(Handle handle) {
-            return new PooledHeapByteBuf(handle, Integer.MAX_VALUE);
+            return new PooledHeapByteBuf(handle, 0);
         }
     };
 
     static PooledHeapByteBuf newInstance(int maxCapacity) {
-        if (maxCapacity == Integer.MAX_VALUE) {
-            return RECYCLER.get();
-        } else {
-            return new PooledHeapByteBuf(null, maxCapacity);
-        }
+        PooledHeapByteBuf buf = RECYCLER.get();
+        buf.maxCapacity(maxCapacity);
+        return buf;
     }
 
     private PooledHeapByteBuf(Recycler.Handle recyclerHandle, int maxCapacity) {

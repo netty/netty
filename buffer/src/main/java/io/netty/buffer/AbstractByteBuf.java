@@ -39,7 +39,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
     private int markedReaderIndex;
     private int markedWriterIndex;
 
-    private final int maxCapacity;
+    private int maxCapacity;
 
     private SwappedByteBuf swappedBuf;
 
@@ -53,6 +53,10 @@ public abstract class AbstractByteBuf implements ByteBuf {
     @Override
     public int maxCapacity() {
         return maxCapacity;
+    }
+
+    protected final void maxCapacity(int maxCapacity) {
+        this.maxCapacity = maxCapacity;
     }
 
     @Override
@@ -216,7 +220,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
         return this;
     }
 
-    protected void adjustMarkers(int decrement) {
+    protected final void adjustMarkers(int decrement) {
         int markedReaderIndex = this.markedReaderIndex;
         if (markedReaderIndex <= decrement) {
             this.markedReaderIndex = 0;
