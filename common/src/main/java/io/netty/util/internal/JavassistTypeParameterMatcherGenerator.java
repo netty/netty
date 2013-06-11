@@ -35,7 +35,7 @@ public final class JavassistTypeParameterMatcherGenerator {
     private static final ClassPool classPool = new ClassPool(true);
 
     static {
-        classPool.appendClassPath(new ClassClassPath(JavassistTypeParameterMatcherGenerator.class));
+        classPool.appendClassPath(new ClassClassPath(NoOpTypeParameterMatcher.class));
     }
 
     public void appendClassPath(ClassPath classpath) {
