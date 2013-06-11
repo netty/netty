@@ -33,11 +33,13 @@ import io.netty.handler.codec.Delimiters;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ThreadFactory;
 
 import static org.junit.Assert.*;
 
@@ -65,7 +67,7 @@ public class UDTClientServerConnectionTest {
         @Override
         public void run() {
             final Bootstrap boot = new Bootstrap();
-            final ThreadFactory clientFactory = new ThreadFactory("client");
+            final ThreadFactory clientFactory = new DefaultThreadFactory("client");
             final NioEventLoopGroup connectGroup = new NioEventLoopGroup(1,
                     clientFactory, NioUdtProvider.BYTE_PROVIDER);
             try {
@@ -143,9 +145,6 @@ public class UDTClientServerConnectionTest {
 
         volatile boolean isActive;
 
-        ClientHandler() {
-        }
-
         @Override
         public void channelActive(final ChannelHandlerContext ctx)
                 throws Exception {
@@ -182,7 +181,7 @@ public class UDTClientServerConnectionTest {
 
         static final Logger log = LoggerFactory.getLogger(Server.class);
 
-        final ChannelGroup group = new DefaultChannelGroup("server group");
+        final ChannelGroup group = new DefaultChannelGroup("server group", GlobalEventExecutor.INSTANCE);
 
         final String host;
         final int port;
@@ -199,8 +198,8 @@ public class UDTClientServerConnectionTest {
         @Override
         public void run() {
             final ServerBootstrap boot = new ServerBootstrap();
-            final ThreadFactory acceptFactory = new ThreadFactory("accept");
-            final ThreadFactory serverFactory = new ThreadFactory("server");
+            final ThreadFactory acceptFactory = new DefaultThreadFactory("accept");
+            final ThreadFactory serverFactory = new DefaultThreadFactory("server");
             final NioEventLoopGroup acceptGroup = new NioEventLoopGroup(1,
                     acceptFactory, NioUdtProvider.BYTE_PROVIDER);
             final NioEventLoopGroup connectGroup = new NioEventLoopGroup(1,
@@ -258,7 +257,7 @@ public class UDTClientServerConnectionTest {
                         }
                     }
                 } else {
-                    if (group.size() == 0) {
+                    if (group.isEmpty()) {
                         return;
                     }
                 }
@@ -330,30 +329,13 @@ public class UDTClientServerConnectionTest {
             msgs.releaseAllAndRecycle();
         }
     }
-
-    static class ThreadFactory implements java.util.concurrent.ThreadFactory {
-
-        static final AtomicInteger counter = new AtomicInteger();
-
-        final String name;
-
-        ThreadFactory(final String name) {
-            this.name = name;
-        }
-
-        @Override
-        public Thread newThread(final Runnable runnable) {
-            return new Thread(runnable, name + '-' + counter.getAndIncrement());
-        }
-    }
-
     static final Logger log = LoggerFactory
             .getLogger(UDTClientServerConnectionTest.class);
 
     /**
      * Maximum wait time is 5 seconds.
      * <p>
-     * wait-time = {@link #WAIT_COUNT} * {@value #WAIT_SLEEP}
+     * wait-time = {@code WAIT_COUNT} * {@value #WAIT_SLEEP}
      */
     static final int WAIT_COUNT = 50;
     static final int WAIT_SLEEP = 100;

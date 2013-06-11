@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 public final class ImmediateEventExecutor extends AbstractEventExecutor {
     public static final ImmediateEventExecutor INSTANCE = new ImmediateEventExecutor();
 
-    private  ImmediateEventExecutor() {
+    private ImmediateEventExecutor() {
         // use static instance
     }
 

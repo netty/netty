@@ -24,6 +24,7 @@ import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.concurrent.GlobalEventExecutor;
 
 import java.net.InetAddress;
 import java.util.logging.Level;
@@ -37,7 +38,7 @@ public class SecureChatServerHandler extends ChannelInboundHandlerAdapter {
     private static final Logger logger = Logger.getLogger(
             SecureChatServerHandler.class.getName());
 
-    static final ChannelGroup channels = new DefaultChannelGroup();
+    static final ChannelGroup channels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
     @Override
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {

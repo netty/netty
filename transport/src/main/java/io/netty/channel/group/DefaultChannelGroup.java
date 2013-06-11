@@ -22,7 +22,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.MessageList;
 import io.netty.channel.ServerChannel;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.internal.PlatformDependent;
 
 import java.util.AbstractSet;
@@ -52,27 +51,11 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     };
 
     /**
-     * Creates a new group with a generated name.
-     */
-    public DefaultChannelGroup() {
-        this("group-0x" + Integer.toHexString(nextId.incrementAndGet()));
-    }
-
-    /**
      * Creates a new group with a generated name amd the provided {@link EventExecutor} to notify the
      * {@link ChannelGroupFuture}s.
      */
     public DefaultChannelGroup(EventExecutor executor) {
         this("group-0x" + Integer.toHexString(nextId.incrementAndGet()), executor);
-    }
-
-    /**
-     * Creates a new group with the specified {@code name}.  Please note that
-     * different groups can have the same name, which means no duplicate check
-     * is done against group names.
-     */
-    public DefaultChannelGroup(String name) {
-        this(name, ImmediateEventExecutor.INSTANCE);
     }
 
     /**
