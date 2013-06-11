@@ -41,25 +41,25 @@ final class VoidChannelPromise extends AbstractFuture<Void> implements ChannelPr
     }
 
     @Override
-    public VoidChannelPromise addListener(GenericFutureListener<? extends Future<Void>> listener) {
+    public VoidChannelPromise addListener(GenericFutureListener<? extends Future<? super Void>> listener) {
         fail();
         return this;
     }
 
     @Override
-    public VoidChannelPromise addListeners(GenericFutureListener<? extends Future<Void>>... listeners) {
+    public VoidChannelPromise addListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
         fail();
         return this;
     }
 
     @Override
-    public VoidChannelPromise removeListener(GenericFutureListener<? extends Future<Void>> listener) {
+    public VoidChannelPromise removeListener(GenericFutureListener<? extends Future<? super Void>> listener) {
         // NOOP
         return this;
     }
 
     @Override
-    public VoidChannelPromise removeListeners(GenericFutureListener<? extends Future<Void>>... listeners) {
+    public VoidChannelPromise removeListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
         // NOOP
         return this;
     }

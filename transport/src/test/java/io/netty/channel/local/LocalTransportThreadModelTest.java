@@ -38,7 +38,6 @@ import java.util.HashSet;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class LocalTransportThreadModelTest {
@@ -69,8 +68,8 @@ public class LocalTransportThreadModelTest {
     }
 
     @AfterClass
-    public static void destroy() {
-        group.shutdownGracefully();
+    public static void destroy() throws Exception {
+        group.shutdownGracefully().sync();
     }
 
     @Test(timeout = 30000)
@@ -216,9 +215,10 @@ public class LocalTransportThreadModelTest {
             l.shutdownGracefully();
             e1.shutdownGracefully();
             e2.shutdownGracefully();
-            l.awaitTermination(5, TimeUnit.SECONDS);
-            e1.awaitTermination(5, TimeUnit.SECONDS);
-            e2.awaitTermination(5, TimeUnit.SECONDS);
+
+            l.terminationFuture().sync();
+            e1.terminationFuture().sync();
+            e2.terminationFuture().sync();
         }
     }
 
@@ -344,6 +344,13 @@ public class LocalTransportThreadModelTest {
             e3.shutdownGracefully();
             e4.shutdownGracefully();
             e5.shutdownGracefully();
+
+            l.terminationFuture().sync();
+            e1.terminationFuture().sync();
+            e2.terminationFuture().sync();
+            e3.terminationFuture().sync();
+            e4.terminationFuture().sync();
+            e5.terminationFuture().sync();
         }
     }
 

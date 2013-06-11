@@ -72,6 +72,8 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
     private volatile long gracefulShutdownTimeout;
     private long gracefulShutdownStartTime;
 
+    private final Promise<?> terminationFuture = new DefaultPromise<Void>(GlobalEventExecutor.INSTANCE);
+
     /**
      * Create a new instance
      *
@@ -133,6 +135,8 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
                                         "An event executor terminated with " +
                                         "non-empty task queue (" + taskQueue.size() + ')');
                             }
+
+                            terminationFuture.setSuccess(null);
                         }
                     }
                 }
@@ -476,7 +480,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
     }
 
     @Override
-    public void shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+    public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
         if (quietPeriod < 0) {
             throw new IllegalArgumentException("quietPeriod: " + quietPeriod + " (expected >= 0)");
         }
@@ -489,7 +493,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         }
 
         if (isShuttingDown()) {
-            return;
+            return terminationFuture();
         }
 
         boolean inEventLoop = inEventLoop();
@@ -497,7 +501,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
 
         synchronized (stateLock) {
             if (isShuttingDown()) {
-                return;
+                return terminationFuture();
             }
 
             gracefulShutdownQuietPeriod = unit.toNanos(quietPeriod);
@@ -524,6 +528,13 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         if (wakeup) {
             wakeup(inEventLoop);
         }
+
+        return terminationFuture();
+    }
+
+    @Override
+    public Future<?> terminationFuture() {
+        return terminationFuture;
     }
 
     @Override

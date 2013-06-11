@@ -23,6 +23,9 @@ import java.util.concurrent.TimeUnit;
 public final class ImmediateEventExecutor extends AbstractEventExecutor {
     public static final ImmediateEventExecutor INSTANCE = new ImmediateEventExecutor();
 
+    private final Future<?> terminationFuture = new FailedFuture<Object>(
+            GlobalEventExecutor.INSTANCE, new UnsupportedOperationException());
+
     private ImmediateEventExecutor() {
         // use static instance
     }
@@ -43,7 +46,14 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
     }
 
     @Override
-    public void shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) { }
+    public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+        return terminationFuture();
+    }
+
+    @Override
+    public Future<?> terminationFuture() {
+        return terminationFuture;
+    }
 
     @Override
     @Deprecated

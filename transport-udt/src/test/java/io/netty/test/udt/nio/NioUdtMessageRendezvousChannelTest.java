@@ -44,7 +44,7 @@ public class NioUdtMessageRendezvousChannelTest extends AbstractUdtTest {
      */
     @Test
     public void metadata() throws Exception {
-        assertEquals(false, new NioUdtMessageRendezvousChannel().metadata().hasDisconnect());
+        assertFalse(new NioUdtMessageRendezvousChannel().metadata().hasDisconnect());
     }
 
     /**
@@ -108,5 +108,8 @@ public class NioUdtMessageRendezvousChannelTest extends AbstractUdtTest {
 
         group1.shutdownGracefully();
         group2.shutdownGracefully();
+
+        group1.terminationFuture().sync();
+        group2.terminationFuture().sync();
     }
 }

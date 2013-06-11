@@ -83,8 +83,8 @@ public class LocalTransportThreadModelTest3 {
     }
 
     @AfterClass
-    public static void destroy() {
-        group.shutdownGracefully();
+    public static void destroy() throws Exception {
+        group.shutdownGracefully().sync();
     }
 
     @Test(timeout = 60000)
@@ -222,6 +222,13 @@ public class LocalTransportThreadModelTest3 {
             e3.shutdownGracefully();
             e4.shutdownGracefully();
             e5.shutdownGracefully();
+
+            l.terminationFuture().sync();
+            e1.terminationFuture().sync();
+            e2.terminationFuture().sync();
+            e3.terminationFuture().sync();
+            e4.terminationFuture().sync();
+            e5.terminationFuture().sync();
         }
     }
 

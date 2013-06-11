@@ -100,7 +100,7 @@ public class UDTClientServerConnectionTest {
             } catch (final Throwable e) {
                 log.error("Client failed.", e);
             } finally {
-                connectGroup.shutdownGracefully();
+                connectGroup.shutdownGracefully().syncUninterruptibly();
             }
         }
 
@@ -238,6 +238,9 @@ public class UDTClientServerConnectionTest {
             } finally {
                 acceptGroup.shutdownGracefully();
                 connectGroup.shutdownGracefully();
+
+                acceptGroup.terminationFuture().syncUninterruptibly();
+                connectGroup.terminationFuture().syncUninterruptibly();
             }
         }
 

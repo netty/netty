@@ -45,8 +45,8 @@ public class DefaultChannelPipelineTest {
     private Channel peer;
 
     @AfterClass
-    public static void afterClass() {
-        group.shutdownGracefully();
+    public static void afterClass() throws Exception {
+        group.shutdownGracefully().sync();
     }
 
     private void setUp(final ChannelHandler... handlers) throws Exception {

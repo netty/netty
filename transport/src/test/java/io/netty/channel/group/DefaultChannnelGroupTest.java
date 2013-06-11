@@ -29,7 +29,7 @@ public class DefaultChannnelGroupTest {
 
     // Test for #1183
     @Test
-    public void testNotThrowBlockingOperationException() {
+    public void testNotThrowBlockingOperationException() throws Exception {
         EventLoopGroup bossGroup = new NioEventLoopGroup();
         EventLoopGroup workerGroup = new NioEventLoopGroup();
 
@@ -54,5 +54,7 @@ public class DefaultChannnelGroupTest {
 
         bossGroup.shutdownGracefully();
         workerGroup.shutdownGracefully();
+        bossGroup.terminationFuture().sync();
+        workerGroup.terminationFuture().sync();
     }
 }

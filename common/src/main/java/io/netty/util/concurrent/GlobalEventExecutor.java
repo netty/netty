@@ -58,6 +58,8 @@ public final class GlobalEventExecutor extends AbstractEventExecutor {
     volatile Thread thread;
     private volatile int state = ST_NOT_STARTED;
 
+    private final Future<?> terminationFuture = new FailedFuture<Object>(this, new UnsupportedOperationException());
+
     private GlobalEventExecutor() {
         delayedTaskQueue.add(purgeTask);
     }
@@ -157,8 +159,13 @@ public final class GlobalEventExecutor extends AbstractEventExecutor {
     }
 
     @Override
-    public void shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
-        throw new UnsupportedOperationException();
+    public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+        return terminationFuture();
+    }
+
+    @Override
+    public Future<?> terminationFuture() {
+        return terminationFuture;
     }
 
     @Override

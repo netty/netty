@@ -63,22 +63,22 @@ public abstract class CompletePromise<V> extends CompleteFuture<V> implements Pr
     }
 
     @Override
-    public Promise<V> addListener(GenericFutureListener<? extends Future<V>> listener) {
+    public Promise<V> addListener(GenericFutureListener<? extends Future<? super V>> listener) {
         return (Promise<V>) super.addListener(listener);
     }
 
     @Override
-    public Promise<V> addListeners(GenericFutureListener<? extends Future<V>>... listeners) {
+    public Promise<V> addListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
         return (Promise<V>) super.addListeners(listeners);
     }
 
     @Override
-    public Promise<V> removeListener(GenericFutureListener<? extends Future<V>> listener) {
+    public Promise<V> removeListener(GenericFutureListener<? extends Future<? super V>> listener) {
         return (Promise<V>) super.removeListener(listener);
     }
 
     @Override
-    public Promise<V> removeListeners(GenericFutureListener<? extends Future<V>>... listeners) {
+    public Promise<V> removeListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
         return (Promise<V>) super.removeListeners(listeners);
     }
 }

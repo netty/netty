@@ -54,8 +54,8 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     @AfterClass
-    public static void destroyGroup() {
-        group.shutdownGracefully();
+    public static void destroyGroup() throws Exception {
+        group.shutdownGracefully().sync();
     }
 
     @Test(timeout = 30000)

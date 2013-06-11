@@ -52,7 +52,7 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
      * {@linkplain #isDone() done}.  If this future is already
      * completed, the specified listener is notified immediately.
      */
-    Future<V> addListener(GenericFutureListener<? extends Future<V>> listener);
+    Future<V> addListener(GenericFutureListener<? extends Future<? super V>> listener);
 
     /**
      * Adds the specified listeners to this future.  The
@@ -60,7 +60,7 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
      * {@linkplain #isDone() done}.  If this future is already
      * completed, the specified listeners are notified immediately.
      */
-    Future<V> addListeners(GenericFutureListener<? extends Future<V>>... listeners);
+    Future<V> addListeners(GenericFutureListener<? extends Future<? super V>>... listeners);
 
     /**
      * Removes the specified listener from this future.
@@ -69,7 +69,7 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
      * listener is not associated with this future, this method
      * does nothing and returns silently.
      */
-    Future<V> removeListener(GenericFutureListener<? extends Future<V>> listener);
+    Future<V> removeListener(GenericFutureListener<? extends Future<? super V>> listener);
 
     /**
      * Removes the specified listeners from this future.
@@ -78,7 +78,7 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
      * listeners are not associated with this future, this method
      * does nothing and returns silently.
      */
-    Future<V> removeListeners(GenericFutureListener<? extends Future<V>>... listeners);
+    Future<V> removeListeners(GenericFutureListener<? extends Future<? super V>>... listeners);
 
     /**
      * Waits for this future until it is done, and rethrows the cause of the failure if this future
