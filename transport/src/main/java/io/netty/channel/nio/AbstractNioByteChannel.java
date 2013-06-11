@@ -121,53 +121,64 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
     @Override
     protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
-        Object msg = msgs.get(index);
-
-        if (msg instanceof ByteBuf) {
-            ByteBuf buf = (ByteBuf) msg;
-            if (!buf.isReadable()) {
-                buf.release();
-                return 1;
+        int size = msgs.size();
+        int writeIndex = index;
+        for (;;) {
+            if (writeIndex >= size) {
+                break;
             }
-            boolean done = false;
-            for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
-                int localFlushedAmount = doWriteBytes(buf, i == 0);
-                if (localFlushedAmount == 0) {
-                    break;
-                }
+            Object msg = msgs.get(writeIndex);
+            if (msg instanceof ByteBuf) {
+                ByteBuf buf = (ByteBuf) msg;
                 if (!buf.isReadable()) {
-                    done = true;
-                    break;
+                    buf.release();
+                    writeIndex++;
+                    continue;
                 }
-            }
-            // We may could optimize this to write multiple buffers at once (scattering)
-            if (done) {
-                buf.release();
-                return 1;
-            }
-        } else if (msg instanceof FileRegion) {
-            FileRegion region = (FileRegion) msg;
-            boolean done = false;
-            for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
-                long localFlushedAmount = doWriteFileRegion(region, i == 0);
-                if (localFlushedAmount == 0) {
-                    break;
-                }
-                if (region.transfered() >= region.count()) {
-                    done = true;
-                    break;
-                }
-            }
+                boolean done = false;
+                for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
+                    int localFlushedAmount = doWriteBytes(buf, i == 0);
+                    if (localFlushedAmount == 0) {
+                        break;
+                    }
 
-            if (done) {
-                region.release();
-                return 1;
+                    if (!buf.isReadable()) {
+                        done = true;
+                        break;
+                    }
+                }
+
+                if (done) {
+                    buf.release();
+                    writeIndex++;
+                } else {
+                    break;
+                }
+            } else if (msg instanceof FileRegion) {
+                FileRegion region = (FileRegion) msg;
+                boolean done = false;
+                for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
+                    long localFlushedAmount = doWriteFileRegion(region, i == 0);
+                    if (localFlushedAmount == 0) {
+                        break;
+                    }
+                    if (region.transfered() >= region.count()) {
+                        done = true;
+                        break;
+                    }
+                }
+
+                if (done) {
+                    region.release();
+                    writeIndex++;
+                } else {
+                    break;
+                }
+            } else {
+                throw new UnsupportedOperationException("unsupported message type: " + StringUtil.simpleClassName(msg));
             }
-        } else {
-            throw new UnsupportedOperationException("unsupported message type: " + StringUtil.simpleClassName(msg));
         }
-
-        return 0;
+        return writeIndex - index;
     }
 
     /**
@@ -193,6 +204,10 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
      * @throws Exception    thrown if an error accour
      */
     protected abstract int doWriteBytes(ByteBuf buf, boolean lastSpin) throws Exception;
+
+    protected long doWriteBytes(MessageList<ByteBuf> bufs, int index, boolean lastSpin) throws Exception {
+        return doWriteBytes(bufs.get(index), lastSpin);
+    }
 
     protected void updateOpWrite(long expectedWrittenBytes, long writtenBytes, boolean lastSpin) {
         if (writtenBytes >= expectedWrittenBytes) {
