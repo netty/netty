@@ -16,13 +16,15 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.ReferenceCounted;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.MessageList;
 import io.netty.util.internal.TypeParameterMatcher;
 
 /**
- * {@link ChannelInboundHandlerAdapter} which decodes from one message to an other message
+ * {@link ChannelInboundHandlerAdapter} which decodes from one message to an other message.
+ *
  *
  * For example here is an implementation which decodes a {@link String} to an {@link Integer} which represent
  * the length of the {@link String}.
@@ -38,6 +40,10 @@ import io.netty.util.internal.TypeParameterMatcher;
  *         }
  *     }
  * </pre>
+ *
+ * Be aware that you need to call {@link ReferenceCounted#retain()} on messages that are just passed through if they
+ * are of type {@link ReferenceCounted}. This is needed as the {@link MessageToMessageDecoder} will call
+ * {@link ReferenceCounted#release()} on decoded messages.
  *
  */
 public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAdapter {

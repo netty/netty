@@ -16,6 +16,7 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.ReferenceCounted;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
@@ -39,6 +40,9 @@ import io.netty.util.internal.TypeParameterMatcher;
  *     }
  * </pre>
  *
+ * Be aware that you need to call {@link ReferenceCounted#retain()} on messages that are just passed through if they
+ * are of type {@link ReferenceCounted}. This is needed as the {@link MessageToMessageEncoder} will call
+ * {@link ReferenceCounted#release()} on encoded messages.
  */
 public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerAdapter {
 
