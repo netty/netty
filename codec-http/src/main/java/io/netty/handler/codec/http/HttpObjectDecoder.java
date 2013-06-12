@@ -449,7 +449,8 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
     private void reset() {
         reset(null);
     }
-    private void reset(MessageList<Object> out) {
+
+    protected final void reset(MessageList<Object> out) {
         if (out != null) {
             HttpMessage message = this.message;
             ByteBuf content = this.content;

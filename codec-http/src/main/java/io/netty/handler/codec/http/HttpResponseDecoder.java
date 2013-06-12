@@ -16,7 +16,9 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.MessageList;
 import io.netty.handler.codec.TooLongFrameException;
 
 
@@ -116,5 +118,21 @@ public class HttpResponseDecoder extends HttpObjectDecoder {
     @Override
     protected boolean isDecodingRequest() {
         return false;
+    }
+
+    @Override
+    protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, MessageList<Object> out) throws Exception {
+        super.decodeLast(ctx, in, out);
+        MessageList<Object> msgs = MessageList.newInstance();
+        reset(msgs);
+        if (!msgs.isEmpty()) {
+            // Handle the case where the server sends an empty 200 response and close the connection
+            // https://github.com/netty/netty/issues/1410
+            HttpResponse response = (HttpResponse) msgs.get(0);
+            if (response.getStatus().code() == 200) {
+                out.add(msgs);
+            }
+        }
+        msgs.recycle();
     }
 }
