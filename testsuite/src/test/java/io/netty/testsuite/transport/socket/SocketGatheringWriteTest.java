@@ -18,6 +18,7 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -47,6 +48,19 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
     }
 
     public void testGatheringWrite(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testGatheringWrite0(sb, cb, false);
+    }
+
+    @Test(timeout = 30000)
+    public void testGatheringWriteWithComposite() throws Throwable {
+        run();
+    }
+
+    public void testGatheringWriteWithComposite(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testGatheringWrite0(sb, cb, true);
+    }
+
+    private static void testGatheringWrite0(ServerBootstrap sb, Bootstrap cb, boolean composite) throws Throwable {
         final TestHandler sh = new TestHandler();
         final TestHandler ch = new TestHandler();
 
@@ -61,7 +75,18 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         for (int i = 0; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
             ByteBuf buf = Unpooled.wrappedBuffer(data, i, length);
-            messages.add(buf);
+            if (composite && i % 2 == 0) {
+                int split =  buf.readableBytes() / 2;
+                int size = buf.readableBytes() - split;
+                int oldIndex = buf.writerIndex();
+                buf.writerIndex(split);
+                ByteBuf buf2 = Unpooled.buffer(size).writeBytes(buf, split, oldIndex - split);
+                CompositeByteBuf comp = Unpooled.compositeBuffer();
+                comp.addComponent(buf).addComponent(buf2).writerIndex(length);
+                messages.add(comp);
+            } else {
+                messages.add(buf);
+            }
             i += length;
         }
         assertNotEquals(cc.voidPromise(), cc.write(messages).sync());

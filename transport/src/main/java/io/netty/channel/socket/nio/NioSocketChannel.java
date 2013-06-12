@@ -23,6 +23,7 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
+import io.netty.channel.MessageList;
 import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
@@ -33,8 +34,12 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * {@link io.netty.channel.socket.SocketChannel} which uses NIO selector based implementation.
@@ -42,6 +47,14 @@ import java.nio.channels.SocketChannel;
 public class NioSocketChannel extends AbstractNioByteChannel implements io.netty.channel.socket.SocketChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
+
+    // Buffers to use for Gathering writes
+    private static final ThreadLocal<ByteBuffer[]> BUFFERS = new ThreadLocal<ByteBuffer[]>() {
+        @Override
+        protected ByteBuffer[] initialValue() {
+            return new ByteBuffer[128];
+        }
+    };
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioSocketChannel.class);
 
@@ -241,5 +254,75 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         final long writtenBytes = region.transferTo(javaChannel(), position);
         updateOpWrite(expectedWrittenBytes, writtenBytes, lastSpin);
         return writtenBytes;
+    }
+
+    @Override
+    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
+        int size =  msgs.size();
+        // Check if this can be optimized via gathering writes
+        if (size > 1 && msgs.containsOnly(ByteBuf.class)) {
+            MessageList<ByteBuf> bufs = msgs.cast();
+
+            List<ByteBuffer> bufferList = new ArrayList<ByteBuffer>(size);
+            long expectedWrittenBytes = 0;
+            long writtenBytes = 0;
+            for (int i = index; i < size; i++) {
+                ByteBuf buf = bufs.get(i);
+                int count = buf.nioBufferCount();
+                if (count == 1) {
+                    bufferList.add(buf.nioBuffer());
+                } else {
+                    ByteBuffer[] nioBufs = buf.nioBuffers();
+                    // use Arrays.asList(..) as it may be more efficient then looping. The only downside
+                    // is that it will create one more object to gc
+                    bufferList.addAll(Arrays.asList(nioBufs));
+                }
+                expectedWrittenBytes += buf.readableBytes();
+            }
+
+            ByteBuffer[] bufArray = bufferList.toArray(BUFFERS.get());
+            boolean done = false;
+            for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
+                final long localWrittenBytes = javaChannel().write(bufArray, 0, bufferList.size());
+                updateOpWrite(expectedWrittenBytes, localWrittenBytes, i == 0);
+                if (localWrittenBytes == 0) {
+                    break;
+                }
+                expectedWrittenBytes -= localWrittenBytes;
+                writtenBytes +=  localWrittenBytes;
+                if (expectedWrittenBytes == 0) {
+                    done = true;
+                    break;
+                }
+            }
+            int writtenBufs = 0;
+
+            if (done) {
+                // release buffers
+                for (int i = index; i < size; i++) {
+                    ByteBuf buf = bufs.get(i);
+                    buf.release();
+                    writtenBufs++;
+                }
+            } else {
+                // not complete written all buffers so release those which was written and update the readerIndex
+                // of the partial written buffer
+                for (int i = index; i < size; i++) {
+                    ByteBuf buf = bufs.get(i);
+                    int readable = buf.readableBytes();
+                    if (readable <= writtenBytes) {
+                        writtenBufs++;
+                        buf.release();
+                        writtenBytes -= readable;
+                    } else {
+                        // not completly written so adjust readerindex break the loop
+                        buf.readerIndex(buf.readerIndex() + (int) writtenBytes);
+                        break;
+                    }
+                }
+            }
+            return writtenBufs;
+        }
+        return super.doWrite(msgs, index);
     }
 }

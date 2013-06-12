@@ -16,6 +16,7 @@
 
 package io.netty.channel;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
@@ -142,6 +143,7 @@ public final class MessageList<T> implements Iterable<T> {
     private T[] elements;
     private int size;
     private int modifications;
+    private boolean byteBufsOnly = true;
 
     MessageList(Handle handle) {
         this(handle, DEFAULT_INITIAL_CAPACITY);
@@ -195,6 +197,9 @@ public final class MessageList<T> implements Iterable<T> {
         ensureCapacity(newSize);
         elements[oldSize] = value;
         size = newSize;
+        if (byteBufsOnly && !(value instanceof ByteBuf)) {
+            byteBufsOnly = false;
+        }
         return this;
     }
 
@@ -221,6 +226,15 @@ public final class MessageList<T> implements Iterable<T> {
         ensureCapacity(newSize);
         System.arraycopy(src, srcIdx, elements, oldSize, srcLen);
         size = newSize;
+        if (byteBufsOnly) {
+            for (int i = srcIdx; i < srcIdx; i++) {
+                if (!(src[i] instanceof ByteBuf)) {
+                    byteBufsOnly = false;
+                    break;
+                }
+            }
+        }
+
         return this;
     }
 
@@ -245,6 +259,7 @@ public final class MessageList<T> implements Iterable<T> {
     public MessageList<T> clear() {
         modifications++;
         Arrays.fill(elements, 0, size, null);
+        byteBufsOnly = true;
         size = 0;
         return this;
     }
@@ -323,6 +338,22 @@ public final class MessageList<T> implements Iterable<T> {
     @Override
     public Iterator<T> iterator() {
         return new MessageListIterator();
+    }
+
+    /**
+     * Returns {@code true} if all messages contained in this {@link MessageList} are assignment-compatible with the
+     * object represented by this {@link Class}.
+     */
+    public boolean containsOnly(Class<?> clazz) {
+        if (clazz == ByteBuf.class) {
+            return byteBufsOnly;
+        }
+        for (int i = 0; i < size; i++) {
+            if (!clazz.isInstance(elements[i])) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void ensureCapacity(int capacity) {
