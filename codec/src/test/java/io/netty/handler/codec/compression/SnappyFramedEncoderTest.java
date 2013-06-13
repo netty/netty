@@ -142,5 +142,7 @@ public class SnappyFramedEncoderTest {
 
         channel.writeOutbound(in);
         assertTrue(channel.finish());
+        ByteBuf out = (ByteBuf) channel.readOutbound();
+        out.release();
     }
 }
