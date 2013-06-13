@@ -58,7 +58,7 @@ public final class PlatformDependent {
     private static final boolean HAS_UNSAFE = hasUnsafe0();
     private static final boolean CAN_USE_CHM_V8 = HAS_UNSAFE && JAVA_VERSION < 8;
     private static final boolean DIRECT_BUFFER_PREFERRED =
-            HAS_UNSAFE && SystemPropertyUtil.getBoolean("io.netty.preferDirect", false);
+            HAS_UNSAFE && !SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
 
     private static final long ARRAY_BASE_OFFSET = arrayBaseOffset0();
 
