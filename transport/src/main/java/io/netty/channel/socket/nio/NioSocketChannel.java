@@ -280,6 +280,15 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         long expectedWrittenBytes = 0;
         for (int i = index; i < size; i++) {
             ByteBuf buf = bufs.get(i);
+            if (!buf.isDirect()) {
+                int readableBytes = buf.readableBytes();
+                ByteBuf directBuf = alloc().directBuffer(readableBytes);
+                directBuf.writeBytes(buf, buf.readerIndex(), readableBytes);
+                buf.release();
+                bufs.set(i, directBuf);
+                buf = directBuf;
+            }
+
             int count = buf.nioBufferCount();
             if (count == 1) {
                 if (nioBufferCnt == nioBuffers.length) {

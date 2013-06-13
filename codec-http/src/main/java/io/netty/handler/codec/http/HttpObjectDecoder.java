@@ -21,7 +21,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.MessageList;
 import io.netty.handler.codec.DecoderResult;
-import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 
@@ -436,11 +435,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                 actualContentLength = 0;
             }
 
-            // Add the last message (and its content) to the output.
-            reset(out);
-
-            // Check if this situation where the connection has been closed before decoding the last message completely
-            // is expected or not.  If unexpected, set decoder result as failure.
+            // Check if the closure of the connection signifies the end of the content.
             boolean prematureClosure;
             if (isDecodingRequest()) {
                 // The last request did not wait for a response.
@@ -453,8 +448,12 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                 prematureClosure = expectedContentLength >= 0 && actualContentLength != expectedContentLength;
             }
 
-            if (prematureClosure) {
-                message.setDecoderResult(DecoderResult.failure(new PrematureChannelClosureException()));
+            if (!prematureClosure) {
+                if (actualContentLength == 0) {
+                    out.add(LastHttpContent.EMPTY_LAST_CONTENT);
+                } else {
+                    out.add(new DefaultLastHttpContent(content));
+                }
             }
         }
     }
