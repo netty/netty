@@ -16,10 +16,9 @@
 package io.netty.channel;
 
 /**
- * A {@link ChannelPipelineException} which is raised if an inbound or outbound buffer of
- * the expected type is not found while transferring data between {@link ChannelHandler}s.
- * This exception is usually triggered by an incorrectly configured {@link ChannelPipeline}.
+ * @deprecated not used anymore, will be removed
  */
+@Deprecated
 public class NoSuchBufferException extends ChannelPipelineException {
 
     private static final long serialVersionUID = -131650785896627090L;
