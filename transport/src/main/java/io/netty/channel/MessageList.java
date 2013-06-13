@@ -185,6 +185,18 @@ public final class MessageList<T> implements Iterable<T> {
     }
 
     /**
+     * Sets the message on the given index.
+     */
+    public MessageList<T> set(int index, T value) {
+        checkExclusive(index);
+        if (value == null) {
+            throw new NullPointerException("value");
+        }
+        elements[index] = value;
+        return this;
+    }
+
+    /**
      * Add the message to this {@link MessageList} and return itself.
      */
     public MessageList<T> add(T value) {
