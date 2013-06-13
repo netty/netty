@@ -280,34 +280,38 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         long expectedWrittenBytes = 0;
         for (int i = index; i < size; i++) {
             ByteBuf buf = bufs.get(i);
-            if (!buf.isDirect()) {
-                int readableBytes = buf.readableBytes();
+            int readableBytes = buf.readableBytes();
+            expectedWrittenBytes += readableBytes;
+
+            if (buf.isDirect()) {
+                int count = buf.nioBufferCount();
+                if (count == 1) {
+                    if (nioBufferCnt == nioBuffers.length) {
+                        nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCnt);
+                    }
+                    nioBuffers[nioBufferCnt ++] = buf.nioBuffer();
+                } else {
+                    ByteBuffer[] nioBufs = buf.nioBuffers();
+                    if (nioBufferCnt + nioBufs.length == nioBuffers.length + 1) {
+                        nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCnt);
+                    }
+                    for (ByteBuffer nioBuf: nioBufs) {
+                        if (nioBuf == null) {
+                            break;
+                        }
+                        nioBuffers[nioBufferCnt ++] = nioBuf;
+                    }
+                }
+            } else {
                 ByteBuf directBuf = alloc().directBuffer(readableBytes);
                 directBuf.writeBytes(buf, buf.readerIndex(), readableBytes);
                 buf.release();
                 bufs.set(i, directBuf);
-                buf = directBuf;
-            }
-
-            int count = buf.nioBufferCount();
-            if (count == 1) {
                 if (nioBufferCnt == nioBuffers.length) {
                     nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCnt);
                 }
-                nioBuffers[nioBufferCnt ++] = buf.nioBuffer();
-            } else {
-                ByteBuffer[] nioBufs = buf.nioBuffers();
-                if (nioBufferCnt + nioBufs.length == nioBuffers.length + 1) {
-                    nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCnt);
-                }
-                for (ByteBuffer nioBuf: nioBufs) {
-                    if (nioBuf == null) {
-                        break;
-                    }
-                    nioBuffers[nioBufferCnt ++] = nioBuf;
-                }
+                nioBuffers[nioBufferCnt ++] = directBuf.nioBuffer();
             }
-            expectedWrittenBytes += buf.readableBytes();
         }
 
         long writtenBytes = 0;
