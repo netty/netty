@@ -95,8 +95,12 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
                 }
             }
 
-            if (buf != null && buf.isReadable()) {
-                out.add(buf);
+            if (buf != null) {
+                if (buf.isReadable()) {
+                    out.add(buf);
+                } else {
+                    buf.release();
+                }
             }
 
             success = true;

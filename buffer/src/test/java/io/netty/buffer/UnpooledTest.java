@@ -584,5 +584,6 @@ public class UnpooledTest {
         for (int i = 0; i < 12; i++) {
             assertEquals((byte) i, wrapped.readByte());
         }
+        wrapped.release();
     }
 }

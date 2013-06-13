@@ -343,6 +343,13 @@ public class SslHandler
     }
 
     @Override
+    protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
+        if (decodeOut != null) {
+            decodeOut.release();
+        }
+    }
+
+    @Override
     public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception {
         ctx.bind(localAddress, promise);
     }
@@ -843,8 +850,9 @@ public class SslHandler
             throw e;
         } finally {
             if (bytesProduced > 0) {
+                ByteBuf decodeOut = this.decodeOut;
+                this.decodeOut = null;
                 ctx.fireMessageReceived(decodeOut);
-                decodeOut = null;
             }
         }
     }
