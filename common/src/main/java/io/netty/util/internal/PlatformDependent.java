@@ -66,7 +66,7 @@ public final class PlatformDependent {
 
     static {
         if (logger.isDebugEnabled()) {
-            logger.debug("io.netty.preferDirect: {}", DIRECT_BUFFER_PREFERRED);
+            logger.debug("io.netty.noPreferDirect: {}", !DIRECT_BUFFER_PREFERRED);
         }
 
         if (!hasUnsafe()) {
