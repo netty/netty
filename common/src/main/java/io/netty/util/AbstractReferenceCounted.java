@@ -68,10 +68,10 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
         for (;;) {
             int refCnt = this.refCnt;
             if (refCnt == 0) {
-                throw new ReferenceCountException(0, 1);
+                throw new IllegalReferenceCountException(0, 1);
             }
             if (refCnt == Integer.MAX_VALUE) {
-                throw new ReferenceCountException(Integer.MAX_VALUE, 1);
+                throw new IllegalReferenceCountException(Integer.MAX_VALUE, 1);
             }
             if (refCntUpdater.compareAndSet(this, refCnt, refCnt + 1)) {
                 break;
@@ -89,10 +89,10 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
         for (;;) {
             int refCnt = this.refCnt;
             if (refCnt == 0) {
-                throw new ReferenceCountException(0, 1);
+                throw new IllegalReferenceCountException(0, 1);
             }
             if (refCnt > Integer.MAX_VALUE - increment) {
-                throw new ReferenceCountException(refCnt, increment);
+                throw new IllegalReferenceCountException(refCnt, increment);
             }
             if (refCntUpdater.compareAndSet(this, refCnt, refCnt + increment)) {
                 break;
@@ -106,7 +106,7 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
         for (;;) {
             int refCnt = this.refCnt;
             if (refCnt == 0) {
-                throw new ReferenceCountException(0, -1);
+                throw new IllegalReferenceCountException(0, -1);
             }
 
             if (refCntUpdater.compareAndSet(this, refCnt, refCnt - 1)) {
@@ -128,7 +128,7 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
         for (;;) {
             int refCnt = this.refCnt;
             if (refCnt < decrement) {
-                throw new ReferenceCountException(refCnt, -decrement);
+                throw new IllegalReferenceCountException(refCnt, -decrement);
             }
 
             if (refCntUpdater.compareAndSet(this, refCnt, refCnt - decrement)) {

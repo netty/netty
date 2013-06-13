@@ -16,7 +16,6 @@
 package io.netty.handler.codec.frame;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.IncompleteFlushException;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.LengthFieldPrepender;

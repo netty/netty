@@ -15,7 +15,7 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.ReferenceCountException;
+import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ResourceLeakDetector;
 
 import java.io.IOException;
@@ -1134,7 +1134,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
      */
     protected final void ensureAccessible() {
         if (refCnt() == 0) {
-            throw new ReferenceCountException(0);
+            throw new IllegalReferenceCountException(0);
         }
     }
 }

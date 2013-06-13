@@ -15,7 +15,7 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.ReferenceCountException;
+import io.netty.util.IllegalReferenceCountException;
 
 /**
  * Default implementation of a {@link ByteBufHolder} that holds it's data in a {@link ByteBuf}.
@@ -35,7 +35,7 @@ public class DefaultByteBufHolder implements ByteBufHolder {
     @Override
     public ByteBuf content() {
         if (data.refCnt() <= 0) {
-            throw new ReferenceCountException(data.refCnt());
+            throw new IllegalReferenceCountException(data.refCnt());
         }
         return data;
     }
