@@ -756,6 +756,12 @@ public final class SwappedByteBuf implements ByteBuf {
     }
 
     @Override
+    public ByteBuffer internalNioBuffer(int index, int length) {
+        // Do not mess with the internal buffer's byte order.
+        return buf.nioBuffer(index, length).order(order);
+    }
+
+    @Override
     public ByteBuffer[] nioBuffers() {
         ByteBuffer[] nioBuffers = buf.nioBuffers();
         for (int i = 0; i < nioBuffers.length; i++) {

@@ -280,6 +280,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         long expectedWrittenBytes = 0;
         for (int i = index; i < size; i++) {
             ByteBuf buf = bufs.get(i);
+            int readerIndex = buf.readerIndex();
             int readableBytes = buf.readableBytes();
             expectedWrittenBytes += readableBytes;
 
@@ -289,7 +290,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                     if (nioBufferCnt == nioBuffers.length) {
                         nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCnt);
                     }
-                    nioBuffers[nioBufferCnt ++] = buf.nioBuffer();
+                    nioBuffers[nioBufferCnt ++] = buf.internalNioBuffer(readerIndex, readableBytes);
                 } else {
                     ByteBuffer[] nioBufs = buf.nioBuffers();
                     if (nioBufferCnt + nioBufs.length == nioBuffers.length + 1) {
@@ -304,13 +305,13 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                 }
             } else {
                 ByteBuf directBuf = alloc().directBuffer(readableBytes);
-                directBuf.writeBytes(buf, buf.readerIndex(), readableBytes);
+                directBuf.writeBytes(buf, readerIndex, readableBytes);
                 buf.release();
                 bufs.set(i, directBuf);
                 if (nioBufferCnt == nioBuffers.length) {
                     nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCnt);
                 }
-                nioBuffers[nioBufferCnt ++] = directBuf.nioBuffer();
+                nioBuffers[nioBufferCnt ++] = directBuf.internalNioBuffer(0, readableBytes);
             }
         }
 

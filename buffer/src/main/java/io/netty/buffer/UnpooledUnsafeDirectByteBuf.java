@@ -410,16 +410,6 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
     }
 
     @Override
-    public ByteBuffer nioBuffer(int index, int length) {
-        ensureAccessible();
-        if (index == 0 && length == capacity()) {
-            return buffer.duplicate();
-        } else {
-            return ((ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length)).slice();
-        }
-    }
-
-    @Override
     public ByteBuffer[] nioBuffers(int index, int length) {
         return new ByteBuffer[] { nioBuffer(index, length) };
     }
@@ -433,6 +423,11 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
             copy.setIndex(0, length);
         }
         return copy;
+    }
+
+    @Override
+    public ByteBuffer internalNioBuffer(int index, int length) {
+        return (ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length);
     }
 
     private ByteBuffer internalNioBuffer() {

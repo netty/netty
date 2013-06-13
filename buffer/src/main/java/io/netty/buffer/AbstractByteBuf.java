@@ -951,6 +951,11 @@ public abstract class AbstractByteBuf implements ByteBuf {
     }
 
     @Override
+    public ByteBuffer nioBuffer(int index, int length) {
+        return internalNioBuffer(index, length).slice();
+    }
+
+    @Override
     public String toString(Charset charset) {
         return toString(readerIndex, readableBytes(), charset);
     }

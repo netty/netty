@@ -761,6 +761,11 @@ public final class EmptyByteBuf implements ByteBuf {
     }
 
     @Override
+    public ByteBuffer internalNioBuffer(int index, int length) {
+        return EMPTY_BYTE_BUFFER;
+    }
+
+    @Override
     public boolean hasArray() {
         return true;
     }
