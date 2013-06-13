@@ -16,10 +16,9 @@
 package io.netty.channel;
 
 /**
- * Special {@link ChannelException} which will be used by {@link ChannelOutboundInvoker#flush(ChannelPromise)},
- * {@link ChannelOutboundInvoker#flush()}, {@link ChannelOutboundInvoker#write(Object)} and
- * {@link ChannelOutboundInvoker#write(Object, ChannelPromise)} if the operation was only partial successful.
+ * @deprecated
  */
+@Deprecated
 public class IncompleteFlushException extends ChannelException {
 
     private static final long serialVersionUID = -9049491093800487565L;
