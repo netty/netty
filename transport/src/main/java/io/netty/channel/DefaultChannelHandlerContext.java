@@ -125,7 +125,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         DefaultChannelHandlerContext prev = this.prev;
         if (prev != null) {
             synchronized (pipeline) {
-                pipeline.remove0(this);
+                pipeline.remove0(this, true);
             }
             prev.teardown();
         }
