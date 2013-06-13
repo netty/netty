@@ -263,8 +263,7 @@ public class JZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx,
-            ByteBuf in, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
         if (finished.get()) {
             return;
         }
@@ -288,7 +287,6 @@ public class JZlibEncoder extends ZlibEncoder {
 
                 // Configure output.
                 int maxOutputLength = (int) Math.ceil(inputLength * 1.001) + 12;
-                ByteBuf compressed = ctx.alloc().heapBuffer(maxOutputLength);
                 z.avail_out = maxOutputLength;
                 z.next_out = out.array();
                 z.next_out_index = out.arrayOffset() + out.writerIndex();

@@ -508,7 +508,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         try {
             ((ChannelOutboundHandler) handler()).bind(this, localAddress, promise);
         } catch (Throwable t) {
-            notifyHandlerException(t, promise);
+            notifyOutboundHandlerException(t, promise);
         }
     }
 
@@ -547,7 +547,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         try {
             ((ChannelOutboundHandler) handler()).connect(this, remoteAddress, localAddress, promise);
         } catch (Throwable t) {
-            notifyHandlerException(t, promise);
+            notifyOutboundHandlerException(t, promise);
         }
     }
 
@@ -584,7 +584,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         try {
             ((ChannelOutboundHandler) handler()).disconnect(this, promise);
         } catch (Throwable t) {
-            notifyHandlerException(t, promise);
+            notifyOutboundHandlerException(t, promise);
         }
     }
 
@@ -614,7 +614,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         try {
             ((ChannelOutboundHandler) handler()).close(this, promise);
         } catch (Throwable t) {
-            notifyHandlerException(t, promise);
+            notifyOutboundHandlerException(t, promise);
         }
     }
 
@@ -644,7 +644,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         try {
             ((ChannelOutboundHandler) handler()).deregister(this, promise);
         } catch (Throwable t) {
-            notifyHandlerException(t, promise);
+            notifyOutboundHandlerException(t, promise);
         }
     }
 
@@ -715,22 +715,22 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         try {
             handler.write(this, msgs.cast(), promise);
         } catch (Throwable t) {
-            notifyHandlerException(t, promise);
+            notifyOutboundHandlerException(t, promise);
         }
     }
 
-    private void notifyHandlerException(Throwable cause, ChannelPromise promise) {
+    private static void notifyOutboundHandlerException(Throwable cause, ChannelPromise promise) {
         // only try to fail the promise if its not a VoidChannelPromise, as
         // the VoidChannelPromise would also fire the cause through the pipeline
-        if (!(promise instanceof VoidChannelPromise) && !promise.tryFailure(cause)) {
-            if (logger.isWarnEnabled()) {
-                logger.warn(
-                        "Failed to fail the promise", cause);
-            }
+        if (promise instanceof VoidChannelPromise) {
             return;
         }
 
-        notifyHandlerException(cause);
+        if (!promise.tryFailure(cause)) {
+            if (logger.isWarnEnabled()) {
+                logger.warn("Failed to fail the promise because it's done already: {}", promise, cause);
+            }
+        }
     }
 
     private void notifyHandlerException(Throwable cause) {

@@ -25,6 +25,10 @@ import io.netty.handler.codec.MessageToByteEncoder;
  */
 public abstract class ZlibEncoder extends MessageToByteEncoder<ByteBuf> {
 
+    protected ZlibEncoder() {
+        super(false);
+    }
+
     /**
      * Returns {@code true} if and only if the end of the compressed stream
      * has been reached.

@@ -56,7 +56,9 @@ public abstract class AbstractCompatibleMarshallingEncoderTest {
 
         unmarshaller.finish();
         unmarshaller.close();
+        buffer.release();
     }
+
     protected ByteBuf truncate(ByteBuf buf) {
         return buf;
     }
