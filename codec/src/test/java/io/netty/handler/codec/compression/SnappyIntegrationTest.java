@@ -17,7 +17,6 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
@@ -128,7 +127,7 @@ public class SnappyIntegrationTest {
             decoder.writeInbound(compressed.retain());
             assertFalse(compressed.isReadable());
             compressed.release();
-            CompositeByteBuf decompressed = Unpooled.compositeBuffer();
+            CompositeByteBuf decompressed = compositeBuffer();
             for (;;) {
                 Object o = decoder.readInbound();
                 if (o == null) {
@@ -138,6 +137,7 @@ public class SnappyIntegrationTest {
                 decompressed.writerIndex(decompressed.writerIndex() + ((ByteBuf) o).readableBytes());
             }
             assertEquals(in, decompressed);
+            decompressed.release();
         } finally {
             // Avoids memory leak through AbstractChannel.allChannels
             encoder.close();

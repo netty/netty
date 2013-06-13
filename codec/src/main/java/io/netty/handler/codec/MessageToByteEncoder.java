@@ -44,13 +44,24 @@ import io.netty.util.internal.TypeParameterMatcher;
 public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdapter {
 
     private final TypeParameterMatcher matcher;
+    private final boolean preferDirect;
 
     protected MessageToByteEncoder() {
-        matcher = TypeParameterMatcher.find(this, MessageToByteEncoder.class, "I");
+        this(true);
     }
 
     protected MessageToByteEncoder(Class<? extends I> outboundMessageType) {
+        this(outboundMessageType, true);
+    }
+
+    protected MessageToByteEncoder(boolean preferDirect) {
+        matcher = TypeParameterMatcher.find(this, MessageToByteEncoder.class, "I");
+        this.preferDirect = preferDirect;
+    }
+
+    protected MessageToByteEncoder(Class<? extends I> outboundMessageType, boolean preferDirect) {
         matcher = TypeParameterMatcher.get(outboundMessageType);
+        this.preferDirect = preferDirect;
     }
 
     public boolean acceptOutboundMessage(Object msg) throws Exception {
@@ -61,8 +72,8 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
     public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
         MessageList<Object> out = MessageList.newInstance();
         boolean success = false;
+        ByteBuf buf = null;
         try {
-            ByteBuf buf = null;
             int size = msgs.size();
             for (int i = 0; i < size; i ++) {
                 // handler was removed in the loop so now copy over all remaining messages
@@ -78,7 +89,11 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
                     @SuppressWarnings("unchecked")
                     I cast = (I) m;
                     if (buf == null) {
-                        buf = ctx.alloc().buffer();
+                        if (preferDirect) {
+                            buf = ctx.alloc().ioBuffer();
+                        } else {
+                            buf = ctx.alloc().heapBuffer();
+                        }
                     }
                     try {
                         encode(ctx, cast, buf);
@@ -98,8 +113,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
             if (buf != null) {
                 if (buf.isReadable()) {
                     out.add(buf);
-                } else {
-                    buf.release();
+                    buf = null;
                 }
             }
 
@@ -110,6 +124,9 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
             throw new EncoderException(e);
         } finally {
             msgs.recycle();
+            if (buf != null) {
+                buf.release();
+            }
             if (success) {
                 ctx.write(out, promise);
             } else {
