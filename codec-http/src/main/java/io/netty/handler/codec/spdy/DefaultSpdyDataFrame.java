@@ -17,7 +17,7 @@ package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.util.ReferenceCountException;
+import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.internal.StringUtil;
 
 /**
@@ -73,7 +73,7 @@ public class DefaultSpdyDataFrame extends DefaultSpdyStreamFrame implements Spdy
     @Override
     public ByteBuf content() {
         if (data.refCnt() <= 0) {
-            throw new ReferenceCountException(data.refCnt());
+            throw new IllegalReferenceCountException(data.refCnt());
         }
         return data;
     }
