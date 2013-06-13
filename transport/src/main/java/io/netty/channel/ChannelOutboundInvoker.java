@@ -102,12 +102,6 @@ interface ChannelOutboundInvoker {
     /**
      * Request to write a message via this ChannelOutboundInvoker and notify the {@link ChannelFuture}
      * once the operation completes, either because the operation was successful or because of an error.
-     *
-     * <p>
-     * Be aware that the write could be only partially successful as the message may need to get encoded before write it
-     * to the remote peer. In such cases the {@link ChannelFuture} will be failed with a
-     * {@link IncompleteFlushException}.
-     * <p>
      */
     ChannelFuture write(Object msg);
     ChannelFuture write(MessageList<?> msgs);
@@ -216,11 +210,6 @@ interface ChannelOutboundInvoker {
     /**
      * Request to write a message via this ChannelOutboundInvoker and notify the {@link ChannelFuture}
      * once the operation completes, either because the operation was successful or because of an error.
-     *
-     * <p>
-     * Be aware that the write could be only partially successful as the message may need to get encoded before write it
-     * to the remote peer. In such cases the {@link ChannelFuture} will be failed with a
-     * {@link IncompleteFlushException}.
      */
     ChannelFuture write(Object msg, ChannelPromise promise);
     ChannelFuture write(MessageList<?> msgs, ChannelPromise promise);
