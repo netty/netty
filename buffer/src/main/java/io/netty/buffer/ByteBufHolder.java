@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.ReferenceCounted;
+
 /**
  * A packet which is send or receive.
  */

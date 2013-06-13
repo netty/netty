@@ -17,7 +17,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.ReferenceCounted;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.StringUtil;
 
 import java.net.SocketAddress;

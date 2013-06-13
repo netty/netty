@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.AbstractReferenceCounted;
+import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 

@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.buffer;
+package io.netty.util;
 
 import io.netty.util.internal.PlatformDependent;
 
@@ -68,10 +68,10 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
         for (;;) {
             int refCnt = this.refCnt;
             if (refCnt == 0) {
-                throw new IllegalBufferAccessException();
+                throw new ReferenceCountException(0, 1);
             }
             if (refCnt == Integer.MAX_VALUE) {
-                throw new IllegalBufferAccessException("refCnt overflow");
+                throw new ReferenceCountException(Integer.MAX_VALUE, 1);
             }
             if (refCntUpdater.compareAndSet(this, refCnt, refCnt + 1)) {
                 break;
@@ -89,10 +89,10 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
         for (;;) {
             int refCnt = this.refCnt;
             if (refCnt == 0) {
-                throw new IllegalBufferAccessException();
+                throw new ReferenceCountException(0, 1);
             }
             if (refCnt > Integer.MAX_VALUE - increment) {
-                throw new IllegalBufferAccessException("refCnt overflow");
+                throw new ReferenceCountException(refCnt, increment);
             }
             if (refCntUpdater.compareAndSet(this, refCnt, refCnt + increment)) {
                 break;
@@ -106,7 +106,7 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
         for (;;) {
             int refCnt = this.refCnt;
             if (refCnt == 0) {
-                throw new IllegalBufferAccessException();
+                throw new ReferenceCountException(0, -1);
             }
 
             if (refCntUpdater.compareAndSet(this, refCnt, refCnt - 1)) {
@@ -128,7 +128,7 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
         for (;;) {
             int refCnt = this.refCnt;
             if (refCnt < decrement) {
-                throw new IllegalBufferAccessException();
+                throw new ReferenceCountException(refCnt, -decrement);
             }
 
             if (refCntUpdater.compareAndSet(this, refCnt, refCnt - decrement)) {

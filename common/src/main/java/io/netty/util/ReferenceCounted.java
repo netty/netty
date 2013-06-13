@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.buffer;
+package io.netty.util;
 
 /**
  * A reference-counted object that requires explicit deallocation.
@@ -24,8 +24,9 @@ package io.netty.buffer;
  * the deallocated object will usually result in an access violation.
  * </p>
  * <p>
- * If this object is a container such as {@link MessageBuf} and {@link CompositeByteBuf}, its elements whose type is
- * {@link ReferenceCounted} will also be released when this object is deallocated.
+ * If an object that implements {@link ReferenceCounted} is a container of other objects that implement
+ * {@link ReferenceCounted}, the contained objects will also be released via {@link #release()} when the container's
+ * reference count becomes 0.
  * </p>
  */
 public interface ReferenceCounted {

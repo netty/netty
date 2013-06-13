@@ -18,12 +18,12 @@ package io.netty.channel;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ReferenceCounted;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalServerChannel;
+import io.netty.util.ReferenceCounted;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Test;

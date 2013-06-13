@@ -16,10 +16,10 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.ReferenceCounted;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.MessageList;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.TypeParameterMatcher;
 
 /**
