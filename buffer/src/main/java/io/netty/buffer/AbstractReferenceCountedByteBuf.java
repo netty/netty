@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+import io.netty.util.ReferenceCountException;
 import io.netty.util.internal.PlatformDependent;
 
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -73,10 +74,10 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
         for (;;) {
             int refCnt = this.refCnt;
             if (refCnt == 0) {
-                throw new IllegalBufferAccessException();
+                throw new ReferenceCountException(0, 1);
             }
             if (refCnt == Integer.MAX_VALUE) {
-                throw new IllegalBufferAccessException("refCnt overflow");
+                throw new ReferenceCountException(Integer.MAX_VALUE, 1);
             }
             if (refCntUpdater.compareAndSet(this, refCnt, refCnt + 1)) {
                 break;
@@ -94,10 +95,10 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
         for (;;) {
             int refCnt = this.refCnt;
             if (refCnt == 0) {
-                throw new IllegalBufferAccessException();
+                throw new ReferenceCountException(0, increment);
             }
             if (refCnt > Integer.MAX_VALUE - increment) {
-                throw new IllegalBufferAccessException("refCnt overflow");
+                throw new ReferenceCountException(refCnt, increment);
             }
             if (refCntUpdater.compareAndSet(this, refCnt, refCnt + increment)) {
                 break;
@@ -111,7 +112,7 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
         for (;;) {
             int refCnt = this.refCnt;
             if (refCnt == 0) {
-                throw new IllegalBufferAccessException();
+                throw new ReferenceCountException(0, -1);
             }
 
             if (refCntUpdater.compareAndSet(this, refCnt, refCnt - 1)) {
@@ -133,7 +134,7 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
         for (;;) {
             int refCnt = this.refCnt;
             if (refCnt < decrement) {
-                throw new IllegalBufferAccessException();
+                throw new ReferenceCountException(refCnt, -decrement);
             }
 
             if (refCntUpdater.compareAndSet(this, refCnt, refCnt - decrement)) {

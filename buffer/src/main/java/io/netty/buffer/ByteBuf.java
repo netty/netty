@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.ReferenceCounted;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;

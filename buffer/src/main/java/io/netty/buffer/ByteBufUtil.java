@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCounted;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
