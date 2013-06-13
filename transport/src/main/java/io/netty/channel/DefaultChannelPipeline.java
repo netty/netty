@@ -973,9 +973,11 @@ final class DefaultChannelPipeline implements ChannelPipeline {
                 ByteBufUtil.release(m);
             }
 
-            logger.warn(
-                    "Discarded {} inbound message(s) that reached at the tail of the pipeline. " +
-                    "Please check your pipeline configuration.", length);
+            if (length != 1) {
+                logger.warn(
+                        "Discarded {} inbound message(s) that reached at the tail of the pipeline. " +
+                        "Please check your pipeline configuration.", length);
+            }
         }
     }
 
