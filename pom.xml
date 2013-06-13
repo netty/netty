@@ -73,7 +73,6 @@
     <jboss.marshalling.version>1.3.17.GA</jboss.marshalling.version>
     <test.jvm.argLine>
       -server 
-      -Dio.netty.resourceLeakDetection
       -dsa -da -ea:io.netty...
       -XX:+AggressiveOpts
       -XX:+TieredCompilation

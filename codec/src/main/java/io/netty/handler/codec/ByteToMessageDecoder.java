@@ -100,14 +100,14 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             }
             buf.clear();
         }
-        handlerRemoved0();
+        handlerRemoved0(ctx);
     }
 
     /**
      * Gets called after the {@link ByteToMessageDecoder} was removed from the actual context and it doesn't handle
      * events anymore.
      */
-    protected void  handlerRemoved0() throws Exception { }
+    protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception { }
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
