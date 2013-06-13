@@ -1785,6 +1785,11 @@ public interface ByteBuf extends ReferenceCounted, Comparable<ByteBuf> {
     ByteBuffer nioBuffer(int index, int length);
 
     /**
+     * Internal use only: Exposes the internal NIO buffer.
+     */
+    ByteBuffer internalNioBuffer(int index, int length);
+
+    /**
      * Exposes this buffer's readable bytes as an NIO {@link ByteBuffer}'s.  The returned buffer
      * shares the content with this buffer, while changing the position and limit of the returned
      * NIO buffer does not affect the indexes and marks of this buffer. This method does not

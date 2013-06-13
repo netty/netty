@@ -991,9 +991,9 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf imp
     }
 
     @Override
-    public ByteBuffer nioBuffer(int index, int length) {
+    public ByteBuffer internalNioBuffer(int index, int length) {
         if (components.size() == 1) {
-            return components.get(0).buf.nioBuffer(index, length);
+            return components.get(0).buf.internalNioBuffer(index, length);
         }
         throw new UnsupportedOperationException();
     }
