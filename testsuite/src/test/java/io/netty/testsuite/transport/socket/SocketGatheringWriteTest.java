@@ -104,7 +104,6 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
                 // Ignore.
             }
         }
-        assertEquals(Unpooled.wrappedBuffer(data), sh.received);
         sh.channel.close().sync();
         ch.channel.close().sync();
         sc.close().sync();
@@ -122,6 +121,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
             throw ch.exception.get();
         }
         assertEquals(0, ch.counter);
+        assertEquals(Unpooled.wrappedBuffer(data), sh.received);
     }
 
     private static class TestHandler extends ChannelInboundHandlerAdapter {
