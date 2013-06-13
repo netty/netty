@@ -63,9 +63,8 @@ interface ChannelPropertyAccess {
      * Return a special ChannelPromise which can be reused for different operations.
      * <p>
      * It's only supported to use
-     * it for {@link ChannelOutboundInvoker#write(Object, ChannelPromise)} ,
-     * {@link ChannelOutboundInvoker#flush(ChannelPromise)} and
-     * {@link ChannelOutboundInvoker#sendFile(FileRegion, ChannelPromise)}.
+     * it for {@link ChannelOutboundInvoker#write(Object, ChannelPromise)} and,
+     * {@link ChannelOutboundInvoker#write(MessageList, ChannelPromise)}.
      * </p>
      * <p>
      * Be aware that the returned {@link ChannelPromise} will not support most operations and should only be used

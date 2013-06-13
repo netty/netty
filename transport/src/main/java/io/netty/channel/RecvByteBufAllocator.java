@@ -30,7 +30,7 @@ public interface RecvByteBufAllocator {
      */
     Handle newHandle();
 
-    public interface Handle {
+    interface Handle {
         /**
          * Creates a new receive buffer whose capacity is probably large enough to read all inbound data and small
          * enough not to waste its space.
