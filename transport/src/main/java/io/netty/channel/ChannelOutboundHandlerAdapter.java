@@ -93,6 +93,12 @@ public class ChannelOutboundHandlerAdapter extends ChannelHandlerAdapter impleme
         ctx.read();
     }
 
+    /**
+     * Calls {@link ChannelHandlerContext#write(MessageList, ChannelPromise)} to forward
+     * to the next {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
+     *
+     * Sub-classes may override this method to change behavior.
+     */
     @Override
     public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
         ctx.write(msgs, promise);
