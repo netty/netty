@@ -123,7 +123,7 @@ import java.util.Map;
 public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
 
     private final int spdyVersion;
-    private volatile int currentStreamId;
+    private int currentStreamId;
 
     /**
      * Creates a new instance.

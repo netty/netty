@@ -40,24 +40,24 @@ public class SpdySessionHandler
     }
 
     private final SpdySession spdySession = new SpdySession();
-    private volatile int lastGoodStreamId;
+    private int lastGoodStreamId;
 
-    private volatile int remoteConcurrentStreams;
-    private volatile int localConcurrentStreams;
-    private volatile int maxConcurrentStreams;
+    private int remoteConcurrentStreams;
+    private int localConcurrentStreams;
+    private int maxConcurrentStreams;
 
     private static final int DEFAULT_WINDOW_SIZE = 64 * 1024; // 64 KB default initial window size
-    private volatile int initialSendWindowSize = DEFAULT_WINDOW_SIZE;
-    private volatile int initialReceiveWindowSize = DEFAULT_WINDOW_SIZE;
+    private int initialSendWindowSize = DEFAULT_WINDOW_SIZE;
+    private int initialReceiveWindowSize = DEFAULT_WINDOW_SIZE;
 
     private final Object flowControlLock = new Object();
 
     private final AtomicInteger pings = new AtomicInteger();
 
-    private volatile boolean sentGoAwayFrame;
-    private volatile boolean receivedGoAwayFrame;
+    private boolean sentGoAwayFrame;
+    private boolean receivedGoAwayFrame;
 
-    private volatile ChannelPromise closeSessionFuture;
+    private ChannelPromise closeSessionFuture;
 
     private final boolean server;
     private final boolean flowControl;
@@ -748,7 +748,7 @@ public class SpdySessionHandler
             return false;
         }
 
-        int maxConcurrentStreams = this.maxConcurrentStreams; // read volatile once
+        int maxConcurrentStreams = this.maxConcurrentStreams;
         if (maxConcurrentStreams != 0 &&
            spdySession.numActiveStreams() >= maxConcurrentStreams) {
             return false;

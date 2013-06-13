@@ -1069,7 +1069,7 @@ public class SslHandler
     }
 
     private static final class CloseNotifyListener implements ChannelFutureListener {
-        volatile boolean done;
+        boolean done;
 
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {

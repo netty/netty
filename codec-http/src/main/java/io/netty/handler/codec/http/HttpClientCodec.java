@@ -47,7 +47,7 @@ public final class HttpClientCodec
     private final Queue<HttpMethod> queue = new ArrayDeque<HttpMethod>();
 
     /** If true, decoding stops (i.e. pass-through) */
-    private volatile boolean done;
+    private boolean done;
 
     private final AtomicLong requestResponseCounter = new AtomicLong();
     private final boolean failOnMissingResponse;

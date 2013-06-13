@@ -34,7 +34,7 @@ import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyFrame> {
 
     private final int version;
-    private volatile boolean finished;
+    private boolean finished;
     private final SpdyHeaderBlockCompressor headerBlockCompressor;
 
     /**
