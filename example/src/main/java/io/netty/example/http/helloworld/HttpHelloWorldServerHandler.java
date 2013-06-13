@@ -26,20 +26,20 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.CharsetUtil;
 
-
 import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 import static io.netty.handler.codec.http.HttpHeaders.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+import static io.netty.handler.codec.http.HttpVersion.*;
 
 public class HttpHelloWorldServerHandler extends ChannelInboundHandlerAdapter {
     private static final ByteBuf CONTENT =
-            Unpooled.unreleasableBuffer(Unpooled.buffer().writeBytes("Hello World".getBytes(CharsetUtil.US_ASCII)));
+            Unpooled.unreleasableBuffer(Unpooled.copiedBuffer("Hello World", CharsetUtil.US_ASCII));
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
         MessageList<Object> out = MessageList.newInstance();
-        for (int i = 0; i < msgs.size(); i++) {
+        int size = msgs.size();
+        for (int i = 0; i < size; i++) {
             Object msg = msgs.get(i);
             if (msg instanceof HttpRequest) {
                 HttpRequest req = (HttpRequest) msg;
