@@ -28,6 +28,12 @@ import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
+/**
+ * Datastructure which holds messages.
+ *
+ * You should call {@link #recycle()} once you are done with using it.
+ * @param <T>
+ */
 public final class MessageList<T> implements Iterable<T> {
 
     private static final int DEFAULT_INITIAL_CAPACITY = 8;

@@ -103,18 +103,11 @@ interface ChannelOutboundInvoker {
      * Request to write a message via this ChannelOutboundInvoker and notify the {@link ChannelFuture}
      * once the operation completes, either because the operation was successful or because of an error.
      *
-     * If you want to write a {@link FileRegion} use {@link #sendFile(FileRegion)}.
      * <p>
      * Be aware that the write could be only partially successful as the message may need to get encoded before write it
      * to the remote peer. In such cases the {@link ChannelFuture} will be failed with a
-     * {@link IncompleteFlushException}. In such cases you may want to call {@link #flush(ChannelPromise)} or
-     * {@link #flush()} to flush the rest of the data or just close the connection via {@link #close(ChannelPromise)}
-     * or {@link #close()} if it is not possible to recover.
+     * {@link IncompleteFlushException}.
      * <p>
-     * This will result in having the message added to the outbound buffer of the next {@link ChannelOutboundHandler}
-     * and the {@link ChannelOutboundHandler#flush(ChannelHandlerContext, ChannelPromise)}
-     * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
-     * {@link Channel}.
      */
     ChannelFuture write(Object msg);
     ChannelFuture write(MessageList<?> msgs);
@@ -208,7 +201,7 @@ interface ChannelOutboundInvoker {
 
     /**
      * Request to Read data from the {@link Channel} into the first inbound buffer, triggers an
-     * {@link ChannelInboundHandler#inboundBufferUpdated(ChannelHandlerContext) inboundBufferUpdated} event if data was
+     * {@link ChannelInboundHandler#messageReceived(ChannelHandlerContext, MessageList)} event if data was
      * read, and triggers an
      * {@link ChannelInboundHandler#channelReadSuspended(ChannelHandlerContext) channelReadSuspended} event so the
      * handler can decide to continue reading.  If there's a pending read operation already, this method does nothing.
@@ -224,20 +217,10 @@ interface ChannelOutboundInvoker {
      * Request to write a message via this ChannelOutboundInvoker and notify the {@link ChannelFuture}
      * once the operation completes, either because the operation was successful or because of an error.
      *
-     * If you want to write a {@link FileRegion} use {@link #sendFile(FileRegion)}.
      * <p>
      * Be aware that the write could be only partially successful as the message may need to get encoded before write it
      * to the remote peer. In such cases the {@link ChannelFuture} will be failed with a
-     * {@link IncompleteFlushException}. In such cases you may want to call {@link #flush(ChannelPromise)} or
-     * {@link #flush()} to flush the rest of the data or just close the connection via {@link #close(ChannelPromise)}
-     * or {@link #close()} if it is not possible to recover.
-     *
-     * The given {@link ChannelPromise} will be notified.
-     * <p>
-     * This will result in having the message added to the outbound buffer of the next {@link ChannelOutboundHandler}
-     * and the {@link ChannelOutboundHandler#flush(ChannelHandlerContext, ChannelPromise)}
-     * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
-     * {@link Channel}.
+     * {@link IncompleteFlushException}.
      */
     ChannelFuture write(Object msg, ChannelPromise promise);
     ChannelFuture write(MessageList<?> msgs, ChannelPromise promise);
