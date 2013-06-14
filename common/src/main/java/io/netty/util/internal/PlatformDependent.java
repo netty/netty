@@ -23,15 +23,20 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 
@@ -47,6 +52,9 @@ public final class PlatformDependent {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PlatformDependent.class);
 
+    private static final Pattern MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN = Pattern.compile(
+            "\\s*-XX:MaxDirectMemorySize\\s*=\\s*([0-9]+)\\s*([kKmMgG]?)\\s*$");
+
     private static final boolean IS_ANDROID = isAndroid0();
     private static final boolean IS_WINDOWS = isWindows0();
     private static final boolean IS_ROOT = isRoot0();
@@ -59,6 +67,7 @@ public final class PlatformDependent {
     private static final boolean CAN_USE_CHM_V8 = HAS_UNSAFE && JAVA_VERSION < 8;
     private static final boolean DIRECT_BUFFER_PREFERRED =
             HAS_UNSAFE && !SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
+    private static final long MAX_DIRECT_MEMORY = maxDirectMemory0();
 
     private static final long ARRAY_BASE_OFFSET = arrayBaseOffset0();
 
@@ -127,6 +136,13 @@ public final class PlatformDependent {
      */
     public static boolean directBufferPreferred() {
         return DIRECT_BUFFER_PREFERRED;
+    }
+
+    /**
+     * Returns the maximum memory reserved for direct buffer allocation.
+     */
+    public static long maxDirectMemory() {
+        return MAX_DIRECT_MEMORY;
     }
 
     /**
@@ -467,6 +483,53 @@ public final class PlatformDependent {
         }
 
         return PlatformDependent0.arrayBaseOffset();
+    }
+
+    private static long maxDirectMemory0() {
+        long maxDirectMemory = 0;
+        try {
+            // Try to get from sun.misc.VM.maxDirectMemory() which should be most accurate.
+            Class<?> vmClass = Class.forName("sun.misc.VM", true, ClassLoader.getSystemClassLoader());
+            Method m = vmClass.getDeclaredMethod("maxDirectMemory");
+            maxDirectMemory = ((Number) m.invoke(null)).longValue();
+        } catch (Throwable t) {
+            // Ignore
+        }
+
+        if (maxDirectMemory <= 0) {
+            // Now try to get the JVM option (-XX:MaxDirectMemorySize) and parse it.
+            RuntimeMXBean runtime = ManagementFactory.getRuntimeMXBean();
+            List<String> vmArgs = runtime.getInputArguments();
+            for (int i = vmArgs.size() - 1; i >= 0; i --) {
+                Matcher m = MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN.matcher(vmArgs.get(i));
+                if (!m.matches()) {
+                    continue;
+                }
+
+                maxDirectMemory = Long.parseLong(m.group(1));
+                switch (m.group(2).charAt(0)) {
+                    case 'k': case 'K':
+                        maxDirectMemory *= 1024;
+                        break;
+                    case 'm': case 'M':
+                        maxDirectMemory *= 1024 * 1024;
+                        break;
+                    case 'g': case 'G':
+                        maxDirectMemory *= 1024 * 1024 * 1024;
+                        break;
+                }
+                break;
+            }
+        }
+
+        if (maxDirectMemory <= 0) {
+            maxDirectMemory = Runtime.getRuntime().maxMemory();
+            logger.debug("maxDirectMemory: {} bytes (maybe)", maxDirectMemory);
+        } else {
+            logger.debug("maxDirectMemory: {} bytes", maxDirectMemory);
+        }
+
+        return maxDirectMemory;
     }
 
     private static boolean hasJavassist0() {
