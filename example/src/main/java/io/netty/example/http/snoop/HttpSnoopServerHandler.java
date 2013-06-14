@@ -134,7 +134,7 @@ public class HttpSnoopServerHandler extends ChannelInboundHandlerAdapter {
                     buf.append("\r\n");
                 }
 
-                return writeResponse(ctx, trailer, out);
+                return writeResponse(trailer, out);
             }
         }
         return true;
@@ -151,7 +151,7 @@ public class HttpSnoopServerHandler extends ChannelInboundHandlerAdapter {
         buf.append("\r\n");
     }
 
-    private boolean writeResponse(ChannelHandlerContext ctx, HttpObject currentObj, MessageList<Object> out) {
+    private boolean writeResponse(HttpObject currentObj, MessageList<Object> out) {
         // Decide whether to close the connection or not.
         boolean keepAlive = isKeepAlive(request);
         // Build the response object.

@@ -19,9 +19,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.MessageList;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
@@ -136,36 +135,30 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         }
     }
 
-    static class StringEchoHandler extends ChannelInboundHandlerAdapter {
+    static class StringEchoHandler extends ChannelInboundConsumingHandler<String> {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx)
-                throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
             channel = ctx.channel();
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-            for (int i = 0; i < msgs.size(); i ++) {
-                String msg = (String) msgs.get(i);
-                assertEquals(data[counter], msg);
+        public void consume(ChannelHandlerContext ctx, String msg) throws Exception {
+            assertEquals(data[counter], msg);
 
-                if (channel.parent() != null) {
-                    String delimiter = random.nextBoolean() ? "\r\n" : "\n";
-                    channel.write(msg + delimiter);
-                }
-
-                counter ++;
+            if (channel.parent() != null) {
+                String delimiter = random.nextBoolean() ? "\r\n" : "\n";
+                channel.write(msg + delimiter);
             }
-            msgs.releaseAllAndRecycle();
+
+            counter ++;
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx,
-                Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             if (exception.compareAndSet(null, cause)) {
                 ctx.close();
             }

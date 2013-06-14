@@ -21,9 +21,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.MessageList;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
@@ -181,7 +180,7 @@ public class SocketEchoTest extends AbstractSocketTest {
         }
     }
 
-    private static class EchoHandler extends ChannelInboundHandlerAdapter {
+    private static class EchoHandler extends ChannelInboundConsumingHandler<ByteBuf> {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
@@ -193,24 +192,20 @@ public class SocketEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-            for (int j = 0; j < msgs.size(); j ++) {
-                ByteBuf in = (ByteBuf) msgs.get(j);
-                byte[] actual = new byte[in.readableBytes()];
-                in.readBytes(actual);
+        public void consume(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+            byte[] actual = new byte[in.readableBytes()];
+            in.readBytes(actual);
 
-                int lastIdx = counter;
-                for (int i = 0; i < actual.length; i ++) {
-                    assertEquals(data[i + lastIdx], actual[i]);
-                }
-
-                if (channel.parent() != null) {
-                    channel.write(Unpooled.wrappedBuffer(actual));
-                }
-
-                counter += actual.length;
+            int lastIdx = counter;
+            for (int i = 0; i < actual.length; i ++) {
+                assertEquals(data[i + lastIdx], actual[i]);
             }
-            msgs.releaseAllAndRecycle();
+
+            if (channel.parent() != null) {
+                channel.write(Unpooled.wrappedBuffer(actual));
+            }
+
+            counter += actual.length;
         }
 
         @Override

@@ -114,7 +114,7 @@ public class LocalTransportThreadModelTest2 {
         @Override
         public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
             count.addAndGet(msgs.size());
-            msgs.recycle();
+            msgs.releaseAllAndRecycle();
         }
     }
 }
