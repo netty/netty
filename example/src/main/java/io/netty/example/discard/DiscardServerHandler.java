@@ -32,7 +32,6 @@ public class DiscardServerHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-        // Discard the received data silently.
         msgs.releaseAllAndRecycle();
     }
 

@@ -20,6 +20,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.DefaultFileRegion;
@@ -63,7 +64,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         testFileRegion0(sb, cb, true);
     }
 
-    private void testFileRegion0(ServerBootstrap sb, Bootstrap cb, boolean voidPromise) throws Throwable {
+    private static void testFileRegion0(ServerBootstrap sb, Bootstrap cb, boolean voidPromise) throws Throwable {
         File file = File.createTempFile("netty-", ".tmp");
         file.deleteOnExit();
 
@@ -72,10 +73,8 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         out.close();
 
         ChannelInboundHandler ch = new ChannelInboundHandlerAdapter() {
-
             @Override
             public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-                // discard
                 msgs.releaseAllAndRecycle();
             }
 
@@ -123,7 +122,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         }
     }
 
-    private static class TestHandler extends ChannelInboundHandlerAdapter {
+    private static class TestHandler extends ChannelInboundConsumingHandler<ByteBuf> {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
@@ -135,19 +134,15 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-            for (int j = 0; j < msgs.size(); j ++) {
-                ByteBuf in = (ByteBuf) msgs.get(j);
-                byte[] actual = new byte[in.readableBytes()];
-                in.readBytes(actual);
+        public void consume(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+            byte[] actual = new byte[in.readableBytes()];
+            in.readBytes(actual);
 
-                int lastIdx = counter;
-                for (int i = 0; i < actual.length; i ++) {
-                    assertEquals(data[i + lastIdx], actual[i]);
-                }
-                counter += actual.length;
+            int lastIdx = counter;
+            for (int i = 0; i < actual.length; i ++) {
+                assertEquals(data[i + lastIdx], actual[i]);
             }
-            msgs.releaseAllAndRecycle();
+            counter += actual.length;
         }
 
         @Override

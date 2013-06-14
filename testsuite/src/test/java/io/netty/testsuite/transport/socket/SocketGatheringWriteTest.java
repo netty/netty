@@ -22,7 +22,7 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.MessageList;
 import org.junit.Test;
 
@@ -124,7 +124,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         assertEquals(Unpooled.wrappedBuffer(data), sh.received);
     }
 
-    private static class TestHandler extends ChannelInboundHandlerAdapter {
+    private static class TestHandler extends ChannelInboundConsumingHandler<ByteBuf> {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
@@ -136,13 +136,9 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-            for (int j = 0; j < msgs.size(); j ++) {
-                ByteBuf in = (ByteBuf) msgs.get(j);
-                counter += in.readableBytes();
-                received.writeBytes(in);
-            }
-            msgs.releaseAllAndRecycle();
+        public void consume(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+            counter += in.readableBytes();
+            received.writeBytes(in);
         }
 
         @Override

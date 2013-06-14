@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.MessageList;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -31,39 +31,44 @@ import static io.netty.handler.codec.http.HttpHeaders.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 
-public class HttpHelloWorldServerHandler extends ChannelInboundHandlerAdapter {
+public class HttpHelloWorldServerHandler extends ChannelInboundConsumingHandler<Object> {
     private static final ByteBuf CONTENT =
             Unpooled.unreleasableBuffer(Unpooled.copiedBuffer("Hello World", CharsetUtil.US_ASCII));
 
+    private MessageList<Object> out;
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-        MessageList<Object> out = MessageList.newInstance();
-        int size = msgs.size();
-        for (int i = 0; i < size; i++) {
-            Object msg = msgs.get(i);
-            if (msg instanceof HttpRequest) {
-                HttpRequest req = (HttpRequest) msg;
+    protected void beginConsume(ChannelHandlerContext ctx) {
+        out = MessageList.newInstance();
+    }
 
-                if (is100ContinueExpected(req)) {
-                    out.add(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE));
-                }
-                boolean keepAlive = isKeepAlive(req);
-                FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, CONTENT.duplicate());
-                response.headers().set(CONTENT_TYPE, "text/plain");
-                response.headers().set(CONTENT_LENGTH, response.content().readableBytes());
+    @Override
+    protected void endConsume(ChannelHandlerContext ctx) {
+        ctx.write(out);
+        out = null;
+    }
 
-                if (!keepAlive) {
-                    out.add(response);
-                    ctx.write(out).addListener(ChannelFutureListener.CLOSE);
-                    out = MessageList.newInstance();
-                } else {
-                    out.add(response);
-                    response.headers().set(CONNECTION, Values.KEEP_ALIVE);
-                }
+    @Override
+    public void consume(ChannelHandlerContext ctx, Object msg) throws Exception {
+        if (msg instanceof HttpRequest) {
+            HttpRequest req = (HttpRequest) msg;
+
+            if (is100ContinueExpected(req)) {
+                out.add(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE));
+            }
+            boolean keepAlive = isKeepAlive(req);
+            FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, CONTENT.duplicate());
+            response.headers().set(CONTENT_TYPE, "text/plain");
+            response.headers().set(CONTENT_LENGTH, response.content().readableBytes());
+
+            if (!keepAlive) {
+                out.add(response);
+                ctx.write(out).addListener(ChannelFutureListener.CLOSE);
+                out = MessageList.newInstance();
+            } else {
+                out.add(response);
+                response.headers().set(CONNECTION, Values.KEEP_ALIVE);
             }
         }
-        ctx.write(out);
-        msgs.releaseAllAndRecycle();
     }
 
     @Override

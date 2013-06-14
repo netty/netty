@@ -19,6 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -138,8 +139,7 @@ public class UDTClientServerConnectionTest {
         }
     }
 
-    static class ClientHandler extends
-            ChannelInboundHandlerAdapter {
+    static class ClientHandler extends ChannelInboundConsumingHandler<Object> {
 
         static final Logger log = LoggerFactory.getLogger(ClientHandler.class);
 
@@ -169,11 +169,8 @@ public class UDTClientServerConnectionTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-            for (int i = 0; i < msgs.size(); i ++) {
-                log.info("Client received: " + msgs.get(i));
-            }
-            msgs.releaseAllAndRecycle();
+        public void consume(ChannelHandlerContext ctx, Object msg) throws Exception {
+            log.info("Client received: " + msg);
         }
     }
 

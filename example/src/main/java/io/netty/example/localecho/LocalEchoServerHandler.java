@@ -24,7 +24,7 @@ public class LocalEchoServerHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
         // Write back as received
-        ctx.write(msgs.copy());
+        ctx.write(msgs);
     }
 
     @Override

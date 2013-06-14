@@ -61,7 +61,7 @@ public class DefaultChannelPipelineTest {
 
             @Override
             public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-                // Swallow.
+                msgs.releaseAllAndRecycle();
             }
         });
 
