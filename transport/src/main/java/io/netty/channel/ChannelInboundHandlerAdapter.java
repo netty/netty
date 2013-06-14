@@ -15,13 +15,21 @@
  */
 package io.netty.channel;
 
-
 /**
  * Abstract base class for {@link ChannelInboundHandler} implementations which provide
  * implementations of all of their methods.
  *
+ * <p>
  * This implementation just forward the operation to the next {@link ChannelHandler} in the
  * {@link ChannelPipeline}. Sub-classes may override a method implementation to change this.
+ * </p>
+ * <p>
+ * Be aware that messages are not released after the {@link #messageReceived(ChannelHandlerContext, MessageList)}
+ * method returns automatically. This is done for make it as flexible as possible and get the most out of
+ * performance. Because of this you need to explicit call {@link MessageList#releaseAllAndRecycle()} if you
+ * consumed all the messages. Because this is such a common need {@link ChannelInboundConsumingHandler} is provided ,
+ * which will automatically release messages and the {@link MessageList} after processing is done.
+ * </p>
  */
 public class ChannelInboundHandlerAdapter extends ChannelHandlerAdapter implements ChannelInboundHandler {
 

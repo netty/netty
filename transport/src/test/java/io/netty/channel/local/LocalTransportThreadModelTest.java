@@ -56,10 +56,11 @@ public class LocalTransportThreadModelTest {
               @Override
               public void initChannel(LocalChannel ch) throws Exception {
                   ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
-                    @Override
-                    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) {
-                        // Discard
-                    }
+                      @Override
+                      public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) {
+                          // Discard
+                          msgs.releaseAllAndRecycle();
+                      }
                   });
               }
           });

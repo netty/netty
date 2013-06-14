@@ -46,9 +46,9 @@ public class NioDatagramChannelTest {
                         .option(ChannelOption.SO_BROADCAST, true)
                         .handler(new ChannelInboundHandlerAdapter() {
                             @Override
-                            public void messageReceived(
-                                    ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-                                // noop
+                            public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) {
+                                // Discard
+                                msgs.releaseAllAndRecycle();
                             }
                         });
                 DatagramChannel datagramChannel = (DatagramChannel) udpBootstrap

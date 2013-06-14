@@ -19,6 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageList;
@@ -92,20 +93,19 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         cc.close().awaitUninterruptibly();
     }
 
-    private static final class MulticastTestHandler extends ChannelInboundHandlerAdapter {
+    private static final class MulticastTestHandler extends ChannelInboundConsumingHandler<DatagramPacket> {
         private final CountDownLatch latch = new CountDownLatch(1);
 
         private boolean done;
         private volatile boolean fail;
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-            if (done || msgs.size() != 1) {
+        protected void consume(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+            if (done) {
                 fail = true;
             }
 
-            assertEquals(1, ((DatagramPacket) msgs.get(0)).content().readInt());
-            msgs.releaseAllAndRecycle();
+            assertEquals(1, msg.content().readInt());
 
             latch.countDown();
 

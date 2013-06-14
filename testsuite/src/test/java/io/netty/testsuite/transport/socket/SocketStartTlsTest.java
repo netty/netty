@@ -19,10 +19,9 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MessageList;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.string.StringDecoder;
@@ -143,7 +142,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
     }
 
-    private class StartTlsClientHandler extends ChannelInboundHandlerAdapter {
+    private class StartTlsClientHandler extends ChannelInboundConsumingHandler<String> {
         private final SslHandler sslHandler;
         private Future<Channel> handshakeFuture;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
@@ -160,22 +159,18 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-            for (int i = 0; i < msgs.size(); i ++) {
-                String msg = (String) msgs.get(i);
-                if ("StartTlsResponse".equals(msg)) {
-                    ctx.pipeline().addAfter("logger", "ssl", sslHandler);
-                    handshakeFuture = sslHandler.handshakeFuture();
-                    ctx.write("EncryptedRequest\n");
-                    continue;
-                }
-
-                assertEquals("EncryptedResponse", msg);
-                assertNotNull(handshakeFuture);
-                assertTrue(handshakeFuture.isSuccess());
-                ctx.close();
+        public void consume(ChannelHandlerContext ctx, String msg) throws Exception {
+            if ("StartTlsResponse".equals(msg)) {
+                ctx.pipeline().addAfter("logger", "ssl", sslHandler);
+                handshakeFuture = sslHandler.handshakeFuture();
+                ctx.write("EncryptedRequest\n");
+                return;
             }
-            msgs.releaseAllAndRecycle();
+
+            assertEquals("EncryptedResponse", msg);
+            assertNotNull(handshakeFuture);
+            assertTrue(handshakeFuture.isSuccess());
+            ctx.close();
         }
 
         @Override
@@ -190,7 +185,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
     }
 
-    private class StartTlsServerHandler extends ChannelInboundHandlerAdapter {
+    private class StartTlsServerHandler extends ChannelInboundConsumingHandler<String> {
         private final SslHandler sslHandler;
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
@@ -206,19 +201,15 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-            for (int i = 0; i < msgs.size(); i ++) {
-               String msg = (String) msgs.get(i);
-               if ("StartTlsRequest".equals(msg)) {
-                    ctx.pipeline().addAfter("logger", "ssl", sslHandler);
-                    ctx.write("StartTlsResponse\n");
-                    continue;
-               }
-
-               assertEquals("EncryptedRequest", msg);
-               ctx.write("EncryptedResponse\n");
+        public void consume(ChannelHandlerContext ctx, String msg) throws Exception {
+            if ("StartTlsRequest".equals(msg)) {
+                ctx.pipeline().addAfter("logger", "ssl", sslHandler);
+                ctx.write("StartTlsResponse\n");
+                return;
             }
-            msgs.releaseAllAndRecycle();
+
+            assertEquals("EncryptedRequest", msg);
+            ctx.write("EncryptedResponse\n");
         }
 
         @Override

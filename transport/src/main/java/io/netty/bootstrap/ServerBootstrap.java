@@ -19,12 +19,11 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MessageList;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.AttributeKey;
@@ -218,7 +217,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
         return new Entry[size];
     }
 
-    private static class ServerBootstrapAcceptor extends ChannelInboundHandlerAdapter {
+    private static class ServerBootstrapAcceptor extends ChannelInboundConsumingHandler<Channel> {
 
         private final EventLoopGroup childGroup;
         private final ChannelHandler childHandler;
@@ -237,32 +236,28 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
 
         @Override
         @SuppressWarnings("unchecked")
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) {
-            int size = msgs.size();
-            for (int i = 0; i < size; i ++) {
-                Channel child = (Channel) msgs.get(i);
-                child.pipeline().addLast(childHandler);
+        public void consume(ChannelHandlerContext ctx, Channel child) {
+            child.pipeline().addLast(childHandler);
 
-                for (Entry<ChannelOption<?>, Object> e: childOptions) {
-                    try {
-                        if (!child.config().setOption((ChannelOption<Object>) e.getKey(), e.getValue())) {
-                            logger.warn("Unknown channel option: " + e);
-                        }
-                    } catch (Throwable t) {
-                        logger.warn("Failed to set a channel option: " + child, t);
-                    }
-                }
-
-                for (Entry<AttributeKey<?>, Object> e: childAttrs) {
-                    child.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
-                }
-
+            for (Entry<ChannelOption<?>, Object> e: childOptions) {
                 try {
-                    childGroup.register(child);
+                    if (!child.config().setOption((ChannelOption<Object>) e.getKey(), e.getValue())) {
+                        logger.warn("Unknown channel option: " + e);
+                    }
                 } catch (Throwable t) {
-                    child.unsafe().closeForcibly();
-                    logger.warn("Failed to register an accepted channel: " + child, t);
+                    logger.warn("Failed to set a channel option: " + child, t);
                 }
+            }
+
+            for (Entry<AttributeKey<?>, Object> e: childAttrs) {
+                child.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
+            }
+
+            try {
+                childGroup.register(child);
+            } catch (Throwable t) {
+                child.unsafe().closeForcibly();
+                logger.warn("Failed to register an accepted channel: " + child, t);
             }
         }
 
