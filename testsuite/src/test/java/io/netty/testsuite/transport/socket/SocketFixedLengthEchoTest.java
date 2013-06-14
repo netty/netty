@@ -21,7 +21,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.MessageList;
 import io.netty.channel.socket.SocketChannel;
@@ -124,7 +124,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         }
     }
 
-    private static class EchoHandler extends ChannelInboundHandlerAdapter {
+    private static class EchoHandler extends ChannelInboundConsumingHandler {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
@@ -136,7 +136,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
             for (int j = 0; j < msgs.size(); j ++) {
                 ByteBuf msg = (ByteBuf) msgs.get(j);
                 assertEquals(1024, msg.readableBytes());
@@ -155,7 +155,6 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
 
                 counter += actual.length;
             }
-            msgs.releaseAllAndRecycle();
         }
 
         @Override

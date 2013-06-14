@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.MessageList;
 import io.netty.channel.socket.SocketChannel;
@@ -136,7 +136,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         }
     }
 
-    static class StringEchoHandler extends ChannelInboundHandlerAdapter {
+    static class StringEchoHandler extends ChannelInboundConsumingHandler {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
@@ -148,7 +148,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
             for (int i = 0; i < msgs.size(); i ++) {
                 String msg = (String) msgs.get(i);
                 assertEquals(data[counter], msg);

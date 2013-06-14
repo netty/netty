@@ -18,6 +18,7 @@ package io.netty.example.uptime;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoop;
 import io.netty.channel.MessageList;
@@ -32,7 +33,7 @@ import java.util.concurrent.TimeUnit;
  * connection attempt getStatus.
  */
 @Sharable
-public class UptimeClientHandler extends ChannelInboundHandlerAdapter {
+public class UptimeClientHandler extends ChannelInboundConsumingHandler {
 
     private final UptimeClient client;
     private long startTime = -1;
@@ -50,9 +51,8 @@ public class UptimeClientHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+    public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
         // Discard received data
-        msgs.releaseAllAndRecycle();
     }
 
     @Override

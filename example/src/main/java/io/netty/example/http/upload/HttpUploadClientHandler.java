@@ -16,6 +16,7 @@
 package io.netty.example.http.upload;
 
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.MessageList;
 import io.netty.handler.codec.http.HttpContent;
@@ -29,14 +30,14 @@ import java.util.logging.Logger;
 /**
  * Handler that just dumps the contents of the response from the server
  */
-public class HttpUploadClientHandler extends ChannelInboundHandlerAdapter {
+public class HttpUploadClientHandler extends ChannelInboundConsumingHandler {
 
     private static final Logger logger = Logger.getLogger(HttpUploadClientHandler.class.getName());
 
     private boolean readingChunks;
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+    public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
         for (int i = 0; i < msgs.size(); i++) {
             Object msg = msgs.get(i);
             if (msg instanceof HttpResponse) {
@@ -76,7 +77,6 @@ public class HttpUploadClientHandler extends ChannelInboundHandlerAdapter {
                 }
             }
         }
-        msgs.releaseAllAndRecycle();
     }
 
     @Override

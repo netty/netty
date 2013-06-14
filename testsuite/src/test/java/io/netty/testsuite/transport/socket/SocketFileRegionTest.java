@@ -20,8 +20,8 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.FileRegion;
 import io.netty.channel.MessageList;
@@ -71,12 +71,11 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         out.write(data);
         out.close();
 
-        ChannelInboundHandler ch = new ChannelInboundHandlerAdapter() {
+        ChannelInboundHandler ch = new ChannelInboundConsumingHandler() {
 
             @Override
-            public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
                 // discard
-                msgs.releaseAllAndRecycle();
             }
 
             @Override
@@ -123,7 +122,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         }
     }
 
-    private static class TestHandler extends ChannelInboundHandlerAdapter {
+    private static class TestHandler extends ChannelInboundConsumingHandler {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
@@ -135,7 +134,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
             for (int j = 0; j < msgs.size(); j ++) {
                 ByteBuf in = (ByteBuf) msgs.get(j);
                 byte[] actual = new byte[in.readableBytes()];
@@ -147,7 +146,6 @@ public class SocketFileRegionTest extends AbstractSocketTest {
                 }
                 counter += actual.length;
             }
-            msgs.releaseAllAndRecycle();
         }
 
         @Override

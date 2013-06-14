@@ -20,6 +20,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.MessageList;
 import io.netty.handler.codec.http.Cookie;
@@ -62,7 +63,7 @@ import java.util.logging.Logger;
 import static io.netty.buffer.Unpooled.*;
 import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 
-public class HttpUploadServerHandler extends ChannelInboundHandlerAdapter {
+public class HttpUploadServerHandler extends ChannelInboundConsumingHandler {
 
     private static final Logger logger = Logger.getLogger(HttpUploadServerHandler.class.getName());
 
@@ -96,7 +97,7 @@ public class HttpUploadServerHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+    public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
         for (int i = 0; i < msgs.size(); i++) {
             Object msg = msgs.get(i);
             if (msg instanceof HttpRequest) {
@@ -203,7 +204,6 @@ public class HttpUploadServerHandler extends ChannelInboundHandlerAdapter {
                 }
             }
         }
-        msgs.releaseAllAndRecycle();
     }
 
     private void reset() {

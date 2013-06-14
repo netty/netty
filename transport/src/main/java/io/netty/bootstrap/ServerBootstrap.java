@@ -19,7 +19,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
@@ -218,7 +218,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
         return new Entry[size];
     }
 
-    private static class ServerBootstrapAcceptor extends ChannelInboundHandlerAdapter {
+    private static class ServerBootstrapAcceptor extends ChannelInboundConsumingHandler {
 
         private final EventLoopGroup childGroup;
         private final ChannelHandler childHandler;
@@ -237,7 +237,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
 
         @Override
         @SuppressWarnings("unchecked")
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) {
+        public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) {
             int size = msgs.size();
             for (int i = 0; i < size; i ++) {
                 Channel child = (Channel) msgs.get(i);

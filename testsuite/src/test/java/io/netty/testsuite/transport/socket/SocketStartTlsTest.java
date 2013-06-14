@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.MessageList;
@@ -143,7 +143,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
     }
 
-    private class StartTlsClientHandler extends ChannelInboundHandlerAdapter {
+    private class StartTlsClientHandler extends ChannelInboundConsumingHandler {
         private final SslHandler sslHandler;
         private Future<Channel> handshakeFuture;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
@@ -160,7 +160,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
             for (int i = 0; i < msgs.size(); i ++) {
                 String msg = (String) msgs.get(i);
                 if ("StartTlsResponse".equals(msg)) {
@@ -175,7 +175,6 @@ public class SocketStartTlsTest extends AbstractSocketTest {
                 assertTrue(handshakeFuture.isSuccess());
                 ctx.close();
             }
-            msgs.releaseAllAndRecycle();
         }
 
         @Override
@@ -190,7 +189,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
     }
 
-    private class StartTlsServerHandler extends ChannelInboundHandlerAdapter {
+    private class StartTlsServerHandler extends ChannelInboundConsumingHandler {
         private final SslHandler sslHandler;
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
@@ -206,7 +205,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
             for (int i = 0; i < msgs.size(); i ++) {
                String msg = (String) msgs.get(i);
                if ("StartTlsRequest".equals(msg)) {
@@ -218,7 +217,6 @@ public class SocketStartTlsTest extends AbstractSocketTest {
                assertEquals("EncryptedRequest", msg);
                ctx.write("EncryptedResponse\n");
             }
-            msgs.releaseAllAndRecycle();
         }
 
         @Override

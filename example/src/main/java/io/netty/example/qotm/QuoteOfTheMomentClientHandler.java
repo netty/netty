@@ -16,15 +16,15 @@
 package io.netty.example.qotm;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.MessageList;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.CharsetUtil;
 
-public class QuoteOfTheMomentClientHandler extends ChannelInboundHandlerAdapter {
+public class QuoteOfTheMomentClientHandler extends ChannelInboundConsumingHandler {
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+    public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
         MessageList<DatagramPacket> packets = msgs.cast();
         for (int i = 0; i < packets.size(); i++) {
             String response = packets.get(i).content().toString(CharsetUtil.UTF_8);
@@ -33,7 +33,6 @@ public class QuoteOfTheMomentClientHandler extends ChannelInboundHandlerAdapter 
                 ctx.close();
             }
         }
-        msgs.releaseAllAndRecycle();
     }
 
     @Override

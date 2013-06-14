@@ -19,7 +19,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.MessageList;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
@@ -98,14 +98,14 @@ import static io.netty.handler.codec.http.HttpVersion.*;
  *
  * </pre>
  */
-public class HttpStaticFileServerHandler extends ChannelInboundHandlerAdapter {
+public class HttpStaticFileServerHandler extends ChannelInboundConsumingHandler {
 
     public static final String HTTP_DATE_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz";
     public static final String HTTP_DATE_GMT_TIMEZONE = "GMT";
     public static final int HTTP_CACHE_SECONDS = 60;
 
     @Override
-    public void messageReceived(
+    public void consume(
             ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
         MessageList<FullHttpRequest> requests = msgs.cast();
         for (int i = 0; i < requests.size(); i++) {
@@ -195,7 +195,6 @@ public class HttpStaticFileServerHandler extends ChannelInboundHandlerAdapter {
                 writeFuture.addListener(ChannelFutureListener.CLOSE);
             }
         }
-        msgs.releaseAllAndRecycle();
     }
 
     @Override

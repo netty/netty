@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageList;
 import io.netty.channel.socket.DatagramChannel;
@@ -44,11 +44,10 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
     public void testMulticast(Bootstrap sb, Bootstrap cb) throws Throwable {
         MulticastTestHandler mhandler = new MulticastTestHandler();
 
-        sb.handler(new ChannelInboundHandlerAdapter() {
+        sb.handler(new ChannelInboundConsumingHandler() {
             @Override
-            public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            protected void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
                 // Nothing will be sent.
-                msgs.releaseAllAndRecycle();
             }
         });
 
@@ -92,20 +91,19 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         cc.close().awaitUninterruptibly();
     }
 
-    private static final class MulticastTestHandler extends ChannelInboundHandlerAdapter {
+    private static final class MulticastTestHandler extends ChannelInboundConsumingHandler {
         private final CountDownLatch latch = new CountDownLatch(1);
 
         private boolean done;
         private volatile boolean fail;
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        protected void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
             if (done || msgs.size() != 1) {
                 fail = true;
             }
 
             assertEquals(1, ((DatagramPacket) msgs.get(0)).content().readInt());
-            msgs.releaseAllAndRecycle();
 
             latch.countDown();
 

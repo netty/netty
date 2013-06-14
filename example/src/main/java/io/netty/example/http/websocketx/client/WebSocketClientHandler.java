@@ -40,7 +40,7 @@ package io.netty.example.http.websocketx.client;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.MessageList;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -51,7 +51,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.util.CharsetUtil;
 
-public class WebSocketClientHandler extends ChannelInboundHandlerAdapter {
+public class WebSocketClientHandler extends ChannelInboundConsumingHandler {
 
     private final WebSocketClientHandshaker handshaker;
     private ChannelPromise handshakeFuture;
@@ -80,7 +80,7 @@ public class WebSocketClientHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+    public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
         for (int i = 0; i < msgs.size(); i++) {
             Object msg = msgs.get(i);
             Channel ch = ctx.channel();

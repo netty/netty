@@ -16,7 +16,7 @@
 package io.netty.example.http.snoop;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.MessageList;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -24,10 +24,10 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
 
-public class HttpSnoopClientHandler extends ChannelInboundHandlerAdapter {
+public class HttpSnoopClientHandler extends ChannelInboundConsumingHandler {
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+    public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
         for (int i = 0; i < msgs.size(); i++) {
             Object msg = msgs.get(i);
             if (msg instanceof HttpResponse) {
@@ -63,7 +63,6 @@ public class HttpSnoopClientHandler extends ChannelInboundHandlerAdapter {
                 }
             }
         }
-        msgs.releaseAllAndRecycle();
     }
 
     @Override

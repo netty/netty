@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.MessageList;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -31,12 +31,12 @@ import static io.netty.handler.codec.http.HttpHeaders.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 
-public class HttpHelloWorldServerHandler extends ChannelInboundHandlerAdapter {
+public class HttpHelloWorldServerHandler extends ChannelInboundConsumingHandler {
     private static final ByteBuf CONTENT =
             Unpooled.unreleasableBuffer(Unpooled.copiedBuffer("Hello World", CharsetUtil.US_ASCII));
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+    public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
         MessageList<Object> out = MessageList.newInstance();
         int size = msgs.size();
         for (int i = 0; i < size; i++) {
@@ -63,7 +63,6 @@ public class HttpHelloWorldServerHandler extends ChannelInboundHandlerAdapter {
             }
         }
         ctx.write(out);
-        msgs.releaseAllAndRecycle();
     }
 
     @Override

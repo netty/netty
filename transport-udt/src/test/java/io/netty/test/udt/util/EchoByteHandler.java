@@ -70,7 +70,6 @@ public class EchoByteHandler extends ChannelInboundHandlerAdapter {
             if (meter != null) {
                 meter.mark(buf.readableBytes());
             }
-            buf.retain();
         }
         ctx.write(msgs);
     }

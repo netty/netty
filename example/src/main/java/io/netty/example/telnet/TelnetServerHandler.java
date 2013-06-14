@@ -19,6 +19,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.MessageList;
 
@@ -31,7 +32,7 @@ import java.util.logging.Logger;
  * Handles a server-side channel.
  */
 @Sharable
-public class TelnetServerHandler extends ChannelInboundHandlerAdapter {
+public class TelnetServerHandler extends ChannelInboundConsumingHandler {
 
     private static final Logger logger = Logger.getLogger(
             TelnetServerHandler.class.getName());
@@ -45,7 +46,7 @@ public class TelnetServerHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+    public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
         MessageList<String> requests = msgs.cast();
         for (int i = 0; i < requests.size(); i++) {
             String request = requests.get(i);
@@ -72,7 +73,6 @@ public class TelnetServerHandler extends ChannelInboundHandlerAdapter {
                 future.addListener(ChannelFutureListener.CLOSE);
             }
         }
-        msgs.releaseAllAndRecycle();
     }
 
     @Override

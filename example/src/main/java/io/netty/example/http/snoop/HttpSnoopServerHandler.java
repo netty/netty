@@ -18,7 +18,7 @@ package io.netty.example.http.snoop;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.MessageList;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.Cookie;
@@ -44,14 +44,14 @@ import static io.netty.handler.codec.http.HttpHeaders.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 
-public class HttpSnoopServerHandler extends ChannelInboundHandlerAdapter {
+public class HttpSnoopServerHandler extends ChannelInboundConsumingHandler {
 
     private HttpRequest request;
     /** Buffer that stores the response content */
     private final StringBuilder buf = new StringBuilder();
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+    public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
         MessageList<Object> out = MessageList.newInstance();
         int size = msgs.size();
         try {
@@ -61,7 +61,6 @@ public class HttpSnoopServerHandler extends ChannelInboundHandlerAdapter {
                 }
             }
         } finally {
-            msgs.releaseAllAndRecycle();
             ctx.write(out);
         }
     }
@@ -134,7 +133,7 @@ public class HttpSnoopServerHandler extends ChannelInboundHandlerAdapter {
                     buf.append("\r\n");
                 }
 
-                return writeResponse(ctx, trailer, out);
+                return writeResponse(trailer, out);
             }
         }
         return true;
@@ -151,7 +150,7 @@ public class HttpSnoopServerHandler extends ChannelInboundHandlerAdapter {
         buf.append("\r\n");
     }
 
-    private boolean writeResponse(ChannelHandlerContext ctx, HttpObject currentObj, MessageList<Object> out) {
+    private boolean writeResponse(HttpObject currentObj, MessageList<Object> out) {
         // Decide whether to close the connection or not.
         boolean keepAlive = isKeepAlive(request);
         // Build the response object.

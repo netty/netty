@@ -18,7 +18,7 @@ package io.netty.example.filetransfer;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultFileRegion;
@@ -92,9 +92,9 @@ public class FileServer {
         new FileServer(port).run();
     }
 
-    private static final class FileHandler extends ChannelInboundHandlerAdapter {
+    private static final class FileHandler extends ChannelInboundConsumingHandler {
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> messages) throws Exception {
+        public void consume(ChannelHandlerContext ctx, MessageList<Object> messages) throws Exception {
             MessageList<String> msgs = messages.cast();
             MessageList<Object> out = MessageList.newInstance();
 
@@ -115,7 +115,6 @@ public class FileServer {
                 }
             }
 
-            msgs.recycle();
             ctx.write(out);
         }
 
