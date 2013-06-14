@@ -17,9 +17,9 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.Signal;
 import io.netty.util.internal.PlatformDependent;
 
@@ -74,49 +74,50 @@ public final class MessageList<T> implements Iterable<T> {
     }
 
     /**
-     * Call {@link ByteBufUtil#retain(Object)} on all messages in this {@link MessageList} and return itself.
+     * Call {@link ReferenceCountUtil#retain(Object)} on all messages in this {@link MessageList} and return itself.
      */
     public MessageList<T> retainAll() {
         int size = this.size;
         for (int i = 0; i < size; i ++) {
-            ByteBufUtil.retain(elements[i]);
+            ReferenceCountUtil.retain(elements[i]);
         }
         return this;
     }
 
     /**
-     * Call {@link ByteBufUtil#retain(Object), int} on all messages in this {@link MessageList} and return itself.
+     * Call {@link ReferenceCountUtil#retain(Object), int} on all messages in this {@link MessageList} and return
+     * itself.
      */
     public MessageList<T> retainAll(int increment) {
         int size = this.size;
         for (int i = 0; i < size; i ++) {
-            ByteBufUtil.retain(elements[i], increment);
+            ReferenceCountUtil.retain(elements[i], increment);
         }
         return this;
     }
 
     /**
-     * Call {@link ByteBufUtil#release(Object)} on all messages in this {@link MessageList} and return {@code true}
-     * if all messages were released.
+     * Call {@link ReferenceCountUtil#release(Object)} on all messages in this {@link MessageList} and return
+     * {@code true} if all messages were released.
      */
     public boolean releaseAll() {
         boolean releasedAll = true;
         int size = this.size;
         for (int i = 0; i < size; i++) {
-            releasedAll &= ByteBufUtil.release(elements[i]);
+            releasedAll &= ReferenceCountUtil.release(elements[i]);
         }
         return releasedAll;
     }
 
     /**
-     * Call {@link ByteBufUtil#release(Object, int)} on all messages in this {@link MessageList} and return
+     * Call {@link ReferenceCountUtil#release(Object, int)} on all messages in this {@link MessageList} and return
      * {@code true} if all messages were released.
      */
     public boolean releaseAll(int decrement) {
         boolean releasedAll = true;
         int size = this.size;
         for (int i = 0; i < size; i++) {
-            releasedAll &= ByteBufUtil.release(elements[i], decrement);
+            releasedAll &= ReferenceCountUtil.release(elements[i], decrement);
         }
         return releasedAll;
     }

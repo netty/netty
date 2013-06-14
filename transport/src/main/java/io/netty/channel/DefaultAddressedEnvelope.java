@@ -16,7 +16,7 @@
 
 package io.netty.channel;
 
-import io.netty.buffer.ByteBufUtil;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.StringUtil;
 
@@ -82,24 +82,24 @@ public class DefaultAddressedEnvelope<M, A extends SocketAddress> implements Add
 
     @Override
     public AddressedEnvelope<M, A> retain() {
-        ByteBufUtil.retain(message);
+        ReferenceCountUtil.retain(message);
         return this;
     }
 
     @Override
     public AddressedEnvelope<M, A> retain(int increment) {
-        ByteBufUtil.retain(message, increment);
+        ReferenceCountUtil.retain(message, increment);
         return this;
     }
 
     @Override
     public boolean release() {
-        return ByteBufUtil.release(message);
+        return ReferenceCountUtil.release(message);
     }
 
     @Override
     public boolean release(int decrement) {
-        return ByteBufUtil.release(message, decrement);
+        return ReferenceCountUtil.release(message, decrement);
     }
 
     @Override
