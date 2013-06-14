@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.NotYetConnectedException;
 import java.util.Random;
 import java.util.concurrent.ConcurrentMap;
 
@@ -671,7 +672,20 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             inFlushNow = true;
+
             final ChannelOutboundBuffer outboundBuffer = AbstractChannel.this.outboundBuffer;
+
+            // Mark all pending write requests as failure if the channel is inactive.
+            if (!isActive()) {
+                if (isOpen()) {
+                    outboundBuffer.fail(new NotYetConnectedException());
+                } else {
+                    outboundBuffer.fail(new ClosedChannelException());
+                }
+                inFlushNow = false;
+                return;
+            }
+
             try {
                 for (;;) {
                     ChannelPromise promise = outboundBuffer.currentPromise;
