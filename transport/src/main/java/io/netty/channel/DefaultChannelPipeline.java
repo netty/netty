@@ -316,14 +316,14 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         synchronized (this) {
             if (!ctx.channel().isRegistered() || ctx.executor().inEventLoop()) {
-                remove0(ctx, false);
+                remove0(ctx);
                 return ctx;
             } else {
                future = ctx.executor().submit(new Runnable() {
                    @Override
                    public void run() {
                        synchronized (DefaultChannelPipeline.this) {
-                           remove0(ctx, false);
+                           remove0(ctx);
                        }
                    }
                });
@@ -339,13 +339,13 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         return context;
     }
 
-    void remove0(DefaultChannelHandlerContext ctx, boolean tearDown) {
+    void remove0(DefaultChannelHandlerContext ctx) {
         DefaultChannelHandlerContext prev = ctx.prev;
         DefaultChannelHandlerContext next = ctx.next;
         prev.next = next;
         next.prev = prev;
         name2ctx.remove(ctx.name());
-        callHandlerRemoved(ctx, tearDown);
+        callHandlerRemoved(ctx);
     }
 
     @Override
@@ -450,7 +450,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         // because callHandlerRemoved() will trigger inboundBufferUpdated() or flush() on newHandler and those
         // event handlers must be called after handlerAdded().
         callHandlerAdded(newCtx);
-        callHandlerRemoved(oldCtx, false);
+        callHandlerRemoved(oldCtx);
     }
 
     private static void checkMultiplicity(ChannelHandlerContext ctx) {
@@ -505,26 +505,24 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private void callHandlerRemoved(final DefaultChannelHandlerContext ctx, final boolean tearDown) {
+    private void callHandlerRemoved(final DefaultChannelHandlerContext ctx) {
         if (ctx.channel().isRegistered() && !ctx.executor().inEventLoop()) {
             ctx.executor().execute(new Runnable() {
                 @Override
                 public void run() {
-                    callHandlerRemoved0(ctx, tearDown);
+                    callHandlerRemoved0(ctx);
                 }
             });
             return;
         }
-        callHandlerRemoved0(ctx, tearDown);
+        callHandlerRemoved0(ctx);
     }
 
-    private void callHandlerRemoved0(final DefaultChannelHandlerContext ctx, boolean tearDown) {
+    private void callHandlerRemoved0(final DefaultChannelHandlerContext ctx) {
         // Notify the complete removal.
         try {
             ctx.handler().handlerRemoved(ctx);
-            if (!tearDown) {
-                ctx.setRemoved();
-            }
+            ctx.setRemoved();
         } catch (Throwable t) {
             fireExceptionCaught(new ChannelPipelineException(
                     ctx.handler().getClass().getName() + ".handlerRemoved() has thrown an exception.", t));
