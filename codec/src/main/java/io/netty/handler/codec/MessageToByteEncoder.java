@@ -80,6 +80,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
                 if (ctx.isRemoved()) {
                     if (buf != null && buf.isReadable())  {
                         out.add(buf);
+                        buf = null;
                     }
                     out.add(msgs, i, size - i);
                     break;
@@ -110,11 +111,9 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
                 }
             }
 
-            if (buf != null) {
-                if (buf.isReadable()) {
-                    out.add(buf);
-                    buf = null;
-                }
+            if (buf != null && buf.isReadable()) {
+                out.add(buf);
+                buf = null;
             }
 
             success = true;
