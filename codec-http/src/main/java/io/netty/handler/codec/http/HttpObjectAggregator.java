@@ -16,7 +16,6 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
@@ -27,6 +26,7 @@ import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 
 import static io.netty.handler.codec.http.HttpHeaders.*;
 
@@ -129,7 +129,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             if (!m.getDecoderResult().isSuccess()) {
                 removeTransferEncodingChunked(m);
                 this.currentMessage = null;
-                out.add(ByteBufUtil.retain(m));
+                out.add(ReferenceCountUtil.retain(m));
                 return;
             }
             if (msg instanceof HttpRequest) {

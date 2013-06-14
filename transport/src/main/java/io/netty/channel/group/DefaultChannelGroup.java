@@ -15,12 +15,12 @@
  */
 package io.netty.channel.group;
 
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.MessageList;
 import io.netty.channel.ServerChannel;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.PlatformDependent;
 
@@ -216,11 +216,11 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
         Map<Integer, ChannelFuture> futures = new LinkedHashMap<Integer, ChannelFuture>(size());
         for (Channel c: nonServerChannels.values()) {
-            ByteBufUtil.retain(message);
+            ReferenceCountUtil.retain(message);
             futures.put(c.id(), c.write(message));
         }
 
-        ByteBufUtil.release(message);
+        ReferenceCountUtil.release(message);
         return new DefaultChannelGroupFuture(this, futures, executor);
     }
 

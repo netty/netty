@@ -15,11 +15,11 @@
  */
 package io.netty.handler.codec.spdy;
 
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.MessageList;
 import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.handler.codec.http.HttpMessage;
+import io.netty.util.ReferenceCountUtil;
 
 import java.util.LinkedList;
 import java.util.Queue;
@@ -46,7 +46,7 @@ public class SpdyHttpResponseStreamIdHandler extends
             SpdyHttpHeaders.setStreamId(msg, id);
         }
 
-        out.add(ByteBufUtil.retain(msg));
+        out.add(ReferenceCountUtil.retain(msg));
     }
 
     @Override
@@ -62,6 +62,6 @@ public class SpdyHttpResponseStreamIdHandler extends
             ids.remove(((SpdyRstStreamFrame) msg).getStreamId());
         }
 
-        out.add(ByteBufUtil.retain(msg));
+        out.add(ReferenceCountUtil.retain(msg));
     }
 }

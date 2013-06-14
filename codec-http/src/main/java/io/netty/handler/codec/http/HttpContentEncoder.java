@@ -17,7 +17,6 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.MessageList;
@@ -25,6 +24,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpHeaders.Values;
+import io.netty.util.ReferenceCountUtil;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -77,7 +77,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
             acceptedEncoding = HttpHeaders.Values.IDENTITY;
         }
         acceptEncodingQueue.add(acceptedEncoding);
-        out.add(ByteBufUtil.retain(msg));
+        out.add(ReferenceCountUtil.retain(msg));
     }
 
     @Override
@@ -92,7 +92,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
 
                 if (res.getStatus().code() == 100) {
                     if (isFull) {
-                        out.add(ByteBufUtil.retain(res));
+                        out.add(ReferenceCountUtil.retain(res));
                     } else {
                         out.add(res);
                         // Pass through all following contents.
@@ -113,7 +113,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                         // Set the content length to 0.
                         res.headers().remove(Names.TRANSFER_ENCODING);
                         res.headers().set(Names.CONTENT_LENGTH, "0");
-                        out.add(ByteBufUtil.retain(res));
+                        out.add(ReferenceCountUtil.retain(res));
                         break;
                     }
                 }
@@ -127,7 +127,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                         // As an unchunked response
                         res.headers().remove(Names.TRANSFER_ENCODING);
                         res.headers().set(Names.CONTENT_LENGTH, ((ByteBufHolder) res).content().readableBytes());
-                        out.add(ByteBufUtil.retain(res));
+                        out.add(ReferenceCountUtil.retain(res));
                     } else {
                         // As a chunked response
                         res.headers().remove(Names.CONTENT_LENGTH);
@@ -172,7 +172,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
             }
             case PASS_THROUGH: {
                 ensureContent(msg);
-                out.add(ByteBufUtil.retain(msg));
+                out.add(ReferenceCountUtil.retain(msg));
                 // Passed through all following contents of the current response.
                 if (msg instanceof LastHttpContent) {
                     state = State.AWAIT_HEADERS;

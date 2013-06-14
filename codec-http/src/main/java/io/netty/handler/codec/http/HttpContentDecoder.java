@@ -17,12 +17,12 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.MessageList;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.MessageToMessageDecoder;
+import io.netty.util.ReferenceCountUtil;
 
 /**
  * Decodes the content of the received {@link HttpRequest} and {@link HttpContent}.
@@ -58,7 +58,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                 continueResponse = true;
             }
             // 100-continue response must be passed through.
-            out.add(ByteBufUtil.retain(msg));
+            out.add(ReferenceCountUtil.retain(msg));
             return;
         }
 
@@ -67,7 +67,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                 continueResponse = false;
             }
             // 100-continue response must be passed through.
-            out.add(ByteBufUtil.retain(msg));
+            out.add(ReferenceCountUtil.retain(msg));
             return;
         }
 

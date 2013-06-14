@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 
 import java.nio.ByteBuffer;
@@ -45,47 +46,47 @@ public final class ByteBufUtil {
     /**
      * Try to call {@link ReferenceCounted#retain()} if the specified message implements {@link ReferenceCounted}.
      * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.
+     *
+     * @deprecated use {@link ReferenceCountUtil#retain(Object)}
      */
     @SuppressWarnings("unchecked")
+    @Deprecated
     public static <T> T retain(T msg) {
-        if (msg instanceof ReferenceCounted) {
-            return (T) ((ReferenceCounted) msg).retain();
-        }
-        return msg;
+        return ReferenceCountUtil.retain(msg);
     }
 
     /**
      * Try to call {@link ReferenceCounted#retain()} if the specified message implements {@link ReferenceCounted}.
      * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.
+     *
+     * @deprecated use {@link ReferenceCountUtil#retain(Object, int)}
      */
     @SuppressWarnings("unchecked")
+    @Deprecated
     public static <T> T retain(T msg, int increment) {
-        if (msg instanceof ReferenceCounted) {
-            return (T) ((ReferenceCounted) msg).retain(increment);
-        }
-        return msg;
+        return ReferenceCountUtil.retain(msg, increment);
     }
 
     /**
      * Try to call {@link ReferenceCounted#release()} if the specified message implements {@link ReferenceCounted}.
      * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.
+     *
+     * @deprecated use {@link ReferenceCountUtil#release(Object)}
      */
+    @Deprecated
     public static boolean release(Object msg) {
-        if (msg instanceof ReferenceCounted) {
-            return ((ReferenceCounted) msg).release();
-        }
-        return false;
+        return ReferenceCountUtil.release(msg);
     }
 
     /**
      * Try to call {@link ReferenceCounted#release()} if the specified message implements {@link ReferenceCounted}.
      * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.
+     *
+     * @deprecated use {@link ReferenceCountUtil#release(Object, int)}
      */
+    @Deprecated
     public static boolean release(Object msg, int decrement) {
-        if (msg instanceof ReferenceCounted) {
-            return ((ReferenceCounted) msg).release(decrement);
-        }
-        return false;
+        return ReferenceCountUtil.release(msg, decrement);
     }
 
     /**
