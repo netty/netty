@@ -15,7 +15,6 @@
  */
 package io.netty.channel.socket.oio;
 
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.MessageList;
@@ -185,10 +184,6 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
 
     @Override
     protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
-        int size = msgs.size();
-        for (int i = index; i < size; i ++) {
-            ByteBufUtil.release(msgs.get(i));
-        }
         throw new UnsupportedOperationException();
     }
 
