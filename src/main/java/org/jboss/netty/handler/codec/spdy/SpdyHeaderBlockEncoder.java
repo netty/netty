@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -18,21 +18,20 @@ package org.jboss.netty.handler.codec.spdy;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.util.internal.DetectionUtil;
 
-abstract class SpdyHeaderBlockCompressor {
+abstract class SpdyHeaderBlockEncoder {
 
-    static SpdyHeaderBlockCompressor newInstance(
+    static SpdyHeaderBlockEncoder newInstance(
             int version, int compressionLevel, int windowBits, int memLevel) {
 
         if (DetectionUtil.javaVersion() >= 7) {
-            return new SpdyHeaderBlockZlibCompressor(
+            return new SpdyHeaderBlockZlibEncoder(
                     version, compressionLevel);
         } else {
-            return new SpdyHeaderBlockJZlibCompressor(
+            return new SpdyHeaderBlockJZlibEncoder(
                     version, compressionLevel, windowBits, memLevel);
         }
     }
 
-    abstract void setInput(ChannelBuffer decompressed);
-    abstract void encode(ChannelBuffer compressed);
+    abstract ChannelBuffer encode(SpdyHeadersFrame frame) throws Exception;
     abstract void end();
 }
