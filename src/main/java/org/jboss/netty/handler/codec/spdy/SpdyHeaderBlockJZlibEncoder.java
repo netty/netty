@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -18,20 +18,20 @@ package org.jboss.netty.handler.codec.spdy;
 import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.compression.CompressionException;
 import org.jboss.netty.util.internal.jzlib.JZlib;
 import org.jboss.netty.util.internal.jzlib.ZStream;
 
-class SpdyHeaderBlockJZlibCompressor extends SpdyHeaderBlockCompressor {
+class SpdyHeaderBlockJZlibEncoder extends SpdyHeaderBlockRawEncoder {
 
     private final ZStream z = new ZStream();
 
-    public SpdyHeaderBlockJZlibCompressor(
+    private boolean finished;
+
+    public SpdyHeaderBlockJZlibEncoder(
             int version, int compressionLevel, int windowBits, int memLevel) {
-        if (version < SPDY_MIN_VERSION || version > SPDY_MAX_VERSION) {
-            throw new IllegalArgumentException(
-                    "unsupported version: " + version);
-        }
+        super(version);
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
@@ -63,8 +63,7 @@ class SpdyHeaderBlockJZlibCompressor extends SpdyHeaderBlockCompressor {
         }
     }
 
-    @Override
-    public void setInput(ChannelBuffer decompressed) {
+    private void setInput(ChannelBuffer decompressed) {
         byte[] in = new byte[decompressed.readableBytes()];
         decompressed.readBytes(in);
         z.next_in = in;
@@ -72,8 +71,7 @@ class SpdyHeaderBlockJZlibCompressor extends SpdyHeaderBlockCompressor {
         z.avail_in = in.length;
     }
 
-    @Override
-    public void encode(ChannelBuffer compressed) {
+    private void encode(ChannelBuffer compressed) {
         try {
             byte[] out = new byte[(int) Math.ceil(z.next_in.length * 1.001) + 12];
             z.next_out = out;
@@ -99,7 +97,29 @@ class SpdyHeaderBlockJZlibCompressor extends SpdyHeaderBlockCompressor {
     }
 
     @Override
-    public void end() {
+    public synchronized ChannelBuffer encode(SpdyHeadersFrame frame) throws Exception {
+        if (frame == null) {
+            throw new IllegalArgumentException("frame");
+        }
+
+        if (finished) {
+            throw new IllegalAccessException("compressor closed");
+        }
+
+        ChannelBuffer decompressed = super.encode(frame);
+        if (decompressed.readableBytes() == 0) {
+            return ChannelBuffers.EMPTY_BUFFER;
+        }
+
+        ChannelBuffer compressed = ChannelBuffers.dynamicBuffer();
+        setInput(decompressed);
+        encode(compressed);
+        return compressed;
+    }
+
+    @Override
+    public synchronized void end() {
+        finished = true;
         z.deflateEnd();
         z.next_in = null;
         z.next_out = null;

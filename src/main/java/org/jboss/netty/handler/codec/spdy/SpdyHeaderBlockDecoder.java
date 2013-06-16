@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,13 +17,13 @@ package org.jboss.netty.handler.codec.spdy;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 
-abstract class SpdyHeaderBlockDecompressor {
+abstract class SpdyHeaderBlockDecoder {
 
-    static SpdyHeaderBlockDecompressor newInstance(int version) {
-        return new SpdyHeaderBlockZlibDecompressor(version);
+    static SpdyHeaderBlockDecoder newInstance(int version, int maxHeaderSize) {
+        return new SpdyHeaderBlockZlibDecoder(version, maxHeaderSize);
     }
 
-    abstract void setInput(ChannelBuffer compressed);
-    abstract int decode(ChannelBuffer decompressed) throws Exception;
+    abstract void decode(ChannelBuffer encoded, SpdyHeadersFrame frame) throws Exception;
+    abstract void reset();
     abstract void end();
 }
