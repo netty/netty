@@ -220,7 +220,7 @@ final class ChannelOutboundBuffer {
         }
 
         do {
-            if (!currentPromise.tryFailure(cause)) {
+            if (!(currentPromise instanceof VoidChannelPromise) && !currentPromise.tryFailure(cause)) {
                 logger.warn("Promise done already:", cause);
             }
 
