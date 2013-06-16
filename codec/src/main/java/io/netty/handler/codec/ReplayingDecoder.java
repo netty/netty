@@ -101,12 +101,12 @@ import io.netty.util.internal.StringUtil;
  * <li>You must keep in mind that {@code decode(..)} method can be called many
  *     times to decode a single message.  For example, the following code will
  *     not work:
- * <pre> public class MyDecoder extends {@link ReplayingDecoder}&lt;{@link Integer}, {@link Void}&gt; {
+ * <pre> public class MyDecoder extends {@link ReplayingDecoder}&lt;{@link Void}&gt; {
  *
  *   private final Queue&lt;Integer&gt; values = new LinkedList&lt;Integer&gt;();
  *
  *   {@code @Override}
- *   public {@link Integer} decode(.., {@link ByteBuf} in) throws Exception {
+ *   public void decode(.., {@link ByteBuf} in, {@link MessageList} out) throws Exception {
  *
  *     // A message contains 2 integers.
  *     values.offer(buffer.readInt());
@@ -115,18 +115,18 @@ import io.netty.util.internal.StringUtil;
  *     // This assertion will fail intermittently since values.offer()
  *     // can be called more than two times!
  *     assert values.size() == 2;
- *     return values.poll() + values.poll();
+ *     out.add(values.poll() + values.poll());
  *   }
  * }</pre>
  *      The correct implementation looks like the following, and you can also
  *      utilize the 'checkpoint' feature which is explained in detail in the
  *      next section.
- * <pre> public class MyDecoder extends {@link ReplayingDecoder}&lt;{@link Integer}, {@link Void}&gt; {
+ * <pre> public class MyDecoder extends {@link ReplayingDecoder}&lt;{@link Void}&gt; {
  *
  *   private final Queue&lt;Integer&gt; values = new LinkedList&lt;Integer&gt;();
  *
  *   {@code @Override}
- *   public {@link Integer} decode(.., {@link ByteBuf} buffer) throws Exception {
+ *   public void decode(.., {@link ByteBuf} buffer, {@link MessageList} out) throws Exception {
  *
  *     // Revert the state of the variable that might have been changed
  *     // since the last partial decode.
@@ -138,7 +138,7 @@ import io.netty.util.internal.StringUtil;
  *
  *     // Now we know this assertion will never fail.
  *     assert values.size() == 2;
- *     return values.poll() + values.poll();
+ *     out.add(values.poll() + values.poll());
  *   }
  * }</pre>
  *     </li>
@@ -178,8 +178,8 @@ import io.netty.util.internal.StringUtil;
  *   }
  *
  *   {@code @Override}
- *   protected {@link Object} decode({@link ChannelHandlerContext} ctx,
- *                           {@link ByteBuf} in) throws Exception {
+ *   protected void decode({@link ChannelHandlerContext} ctx,
+ *                           {@link ByteBuf} in, {@link MessageList} out) throws Exception {
  *     switch (state()) {
  *     case READ_LENGTH:
  *       length = buf.readInt();
@@ -187,7 +187,7 @@ import io.netty.util.internal.StringUtil;
  *     case READ_CONTENT:
  *       ByteBuf frame = buf.readBytes(length);
  *       <strong>checkpoint(MyDecoderState.READ_LENGTH);</strong>
- *       return frame;
+ *       out.add(frame);
  *     default:
  *       throw new Error("Shouldn't reach here.");
  *     }
@@ -206,8 +206,8 @@ import io.netty.util.internal.StringUtil;
  *   private int length;
  *
  *   {@code @Override}
- *   protected {@link Object} decode({@link ChannelHandlerContext} ctx,
- *                           {@link ByteBuf} in) throws Exception {
+ *   protected void decode({@link ChannelHandlerContext} ctx,
+ *                           {@link ByteBuf} in, {@link MessageList} out) throws Exception {
  *     if (!readLength) {
  *       length = buf.readInt();
  *       <strong>readLength = true;</strong>
@@ -218,7 +218,7 @@ import io.netty.util.internal.StringUtil;
  *       ByteBuf frame = buf.readBytes(length);
  *       <strong>readLength = false;</strong>
  *       <strong>checkpoint();</strong>
- *       return frame;
+ *       out.add(frame);
  *     }
  *   }
  * }
@@ -238,7 +238,7 @@ import io.netty.util.internal.StringUtil;
  *
  *     {@code @Override}
  *     protected Object decode({@link ChannelHandlerContext} ctx,
- *                             {@link ByteBuf} in) {
+ *                             {@link ByteBuf} in, {@link MessageList} out) {
  *         ...
  *         // Decode the first message
  *         Object firstMessage = ...;
@@ -246,16 +246,16 @@ import io.netty.util.internal.StringUtil;
  *         // Add the second decoder
  *         ctx.pipeline().addLast("second", new SecondDecoder());
  *
- *         // Remove the first decoder (me)
- *         ctx.pipeline().remove(this);
- *
  *         if (buf.isReadable()) {
  *             // Hand off the remaining data to the second decoder
- *             return new Object[] { firstMessage, buf.readBytes(<b>super.actualReadableBytes()</b>) };
+ *             out.add(firstMessage);
+ *             out.add(buf.readBytes(<b>super.actualReadableBytes()</b>));
  *         } else {
  *             // Nothing to hand off
- *             return firstMessage;
+ *             out.add(firstMessage);
  *         }
+ *         // Remove the first decoder (me)
+ *         ctx.pipeline().remove(this);
  *     }
  * </pre>
  * @param <S>
