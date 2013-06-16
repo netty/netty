@@ -65,7 +65,6 @@ public class DiscardClientHandler extends ChannelInboundConsumingHandler {
     @Override
     public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
         // Server is supposed to send nothing, but if it sends something, discard it.
-        msgs.releaseAllAndRecycle();
     }
 
     @Override

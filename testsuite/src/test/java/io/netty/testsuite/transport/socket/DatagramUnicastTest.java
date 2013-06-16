@@ -44,7 +44,6 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
             public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
                 assertEquals(1, msgs.size());
                 assertEquals(1, ((DatagramPacket) msgs.get(0)).content().readInt());
-                msgs.releaseAllAndRecycle();
                 latch.countDown();
             }
         });
