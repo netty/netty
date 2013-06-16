@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -20,17 +20,17 @@ import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
 import java.util.zip.Deflater;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 
-class SpdyHeaderBlockZlibCompressor extends SpdyHeaderBlockCompressor {
+class SpdyHeaderBlockZlibEncoder extends SpdyHeaderBlockRawEncoder {
 
     private final byte[] out = new byte[8192];
     private final Deflater compressor;
 
-    public SpdyHeaderBlockZlibCompressor(int version, int compressionLevel) {
-        if (version < SPDY_MIN_VERSION || version > SPDY_MAX_VERSION) {
-            throw new IllegalArgumentException(
-                    "unsupported version: " + version);
-        }
+    private boolean finished;
+
+    public SpdyHeaderBlockZlibEncoder(int version, int compressionLevel) {
+        super(version);
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
@@ -43,15 +43,13 @@ class SpdyHeaderBlockZlibCompressor extends SpdyHeaderBlockCompressor {
         }
     }
 
-    @Override
-    public void setInput(ChannelBuffer decompressed) {
+    private void setInput(ChannelBuffer decompressed) {
         byte[] in = new byte[decompressed.readableBytes()];
         decompressed.readBytes(in);
         compressor.setInput(in);
     }
 
-    @Override
-    public void encode(ChannelBuffer compressed) {
+    private void encode(ChannelBuffer compressed) {
         int numBytes = out.length;
         while (numBytes == out.length) {
             numBytes = compressor.deflate(out, 0, out.length, Deflater.SYNC_FLUSH);
@@ -60,7 +58,29 @@ class SpdyHeaderBlockZlibCompressor extends SpdyHeaderBlockCompressor {
     }
 
     @Override
-    public void end() {
+    public synchronized ChannelBuffer encode(SpdyHeadersFrame frame) throws Exception {
+        if (frame == null) {
+            throw new IllegalArgumentException("frame");
+        }
+        if (finished) {
+            throw new IllegalAccessException("compressor closed");
+        }
+
+        ChannelBuffer decompressed = super.encode(frame);
+        if (decompressed.readableBytes() == 0) {
+            return ChannelBuffers.EMPTY_BUFFER;
+        }
+
+        ChannelBuffer compressed = ChannelBuffers.dynamicBuffer();
+        setInput(decompressed);
+        encode(compressed);
+        return compressed;
+    }
+
+    @Override
+    public synchronized void end() {
+        finished = true;
         compressor.end();
+        super.end();
     }
 }

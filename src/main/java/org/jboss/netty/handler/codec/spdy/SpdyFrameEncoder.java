@@ -35,8 +35,7 @@ import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
 public class SpdyFrameEncoder implements ChannelDownstreamHandler {
 
     private final int version;
-    private volatile boolean finished;
-    private final SpdyHeaderBlockCompressor headerBlockCompressor;
+    private final SpdyHeaderBlockEncoder headerBlockEncoder;
 
     /**
      * Creates a new instance with the specified {@code version} and the
@@ -51,13 +50,17 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
      * Creates a new instance with the specified parameters.
      */
     public SpdyFrameEncoder(int version, int compressionLevel, int windowBits, int memLevel) {
+        this(version, SpdyHeaderBlockEncoder.newInstance(
+                version, compressionLevel, windowBits, memLevel));
+    }
+
+    protected SpdyFrameEncoder(int version, SpdyHeaderBlockEncoder headerBlockEncoder) {
         if (version < SPDY_MIN_VERSION || version > SPDY_MAX_VERSION) {
             throw new IllegalArgumentException(
                     "unknown version: " + version);
         }
         this.version = version;
-        headerBlockCompressor = SpdyHeaderBlockCompressor.newInstance(
-                version, compressionLevel, windowBits, memLevel);
+        this.headerBlockEncoder = headerBlockEncoder;
     }
 
     public void handleDownstream(
@@ -69,9 +72,8 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
             case CONNECTED:
             case BOUND:
                 if (Boolean.FALSE.equals(e.getValue()) || e.getValue() == null) {
-                    synchronized (headerBlockCompressor) {
-                        finished = true;
-                        headerBlockCompressor.end();
+                    synchronized (headerBlockEncoder) {
+                        headerBlockEncoder.end();
                     }
                 }
             }
@@ -102,10 +104,9 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
 
         if (msg instanceof SpdySynStreamFrame) {
 
-            synchronized (headerBlockCompressor) {
+            synchronized (headerBlockEncoder) {
                 SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
-                ChannelBuffer data = compressHeaderBlock(
-                        encodeHeaderBlock(version, spdySynStreamFrame));
+                ChannelBuffer data = headerBlockEncoder.encode(spdySynStreamFrame);
                 byte flags = spdySynStreamFrame.isLast() ? SPDY_FLAG_FIN : 0;
                 if (spdySynStreamFrame.isUnidirectional()) {
                     flags |= SPDY_FLAG_UNIDIRECTIONAL;
@@ -147,10 +148,9 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
 
         if (msg instanceof SpdySynReplyFrame) {
 
-            synchronized (headerBlockCompressor) {
+            synchronized (headerBlockEncoder) {
                 SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
-                ChannelBuffer data = compressHeaderBlock(
-                        encodeHeaderBlock(version, spdySynReplyFrame));
+                ChannelBuffer data = headerBlockEncoder.encode(spdySynReplyFrame);
                 byte flags = spdySynReplyFrame.isLast() ? SPDY_FLAG_FIN : 0;
                 int headerBlockLength = data.readableBytes();
                 int length;
@@ -268,10 +268,9 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
 
         if (msg instanceof SpdyHeadersFrame) {
 
-            synchronized (headerBlockCompressor) {
+            synchronized (headerBlockEncoder) {
                 SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
-                ChannelBuffer data = compressHeaderBlock(
-                        encodeHeaderBlock(version, spdyHeadersFrame));
+                ChannelBuffer data = headerBlockEncoder.encode(spdyHeadersFrame);
                 byte flags = spdyHeadersFrame.isLast() ? SPDY_FLAG_FIN : 0;
                 int headerBlockLength = data.readableBytes();
                 int length;
@@ -312,84 +311,5 @@ public class SpdyFrameEncoder implements ChannelDownstreamHandler {
 
         // Unknown message type
         ctx.sendDownstream(evt);
-    }
-
-    private static void writeLengthField(int version, ChannelBuffer buffer, int length) {
-        if (version < 3) {
-            buffer.writeShort(length);
-        } else {
-            buffer.writeInt(length);
-        }
-    }
-
-    private static void setLengthField(int version, ChannelBuffer buffer, int writerIndex, int length) {
-        if (version < 3) {
-            buffer.setShort(writerIndex, length);
-        } else {
-            buffer.setInt(writerIndex, length);
-        }
-    }
-
-    private static ChannelBuffer encodeHeaderBlock(int version, SpdyHeadersFrame headerFrame)
-            throws Exception {
-        Set<String> names = headerFrame.getHeaderNames();
-        int numHeaders = names.size();
-        if (numHeaders == 0) {
-            return ChannelBuffers.EMPTY_BUFFER;
-        }
-        if (numHeaders > SPDY_MAX_NV_LENGTH) {
-            throw new IllegalArgumentException(
-                    "header block contains too many headers");
-        }
-        ChannelBuffer headerBlock = ChannelBuffers.dynamicBuffer(
-                ByteOrder.BIG_ENDIAN, 256);
-        writeLengthField(version, headerBlock, numHeaders);
-        for (String name: names) {
-            byte[] nameBytes = name.getBytes("UTF-8");
-            writeLengthField(version, headerBlock, nameBytes.length);
-            headerBlock.writeBytes(nameBytes);
-            int savedIndex = headerBlock.writerIndex();
-            int valueLength = 0;
-            writeLengthField(version, headerBlock, valueLength);
-            for (String value: headerFrame.getHeaders(name)) {
-                byte[] valueBytes = value.getBytes("UTF-8");
-                if (valueBytes.length > 0) {
-                    headerBlock.writeBytes(valueBytes);
-                    headerBlock.writeByte(0);
-                    valueLength += valueBytes.length + 1;
-                }
-            }
-            if (valueLength == 0) {
-                if (version < 3) {
-                    throw new IllegalArgumentException(
-                            "header value cannot be empty: " + name);
-                }
-            } else {
-                valueLength --;
-            }
-            if (valueLength > SPDY_MAX_NV_LENGTH) {
-                throw new IllegalArgumentException(
-                        "header exceeds allowable length: " + name);
-            }
-            if (valueLength > 0) {
-                setLengthField(version, headerBlock, savedIndex, valueLength);
-                headerBlock.writerIndex(headerBlock.writerIndex() - 1);
-            }
-        }
-        return headerBlock;
-    }
-
-    // always called while synchronized on headerBlockCompressor
-    private ChannelBuffer compressHeaderBlock(ChannelBuffer uncompressed)
-            throws Exception {
-        if (uncompressed.readableBytes() == 0) {
-            return ChannelBuffers.EMPTY_BUFFER;
-        }
-        ChannelBuffer compressed = ChannelBuffers.dynamicBuffer();
-        if (!finished) {
-            headerBlockCompressor.setInput(uncompressed);
-            headerBlockCompressor.encode(compressed);
-        }
-        return compressed;
     }
 }
