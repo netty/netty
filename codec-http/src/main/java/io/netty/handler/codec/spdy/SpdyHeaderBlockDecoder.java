@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,13 +17,13 @@ package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
 
-abstract class SpdyHeaderBlockDecompressor {
+abstract class SpdyHeaderBlockDecoder {
 
-    static SpdyHeaderBlockDecompressor newInstance(int version) {
-        return new SpdyHeaderBlockZlibDecompressor(version);
+    static SpdyHeaderBlockDecoder newInstance(int version, int maxHeaderSize) {
+        return new SpdyHeaderBlockZlibDecoder(version, maxHeaderSize);
     }
 
-    abstract void setInput(ByteBuf compressed);
-    abstract int decode(ByteBuf decompressed) throws Exception;
+    abstract void decode(ByteBuf encoded, SpdyHeadersFrame frame) throws Exception;
+    abstract void reset();
     abstract void end();
 }
