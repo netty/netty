@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -20,18 +20,18 @@ import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 import com.jcraft.jzlib.Deflater;
 import com.jcraft.jzlib.JZlib;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.compression.CompressionException;
 
-class SpdyHeaderBlockJZlibCompressor extends SpdyHeaderBlockCompressor {
+class SpdyHeaderBlockJZlibEncoder extends SpdyHeaderBlockRawEncoder {
 
     private final Deflater z = new Deflater();
 
-    public SpdyHeaderBlockJZlibCompressor(
+    private boolean finished;
+
+    public SpdyHeaderBlockJZlibEncoder(
             int version, int compressionLevel, int windowBits, int memLevel) {
-        if (version < SpdyConstants.SPDY_MIN_VERSION || version > SpdyConstants.SPDY_MAX_VERSION) {
-            throw new IllegalArgumentException(
-                    "unsupported version: " + version);
-        }
+        super(version);
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
@@ -63,8 +63,7 @@ class SpdyHeaderBlockJZlibCompressor extends SpdyHeaderBlockCompressor {
         }
     }
 
-    @Override
-    public void setInput(ByteBuf decompressed) {
+    private void setInput(ByteBuf decompressed) {
         byte[] in = new byte[decompressed.readableBytes()];
         decompressed.readBytes(in);
         z.next_in = in;
@@ -72,8 +71,7 @@ class SpdyHeaderBlockJZlibCompressor extends SpdyHeaderBlockCompressor {
         z.avail_in = in.length;
     }
 
-    @Override
-    public void encode(ByteBuf compressed) {
+    private void encode(ByteBuf compressed) {
         try {
             byte[] out = new byte[(int) Math.ceil(z.next_in.length * 1.001) + 12];
             z.next_out = out;
@@ -99,7 +97,32 @@ class SpdyHeaderBlockJZlibCompressor extends SpdyHeaderBlockCompressor {
     }
 
     @Override
-    public void end() {
+    public synchronized ByteBuf encode(SpdyHeadersFrame frame) throws Exception {
+        if (frame == null) {
+            throw new IllegalArgumentException("frame");
+        }
+
+        if (finished) {
+            throw new IllegalAccessException("compressor closed");
+        }
+
+        ByteBuf decompressed = super.encode(frame);
+        if (decompressed.readableBytes() == 0) {
+            return Unpooled.EMPTY_BUFFER;
+        }
+
+        ByteBuf compressed = Unpooled.buffer();
+        setInput(decompressed);
+        encode(compressed);
+        return compressed;
+    }
+
+    @Override
+    public synchronized void end() {
+        if (finished) {
+            return;
+        }
+        finished = true;
         z.deflateEnd();
         z.next_in = null;
         z.next_out = null;
