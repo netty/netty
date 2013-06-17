@@ -26,6 +26,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.MessageList;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.sctp.DefaultSctpChannelConfig;
 import io.netty.channel.sctp.SctpChannelConfig;
@@ -71,6 +72,8 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     private final Selector connectSelector;
 
     private final NotificationHandler<?> notificationHandler;
+
+    private RecvByteBufAllocator.Handle allocHandle;
 
     private static SctpChannel openChannel() {
         try {
@@ -182,7 +185,11 @@ public class OioSctpChannel extends AbstractOioMessageChannel
         Set<SelectionKey> reableKeys = readSelector.selectedKeys();
         try {
             for (SelectionKey ignored : reableKeys) {
-                ByteBuf buffer = alloc().directBuffer(config().getReceiveBufferSize());
+                RecvByteBufAllocator.Handle allocHandle = this.allocHandle;
+                if (allocHandle == null) {
+                    this.allocHandle = allocHandle = config().getRecvByteBufAllocator().newHandle();
+                }
+                ByteBuf buffer = allocHandle.allocate(config().getAllocator());
                 boolean free = true;
 
                 try {
@@ -199,6 +206,8 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                 } catch (Throwable cause) {
                     PlatformDependent.throwException(cause);
                 }  finally {
+                    int bytesRead = buffer.readableBytes();
+                    allocHandle.record(bytesRead);
                     if (free) {
                         buffer.release();
                     }
