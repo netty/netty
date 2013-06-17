@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,34 +16,46 @@
 package io.netty.handler.codec.spdy;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
+
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 
-class SpdyHeaderBlockZlibDecompressor extends SpdyHeaderBlockDecompressor {
+class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
 
     private final int version;
     private final byte[] out = new byte[8192];
     private final Inflater decompressor = new Inflater();
 
-    public SpdyHeaderBlockZlibDecompressor(int version) {
-        if (version < SpdyConstants.SPDY_MIN_VERSION || version > SpdyConstants.SPDY_MAX_VERSION) {
-            throw new IllegalArgumentException(
-                    "unsupported version: " + version);
-        }
+    private ByteBuf decompressed;
+
+    public SpdyHeaderBlockZlibDecoder(int version, int maxHeaderSize) {
+        super(version, maxHeaderSize);
         this.version = version;
     }
 
     @Override
-    public void setInput(ByteBuf compressed) {
+    void decode(ByteBuf encoded, SpdyHeadersFrame frame) throws Exception {
+        setInput(encoded);
+
+        int numBytes;
+        do {
+            numBytes = decompress(frame);
+        } while (!decompressed.readable() && numBytes > 0);
+    }
+
+    private void setInput(ByteBuf compressed) {
         byte[] in = new byte[compressed.readableBytes()];
         compressed.readBytes(in);
         decompressor.setInput(in);
     }
 
-    @Override
-    public int decode(ByteBuf decompressed) throws Exception {
+    private int decompress(SpdyHeadersFrame frame) throws Exception {
+        if (decompressed == null) {
+            decompressed = decompressed = Unpooled.buffer(8192);
+        }
         try {
             int numBytes = decompressor.inflate(out);
             if (numBytes == 0 && decompressor.needsDictionary()) {
@@ -54,7 +66,10 @@ class SpdyHeaderBlockZlibDecompressor extends SpdyHeaderBlockDecompressor {
                 }
                 numBytes = decompressor.inflate(out);
             }
-            decompressed.writeBytes(out, 0, numBytes);
+            if (frame != null) {
+                decompressed.writeBytes(out, 0, numBytes);
+                super.decode(decompressed, frame);
+            }
             return numBytes;
         } catch (DataFormatException e) {
             throw new SpdyProtocolException(
@@ -63,7 +78,15 @@ class SpdyHeaderBlockZlibDecompressor extends SpdyHeaderBlockDecompressor {
     }
 
     @Override
+    public void reset() {
+        decompressed = null;
+        super.reset();
+    }
+
+    @Override
     public void end() {
+        decompressed = null;
         decompressor.end();
+        super.end();
     }
 }

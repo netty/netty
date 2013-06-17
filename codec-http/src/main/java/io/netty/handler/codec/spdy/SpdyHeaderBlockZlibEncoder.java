@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,20 +16,21 @@
 package io.netty.handler.codec.spdy;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
+
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
 import java.util.zip.Deflater;
 
-class SpdyHeaderBlockZlibCompressor extends SpdyHeaderBlockCompressor {
+class SpdyHeaderBlockZlibEncoder extends SpdyHeaderBlockRawEncoder {
 
     private final byte[] out = new byte[8192];
     private final Deflater compressor;
 
-    public SpdyHeaderBlockZlibCompressor(int version, int compressionLevel) {
-        if (version < SpdyConstants.SPDY_MIN_VERSION || version > SpdyConstants.SPDY_MAX_VERSION) {
-            throw new IllegalArgumentException(
-                    "unsupported version: " + version);
-        }
+    private boolean finished;
+
+    public SpdyHeaderBlockZlibEncoder(int version, int compressionLevel) {
+        super(version);
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
@@ -42,15 +43,13 @@ class SpdyHeaderBlockZlibCompressor extends SpdyHeaderBlockCompressor {
         }
     }
 
-    @Override
-    public void setInput(ByteBuf decompressed) {
+    private void setInput(ByteBuf decompressed) {
         byte[] in = new byte[decompressed.readableBytes()];
         decompressed.readBytes(in);
         compressor.setInput(in);
     }
 
-    @Override
-    public void encode(ByteBuf compressed) {
+    private void encode(ByteBuf compressed) {
         int numBytes = out.length;
         while (numBytes == out.length) {
             numBytes = compressor.deflate(out, 0, out.length, Deflater.SYNC_FLUSH);
@@ -59,7 +58,32 @@ class SpdyHeaderBlockZlibCompressor extends SpdyHeaderBlockCompressor {
     }
 
     @Override
+    public synchronized ByteBuf encode(SpdyHeadersFrame frame) throws Exception {
+        if (frame == null) {
+            throw new IllegalArgumentException("frame");
+        }
+        if (finished) {
+            throw new IllegalAccessException("compressor closed");
+        }
+
+        ByteBuf decompressed = super.encode(frame);
+        if (decompressed.readableBytes() == 0) {
+            return Unpooled.EMPTY_BUFFER;
+        }
+
+        ByteBuf compressed = Unpooled.buffer();
+        setInput(decompressed);
+        encode(compressed);
+        return compressed;
+    }
+
+    @Override
     public void end() {
+        if (finished) {
+            return;
+        }
+        finished = true;
         compressor.end();
+        super.end();
     }
 }
