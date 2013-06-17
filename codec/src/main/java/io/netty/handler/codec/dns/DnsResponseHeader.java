@@ -41,7 +41,7 @@ public class DnsResponseHeader extends DnsHeader {
 	 * @param parent the {@link DnsMessage} this header belongs to
 	 * @param id a 2 bit unsigned identification number received from client
 	 */
-	public DnsResponseHeader(DnsMessage<? extends DnsResponseHeader> parent, int id) throws ResponseException {
+	public DnsResponseHeader(DnsMessage<? extends DnsResponseHeader> parent, int id) {
 		super(parent);
 		setId(id);
 		setType(TYPE_RESPONSE);

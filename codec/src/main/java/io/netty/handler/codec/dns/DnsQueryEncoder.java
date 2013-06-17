@@ -16,9 +16,9 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.MessageList;
 import io.netty.handler.codec.MessageToMessageEncoder;
 
 import java.util.List;
@@ -36,7 +36,7 @@ public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
 	 * @param header the query header being encoded
 	 * @param buf the buffer the encoded data should be written to
 	 */
-	public void encodeHeader(DnsQueryHeader header, ByteBuf buf) {
+	public static void encodeHeader(DnsQueryHeader header, ByteBuf buf) {
 		buf.writeShort(header.getId());
 		int flags = 0;
 		flags |= header.getType() << 15;
@@ -56,7 +56,7 @@ public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
 	 * @param question the question being encoded
 	 * @param buf the buffer the encoded data should be written to
 	 */
-	public void encodeQuestion(Question question, ByteBuf buf) {
+	public static void encodeQuestion(Question question, ByteBuf buf) {
 		String[] parts = question.name().split("\\.");
 		for (int i = 0; i < parts.length; i++) {
 			buf.writeByte(parts[i].length());
@@ -79,7 +79,7 @@ public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
 	 */
 	@Override
 	protected void encode(ChannelHandlerContext ctx, DnsQuery query,
-			MessageBuf<Object> out) throws Exception {
+			MessageList<Object> out) throws Exception {
 		ByteBuf buf = Unpooled.buffer(512);
 		encodeHeader(query.getHeader(), buf);
 		List<Question> questions = query.getQuestions();

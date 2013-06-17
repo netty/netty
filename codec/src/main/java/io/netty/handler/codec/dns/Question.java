@@ -44,4 +44,15 @@ public class Question extends DnsEntry {
 		super(name, type, qClass);
 	}
 
+	@Override
+	public boolean equals(Object other) {
+		if (other == this)
+			return true;
+		if (other instanceof Question) {
+			Question question = (Question) other;
+			return question.name().equals(name()) && question.type() == type() && question.dnsClass() == dnsClass();
+		}
+		return false;
+	}
+
 }

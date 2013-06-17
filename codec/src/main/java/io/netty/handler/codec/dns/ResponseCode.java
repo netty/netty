@@ -96,28 +96,28 @@ public enum ResponseCode {
 	 */
 	BADTIME(14, "bad timestamp");
 
-	private final int id;
+	private final int errorCode;
 	private final String message;
 
 	/**
 	 * Returns a formated message for an error received given an ID, or unknown
 	 * if the error is unsupported.
 	 * 
-	 * @param id the error code's id
+	 * @param responseCode the error code's id
 	 * @return formatted error message
 	 */
-	public static String obtainError(int id) {
+	public static String obtainError(int responseCode) {
 		ResponseCode[] errors = ResponseCode.values();
 		for (ResponseCode e : errors) {
-			if (e.id == id) {
-				return e.name() + ": type " + e.id + ", " + e.message;
+			if (e.errorCode == responseCode) {
+				return e.name() + ": type " + e.errorCode + ", " + e.message;
 			}
 		}
 		return "UNKNOWN: unknown error";
 	}
 
-	private ResponseCode(int id, String message) {
-		this.id = id;
+	private ResponseCode(int errorCode, String message) {
+		this.errorCode = errorCode;
 		this.message = message;
 	}
 

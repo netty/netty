@@ -16,13 +16,13 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MessageList;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 
@@ -33,12 +33,11 @@ import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class DnsTest {
+public class DnsCodecTest {
 
 	@Test
 	public void sendQuery() throws Exception {
-		byte[] dns = { 8, 8, 4, 4 }; // Google public dns
-		String domain = "www.google.com";
+		byte[] dns = { (byte) 192, (byte) 168, 1, 37 }; // Google public dns
 		EventLoopGroup group = new NioEventLoopGroup();
 		try {
 			InetSocketAddress address = new InetSocketAddress(InetAddress.getByAddress(dns), 53);
@@ -49,7 +48,7 @@ public class DnsTest {
 			.handler(new Initializer());
 			Channel ch = b.connect(address).sync().channel();
 			DnsQuery query = new DnsQuery(15305);
-			query.addQuestion(new Question(domain, Resource.TYPE_A));
+			query.addQuestion(new Question("1.0.0.127.in-addr.arpa", Resource.TYPE_PTR));
 			Assert.assertEquals("Invalid question count, expected 1.", 1, query.getHeader().questionCount());
 			Assert.assertEquals("Invalid answer count, expected 0.", 0, query.getHeader().answerCount());
 			Assert.assertEquals("Invalid authority resource record count, expected 0.", 0, query.getHeader().authorityResourceCount());
@@ -69,43 +68,48 @@ public class DnsTest {
 		@Override
 		protected void initChannel(NioDatagramChannel ch) throws Exception {
 			ch.pipeline()
-				.addLast("decoder", new DnsResponseDecoder())
-				.addLast("encoder", new DnsQueryEncoder())
-				.addLast("handler", new Handler());
+			.addLast("decoder", new DnsResponseDecoder())
+			.addLast("encoder", new DnsQueryEncoder())
+			.addLast("handler", new Handler());
 		}
 
 	}
 
-	class Handler extends ChannelInboundMessageHandlerAdapter<DnsResponse> {
+	class Handler extends ChannelInboundHandlerAdapter {
 
 		@Override
 		public void messageReceived(ChannelHandlerContext ctx,
-				DnsResponse object) throws Exception {
-			DnsResponse response = (DnsResponse) object;
-			DnsResponseHeader header = response.getHeader();
-			Assert.assertEquals("Invalid response code, expected TYPE_RESPONSE (1).", DnsHeader.TYPE_RESPONSE,
-					header.getType());
-			Assert.assertFalse("Server response was truncated.", header.isTruncated());
-			Assert.assertTrue("Inconsistency between recursion desirability and availability.",
-					header.isRecursionDesired() == header.isRecursionAvailable());
-			Assert.assertEquals("Invalid ID returned from server.", 15305, response.getHeader().getId());
-			Assert.assertEquals("Question count in response not 1.", 1, response.getHeader().questionCount());
-			Assert.assertTrue("Server didn't send any resources.",
-					response.getHeader().answerCount()
-					+ response.getHeader().authorityResourceCount()
-					+ response.getHeader().additionalResourceCount() > 0);
-			List<Resource> answers = response.getAnswers();
-			for (Resource answer : answers) {
-				if (answer.type() == DnsEntry.TYPE_A) {
-					ByteBuf info = answer.content();
-					Assert.assertEquals("A non-IPv4 resource record was returned.", info.writerIndex(), 4);
-					StringBuilder builder = new StringBuilder();
-					for (int n = 0; n < 4; n++)
-						builder.append(info.readByte() & 0xff).append(".");
-					System.out.println(builder.substring(0, builder.length() - 1));
+				MessageList<Object> messages) throws Exception {
+			try {
+				int size = messages.size();
+				for (int i = 0; i < size; i++) {
+					Object mesg = messages.get(i);
+					if (mesg instanceof DnsResponse) {
+						DnsResponse response = (DnsResponse) mesg;
+						DnsResponseHeader header = response.getHeader();
+						Assert.assertEquals("Invalid response code, expected TYPE_RESPONSE (1).", DnsHeader.TYPE_RESPONSE,
+								header.getType());
+						Assert.assertFalse("Server response was truncated.", header.isTruncated());
+						Assert.assertTrue("Inconsistency between recursion desirability and availability.",
+								header.isRecursionDesired() == header.isRecursionAvailable());
+						Assert.assertEquals("Invalid ID returned from server.", 15305, response.getHeader().getId());
+						Assert.assertEquals("Question count in response not 1.", 1, response.getHeader().questionCount());
+						Assert.assertTrue("Server didn't send any resources.",
+								response.getHeader().answerCount()
+								+ response.getHeader().authorityResourceCount()
+								+ response.getHeader().additionalResourceCount() > 0);
+						List<Resource> answers = response.getAnswers();
+						for (Resource answer : answers) {
+							if (answer.type() == DnsEntry.TYPE_PTR) {
+								System.out.println(DnsResponseDecoder.readName(answer.content()));
+							}
+						}
+					}
 				}
+			} finally {
+				messages.releaseAllAndRecycle();
+				ctx.close();
 			}
-			ctx.close();
 		}
 	}
 }

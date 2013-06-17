@@ -5,21 +5,21 @@ import io.netty.util.concurrent.GenericFutureListener;
 
 import java.util.concurrent.TimeUnit;
 
-public class CachedFuture<E> implements Future<E> {
+public class CachedFuture<T> implements Future<T> {
 
-	private final E content;
+	private final T content;
 
-	public CachedFuture(E content) {
+	public CachedFuture(T content) {
 		this.content = content;
 	}
 
 	@Override
-	public E get() {
+	public T get() {
 		return content;
 	}
 
 	@Override
-	public E get(long timeout, TimeUnit timeUnit) {
+	public T get(long timeout, TimeUnit timeUnit) {
 		return content;
 	}
 
@@ -34,18 +34,7 @@ public class CachedFuture<E> implements Future<E> {
 	}
 
 	@Override
-	public Future<E> addListener(GenericFutureListener<? extends Future<E>> listener) {
-		throw new RuntimeException("Cannot add a listener to a CachedFuture.");
-	}
-
-	@SuppressWarnings("unchecked")
-	@Override
-	public Future<E> addListeners(GenericFutureListener<? extends Future<E>>... listeners) {
-		throw new RuntimeException("Cannot add listeners to a CachedFuture.");
-	}
-
-	@Override
-	public Future<E> await() {
+	public Future<T> await() {
 		return this;
 	}
 
@@ -60,7 +49,7 @@ public class CachedFuture<E> implements Future<E> {
 	}
 
 	@Override
-	public Future<E> awaitUninterruptibly() {
+	public Future<T> awaitUninterruptibly() {
 		return this;
 	}
 
@@ -85,7 +74,7 @@ public class CachedFuture<E> implements Future<E> {
 	}
 
 	@Override
-	public E getNow() {
+	public T getNow() {
 		return content;
 	}
 
@@ -95,23 +84,39 @@ public class CachedFuture<E> implements Future<E> {
 	}
 
 	@Override
-	public Future<E> removeListener(GenericFutureListener<? extends Future<E>> listener) {
+	public Future<T> sync() {
+		return this;
+	}
+
+	@Override
+	public Future<T> syncUninterruptibly() {
+		return this;
+	}
+
+	@Override
+	public Future<T> addListener(GenericFutureListener<? extends Future<? super T>> listener) {
+		throw new RuntimeException("Cannot add a listener to a CachedFuture.");
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public Future<T> addListeners(GenericFutureListener<? extends Future<? super T>>... listeners) {
+		throw new RuntimeException("Cannot add listeners to a CachedFuture.");
+	}
+
+	@Override
+	public boolean isCancellable() {
+		return false;
+	}
+
+	@Override
+	public Future<T> removeListener(GenericFutureListener<? extends Future<? super T>> listener) {
 		return this;
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public Future<E> removeListeners(GenericFutureListener<? extends Future<E>>... listeners) {
-		return this;
-	}
-
-	@Override
-	public Future<E> sync() {
-		return this;
-	}
-
-	@Override
-	public Future<E> syncUninterruptibly() {
+	public Future<T> removeListeners(GenericFutureListener<? extends Future<? super T>>... listeners) {
 		return this;
 	}
 

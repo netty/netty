@@ -15,14 +15,14 @@
  */
 package io.netty.handler.codec.dns;
 
-import java.nio.charset.Charset;
-
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.MessageList;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.MessageToMessageDecoder;
+
+import java.nio.charset.Charset;
 
 /**
  * DnsResponseDecoder accepts {@link DatagramPacket} and encodes to {@link DnsResponse}. This class
@@ -57,6 +57,8 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
 		if (position != -1) {
 			buf.readerIndex(position);
 		}
+		if (name.length() == 0)
+			return null;
 		return name.substring(0, name.length() - 1);
 	}
 
@@ -79,6 +81,8 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
 				offset += len;
 			}
 		}
+		if (name.length() == 0)
+			return null;
 		return name.substring(0, name.length() - 1);
 	}
 
@@ -108,8 +112,9 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
 		long ttl = buf.readUnsignedInt();
 		int len = buf.readUnsignedShort();
 		ByteBuf resourceData = Unpooled.buffer(len);
+		int contentIndex = buf.readerIndex();
 		resourceData.writeBytes(buf, len);
-		return new Resource(name, type, aClass, ttl, resourceData);
+		return new Resource(name, type, aClass, ttl, contentIndex, resourceData);
 	}
 
 	/**
@@ -119,7 +124,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
 	 * @param buf the byte buffer containing the DNS packet
 	 * @return a {@link DnsResponseHeader} containing the response's header information
 	 */
-	public DnsResponseHeader decodeHeader(DnsResponse parent, ByteBuf buf) throws ResponseException {
+	public static DnsResponseHeader decodeHeader(DnsResponse parent, ByteBuf buf) {
 		int id = buf.readUnsignedShort();
 		DnsResponseHeader header = new DnsResponseHeader(parent, id);
 		int flags = buf.readUnsignedShort();
@@ -131,8 +136,6 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
 		header.setRecursionAvailable(((flags >> 7) & 1) == 1);
 		header.setZ((flags >> 4) & 0x7);
 		header.setResponseCode(flags & 0xf);
-		if (header.getResponseCode() != 0)
-			throw new ResponseException(header.getResponseCode());
 		header.setReadQuestions(buf.readUnsignedShort());
 		header.setReadAnswers(buf.readUnsignedShort());
 		header.setReadAuthorityResources(buf.readUnsignedShort());
@@ -153,13 +156,20 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
 	 */
 	@Override
 	protected void decode(ChannelHandlerContext ctx, DatagramPacket packet,
-			MessageBuf<Object> out) throws Exception {
+			MessageList<Object> out) throws Exception {
 		ByteBuf buf = packet.content();
 		DnsResponse response = new DnsResponse();
+		byte[] raw = new byte[buf.writerIndex() - buf.readerIndex()];
+		buf.getBytes(0, raw);
+		response.setRawPacket(raw);
 		DnsResponseHeader header = decodeHeader(response, buf);
 		response.setHeader(header);
 		for (int i = 0; i < header.getReadQuestions(); i++) {
 			response.addQuestion(decodeQuestion(buf));
+		}
+		if (header.getResponseCode() != 0) {
+			System.err.println("Encountered error decoding DNS response for domain \""
+					+ response.getQuestions().get(0).name() + "\": " + ResponseCode.obtainError(header.getResponseCode()));
 		}
 		for (int i = 0; i < header.getReadAnswers(); i++) {
 			response.addAnswer(decodeResource(buf));
