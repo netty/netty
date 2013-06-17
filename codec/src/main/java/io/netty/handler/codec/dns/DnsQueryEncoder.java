@@ -70,11 +70,11 @@ public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
 	/**
 	 * Encodes a query and writes it to a {@link ByteBuf}. Queries are sent to
 	 * a DNS server and a response will be returned from the server. The encoded
-	 * ByteBuf is written to the specified {@link MessageBuf}.
+	 * ByteBuf is written to the specified {@link MessageList}.
 	 * 
 	 * @param ctx the {@link ChannelHandlerContext} this {@link DnsQueryEncoder} belongs to
 	 * @param query the query being encoded
-	 * @param out the {@link MessageBuf} to which encoded messages should be added
+	 * @param out the {@link MessageList} to which encoded messages should be added
 	 * @throws Exception
 	 */
 	@Override

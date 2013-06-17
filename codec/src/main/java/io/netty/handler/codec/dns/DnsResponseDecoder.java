@@ -146,12 +146,12 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
 	/**
 	 * Decodes a response from a {@link DatagramPacket} containing a {@link ByteBuf} with a
 	 * DNS packet. Responses are sent from a DNS server to a client in response to a query.
-	 * This method writes the decoded response to the specified {@link MessageBuf} to be
+	 * This method writes the decoded response to the specified {@link MessageList} to be
 	 * handled by a specialized message handler.
 	 * 
 	 * @param ctx the {@link ChannelHandlerContext} this {@link DnsResponseDecoder} belongs to
 	 * @param buf the message being decoded, a {@link DatagramPacket} containing a DNS packet
-	 * @param out the {@link MessageBuf} to which decoded messages should be added
+	 * @param out the {@link MessageList} to which decoded messages should be added
 	 * @throws Exception
 	 */
 	@Override
