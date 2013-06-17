@@ -17,7 +17,6 @@ package io.netty.channel.sctp.oio;
 
 import com.sun.nio.sctp.SctpChannel;
 import com.sun.nio.sctp.SctpServerChannel;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
@@ -26,6 +25,7 @@ import io.netty.channel.MessageList;
 import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.sctp.DefaultSctpServerChannelConfig;
 import io.netty.channel.sctp.SctpServerChannelConfig;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -299,7 +299,7 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
     protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
         int size = msgs.size();
         for (int i = index; i < size; i ++) {
-            ByteBufUtil.release(msgs.get(i));
+            ReferenceCountUtil.release(msgs.get(i));
         }
         throw new UnsupportedOperationException();
     }
