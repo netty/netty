@@ -34,8 +34,7 @@ import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyFrame> {
 
     private final int version;
-    private boolean finished;
-    private final SpdyHeaderBlockCompressor headerBlockCompressor;
+    private final SpdyHeaderBlockEncoder headerBlockEncoder;
 
     /**
      * Creates a new instance with the specified {@code version} and the
@@ -50,13 +49,17 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyFrame> {
      * Creates a new instance with the specified parameters.
      */
     public SpdyFrameEncoder(int version, int compressionLevel, int windowBits, int memLevel) {
+        this(version, SpdyHeaderBlockEncoder.newInstance(
+                    version, compressionLevel, windowBits, memLevel));
+    }
+
+    protected SpdyFrameEncoder(int version, SpdyHeaderBlockEncoder headerBlockEncoder) {
         if (version < SpdyConstants.SPDY_MIN_VERSION || version > SpdyConstants.SPDY_MAX_VERSION) {
             throw new IllegalArgumentException(
                     "unknown version: " + version);
         }
         this.version = version;
-        headerBlockCompressor = SpdyHeaderBlockCompressor.newInstance(
-                version, compressionLevel, windowBits, memLevel);
+        this.headerBlockEncoder = headerBlockEncoder;
     }
 
     @Override
@@ -64,12 +67,8 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyFrame> {
         ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
-                synchronized (headerBlockCompressor) {
-                    if (finished) {
-                        return;
-                    }
-                    finished = true;
-                    headerBlockCompressor.end();
+                synchronized (headerBlockEncoder) {
+                    headerBlockEncoder.end();
                 }
             }
         });
@@ -91,8 +90,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyFrame> {
         } else if (msg instanceof SpdySynStreamFrame) {
 
             SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
-            ByteBuf data = compressHeaderBlock(
-                    encodeHeaderBlock(version, spdySynStreamFrame));
+            ByteBuf data = headerBlockEncoder.encode(spdySynStreamFrame);
             byte flags = spdySynStreamFrame.isLast() ? SPDY_FLAG_FIN : 0;
             if (spdySynStreamFrame.isUnidirectional()) {
                 flags |= SPDY_FLAG_UNIDIRECTIONAL;
@@ -129,8 +127,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyFrame> {
         } else if (msg instanceof SpdySynReplyFrame) {
 
             SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
-            ByteBuf data = compressHeaderBlock(
-                    encodeHeaderBlock(version, spdySynReplyFrame));
+            ByteBuf data = headerBlockEncoder.encode(spdySynReplyFrame);
             byte flags = spdySynReplyFrame.isLast() ? SPDY_FLAG_FIN : 0;
             int headerBlockLength = data.readableBytes();
             int length;
@@ -227,8 +224,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyFrame> {
         } else if (msg instanceof SpdyHeadersFrame) {
 
             SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
-            ByteBuf data = compressHeaderBlock(
-                    encodeHeaderBlock(version, spdyHeadersFrame));
+            ByteBuf data = headerBlockEncoder.encode(spdyHeadersFrame);
             byte flags = spdyHeadersFrame.isLast() ? SPDY_FLAG_FIN : 0;
             int headerBlockLength = data.readableBytes();
             int length;
@@ -260,84 +256,5 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyFrame> {
         } else {
             throw new UnsupportedMessageTypeException(msg);
         }
-    }
-
-    private static void writeLengthField(int version, ByteBuf buffer, int length) {
-        if (version < 3) {
-            buffer.writeShort(length);
-        } else {
-            buffer.writeInt(length);
-        }
-    }
-
-    private static void setLengthField(int version, ByteBuf buffer, int writerIndex, int length) {
-        if (version < 3) {
-            buffer.setShort(writerIndex, length);
-        } else {
-            buffer.setInt(writerIndex, length);
-        }
-    }
-
-    private static ByteBuf encodeHeaderBlock(int version, SpdyHeadersFrame headerFrame)
-            throws Exception {
-        Set<String> names = headerFrame.headers().names();
-        int numHeaders = names.size();
-        if (numHeaders == 0) {
-            return Unpooled.EMPTY_BUFFER;
-        }
-        if (numHeaders > SPDY_MAX_NV_LENGTH) {
-            throw new IllegalArgumentException(
-                    "header block contains too many headers");
-        }
-        ByteBuf headerBlock = Unpooled.buffer();
-        writeLengthField(version, headerBlock, numHeaders);
-        for (String name: names) {
-            byte[] nameBytes = name.getBytes(CharsetUtil.UTF_8);
-            writeLengthField(version, headerBlock, nameBytes.length);
-            headerBlock.writeBytes(nameBytes);
-            int savedIndex = headerBlock.writerIndex();
-            int valueLength = 0;
-            writeLengthField(version, headerBlock, valueLength);
-            for (String value: headerFrame.headers().getAll(name)) {
-                byte[] valueBytes = value.getBytes(CharsetUtil.UTF_8);
-                if (valueBytes.length > 0) {
-                    headerBlock.writeBytes(valueBytes);
-                    headerBlock.writeByte(0);
-                    valueLength += valueBytes.length + 1;
-                }
-            }
-            if (valueLength == 0) {
-                if (version < 3) {
-                    throw new IllegalArgumentException(
-                            "header value cannot be empty: " + name);
-                }
-            } else {
-                valueLength --;
-            }
-            if (valueLength > SPDY_MAX_NV_LENGTH) {
-                throw new IllegalArgumentException(
-                        "header exceeds allowable length: " + name);
-            }
-            if (valueLength > 0) {
-                setLengthField(version, headerBlock, savedIndex, valueLength);
-                headerBlock.writerIndex(headerBlock.writerIndex() - 1);
-            }
-        }
-        return headerBlock;
-    }
-
-    private synchronized ByteBuf compressHeaderBlock(
-            ByteBuf uncompressed) throws Exception {
-        if (uncompressed.readableBytes() == 0) {
-            return Unpooled.EMPTY_BUFFER;
-        }
-        ByteBuf compressed = Unpooled.buffer();
-        synchronized (headerBlockCompressor) {
-            if (!finished) {
-                headerBlockCompressor.setInput(uncompressed);
-                headerBlockCompressor.encode(compressed);
-            }
-        }
-        return compressed;
     }
 }

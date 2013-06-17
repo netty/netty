@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -29,16 +29,16 @@ final class SpdyCodecUtil {
 
     static final byte SPDY_DATA_FLAG_FIN = 0x01;
 
+    static final int SPDY_DATA_FRAME          = 0;
     static final int SPDY_SYN_STREAM_FRAME    = 1;
     static final int SPDY_SYN_REPLY_FRAME     = 2;
     static final int SPDY_RST_STREAM_FRAME    = 3;
     static final int SPDY_SETTINGS_FRAME      = 4;
-    static final int SPDY_NOOP_FRAME          = 5;
+    static final int SPDY_PUSH_PROMISE_FRAME  = 5;
     static final int SPDY_PING_FRAME          = 6;
     static final int SPDY_GOAWAY_FRAME        = 7;
     static final int SPDY_HEADERS_FRAME       = 8;
     static final int SPDY_WINDOW_UPDATE_FRAME = 9;
-    static final int SPDY_CREDENTIAL_FRAME    = 10;
 
     static final byte SPDY_FLAG_FIN            = 0x01;
     static final byte SPDY_FLAG_UNIDIRECTIONAL = 0x02;
