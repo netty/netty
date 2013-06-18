@@ -103,7 +103,7 @@ class SpdyHeaderBlockJZlibEncoder extends SpdyHeaderBlockRawEncoder {
         }
 
         if (finished) {
-            throw new IllegalAccessException("compressor closed");
+            return ChannelBuffers.EMPTY_BUFFER;
         }
 
         ChannelBuffer decompressed = super.encode(frame);
@@ -119,6 +119,9 @@ class SpdyHeaderBlockJZlibEncoder extends SpdyHeaderBlockRawEncoder {
 
     @Override
     public synchronized void end() {
+        if (finished) {
+            return;
+        }
         finished = true;
         z.deflateEnd();
         z.next_in = null;
