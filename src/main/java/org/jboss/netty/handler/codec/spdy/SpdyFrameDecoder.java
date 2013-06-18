@@ -243,7 +243,8 @@ public class SpdyFrameDecoder extends FrameDecoder {
                 return null;
             }
 
-            if (spdyHeadersFrame != null && spdyHeadersFrame.isInvalid()) {
+            if (spdyHeadersFrame != null &&
+                    (spdyHeadersFrame.isInvalid() || spdyHeadersFrame.isTruncated())) {
                 Object frame = spdyHeadersFrame;
                 spdyHeadersFrame = null;
                 if (length == 0) {
