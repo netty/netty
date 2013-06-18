@@ -62,8 +62,9 @@ class SpdyHeaderBlockZlibEncoder extends SpdyHeaderBlockRawEncoder {
         if (frame == null) {
             throw new IllegalArgumentException("frame");
         }
+
         if (finished) {
-            throw new IllegalAccessException("compressor closed");
+            return ChannelBuffers.EMPTY_BUFFER;
         }
 
         ChannelBuffer decompressed = super.encode(frame);
@@ -79,6 +80,9 @@ class SpdyHeaderBlockZlibEncoder extends SpdyHeaderBlockRawEncoder {
 
     @Override
     public synchronized void end() {
+        if (finished) {
+            return;
+        }
         finished = true;
         compressor.end();
         super.end();
