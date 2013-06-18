@@ -1,0 +1,120 @@
+package org.jboss.netty.handler.codec.spdy;
+
+import java.net.InetSocketAddress;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+
+import org.jboss.netty.bootstrap.ClientBootstrap;
+import org.jboss.netty.bootstrap.ServerBootstrap;
+import org.jboss.netty.channel.*;
+import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import org.jboss.netty.util.TestUtil;
+import org.junit.Test;
+
+import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
+import static org.junit.Assert.*;
+
+public class SpdyFrameDecoderTest {
+
+    @Test
+    public void testTooLargeHeaderNameOnSynStreamRequest() throws Exception {
+        for (int version = SPDY_MIN_VERSION; version <= SPDY_MAX_VERSION; version++) {
+            List<Integer> headerSizes = Arrays.asList(90, 900);
+            for (int maxHeaderSize : headerSizes) { // 90 catches the header name, 900 the value
+                SpdyHeadersFrame frame = new DefaultSpdySynStreamFrame(1, 0, (byte) 0);
+                addHeader(frame, 100, 1000);
+                CaptureHandler captureHandler = new CaptureHandler();
+                ServerBootstrap sb = new ServerBootstrap(
+                        newServerSocketChannelFactory(Executors.newCachedThreadPool()));
+                ClientBootstrap cb = new ClientBootstrap(
+                        newClientSocketChannelFactory(Executors.newCachedThreadPool()));
+
+                sb.getPipeline().addLast("decoder", new SpdyFrameDecoder(version, 10000, maxHeaderSize));
+                sb.getPipeline().addLast("sessionHandler", new SpdySessionHandler(version, true));
+                sb.getPipeline().addLast("handler", captureHandler);
+
+                cb.getPipeline().addLast("encoder", new SpdyFrameEncoder(version));
+
+                Channel sc = sb.bind(new InetSocketAddress(0));
+                int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();
+
+                ChannelFuture ccf = cb.connect(new InetSocketAddress(TestUtil.getLocalHost(), port));
+                assertTrue(ccf.awaitUninterruptibly().isSuccess());
+                Channel cc = ccf.getChannel();
+
+                sendAndWaitForFrame(cc, frame, captureHandler);
+
+                assertNotNull("version " + version + ", not null message",
+                        captureHandler.message);
+                String message = "version " + version + ", should be SpdyHeadersFrame, was " +
+                        captureHandler.message.getClass();
+                assertTrue(
+                        message,
+                        captureHandler.message instanceof SpdyHeadersFrame);
+                SpdyHeadersFrame writtenFrame = (SpdyHeadersFrame) captureHandler.message;
+
+                assertTrue("should be truncated", writtenFrame.isTruncated());
+                assertFalse("should not be invalid", writtenFrame.isInvalid());
+
+                sc.close().awaitUninterruptibly();
+                cb.shutdown();
+                sb.shutdown();
+                cb.releaseExternalResources();
+                sb.releaseExternalResources();
+            }
+        }
+    }
+
+    private void sendAndWaitForFrame(Channel cc, SpdyFrame frame, CaptureHandler handler) {
+        cc.write(frame);
+        long theFuture = System.currentTimeMillis() + 3000;
+        while (handler.message == null && System.currentTimeMillis() < theFuture) {
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                // Ignore.
+            }
+        }
+    }
+
+    private void addHeader(SpdyHeadersFrame frame, int headerNameSize, int headerValueSize) {
+        frame.addHeader("k", "v");
+        StringBuilder headerName = new StringBuilder();
+        for (int i = 0; i < headerNameSize; i++) {
+            headerName.append('h');
+        }
+        StringBuilder headerValue = new StringBuilder();
+        for (int i = 0; i < headerValueSize; i++) {
+            headerValue.append('a');
+        }
+        frame.addHeader(headerName.toString(), headerValue.toString());
+    }
+
+    protected ChannelFactory newClientSocketChannelFactory(Executor executor) {
+        return new NioClientSocketChannelFactory(executor, executor);
+    }
+
+    protected ChannelFactory newServerSocketChannelFactory(Executor executor) {
+        return new NioServerSocketChannelFactory(executor, executor);
+    }
+
+    private static class CaptureHandler extends SimpleChannelUpstreamHandler {
+        public volatile Object message;
+
+        @Override
+        public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+            this.message = e.getMessage();
+        }
+
+        @Override
+        public void exceptionCaught(
+                ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
+            System.out.println(e.getCause());
+            e.getCause().printStackTrace();
+            message = e.getCause();
+        }
+    }
+}

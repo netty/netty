@@ -36,6 +36,17 @@ public interface SpdyHeadersFrame extends SpdyStreamFrame {
     void setInvalid();
 
     /**
+     * Returns {@code true} if this header block has been truncated due to
+     * length restrictions.
+     */
+    boolean isTruncated();
+
+    /**
+     * Mark this header block as truncated.
+     */
+    void setTruncated();
+
+    /**
      * Returns the header value with the specified header name.  If there is
      * more than one header value for the specified header name, the first
      * value is returned.
