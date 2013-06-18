@@ -28,6 +28,7 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyStreamFrame
         implements SpdyHeadersFrame {
 
     private boolean invalid;
+    private boolean truncated;
     private final SpdyHeaders headers = new SpdyHeaders();
 
     /**
@@ -45,6 +46,14 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyStreamFrame
 
     public void setInvalid() {
         invalid = true;
+    }
+
+    public boolean isTruncated() {
+        return truncated;
+    }
+
+    public void setTruncated() {
+        truncated = true;
     }
 
     public void addHeader(final String name, final Object value) {

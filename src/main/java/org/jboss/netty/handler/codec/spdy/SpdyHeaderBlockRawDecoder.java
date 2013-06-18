@@ -94,8 +94,8 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
             }
             headerSize += nameLength;
             if (headerSize > maxHeaderSize) {
-                throw new TooLongFrameException(
-                        "Header block exceeds " + maxHeaderSize);
+                frame.setTruncated();
+                return;
             }
 
             // Try to read name
@@ -143,8 +143,8 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
 
             headerSize += valueLength;
             if (headerSize > maxHeaderSize) {
-                throw new TooLongFrameException(
-                        "Header block exceeds " + maxHeaderSize);
+                frame.setTruncated();
+                return;
             }
 
             // Try to read value

@@ -126,6 +126,14 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
                     Channels.write(ctx, Channels.future(channel), spdyRstStreamFrame);
                 }
 
+                // If a client receives a response with a truncated header block,
+                // reply with a RST_STREAM with error code INTERNAL_ERROR.
+                if (spdySynStreamFrame.isTruncated()) {
+                    SpdyRstStreamFrame spdyRstStreamFrame =
+                            new DefaultSpdyRstStreamFrame(streamId, SpdyStreamStatus.INTERNAL_ERROR);
+                    Channels.write(ctx, Channels.future(channel), spdyRstStreamFrame);
+                }
+
                 try {
                     HttpResponse httpResponse = createHttpResponse(spdyVersion, spdySynStreamFrame);
 
@@ -149,6 +157,19 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
                 }
             } else {
                 // SYN_STREAM frames initiated by the client are HTTP requests
+
+                // If a client sends a request with a truncated header block, the server must
+                // reply with a HTTP 431 REQUEST HEADER FIELDS TOO LARGE reply.
+                if (spdySynStreamFrame.isTruncated()) {
+                    SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamId);
+                    spdySynReplyFrame.setLast(true);
+                    SpdyHeaders.setStatus(spdyVersion,
+                            spdySynReplyFrame,
+                            HttpResponseStatus.REQUEST_HEADER_FIELDS_TOO_LARGE);
+                    SpdyHeaders.setVersion(spdyVersion, spdySynReplyFrame, HttpVersion.HTTP_1_0);
+                    Channels.write(ctx, Channels.future(channel), spdySynReplyFrame);
+                }
+
                 try {
                     HttpRequest httpRequest = createHttpRequest(spdyVersion, spdySynStreamFrame);
 
@@ -177,6 +198,14 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
 
             SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
             int streamId = spdySynReplyFrame.getStreamId();
+
+            // If a client receives a SYN_REPLY with a truncated header block,
+            // reply with a RST_STREAM frame with error code INTERNAL_ERROR.
+            if (spdySynReplyFrame.isTruncated()) {
+                SpdyRstStreamFrame spdyRstStreamFrame =
+                        new DefaultSpdyRstStreamFrame(streamId, SpdyStreamStatus.INTERNAL_ERROR);
+                Channels.write(ctx, Channels.future(channel), spdyRstStreamFrame);
+            }
 
             try {
                 HttpResponse httpResponse = createHttpResponse(spdyVersion, spdySynReplyFrame);
@@ -210,8 +239,11 @@ public class SpdyHttpDecoder extends OneToOneDecoder {
                 return null;
             }
 
-            for (Map.Entry<String, String> e: spdyHeadersFrame.getHeaders()) {
-                httpMessage.addHeader(e.getKey(), e.getValue());
+            // Ignore trailers in a truncated HEADERS frame.
+            if (!spdyHeadersFrame.isTruncated()) {
+                for (Map.Entry<String, String> e : spdyHeadersFrame.getHeaders()) {
+                    httpMessage.addHeader(e.getKey(), e.getValue());
+                }
             }
 
             if (spdyHeadersFrame.isLast()) {
