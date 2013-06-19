@@ -17,6 +17,7 @@ package io.netty.util.concurrent;
 
 import io.netty.util.Signal;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -228,7 +229,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         }
 
         if (Thread.interrupted()) {
-            throw new InterruptedException();
+            throw new InterruptedException(toString());
         }
 
         synchronized (this) {
@@ -312,7 +313,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         }
 
         if (interruptable && Thread.interrupted()) {
-            throw new InterruptedException();
+            throw new InterruptedException(toString());
         }
 
         long startTime = timeoutNanos <= 0 ? 0 : System.nanoTime();
@@ -369,7 +370,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     protected void checkDeadLock() {
         EventExecutor e = executor();
         if (e != null && e.inEventLoop()) {
-            throw new BlockingOperationException();
+            throw new BlockingOperationException(toString());
         }
     }
 
@@ -379,7 +380,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             notifyListeners();
             return this;
         }
-        throw new IllegalStateException("complete already");
+        throw new IllegalStateException("complete already: " + this);
     }
 
     @Override
@@ -397,7 +398,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             notifyListeners();
             return this;
         }
-        throw new IllegalStateException("complete already", cause);
+        throw new IllegalStateException("complete already: " + this, cause);
     }
 
     @Override
@@ -437,14 +438,14 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     public boolean setUncancellable() {
         Object result = this.result;
         if (isDone0(result)) {
-            return isCancelled0(result);
+            return false;
         }
 
         synchronized (this) {
             // Allow only once.
             result = this.result;
             if (isDone0(result)) {
-                return isCancelled0(result);
+                return false;
             }
 
             this.result = UNCANCELLABLE;
@@ -509,7 +510,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     private void incWaiters() {
         if (waiters == Short.MAX_VALUE) {
-            throw new IllegalStateException("too many waiters");
+            throw new IllegalStateException("too many waiters: " + this);
         }
         waiters ++;
     }
@@ -733,5 +734,31 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         private CauseHolder(Throwable cause) {
             this.cause = cause;
         }
+    }
+
+    @Override
+    public String toString() {
+        return toStringBuilder().toString();
+    }
+
+    protected StringBuilder toStringBuilder() {
+        StringBuilder buf = new StringBuilder(64);
+        buf.append(StringUtil.simpleClassName(this));
+        buf.append('@');
+        buf.append(Integer.toHexString(hashCode()));
+
+        Object result = this.result;
+        if (result == SUCCESS) {
+            buf.append("(success)");
+        } else if (result == UNCANCELLABLE) {
+            buf.append("(uncancellable)");
+        } else if (result instanceof CauseHolder) {
+            buf.append("(failure(");
+            buf.append(((CauseHolder) result).cause);
+            buf.append(')');
+        } else {
+            buf.append("(incomplete)");
+        }
+        return buf;
     }
 }

@@ -19,7 +19,6 @@ package io.netty.util.concurrent;
 import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Delayed;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -46,7 +45,7 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
             EventExecutor executor, Queue<ScheduledFutureTask<?>> delayedTaskQueue,
             Runnable runnable, V result, long nanoTime) {
 
-        this(executor, delayedTaskQueue, Executors.callable(runnable, result), nanoTime);
+        this(executor, delayedTaskQueue, toCallable(runnable, result), nanoTime);
     }
 
     ScheduledFutureTask(
@@ -144,5 +143,19 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
         } catch (Throwable cause) {
             setFailureInternal(cause);
         }
+    }
+
+    @Override
+    protected StringBuilder toStringBuilder() {
+        StringBuilder buf = super.toStringBuilder();
+        buf.setCharAt(buf.length() - 1, ',');
+        buf.append(" id: ");
+        buf.append(id);
+        buf.append(", deadline: ");
+        buf.append(deadlineNanos);
+        buf.append(", period: ");
+        buf.append(periodNanos);
+        buf.append(')');
+        return buf;
     }
 }
