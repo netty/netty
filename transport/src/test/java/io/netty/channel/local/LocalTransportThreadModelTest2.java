@@ -22,7 +22,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundConsumingHandler;
-import io.netty.channel.MessageList;
 import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -93,7 +92,7 @@ public class LocalTransportThreadModelTest2 {
     }
 
     @Sharable
-    static class LocalHander extends ChannelInboundConsumingHandler {
+    static class LocalHander extends ChannelInboundConsumingHandler<Object> {
         private final String name;
 
         public volatile ChannelFuture lastWriteFuture;
@@ -112,8 +111,8 @@ public class LocalTransportThreadModelTest2 {
         }
 
         @Override
-        public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-            count.addAndGet(msgs.size());
+        public void consume(ChannelHandlerContext ctx, Object msg) throws Exception {
+            count.incrementAndGet();
         }
     }
 }

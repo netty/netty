@@ -23,7 +23,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.MessageList;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.FixedLengthFrameDecoder;
 import org.junit.Test;
@@ -124,7 +123,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         }
     }
 
-    private static class EchoHandler extends ChannelInboundConsumingHandler {
+    private static class EchoHandler extends ChannelInboundConsumingHandler<ByteBuf> {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
@@ -136,25 +135,22 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-            for (int j = 0; j < msgs.size(); j ++) {
-                ByteBuf msg = (ByteBuf) msgs.get(j);
-                assertEquals(1024, msg.readableBytes());
+        public void consume(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+            assertEquals(1024, msg.readableBytes());
 
-                byte[] actual = new byte[msg.readableBytes()];
-                msg.getBytes(0, actual);
+            byte[] actual = new byte[msg.readableBytes()];
+            msg.getBytes(0, actual);
 
-                int lastIdx = counter;
-                for (int i = 0; i < actual.length; i ++) {
-                    assertEquals(data[i + lastIdx], actual[i]);
-                }
-
-                if (channel.parent() != null) {
-                    channel.write(msg.retain());
-                }
-
-                counter += actual.length;
+            int lastIdx = counter;
+            for (int i = 0; i < actual.length; i ++) {
+                assertEquals(data[i + lastIdx], actual[i]);
             }
+
+            if (channel.parent() != null) {
+                channel.write(msg.retain());
+            }
+
+            counter += actual.length;
         }
 
         @Override

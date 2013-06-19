@@ -55,9 +55,9 @@ public class LocalTransportThreadModelTest {
           .childHandler(new ChannelInitializer<LocalChannel>() {
               @Override
               public void initChannel(LocalChannel ch) throws Exception {
-                  ch.pipeline().addLast(new ChannelInboundConsumingHandler() {
+                  ch.pipeline().addLast(new ChannelInboundConsumingHandler<Object>() {
                     @Override
-                    public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) {
+                    public void consume(ChannelHandlerContext ctx, Object msg) {
                         // Discard
                     }
                   });

@@ -23,7 +23,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundConsumingHandler;
-import io.netty.channel.MessageList;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.DefaultThreadFactory;
@@ -67,7 +66,7 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         clientHandler.check();
     }
 
-    private static class BufWriterHandler extends ChannelInboundConsumingHandler {
+    private static class BufWriterHandler extends ChannelInboundConsumingHandler<Object> {
 
         private final Random random = new Random();
         private final CountDownLatch latch = new CountDownLatch(1);
@@ -96,7 +95,7 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         }
 
         @Override
-        public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        public void consume(ChannelHandlerContext ctx, Object msg) throws Exception {
             // discard
         }
 

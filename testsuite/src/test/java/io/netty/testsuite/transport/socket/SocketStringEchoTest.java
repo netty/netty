@@ -21,7 +21,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.MessageList;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
@@ -136,7 +135,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         }
     }
 
-    static class StringEchoHandler extends ChannelInboundConsumingHandler {
+    static class StringEchoHandler extends ChannelInboundConsumingHandler<String> {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
@@ -148,18 +147,15 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-            for (int i = 0; i < msgs.size(); i ++) {
-                String msg = (String) msgs.get(i);
-                assertEquals(data[counter], msg);
+        public void consume(ChannelHandlerContext ctx, String msg) throws Exception {
+            assertEquals(data[counter], msg);
 
-                if (channel.parent() != null) {
-                    String delimiter = random.nextBoolean() ? "\r\n" : "\n";
-                    channel.write(msg + delimiter);
-                }
-
-                counter ++;
+            if (channel.parent() != null) {
+                String delimiter = random.nextBoolean() ? "\r\n" : "\n";
+                channel.write(msg + delimiter);
             }
+
+            counter ++;
         }
 
         @Override

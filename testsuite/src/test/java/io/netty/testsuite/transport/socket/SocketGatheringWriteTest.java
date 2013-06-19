@@ -124,7 +124,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         assertEquals(Unpooled.wrappedBuffer(data), sh.received);
     }
 
-    private static class TestHandler extends ChannelInboundConsumingHandler {
+    private static class TestHandler extends ChannelInboundConsumingHandler<ByteBuf> {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
@@ -136,12 +136,9 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         }
 
         @Override
-        public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-            for (int j = 0; j < msgs.size(); j ++) {
-                ByteBuf in = (ByteBuf) msgs.get(j);
-                counter += in.readableBytes();
-                received.writeBytes(in);
-            }
+        public void consume(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+            counter += in.readableBytes();
+            received.writeBytes(in);
         }
 
         @Override

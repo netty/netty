@@ -20,7 +20,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundConsumingHandler;
-import io.netty.channel.MessageList;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -28,7 +27,7 @@ import java.util.logging.Logger;
 /**
  * Handles a client-side channel.
  */
-public class DiscardClientHandler extends ChannelInboundConsumingHandler {
+public class DiscardClientHandler extends ChannelInboundConsumingHandler<Object> {
 
     private static final Logger logger = Logger.getLogger(
             DiscardClientHandler.class.getName());
@@ -63,7 +62,7 @@ public class DiscardClientHandler extends ChannelInboundConsumingHandler {
     }
 
     @Override
-    public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+    public void consume(ChannelHandlerContext ctx, Object msg) throws Exception {
         // Server is supposed to send nothing, but if it sends something, discard it.
     }
 

@@ -25,19 +25,48 @@ import io.netty.util.ReferenceCountUtil;
  *
  * If you need to pass them throught the {@link ChannelPipeline} use {@link ChannelInboundHandlerAdapter}.
  */
-public abstract class ChannelInboundConsumingHandler extends ChannelInboundHandlerAdapter {
+public abstract class ChannelInboundConsumingHandler<I> extends ChannelInboundHandlerAdapter {
 
     @Override
     public final void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
         try {
-            consume(ctx, msgs);
+            beginConsume(ctx);
+            MessageList<I> cast = msgs.cast();
+            int size = cast.size();
+            for (int i = 0; i < size; i++) {
+                consume(ctx, cast.get(i));
+            }
         } finally {
-            msgs.releaseAllAndRecycle();
+            try {
+                endConsume(ctx);
+            } finally {
+                msgs.releaseAllAndRecycle();
+            }
         }
     }
 
     /**
-     * Consume the received {@link MessageList}. After this method is executed
+     * Is called before consume of messages start.
+     *
+     * @param ctx           The {@link ChannelHandlerContext} which is bound to this
+     *                      {@link ChannelInboundConsumingHandler}
+     */
+    protected void beginConsume(ChannelHandlerContext ctx) {
+        // NOOP
+    }
+
+    /**
+     * Is called after consume of messages ends.
+     *
+     * @param ctx           The {@link ChannelHandlerContext} which is bound to this
+     *                      {@link ChannelInboundConsumingHandler}
+     */
+    protected void endConsume(ChannelHandlerContext ctx) {
+        // NOOP
+    }
+
+    /**
+     * Consume the message. After this method was executed  for all of the messages in the {@link MessageList}
      * {@link MessageList#releaseAllAndRecycle()} is called and so the {@link MessageList} is recycled and
      * {@link ReferenceCounted#release()} is called on all messages that implement {@link ReferenceCounted}.
      *
@@ -49,8 +78,8 @@ public abstract class ChannelInboundConsumingHandler extends ChannelInboundHandl
      *
      * @param ctx           The {@link ChannelHandlerContext} which is bound to this
      *                      {@link ChannelInboundConsumingHandler}
-     * @param msgs          The {@link .MessageList} to consume and handle
+     * @param msg           The mesage to consume and handle
      * @throws Exception    thrown if an error accours
      */
-    protected abstract void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception;
+    protected abstract void consume(ChannelHandlerContext ctx, I msg) throws Exception;
 }

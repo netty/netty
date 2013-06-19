@@ -21,7 +21,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundConsumingHandler;
-import io.netty.channel.MessageList;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -46,7 +45,7 @@ import static io.netty.handler.codec.http.HttpVersion.*;
 /**
  * Handles handshakes and messages
  */
-public class WebSocketServerHandler extends ChannelInboundConsumingHandler {
+public class WebSocketServerHandler extends ChannelInboundConsumingHandler<Object> {
     private static final Logger logger = Logger.getLogger(WebSocketServerHandler.class.getName());
 
     private static final String WEBSOCKET_PATH = "/websocket";
@@ -54,14 +53,11 @@ public class WebSocketServerHandler extends ChannelInboundConsumingHandler {
     private WebSocketServerHandshaker handshaker;
 
     @Override
-    public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-        for (int i = 0; i < msgs.size(); i++) {
-            Object msg = msgs.get(i);
-            if (msg instanceof FullHttpRequest) {
-                handleHttpRequest(ctx, (FullHttpRequest) msg);
-            } else if (msg instanceof WebSocketFrame) {
-                handleWebSocketFrame(ctx, (WebSocketFrame) msg);
-            }
+    public void consume(ChannelHandlerContext ctx, Object msg) throws Exception {
+        if (msg instanceof FullHttpRequest) {
+            handleHttpRequest(ctx, (FullHttpRequest) msg);
+        } else if (msg instanceof WebSocketFrame) {
+            handleWebSocketFrame(ctx, (WebSocketFrame) msg);
         }
     }
 

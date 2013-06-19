@@ -140,7 +140,7 @@ public class UDTClientServerConnectionTest {
     }
 
     static class ClientHandler extends
-            ChannelInboundConsumingHandler {
+            ChannelInboundConsumingHandler<Object> {
 
         static final Logger log = LoggerFactory.getLogger(ClientHandler.class);
 
@@ -170,10 +170,8 @@ public class UDTClientServerConnectionTest {
         }
 
         @Override
-        public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-            for (int i = 0; i < msgs.size(); i ++) {
-                log.info("Client received: " + msgs.get(i));
-            }
+        public void consume(ChannelHandlerContext ctx, Object msg) throws Exception {
+            log.info("Client received: " + msg);
         }
     }
 

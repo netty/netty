@@ -21,7 +21,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.MessageList;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.oio.OioDatagramChannel;
@@ -44,9 +43,9 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
     public void testMulticast(Bootstrap sb, Bootstrap cb) throws Throwable {
         MulticastTestHandler mhandler = new MulticastTestHandler();
 
-        sb.handler(new ChannelInboundConsumingHandler() {
+        sb.handler(new ChannelInboundConsumingHandler<DatagramPacket>() {
             @Override
-            protected void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            protected void consume(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
                 // Nothing will be sent.
             }
         });
@@ -91,19 +90,19 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         cc.close().awaitUninterruptibly();
     }
 
-    private static final class MulticastTestHandler extends ChannelInboundConsumingHandler {
+    private static final class MulticastTestHandler extends ChannelInboundConsumingHandler<DatagramPacket> {
         private final CountDownLatch latch = new CountDownLatch(1);
 
         private boolean done;
         private volatile boolean fail;
 
         @Override
-        protected void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-            if (done || msgs.size() != 1) {
+        protected void consume(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+            if (done) {
                 fail = true;
             }
 
-            assertEquals(1, ((DatagramPacket) msgs.get(0)).content().readInt());
+            assertEquals(1, msg.content().readInt());
 
             latch.countDown();
 

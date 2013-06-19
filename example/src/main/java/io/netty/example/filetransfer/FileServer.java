@@ -92,30 +92,23 @@ public class FileServer {
         new FileServer(port).run();
     }
 
-    private static final class FileHandler extends ChannelInboundConsumingHandler {
+    private static final class FileHandler extends ChannelInboundConsumingHandler<String> {
         @Override
-        public void consume(ChannelHandlerContext ctx, MessageList<Object> messages) throws Exception {
-            MessageList<String> msgs = messages.cast();
-            MessageList<Object> out = MessageList.newInstance();
-
-            for (int i = 0; i < msgs.size(); i++) {
-                String msg = msgs.get(i);
-                File file = new File(msg);
-                if (file.exists()) {
-                    if (!file.isFile()) {
-                        ctx.write("Not a file: " + file + '\n');
-                        return;
-                    }
-                    ctx.write(file + " " + file.length() + '\n');
-                    FileRegion region = new DefaultFileRegion(new FileInputStream(file).getChannel(), 0, file.length());
-                    out.add(region);
-                    out.add("\n");
-                } else {
-                    out.add("File not found: " + file + '\n');
+        public void consume(ChannelHandlerContext ctx, String msg) throws Exception {
+            File file = new File(msg);
+            if (file.exists()) {
+                if (!file.isFile()) {
+                    ctx.write("Not a file: " + file + '\n');
+                    return;
                 }
+                MessageList<Object> out = MessageList.newInstance();
+                ctx.write(file + " " + file.length() + '\n');
+                FileRegion region = new DefaultFileRegion(new FileInputStream(file).getChannel(), 0, file.length());
+                out.add(region);
+                out.add("\n");
+            } else {
+                ctx.write("File not found: " + file + '\n');
             }
-
-            ctx.write(out);
         }
 
         @Override

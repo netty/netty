@@ -17,21 +17,17 @@ package io.netty.example.qotm;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundConsumingHandler;
-import io.netty.channel.MessageList;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.CharsetUtil;
 
-public class QuoteOfTheMomentClientHandler extends ChannelInboundConsumingHandler {
+public class QuoteOfTheMomentClientHandler extends ChannelInboundConsumingHandler<DatagramPacket> {
 
     @Override
-    public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-        MessageList<DatagramPacket> packets = msgs.cast();
-        for (int i = 0; i < packets.size(); i++) {
-            String response = packets.get(i).content().toString(CharsetUtil.UTF_8);
-            if (response.startsWith("QOTM: ")) {
-                System.out.println("Quote of the Moment: " + response.substring(6));
-                ctx.close();
-            }
+    public void consume(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+        String response = msg.content().toString(CharsetUtil.UTF_8);
+        if (response.startsWith("QOTM: ")) {
+            System.out.println("Quote of the Moment: " + response.substring(6));
+            ctx.close();
         }
     }
 

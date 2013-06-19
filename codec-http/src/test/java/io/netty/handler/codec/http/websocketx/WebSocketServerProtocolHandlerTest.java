@@ -156,13 +156,13 @@ public class WebSocketServerProtocolHandlerTest {
         }
     }
 
-    private static class CustomTextFrameHandler extends ChannelInboundConsumingHandler {
+    private static class CustomTextFrameHandler extends ChannelInboundConsumingHandler<TextWebSocketFrame> {
         private String content;
 
         @Override
-        public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-            assertEquals(1, msgs.size());
-            content = "processed: " + ((TextWebSocketFrame) msgs.get(0)).text();
+        public void consume(ChannelHandlerContext ctx, TextWebSocketFrame msg) throws Exception {
+            assertNull(content);
+            content = "processed: " + msg.text();
         }
 
         String getContent() {

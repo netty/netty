@@ -53,14 +53,14 @@ public class DefaultChannelPipelineTest {
         final AtomicReference<Channel> peerRef = new AtomicReference<Channel>();
         ServerBootstrap sb = new ServerBootstrap();
         sb.group(group).channel(LocalServerChannel.class);
-        sb.childHandler(new ChannelInboundConsumingHandler() {
+        sb.childHandler(new ChannelInboundConsumingHandler<Object>() {
             @Override
             public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
                 peerRef.set(ctx.channel());
             }
 
             @Override
-            public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            public void consume(ChannelHandlerContext ctx, Object msg) throws Exception {
                 // Swallow.
             }
         });

@@ -20,8 +20,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundConsumingHandler;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.MessageList;
 
 import java.net.InetAddress;
 import java.util.Date;
@@ -32,7 +30,7 @@ import java.util.logging.Logger;
  * Handles a server-side channel.
  */
 @Sharable
-public class TelnetServerHandler extends ChannelInboundConsumingHandler {
+public class TelnetServerHandler extends ChannelInboundConsumingHandler<String> {
 
     private static final Logger logger = Logger.getLogger(
             TelnetServerHandler.class.getName());
@@ -46,32 +44,28 @@ public class TelnetServerHandler extends ChannelInboundConsumingHandler {
     }
 
     @Override
-    public void consume(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-        MessageList<String> requests = msgs.cast();
-        for (int i = 0; i < requests.size(); i++) {
-            String request = requests.get(i);
+    public void consume(ChannelHandlerContext ctx, String request) throws Exception {
 
-            // Generate and write a response.
-            String response;
-            boolean close = false;
-            if (request.isEmpty()) {
-                response = "Please type something.\r\n";
-            } else if ("bye".equals(request.toLowerCase())) {
-                response = "Have a good day!\r\n";
-                close = true;
-            } else {
-                response = "Did you say '" + request + "'?\r\n";
-            }
+        // Generate and write a response.
+        String response;
+        boolean close = false;
+        if (request.isEmpty()) {
+            response = "Please type something.\r\n";
+        } else if ("bye".equals(request.toLowerCase())) {
+            response = "Have a good day!\r\n";
+            close = true;
+        } else {
+            response = "Did you say '" + request + "'?\r\n";
+        }
 
-            // We do not need to write a ChannelBuffer here.
-            // We know the encoder inserted at TelnetPipelineFactory will do the conversion.
-            ChannelFuture future = ctx.write(response);
+        // We do not need to write a ChannelBuffer here.
+        // We know the encoder inserted at TelnetPipelineFactory will do the conversion.
+        ChannelFuture future = ctx.write(response);
 
-            // Close the connection after sending 'Have a good day!'
-            // if the client has sent 'bye'.
-            if (close) {
-                future.addListener(ChannelFutureListener.CLOSE);
-            }
+        // Close the connection after sending 'Have a good day!'
+        // if the client has sent 'bye'.
+        if (close) {
+            future.addListener(ChannelFutureListener.CLOSE);
         }
     }
 
