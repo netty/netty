@@ -17,8 +17,6 @@ package io.netty.util.concurrent;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.RunnableFuture;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
 
@@ -86,8 +84,6 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
     }
 
     protected final Promise<V> setFailureInternal(Throwable cause) {
-        Logger.getLogger(PromiseTask.class.getName()).log(
-                Level.WARNING, "Calling setFailureInternal(" + cause + ") on " + this, new Exception());
         super.setFailure(cause);
         return this;
     }
@@ -107,8 +103,6 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
     }
 
     protected final Promise<V> setSuccessInternal(V result) {
-        Logger.getLogger(PromiseTask.class.getName()).log(
-                Level.WARNING, "Calling setSuccessInternal() on " + this, new Exception());
         super.setSuccess(result);
         return this;
     }
