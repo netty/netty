@@ -49,7 +49,7 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
         if (position < 0) {
             throw new IllegalArgumentException("position must be >= 0 but was " + position);
         }
-        if (count <= 0) {
+        if (count < 0) {
             throw new IllegalArgumentException("count must be >= 0 but was " + count);
         }
         this.file = file;
