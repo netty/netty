@@ -146,13 +146,13 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         }
 
         // Format request
+        int wsPort = wsURL.getPort();
         HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, path);
         request.addHeader(Names.UPGRADE, Values.WEBSOCKET.toLowerCase());
         request.addHeader(Names.CONNECTION, Values.UPGRADE);
         request.addHeader(Names.SEC_WEBSOCKET_KEY, key);
-        request.addHeader(Names.HOST, wsURL.getHost());
+        request.addHeader(Names.HOST, wsURL.getHost() + ':' + wsPort);
 
-        int wsPort = wsURL.getPort();
         String originValue = "http://" + wsURL.getHost();
         if (wsPort != 80 && wsPort != 443) {
             // if the port is not standard (80/443) its needed to add the port to the header.
