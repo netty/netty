@@ -44,23 +44,12 @@ public class AdaptiveRecvByteBufAllocator implements RecvByteBufAllocator {
 
     static {
         List<Integer> sizeTable = new ArrayList<Integer>();
-        for (int i = 1; i <= 8; i ++) {
+        for (int i = 16; i < 512; i += 16) {
             sizeTable.add(i);
         }
 
-        for (int i = 4; i < 32; i ++) {
-            long v = 1L << i;
-            long inc = v >>> 4;
-            v -= inc << 3;
-
-            for (int j = 0; j < 8; j ++) {
-                v += inc;
-                if (v > Integer.MAX_VALUE) {
-                    sizeTable.add(Integer.MAX_VALUE);
-                } else {
-                    sizeTable.add((int) v);
-                }
-            }
+        for (int i = 512; i > 0; i <<= 1) {
+            sizeTable.add(i);
         }
 
         SIZE_TABLE = new int[sizeTable.size()];
