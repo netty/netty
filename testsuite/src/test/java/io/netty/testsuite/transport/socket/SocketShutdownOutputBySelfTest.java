@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundConsumingHandler;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import org.junit.Test;
 
@@ -76,7 +76,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         }
     }
 
-    private static class TestHandler extends ChannelInboundConsumingHandler<ByteBuf> {
+    private static class TestHandler extends SimpleChannelInboundHandler<ByteBuf> {
         volatile SocketChannel ch;
         final BlockingQueue<Byte> queue = new LinkedBlockingQueue<Byte>();
 
@@ -86,7 +86,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         }
 
         @Override
-        public void consume(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
             queue.offer(msg.readByte());
         }
     }

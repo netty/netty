@@ -17,13 +17,13 @@ package io.netty.example.qotm;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundConsumingHandler;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.CharsetUtil;
 
 import java.util.Random;
 
-public class QuoteOfTheMomentServerHandler extends ChannelInboundConsumingHandler<DatagramPacket> {
+public class QuoteOfTheMomentServerHandler extends SimpleChannelInboundHandler<DatagramPacket> {
 
     private static final Random random = new Random();
 
@@ -44,7 +44,7 @@ public class QuoteOfTheMomentServerHandler extends ChannelInboundConsumingHandle
     }
 
     @Override
-    public void consume(ChannelHandlerContext ctx, DatagramPacket packet) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, DatagramPacket packet) throws Exception {
         System.err.println(packet);
         if ("QOTM?".equals(packet.content().toString(CharsetUtil.UTF_8))) {
             ctx.write(new DatagramPacket(
