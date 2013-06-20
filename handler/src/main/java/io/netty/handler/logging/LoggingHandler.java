@@ -310,9 +310,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
                 logger.log(internalLevel, format(ctx, formatEmptyMessageList(eventName)));
             } else {
                 for (int i = 0; i < size; i ++) {
-                    Object msg = msgs.get(i);
-                    logger.log(internalLevel, format(ctx, formatMessage(eventName, i + 1, size, msg)));
-
+                    logger.log(internalLevel, format(ctx, formatMessage(eventName, i + 1, size, msgs.get(i))));
                 }
             }
         }
