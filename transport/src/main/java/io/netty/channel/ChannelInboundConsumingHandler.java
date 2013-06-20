@@ -15,8 +15,8 @@
  */
 package io.netty.channel;
 
-import io.netty.util.ReferenceCounted;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 
 
 /**
@@ -38,9 +38,9 @@ public abstract class ChannelInboundConsumingHandler<I> extends ChannelInboundHa
             }
         } finally {
             try {
-                endConsume(ctx);
-            } finally {
                 msgs.releaseAllAndRecycle();
+            } finally {
+                endConsume(ctx);
             }
         }
     }
