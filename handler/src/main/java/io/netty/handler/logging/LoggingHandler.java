@@ -303,26 +303,40 @@ public class LoggingHandler extends ChannelDuplexHandler {
         ctx.write(msgs, promise);
     }
 
-    private void logMessages(ChannelHandlerContext ctx, String message, MessageList<Object> msgs) {
+    private void logMessages(ChannelHandlerContext ctx, String eventName, MessageList<Object> msgs) {
         if (logger.isEnabled(internalLevel)) {
             int size = msgs.size();
-            for (int i = 0; i < size; i ++) {
-                Object msg = msgs.get(i);
-                if (msg instanceof ByteBuf) {
-                    logger.log(internalLevel, format(ctx, formatBuffer(message, (ByteBuf) msg)));
-                } else {
-                    // ignore
+            if (size == 0) {
+                logger.log(internalLevel, format(ctx, formatEmptyMessageList(eventName)));
+            } else {
+                for (int i = 0; i < size; i ++) {
+                    Object msg = msgs.get(i);
+                    logger.log(internalLevel, format(ctx, formatMessage(eventName, i + 1, size, msg)));
+
                 }
             }
         }
     }
 
-    protected String formatBuffer(String message, ByteBuf buf) {
+    protected String formatEmptyMessageList(String eventName) {
+        return eventName + "(empty)";
+    }
+
+    protected String formatMessage(String eventName, int seq, int size, Object msg) {
+        if (msg instanceof ByteBuf) {
+            return formatByteBuf(eventName, seq, size, (ByteBuf) msg);
+        } else {
+            return formatNonByteBuf(eventName, seq, size, msg);
+        }
+    }
+
+    protected String formatByteBuf(String eventName, int seq, int size, ByteBuf buf) {
         int length = buf.readableBytes();
         int rows = length / 16 + (length % 15 == 0? 0 : 1) + 4;
-        StringBuilder dump = new StringBuilder(rows * 80 + message.length() + 16);
+        StringBuilder dump = new StringBuilder(rows * 80 + eventName.length() + 16);
 
-        dump.append(message).append('(').append(length).append('B').append(')');
+        dump.append(eventName).append('(').append(seq).append('/').append(size).append(", ");
+        dump.append(length).append('B').append(')');
         dump.append(
                 NEWLINE + "         +-------------------------------------------------+" +
                         NEWLINE + "         |  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f |" +
@@ -368,24 +382,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
         return dump.toString();
     }
 
-    protected String formatBuffer(String message, Object[] msgs, int index, int length) {
-        return message + '(' + length + "): " + contentToString(msgs, index, length);
-    }
-
-    private static String contentToString(Object[] msgs, int index, int length) {
-        if (length == 0) {
-            return "[]";
-        }
-        StringBuilder sb = new StringBuilder();
-        sb.append('[');
-        for (int i = index; i < length; i++) {
-            Object msg = msgs[i];
-            sb.append(msg);
-
-            if (i + 1 < length) {
-                sb.append(", ");
-            }
-        }
-        return sb.append(']').toString();
+    protected String formatNonByteBuf(String eventName, int seq, int size, Object msg) {
+        return eventName + '(' + seq + '/' + size + "): " + msg;
     }
 }
