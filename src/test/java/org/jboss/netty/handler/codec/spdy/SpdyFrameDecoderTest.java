@@ -1,18 +1,39 @@
+/*
+ * Copyright 2013 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package org.jboss.netty.handler.codec.spdy;
+
+import org.jboss.netty.bootstrap.ClientBootstrap;
+import org.jboss.netty.bootstrap.ServerBootstrap;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ExceptionEvent;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import org.jboss.netty.util.TestUtil;
+import org.junit.Test;
 
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-
-import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.jboss.netty.channel.*;
-import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
-import org.jboss.netty.util.TestUtil;
-import org.junit.Test;
 
 import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
 import static org.junit.Assert.*;
@@ -68,7 +89,7 @@ public class SpdyFrameDecoderTest {
         }
     }
 
-    private void sendAndWaitForFrame(Channel cc, SpdyFrame frame, CaptureHandler handler) {
+    private static void sendAndWaitForFrame(Channel cc, SpdyFrame frame, CaptureHandler handler) {
         cc.write(frame);
         long theFuture = System.currentTimeMillis() + 3000;
         while (handler.message == null && System.currentTimeMillis() < theFuture) {
@@ -80,7 +101,7 @@ public class SpdyFrameDecoderTest {
         }
     }
 
-    private void addHeader(SpdyHeadersFrame frame, int headerNameSize, int headerValueSize) {
+    private static void addHeader(SpdyHeadersFrame frame, int headerNameSize, int headerValueSize) {
         frame.addHeader("k", "v");
         StringBuilder headerName = new StringBuilder();
         for (int i = 0; i < headerNameSize; i++) {
@@ -106,13 +127,11 @@ public class SpdyFrameDecoderTest {
 
         @Override
         public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-            this.message = e.getMessage();
+            message = e.getMessage();
         }
 
         @Override
-        public void exceptionCaught(
-                ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-            System.out.println(e.getCause());
+        public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
             e.getCause().printStackTrace();
             message = e.getCause();
         }
