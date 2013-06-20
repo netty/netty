@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -33,7 +33,7 @@ public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
 	/**
 	 * Encodes the information in a {@link DnsQueryHeader} and writes it to the
 	 * specified {@link ByteBuf}. The header is always 12 bytes long.
-	 * 
+	 *
 	 * @param header
 	 *            the query header being encoded
 	 * @param buf
@@ -44,7 +44,7 @@ public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
 		int flags = 0;
 		flags |= header.getType() << 15;
 		flags |= header.getOpcode() << 14;
-		flags |= header.isRecursionDesired() ? (1 << 8) : 0;
+		flags |= header.isRecursionDesired() ? 1 << 8 : 0;
 		buf.writeShort(flags);
 		buf.writeShort(header.questionCount());
 		buf.writeShort(header.answerCount()); // Must be 0
@@ -55,7 +55,7 @@ public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
 	/**
 	 * Encodes the information in a {@link Question} and writes it to the
 	 * specified {@link ByteBuf}.
-	 * 
+	 *
 	 * @param question
 	 *            the question being encoded
 	 * @param buf
@@ -76,7 +76,7 @@ public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
 	 * Encodes a query and writes it to a {@link ByteBuf}. Queries are sent to a
 	 * DNS server and a response will be returned from the server. The encoded
 	 * ByteBuf is written to the specified {@link MessageList}.
-	 * 
+	 *
 	 * @param ctx
 	 *            the {@link ChannelHandlerContext} this {@link DnsQueryEncoder}
 	 *            belongs to

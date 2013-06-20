@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,13 +15,15 @@
  */
 package io.netty.handler.dns;
 
+import io.netty.buffer.ByteBuf;
+
 import java.util.List;
 import java.util.concurrent.Callable;
 
 /**
  * Returns a single result, as opposed to a {@link List} of results in a
  * {@link DnsCallback}.
- * 
+ *
  * @param <T>
  *            a single result for a specified type (i.e. if type is A, result
  *            would be a {@link ByteBuf})
@@ -33,7 +35,7 @@ public class SingleResultCallback<T> implements Callable<T> {
 	/**
 	 * Constructs a {@link SingleResultCallback} by passing it a
 	 * {@link DnsCallback}.
-	 * 
+	 *
 	 * @param parent
 	 *            the {@link DnsCallback}
 	 */
@@ -48,8 +50,9 @@ public class SingleResultCallback<T> implements Callable<T> {
 	@Override
 	public T call() throws InterruptedException {
 		List<T> list = parent.call();
-		if (list == null || list.isEmpty())
+		if (list == null || list.isEmpty()) {
 			return null;
+		}
 		return list.get(0);
 	}
 

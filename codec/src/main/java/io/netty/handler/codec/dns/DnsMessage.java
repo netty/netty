@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -71,7 +71,7 @@ public abstract class DnsMessage<H extends DnsHeader> {
 
 	/**
 	 * Adds an answer resource record to this message.
-	 * 
+	 *
 	 * @param answer
 	 *            the answer resource record to be added
 	 * @return the message to allow method chaining
@@ -83,7 +83,7 @@ public abstract class DnsMessage<H extends DnsHeader> {
 
 	/**
 	 * Adds a question to this message.
-	 * 
+	 *
 	 * @param question
 	 *            the question to be added
 	 * @return the message to allow method chaining
@@ -95,7 +95,7 @@ public abstract class DnsMessage<H extends DnsHeader> {
 
 	/**
 	 * Adds an authority resource record to this message.
-	 * 
+	 *
 	 * @param authority
 	 *            the authority resource record to be added
 	 * @return the message to allow method chaining
@@ -107,7 +107,7 @@ public abstract class DnsMessage<H extends DnsHeader> {
 
 	/**
 	 * Adds an additional resource record to this message.
-	 * 
+	 *
 	 * @param resource
 	 *            the additional resource record to be added
 	 * @return the message to allow method chaining
@@ -119,7 +119,7 @@ public abstract class DnsMessage<H extends DnsHeader> {
 
 	/**
 	 * Sets this message's {@link DnsHeader}.
-	 * 
+	 *
 	 * @param header
 	 *            the header being attached to this message
 	 * @return the message to allow method chaining

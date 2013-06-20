@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -24,7 +24,7 @@ public class DnsQueryHeader extends DnsHeader {
 	/**
 	 * Constructor for a DNS packet query header. The id is user generated and
 	 * will be replicated in the response packet by the server.
-	 * 
+	 *
 	 * @param parent
 	 *            the {@link DnsMessage} this header belongs to
 	 * @param id
@@ -48,7 +48,7 @@ public class DnsQueryHeader extends DnsHeader {
 
 	/**
 	 * Sets the {@link DnsHeader} type. Must be {@code TYPE_RESPONSE}.
-	 * 
+	 *
 	 * @param type
 	 *            message type
 	 * @return the header to allow method chaining

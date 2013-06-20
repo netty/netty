@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -37,7 +37,7 @@ public class DnsResponseHeader extends DnsHeader {
 	/**
 	 * Constructor for a DNS packet response header. The id is received by
 	 * reading a {@link DnsQuery} and is sent back to the client.
-	 * 
+	 *
 	 * @param parent
 	 *            the {@link DnsMessage} this header belongs to
 	 * @param id
@@ -130,7 +130,7 @@ public class DnsResponseHeader extends DnsHeader {
 	/**
 	 * Set to {@code true} if responding server is authoritative for the domain
 	 * name in the query message.
-	 * 
+	 *
 	 * @param authoritativeAnswer
 	 *            flag for authoritative answer
 	 */
@@ -141,7 +141,7 @@ public class DnsResponseHeader extends DnsHeader {
 	/**
 	 * Set to {@code true} if response has been truncated (usually happens for
 	 * responses over 512 bytes).
-	 * 
+	 *
 	 * @param truncated
 	 *            flag for truncation
 	 */
@@ -151,7 +151,7 @@ public class DnsResponseHeader extends DnsHeader {
 
 	/**
 	 * Set to {@code true} if DNS server can handle recursive queries.
-	 * 
+	 *
 	 * @param recursionAvailable
 	 *            flag for recursion availability
 	 */
@@ -162,7 +162,7 @@ public class DnsResponseHeader extends DnsHeader {
 	/**
 	 * Sets the field Z. This field is reserved and should remain as 0 if the
 	 * DNS server does not make usage of this field.
-	 * 
+	 *
 	 * @param z
 	 *            the value for the reserved field Z
 	 */
@@ -172,7 +172,7 @@ public class DnsResponseHeader extends DnsHeader {
 
 	/**
 	 * Sets the response code for this message.
-	 * 
+	 *
 	 * @param responseCode
 	 *            the response code
 	 */
@@ -183,7 +183,7 @@ public class DnsResponseHeader extends DnsHeader {
 	/**
 	 * Sets the number of questions that should be read after this header has
 	 * been decoded.
-	 * 
+	 *
 	 * @param readQuestions
 	 *            the number of questions to read
 	 */
@@ -194,7 +194,7 @@ public class DnsResponseHeader extends DnsHeader {
 	/**
 	 * Sets the number of answers that should be read after this header has been
 	 * decoded.
-	 * 
+	 *
 	 * @param readAnswers
 	 *            the number of answers to read
 	 */
@@ -205,7 +205,7 @@ public class DnsResponseHeader extends DnsHeader {
 	/**
 	 * Sets the number of authority resources to be read after this header has
 	 * been decoded.
-	 * 
+	 *
 	 * @param readAuthorityResources
 	 *            the number of authority resources to read
 	 */
@@ -216,7 +216,7 @@ public class DnsResponseHeader extends DnsHeader {
 	/**
 	 * Sets the number of additional resources to be read after this header has
 	 * been decoded.
-	 * 
+	 *
 	 * @param readAdditionalResources
 	 *            the number of additional resources to read
 	 */
@@ -226,7 +226,7 @@ public class DnsResponseHeader extends DnsHeader {
 
 	/**
 	 * Sets the {@link DnsHeader} type. Must be {@code TYPE_RESPONSE}.
-	 * 
+	 *
 	 * @param type
 	 *            message type
 	 * @return the header to allow method chaining

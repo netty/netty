@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -15,9 +15,12 @@
  */
 package io.netty.handler.dns;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.dns.DnsQuery;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -28,7 +31,7 @@ import java.util.concurrent.TimeUnit;
  * cached information to the constructor. The information can be obtained by
  * calling any of the {@code get()} methods. Attempting to add a listener to
  * this class will throw a {@link RuntimeException}.
- * 
+ *
  * @param <T>
  *            the type for the cached information (i.e. for A and AAAA records,
  *            this is {@link ByteBuf})
@@ -40,7 +43,7 @@ public class CachedFuture<T> implements Future<T> {
 	/**
 	 * Constructs a {@link CachedFuture}, used for instantly returning data
 	 * while implementing {@link Future}.
-	 * 
+	 *
 	 * @param content
 	 *            the data to be returned on when calling {@code get()} methods
 	 */
@@ -195,8 +198,8 @@ public class CachedFuture<T> implements Future<T> {
 	}
 
 	/**
-	 * Since this {@link Future} completes instantly, listeners cannot be
-	 * added. This method throws a {@link RuntimeException}.
+	 * Since this {@link Future} completes instantly, listeners cannot be added.
+	 * This method throws a {@link RuntimeException}.
 	 */
 	@SuppressWarnings("unchecked")
 	@Override

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -35,7 +35,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
 	 * Retrieves a domain name given a buffer containing a DNS packet. If the
 	 * name contains a pointer, the position of the buffer will be set to
 	 * directly after the pointer's index after the name has been read.
-	 * 
+	 *
 	 * @param buf
 	 *            the byte buffer containing the DNS packet
 	 * @return the domain name for an entry
@@ -61,15 +61,16 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
 		if (position != -1) {
 			buf.readerIndex(position);
 		}
-		if (name.length() == 0)
+		if (name.length() == 0) {
 			return null;
+		}
 		return name.substring(0, name.length() - 1);
 	}
 
 	/**
 	 * Retrieves a domain name given a buffer containing a DNS packet without
 	 * advancing the readerIndex for the buffer.
-	 * 
+	 *
 	 * @param buf
 	 *            the byte buffer containing the DNS packet
 	 * @param offset
@@ -85,18 +86,19 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
 				offset = (len & 0x3f) << 8 | buf.getUnsignedByte(offset++);
 			} else {
 				name.append(buf.toString(offset, len, Charset.forName("UTF-8")))
-						.append(".");
+				.append(".");
 				offset += len;
 			}
 		}
-		if (name.length() == 0)
+		if (name.length() == 0) {
 			return null;
+		}
 		return name.substring(0, name.length() - 1);
 	}
 
 	/**
 	 * Decodes a question, given a DNS packet in a byte buffer.
-	 * 
+	 *
 	 * @param buf
 	 *            the byte buffer containing the DNS packet
 	 * @return a decoded {@link Question}
@@ -110,7 +112,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
 
 	/**
 	 * Decodes a resource record, given a DNS packet in a byte buffer.
-	 * 
+	 *
 	 * @param buf
 	 *            the byte buffer containing the DNS packet
 	 * @return a {@link Resource} record containing response data
@@ -129,7 +131,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
 
 	/**
 	 * Decodes a DNS response header, given a DNS packet in a byte buffer.
-	 * 
+	 *
 	 * @param parent
 	 *            the parent {@link Message} to this header
 	 * @param buf
@@ -142,12 +144,12 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
 		DnsResponseHeader header = new DnsResponseHeader(parent, id);
 		int flags = buf.readUnsignedShort();
 		header.setType(flags >> 15);
-		header.setOpcode((flags >> 11) & 0xf);
-		header.setRecursionDesired(((flags >> 8) & 1) == 1);
-		header.setAuthoritativeAnswer(((flags >> 10) & 1) == 1);
-		header.setTruncated(((flags >> 9) & 1) == 1);
-		header.setRecursionAvailable(((flags >> 7) & 1) == 1);
-		header.setZ((flags >> 4) & 0x7);
+		header.setOpcode(flags >> 11 & 0xf);
+		header.setRecursionDesired((flags >> 8 & 1) == 1);
+		header.setAuthoritativeAnswer((flags >> 10 & 1) == 1);
+		header.setTruncated((flags >> 9 & 1) == 1);
+		header.setRecursionAvailable((flags >> 7 & 1) == 1);
+		header.setZ(flags >> 4 & 0x7);
 		header.setResponseCode(flags & 0xf);
 		header.setReadQuestions(buf.readUnsignedShort());
 		header.setReadAnswers(buf.readUnsignedShort());
@@ -162,7 +164,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
 	 * to a client in response to a query. This method writes the decoded
 	 * response to the specified {@link MessageList} to be handled by a
 	 * specialized message handler.
-	 * 
+	 *
 	 * @param ctx
 	 *            the {@link ChannelHandlerContext} this
 	 *            {@link DnsResponseDecoder} belongs to
@@ -189,10 +191,10 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
 		}
 		if (header.getResponseCode() != 0) {
 			System.err
-					.println("Encountered error decoding DNS response for domain \""
-							+ response.getQuestions().get(0).name()
-							+ "\": "
-							+ ResponseCode.obtainError(header.getResponseCode()));
+			.println("Encountered error decoding DNS response for domain \""
+					+ response.getQuestions().get(0).name()
+					+ "\": "
+					+ ResponseCode.obtainError(header.getResponseCode()));
 		}
 		for (int i = 0; i < header.getReadAnswers(); i++) {
 			response.addAnswer(decodeResource(buf));

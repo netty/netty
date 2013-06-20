@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -30,7 +30,7 @@ public class AddressDecoder implements RecordDecoder<ByteBuf> {
 	/**
 	 * Constructs an {@code AddressDecoder}, which decodes A and AAAA resource
 	 * records.
-	 * 
+	 *
 	 * @param octets
 	 *            the number of octets an address has. 4 for type A records and
 	 *            16 for type AAAA records
@@ -42,7 +42,7 @@ public class AddressDecoder implements RecordDecoder<ByteBuf> {
 	/**
 	 * Returns a {@link ByteBuf} containing a decoded address from either an A
 	 * or AAAA resource record.
-	 * 
+	 *
 	 * @param response
 	 *            the {@link DnsResponse} received that contained the resource
 	 *            record being decoded

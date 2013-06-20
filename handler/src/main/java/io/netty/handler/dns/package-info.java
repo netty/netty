@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,19 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.dns;
 
 /**
- * A DNS query packet which is sent to a server to receive a DNS response packet
- * with information answering a DnsQuery's questions.
+ * Netty implements its own DNS codec to perform asynchronous DNS queries via
+ * {@link DnsExchangeFactory}.
  */
-public class DnsQuery extends DnsMessage<DnsQueryHeader> {
-
-	/**
-	 * Constructs a DNS query. By default recursion will be toggled on.
-	 */
-	public DnsQuery(int id) {
-		setHeader(new DnsQueryHeader(this, id));
-	}
-
-}
+package io.netty.handler.dns;

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -25,7 +25,7 @@ public class Question extends DnsEntry {
 
 	/**
 	 * Constructs a question with the default class IN (Internet).
-	 * 
+	 *
 	 * @param name
 	 *            the domain name being queried i.e. "www.example.com"
 	 * @param type
@@ -38,7 +38,7 @@ public class Question extends DnsEntry {
 
 	/**
 	 * Constructs a question with the given class.
-	 * 
+	 *
 	 * @param name
 	 *            the domain name being queried i.e. "www.example.com"
 	 * @param type
@@ -53,8 +53,9 @@ public class Question extends DnsEntry {
 
 	@Override
 	public boolean equals(Object other) {
-		if (other == this)
+		if (other == this) {
 			return true;
+		}
 		if (other instanceof Question) {
 			Question question = (Question) other;
 			return question.name().equals(name()) && question.type() == type()
