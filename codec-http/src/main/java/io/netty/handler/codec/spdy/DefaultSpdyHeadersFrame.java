@@ -15,9 +15,9 @@
  */
 package io.netty.handler.codec.spdy;
 
-import java.util.Map;
-
 import io.netty.util.internal.StringUtil;
+
+import java.util.Map;
 
 /**
  * The default {@link SpdyHeadersFrame} implementation.
@@ -26,6 +26,7 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyStreamFrame
         implements SpdyHeadersFrame {
 
     private boolean invalid;
+    private boolean truncated;
     private final SpdyHeaders headers = new DefaultSpdyHeaders();
 
     /**
@@ -49,15 +50,27 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyStreamFrame
         return this;
     }
 
+    @Override
     public boolean isInvalid() {
         return invalid;
     }
 
+    @Override
     public SpdyHeadersFrame setInvalid() {
         invalid = true;
         return this;
     }
 
+    public boolean isTruncated() {
+        return truncated;
+    }
+
+    public SpdyHeadersFrame setTruncated() {
+        truncated = true;
+        return this;
+    }
+
+    @Override
     public SpdyHeaders headers() {
         return headers;
     }

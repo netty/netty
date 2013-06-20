@@ -241,7 +241,9 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
                 return;
             }
 
-            if (spdyHeadersFrame != null && spdyHeadersFrame.isInvalid()) {
+            if (spdyHeadersFrame != null &&
+                    (spdyHeadersFrame.isInvalid() || spdyHeadersFrame.isTruncated())) {
+
                 Object frame = spdyHeadersFrame;
                 spdyHeadersFrame = null;
                 if (length == 0) {
