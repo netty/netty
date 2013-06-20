@@ -32,9 +32,7 @@ public class QuoteOfTheMomentClientHandler extends ChannelInboundConsumingHandle
     }
 
     @Override
-    public void exceptionCaught(
-            ChannelHandlerContext ctx, Throwable cause)
-            throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         cause.printStackTrace();
         ctx.close();
     }

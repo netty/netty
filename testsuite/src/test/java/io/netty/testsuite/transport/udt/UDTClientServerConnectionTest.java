@@ -139,8 +139,7 @@ public class UDTClientServerConnectionTest {
         }
     }
 
-    static class ClientHandler extends
-            ChannelInboundConsumingHandler<Object> {
+    static class ClientHandler extends ChannelInboundConsumingHandler<Object> {
 
         static final Logger log = LoggerFactory.getLogger(ClientHandler.class);
 

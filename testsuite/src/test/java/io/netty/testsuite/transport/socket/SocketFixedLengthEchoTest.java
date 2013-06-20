@@ -129,8 +129,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         volatile int counter;
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx)
-                throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
             channel = ctx.channel();
         }
 
@@ -154,9 +153,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void exceptionCaught(
-                ChannelHandlerContext ctx, Throwable cause)
-                throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             if (exception.compareAndSet(null, cause)) {
                 ctx.close();
             }

@@ -32,8 +32,7 @@ import java.util.logging.Logger;
 @Sharable
 public class TelnetServerHandler extends ChannelInboundConsumingHandler<String> {
 
-    private static final Logger logger = Logger.getLogger(
-            TelnetServerHandler.class.getName());
+    private static final Logger logger = Logger.getLogger(TelnetServerHandler.class.getName());
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {

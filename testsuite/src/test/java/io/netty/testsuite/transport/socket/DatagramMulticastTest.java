@@ -20,7 +20,9 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundConsumingHandler;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.MessageList;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.oio.OioDatagramChannel;
@@ -43,10 +45,11 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
     public void testMulticast(Bootstrap sb, Bootstrap cb) throws Throwable {
         MulticastTestHandler mhandler = new MulticastTestHandler();
 
-        sb.handler(new ChannelInboundConsumingHandler<DatagramPacket>() {
+        sb.handler(new ChannelInboundHandlerAdapter() {
             @Override
-            protected void consume(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+            public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
                 // Nothing will be sent.
+                msgs.releaseAllAndRecycle();
             }
         });
 

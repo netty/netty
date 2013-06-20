@@ -50,7 +50,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.util.CharsetUtil;
 
-public class WebSocketClientHandler extends ChannelInboundConsumingHandler {
+public class WebSocketClientHandler extends ChannelInboundConsumingHandler<Object> {
 
     private final WebSocketClientHandshaker handshaker;
     private ChannelPromise handshakeFuture;

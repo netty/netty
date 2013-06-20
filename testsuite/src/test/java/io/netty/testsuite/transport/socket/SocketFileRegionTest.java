@@ -22,8 +22,10 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.FileRegion;
+import io.netty.channel.MessageList;
 import org.junit.Test;
 
 import java.io.File;
@@ -70,11 +72,10 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         out.write(data);
         out.close();
 
-        ChannelInboundHandler ch = new ChannelInboundConsumingHandler<Object>() {
-
+        ChannelInboundHandler ch = new ChannelInboundHandlerAdapter() {
             @Override
-            public void consume(ChannelHandlerContext ctx, Object msg) throws Exception {
-                // discard
+            public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+                msgs.releaseAllAndRecycle();
             }
 
             @Override

@@ -20,7 +20,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundConsumingHandler;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
@@ -69,11 +69,11 @@ public class LocalTransportThreadModelTest3 {
                 .childHandler(new ChannelInitializer<LocalChannel>() {
                     @Override
                     public void initChannel(LocalChannel ch) throws Exception {
-                        ch.pipeline().addLast(new ChannelInboundConsumingHandler<Object>() {
+                        ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                             @Override
-                            public void consume(
-                                    ChannelHandlerContext ctx, Object msg) throws Exception {
+                            public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) {
                                 // Discard
+                                msgs.releaseAllAndRecycle();
                             }
                         });
                     }
