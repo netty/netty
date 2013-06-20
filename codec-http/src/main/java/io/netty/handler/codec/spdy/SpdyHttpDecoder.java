@@ -108,7 +108,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
                 if (associatedToStreamId == 0) {
                     SpdyRstStreamFrame spdyRstStreamFrame =
                         new DefaultSpdyRstStreamFrame(streamId, SpdyStreamStatus.INVALID_STREAM);
-                    ctx.write(spdyRstStreamFrame);
+                    out.add(spdyRstStreamFrame);
                 }
 
                 String URL = SpdyHeaders.getUrl(spdyVersion, spdySynStreamFrame);
@@ -118,7 +118,15 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
                 if (URL == null) {
                     SpdyRstStreamFrame spdyRstStreamFrame =
                         new DefaultSpdyRstStreamFrame(streamId, SpdyStreamStatus.PROTOCOL_ERROR);
-                    ctx.write(spdyRstStreamFrame);
+                    out.add(spdyRstStreamFrame);
+                }
+
+                // If a client receives a response with a truncated header block,
+                // reply with a RST_STREAM with error code INTERNAL_ERROR.
+                if (spdySynStreamFrame.isTruncated()) {
+                    SpdyRstStreamFrame spdyRstStreamFrame =
+                    new DefaultSpdyRstStreamFrame(streamId, SpdyStreamStatus.INTERNAL_ERROR);
+                    out.add(spdyRstStreamFrame);
                 }
 
                 try {
@@ -141,10 +149,23 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
                 } catch (Exception e) {
                     SpdyRstStreamFrame spdyRstStreamFrame =
                         new DefaultSpdyRstStreamFrame(streamId, SpdyStreamStatus.PROTOCOL_ERROR);
-                    ctx.write(spdyRstStreamFrame);
+                    out.add(spdyRstStreamFrame);
                 }
             } else {
                 // SYN_STREAM frames initiated by the client are HTTP requests
+
+                // If a client sends a request with a truncated header block, the server must
+                // reply with a HTTP 431 REQUEST HEADER FIELDS TOO LARGE reply.
+                if (spdySynStreamFrame.isTruncated()) {
+                    SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamId);
+                    spdySynReplyFrame.setLast(true);
+                    SpdyHeaders.setStatus(spdyVersion,
+                            spdySynReplyFrame,
+                            HttpResponseStatus.REQUEST_HEADER_FIELDS_TOO_LARGE);
+                    SpdyHeaders.setVersion(spdyVersion, spdySynReplyFrame, HttpVersion.HTTP_1_0);
+                    out.add(spdySynReplyFrame);
+                }
+
                 try {
                     FullHttpRequest httpRequestWithEntity = createHttpRequest(spdyVersion, spdySynStreamFrame);
 
@@ -165,7 +186,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
                     spdySynReplyFrame.setLast(true);
                     SpdyHeaders.setStatus(spdyVersion, spdySynReplyFrame, HttpResponseStatus.BAD_REQUEST);
                     SpdyHeaders.setVersion(spdyVersion, spdySynReplyFrame, HttpVersion.HTTP_1_0);
-                    ctx.write(spdySynReplyFrame);
+                    out.add(spdySynReplyFrame);
                 }
             }
 
@@ -173,6 +194,14 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
 
             SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
             int streamId = spdySynReplyFrame.getStreamId();
+
+            // If a client receives a SYN_REPLY with a truncated header block,
+            // reply with a RST_STREAM frame with error code INTERNAL_ERROR.
+            if (spdySynReplyFrame.isTruncated()) {
+                SpdyRstStreamFrame spdyRstStreamFrame =
+                        new DefaultSpdyRstStreamFrame(streamId, SpdyStreamStatus.INTERNAL_ERROR);
+                out.add(spdyRstStreamFrame);
+            }
 
             try {
                 FullHttpResponse httpResponseWithEntity = createHttpResponse(spdyVersion, spdySynReplyFrame);
@@ -192,7 +221,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
                 // the client must reply with a RST_STREAM frame indicating a PROTOCOL_ERROR
                 SpdyRstStreamFrame spdyRstStreamFrame =
                     new DefaultSpdyRstStreamFrame(streamId, SpdyStreamStatus.PROTOCOL_ERROR);
-                ctx.write(spdyRstStreamFrame);
+                out.add(spdyRstStreamFrame);
             }
 
         } else if (msg instanceof SpdyHeadersFrame) {
@@ -206,8 +235,11 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
                 return;
             }
 
-            for (Map.Entry<String, String> e: spdyHeadersFrame.headers().entries()) {
-                fullHttpMessage.headers().add(e.getKey(), e.getValue());
+            // Ignore trailers in a truncated HEADERS frame.
+            if (!spdyHeadersFrame.isTruncated()) {
+                for (Map.Entry<String, String> e: spdyHeadersFrame.headers().entries()) {
+                    fullHttpMessage.headers().add(e.getKey(), e.getValue());
+                }
             }
 
             if (spdyHeadersFrame.isLast()) {
