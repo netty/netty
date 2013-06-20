@@ -20,7 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundConsumingHandler;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.example.http.websocketx.server.WebSocketServerIndexPage;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -46,7 +46,7 @@ import static io.netty.handler.codec.http.HttpVersion.*;
 /**
  * Handles handshakes and messages
  */
-public class WebSocketSslServerHandler extends ChannelInboundConsumingHandler<Object> {
+public class WebSocketSslServerHandler extends SimpleChannelInboundHandler<Object> {
     private static final Logger logger = Logger.getLogger(WebSocketSslServerHandler.class.getName());
 
     private static final String WEBSOCKET_PATH = "/websocket";
@@ -54,7 +54,7 @@ public class WebSocketSslServerHandler extends ChannelInboundConsumingHandler<Ob
     private WebSocketServerHandshaker handshaker;
 
     @Override
-    public void consume(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof FullHttpRequest) {
             handleHttpRequest(ctx, (FullHttpRequest) msg);
         } else if (msg instanceof WebSocketFrame) {

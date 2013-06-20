@@ -28,8 +28,7 @@ import java.util.logging.Logger;
 @Sharable
 public class TelnetClientHandler extends SimpleChannelInboundHandler<String> {
 
-    private static final Logger logger = Logger.getLogger(
-            TelnetClientHandler.class.getName());
+    private static final Logger logger = Logger.getLogger(TelnetClientHandler.class.getName());
 
     @Override
     protected void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {

@@ -20,9 +20,9 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Test;
@@ -140,9 +140,9 @@ public class LocalChannelTest {
         clientGroup.terminationFuture().sync();
     }
 
-    static class TestHandler extends ChannelInboundConsumingHandler<Object> {
+    static class TestHandler extends SimpleChannelInboundHandler<Object> {
         @Override
-        public void consume(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
             logger.info(String.format("Received mesage: %s", msg));
         }
     }

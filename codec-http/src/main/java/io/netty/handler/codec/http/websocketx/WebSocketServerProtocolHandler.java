@@ -20,7 +20,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.MessageList;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -125,7 +124,6 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
         return new SimpleChannelInboundHandler<FullHttpRequest>() {
             @Override
             protected void messageReceived(ChannelHandlerContext ctx, FullHttpRequest msg) throws Exception {
-                msg.release();
                 FullHttpResponse response =
                         new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.FORBIDDEN);
                 ctx.channel().write(response);

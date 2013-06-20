@@ -16,7 +16,7 @@
 package io.netty.example.http.upload;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundConsumingHandler;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObject;
@@ -29,14 +29,14 @@ import java.util.logging.Logger;
 /**
  * Handler that just dumps the contents of the response from the server
  */
-public class HttpUploadClientHandler extends ChannelInboundConsumingHandler<HttpObject> {
+public class HttpUploadClientHandler extends SimpleChannelInboundHandler<HttpObject> {
 
     private static final Logger logger = Logger.getLogger(HttpUploadClientHandler.class.getName());
 
     private boolean readingChunks;
 
     @Override
-    public void consume(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
         if (msg instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) msg;
 

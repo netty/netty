@@ -37,14 +37,27 @@ import io.netty.util.internal.TypeParameterMatcher;
  */
 public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandlerAdapter {
 
+    private static final Object UNRELEASABLE = new Object();
+
     private final TypeParameterMatcher matcher;
+    private final boolean autoRelease;
 
     protected SimpleChannelInboundHandler() {
+        this(true);
+    }
+
+    protected SimpleChannelInboundHandler(boolean autoRelease) {
         matcher = TypeParameterMatcher.find(this, SimpleChannelInboundHandler.class, "I");
+        this.autoRelease = autoRelease;
     }
 
     protected SimpleChannelInboundHandler(Class<? extends I> inboundMessageType) {
+        this(inboundMessageType, true);
+    }
+
+    protected SimpleChannelInboundHandler(Class<? extends I> inboundMessageType, boolean autoRelease) {
         matcher = TypeParameterMatcher.get(inboundMessageType);
+        this.autoRelease = autoRelease;
     }
 
     public boolean acceptInboundMessage(Object msg) throws Exception {
@@ -56,6 +69,8 @@ public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandl
         MessageList<Object> unaccepted = MessageList.newInstance();
         int size = msgs.size();
         try {
+            beginMessageReceived(ctx);
+
             for (int i = 0; i < size; i++) {
                 Object msg = msgs.get(i);
                 if (!ctx.isRemoved() && acceptInboundMessage(msg)) {
@@ -68,12 +83,26 @@ public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandl
                     I imsg = (I) msg;
                     messageReceived(ctx, imsg);
                 } else {
+                    if (autoRelease) {
+                        msgs.set(i, UNRELEASABLE); // Prevent the message added to 'unaccepted' from being released.
+                    }
                     unaccepted.add(msg);
                 }
             }
         } finally {
-            msgs.recycle();
-            ctx.fireMessageReceived(unaccepted);
+            try {
+                if (autoRelease) {
+                    msgs.releaseAllAndRecycle();
+                } else {
+                    msgs.recycle();
+                }
+            } finally {
+                try {
+                    endMessageReceived(ctx);
+                } finally {
+                    ctx.fireMessageReceived(unaccepted);
+                }
+            }
         }
     }
 
@@ -86,4 +115,26 @@ public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandl
      * @throws Exception    is thrown if an error accour
      */
     protected abstract void messageReceived(ChannelHandlerContext ctx, I msg) throws Exception;
+
+    /**
+     * Is called before the first {@link #messageReceived(ChannelHandlerContext, Object)} of the current
+     * {@link MessageList} is handled.
+     *
+     * @param ctx           the {@link ChannelHandlerContext} which is bound to this handler
+     */
+    @SuppressWarnings("UnusedParameters")
+    protected void beginMessageReceived(ChannelHandlerContext ctx) throws Exception {
+        // NOOP
+    }
+
+    /**
+     * Is called after the last {@link #messageReceived(ChannelHandlerContext, Object)} of the current
+     * {@link MessageList} is handled.
+     *
+     * @param ctx           the {@link ChannelHandlerContext} which is bound to this handler
+     */
+    @SuppressWarnings("UnusedParameters")
+    protected void endMessageReceived(ChannelHandlerContext ctx) throws Exception {
+        // NOOP
+    }
 }
