@@ -1,3 +1,4 @@
+
 /*
  * Copyright 2013 The Netty Project
  *
@@ -100,7 +101,8 @@ public class DnsCodecTest {
 						Assert.assertFalse("Server response was truncated.",
 								header.isTruncated());
 						Assert.assertTrue(
-								"Inconsistency between recursion desirability and availability.",
+								"Inconsistency between recursion"
+								+ "desirability and availability.",
 								header.isRecursionDesired() == header
 								.isRecursionAvailable());
 						Assert.assertEquals("Invalid ID returned from server.",

@@ -1,3 +1,4 @@
+
 /*
  * Copyright 2012 The Netty Project
  *
@@ -18,4 +19,4 @@
  * A DNS client that queries a server and checks if query information and
  * responses are valid to ensure codec is correct.
  */
-package io.netty.handler.dns;
+package io.netty.handler.codec.dns;

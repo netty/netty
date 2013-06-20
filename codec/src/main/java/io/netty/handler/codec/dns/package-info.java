@@ -1,3 +1,4 @@
+
 /*
  * Copyright 2012 The Netty Project
  *
@@ -18,4 +19,4 @@
  * DNS codec information for writing to and reading from a DNS server.
  * Includes decoders and classes for representing messages and resources.
  */
-package io.netty.handler.dns;
+package io.netty.handler.codec.dns;
