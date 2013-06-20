@@ -392,17 +392,28 @@ public class SslHandler
             ctx.write(msgs, promise);
             return;
         }
-        for (int i = 0; i < msgs.size(); i++) {
-            ByteBuf msg = (ByteBuf) msgs.get(i);
-            ChannelPromise cp;
-            if (i + 1 == msgs.size()) {
-                cp = promise;
+        try {
+            if (msgs.isEmpty()) {
+                // if the MessageList is empty we need to add an empty buffer as pending write as otherwise
+                // the promise will never be notified.
+                // See https://github.com/netty/netty/issues/1475
+                pendingUnencryptedWrites.add(new PendingWrite(Unpooled.EMPTY_BUFFER, promise));
             } else {
-                cp = ctx.newPromise();
+                for (int i = 0; i < msgs.size(); i++) {
+                    ByteBuf msg = (ByteBuf) msgs.get(i);
+                    ChannelPromise cp;
+                    if (i + 1 == msgs.size()) {
+                        cp = promise;
+                    } else {
+                        cp = ctx.newPromise();
+                    }
+                    pendingUnencryptedWrites.add(new PendingWrite(msg, cp));
+                }
             }
-            pendingUnencryptedWrites.add(new PendingWrite(msg, cp));
+            flush0(ctx);
+        } finally {
+            msgs.recycle();
         }
-        flush0(ctx);
     }
 
     private void flush0(ChannelHandlerContext ctx) throws SSLException {
