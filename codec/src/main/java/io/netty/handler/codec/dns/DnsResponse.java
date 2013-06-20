@@ -1,4 +1,3 @@
-
 /*
  * Copyright 2013 The Netty Project
  *
@@ -24,23 +23,23 @@ import io.netty.util.ReferenceCounted;
  */
 public class DnsResponse extends DnsMessage<DnsResponseHeader> {
 
-	private byte[] rawPacket;
+    private byte[] rawPacket;
 
-	/**
-	 * Returns the original, non-decoded DNS response packet. Stored as a byte
-	 * array since an instance of {@link DnsResponse} may be discarded at any
-	 * time, necessitating a release of any {@link ReferenceCounted} objects.
-	 * Byte arrays will automatically be cleaned up by the garbage collector.
-	 */
-	public byte[] getRawPacket() {
-		return rawPacket;
-	}
+    /**
+     * Returns the original, non-decoded DNS response packet. Stored as a byte
+     * array since an instance of {@link DnsResponse} may be discarded at any
+     * time, necessitating a release of any {@link ReferenceCounted} objects.
+     * Byte arrays will automatically be cleaned up by the garbage collector.
+     */
+    public byte[] getRawPacket() {
+        return rawPacket;
+    }
 
-	/**
-	 * Sets the non-decoded DNS response packet.
-	 */
-	public void setRawPacket(byte[] rawPacket) {
-		this.rawPacket = rawPacket;
-	}
+    /**
+     * Sets the non-decoded DNS response packet.
+     */
+    public void setRawPacket(byte[] rawPacket) {
+        this.rawPacket = rawPacket;
+    }
 
 }

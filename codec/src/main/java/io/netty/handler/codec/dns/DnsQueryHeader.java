@@ -1,4 +1,3 @@
-
 /*
  * Copyright 2013 The Netty Project
  *
@@ -22,46 +21,46 @@ package io.netty.handler.codec.dns;
  */
 public class DnsQueryHeader extends DnsHeader {
 
-	/**
-	 * Constructor for a DNS packet query header. The id is user generated and
-	 * will be replicated in the response packet by the server.
-	 *
-	 * @param parent
-	 *            the {@link DnsMessage} this header belongs to
-	 * @param id
-	 *            a 2 bit unsigned identification number for this query
-	 */
-	public DnsQueryHeader(DnsMessage<? extends DnsQueryHeader> parent, int id) {
-		super(parent);
-		setId(id);
-		setType(TYPE_QUERY);
-		setRecursionDesired(true);
-	}
+    /**
+     * Constructor for a DNS packet query header. The id is user generated and
+     * will be replicated in the response packet by the server.
+     *
+     * @param parent
+     *            the {@link DnsMessage} this header belongs to
+     * @param id
+     *            a 2 bit unsigned identification number for this query
+     */
+    public DnsQueryHeader(DnsMessage<? extends DnsQueryHeader> parent, int id) {
+        super(parent);
+        setId(id);
+        setType(TYPE_QUERY);
+        setRecursionDesired(true);
+    }
 
-	/**
-	 * Returns the {@link DnsMessage} type. This will always return
-	 * {@code TYPE_QUERY}.
-	 */
-	@Override
-	public final int getType() {
-		return TYPE_QUERY;
-	}
+    /**
+     * Returns the {@link DnsMessage} type. This will always return
+     * {@code TYPE_QUERY}.
+     */
+    @Override
+    public final int getType() {
+        return TYPE_QUERY;
+    }
 
-	/**
-	 * Sets the {@link DnsHeader} type. Must be {@code TYPE_RESPONSE}.
-	 *
-	 * @param type
-	 *            message type
-	 * @return the header to allow method chaining
-	 */
-	@Override
-	public final DnsQueryHeader setType(int type) {
-		if (type != TYPE_QUERY) {
-			throw new IllegalArgumentException(
-					"type cannot be anything but TYPE_QUERY (0) for a query header.");
-		}
-		super.setType(type);
-		return this;
-	}
+    /**
+     * Sets the {@link DnsHeader} type. Must be {@code TYPE_RESPONSE}.
+     *
+     * @param type
+     *            message type
+     * @return the header to allow method chaining
+     */
+    @Override
+    public final DnsQueryHeader setType(int type) {
+        if (type != TYPE_QUERY) {
+            throw new IllegalArgumentException(
+                    "type cannot be anything but TYPE_QUERY (0) for a query header.");
+        }
+        super.setType(type);
+        return this;
+    }
 
 }

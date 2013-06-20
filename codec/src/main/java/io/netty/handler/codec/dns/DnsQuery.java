@@ -1,4 +1,3 @@
-
 /*
  * Copyright 2013 The Netty Project
  *
@@ -22,11 +21,11 @@ package io.netty.handler.codec.dns;
  */
 public class DnsQuery extends DnsMessage<DnsQueryHeader> {
 
-	/**
-	 * Constructs a DNS query. By default recursion will be toggled on.
-	 */
-	public DnsQuery(int id) {
-		setHeader(new DnsQueryHeader(this, id));
-	}
+    /**
+     * Constructs a DNS query. By default recursion will be toggled on.
+     */
+    public DnsQuery(int id) {
+        setHeader(new DnsQueryHeader(this, id));
+    }
 
 }

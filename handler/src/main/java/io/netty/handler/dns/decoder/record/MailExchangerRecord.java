@@ -1,4 +1,3 @@
-
 /*
  * Copyright 2013 The Netty Project
  *
@@ -23,36 +22,36 @@ package io.netty.handler.dns.decoder.record;
  */
 public class MailExchangerRecord {
 
-	private final int priority;
-	private final String name;
+    private final int priority;
+    private final String name;
 
-	/**
-	 * Constructs an MX (mail exchanger) record.
-	 *
-	 * @param priority
-	 *            the priority of the mail exchanger, lower is more preferred
-	 * @param name
-	 *            the e-mail address in the format admin.example.com, which
-	 *            represents admin@example.com
-	 */
-	public MailExchangerRecord(int priority, String name) {
-		this.priority = priority;
-		this.name = name;
-	}
+    /**
+     * Constructs an MX (mail exchanger) record.
+     *
+     * @param priority
+     *            the priority of the mail exchanger, lower is more preferred
+     * @param name
+     *            the e-mail address in the format admin.example.com, which
+     *            represents admin@example.com
+     */
+    public MailExchangerRecord(int priority, String name) {
+        this.priority = priority;
+        this.name = name;
+    }
 
-	/**
-	 * Returns the priority of the mail exchanger, lower is more preferred.
-	 */
-	public int priority() {
-		return priority;
-	}
+    /**
+     * Returns the priority of the mail exchanger, lower is more preferred.
+     */
+    public int priority() {
+        return priority;
+    }
 
-	/**
-	 * Returns the mail exchanger (an e-mail address) in the format
-	 * admin.example.com, which represents admin@example.com.
-	 */
-	public String name() {
-		return name;
-	}
+    /**
+     * Returns the mail exchanger (an e-mail address) in the format
+     * admin.example.com, which represents admin@example.com.
+     */
+    public String name() {
+        return name;
+    }
 
 }

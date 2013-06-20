@@ -1,4 +1,3 @@
-
 /*
  * Copyright 2013 The Netty Project
  *
@@ -29,27 +28,27 @@ import java.util.List;
  */
 public class TextDecoder implements RecordDecoder<List<String>> {
 
-	/**
-	 * Returns a decoded TXT (text) resource record, stored as an
-	 * {@link ArrayList} of {@code String}s.
-	 *
-	 * @param response
-	 *            the DNS response that contains the resource record being
-	 *            decoded
-	 * @param resource
-	 *            the resource record being decoded
-	 */
-	@Override
-	public List<String> decode(DnsResponse response, Resource resource) {
-		List<String> list = new ArrayList<String>();
-		ByteBuf data = resource.content();
-		int index = data.readerIndex();
-		while (index < data.writerIndex()) {
-			int len = data.getUnsignedByte(index++);
-			list.add(data.toString(index, len, Charset.forName("UTF-8")));
-			index += len;
-		}
-		return list;
-	}
+    /**
+     * Returns a decoded TXT (text) resource record, stored as an
+     * {@link ArrayList} of {@code String}s.
+     *
+     * @param response
+     *            the DNS response that contains the resource record being
+     *            decoded
+     * @param resource
+     *            the resource record being decoded
+     */
+    @Override
+    public List<String> decode(DnsResponse response, Resource resource) {
+        List<String> list = new ArrayList<String>();
+        ByteBuf data = resource.content();
+        int index = data.readerIndex();
+        while (index < data.writerIndex()) {
+            int len = data.getUnsignedByte(index++);
+            list.add(data.toString(index, len, Charset.forName("UTF-8")));
+            index += len;
+        }
+        return list;
+    }
 
 }

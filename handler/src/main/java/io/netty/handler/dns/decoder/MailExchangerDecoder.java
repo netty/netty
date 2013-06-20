@@ -1,4 +1,3 @@
-
 /*
  * Copyright 2013 The Netty Project
  *
@@ -28,24 +27,24 @@ import io.netty.handler.dns.decoder.record.MailExchangerRecord;
  */
 public class MailExchangerDecoder implements RecordDecoder<MailExchangerRecord> {
 
-	/**
-	 * Returns a decoded MX (mail exchanger) resource record, stored as an
-	 * instance of {@link MailExchangerRecord}.
-	 *
-	 * @param response
-	 *            the {@link DnsResponse} received that contained the resource
-	 *            record being decoded
-	 * @param resource
-	 *            the {@link Resource} being decoded
-	 */
-	@Override
-	public MailExchangerRecord decode(DnsResponse response, Resource resource) {
-		ByteBuf packet = Unpooled.copiedBuffer(response.getRawPacket())
-				.readerIndex(resource.contentIndex());
-		int priority = packet.readShort();
-		String name = DnsResponseDecoder.readName(packet);
-		packet.release();
-		return new MailExchangerRecord(priority, name);
-	}
+    /**
+     * Returns a decoded MX (mail exchanger) resource record, stored as an
+     * instance of {@link MailExchangerRecord}.
+     *
+     * @param response
+     *            the {@link DnsResponse} received that contained the resource
+     *            record being decoded
+     * @param resource
+     *            the {@link Resource} being decoded
+     */
+    @Override
+    public MailExchangerRecord decode(DnsResponse response, Resource resource) {
+        ByteBuf packet = Unpooled.copiedBuffer(response.getRawPacket())
+                .readerIndex(resource.contentIndex());
+        int priority = packet.readShort();
+        String name = DnsResponseDecoder.readName(packet);
+        packet.release();
+        return new MailExchangerRecord(priority, name);
+    }
 
 }
