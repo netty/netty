@@ -15,6 +15,8 @@
  */
 package io.netty.channel.group;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -216,8 +218,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
         Map<Integer, ChannelFuture> futures = new LinkedHashMap<Integer, ChannelFuture>(size());
         for (Channel c: nonServerChannels.values()) {
-            ReferenceCountUtil.retain(message);
-            futures.put(c.id(), c.write(message));
+            futures.put(c.id(), c.write(safeDuplicate(message)));
         }
 
         ReferenceCountUtil.release(message);
@@ -232,12 +233,28 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
         Map<Integer, ChannelFuture> futures = new LinkedHashMap<Integer, ChannelFuture>(size());
         for (Channel c: nonServerChannels.values()) {
-            MessageList<Object> messagesCopy = messages.retainAll().copy();
-            futures.put(c.id(), c.write(messagesCopy));
+            int size = messages.size();
+            MessageList<Object> messageCopy = MessageList.newInstance(size);
+            for (int i = 0 ; i < size; i++) {
+                messageCopy.add(safeDuplicate(messages.get(i)));
+            }
+            futures.put(c.id(), c.write(messageCopy));
         }
 
         messages.releaseAllAndRecycle();
         return new DefaultChannelGroupFuture(this, futures, executor);
+    }
+
+    // Create a safe duplicate of the message to write it to a channel but not affect other writes.
+    // See https://github.com/netty/netty/issues/1461
+    private static Object safeDuplicate(Object message) {
+        if (message instanceof ByteBuf) {
+            return ((ByteBuf) message).duplicate().retain();
+        } else if (message instanceof ByteBufHolder) {
+            return ((ByteBufHolder) message).copy();
+        } else {
+            return ReferenceCountUtil.retain(message);
+        }
     }
 
     @Override
