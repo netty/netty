@@ -63,7 +63,7 @@ public class AdaptiveRecvByteBufAllocator implements RecvByteBufAllocator {
     private static int getSizeTableIndex(final int size) {
         for (int low = 0, high = SIZE_TABLE.length - 1;;) {
             if (high < low) {
-                return 0;
+                return low;
             }
             if (high == low) {
                 return high;
