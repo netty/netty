@@ -19,9 +19,9 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.MessageList;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
 import org.junit.Test;
 
@@ -40,9 +40,9 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
     public void testSimpleSend(Bootstrap sb, Bootstrap cb) throws Throwable {
         final CountDownLatch latch = new CountDownLatch(1);
 
-        sb.handler(new ChannelInboundConsumingHandler<DatagramPacket>() {
+        sb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
             @Override
-            public void consume(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+            public void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
                 assertEquals(1, msg.content().readInt());
                 latch.countDown();
             }

@@ -27,7 +27,7 @@ package io.netty.channel;
  * Be aware that messages are not released after the {@link #messageReceived(ChannelHandlerContext, MessageList)}
  * method returns automatically. This is done for make it as flexible as possible and get the most out of
  * performance. Because of this you need to explicit call {@link MessageList#releaseAllAndRecycle()} if you
- * consumed all the messages. Because this is such a common need {@link ChannelInboundConsumingHandler} is provided ,
+ * consumed all the messages. Because this is such a common need {@link SimpleChannelInboundHandler} is provided ,
  * which will automatically release messages and the {@link MessageList} after processing is done.
  * </p>
  */

@@ -17,7 +17,7 @@ package io.netty.example.securechat;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundConsumingHandler;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.handler.ssl.SslHandler;
@@ -32,7 +32,7 @@ import java.util.logging.Logger;
 /**
  * Handles a server-side channel.
  */
-public class SecureChatServerHandler extends ChannelInboundConsumingHandler<String> {
+public class SecureChatServerHandler extends SimpleChannelInboundHandler<String> {
 
     private static final Logger logger = Logger.getLogger(
             SecureChatServerHandler.class.getName());
@@ -61,7 +61,7 @@ public class SecureChatServerHandler extends ChannelInboundConsumingHandler<Stri
     }
 
     @Override
-    public void consume(ChannelHandlerContext ctx, String msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
         // Send the received message to all channels but the current one.
         for (Channel c: channels) {
             if (c != ctx.channel()) {

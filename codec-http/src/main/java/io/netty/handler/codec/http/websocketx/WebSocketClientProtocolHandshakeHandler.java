@@ -48,7 +48,6 @@ class WebSocketClientProtocolHandshakeHandler extends SimpleChannelInboundHandle
     protected void messageReceived(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
         if (!handshaker.isHandshakeComplete()) {
             handshaker.finishHandshake(ctx.channel(), msg);
-            msg.release();
             ctx.fireUserEventTriggered(
                     WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_COMPLETE);
             ctx.pipeline().remove(this);

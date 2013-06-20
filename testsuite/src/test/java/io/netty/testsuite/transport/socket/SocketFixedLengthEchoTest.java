@@ -21,8 +21,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.FixedLengthFrameDecoder;
 import org.junit.Test;
@@ -123,7 +123,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         }
     }
 
-    private static class EchoHandler extends ChannelInboundConsumingHandler<ByteBuf> {
+    private static class EchoHandler extends SimpleChannelInboundHandler<ByteBuf> {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
@@ -134,7 +134,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void consume(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
             assertEquals(1024, msg.readableBytes());
 
             byte[] actual = new byte[msg.readableBytes()];
