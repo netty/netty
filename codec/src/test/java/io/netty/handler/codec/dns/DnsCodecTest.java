@@ -79,7 +79,6 @@ public class DnsCodecTest {
                     .addLast("encoder", new DnsQueryEncoder())
                     .addLast("handler", new Handler());
         }
-
     }
 
     class Handler extends ChannelInboundHandlerAdapter {
