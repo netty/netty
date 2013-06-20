@@ -24,7 +24,7 @@ import io.netty.util.ReferenceCounted;
  */
 public class DnsResponse extends DnsMessage<DnsResponseHeader> {
 
-	private byte[] rawPacket = null;
+	private byte[] rawPacket;
 
 	/**
 	 * Returns the original, non-decoded DNS response packet. Stored as a byte

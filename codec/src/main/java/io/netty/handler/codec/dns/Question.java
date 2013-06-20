@@ -65,4 +65,9 @@ public class Question extends DnsEntry {
 		return false;
 	}
 
+	@Override
+	public int hashCode() {
+		return (((name().hashCode() + type()) * 7) + dnsClass()) * 7;
+	}
+
 }
