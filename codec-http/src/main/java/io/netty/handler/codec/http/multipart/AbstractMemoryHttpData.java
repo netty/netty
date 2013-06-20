@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.handler.codec.http.HttpConstants;
 
 import java.io.File;
@@ -91,8 +92,15 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
             size += localsize;
             if (byteBuf == null) {
                 byteBuf = buffer;
+            } else if (byteBuf instanceof CompositeByteBuf) {
+                CompositeByteBuf cbb = (CompositeByteBuf) byteBuf;
+                cbb.addComponent(buffer);
+                cbb.writerIndex(cbb.writerIndex() + buffer.readableBytes());
             } else {
-                byteBuf = wrappedBuffer(byteBuf, buffer);
+                CompositeByteBuf cbb = compositeBuffer();
+                cbb.addComponent(buffer);
+                cbb.writerIndex(buffer.readableBytes());
+                byteBuf = cbb;
             }
         }
         if (last) {
