@@ -187,7 +187,7 @@ public class DnsEntry {
 	public static final int TYPE_RRSIG = 0x002e;
 
 	/**
-	 * Next-Secure record RFC 4034 Part of DNSSEC—used to prove a name does not
+	 * Next-Secure record RFC 4034 Part of DNSSEC, used to prove a name does not
 	 * exist. Uses the same format as the (obsolete) NXT record.
 	 */
 	public static final int TYPE_NSEC = 0x002f;
