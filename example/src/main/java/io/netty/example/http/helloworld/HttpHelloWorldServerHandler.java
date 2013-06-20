@@ -19,8 +19,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundConsumingHandler;
 import io.netty.channel.MessageList;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpRequest;
@@ -31,24 +31,24 @@ import static io.netty.handler.codec.http.HttpHeaders.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 
-public class HttpHelloWorldServerHandler extends ChannelInboundConsumingHandler<Object> {
+public class HttpHelloWorldServerHandler extends SimpleChannelInboundHandler<Object> {
     private static final ByteBuf CONTENT =
             Unpooled.unreleasableBuffer(Unpooled.copiedBuffer("Hello World", CharsetUtil.US_ASCII));
 
     private MessageList<Object> out;
     @Override
-    protected void beginConsume(ChannelHandlerContext ctx) {
+    protected void beginMessageReceived(ChannelHandlerContext ctx) {
         out = MessageList.newInstance();
     }
 
     @Override
-    protected void endConsume(ChannelHandlerContext ctx) {
+    protected void endMessageReceived(ChannelHandlerContext ctx) {
         ctx.write(out);
         out = null;
     }
 
     @Override
-    public void consume(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof HttpRequest) {
             HttpRequest req = (HttpRequest) msg;
 
