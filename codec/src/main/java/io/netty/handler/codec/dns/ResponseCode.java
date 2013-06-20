@@ -16,8 +16,8 @@
 package io.netty.handler.codec.dns;
 
 /**
- * Represents the possible response codes a server may send after
- * receiving a query. A response code of 0 indicates no error.
+ * Represents the possible response codes a server may send after receiving a
+ * query. A response code of 0 indicates no error.
  */
 public enum ResponseCode {
 
@@ -103,7 +103,8 @@ public enum ResponseCode {
 	 * Returns a formated message for an error received given an ID, or unknown
 	 * if the error is unsupported.
 	 * 
-	 * @param responseCode the error code's id
+	 * @param responseCode
+	 *            the error code's id
 	 * @return formatted error message
 	 */
 	public static String obtainError(int responseCode) {

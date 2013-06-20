@@ -16,9 +16,9 @@
 package io.netty.handler.codec.dns;
 
 /**
- * The header super-class which includes information shared by DNS query and response packet headers
- * such as the ID, opcode, and type. The only flag shared by both classes is the flag for
- * desiring recursion.
+ * The header super-class which includes information shared by DNS query and
+ * response packet headers such as the ID, opcode, and type. The only flag
+ * shared by both classes is the flag for desiring recursion.
  */
 public class DnsHeader {
 
@@ -38,8 +38,8 @@ public class DnsHeader {
 	public static final int OPCODE_QUERY = 0;
 
 	/**
-	 * Message is for an inverse query. <strong>Note: inverse queries have been obsoleted since RFC 3425,
-	 * and are not necessarily supported.</strong>
+	 * Message is for an inverse query. <strong>Note: inverse queries have been
+	 * obsoleted since RFC 3425, and are not necessarily supported.</strong>
 	 */
 	@Deprecated
 	public static final int OPCODE_IQUERY = 1;
@@ -53,7 +53,8 @@ public class DnsHeader {
 
 	public DnsHeader(DnsMessage<? extends DnsHeader> parent) {
 		if (parent == null) {
-			throw new NullPointerException("the parent field cannot be null and must point to a valid DnsMessage.");
+			throw new NullPointerException(
+					"the parent field cannot be null and must point to a valid DnsMessage.");
 		}
 		this.parent = parent;
 	}
@@ -73,14 +74,16 @@ public class DnsHeader {
 	}
 
 	/**
-	 * Returns the number of authority resource records in the {@link DnsMessage}.
+	 * Returns the number of authority resource records in the
+	 * {@link DnsMessage}.
 	 */
 	public int authorityResourceCount() {
 		return parent.getAuthorityResources().size();
 	}
 
 	/**
-	 * Returns the number of additional resource records in the {@link DnsMessage}.
+	 * Returns the number of additional resource records in the
+	 * {@link DnsMessage}.
 	 */
 	public int additionalResourceCount() {
 		return parent.getAdditionalResources().size();
@@ -114,7 +117,8 @@ public class DnsHeader {
 	}
 
 	/**
-	 * Returns the 2 byte unsigned identifier number used for the {@link DnsMessage}.
+	 * Returns the 2 byte unsigned identifier number used for the
+	 * {@link DnsMessage}.
 	 */
 	public int getId() {
 		return id;
@@ -123,7 +127,8 @@ public class DnsHeader {
 	/**
 	 * Sets the opcode for this {@link DnsMessage}.
 	 * 
-	 * @param opcode opcode to set
+	 * @param opcode
+	 *            opcode to set
 	 * @return the header to allow method chaining
 	 */
 	public DnsHeader setOpcode(int opcode) {
@@ -132,9 +137,11 @@ public class DnsHeader {
 	}
 
 	/**
-	 * Sets whether a name server is directed to pursue a query recursively or not.
+	 * Sets whether a name server is directed to pursue a query recursively or
+	 * not.
 	 * 
-	 * @param recursionDesired if set to {@code true}, pursues query recursively
+	 * @param recursionDesired
+	 *            if set to {@code true}, pursues query recursively
 	 * @return the header to allow method chaining
 	 */
 	public DnsHeader setRecursionDesired(boolean recursionDesired) {
@@ -145,7 +152,8 @@ public class DnsHeader {
 	/**
 	 * Sets the {@link DnsMessage} type.
 	 * 
-	 * @param type message type
+	 * @param type
+	 *            message type
 	 * @return the header to allow method chaining
 	 */
 	public DnsHeader setType(int type) {
@@ -156,7 +164,8 @@ public class DnsHeader {
 	/**
 	 * Sets the id for this {@link DnsMessage}.
 	 * 
-	 * @param id a unique 2 byte unsigned identifier
+	 * @param id
+	 *            a unique 2 byte unsigned identifier
 	 * @return the header to allow method chaining
 	 */
 	public DnsHeader setId(int id) {

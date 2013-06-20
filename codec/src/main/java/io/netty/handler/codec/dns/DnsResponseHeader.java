@@ -16,9 +16,9 @@
 package io.netty.handler.codec.dns;
 
 /**
- * The DNS response header class which is used when receiving data from a DNS server.
- * Contains information contained in a DNS response header, such as recursion
- * availability, and response codes.
+ * The DNS response header class which is used when receiving data from a DNS
+ * server. Contains information contained in a DNS response header, such as
+ * recursion availability, and response codes.
  */
 public class DnsResponseHeader extends DnsHeader {
 
@@ -38,24 +38,29 @@ public class DnsResponseHeader extends DnsHeader {
 	 * Constructor for a DNS packet response header. The id is received by
 	 * reading a {@link DnsQuery} and is sent back to the client.
 	 * 
-	 * @param parent the {@link DnsMessage} this header belongs to
-	 * @param id a 2 bit unsigned identification number received from client
+	 * @param parent
+	 *            the {@link DnsMessage} this header belongs to
+	 * @param id
+	 *            a 2 bit unsigned identification number received from client
 	 */
-	public DnsResponseHeader(DnsMessage<? extends DnsResponseHeader> parent, int id) {
+	public DnsResponseHeader(DnsMessage<? extends DnsResponseHeader> parent,
+			int id) {
 		super(parent);
 		setId(id);
 		setType(TYPE_RESPONSE);
 	}
 
 	/**
-	 * Returns {@code true} if responding server is authoritative for the domain name in the query message.
+	 * Returns {@code true} if responding server is authoritative for the domain
+	 * name in the query message.
 	 */
 	public boolean isAuthoritativeAnswer() {
 		return authoritativeAnswer;
 	}
 
 	/**
-	 * Returns {@code true} if response has been truncated, usually if it is over 512 bytes.
+	 * Returns {@code true} if response has been truncated, usually if it is
+	 * over 512 bytes.
 	 */
 	public boolean isTruncated() {
 		return truncated;
@@ -76,7 +81,8 @@ public class DnsResponseHeader extends DnsHeader {
 	}
 
 	/**
-	 * Returns the 4 bit return code. Response codes outlined in {@link ReturnCode}.
+	 * Returns the 4 bit return code. Response codes outlined in
+	 * {@link ReturnCode}.
 	 */
 	public int getResponseCode() {
 		return responseCode;
@@ -97,21 +103,24 @@ public class DnsResponseHeader extends DnsHeader {
 	}
 
 	/**
-	 * Returns the number of authority resource records to read for this DNS response packet.
+	 * Returns the number of authority resource records to read for this DNS
+	 * response packet.
 	 */
 	public int getReadAuthorityResources() {
 		return readAuthorityResources;
 	}
 
 	/**
-	 * Returns the number of additional resource records to read for this DNS response packet.
+	 * Returns the number of additional resource records to read for this DNS
+	 * response packet.
 	 */
 	public int getReadAdditionalResources() {
 		return readAdditionalResources;
 	}
 
 	/**
-	 * Returns the {@link DnsMessage} type. This will always return {@code TYPE_RESPONSE}.
+	 * Returns the {@link DnsMessage} type. This will always return
+	 * {@code TYPE_RESPONSE}.
 	 */
 	@Override
 	public final int getType() {
@@ -119,19 +128,22 @@ public class DnsResponseHeader extends DnsHeader {
 	}
 
 	/**
-	 * Set to {@code true} if responding server is authoritative for the domain name in the query message.
+	 * Set to {@code true} if responding server is authoritative for the domain
+	 * name in the query message.
 	 * 
-	 * @param authoritativeAnswer flag for authoritative answer
+	 * @param authoritativeAnswer
+	 *            flag for authoritative answer
 	 */
 	public void setAuthoritativeAnswer(boolean authoritativeAnswer) {
 		this.authoritativeAnswer = authoritativeAnswer;
 	}
 
 	/**
-	 * Set to {@code true} if response has been truncated (usually happens
-	 * for responses over 512 bytes).
+	 * Set to {@code true} if response has been truncated (usually happens for
+	 * responses over 512 bytes).
 	 * 
-	 * @param truncated flag for truncation
+	 * @param truncated
+	 *            flag for truncation
 	 */
 	public void setTruncated(boolean truncated) {
 		this.truncated = truncated;
@@ -140,17 +152,19 @@ public class DnsResponseHeader extends DnsHeader {
 	/**
 	 * Set to {@code true} if DNS server can handle recursive queries.
 	 * 
-	 * @param recursionAvailable flag for recursion availability
+	 * @param recursionAvailable
+	 *            flag for recursion availability
 	 */
 	public void setRecursionAvailable(boolean recursionAvailable) {
 		this.recursionAvailable = recursionAvailable;
 	}
 
 	/**
-	 * Sets the field Z. This field is reserved and should remain as 0
-	 * if the DNS server does not make usage of this field.
+	 * Sets the field Z. This field is reserved and should remain as 0 if the
+	 * DNS server does not make usage of this field.
 	 * 
-	 * @param z the value for the reserved field Z
+	 * @param z
+	 *            the value for the reserved field Z
 	 */
 	public void setZ(int z) {
 		this.z = z;
@@ -159,47 +173,52 @@ public class DnsResponseHeader extends DnsHeader {
 	/**
 	 * Sets the response code for this message.
 	 * 
-	 * @param responseCode the response code
+	 * @param responseCode
+	 *            the response code
 	 */
 	public void setResponseCode(int responseCode) {
 		this.responseCode = responseCode;
 	}
 
 	/**
-	 * Sets the number of questions that should be read after this header
-	 * has been decoded.
+	 * Sets the number of questions that should be read after this header has
+	 * been decoded.
 	 * 
-	 * @param readQuestions the number of questions to read
+	 * @param readQuestions
+	 *            the number of questions to read
 	 */
 	public void setReadQuestions(int readQuestions) {
 		this.readQuestions = readQuestions;
 	}
 
 	/**
-	 * Sets the number of answers that should be read after this header
-	 * has been decoded.
+	 * Sets the number of answers that should be read after this header has been
+	 * decoded.
 	 * 
-	 * @param readAnswers the number of answers to read
+	 * @param readAnswers
+	 *            the number of answers to read
 	 */
 	public void setReadAnswers(int readAnswers) {
 		this.readAnswers = readAnswers;
 	}
 
 	/**
-	 * Sets the number of authority resources to be read after this header
-	 * has been decoded.
+	 * Sets the number of authority resources to be read after this header has
+	 * been decoded.
 	 * 
-	 * @param readAuthorityResources the number of authority resources to read
+	 * @param readAuthorityResources
+	 *            the number of authority resources to read
 	 */
 	public void setReadAuthorityResources(int readAuthorityResources) {
 		this.readAuthorityResources = readAuthorityResources;
 	}
 
 	/**
-	 * Sets the number of additional resources to be read after this header
-	 * has been decoded.
+	 * Sets the number of additional resources to be read after this header has
+	 * been decoded.
 	 * 
-	 * @param readAdditionalResources the number of additional resources to read
+	 * @param readAdditionalResources
+	 *            the number of additional resources to read
 	 */
 	public void setReadAdditionalResources(int readAdditionalResources) {
 		this.readAdditionalResources = readAdditionalResources;
@@ -208,13 +227,15 @@ public class DnsResponseHeader extends DnsHeader {
 	/**
 	 * Sets the {@link DnsHeader} type. Must be {@code TYPE_RESPONSE}.
 	 * 
-	 * @param type message type
+	 * @param type
+	 *            message type
 	 * @return the header to allow method chaining
 	 */
 	@Override
 	public final DnsResponseHeader setType(int type) {
 		if (type != TYPE_RESPONSE) {
-			throw new IllegalArgumentException("type cannot be anything but TYPE_RESPONSE (1) for a response header.");
+			throw new IllegalArgumentException(
+					"type cannot be anything but TYPE_RESPONSE (1) for a response header.");
 		}
 		super.setType(type);
 		return this;

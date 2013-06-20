@@ -16,18 +16,21 @@
 package io.netty.handler.codec.dns;
 
 /**
- * The DNS question class which represents a question being sent to a server via a
- * query, or the question being duplicated and sent back in a response. Usually
- * a message contains a single question, and DNS servers often don't support
- * multiple questions in a single query.
+ * The DNS question class which represents a question being sent to a server via
+ * a query, or the question being duplicated and sent back in a response.
+ * Usually a message contains a single question, and DNS servers often don't
+ * support multiple questions in a single query.
  */
 public class Question extends DnsEntry {
 
 	/**
 	 * Constructs a question with the default class IN (Internet).
 	 * 
-	 * @param name the domain name being queried i.e. "www.example.com"
-	 * @param type the question type, which represents the type of {@link Resource} record that should be returned
+	 * @param name
+	 *            the domain name being queried i.e. "www.example.com"
+	 * @param type
+	 *            the question type, which represents the type of
+	 *            {@link Resource} record that should be returned
 	 */
 	public Question(String name, int type) {
 		this(name, type, CLASS_IN);
@@ -36,9 +39,13 @@ public class Question extends DnsEntry {
 	/**
 	 * Constructs a question with the given class.
 	 * 
-	 * @param name the domain name being queried i.e. "www.example.com"
-	 * @param type the question type, which represents the type of {@link Resource} record that should be returned
-	 * @param qClass the class of a DNS record
+	 * @param name
+	 *            the domain name being queried i.e. "www.example.com"
+	 * @param type
+	 *            the question type, which represents the type of
+	 *            {@link Resource} record that should be returned
+	 * @param qClass
+	 *            the class of a DNS record
 	 */
 	public Question(String name, int type, int qClass) {
 		super(name, type, qClass);
@@ -50,7 +57,8 @@ public class Question extends DnsEntry {
 			return true;
 		if (other instanceof Question) {
 			Question question = (Question) other;
-			return question.name().equals(name()) && question.type() == type() && question.dnsClass() == dnsClass();
+			return question.name().equals(name()) && question.type() == type()
+					&& question.dnsClass() == dnsClass();
 		}
 		return false;
 	}

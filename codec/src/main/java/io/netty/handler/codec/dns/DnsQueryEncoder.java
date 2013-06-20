@@ -24,17 +24,20 @@ import io.netty.handler.codec.MessageToMessageEncoder;
 import java.util.List;
 
 /**
- * DnsQueryEncoder accepts {@link DnsQuery} and encodes to {@link ByteBuf}. This class
- * also contains methods for encoding parts of DnsQuery's such as the header and questions.
+ * DnsQueryEncoder accepts {@link DnsQuery} and encodes to {@link ByteBuf}. This
+ * class also contains methods for encoding parts of DnsQuery's such as the
+ * header and questions.
  */
 public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
 
 	/**
-	 * Encodes the information in a {@link DnsQueryHeader} and writes it
-	 * to the specified {@link ByteBuf}. The header is always 12 bytes long.
+	 * Encodes the information in a {@link DnsQueryHeader} and writes it to the
+	 * specified {@link ByteBuf}. The header is always 12 bytes long.
 	 * 
-	 * @param header the query header being encoded
-	 * @param buf the buffer the encoded data should be written to
+	 * @param header
+	 *            the query header being encoded
+	 * @param buf
+	 *            the buffer the encoded data should be written to
 	 */
 	public static void encodeHeader(DnsQueryHeader header, ByteBuf buf) {
 		buf.writeShort(header.getId());
@@ -50,11 +53,13 @@ public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
 	}
 
 	/**
-	 * Encodes the information in a {@link Question} and writes it
-	 * to the specified {@link ByteBuf}.
+	 * Encodes the information in a {@link Question} and writes it to the
+	 * specified {@link ByteBuf}.
 	 * 
-	 * @param question the question being encoded
-	 * @param buf the buffer the encoded data should be written to
+	 * @param question
+	 *            the question being encoded
+	 * @param buf
+	 *            the buffer the encoded data should be written to
 	 */
 	public static void encodeQuestion(Question question, ByteBuf buf) {
 		String[] parts = question.name().split("\\.");
@@ -68,13 +73,18 @@ public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
 	}
 
 	/**
-	 * Encodes a query and writes it to a {@link ByteBuf}. Queries are sent to
-	 * a DNS server and a response will be returned from the server. The encoded
+	 * Encodes a query and writes it to a {@link ByteBuf}. Queries are sent to a
+	 * DNS server and a response will be returned from the server. The encoded
 	 * ByteBuf is written to the specified {@link MessageList}.
 	 * 
-	 * @param ctx the {@link ChannelHandlerContext} this {@link DnsQueryEncoder} belongs to
-	 * @param query the query being encoded
-	 * @param out the {@link MessageList} to which encoded messages should be added
+	 * @param ctx
+	 *            the {@link ChannelHandlerContext} this {@link DnsQueryEncoder}
+	 *            belongs to
+	 * @param query
+	 *            the query being encoded
+	 * @param out
+	 *            the {@link MessageList} to which encoded messages should be
+	 *            added
 	 * @throws Exception
 	 */
 	@Override

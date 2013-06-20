@@ -20,7 +20,8 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * The message super-class which contains core information concerning DNS packets, both outgoing and incoming.
+ * The message super-class which contains core information concerning DNS
+ * packets, both outgoing and incoming.
  */
 public abstract class DnsMessage<H extends DnsHeader> {
 
@@ -32,8 +33,9 @@ public abstract class DnsMessage<H extends DnsHeader> {
 	private H header;
 
 	/**
-	 * Returns the header belonging to this message. If the message is a {@link DnsQuery}, this should be
-	 * {@link DnsQueryHeader}. If the message is a {@link DnsResponse}, this should be {@link ResponseQuery}.
+	 * Returns the header belonging to this message. If the message is a
+	 * {@link DnsQuery}, this should be {@link DnsQueryHeader}. If the message
+	 * is a {@link DnsResponse}, this should be {@link ResponseQuery}.
 	 */
 	public H getHeader() {
 		return header;
@@ -70,7 +72,8 @@ public abstract class DnsMessage<H extends DnsHeader> {
 	/**
 	 * Adds an answer resource record to this message.
 	 * 
-	 * @param answer the answer resource record to be added
+	 * @param answer
+	 *            the answer resource record to be added
 	 * @return the message to allow method chaining
 	 */
 	public DnsMessage<H> addAnswer(Resource answer) {
@@ -81,7 +84,8 @@ public abstract class DnsMessage<H extends DnsHeader> {
 	/**
 	 * Adds a question to this message.
 	 * 
-	 * @param question the question to be added
+	 * @param question
+	 *            the question to be added
 	 * @return the message to allow method chaining
 	 */
 	public DnsMessage<H> addQuestion(Question question) {
@@ -92,7 +96,8 @@ public abstract class DnsMessage<H extends DnsHeader> {
 	/**
 	 * Adds an authority resource record to this message.
 	 * 
-	 * @param authority the authority resource record to be added
+	 * @param authority
+	 *            the authority resource record to be added
 	 * @return the message to allow method chaining
 	 */
 	public DnsMessage<H> addAuthorityResource(Resource resource) {
@@ -103,7 +108,8 @@ public abstract class DnsMessage<H extends DnsHeader> {
 	/**
 	 * Adds an additional resource record to this message.
 	 * 
-	 * @param resource the additional resource record to be added
+	 * @param resource
+	 *            the additional resource record to be added
 	 * @return the message to allow method chaining
 	 */
 	public DnsMessage<H> addAdditionalResource(Resource resource) {
@@ -114,7 +120,8 @@ public abstract class DnsMessage<H extends DnsHeader> {
 	/**
 	 * Sets this message's {@link DnsHeader}.
 	 * 
-	 * @param header the header being attached to this message
+	 * @param header
+	 *            the header being attached to this message
 	 * @return the message to allow method chaining
 	 */
 	public DnsMessage<H> setHeader(H header) {

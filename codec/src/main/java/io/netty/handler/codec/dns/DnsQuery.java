@@ -16,8 +16,8 @@
 package io.netty.handler.codec.dns;
 
 /**
- * A DNS query packet which is sent to a server to receive a DNS response packet with information
- * answering a DnsQuery's questions.
+ * A DNS query packet which is sent to a server to receive a DNS response packet
+ * with information answering a DnsQuery's questions.
  */
 public class DnsQuery extends DnsMessage<DnsQueryHeader> {
 

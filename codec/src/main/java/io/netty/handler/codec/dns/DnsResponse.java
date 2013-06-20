@@ -15,9 +15,9 @@
  */
 package io.netty.handler.codec.dns;
 
-
 /**
- * A DNS response packet which is sent to a client after a server receives a query.
+ * A DNS response packet which is sent to a client after a server receives a
+ * query.
  */
 public class DnsResponse extends DnsMessage<DnsResponseHeader> {
 
@@ -25,9 +25,9 @@ public class DnsResponse extends DnsMessage<DnsResponseHeader> {
 
 	/**
 	 * Returns the original, non-decoded DNS response packet. Stored as a byte
-	 * array since an instance of {@code DnsResponse} may be discarded at any time,
-	 * necessitating a release of any {@link ReferenceCounted} objects. Byte arrays
-	 * will automatically be cleaned up by the garbage collector.
+	 * array since an instance of {@link DnsResponse} may be discarded at any
+	 * time, necessitating a release of any {@link ReferenceCounted} objects.
+	 * Byte arrays will automatically be cleaned up by the garbage collector.
 	 */
 	public byte[] getRawPacket() {
 		return rawPacket;

@@ -19,7 +19,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 
 /**
- * Represents any resource record (answer, authority, or additional resource records).
+ * Represents any resource record (answer, authority, or additional resource
+ * records).
  */
 public class Resource extends DnsEntry implements ByteBufHolder {
 
@@ -30,14 +31,22 @@ public class Resource extends DnsEntry implements ByteBufHolder {
 	/**
 	 * Constructs a resource record.
 	 * 
-	 * @param name the domain name
-	 * @param type the type of record being returned
-	 * @param aClass the class for this resource record
-	 * @param ttl the time to live after reading
-	 * @param contentIndex the {@code writerIndex} at which the content appears in the original packet
-	 * @param content the data contained in this record
+	 * @param name
+	 *            the domain name
+	 * @param type
+	 *            the type of record being returned
+	 * @param aClass
+	 *            the class for this resource record
+	 * @param ttl
+	 *            the time to live after reading
+	 * @param contentIndex
+	 *            the {@code writerIndex} at which the content appears in the
+	 *            original packet
+	 * @param content
+	 *            the data contained in this record
 	 */
-	public Resource(String name, int type, int aClass, long ttl, int contentIndex, ByteBuf content) {
+	public Resource(String name, int type, int aClass, long ttl,
+			int contentIndex, ByteBuf content) {
 		super(name, type, aClass);
 		this.ttl = ttl;
 		this.contentIndex = contentIndex;
@@ -52,14 +61,15 @@ public class Resource extends DnsEntry implements ByteBufHolder {
 	}
 
 	/**
-	 * Returns the {@code writerIndex} at which the content appears in the original packet.
+	 * Returns the {@code writerIndex} at which the content appears in the
+	 * original packet.
 	 */
 	public int contentIndex() {
 		return contentIndex;
 	}
 
 	/**
-	 *Returns the length of the content in this resource record.
+	 * Returns the length of the content in this resource record.
 	 */
 	public int contentLength() {
 		return content.writerIndex() - content.readerIndex();
@@ -78,7 +88,8 @@ public class Resource extends DnsEntry implements ByteBufHolder {
 	 */
 	@Override
 	public Resource copy() {
-		return new Resource(name(), type(), dnsClass(), ttl, contentIndex, content.copy());
+		return new Resource(name(), type(), dnsClass(), ttl, contentIndex,
+				content.copy());
 	}
 
 	@Override
