@@ -287,6 +287,7 @@ public class JZlibEncoder extends ZlibEncoder {
 
                 // Configure output.
                 int maxOutputLength = (int) Math.ceil(inputLength * 1.001) + 12;
+                out.ensureWritable(maxOutputLength);
                 z.avail_out = maxOutputLength;
                 z.next_out = out.array();
                 z.next_out_index = out.arrayOffset() + out.writerIndex();
