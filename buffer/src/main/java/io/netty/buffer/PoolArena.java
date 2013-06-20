@@ -188,10 +188,19 @@ abstract class PoolArena<T> {
 
         if ((reqCapacity & 0xFFFFFE00) != 0) { // >= 512
             // Doubled
-            int normalizedCapacity = 512;
-            while (normalizedCapacity < reqCapacity) {
-                normalizedCapacity <<= 1;
+
+            int normalizedCapacity = reqCapacity;
+            normalizedCapacity |= normalizedCapacity >>>  1;
+            normalizedCapacity |= normalizedCapacity >>>  2;
+            normalizedCapacity |= normalizedCapacity >>>  4;
+            normalizedCapacity |= normalizedCapacity >>>  8;
+            normalizedCapacity |= normalizedCapacity >>> 16;
+            normalizedCapacity ++;
+
+            if (normalizedCapacity < 0) {
+                normalizedCapacity >>>= 1;
             }
+
             return normalizedCapacity;
         }
 
