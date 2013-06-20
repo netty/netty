@@ -406,16 +406,15 @@ public class SslHandler
     }
 
     private void flush0(ChannelHandlerContext ctx) throws SSLException {
-
         boolean unwrapLater = false;
-        PendingWrite pending = null;
         ByteBuf out = null;
+        ChannelPromise promise = null;
         try {
             for (;;) {
                 if (out == null) {
                     out = ctx.alloc().buffer();
                 }
-                pending = pendingUnencryptedWrites.peek();
+                PendingWrite pending = pendingUnencryptedWrites.peek();
                 if (pending == null) {
                     break;
                 }
@@ -423,7 +422,10 @@ public class SslHandler
 
                 if (!pending.buf.isReadable()) {
                     pending.buf.release();
+                    promise = pending.promise;
                     pendingUnencryptedWrites.remove();
+                } else {
+                    promise = null;
                 }
 
                 if (result.getStatus() == Status.CLOSED) {
@@ -445,8 +447,9 @@ public class SslHandler
                 } else {
                     switch (result.getHandshakeStatus()) {
                         case NEED_WRAP:
-                            if (!pending.buf.isReadable()) {
-                                ctx.write(out, pending.promise);
+                            if (promise != null) {
+                                ctx.write(out, promise);
+                                promise = null;
                             } else {
                                 ctx.write(out);
                             }
@@ -488,14 +491,14 @@ public class SslHandler
             throw e;
         } finally {
             if (out != null && out.isReadable()) {
-                if (pending != null && !pending.buf.isReadable()) {
-                    ctx.write(out, pending.promise);
+                if (promise != null) {
+                    ctx.write(out, promise);
                 } else {
                     ctx.write(out);
                 }
                 out = null;
-            } else if (pending != null && !pending.buf.isReadable()) {
-                pending.promise.setSuccess();
+            } else if (promise != null) {
+                promise.trySuccess();
             }
             if (out != null) {
                 out.release();

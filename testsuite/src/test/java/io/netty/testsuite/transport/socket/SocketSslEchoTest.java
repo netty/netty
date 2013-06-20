@@ -20,6 +20,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -109,7 +110,11 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
         for (int i = FIRST_MESSAGE_SIZE; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
-            cc.write(Unpooled.wrappedBuffer(data, i, length));
+            ChannelFuture future = cc.write(Unpooled.wrappedBuffer(data, i, length));
+            // TODO: Remove me as it seems like ChunkWriteHandler has a bug which let it hang here
+            if (!chunkWriteHandler) {
+                future.sync();
+            }
             i += length;
         }
 
