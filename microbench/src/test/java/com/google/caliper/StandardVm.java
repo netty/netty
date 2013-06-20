@@ -49,7 +49,7 @@ final class StandardVm extends Vm {
                 "-Xms768m", "-Xmx768m", "-XX:MaxDirectMemorySize=768m",
                 "-XX:+AggressiveOpts", "-XX:+UseBiasedLocking", "-XX:+UseFastAccessorMethods",
                 "-XX:+UseStringCache", "-XX:+OptimizeStringConcat",
-                "-XX:+HeapDumpOnOutOfMemoryError");
+                "-XX:+HeapDumpOnOutOfMemoryError", "-Dio.netty.noResourceLeakDetection");
 
         if (type == MeasurementType.TIME) {
             Collections.addAll(
