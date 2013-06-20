@@ -233,6 +233,12 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     public static final HttpResponseStatus UPGRADE_REQUIRED = new HttpResponseStatus(426, "Upgrade Required");
 
     /**
+     * 431 Request Header Fields Too Large (RFC6585)
+     */
+    public static final HttpResponseStatus REQUEST_HEADER_FIELDS_TOO_LARGE =
+            new HttpResponseStatus(431, "Request Header Fields Too Large");
+
+    /**
      * 500 Internal Server Error
      */
     public static final HttpResponseStatus INTERNAL_SERVER_ERROR =
