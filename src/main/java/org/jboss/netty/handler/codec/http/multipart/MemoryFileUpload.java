@@ -15,9 +15,9 @@
  */
 package org.jboss.netty.handler.codec.http.multipart;
 
-import java.nio.charset.Charset;
-
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+
+import java.nio.charset.Charset;
 
 /**
  * Default FileUpload implementation that stores file into memory.<br><br>
@@ -33,7 +33,7 @@ public class MemoryFileUpload extends AbstractMemoryHttpData implements FileUplo
     private String contentTransferEncoding;
 
     public MemoryFileUpload(String name, String filename, String contentType,
-            String contentTransferEncoding, Charset charset, long size) {
+                            String contentTransferEncoding, Charset charset, long size) {
         super(name, charset, size);
         setFilename(filename);
         setContentType(contentType);
@@ -69,12 +69,12 @@ public class MemoryFileUpload extends AbstractMemoryHttpData implements FileUplo
         return getName().equalsIgnoreCase(attribute.getName());
     }
 
-    public int compareTo(InterfaceHttpData data) {
-        if (!(data instanceof FileUpload)) {
+    public int compareTo(InterfaceHttpData o) {
+        if (!(o instanceof FileUpload)) {
             throw new ClassCastException("Cannot compare " + getHttpDataType() +
-                    " with " + data.getHttpDataType());
+                    " with " + o.getHttpDataType());
         }
-        return compareTo((FileUpload) data);
+        return compareTo((FileUpload) o);
     }
 
     public int compareTo(FileUpload o) {
@@ -109,12 +109,12 @@ public class MemoryFileUpload extends AbstractMemoryHttpData implements FileUplo
     @Override
     public String toString() {
         return HttpPostBodyUtil.CONTENT_DISPOSITION + ": " +
-            HttpPostBodyUtil.FORM_DATA + "; " + HttpPostBodyUtil.NAME + "=\"" + getName() +
-            "\"; " + HttpPostBodyUtil.FILENAME + "=\"" + filename + "\"\r\n" +
-            HttpHeaders.Names.CONTENT_TYPE + ": " + contentType +
-            (charset != null? "; " + HttpHeaders.Values.CHARSET + '=' + charset + "\r\n" : "\r\n") +
-            HttpHeaders.Names.CONTENT_LENGTH + ": " + length() + "\r\n" +
-            "Completed: " + isCompleted() +
-            "\r\nIsInMemory: " + isInMemory();
+                HttpPostBodyUtil.FORM_DATA + "; " + HttpPostBodyUtil.NAME + "=\"" + getName() +
+                "\"; " + HttpPostBodyUtil.FILENAME + "=\"" + filename + "\"\r\n" +
+                HttpHeaders.Names.CONTENT_TYPE + ": " + contentType +
+                (charset != null? "; " + HttpHeaders.Values.CHARSET + '=' + charset + "\r\n" : "\r\n") +
+                HttpHeaders.Names.CONTENT_LENGTH + ": " + length() + "\r\n" +
+                "Completed: " + isCompleted() +
+                "\r\nIsInMemory: " + isInMemory();
     }
 }

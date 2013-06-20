@@ -29,14 +29,7 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
     public MemoryAttribute(String name) {
         super(name, HttpConstants.DEFAULT_CHARSET, 0);
     }
-    /**
-     *
-     * @param name
-     * @param value
-     * @throws NullPointerException
-     * @throws IllegalArgumentException
-     * @throws IOException
-     */
+
     public MemoryAttribute(String name, String value) throws IOException {
         super(name, HttpConstants.DEFAULT_CHARSET, 0); // Attribute have no default size
         setValue(value);
@@ -85,12 +78,12 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
         return getName().equalsIgnoreCase(attribute.getName());
     }
 
-    public int compareTo(InterfaceHttpData data) {
-        if (!(data instanceof Attribute)) {
+    public int compareTo(InterfaceHttpData other) {
+        if (!(other instanceof Attribute)) {
             throw new ClassCastException("Cannot compare " + getHttpDataType() +
-                    " with " + data.getHttpDataType());
+                    " with " + other.getHttpDataType());
         }
-        return compareTo((Attribute) data);
+        return compareTo((Attribute) other);
     }
 
     public int compareTo(Attribute o) {
@@ -101,5 +94,4 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
     public String toString() {
         return getName() + '=' + getValue();
     }
-
 }

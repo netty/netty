@@ -15,6 +15,10 @@
  */
 package org.jboss.netty.handler.codec.http.multipart;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.handler.codec.http.HttpConstants;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -23,10 +27,6 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
-
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.HttpConstants;
 
 /**
  * Abstract Memory HttpData implementation
@@ -64,7 +64,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         int read = inputStream.read(bytes);
         int written = 0;
         while (read > 0) {
-            buffer.writeBytes(bytes);
+            buffer.writeBytes(bytes, 0, read);
             written += read;
             read = inputStream.read(bytes);
         }
@@ -148,7 +148,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
             return "";
         }
         if (encoding == null) {
-            return getString(HttpConstants.DEFAULT_CHARSET);
+            encoding = HttpConstants.DEFAULT_CHARSET;
         }
         return channelBuffer.toString(encoding);
     }

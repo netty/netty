@@ -29,25 +29,16 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
 
     public static boolean deleteOnExitTemporaryFile = true;
 
-    public static String prefix = "Attr_";
+    public static final String prefix = "Attr_";
 
-    public static String postfix = ".att";
+    public static final String postfix = ".att";
 
     /**
      * Constructor used for huge Attribute
-     * @param name
      */
     public DiskAttribute(String name) {
         super(name, HttpConstants.DEFAULT_CHARSET, 0);
     }
-    /**
-     *
-     * @param name
-     * @param value
-     * @throws NullPointerException
-     * @throws IllegalArgumentException
-     * @throws IOException
-     */
     public DiskAttribute(String name, String value) throws IOException {
         super(name, HttpConstants.DEFAULT_CHARSET, 0); // Attribute have no default size
         setValue(value);
@@ -96,12 +87,12 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
         return getName().equalsIgnoreCase(attribute.getName());
     }
 
-    public int compareTo(InterfaceHttpData data) {
-        if (!(data instanceof Attribute)) {
+    public int compareTo(InterfaceHttpData o) {
+        if (!(o instanceof Attribute)) {
             throw new ClassCastException("Cannot compare " + getHttpDataType() +
-                    " with " + data.getHttpDataType());
+                    " with " + o.getHttpDataType());
         }
-        return compareTo((Attribute) data);
+        return compareTo((Attribute) o);
     }
 
     public int compareTo(Attribute o) {

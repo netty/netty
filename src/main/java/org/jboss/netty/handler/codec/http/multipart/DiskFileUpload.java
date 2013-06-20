@@ -28,9 +28,9 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
 
     public static boolean deleteOnExitTemporaryFile = true;
 
-    public static String prefix = "FUp_";
+    public static final String prefix = "FUp_";
 
-    public static String postfix = ".tmp";
+    public static final String postfix = ".tmp";
 
     private String filename;
 
@@ -39,7 +39,7 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
     private String contentTransferEncoding;
 
     public DiskFileUpload(String name, String filename, String contentType,
-            String contentTransferEncoding, Charset charset, long size) {
+                          String contentTransferEncoding, Charset charset, long size) {
         super(name, charset, size);
         setFilename(filename);
         setContentType(contentType);
@@ -75,12 +75,12 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
         return getName().equalsIgnoreCase(attribute.getName());
     }
 
-    public int compareTo(InterfaceHttpData data) {
-        if (!(data instanceof FileUpload)) {
+    public int compareTo(InterfaceHttpData o) {
+        if (!(o instanceof FileUpload)) {
             throw new ClassCastException("Cannot compare " + getHttpDataType() +
-                    " with " + data.getHttpDataType());
+                    " with " + o.getHttpDataType());
         }
-        return compareTo((FileUpload) data);
+        return compareTo((FileUpload) o);
     }
 
     public int compareTo(FileUpload o) {
@@ -115,7 +115,7 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
     @Override
     public String toString() {
         return HttpPostBodyUtil.CONTENT_DISPOSITION + ": " +
-            HttpPostBodyUtil.FORM_DATA + "; " + HttpPostBodyUtil.NAME + "=\"" + getName() +
+                HttpPostBodyUtil.FORM_DATA + "; " + HttpPostBodyUtil.NAME + "=\"" + getName() +
                 "\"; " + HttpPostBodyUtil.FILENAME + "=\"" + filename + "\"\r\n" +
                 HttpHeaders.Names.CONTENT_TYPE + ": " + contentType +
                 (charset != null? "; " + HttpHeaders.Values.CHARSET + '=' + charset + "\r\n" : "\r\n") +
