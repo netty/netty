@@ -61,28 +61,27 @@ public class AdaptiveRecvByteBufAllocator implements RecvByteBufAllocator {
     public static final AdaptiveRecvByteBufAllocator DEFAULT = new AdaptiveRecvByteBufAllocator();
 
     private static int getSizeTableIndex(final int size) {
-        if (size <= 16) {
-            return size - 1;
-        }
+        for (int low = 0, high = SIZE_TABLE.length - 1;;) {
+            if (high < low) {
+                return 0;
+            }
+            if (high == low) {
+                return high;
+            }
 
-        int bits = 0;
-        int v = size;
-        do {
-            v >>>= 1;
-            bits ++;
-        } while (v != 0);
-
-        final int baseIdx = bits << 3;
-        final int startIdx = baseIdx - 18;
-        final int endIdx = baseIdx - 25;
-
-        for (int i = startIdx; i >= endIdx; i --) {
-            if (size >= SIZE_TABLE[i]) {
-                return i;
+            int mid = low + high >>> 1;
+            int a = SIZE_TABLE[mid];
+            int b = SIZE_TABLE[mid + 1];
+            if (size > b) {
+                low = mid + 1;
+            } else if (size < a) {
+                high = mid - 1;
+            } else if (size == a) {
+                return mid;
+            } else {
+                return mid + 1;
             }
         }
-
-        throw new Error("shouldn't reach here; please file a bug report.");
     }
 
     private static final class HandleImpl implements Handle {
