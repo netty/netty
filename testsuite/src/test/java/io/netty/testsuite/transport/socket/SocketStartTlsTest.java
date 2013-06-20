@@ -27,8 +27,8 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
-import io.netty.handler.logging.ByteLoggingHandler;
 import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.testsuite.util.BogusSslContextFactory;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
@@ -76,7 +76,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
             @Override
             public void initChannel(SocketChannel sch) throws Exception {
                 ChannelPipeline p = sch.pipeline();
-                p.addLast("logger", new ByteLoggingHandler(LOG_LEVEL));
+                p.addLast("logger", new LoggingHandler(LOG_LEVEL));
                 p.addLast(new LineBasedFrameDecoder(64), new StringDecoder(), new StringEncoder());
                 p.addLast(executor, sh);
             }
@@ -86,7 +86,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
             @Override
             public void initChannel(SocketChannel sch) throws Exception {
                 ChannelPipeline p = sch.pipeline();
-                p.addLast("logger", new ByteLoggingHandler(LOG_LEVEL));
+                p.addLast("logger", new LoggingHandler(LOG_LEVEL));
                 p.addLast(new LineBasedFrameDecoder(64), new StringDecoder(), new StringEncoder());
                 p.addLast(executor, ch);
             }
