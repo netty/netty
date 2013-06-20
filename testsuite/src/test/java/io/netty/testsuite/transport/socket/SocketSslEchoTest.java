@@ -111,10 +111,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         for (int i = FIRST_MESSAGE_SIZE; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
             ChannelFuture future = cc.write(Unpooled.wrappedBuffer(data, i, length));
-            // TODO: Remove me as it seems like ChunkWriteHandler has a bug which let it hang here
-            if (!chunkWriteHandler) {
-                future.sync();
-            }
+            future.sync();
             i += length;
         }
 
