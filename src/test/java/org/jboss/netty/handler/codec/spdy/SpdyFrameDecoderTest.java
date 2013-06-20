@@ -112,8 +112,6 @@ public class SpdyFrameDecoderTest {
         @Override
         public void exceptionCaught(
                 ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-            System.out.println(e.getCause());
-            e.getCause().printStackTrace();
             message = e.getCause();
         }
     }
