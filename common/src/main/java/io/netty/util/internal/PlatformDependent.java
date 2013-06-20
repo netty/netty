@@ -354,7 +354,11 @@ public final class PlatformDependent {
                     }
                 }
                 if (p != null) {
-                    p.destroy();
+                    try {
+                        p.destroy();
+                    } catch (Exception e) {
+                        // Android sometimes triggers an ErrnoException.
+                    }
                 }
             }
 
