@@ -98,8 +98,8 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
                 cbb.writerIndex(cbb.writerIndex() + buffer.readableBytes());
             } else {
                 CompositeByteBuf cbb = compositeBuffer();
-                cbb.addComponent(buffer);
-                cbb.writerIndex(buffer.readableBytes());
+                cbb.addComponents(byteBuf, buffer);
+                cbb.writerIndex(byteBuf.readableBytes() + buffer.readableBytes());
                 byteBuf = cbb;
             }
         }
