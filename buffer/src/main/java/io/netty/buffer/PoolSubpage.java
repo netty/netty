@@ -108,6 +108,7 @@ final class PoolSubpage<T> {
      *         {@code false} if this subpage is not used by its chunk and thus it's OK to be released.
      */
     boolean free(int bitmapIdx) {
+
         if (elemSize == 0) {
             return true;
         }
@@ -123,9 +124,16 @@ final class PoolSubpage<T> {
             return true;
         }
 
-        if (numAvail < maxNumElems) {
+        if (numAvail != maxNumElems) {
             return true;
         } else {
+            // Subpage not in use (numAvail == maxNumElems)
+            if (prev == next) {
+                // Do not remove if this subpage is the only one left in the pool.
+                return true;
+            }
+
+            // Remove this subpage from the pool if there are other subpages left in the pool.
             doNotDestroy = false;
             removeFromPool();
             return false;
