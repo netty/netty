@@ -16,7 +16,6 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.MessageList;
 import io.netty.handler.codec.MessageToMessageEncoder;
@@ -73,6 +72,22 @@ public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
     }
 
     /**
+     * Encodes a query and writes it to a {@link ByteBuf}.
+     *
+     * @param query
+     *            the {@link DnsQuery} being encoded
+     * @param buf
+     *            the {@link ByteBuf} the query will be written to
+     */
+    public static void encodeQuery(DnsQuery query, ByteBuf buf) {
+        encodeHeader(query.getHeader(), buf);
+        List<Question> questions = query.getQuestions();
+        for (Question question : questions) {
+            encodeQuestion(question, buf);
+        }
+    }
+
+    /**
      * Encodes a query and writes it to a {@link ByteBuf}. Queries are sent to a
      * DNS server and a response will be returned from the server. The encoded
      * ByteBuf is written to the specified {@link MessageList}.
@@ -90,12 +105,8 @@ public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
     @Override
     protected void encode(ChannelHandlerContext ctx, DnsQuery query,
             MessageList<Object> out) throws Exception {
-        ByteBuf buf = Unpooled.buffer(512);
-        encodeHeader(query.getHeader(), buf);
-        List<Question> questions = query.getQuestions();
-        for (Question question : questions) {
-            encodeQuestion(question, buf);
-        }
+        ByteBuf buf = ctx.alloc().buffer(512);
+        encodeQuery(query, buf);
         out.add(buf);
     }
 

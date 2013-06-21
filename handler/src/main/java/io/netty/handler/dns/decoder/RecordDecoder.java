@@ -16,6 +16,7 @@
 package io.netty.handler.dns.decoder;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.Resource;
 
@@ -39,6 +40,6 @@ public interface RecordDecoder<T> {
      * @param resource
      *            the resource record being decoded
      */
-    public T decode(DnsResponse response, Resource resource);
+    public T decode(DnsResponse response, Resource resource) throws DecoderException;
 
 }

@@ -67,14 +67,13 @@ public class RecordDecoderFactory {
         }
         RecordDecoder<?> decoder = decoders.get(type);
         if (decoder == null) {
-            throw new RuntimeException("Unsupported resource record type [id: "
+            throw new IllegalStateException("Unsupported resource record type [id: "
                     + type + "].");
         }
         T result = null;
         try {
             result = (T) decoder.decode(response, resource);
         } catch (Exception e) {
-            System.out.println("Failed: " + resource.name());
             e.printStackTrace();
         }
         return result;

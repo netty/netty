@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A {@link DnsCallback} can represent a single {@link DnsQuery} or a group of
@@ -105,12 +106,12 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
         }
     }
 
+    private final AtomicInteger fails = new AtomicInteger();
     private final DnsQuery[] queries;
 
     @SuppressWarnings("unchecked")
     private T result = (T) DEFAULT;
 
-    private int fails = 0;
     private int serverIndex;
     private int validType = -1;
 
@@ -146,7 +147,7 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
      * failed).
      */
     private synchronized int failsIncremented() {
-        return ++fails;
+        return fails.getAndIncrement();
     }
 
     /**

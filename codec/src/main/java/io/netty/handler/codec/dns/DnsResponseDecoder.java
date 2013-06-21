@@ -159,31 +159,14 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
     }
 
     /**
-     * Decodes a response from a {@link DatagramPacket} containing a
-     * {@link ByteBuf} with a DNS packet. Responses are sent from a DNS server
-     * to a client in response to a query. This method writes the decoded
-     * response to the specified {@link MessageList} to be handled by a
-     * specialized message handler.
+     * Decodes a full DNS response packet.
      *
-     * @param ctx
-     *            the {@link ChannelHandlerContext} this
-     *            {@link DnsResponseDecoder} belongs to
      * @param buf
-     *            the message being decoded, a {@link DatagramPacket} containing
-     *            a DNS packet
-     * @param out
-     *            the {@link MessageList} to which decoded messages should be
-     *            added
-     * @throws Exception
+     *            the raw DNS response packet
+     * @return the decoded {@link DnsResponse}
      */
-    @Override
-    protected void decode(ChannelHandlerContext ctx, DatagramPacket packet,
-            MessageList<Object> out) throws Exception {
-        ByteBuf buf = packet.content();
-        DnsResponse response = new DnsResponse();
-        byte[] raw = new byte[buf.writerIndex() - buf.readerIndex()];
-        buf.getBytes(0, raw);
-        response.setRawPacket(raw);
+    public static DnsResponse decodeResponse(ByteBuf buf) {
+        DnsResponse response = new DnsResponse(buf);
         DnsResponseHeader header = decodeHeader(response, buf);
         response.setHeader(header);
         for (int i = 0; i < header.getReadQuestions(); i++) {
@@ -205,7 +188,31 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
         for (int i = 0; i < header.getReadAdditionalResources(); i++) {
             response.addAdditionalResource(decodeResource(buf));
         }
-        out.add(response);
+        return response;
+    }
+
+    /**
+     * Decodes a response from a {@link DatagramPacket} containing a
+     * {@link ByteBuf} with a DNS packet. Responses are sent from a DNS server
+     * to a client in response to a query. This method writes the decoded
+     * response to the specified {@link MessageList} to be handled by a
+     * specialized message handler.
+     *
+     * @param ctx
+     *            the {@link ChannelHandlerContext} this
+     *            {@link DnsResponseDecoder} belongs to
+     * @param buf
+     *            the message being decoded, a {@link DatagramPacket} containing
+     *            a DNS packet
+     * @param out
+     *            the {@link MessageList} to which decoded messages should be
+     *            added
+     * @throws Exception
+     */
+    @Override
+    protected void decode(ChannelHandlerContext ctx, DatagramPacket packet,
+            MessageList<Object> out) throws Exception {
+        out.add(decodeResponse(packet.content()).retain());
     }
 
 }

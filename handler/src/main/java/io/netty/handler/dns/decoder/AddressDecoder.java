@@ -16,6 +16,7 @@
 package io.netty.handler.dns.decoder;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.Resource;
 
@@ -54,7 +55,7 @@ public class AddressDecoder implements RecordDecoder<ByteBuf> {
         ByteBuf data = resource.content().copy();
         int size = data.writerIndex() - data.readerIndex();
         if (data.readerIndex() != 0 || size != octets) {
-            throw new RuntimeException(
+            throw new DecoderException(
                     "Invalid content length, or reader index when decoding address [index: "
                             + data.readerIndex() + ", expected length: "
                             + octets + ", actual: " + size + "].");

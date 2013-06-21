@@ -55,12 +55,17 @@ public class InboundDnsMessageHandler extends ChannelInboundHandlerAdapter {
                 Object mesg = messages.get(i);
                 if (mesg instanceof DnsResponse) {
                     DnsCallback.finish((DnsResponse) mesg);
+                    ((DnsResponse) mesg).content().readByte(); // We can read
+                                                               // from some
+                                                               // buffers but
+                                                               // not others?
                 }
             }
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
             messages.releaseAllAndRecycle();
+            System.out.println("SUCCESS\n\n\n\n");
         }
     }
 

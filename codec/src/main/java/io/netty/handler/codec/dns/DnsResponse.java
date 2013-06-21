@@ -15,31 +15,66 @@
  */
 package io.netty.handler.codec.dns;
 
-import io.netty.util.ReferenceCounted;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 
 /**
  * A DNS response packet which is sent to a client after a server receives a
  * query.
  */
-public class DnsResponse extends DnsMessage<DnsResponseHeader> {
+public class DnsResponse extends DnsMessage<DnsResponseHeader> implements
+        ByteBufHolder {
 
-    private byte[] rawPacket;
+    private final ByteBuf rawPacket;
+    private final int originalIndex;
 
-    /**
-     * Returns the original, non-decoded DNS response packet. Stored as a byte
-     * array since an instance of {@link DnsResponse} may be discarded at any
-     * time, necessitating a release of any {@link ReferenceCounted} objects.
-     * Byte arrays will automatically be cleaned up by the garbage collector.
-     */
-    public byte[] getRawPacket() {
-        return rawPacket;
+    public DnsResponse(ByteBuf rawPacket) {
+        this.rawPacket = rawPacket;
+        this.originalIndex = rawPacket.readerIndex();
     }
 
     /**
-     * Sets the non-decoded DNS response packet.
+     * Returns the non-decoded DNS response packet, at its
+     * <strong>original</strong> {@code readerIndex}.
      */
-    public void setRawPacket(byte[] rawPacket) {
-        this.rawPacket = rawPacket;
+    @Override
+    public ByteBuf content() {
+        return rawPacket.readerIndex(originalIndex);
+    }
+
+    @Override
+    public int refCnt() {
+        return rawPacket.refCnt();
+    }
+
+    @Override
+    public boolean release() {
+        return rawPacket.release();
+    }
+
+    /**
+     * Returns a deep copy of this DNS response.
+     */
+    @Override
+    public DnsResponse copy() {
+        return DnsResponseDecoder.decodeResponse(content());
+    }
+
+    @Override
+    public DnsResponse retain() {
+        rawPacket.retain();
+        return this;
+    }
+
+    @Override
+    public DnsResponse retain(int increment) {
+        rawPacket.retain(increment);
+        return this;
+    }
+
+    @Override
+    public boolean release(int decrement) {
+        return rawPacket.release(decrement);
     }
 
 }

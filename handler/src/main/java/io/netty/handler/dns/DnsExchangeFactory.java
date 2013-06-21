@@ -156,7 +156,7 @@ public class DnsExchangeFactory {
      * @return the {@link DnsQuery} being written
      * @throws InterruptedException
      */
-    public static DnsQuery sendQuery(int type, String domain, int id,
+    private static DnsQuery sendQuery(int type, String domain, int id,
             Channel channel) throws InterruptedException {
         DnsQuery query = new DnsQuery(id);
         query.addQuestion(new Question(domain, type));
@@ -299,7 +299,7 @@ public class DnsExchangeFactory {
         for (int i = 0; i < types.length; i++) {
             T result = ResourceCache.getRecord(domain, types[i]);
             if (result != null) {
-                return new CachedFuture<T>(result);
+                return executor.next().newSucceededFuture(result);
             }
         }
         int id = obtainId();
@@ -338,7 +338,7 @@ public class DnsExchangeFactory {
             @SuppressWarnings("unchecked")
             T result = (T) ResourceCache.getRecords(domain, types[i]);
             if (result != null) {
-                return new CachedFuture<T>(result);
+                return executor.next().newSucceededFuture(result);
             }
         }
         int id = obtainId();
@@ -455,7 +455,7 @@ public class DnsExchangeFactory {
      */
     public static Future<List<String>> reverse(byte[] ipAddress)
             throws UnknownHostException, SocketException, InterruptedException {
-        ByteBuf buf = Unpooled.copiedBuffer(ipAddress);
+        ByteBuf buf = Unpooled.wrappedBuffer(ipAddress);
         Future<List<String>> future = reverse(buf);
         buf.release();
         return future;
