@@ -278,6 +278,10 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf imp
     }
 
     private void updateComponentOffsets(int cIndex) {
+        if (components.isEmpty()) {
+            return;
+        }
+
         Component c = components.get(cIndex);
         if (cIndex == 0) {
             c.offset = 0;
