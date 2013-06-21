@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static io.netty.buffer.Unpooled.*;
+import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.util.internal.EmptyArrays.*;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
@@ -542,5 +543,14 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         assertThat(nioBuffers[0].get(), is((byte) 2));
         assertThat(nioBuffers[1].remaining(), is(1));
         assertThat(nioBuffers[1].get(), is((byte) 3));
+    }
+
+    @Test
+    public void testRemoveLastComponent() {
+        CompositeByteBuf buf = freeLater(compositeBuffer());
+        buf.addComponent(wrappedBuffer(new byte[]{1, 2}));
+        assertEquals(1, buf.numComponents());
+        buf.removeComponent(0);
+        assertEquals(0, buf.numComponents());
     }
 }
