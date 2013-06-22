@@ -26,7 +26,7 @@ import java.util.Map;
  * Handles the decoding of resource records. Some default decoders are mapped to
  * their resource types in the map {@code decoders}.
  */
-public class RecordDecoderFactory {
+public final class RecordDecoderFactory {
 
     /**
      * Contains the default resource record decoders, which are for A, AAAA, MX,
