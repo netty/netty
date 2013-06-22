@@ -27,14 +27,14 @@ import io.netty.handler.timeout.ReadTimeoutHandler;
  * case the client is shutdown. Each DNS server gets its own DNS client.
  */
 public class DnsClientInitializer extends
-        ChannelInitializer<NioDatagramChannel> {
+		ChannelInitializer<NioDatagramChannel> {
 
-    @Override
-    protected void initChannel(NioDatagramChannel channel) throws Exception {
-        channel.pipeline().addLast("timeout", new ReadTimeoutHandler(30))
-                .addLast("decoder", new DnsResponseDecoder())
-                .addLast("encoder", new DnsQueryEncoder())
-                .addLast("handler", new InboundDnsMessageHandler());
-    }
+	@Override
+	protected void initChannel(NioDatagramChannel channel) throws Exception {
+		channel.pipeline().addLast("timeout", new ReadTimeoutHandler(30))
+				.addLast("decoder", new DnsResponseDecoder())
+				.addLast("encoder", new DnsQueryEncoder())
+				.addLast("handler", new InboundDnsMessageHandler());
+	}
 
 }

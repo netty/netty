@@ -19,7 +19,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.SimpleChannelInboundHandler;
 
 import java.net.InetAddress;
 import java.util.Date;
@@ -30,10 +30,9 @@ import java.util.logging.Logger;
  * Handles a server-side channel.
  */
 @Sharable
-public class TelnetServerHandler extends ChannelInboundMessageHandlerAdapter<String> {
+public class TelnetServerHandler extends SimpleChannelInboundHandler<String> {
 
-    private static final Logger logger = Logger.getLogger(
-            TelnetServerHandler.class.getName());
+    private static final Logger logger = Logger.getLogger(TelnetServerHandler.class.getName());
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -45,6 +44,7 @@ public class TelnetServerHandler extends ChannelInboundMessageHandlerAdapter<Str
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, String request) throws Exception {
+
         // Generate and write a response.
         String response;
         boolean close = false;

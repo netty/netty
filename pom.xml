@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.0.0.CR2-SNAPSHOT</version>
+  <version>4.0.0.CR7-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>http://netty.io/</url>
@@ -73,7 +73,6 @@
     <jboss.marshalling.version>1.3.17.GA</jboss.marshalling.version>
     <test.jvm.argLine>
       -server 
-      -Dio.netty.resourceLeakDetection
       -dsa -da -ea:io.netty...
       -XX:+AggressiveOpts
       -XX:+TieredCompilation
@@ -110,7 +109,7 @@
       <dependency>
         <groupId>org.javassist</groupId>
         <artifactId>javassist</artifactId>
-        <version>3.17.1-GA</version>
+        <version>3.18.0-GA</version>
         <scope>compile</scope>
         <optional>true</optional>
       </dependency>
@@ -144,7 +143,7 @@
       <dependency>
         <groupId>com.barchart.udt</groupId>
         <artifactId>barchart-udt-bundle</artifactId>
-        <version>2.2.6</version>
+        <version>2.3.0</version>
       </dependency>
 
       <dependency>
@@ -156,12 +155,12 @@
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
-        <version>1.7.4</version>
+        <version>1.7.5</version>
       </dependency>
       <dependency>
         <groupId>commons-logging</groupId>
         <artifactId>commons-logging</artifactId>
-        <version>1.1.1</version>
+        <version>1.1.3</version>
       </dependency>
       <dependency>
         <groupId>log4j</groupId>
@@ -255,7 +254,7 @@
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
-      <version>1.0.10</version>
+      <version>1.0.13</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -288,7 +287,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.0</version>
+        <version>3.1</version>
         <configuration>
           <compilerVersion>1.7</compilerVersion>
           <fork>true</fork>
@@ -402,14 +401,27 @@
         <version>2.3.7</version>
         <extensions>true</extensions>
       </plugin>             
-       <plugin>
+      <plugin>
         <artifactId>maven-source-plugin</artifactId>
         <version>2.2.1</version>
         <executions>
+          <!--
+            ~ This workaround prevents Maven from executing the 'generate-sources' phase twice.
+            ~ See http://jira.codehaus.org/browse/MSOURCES-13
+            ~ and http://blog.peterlynch.ca/2010/05/maven-how-to-prevent-generate-sources.html
+            -->
           <execution>
             <id>attach-sources</id>
+            <phase>invalid</phase>
             <goals>
               <goal>jar</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>attach-sources-no-fork</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar-no-fork</goal>
             </goals>
           </execution>
         </executions>
@@ -434,7 +446,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-release-plugin</artifactId>
-        <version>2.4</version>
+        <version>2.4.1</version>
         <configuration>
           <useReleaseProfile>false</useReleaseProfile>
           <arguments>-P release,sonatype-oss-release,full,no-osgi</arguments>
@@ -451,12 +463,12 @@
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.14</version>
+          <version>2.15</version>
         </plugin>
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-failsafe-plugin</artifactId>
-          <version>2.14</version>
+          <version>2.15</version>
         </plugin>
         <plugin>
           <artifactId>maven-clean-plugin</artifactId>
@@ -472,13 +484,14 @@
         </plugin>
         <plugin>
           <artifactId>maven-dependency-plugin</artifactId>
-          <version>2.7</version>
+          <version>2.8</version>
         </plugin>
         <plugin>
           <artifactId>maven-assembly-plugin</artifactId>
           <version>2.4</version>
         </plugin>
         <plugin>
+          <!-- Do NOT upgrade -->
           <artifactId>maven-jxr-plugin</artifactId>
           <version>2.2</version>
         </plugin>
@@ -502,7 +515,7 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>build-helper-maven-plugin</artifactId>
-          <version>1.7</version>
+          <version>1.8</version>
         </plugin>               
 
         <!-- Workaround for the 'M2E plugin execution not covered' problem.
@@ -567,3 +580,4 @@
     </pluginManagement>
   </build>
 </project>
+

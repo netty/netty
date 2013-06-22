@@ -45,6 +45,9 @@ public final class RxtxChannelOption<T> extends ChannelOption<T> {
     public static final RxtxChannelOption<Integer> WAIT_TIME =
             new RxtxChannelOption<Integer>("WAIT_TIME");
 
+    public static final RxtxChannelOption<Integer> READ_TIMEOUT =
+            new RxtxChannelOption<Integer>("READ_TIMEOUT");
+
     private RxtxChannelOption(String name) {
         super(name);
     }

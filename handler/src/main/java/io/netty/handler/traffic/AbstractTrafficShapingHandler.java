@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.MessageList;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
@@ -74,7 +75,6 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
 
     private static final AttributeKey<Boolean> READ_SUSPENDED = new AttributeKey<Boolean>("readSuspended");
     private static final AttributeKey<Runnable> REOPEN_TASK = new AttributeKey<Runnable>("reopenTask");
-    private static final AttributeKey<Runnable> BUFFER_UPDATE_TASK = new AttributeKey<Runnable>("bufferUpdateTask");
 
     /**
      *
@@ -210,25 +210,27 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
     }
 
     @Override
-    public void inboundBufferUpdated(final ChannelHandlerContext ctx) throws Exception {
-        ByteBuf buf = ctx.nextInboundByteBuffer();
-
+    public void messageReceived(final ChannelHandlerContext ctx, final MessageList<Object> msgs) throws Exception {
+        MessageList<ByteBuf> buffers = msgs.cast();
+        long size = 0;
+        for (int i = 0; i < buffers.size(); i++) {
+           size += buffers.get(i).readableBytes();
+        }
         long curtime = System.currentTimeMillis();
-        long size = buf.readableBytes();
 
         if (trafficCounter != null) {
             trafficCounter.bytesRecvFlowControl(size);
             if (readLimit == 0) {
                 // no action
-                ctx.fireInboundBufferUpdated();
+                ctx.fireMessageReceived(msgs);
 
                 return;
             }
 
             // compute the number of ms to wait before reopening the channel
             long wait = getTimeToWait(readLimit,
-                                      trafficCounter.currentReadBytes(),
-                                      trafficCounter.lastTime(), curtime);
+                    trafficCounter.currentReadBytes(),
+                    trafficCounter.lastTime(), curtime);
             if (wait >= MINIMAL_WAIT) { // At least 10ms seems a minimal
                 // time in order to
                 // try to limit the traffic
@@ -244,45 +246,45 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                         attr.set(reopenTask);
                     }
                     ctx.executor().schedule(reopenTask, wait,
-                                                   TimeUnit.MILLISECONDS);
+                            TimeUnit.MILLISECONDS);
                 } else {
                     // Create a Runnable to update the next handler in the chain. If one was create before it will
                     // just be reused to limit object creation
-                    Attribute<Runnable> attr  = ctx.attr(BUFFER_UPDATE_TASK);
-                    Runnable bufferUpdateTask = attr.get();
-                    if (bufferUpdateTask == null) {
-                        bufferUpdateTask = new Runnable() {
-                            @Override
-                            public void run() {
-                                ctx.fireInboundBufferUpdated();
-                            }
-                        };
-                        attr.set(bufferUpdateTask);
-                    }
+                    Runnable bufferUpdateTask = new Runnable() {
+                        @Override
+                        public void run() {
+                            ctx.fireMessageReceived(msgs);
+                        }
+                    };
                     ctx.executor().schedule(bufferUpdateTask, wait, TimeUnit.MILLISECONDS);
                     return;
                 }
             }
         }
-        ctx.fireInboundBufferUpdated();
+        ctx.fireMessageReceived(msgs);
     }
 
     @Override
     public void read(ChannelHandlerContext ctx) {
-        if (!ctx.attr(READ_SUSPENDED).get()) {
+        Boolean suspended = ctx.attr(READ_SUSPENDED).get();
+        if (suspended == null || Boolean.FALSE.equals(suspended)) {
             ctx.read();
         }
     }
 
     @Override
-    public void flush(final ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
+    public void write(final ChannelHandlerContext ctx, final MessageList<Object> msgs, final ChannelPromise promise)
+            throws Exception {
         long curtime = System.currentTimeMillis();
-        long size = ctx.nextOutboundByteBuffer().readableBytes();
+        long size = 0;
+        for (int i = 0; i < msgs.size(); i++) {
+            size += ((ByteBuf) msgs.get(i)).readableBytes();
+        }
 
         if (trafficCounter != null) {
             trafficCounter.bytesWriteFlowControl(size);
             if (writeLimit == 0) {
-                ctx.flush(promise);
+                ctx.write(msgs, promise);
                 return;
             }
             // compute the number of ms to wait before continue with the
@@ -294,13 +296,13 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                 ctx.executor().schedule(new Runnable() {
                     @Override
                     public void run() {
-                        ctx.flush(promise);
+                        ctx.write(msgs, promise);
                     }
                 }, wait, TimeUnit.MILLISECONDS);
                 return;
             }
         }
-        ctx.flush(promise);
+        ctx.write(msgs, promise);
     }
 
     /**

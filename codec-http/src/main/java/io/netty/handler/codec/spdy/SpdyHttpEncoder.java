@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.spdy;
 
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.MessageList;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -123,7 +123,7 @@ import java.util.Map;
 public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
 
     private final int spdyVersion;
-    private volatile int currentStreamId;
+    private int currentStreamId;
 
     /**
      * Creates a new instance.
@@ -139,7 +139,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, HttpObject msg, MessageBuf<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, HttpObject msg, MessageList<Object> out) throws Exception {
 
         boolean valid = false;
 
@@ -266,7 +266,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
         int streamID = SpdyHttpHeaders.getStreamId(httpResponse);
         SpdyHttpHeaders.removeStreamId(httpResponse);
 
-        // The Connection, Keep-Alive, Proxy-Connection, and Transfer-ENcoding
+        // The Connection, Keep-Alive, Proxy-Connection, and Transfer-Encoding
         // headers are not valid and MUST not be sent.
         httpResponse.headers().remove(HttpHeaders.Names.CONNECTION);
         httpResponse.headers().remove("Keep-Alive");

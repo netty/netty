@@ -21,15 +21,15 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.socks.SocksCmdRequest;
 import io.netty.handler.codec.socks.SocksCmdResponse;
 import io.netty.handler.codec.socks.SocksCmdStatus;
 
 @ChannelHandler.Sharable
-public final class SocksServerConnectHandler extends ChannelInboundMessageHandlerAdapter<SocksCmdRequest> {
+public final class SocksServerConnectHandler extends SimpleChannelInboundHandler<SocksCmdRequest> {
     private static final String name = "SOCKS_SERVER_CONNECT_HANDLER";
 
     public static String getName() {

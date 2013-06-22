@@ -28,12 +28,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class ResourceLeakDetector<T> {
 
-    private static final boolean ENABLED = SystemPropertyUtil.getBoolean("io.netty.resourceLeakDetection", false);
+    private static final boolean DISABLED = SystemPropertyUtil.getBoolean("io.netty.noResourceLeakDetection", false);
+
+    public static final boolean ENABLED = !DISABLED;
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ResourceLeakDetector.class);
 
     static {
-        logger.debug("io.netty.resourceLeakDetection: {}", ENABLED);
+        logger.debug("io.netty.noResourceLeakDetection: {}", DISABLED);
     }
 
     private static final int DEFAULT_SAMPLING_INTERVAL = 113;
@@ -92,7 +94,7 @@ public final class ResourceLeakDetector<T> {
     }
 
     public ResourceLeak open(T obj) {
-        if (!ENABLED || leakCheckCnt ++ % samplingInterval != 0) {
+        if (DISABLED || leakCheckCnt ++ % samplingInterval != 0) {
             return NOOP;
         }
 

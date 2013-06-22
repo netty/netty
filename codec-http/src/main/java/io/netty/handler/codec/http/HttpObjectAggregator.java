@@ -15,18 +15,18 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.MessageList;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 
 import static io.netty.handler.codec.http.HttpHeaders.*;
 
@@ -53,6 +53,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
 
     private final int maxContentLength;
     private FullHttpMessage currentMessage;
+    private boolean tooLongFrameFound;
 
     private int maxCumulationBufferComponents = DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS;
     private ChannelHandlerContext ctx;
@@ -107,10 +108,11 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, HttpObject msg, MessageBuf<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, HttpObject msg, MessageList<Object> out) throws Exception {
         FullHttpMessage currentMessage = this.currentMessage;
 
         if (msg instanceof HttpMessage) {
+            tooLongFrameFound = false;
             assert currentMessage == null;
 
             HttpMessage m = (HttpMessage) msg;
@@ -127,7 +129,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             if (!m.getDecoderResult().isSuccess()) {
                 removeTransferEncodingChunked(m);
                 this.currentMessage = null;
-                out.add(BufUtil.retain(m));
+                out.add(ReferenceCountUtil.retain(m));
                 return;
             }
             if (msg instanceof HttpRequest) {
@@ -150,15 +152,21 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
         } else if (msg instanceof HttpContent) {
             assert currentMessage != null;
 
+            if (tooLongFrameFound) {
+                if (msg instanceof LastHttpContent) {
+                    this.currentMessage = null;
+                }
+                // already detect the too long frame so just discard the content
+                return;
+            }
+
             // Merge the received chunk into the content of the current message.
             HttpContent chunk = (HttpContent) msg;
             CompositeByteBuf content = (CompositeByteBuf) currentMessage.content();
 
             if (content.readableBytes() > maxContentLength - chunk.content().readableBytes()) {
-                // TODO: Respond with 413 Request Entity Too Large
-                //   and discard the traffic or close the connection.
-                //       No need to notify the upstream handlers - just log.
-                //       If decoding a response, just throw an exception.
+                tooLongFrameFound = true;
+
                 throw new TooLongFrameException(
                         "HTTP content length exceeded " + maxContentLength +
                         " bytes.");
@@ -203,7 +211,29 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
     }
 
     @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        super.channelInactive(ctx);
+
+        // release current message if it is not null as it may be a left-over
+        if (currentMessage != null) {
+            currentMessage.release();
+            currentMessage = null;
+        }
+    }
+
+    @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        super.handlerRemoved(ctx);
+        // release current message if it is not null as it may be a left-over as there is not much more we can do in
+        // this case
+        if (currentMessage != null) {
+            currentMessage.release();
+            currentMessage = null;
+        }
     }
 }

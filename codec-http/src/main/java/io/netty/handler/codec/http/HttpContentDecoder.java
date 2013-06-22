@@ -15,21 +15,19 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.embedded.EmbeddedByteChannel;
+import io.netty.channel.MessageList;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.MessageToMessageDecoder;
-
-import java.util.Collections;
+import io.netty.util.ReferenceCountUtil;
 
 /**
  * Decodes the content of the received {@link HttpRequest} and {@link HttpContent}.
  * The original content is replaced with the new content decoded by the
- * {@link EmbeddedByteChannel}, which is created by {@link #newContentDecoder(String)}.
+ * {@link EmbeddedChannel}, which is created by {@link #newContentDecoder(String)}.
  * Once decoding is finished, the value of the <tt>'Content-Encoding'</tt>
  * header is set to the target content encoding, as returned by {@link #getTargetContentEncoding(String)}.
  * Also, the <tt>'Content-Length'</tt> header is updated to the length of the
@@ -47,20 +45,20 @@ import java.util.Collections;
  */
 public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObject> {
 
-    private EmbeddedByteChannel decoder;
+    private EmbeddedChannel decoder;
     private HttpMessage message;
     private boolean decodeStarted;
     private boolean continueResponse;
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, HttpObject msg, MessageBuf<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, HttpObject msg, MessageList<Object> out) throws Exception {
         if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().code() == 100) {
 
             if (!(msg instanceof LastHttpContent)) {
                 continueResponse = true;
             }
             // 100-continue response must be passed through.
-            out.add(BufUtil.retain(msg));
+            out.add(ReferenceCountUtil.retain(msg));
             return;
         }
 
@@ -69,7 +67,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                 continueResponse = false;
             }
             // 100-continue response must be passed through.
-            out.add(BufUtil.retain(msg));
+            out.add(ReferenceCountUtil.retain(msg));
             return;
         }
 
@@ -117,8 +115,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                                 HttpHeaders.Names.CONTENT_LENGTH,
                                 Integer.toString(((ByteBufHolder) decoded[1]).content().readableBytes()));
                     }
-
-                    Collections.addAll(out, decoded);
+                    out.add(decoded);
                     return;
                 }
 
@@ -131,7 +128,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
             }
 
             if (decoder != null) {
-                Collections.addAll(out, decodeContent(null, c));
+                out.add(decodeContent(null, c));
             } else {
                 if (c instanceof LastHttpContent) {
                     decodeStarted = false;
@@ -175,15 +172,15 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
     }
 
     /**
-     * Returns a new {@link EmbeddedByteChannel} that decodes the HTTP message
+     * Returns a new {@link EmbeddedChannel} that decodes the HTTP message
      * content encoded in the specified <tt>contentEncoding</tt>.
      *
      * @param contentEncoding the value of the {@code "Content-Encoding"} header
-     * @return a new {@link EmbeddedByteChannel} if the specified encoding is supported.
+     * @return a new {@link EmbeddedChannel} if the specified encoding is supported.
      *         {@code null} otherwise (alternatively, you can throw an exception
      *         to block unknown encoding).
      */
-    protected abstract EmbeddedByteChannel newContentDecoder(String contentEncoding) throws Exception;
+    protected abstract EmbeddedChannel newContentDecoder(String contentEncoding) throws Exception;
 
     /**
      * Returns the expected content encoding of the decoded content.

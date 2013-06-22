@@ -25,6 +25,7 @@ import static io.netty.handler.codec.http.HttpConstants.*;
  * a {@link ByteBuf}.
  */
 public class HttpResponseEncoder extends HttpObjectEncoder<HttpResponse> {
+    private static final byte[] CRLF = { CR, LF };
 
     @Override
     public boolean acceptOutboundMessage(Object msg) throws Exception {
@@ -38,7 +39,6 @@ public class HttpResponseEncoder extends HttpObjectEncoder<HttpResponse> {
         buf.writeBytes(String.valueOf(response.getStatus().code()).getBytes(CharsetUtil.US_ASCII));
         buf.writeByte(SP);
         buf.writeBytes(String.valueOf(response.getStatus().reasonPhrase()).getBytes(CharsetUtil.US_ASCII));
-        buf.writeByte(CR);
-        buf.writeByte(LF);
+        buf.writeBytes(CRLF);
     }
 }

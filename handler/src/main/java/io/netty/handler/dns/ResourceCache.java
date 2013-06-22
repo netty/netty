@@ -30,142 +30,142 @@ import java.util.Set;
  */
 public class ResourceCache {
 
-    private static final Map<String, Map<Integer, Set<Record<?>>>> recordCache = new HashMap<String, Map<Integer, Set<Record<?>>>>();
+	private static final Map<String, Map<Integer, Set<Record<?>>>> recordCache = new HashMap<String, Map<Integer, Set<Record<?>>>>();
 
-    /**
-     * Returns a <strong>single</strong> record for the given domain
-     * {@code name} and record {@code type}, or null if this record does not
-     * exist.
-     */
-    @SuppressWarnings("unchecked")
-    public static <T> T getRecord(String name, int type) {
-        List<?> records = getRecords(name, type);
-        if (records == null) {
-            return null;
-        }
-        return records.size() == 0 ? null : (T) records.get(0);
-    }
+	/**
+	 * Returns a <strong>single</strong> record for the given domain
+	 * {@code name} and record {@code type}, or null if this record does not
+	 * exist.
+	 */
+	@SuppressWarnings("unchecked")
+	public static <T> T getRecord(String name, int type) {
+		List<?> records = getRecords(name, type);
+		if (records == null) {
+			return null;
+		}
+		return records.size() == 0 ? null : (T) records.get(0);
+	}
 
-    /**
-     * Returns a <strong>{@code List}</strong> of records for the given domain
-     * {@code name} and record {@code type}, or null if no records exist.
-     */
-    @SuppressWarnings("unchecked")
-    public static <T> List<T> getRecords(String name, int type) {
-        Map<Integer, Set<Record<?>>> records = recordCache.get(name);
-        if (records == null || records.isEmpty()) {
-            return null;
-        }
-        Set<Record<?>> subresults = records.get(type);
-        if (subresults == null || subresults.isEmpty()) {
-            return null;
-        }
-        List<T> results = new ArrayList<T>();
-        synchronized (subresults) {
-            for (Iterator<Record<?>> iter = subresults.iterator(); iter
-                    .hasNext();) {
-                Record<?> record = iter.next();
-                if (System.currentTimeMillis() > record.expiration) {
-                    iter.remove();
-                } else {
-                    results.add((T) record.content());
-                }
-            }
-        }
-        if (results.isEmpty()) {
-            return null;
-        }
-        return results;
-    }
+	/**
+	 * Returns a <strong>{@code List}</strong> of records for the given domain
+	 * {@code name} and record {@code type}, or null if no records exist.
+	 */
+	@SuppressWarnings("unchecked")
+	public static <T> List<T> getRecords(String name, int type) {
+		Map<Integer, Set<Record<?>>> records = recordCache.get(name);
+		if (records == null || records.isEmpty()) {
+			return null;
+		}
+		Set<Record<?>> subresults = records.get(type);
+		if (subresults == null || subresults.isEmpty()) {
+			return null;
+		}
+		List<T> results = new ArrayList<T>();
+		synchronized (subresults) {
+			for (Iterator<Record<?>> iter = subresults.iterator(); iter
+					.hasNext();) {
+				Record<?> record = iter.next();
+				if (System.currentTimeMillis() > record.expiration) {
+					iter.remove();
+				} else {
+					results.add((T) record.content());
+				}
+			}
+		}
+		if (results.isEmpty()) {
+			return null;
+		}
+		return results;
+	}
 
-    /**
-     * Submits a record to the cache.
-     *
-     * @param name
-     *            the domain name for the record
-     * @param type
-     *            the type of record
-     * @param ttl
-     *            the time to live for the record
-     * @param content
-     *            the record (i.e. for A records, this would be a
-     *            {@link ByteBuf})
-     */
-    public static <T> void submitRecord(String name, int type, long ttl,
-            T content) {
-        Map<Integer, Set<Record<?>>> records = recordCache.get(name);
-        if (records == null) {
-            recordCache.put(name,
-                    records = new HashMap<Integer, Set<Record<?>>>());
-        }
-        Set<Record<?>> results = records.get(type);
-        if (results == null) {
-            records.put(type, results = new HashSet<Record<?>>());
-        }
-        synchronized (results) {
-            results.add(new Record<T>(content, ttl));
-        }
-    }
+	/**
+	 * Submits a record to the cache.
+	 * 
+	 * @param name
+	 *            the domain name for the record
+	 * @param type
+	 *            the type of record
+	 * @param ttl
+	 *            the time to live for the record
+	 * @param content
+	 *            the record (i.e. for A records, this would be a
+	 *            {@link ByteBuf})
+	 */
+	public static <T> void submitRecord(String name, int type, long ttl,
+			T content) {
+		Map<Integer, Set<Record<?>>> records = recordCache.get(name);
+		if (records == null) {
+			recordCache.put(name,
+					records = new HashMap<Integer, Set<Record<?>>>());
+		}
+		Set<Record<?>> results = records.get(type);
+		if (results == null) {
+			records.put(type, results = new HashSet<Record<?>>());
+		}
+		synchronized (results) {
+			results.add(new Record<T>(content, ttl));
+		}
+	}
 
-    /**
-     * Represents a single resource record.
-     *
-     * @param <T>
-     *            the type of record (i.e. for A records, this would be
-     *            {@link ByteBuf})
-     */
-    static class Record<T> {
+	/**
+	 * Represents a single resource record.
+	 * 
+	 * @param <T>
+	 *            the type of record (i.e. for A records, this would be
+	 *            {@link ByteBuf})
+	 */
+	static class Record<T> {
 
-        private final T content;
-        private final long expiration;
+		private final T content;
+		private final long expiration;
 
-        /**
-         * Constructs the resource record.
-         *
-         * @param content
-         *            the content of the record
-         * @param ttl
-         *            the time to live for the record
-         */
-        public Record(T content, long ttl) {
-            this.content = content;
-            expiration = System.currentTimeMillis() + ttl * 1000l;
-        }
+		/**
+		 * Constructs the resource record.
+		 * 
+		 * @param content
+		 *            the content of the record
+		 * @param ttl
+		 *            the time to live for the record
+		 */
+		public Record(T content, long ttl) {
+			this.content = content;
+			expiration = System.currentTimeMillis() + ttl * 1000l;
+		}
 
-        /**
-         * Returns when this record will expire in milliseconds, based on the
-         * machine's time.
-         */
-        public long expiration() {
-            return expiration;
-        }
+		/**
+		 * Returns when this record will expire in milliseconds, based on the
+		 * machine's time.
+		 */
+		public long expiration() {
+			return expiration;
+		}
 
-        /**
-         * Returns the content of this record.
-         */
-        public T content() {
-            return content;
-        }
+		/**
+		 * Returns the content of this record.
+		 */
+		public T content() {
+			return content;
+		}
 
-        @Override
-        public boolean equals(Object other) {
-            if (other == this) {
-                return true;
-            }
-            if (other instanceof Record) {
-                Record<?> oRec = (Record<?>) other;
-                if (oRec.content == content) {
-                    return true;
-                }
-                return oRec.content.equals(content);
-            }
-            return false;
-        }
+		@Override
+		public boolean equals(Object other) {
+			if (other == this) {
+				return true;
+			}
+			if (other instanceof Record) {
+				Record<?> oRec = (Record<?>) other;
+				if (oRec.content == content) {
+					return true;
+				}
+				return oRec.content.equals(content);
+			}
+			return false;
+		}
 
-        // Don't want to store duplicate records
-        @Override
-        public int hashCode() {
-            return content.getClass().hashCode();
-        }
-    }
+		// Don't want to store duplicate records
+		@Override
+		public int hashCode() {
+			return content.getClass().hashCode();
+		}
+	}
 }

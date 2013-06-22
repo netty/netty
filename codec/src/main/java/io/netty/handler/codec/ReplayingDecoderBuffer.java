@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufIndexFinder;
@@ -79,11 +78,6 @@ final class ReplayingDecoderBuffer implements ByteBuf {
     @Override
     public int maxCapacity() {
         return capacity();
-    }
-
-    @Override
-    public BufType type() {
-        return BufType.BYTE;
     }
 
     @Override
@@ -736,6 +730,12 @@ final class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
+    public ByteBuffer internalNioBuffer(int index, int length) {
+        checkIndex(index, length);
+        return buffer.internalNioBuffer(index, length);
+    }
+
+    @Override
     public String toString(int index, int length, Charset charset) {
         checkIndex(index, length);
         return buffer.toString(index, length, charset);
@@ -922,16 +922,6 @@ final class ReplayingDecoderBuffer implements ByteBuf {
 
     @Override
     public boolean release(int decrement) {
-        throw new UnreplayableOperationException();
-    }
-
-    @Override
-    public ByteBuf suspendIntermediaryDeallocations() {
-        throw new UnreplayableOperationException();
-    }
-
-    @Override
-    public ByteBuf resumeIntermediaryDeallocations() {
         throw new UnreplayableOperationException();
     }
 

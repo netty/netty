@@ -15,19 +15,19 @@
  */
 package io.netty.example.http.upload;
 
-import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.Cookie;
 import io.netty.handler.codec.http.CookieDecoder;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
@@ -62,7 +62,7 @@ import java.util.logging.Logger;
 import static io.netty.buffer.Unpooled.*;
 import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 
-public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter<Object> {
+public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObject> {
 
     private static final Logger logger = Logger.getLogger(HttpUploadServerHandler.class.getName());
 
@@ -96,7 +96,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
         if (msg instanceof HttpRequest) {
             HttpRequest request = this.request = (HttpRequest) msg;
             URI uri = new URI(request.getUri());
@@ -319,7 +319,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
         if (!close) {
             // There's no need to add 'Content-Length' header
             // if this is the last response.
-            response.headers().set(CONTENT_LENGTH, String.valueOf(buf.readableBytes()));
+            response.headers().set(CONTENT_LENGTH, buf.readableBytes());
         }
 
         Set<Cookie> cookies;
@@ -421,7 +421,7 @@ public class HttpUploadServerHandler extends ChannelInboundMessageHandlerAdapter
                 HttpVersion.HTTP_1_1, HttpResponseStatus.OK, buf);
 
         response.headers().set(CONTENT_TYPE, "text/html; charset=UTF-8");
-        response.headers().set(CONTENT_LENGTH, String.valueOf(buf.readableBytes()));
+        response.headers().set(CONTENT_LENGTH, buf.readableBytes());
 
         // Write the response.
         ctx.channel().write(response);

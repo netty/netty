@@ -19,9 +19,9 @@ import com.barchart.udt.OptionUDT;
 import com.barchart.udt.SocketUDT;
 import com.barchart.udt.nio.ChannelUDT;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.RecvByteBufAllocator;
 
 import java.io.IOException;
 import java.util.Map;
@@ -251,14 +251,24 @@ public class DefaultUdtChannelConfig extends DefaultChannelConfig implements
     }
 
     @Override
+    public UdtChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
+        super.setRecvByteBufAllocator(allocator);
+        return this;
+    }
+
+    @Override
     public UdtChannelConfig setAutoRead(boolean autoRead) {
         super.setAutoRead(autoRead);
         return this;
     }
 
     @Override
-    public UdtChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type) {
-        super.setDefaultHandlerByteBufType(type);
-        return this;
+    public UdtChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
+        return (UdtChannelConfig) super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
+    }
+
+    @Override
+    public UdtChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
+        return (UdtChannelConfig) super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
     }
 }

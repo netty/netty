@@ -174,4 +174,12 @@ public class ReadOnlyByteBufTest {
     public void shouldRejectSetBytes5() {
         unmodifiableBuffer(EMPTY_BUFFER).setBytes(0, (ByteBuffer) null);
     }
+
+    public void shouldIndicateNotWriteable() {
+        assertFalse(unmodifiableBuffer(buffer(1)).isWritable());
+    }
+
+    public void shouldIndicteNotWritableAnyNumber() {
+        assertFalse(unmodifiableBuffer(buffer(1)).isWritable(1));
+    }
 }

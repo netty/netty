@@ -151,16 +151,16 @@ public interface ChannelGroupFuture extends Future<Void>, Iterable<ChannelFuture
     boolean isPartialFailure();
 
     @Override
-    ChannelGroupFuture addListener(GenericFutureListener<? extends Future<Void>> listener);
+    ChannelGroupFuture addListener(GenericFutureListener<? extends Future<? super Void>> listener);
 
     @Override
-    ChannelGroupFuture addListeners(GenericFutureListener<? extends Future<Void>>... listeners);
+    ChannelGroupFuture addListeners(GenericFutureListener<? extends Future<? super Void>>... listeners);
 
     @Override
-    ChannelGroupFuture removeListener(GenericFutureListener<? extends Future<Void>> listener);
+    ChannelGroupFuture removeListener(GenericFutureListener<? extends Future<? super Void>> listener);
 
     @Override
-    ChannelGroupFuture removeListeners(GenericFutureListener<? extends Future<Void>>... listeners);
+    ChannelGroupFuture removeListeners(GenericFutureListener<? extends Future<? super Void>>... listeners);
 
     @Override
     ChannelGroupFuture await() throws InterruptedException;

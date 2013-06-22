@@ -16,6 +16,8 @@
 
 package io.netty.buffer;
 
+import io.netty.util.Recycler;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -26,8 +28,21 @@ import java.nio.channels.ScatteringByteChannel;
 
 final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
-    PooledDirectByteBuf(int maxCapacity) {
-        super(maxCapacity);
+    private static final Recycler<PooledDirectByteBuf> RECYCLER = new Recycler<PooledDirectByteBuf>() {
+        @Override
+        protected PooledDirectByteBuf newObject(Handle handle) {
+            return new PooledDirectByteBuf(handle, 0);
+        }
+    };
+
+    static PooledDirectByteBuf newInstance(int maxCapacity) {
+        PooledDirectByteBuf buf = RECYCLER.get();
+        buf.maxCapacity(maxCapacity);
+        return buf;
+    }
+
+    private PooledDirectByteBuf(Recycler.Handle recyclerHandle, int maxCapacity) {
+        super(recyclerHandle, maxCapacity);
     }
 
     @Override
@@ -242,15 +257,15 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     }
 
     @Override
-    public ByteBuffer nioBuffer(int index, int length) {
-        checkIndex(index, length);
-        index = idx(index);
-        return ((ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length)).slice();
+    public ByteBuffer[] nioBuffers(int index, int length) {
+        return new ByteBuffer[] { nioBuffer(index, length) };
     }
 
     @Override
-    public ByteBuffer[] nioBuffers(int index, int length) {
-        return new ByteBuffer[] { nioBuffer(index, length) };
+    public ByteBuffer internalNioBuffer(int index, int length) {
+        checkIndex(index, length);
+        index = idx(index);
+        return (ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length);
     }
 
     @Override
@@ -276,5 +291,10 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     @Override
     public long memoryAddress() {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected Recycler<?> recycler() {
+        return RECYCLER;
     }
 }

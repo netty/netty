@@ -15,12 +15,14 @@
  */
 package io.netty.channel.group;
 
-import io.netty.buffer.BufUtil;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.FileRegion;
+import io.netty.channel.MessageList;
 import io.netty.channel.ServerChannel;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.PlatformDependent;
 
@@ -39,7 +41,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class DefaultChannelGroup extends AbstractSet<Channel> implements ChannelGroup {
 
     private static final AtomicInteger nextId = new AtomicInteger();
-    private static final ImmediateEventExecutor DEFAULT_EXECUTOR = new ImmediateEventExecutor();
     private final String name;
     private final EventExecutor executor;
     private final ConcurrentMap<Integer, Channel> serverChannels = PlatformDependent.newConcurrentHashMap();
@@ -52,27 +53,11 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     };
 
     /**
-     * Creates a new group with a generated name.
-     */
-    public DefaultChannelGroup() {
-        this("group-0x" + Integer.toHexString(nextId.incrementAndGet()));
-    }
-
-    /**
      * Creates a new group with a generated name amd the provided {@link EventExecutor} to notify the
      * {@link ChannelGroupFuture}s.
      */
     public DefaultChannelGroup(EventExecutor executor) {
         this("group-0x" + Integer.toHexString(nextId.incrementAndGet()), executor);
-    }
-
-    /**
-     * Creates a new group with the specified {@code name}.  Please note that
-     * different groups can have the same name, which means no duplicate check
-     * is done against group names.
-     */
-    public DefaultChannelGroup(String name) {
-        this(name, DEFAULT_EXECUTOR);
     }
 
     /**
@@ -233,38 +218,43 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
         Map<Integer, ChannelFuture> futures = new LinkedHashMap<Integer, ChannelFuture>(size());
         for (Channel c: nonServerChannels.values()) {
-            BufUtil.retain(message);
-            futures.put(c.id(), c.write(message));
+            futures.put(c.id(), c.write(safeDuplicate(message)));
         }
 
-        BufUtil.release(message);
+        ReferenceCountUtil.release(message);
         return new DefaultChannelGroupFuture(this, futures, executor);
     }
 
     @Override
-    public ChannelGroupFuture sendFile(FileRegion region) {
-        if (region == null) {
-            throw new NullPointerException("region");
+    public ChannelGroupFuture write(MessageList<Object> messages) {
+        if (messages == null) {
+            throw new NullPointerException("messages");
         }
 
         Map<Integer, ChannelFuture> futures = new LinkedHashMap<Integer, ChannelFuture>(size());
         for (Channel c: nonServerChannels.values()) {
-            BufUtil.retain(region);
-            futures.put(c.id(), c.sendFile(region));
+            int size = messages.size();
+            MessageList<Object> messageCopy = MessageList.newInstance(size);
+            for (int i = 0 ; i < size; i++) {
+                messageCopy.add(safeDuplicate(messages.get(i)));
+            }
+            futures.put(c.id(), c.write(messageCopy));
         }
 
-        BufUtil.release(region);
+        messages.releaseAllAndRecycle();
         return new DefaultChannelGroupFuture(this, futures, executor);
     }
 
-    @Override
-    public ChannelGroupFuture flush() {
-        Map<Integer, ChannelFuture> futures = new LinkedHashMap<Integer, ChannelFuture>(size());
-        for (Channel c: nonServerChannels.values()) {
-            futures.put(c.id(), c.flush());
+    // Create a safe duplicate of the message to write it to a channel but not affect other writes.
+    // See https://github.com/netty/netty/issues/1461
+    private static Object safeDuplicate(Object message) {
+        if (message instanceof ByteBuf) {
+            return ((ByteBuf) message).duplicate().retain();
+        } else if (message instanceof ByteBufHolder) {
+            return ((ByteBufHolder) message).copy();
+        } else {
+            return ReferenceCountUtil.retain(message);
         }
-
-        return new DefaultChannelGroupFuture(this, futures, executor);
     }
 
     @Override

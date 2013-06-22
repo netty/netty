@@ -15,8 +15,6 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
@@ -40,14 +38,8 @@ import java.lang.annotation.Target;
  *
  * But the most useful for developers may be:
  * <ul>
- * <li>{@link ChannelInboundByteHandlerAdapter} handles and intercepts inbound operations where the inbound message
- * type is a {@link ByteBuf}.</li>
- * <li>{@link ChannelInboundMessageHandlerAdapter} handles and intercepts inbound operations where the inbound message
- * type is a {@link MessageBuf}.</li>
- *  * <li>{@link ChannelOutboundByteHandlerAdapter} handles and intercepts outbound operations where the inbound message
- * type is a {@link ByteBuf}.</li>
- * <li>{@link ChannelOutboundMessageHandlerAdapter} handles and intercepts outbound operations where the inbound message
- * type is a {@link MessageBuf}.</li>
+ * <li>{@link ChannelInboundHandlerAdapter} handles and intercepts inbound operations</li>
+ * <li>{@link ChannelOutboundHandlerAdapter} handles and intercepts outbound operations</li>
  * </ul>
  *
  * You will also find more detailed explanation from the documentation of
@@ -72,7 +64,7 @@ import java.lang.annotation.Target;
  *     // your methods here
  * }
  *
- * public class DataServerHandler extends {@link ChannelInboundMessageHandlerAdapter}&lt;Message&gt; {
+ * public class DataServerHandler extends {@link SimpleChannelInboundHandler}&lt;Message&gt; {
  *
  *     <b>private boolean loggedIn;</b>
  *
@@ -121,7 +113,7 @@ import java.lang.annotation.Target;
  * }
  *
  * {@code @Sharable}
- * public class DataServerHandler extends {@link ChannelInboundMessageHandlerAdapter}&lt;Message&gt; {
+ * public class DataServerHandler extends {@link SimpleChannelInboundHandler}&lt;Message&gt; {
  *   private final {@link AttributeKey}&lt{@link Boolean}&gt auth =
  *           new {@link AttributeKey}&lt{@link Boolean}&gt("auth");
  *

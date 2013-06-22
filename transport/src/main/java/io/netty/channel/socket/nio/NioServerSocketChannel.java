@@ -15,10 +15,9 @@
  */
 package io.netty.channel.socket.nio;
 
-import io.netty.buffer.BufType;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.MessageList;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannelConfig;
@@ -39,7 +38,7 @@ import java.nio.channels.SocketChannel;
 public class NioServerSocketChannel extends AbstractNioMessageChannel
                              implements io.netty.channel.socket.ServerSocketChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioServerSocketChannel.class);
 
@@ -108,7 +107,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
+    protected int doReadMessages(MessageList<Object> buf) throws Exception {
         SocketChannel ch = javaChannel().accept();
 
         try {
@@ -152,7 +151,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected int doWriteMessages(MessageBuf<Object> buf, boolean lastSpin) throws Exception {
+    protected int doWriteMessages(MessageList<Object> msgs, int index, boolean lastSpin) throws Exception {
         throw new UnsupportedOperationException();
     }
 }

@@ -17,15 +17,15 @@ package io.netty.channel.sctp.oio;
 
 import com.sun.nio.sctp.SctpChannel;
 import com.sun.nio.sctp.SctpServerChannel;
-import io.netty.buffer.BufType;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.MessageList;
 import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.sctp.DefaultSctpServerChannelConfig;
 import io.netty.channel.sctp.SctpServerChannelConfig;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -53,7 +53,7 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(OioSctpServerChannel.class);
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private static SctpServerChannel newServerSocket() {
         try {
@@ -189,27 +189,32 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
+    protected int doReadMessages(MessageList<Object> buf) throws Exception {
         if (!isActive()) {
             return -1;
         }
 
         SctpChannel s = null;
+        int acceptedChannels = 0;
         try {
             final int selectedKeys = selector.select(SO_TIMEOUT);
             if (selectedKeys > 0) {
-                final Set<SelectionKey> selectionKeys = selector.selectedKeys();
-                for (SelectionKey key : selectionKeys) {
-                   if (key.isAcceptable()) {
-                       s = sch.accept();
-                       if (s != null) {
-                           buf.add(new OioSctpChannel(this, null, s));
-                       }
-                   }
+                final Iterator<SelectionKey> selectionKeys = selector.selectedKeys().iterator();
+                for (;;) {
+                    SelectionKey key = selectionKeys.next();
+                    selectionKeys.remove();
+                    if (key.isAcceptable()) {
+                        s = sch.accept();
+                        if (s != null) {
+                            buf.add(new OioSctpChannel(this, null, s));
+                            acceptedChannels ++;
+                        }
+                    }
+                    if (!selectionKeys.hasNext()) {
+                        return acceptedChannels;
+                    }
                 }
-                return selectedKeys;
             }
-
         } catch (Throwable t) {
             logger.warn("Failed to create a new channel from an accepted sctp channel.", t);
             if (s != null) {
@@ -221,7 +226,7 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
             }
         }
 
-        return 0;
+        return acceptedChannels;
     }
 
     @Override
@@ -291,7 +296,11 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected void doWriteMessages(MessageBuf<Object> buf) throws Exception {
+    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
+        int size = msgs.size();
+        for (int i = index; i < size; i ++) {
+            ReferenceCountUtil.release(msgs.get(i));
+        }
         throw new UnsupportedOperationException();
     }
 }

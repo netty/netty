@@ -23,6 +23,7 @@ import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -152,25 +153,26 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
     }
 
     @Override
-    public DefaultChannelGroupFuture addListener(GenericFutureListener<? extends Future<Void>> listener) {
+    public DefaultChannelGroupFuture addListener(GenericFutureListener<? extends Future<? super Void>> listener) {
         super.addListener(listener);
         return this;
     }
 
     @Override
-    public DefaultChannelGroupFuture addListeners(GenericFutureListener<? extends Future<Void>>... listeners) {
+    public DefaultChannelGroupFuture addListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
         super.addListeners(listeners);
         return this;
     }
 
     @Override
-    public DefaultChannelGroupFuture removeListener(GenericFutureListener<? extends Future<Void>> listener) {
+    public DefaultChannelGroupFuture removeListener(GenericFutureListener<? extends Future<? super Void>> listener) {
         super.removeListener(listener);
         return this;
     }
 
     @Override
-    public DefaultChannelGroupFuture removeListeners(GenericFutureListener<? extends Future<Void>>... listeners) {
+    public DefaultChannelGroupFuture removeListeners(
+            GenericFutureListener<? extends Future<? super Void>>... listeners) {
         super.removeListeners(listeners);
         return this;
     }
@@ -235,7 +237,7 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
     @Override
     protected void checkDeadLock() {
         EventExecutor e = executor();
-        if (e != null && !(e instanceof ImmediateEventExecutor) && e.inEventLoop()) {
+        if (e != null && e != ImmediateEventExecutor.INSTANCE && e.inEventLoop()) {
             throw new BlockingOperationException();
         }
     }

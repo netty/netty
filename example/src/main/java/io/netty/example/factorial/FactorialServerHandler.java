@@ -16,7 +16,8 @@
 package io.netty.example.factorial;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MessageList;
 
 import java.math.BigInteger;
 import java.util.Formatter;
@@ -30,7 +31,7 @@ import java.util.logging.Logger;
  * to create a new handler instance whenever you create a new channel and insert
  * this handler  to avoid a race condition.
  */
-public class FactorialServerHandler extends ChannelInboundMessageHandlerAdapter<BigInteger> {
+public class FactorialServerHandler extends ChannelInboundHandlerAdapter {
 
     private static final Logger logger = Logger.getLogger(
             FactorialServerHandler.class.getName());
@@ -40,11 +41,16 @@ public class FactorialServerHandler extends ChannelInboundMessageHandlerAdapter<
 
     @Override
     public void messageReceived(
-            ChannelHandlerContext ctx, BigInteger msg) throws Exception {
-        // Calculate the cumulative factorial and send it to the client.
-        lastMultiplier = msg;
-        factorial = factorial.multiply(msg);
-        ctx.write(factorial);
+            ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        MessageList<BigInteger> ints = msgs.cast();
+        for (int i = 0; i < ints.size(); i++) {
+            BigInteger msg = ints.get(i);
+            // Calculate the cumulative factorial and send it to the client.
+            lastMultiplier = msg;
+            factorial = factorial.multiply(msg);
+            ctx.write(factorial);
+        }
+        msgs.recycle();
     }
 
     @Override

@@ -15,12 +15,11 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundMessageHandler;
-import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.MessageList;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.TypeParameterMatcher;
 
 /**
@@ -47,14 +46,15 @@ import io.netty.util.internal.TypeParameterMatcher;
  *         }
  *     }
  * </pre>
+ *
+ * Be aware that you need to call {@link ReferenceCounted#retain()} on messages that are just passed through if they
+ * are of type {@link ReferenceCounted}. This is needed as the {@link MessageToMessageCodec} will call
+ * {@link ReferenceCounted#release()} on encoded / decoded messages.
  */
-public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
-        extends ChannelDuplexHandler
-        implements ChannelInboundMessageHandler<INBOUND_IN>,
-                   ChannelOutboundMessageHandler<OUTBOUND_IN> {
+public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN> extends ChannelDuplexHandler {
 
-    private final MessageToMessageEncoder<Object> encoder =
-            new MessageToMessageEncoder<Object>() {
+    private final MessageToMessageEncoder<Object> encoder = new MessageToMessageEncoder<Object>() {
+
         @Override
         public boolean acceptOutboundMessage(Object msg) throws Exception {
             return MessageToMessageCodec.this.acceptOutboundMessage(msg);
@@ -62,13 +62,12 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
 
         @Override
         @SuppressWarnings("unchecked")
-        protected void encode(ChannelHandlerContext ctx, Object msg, MessageBuf<Object> out) throws Exception {
+        protected void encode(ChannelHandlerContext ctx, Object msg, MessageList<Object> out) throws Exception {
             MessageToMessageCodec.this.encode(ctx, (OUTBOUND_IN) msg, out);
         }
     };
 
-    private final MessageToMessageDecoder<Object> decoder =
-            new MessageToMessageDecoder<Object>() {
+    private final MessageToMessageDecoder<Object> decoder = new MessageToMessageDecoder<Object>() {
 
         @Override
         public boolean acceptInboundMessage(Object msg) throws Exception {
@@ -77,7 +76,7 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
 
         @Override
         @SuppressWarnings("unchecked")
-        protected void decode(ChannelHandlerContext ctx, Object msg, MessageBuf<Object> out) throws Exception {
+        protected void decode(ChannelHandlerContext ctx, Object msg, MessageList<Object> out) throws Exception {
             MessageToMessageCodec.this.decode(ctx, (INBOUND_IN) msg, out);
         }
     };
@@ -97,26 +96,13 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public MessageBuf<INBOUND_IN> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return (MessageBuf<INBOUND_IN>) decoder.newInboundBuffer(ctx);
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        decoder.messageReceived(ctx, msgs);
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public MessageBuf<OUTBOUND_IN> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return (MessageBuf<OUTBOUND_IN>) encoder.newOutboundBuffer(ctx);
-    }
-
-    @Override
-    public void inboundBufferUpdated(
-            ChannelHandlerContext ctx) throws Exception {
-        decoder.inboundBufferUpdated(ctx);
-    }
-
-    @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
-        encoder.flush(ctx, future);
+    public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
+        encoder.write(ctx, msgs, promise);
     }
 
     /**
@@ -137,6 +123,8 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
         return outboundMsgMatcher.match(msg);
     }
 
-    protected abstract void encode(ChannelHandlerContext ctx, OUTBOUND_IN msg, MessageBuf<Object> out) throws Exception;
-    protected abstract void decode(ChannelHandlerContext ctx, INBOUND_IN msg, MessageBuf<Object> out) throws Exception;
+    protected abstract void encode(ChannelHandlerContext ctx, OUTBOUND_IN msg, MessageList<Object> out)
+            throws Exception;
+    protected abstract void decode(ChannelHandlerContext ctx, INBOUND_IN msg, MessageList<Object> out)
+            throws Exception;
 }

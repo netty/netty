@@ -772,6 +772,11 @@ final class UnreleasableByteBuf implements ByteBuf {
     }
 
     @Override
+    public ByteBuffer internalNioBuffer(int index, int length) {
+        return buf.internalNioBuffer(index, length);
+    }
+
+    @Override
     public boolean hasArray() {
         return buf.hasArray();
     }
@@ -794,18 +799,6 @@ final class UnreleasableByteBuf implements ByteBuf {
     @Override
     public String toString(int index, int length, Charset charset) {
         return buf.toString(index, length, charset);
-    }
-
-    @Override
-    public ByteBuf suspendIntermediaryDeallocations() {
-        buf.suspendIntermediaryDeallocations();
-        return this;
-    }
-
-    @Override
-    public ByteBuf resumeIntermediaryDeallocations() {
-        buf.resumeIntermediaryDeallocations();
-        return this;
     }
 
     @Override
@@ -836,11 +829,6 @@ final class UnreleasableByteBuf implements ByteBuf {
     @Override
     public ByteBuf retain() {
         return this;
-    }
-
-    @Override
-    public BufType type() {
-        return buf.type();
     }
 
     @Override

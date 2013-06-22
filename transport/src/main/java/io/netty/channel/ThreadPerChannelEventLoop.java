@@ -57,7 +57,7 @@ public class ThreadPerChannelEventLoop extends SingleThreadEventLoop {
             Channel ch = this.ch;
             if (isShuttingDown()) {
                 if (ch != null) {
-                    ch.unsafe().close(ch.unsafe().voidFuture());
+                    ch.unsafe().close(ch.unsafe().voidPromise());
                 }
                 if (confirmShutdown()) {
                     break;

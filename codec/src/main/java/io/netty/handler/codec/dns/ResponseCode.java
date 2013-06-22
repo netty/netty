@@ -21,105 +21,105 @@ package io.netty.handler.codec.dns;
  */
 public enum ResponseCode {
 
-    /**
-     * ID 0, no error
-     */
-    NOERROR(0, "no error"),
+	/**
+	 * ID 0, no error
+	 */
+	NOERROR(0, "no error"),
 
-    /**
-     * ID 1, format error
-     */
-    FORMERROR(1, "format error"),
+	/**
+	 * ID 1, format error
+	 */
+	FORMERROR(1, "format error"),
 
-    /**
-     * ID 2, server failure
-     */
-    SERVFAIL(2, "server failure"),
+	/**
+	 * ID 2, server failure
+	 */
+	SERVFAIL(2, "server failure"),
 
-    /**
-     * ID 3, name error
-     */
-    NXDOMAIN(3, "name error"),
+	/**
+	 * ID 3, name error
+	 */
+	NXDOMAIN(3, "name error"),
 
-    /**
-     * ID 4, not implemented
-     */
-    NOTIMPL(4, "not implemented"),
+	/**
+	 * ID 4, not implemented
+	 */
+	NOTIMPL(4, "not implemented"),
 
-    /**
-     * ID 5, operation refused
-     */
-    REFUSED(5, "operation refused"),
+	/**
+	 * ID 5, operation refused
+	 */
+	REFUSED(5, "operation refused"),
 
-    /**
-     * ID 6, domain name should not exist
-     */
-    YXDOMAIN(6, "domain name should not exist"),
+	/**
+	 * ID 6, domain name should not exist
+	 */
+	YXDOMAIN(6, "domain name should not exist"),
 
-    /**
-     * ID 7, resource record set should not exist
-     */
-    YXRRSET(7, "resource record set should not exist"),
+	/**
+	 * ID 7, resource record set should not exist
+	 */
+	YXRRSET(7, "resource record set should not exist"),
 
-    /**
-     * ID 8, rrset does not exist
-     */
-    NXRRSET(8, "rrset does not exist"),
+	/**
+	 * ID 8, rrset does not exist
+	 */
+	NXRRSET(8, "rrset does not exist"),
 
-    /**
-     * ID 9, not authoritative for zone
-     */
-    NOTAUTH(9, "not authoritative for zone"),
+	/**
+	 * ID 9, not authoritative for zone
+	 */
+	NOTAUTH(9, "not authoritative for zone"),
 
-    /**
-     * ID 10, name not in zone
-     */
-    NOTZONE(10, "name not in zone"),
+	/**
+	 * ID 10, name not in zone
+	 */
+	NOTZONE(10, "name not in zone"),
 
-    /**
-     * ID 11, bad extension mechanism for version
-     */
-    BADVERS(11, "bad extension mechanism for version"),
+	/**
+	 * ID 11, bad extension mechanism for version
+	 */
+	BADVERS(11, "bad extension mechanism for version"),
 
-    /**
-     * ID 12, bad signature
-     */
-    BADSIG(12, "bad signature"),
+	/**
+	 * ID 12, bad signature
+	 */
+	BADSIG(12, "bad signature"),
 
-    /**
-     * ID 13, bad key
-     */
-    BADKEY(13, "bad key"),
+	/**
+	 * ID 13, bad key
+	 */
+	BADKEY(13, "bad key"),
 
-    /**
-     * ID 14, bad timestamp
-     */
-    BADTIME(14, "bad timestamp");
+	/**
+	 * ID 14, bad timestamp
+	 */
+	BADTIME(14, "bad timestamp");
 
-    private final int errorCode;
-    private final String message;
+	private final int errorCode;
+	private final String message;
 
-    /**
-     * Returns a formated message for an error received given an ID, or unknown
-     * if the error is unsupported.
-     *
-     * @param responseCode
-     *            the error code's id
-     * @return formatted error message
-     */
-    public static String obtainError(int responseCode) {
-        ResponseCode[] errors = ResponseCode.values();
-        for (ResponseCode e : errors) {
-            if (e.errorCode == responseCode) {
-                return e.name() + ": type " + e.errorCode + ", " + e.message;
-            }
-        }
-        return "UNKNOWN: unknown error";
-    }
+	/**
+	 * Returns a formated message for an error received given an ID, or unknown
+	 * if the error is unsupported.
+	 * 
+	 * @param responseCode
+	 *            the error code's id
+	 * @return formatted error message
+	 */
+	public static String obtainError(int responseCode) {
+		ResponseCode[] errors = ResponseCode.values();
+		for (ResponseCode e : errors) {
+			if (e.errorCode == responseCode) {
+				return e.name() + ": type " + e.errorCode + ", " + e.message;
+			}
+		}
+		return "UNKNOWN: unknown error";
+	}
 
-    private ResponseCode(int errorCode, String message) {
-        this.errorCode = errorCode;
-        this.message = message;
-    }
+	private ResponseCode(int errorCode, String message) {
+		this.errorCode = errorCode;
+		this.message = message;
+	}
 
 }

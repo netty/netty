@@ -18,6 +18,7 @@ package io.netty.channel.rxtx;
 import gnu.io.SerialPort;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
+import io.netty.channel.RecvByteBufAllocator;
 
 /**
  * A configuration class for RXTX device connections.
@@ -258,6 +259,16 @@ public interface RxtxChannelConfig extends ChannelConfig {
      */
     RxtxChannelConfig setWaitTimeMillis(int waitTimeMillis);
 
+    /**
+     * Sets the maximal time (in ms) to block while try to read from the serial port. Default is 1000ms
+     */
+    RxtxChannelConfig setReadTimeout(int readTimout);
+
+    /**
+     * Return the maximal time (in ms) to block and wait for something to be ready to read.
+     */
+    int getReadTimeout();
+
     @Override
     RxtxChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
 
@@ -268,8 +279,8 @@ public interface RxtxChannelConfig extends ChannelConfig {
     RxtxChannelConfig setAllocator(ByteBufAllocator allocator);
 
     @Override
-    RxtxChannelConfig setAutoRead(boolean autoRead);
+    RxtxChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator);
 
     @Override
-    RxtxChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type);
+    RxtxChannelConfig setAutoRead(boolean autoRead);
 }

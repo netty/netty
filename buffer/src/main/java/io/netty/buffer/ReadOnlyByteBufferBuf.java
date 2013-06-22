@@ -278,18 +278,14 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
-    public ByteBuffer nioBuffer(int index, int length) {
-        ensureAccessible();
-        if (index == 0 && length == capacity()) {
-            return buffer.duplicate();
-        } else {
-            return ((ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length)).slice();
-        }
+    public ByteBuffer[] nioBuffers(int index, int length) {
+        return new ByteBuffer[] { nioBuffer(index, length) };
     }
 
     @Override
-    public ByteBuffer[] nioBuffers(int index, int length) {
-        return new ByteBuffer[] { nioBuffer(index, length) };
+    public ByteBuffer internalNioBuffer(int index, int length) {
+        ensureAccessible();
+        return (ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length);
     }
 
     @Override
@@ -315,15 +311,5 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public long memoryAddress() {
         throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ByteBuf suspendIntermediaryDeallocations() {
-        return this;
-    }
-
-    @Override
-    public ByteBuf resumeIntermediaryDeallocations() {
-        return this;
     }
 }

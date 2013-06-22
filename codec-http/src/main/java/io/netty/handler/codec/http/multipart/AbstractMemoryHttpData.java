@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.handler.codec.http.HttpConstants;
 
 import java.io.File;
@@ -91,8 +92,15 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
             size += localsize;
             if (byteBuf == null) {
                 byteBuf = buffer;
+            } else if (byteBuf instanceof CompositeByteBuf) {
+                CompositeByteBuf cbb = (CompositeByteBuf) byteBuf;
+                cbb.addComponent(buffer);
+                cbb.writerIndex(cbb.writerIndex() + buffer.readableBytes());
             } else {
-                byteBuf = wrappedBuffer(byteBuf, buffer);
+                CompositeByteBuf cbb = compositeBuffer();
+                cbb.addComponents(byteBuf, buffer);
+                cbb.writerIndex(byteBuf.readableBytes() + buffer.readableBytes());
+                byteBuf = cbb;
             }
         }
         if (last) {
@@ -210,11 +218,19 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         int length = byteBuf.readableBytes();
         FileOutputStream outputStream = new FileOutputStream(dest);
         FileChannel fileChannel = outputStream.getChannel();
-        ByteBuffer byteBuffer = byteBuf.nioBuffer();
         int written = 0;
-        while (written < length) {
-            written += fileChannel.write(byteBuffer);
+        if (byteBuf.nioBufferCount() == 1) {
+            ByteBuffer byteBuffer = byteBuf.nioBuffer();
+            while (written < length) {
+                written += fileChannel.write(byteBuffer);
+            }
+        } else {
+            ByteBuffer[] byteBuffers = byteBuf.nioBuffers();
+            while (written < length) {
+                written += fileChannel.write(byteBuffers);
+            }
         }
+
         fileChannel.force(false);
         fileChannel.close();
         outputStream.close();

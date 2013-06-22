@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.http.multipart;
 
-import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.http.HttpConstants;

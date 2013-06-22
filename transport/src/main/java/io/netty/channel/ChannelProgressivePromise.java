@@ -25,16 +25,16 @@ import io.netty.util.concurrent.ProgressivePromise;
 public interface ChannelProgressivePromise extends ProgressivePromise<Void>, ChannelProgressiveFuture, ChannelPromise {
 
     @Override
-    ChannelProgressivePromise addListener(GenericFutureListener<? extends Future<Void>> listener);
+    ChannelProgressivePromise addListener(GenericFutureListener<? extends Future<? super Void>> listener);
 
     @Override
-    ChannelProgressivePromise addListeners(GenericFutureListener<? extends Future<Void>>... listeners);
+    ChannelProgressivePromise addListeners(GenericFutureListener<? extends Future<? super Void>>... listeners);
 
     @Override
-    ChannelProgressivePromise removeListener(GenericFutureListener<? extends Future<Void>> listener);
+    ChannelProgressivePromise removeListener(GenericFutureListener<? extends Future<? super Void>> listener);
 
     @Override
-    ChannelProgressivePromise removeListeners(GenericFutureListener<? extends Future<Void>>... listeners);
+    ChannelProgressivePromise removeListeners(GenericFutureListener<? extends Future<? super Void>>... listeners);
 
     @Override
     ChannelProgressivePromise sync() throws InterruptedException;

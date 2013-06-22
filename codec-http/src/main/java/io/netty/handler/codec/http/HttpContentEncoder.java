@@ -15,25 +15,24 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.BufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.MessageBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.embedded.EmbeddedByteChannel;
+import io.netty.channel.MessageList;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpHeaders.Values;
+import io.netty.util.ReferenceCountUtil;
 
 import java.util.ArrayDeque;
-import java.util.Collections;
 import java.util.Queue;
 
 /**
  * Encodes the content of the outbound {@link HttpResponse} and {@link HttpContent}.
  * The original content is replaced with the new content encoded by the
- * {@link EmbeddedByteChannel}, which is created by {@link #beginEncode(HttpResponse, String)}.
+ * {@link EmbeddedChannel}, which is created by {@link #beginEncode(HttpResponse, String)}.
  * Once encoding is finished, the value of the <tt>'Content-Encoding'</tt> header
  * is set to the target content encoding, as returned by
  * {@link #beginEncode(HttpResponse, String)}.
@@ -62,7 +61,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
 
     private final Queue<String> acceptEncodingQueue = new ArrayDeque<String>();
     private String acceptEncoding;
-    private EmbeddedByteChannel encoder;
+    private EmbeddedChannel encoder;
     private State state = State.AWAIT_HEADERS;
 
     @Override
@@ -71,18 +70,18 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, HttpRequest msg, MessageBuf<Object> out)
+    protected void decode(ChannelHandlerContext ctx, HttpRequest msg, MessageList<Object> out)
             throws Exception {
         String acceptedEncoding = msg.headers().get(HttpHeaders.Names.ACCEPT_ENCODING);
         if (acceptedEncoding == null) {
             acceptedEncoding = HttpHeaders.Values.IDENTITY;
         }
         acceptEncodingQueue.add(acceptedEncoding);
-        out.add(BufUtil.retain(msg));
+        out.add(ReferenceCountUtil.retain(msg));
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, HttpObject msg, MessageBuf<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, HttpObject msg, MessageList<Object> out) throws Exception {
         final boolean isFull = msg instanceof HttpResponse && msg instanceof LastHttpContent;
         switch (state) {
             case AWAIT_HEADERS: {
@@ -93,7 +92,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
 
                 if (res.getStatus().code() == 100) {
                     if (isFull) {
-                        out.add(BufUtil.retain(res));
+                        out.add(ReferenceCountUtil.retain(res));
                     } else {
                         out.add(res);
                         // Pass through all following contents.
@@ -114,7 +113,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                         // Set the content length to 0.
                         res.headers().remove(Names.TRANSFER_ENCODING);
                         res.headers().set(Names.CONTENT_LENGTH, "0");
-                        out.add(BufUtil.retain(res));
+                        out.add(ReferenceCountUtil.retain(res));
                         break;
                     }
                 }
@@ -128,7 +127,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                         // As an unchunked response
                         res.headers().remove(Names.TRANSFER_ENCODING);
                         res.headers().set(Names.CONTENT_LENGTH, ((ByteBufHolder) res).content().readableBytes());
-                        out.add(BufUtil.retain(res));
+                        out.add(ReferenceCountUtil.retain(res));
                     } else {
                         // As a chunked response
                         res.headers().remove(Names.CONTENT_LENGTH);
@@ -165,7 +164,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
             case AWAIT_CONTENT: {
                 ensureContent(msg);
                 HttpContent[] encoded = encodeContent((HttpContent) msg);
-                Collections.addAll(out, encoded);
+                out.add(encoded);
                 if (encoded[encoded.length - 1] instanceof LastHttpContent) {
                     state = State.AWAIT_HEADERS;
                 }
@@ -173,7 +172,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
             }
             case PASS_THROUGH: {
                 ensureContent(msg);
-                out.add(BufUtil.retain(msg));
+                out.add(ReferenceCountUtil.retain(msg));
                 // Passed through all following contents of the current response.
                 if (msg instanceof LastHttpContent) {
                     state = State.AWAIT_HEADERS;
@@ -235,7 +234,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
      *        the value of the {@code "Accept-Encoding"} header
      *
      * @return the result of preparation, which is composed of the determined
-     *         target content encoding and a new {@link EmbeddedByteChannel} that
+     *         target content encoding and a new {@link EmbeddedChannel} that
      *         encodes the content into the target content encoding.
      *         {@code null} if {@code acceptEncoding} is unsupported or rejected
      *         and thus the content should be handled as-is (i.e. no encoding).
@@ -276,7 +275,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
 
     private void fetchEncoderOutput(ByteBuf out) {
         for (;;) {
-            ByteBuf buf = encoder.readOutbound();
+            ByteBuf buf = (ByteBuf) encoder.readOutbound();
             if (buf == null) {
                 break;
             }
@@ -286,9 +285,9 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
 
     public static final class Result {
         private final String targetContentEncoding;
-        private final EmbeddedByteChannel contentEncoder;
+        private final EmbeddedChannel contentEncoder;
 
-        public Result(String targetContentEncoding, EmbeddedByteChannel contentEncoder) {
+        public Result(String targetContentEncoding, EmbeddedChannel contentEncoder) {
             if (targetContentEncoding == null) {
                 throw new NullPointerException("targetContentEncoding");
             }
@@ -304,7 +303,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
             return targetContentEncoding;
         }
 
-        public EmbeddedByteChannel contentEncoder() {
+        public EmbeddedChannel contentEncoder() {
             return contentEncoder;
         }
     }

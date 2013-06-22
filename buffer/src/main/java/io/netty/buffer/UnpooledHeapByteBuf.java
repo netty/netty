@@ -257,6 +257,11 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public ByteBuffer internalNioBuffer(int index, int length) {
+        return (ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length);
+    }
+
+    @Override
     public byte getByte(int index) {
         ensureAccessible();
         return _getByte(index);
@@ -415,16 +420,6 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     protected void deallocate() {
         array = null;
-    }
-
-    @Override
-    public ByteBuf suspendIntermediaryDeallocations() {
-        return this;
-    }
-
-    @Override
-    public ByteBuf resumeIntermediaryDeallocations() {
-        return this;
     }
 
     @Override

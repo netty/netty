@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+import io.netty.util.Recycler;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -30,10 +31,24 @@ import java.nio.channels.ScatteringByteChannel;
 final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     private static final boolean NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
+
+    private static final Recycler<PooledUnsafeDirectByteBuf> RECYCLER = new Recycler<PooledUnsafeDirectByteBuf>() {
+        @Override
+        protected PooledUnsafeDirectByteBuf newObject(Handle handle) {
+            return new PooledUnsafeDirectByteBuf(handle, 0);
+        }
+    };
+
+    static PooledUnsafeDirectByteBuf newInstance(int maxCapacity) {
+        PooledUnsafeDirectByteBuf buf = RECYCLER.get();
+        buf.maxCapacity(maxCapacity);
+        return buf;
+    }
+
     private long memoryAddress;
 
-    PooledUnsafeDirectByteBuf(int maxCapacity) {
-        super(maxCapacity);
+    private PooledUnsafeDirectByteBuf(Recycler.Handle recyclerHandle, int maxCapacity) {
+        super(recyclerHandle, maxCapacity);
     }
 
     @Override
@@ -279,15 +294,15 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     }
 
     @Override
-    public ByteBuffer nioBuffer(int index, int length) {
-        checkIndex(index, length);
-        index = idx(index);
-        return ((ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length)).slice();
+    public ByteBuffer[] nioBuffers(int index, int length) {
+        return new ByteBuffer[] { nioBuffer(index, length) };
     }
 
     @Override
-    public ByteBuffer[] nioBuffers(int index, int length) {
-        return new ByteBuffer[] { nioBuffer(index, length) };
+    public ByteBuffer internalNioBuffer(int index, int length) {
+        checkIndex(index, length);
+        index = idx(index);
+        return (ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length);
     }
 
     @Override
@@ -317,5 +332,10 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     private long addr(int index) {
         return memoryAddress + index;
+    }
+
+    @Override
+    protected Recycler<?> recycler() {
+        return RECYCLER;
     }
 }

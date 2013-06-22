@@ -17,9 +17,11 @@ package io.netty.util.concurrent;
 
 import io.netty.util.Signal;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.TimeUnit.*;
@@ -38,12 +40,13 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         }
     };
     private static final Signal SUCCESS = new Signal(DefaultPromise.class.getName() + ".SUCCESS");
+    private static final Signal UNCANCELLABLE = new Signal(DefaultPromise.class.getName() + ".UNCANCELLABLE");
     private final EventExecutor executor;
 
     private volatile Object result;
     private Object listeners; // Can be ChannelFutureListener or DefaultFutureListeners
 
-    private long waiters;
+    private short waiters;
 
     /**
      * Creates a new instance.
@@ -70,14 +73,32 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     @Override
+    public boolean isCancelled() {
+        return isCancelled0(result);
+    }
+
+    private static boolean isCancelled0(Object result) {
+        return result instanceof CauseHolder && ((CauseHolder) result).cause instanceof CancellationException;
+    }
+
+    @Override
+    public boolean isCancellable() {
+        return result == null;
+    }
+
+    @Override
     public boolean isDone() {
-        return result != null;
+        return isDone0(result);
+    }
+
+    private static boolean isDone0(Object result) {
+        return result != null && result != UNCANCELLABLE;
     }
 
     @Override
     public boolean isSuccess() {
         Object result = this.result;
-        if (result == null) {
+        if (result == null || result == UNCANCELLABLE) {
             return false;
         }
         return !(result instanceof CauseHolder);
@@ -85,15 +106,15 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     @Override
     public Throwable cause() {
-        Object cause = result;
-        if (cause instanceof CauseHolder) {
-            return ((CauseHolder) cause).cause;
+        Object result = this.result;
+        if (result instanceof CauseHolder) {
+            return ((CauseHolder) result).cause;
         }
         return null;
     }
 
     @Override
-    public Promise<V> addListener(GenericFutureListener<? extends Future<V>> listener) {
+    public Promise<V> addListener(GenericFutureListener<? extends Future<? super V>> listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
         }
@@ -126,12 +147,12 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     @Override
-    public Promise<V> addListeners(GenericFutureListener<? extends Future<V>>... listeners) {
+    public Promise<V> addListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
         if (listeners == null) {
             throw new NullPointerException("listeners");
         }
 
-        for (GenericFutureListener<? extends Future<V>> l: listeners) {
+        for (GenericFutureListener<? extends Future<? super V>> l: listeners) {
             if (l == null) {
                 break;
             }
@@ -141,7 +162,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     @Override
-    public Promise<V> removeListener(GenericFutureListener<? extends Future<V>> listener) {
+    public Promise<V> removeListener(GenericFutureListener<? extends Future<? super V>> listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
         }
@@ -164,12 +185,12 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     @Override
-    public Promise<V> removeListeners(GenericFutureListener<? extends Future<V>>... listeners) {
+    public Promise<V> removeListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
         if (listeners == null) {
             throw new NullPointerException("listeners");
         }
 
-        for (GenericFutureListener<? extends Future<V>> l: listeners) {
+        for (GenericFutureListener<? extends Future<? super V>> l: listeners) {
             if (l == null) {
                 break;
             }
@@ -208,7 +229,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         }
 
         if (Thread.interrupted()) {
-            throw new InterruptedException();
+            throw new InterruptedException(toString());
         }
 
         synchronized (this) {
@@ -292,7 +313,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         }
 
         if (interruptable && Thread.interrupted()) {
-            throw new InterruptedException();
+            throw new InterruptedException(toString());
         }
 
         long startTime = timeoutNanos <= 0 ? 0 : System.nanoTime();
@@ -349,7 +370,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     protected void checkDeadLock() {
         EventExecutor e = executor();
         if (e != null && e.inEventLoop()) {
-            throw new BlockingOperationException();
+            throw new BlockingOperationException(toString());
         }
     }
 
@@ -359,7 +380,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             notifyListeners();
             return this;
         }
-        throw new IllegalStateException("complete already");
+        throw new IllegalStateException("complete already: " + this);
     }
 
     @Override
@@ -377,7 +398,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             notifyListeners();
             return this;
         }
-        throw new IllegalStateException("complete already", cause);
+        throw new IllegalStateException("complete already: " + this, cause);
     }
 
     @Override
@@ -387,6 +408,49 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             return true;
         }
         return false;
+    }
+
+    @Override
+    public boolean cancel(boolean mayInterruptIfRunning) {
+        Object result = this.result;
+        if (isDone0(result) || result == UNCANCELLABLE) {
+            return false;
+        }
+
+        synchronized (this) {
+            // Allow only once.
+            result = this.result;
+            if (isDone0(result) || result == UNCANCELLABLE) {
+                return false;
+            }
+
+            this.result = new CauseHolder(new CancellationException());
+            if (hasWaiters()) {
+                notifyAll();
+            }
+        }
+
+        notifyListeners();
+        return true;
+    }
+
+    @Override
+    public boolean setUncancellable() {
+        Object result = this.result;
+        if (isDone0(result)) {
+            return false;
+        }
+
+        synchronized (this) {
+            // Allow only once.
+            result = this.result;
+            if (isDone0(result)) {
+                return false;
+            }
+
+            this.result = UNCANCELLABLE;
+        }
+        return true;
     }
 
     private boolean setFailure0(Throwable cause) {
@@ -445,14 +509,14 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     private void incWaiters() {
-        if (waiters == Long.MAX_VALUE) {
-            throw new IllegalStateException("too many waiters");
+        if (waiters == Short.MAX_VALUE) {
+            throw new IllegalStateException("too many waiters: " + this);
         }
-        waiters++;
+        waiters ++;
     }
 
     private void decWaiters() {
-        waiters--;
+        waiters --;
     }
 
     private void notifyListeners() {
@@ -670,5 +734,31 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         private CauseHolder(Throwable cause) {
             this.cause = cause;
         }
+    }
+
+    @Override
+    public String toString() {
+        return toStringBuilder().toString();
+    }
+
+    protected StringBuilder toStringBuilder() {
+        StringBuilder buf = new StringBuilder(64);
+        buf.append(StringUtil.simpleClassName(this));
+        buf.append('@');
+        buf.append(Integer.toHexString(hashCode()));
+
+        Object result = this.result;
+        if (result == SUCCESS) {
+            buf.append("(success)");
+        } else if (result == UNCANCELLABLE) {
+            buf.append("(uncancellable)");
+        } else if (result instanceof CauseHolder) {
+            buf.append("(failure(");
+            buf.append(((CauseHolder) result).cause);
+            buf.append(')');
+        } else {
+            buf.append("(incomplete)");
+        }
+        return buf;
     }
 }

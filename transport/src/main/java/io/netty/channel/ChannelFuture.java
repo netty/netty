@@ -171,16 +171,16 @@ public interface ChannelFuture extends Future<Void> {
     Channel channel();
 
     @Override
-    ChannelFuture addListener(GenericFutureListener<? extends Future<Void>> listener);
+    ChannelFuture addListener(GenericFutureListener<? extends Future<? super Void>> listener);
 
     @Override
-    ChannelFuture addListeners(GenericFutureListener<? extends Future<Void>>... listeners);
+    ChannelFuture addListeners(GenericFutureListener<? extends Future<? super Void>>... listeners);
 
     @Override
-    ChannelFuture removeListener(GenericFutureListener<? extends Future<Void>> listener);
+    ChannelFuture removeListener(GenericFutureListener<? extends Future<? super Void>> listener);
 
     @Override
-    ChannelFuture removeListeners(GenericFutureListener<? extends Future<Void>>... listeners);
+    ChannelFuture removeListeners(GenericFutureListener<? extends Future<? super Void>>... listeners);
 
     @Override
     ChannelFuture sync() throws InterruptedException;
@@ -193,12 +193,4 @@ public interface ChannelFuture extends Future<Void> {
 
     @Override
     ChannelFuture awaitUninterruptibly();
-
-    /**
-     * A {@link ChannelFuture} which is not allowed to be sent to {@link ChannelPipeline} due to
-     * implementation details.
-     */
-    interface Unsafe extends ChannelFuture {
-        // Tag interface
-    }
 }

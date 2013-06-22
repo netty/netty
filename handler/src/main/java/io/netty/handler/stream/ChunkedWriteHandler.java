@@ -15,23 +15,23 @@
  */
 package io.netty.handler.stream;
 
-import io.netty.buffer.MessageBuf;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelHandlerUtil;
-import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.MessageList;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.channels.ClosedChannelException;
+import java.util.ArrayDeque;
+import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -66,12 +66,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  * call {@link #resumeTransfer()}.
  */
 public class ChunkedWriteHandler
-        extends ChannelDuplexHandler implements ChannelOutboundMessageHandler<Object> {
+        extends ChannelDuplexHandler {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(ChunkedWriteHandler.class);
 
-    private final MessageBuf<Object> queue = Unpooled.messageBuffer();
+    private final Queue<Object> queue = new ArrayDeque<Object>();
     private final int maxPendingWrites;
     private volatile ChannelHandlerContext ctx;
     private final AtomicInteger pendingWrites = new AtomicInteger();
@@ -90,21 +90,8 @@ public class ChunkedWriteHandler
     }
 
     @Override
-    public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return queue;
-    }
-
-    @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
-    }
-
-    // This method should not need any synchronization as the ChunkedWriteHandler will not receive any new events
-    @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        // Fail all promised that are queued. This is needed because otherwise we would never notify the
-        // ChannelFuture and the registered FutureListener. See #304
-        discard(ctx, new ChannelException(ChunkedWriteHandler.class.getSimpleName() + " removed from pipeline."));
     }
 
     private boolean isWritable() {
@@ -151,16 +138,15 @@ public class ChunkedWriteHandler
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
+        for (int i = 0; i  < msgs.size(); i++) {
+            queue.add(msgs.get(i));
+        }
+        msgs.recycle();
         queue.add(promise);
         if (isWritable() || !ctx.channel().isActive()) {
             doFlush(ctx);
         }
-    }
-
-    @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
-        ctx.fireInboundBufferUpdated();
     }
 
     @Override
@@ -222,6 +208,7 @@ public class ChunkedWriteHandler
             discard(ctx, null);
             return;
         }
+        MessageList<Object> messages = MessageList.newInstance();
         while (isWritable()) {
             if (currentEvent == null) {
                 currentEvent = queue.poll();
@@ -234,14 +221,16 @@ public class ChunkedWriteHandler
             final Object currentEvent = this.currentEvent;
             if (currentEvent instanceof ChannelPromise) {
                 this.currentEvent = null;
-                ctx.flush((ChannelPromise) currentEvent);
+                ctx.write(messages, (ChannelPromise) currentEvent);
+                messages = MessageList.newInstance();
             } else if (currentEvent instanceof ChunkedInput) {
+                MessageList<Object> out = MessageList.newInstance();
                 final ChunkedInput<?> chunks = (ChunkedInput<?>) currentEvent;
                 boolean read;
                 boolean endOfInput;
                 boolean suspend;
                 try {
-                    read = readChunk(ctx, chunks);
+                    read = readChunk(ctx, chunks, out);
                     endOfInput = chunks.isEndOfInput();
 
                     if (!read) {
@@ -276,7 +265,7 @@ public class ChunkedWriteHandler
                 }
 
                 pendingWrites.incrementAndGet();
-                ChannelFuture f = ctx.flush();
+                ChannelFuture f = ctx.write(out);
                 if (endOfInput) {
                     this.currentEvent = null;
 
@@ -316,7 +305,7 @@ public class ChunkedWriteHandler
                     });
                 }
             } else {
-                ChannelHandlerUtil.addToNextOutboundBuffer(ctx, currentEvent);
+                ctx.write(currentEvent);
                 this.currentEvent = null;
             }
 
@@ -335,11 +324,16 @@ public class ChunkedWriteHandler
      * @throws Exception    if something goes wrong
      */
     @SuppressWarnings("unchecked")
-    protected boolean readChunk(ChannelHandlerContext ctx, ChunkedInput<?> chunks) throws Exception {
+    protected boolean readChunk(
+            @SuppressWarnings("UnusedParameters") ChannelHandlerContext ctx,
+            ChunkedInput<?> chunks, MessageList<Object> out) throws Exception {
         if (chunks instanceof ChunkedByteInput) {
-            return ((ChunkedByteInput) chunks).readChunk(ctx.nextOutboundByteBuffer());
+            ByteBuf buf = Unpooled.buffer();
+            boolean done = ((ChunkedByteInput) chunks).readChunk(buf);
+            out.add(buf);
+            return done;
         } else if (chunks instanceof ChunkedMessageInput) {
-            return ((ChunkedMessageInput<Object>) chunks).readChunk(ctx.nextOutboundMessageBuffer());
+            return ((ChunkedMessageInput<Object>) chunks).readChunk(out);
         } else {
             throw new IllegalArgumentException("ChunkedInput instance " + chunks + " not supported");
         }

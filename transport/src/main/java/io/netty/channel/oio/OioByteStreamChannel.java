@@ -17,8 +17,6 @@ package io.netty.channel.oio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelProgressivePromise;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.FileRegion;
 
 import java.io.IOException;
@@ -98,7 +96,7 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
     }
 
     @Override
-    protected void doFlushFileRegion(FileRegion region, ChannelPromise promise) throws Exception {
+    protected void doWriteFileRegion(FileRegion region) throws Exception {
         OutputStream os = this.os;
         if (os == null) {
             throw new NotYetConnectedException();
@@ -111,18 +109,12 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
         for (;;) {
             long localWritten = region.transferTo(outChannel, written);
             if (localWritten == -1) {
-                checkEOF(region, written);
-                region.release();
-                promise.setSuccess();
+                checkEOF(region);
                 return;
             }
             written += localWritten;
-            if (promise instanceof ChannelProgressivePromise) {
-                final ChannelProgressivePromise pp = (ChannelProgressivePromise) promise;
-                pp.setProgress(written, region.count());
-            }
+
             if (written >= region.count()) {
-                promise.setSuccess();
                 return;
             }
         }

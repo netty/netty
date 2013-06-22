@@ -24,99 +24,99 @@ import io.netty.buffer.ByteBufHolder;
  */
 public class Resource extends DnsEntry implements ByteBufHolder {
 
-    private final int contentIndex;
-    private final long ttl;
-    private final ByteBuf content;
+	private final int contentIndex;
+	private final long ttl;
+	private final ByteBuf content;
 
-    /**
-     * Constructs a resource record.
-     *
-     * @param name
-     *            the domain name
-     * @param type
-     *            the type of record being returned
-     * @param aClass
-     *            the class for this resource record
-     * @param ttl
-     *            the time to live after reading
-     * @param contentIndex
-     *            the {@code writerIndex} at which the content appears in the
-     *            original packet
-     * @param content
-     *            the data contained in this record
-     */
-    public Resource(String name, int type, int aClass, long ttl,
-            int contentIndex, ByteBuf content) {
-        super(name, type, aClass);
-        this.ttl = ttl;
-        this.contentIndex = contentIndex;
-        this.content = content;
-    }
+	/**
+	 * Constructs a resource record.
+	 * 
+	 * @param name
+	 *            the domain name
+	 * @param type
+	 *            the type of record being returned
+	 * @param aClass
+	 *            the class for this resource record
+	 * @param ttl
+	 *            the time to live after reading
+	 * @param contentIndex
+	 *            the {@code writerIndex} at which the content appears in the
+	 *            original packet
+	 * @param content
+	 *            the data contained in this record
+	 */
+	public Resource(String name, int type, int aClass, long ttl,
+			int contentIndex, ByteBuf content) {
+		super(name, type, aClass);
+		this.ttl = ttl;
+		this.contentIndex = contentIndex;
+		this.content = content;
+	}
 
-    /**
-     * Returns the time to live after reading for this resource record.
-     */
-    public long timeToLive() {
-        return ttl;
-    }
+	/**
+	 * Returns the time to live after reading for this resource record.
+	 */
+	public long timeToLive() {
+		return ttl;
+	}
 
-    /**
-     * Returns the {@code writerIndex} at which the content appears in the
-     * original packet.
-     */
-    public int contentIndex() {
-        return contentIndex;
-    }
+	/**
+	 * Returns the {@code writerIndex} at which the content appears in the
+	 * original packet.
+	 */
+	public int contentIndex() {
+		return contentIndex;
+	}
 
-    /**
-     * Returns the length of the content in this resource record.
-     */
-    public int contentLength() {
-        return content.writerIndex() - content.readerIndex();
-    }
+	/**
+	 * Returns the length of the content in this resource record.
+	 */
+	public int contentLength() {
+		return content.writerIndex() - content.readerIndex();
+	}
 
-    /**
-     * Returns the data contained in this resource record.
-     */
-    @Override
-    public ByteBuf content() {
-        return content;
-    }
+	/**
+	 * Returns the data contained in this resource record.
+	 */
+	@Override
+	public ByteBuf content() {
+		return content;
+	}
 
-    /**
-     * Returns a deep copy of this resource record.
-     */
-    @Override
-    public Resource copy() {
-        return new Resource(name(), type(), dnsClass(), ttl, contentIndex,
-                content.copy());
-    }
+	/**
+	 * Returns a deep copy of this resource record.
+	 */
+	@Override
+	public Resource copy() {
+		return new Resource(name(), type(), dnsClass(), ttl, contentIndex,
+				content.copy());
+	}
 
-    @Override
-    public int refCnt() {
-        return content.refCnt();
-    }
+	@Override
+	public int refCnt() {
+		return content.refCnt();
+	}
 
-    @Override
-    public Resource retain() {
-        content.retain();
-        return this;
-    }
+	@Override
+	public Resource retain() {
+		content.retain();
+		return this;
+	}
 
-    @Override
-    public Resource retain(int increment) {
-        content.retain(increment);
-        return this;
-    }
+	@Override
+	public Resource retain(int increment) {
+		content.retain(increment);
+		return this;
+	}
 
-    @Override
-    public boolean release() {
-        return content.release();
-    }
+	@Override
+	public boolean release() {
+		return content.release();
+	}
 
-    @Override
-    public boolean release(int decrement) {
-        return content.release(decrement);
-    }
+	@Override
+	public boolean release(int decrement) {
+		return content.release(decrement);
+	}
 
 }

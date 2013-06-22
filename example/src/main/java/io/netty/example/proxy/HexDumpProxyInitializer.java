@@ -17,8 +17,8 @@ package io.netty.example.proxy;
 
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.logging.ByteLoggingHandler;
 import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 
 public class HexDumpProxyInitializer extends ChannelInitializer<SocketChannel> {
 
@@ -33,7 +33,7 @@ public class HexDumpProxyInitializer extends ChannelInitializer<SocketChannel> {
     @Override
     public void initChannel(SocketChannel ch) throws Exception {
         ch.pipeline().addLast(
-                new ByteLoggingHandler(LogLevel.INFO),
+                new LoggingHandler(LogLevel.INFO),
                 new HexDumpProxyFrontendHandler(remoteHost, remotePort));
     }
 }

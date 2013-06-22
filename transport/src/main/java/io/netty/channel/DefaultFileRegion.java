@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.AbstractReferenceCounted;
+import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -33,6 +33,7 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
     private final FileChannel file;
     private final long position;
     private final long count;
+    private long transfered;
 
     /**
      * Create a new instance
@@ -48,7 +49,7 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
         if (position < 0) {
             throw new IllegalArgumentException("position must be >= 0 but was " + position);
         }
-        if (count <= 0) {
+        if (count < 0) {
             throw new IllegalArgumentException("count must be >= 0 but was " + count);
         }
         this.file = file;
@@ -67,6 +68,11 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
     }
 
     @Override
+    public long transfered() {
+        return transfered;
+    }
+
+    @Override
     public long transferTo(WritableByteChannel target, long position) throws IOException {
         long count = this.count - position;
         if (count < 0 || position < 0) {
@@ -78,7 +84,11 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
             return 0L;
         }
 
-        return file.transferTo(this.position + position, count, target);
+        long written = file.transferTo(this.position + position, count, target);
+        if (written > 0) {
+            transfered += written;
+        }
+        return written;
     }
 
     @Override

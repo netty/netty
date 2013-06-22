@@ -28,45 +28,45 @@ import io.netty.handler.timeout.ReadTimeoutException;
  */
 public class InboundDnsMessageHandler extends ChannelInboundHandlerAdapter {
 
-    /**
-     * When a {@link ReadTimeoutException} is caught, this means a DNS client
-     * has been active for a period of 30 seconds, and will be removed from the
-     * list of active channels.
-     */
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        if (cause instanceof ReadTimeoutException) {
-            DnsExchangeFactory.removeChannel(ctx.channel());
-            return;
-        }
-        cause.printStackTrace();
-    }
+	/**
+	 * When a {@link ReadTimeoutException} is caught, this means a DNS client
+	 * has been active for a period of 30 seconds, and will be removed from the
+	 * list of active channels.
+	 */
+	@Override
+	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+		if (cause instanceof ReadTimeoutException) {
+			DnsExchangeFactory.removeChannel(ctx.channel());
+			return;
+		}
+		cause.printStackTrace();
+	}
 
-    /**
-     * Called when a new {@link DnsMessage} is received. The callback
-     * corresponding to this message is found and finished.
-     */
-    @Override
-    public void messageReceived(ChannelHandlerContext ctx,
-            MessageList<Object> messages) {
-        int size = messages.size();
-        try {
-            for (int i = 0; i < size; i++) {
-                Object mesg = messages.get(i);
-                if (mesg instanceof DnsResponse) {
-                    DnsCallback.finish((DnsResponse) mesg);
-                    ((DnsResponse) mesg).content().readByte(); // We can read
-                                                               // from some
-                                                               // buffers but
-                                                               // not others?
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            messages.releaseAllAndRecycle();
-            System.out.println("SUCCESS\n\n\n\n");
-        }
-    }
+	/**
+	 * Called when a new {@link DnsMessage} is received. The callback
+	 * corresponding to this message is found and finished.
+	 */
+	@Override
+	public void messageReceived(ChannelHandlerContext ctx,
+			MessageList<Object> messages) {
+		int size = messages.size();
+		try {
+			for (int i = 0; i < size; i++) {
+				Object mesg = messages.get(i);
+				if (mesg instanceof DnsResponse) {
+					DnsCallback.finish((DnsResponse) mesg);
+					((DnsResponse) mesg).content().readByte(); // We can read
+																// from some
+																// buffers but
+																// not others?
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			messages.releaseAllAndRecycle();
+			System.out.println("SUCCESS\n\n\n\n");
+		}
+	}
 
 }

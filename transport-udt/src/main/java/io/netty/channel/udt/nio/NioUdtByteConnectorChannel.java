@@ -17,11 +17,11 @@ package io.netty.channel.udt.nio;
 
 import com.barchart.udt.TypeUDT;
 import com.barchart.udt.nio.SocketChannelUDT;
-import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.FileRegion;
 import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.udt.DefaultUdtChannelConfig;
 import io.netty.channel.udt.UdtChannel;
@@ -31,7 +31,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.channels.SelectionKey;
 
 import static java.nio.channels.SelectionKey.*;
 
@@ -44,8 +43,7 @@ public class NioUdtByteConnectorChannel extends AbstractNioByteChannel
     private static final InternalLogger logger = InternalLoggerFactory
             .getInstance(NioUdtByteConnectorChannel.class);
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(
-            BufType.BYTE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private final UdtChannelConfig config;
 
@@ -144,26 +142,16 @@ public class NioUdtByteConnectorChannel extends AbstractNioByteChannel
     }
 
     @Override
-    protected int doWriteBytes(final ByteBuf byteBuf, final boolean lastSpin)
-            throws Exception {
-        final int pendingBytes = byteBuf.readableBytes();
-        final int writtenBytes = byteBuf.readBytes(javaChannel(), pendingBytes);
-        final SelectionKey key = selectionKey();
-        final int interestOps = key.interestOps();
-        if (writtenBytes >= pendingBytes) {
-            // wrote the buffer completely - clear OP_WRITE.
-            if ((interestOps & OP_WRITE) != 0) {
-                key.interestOps(interestOps & ~OP_WRITE);
-            }
-        } else {
-            // wrote partial or nothing - ensure OP_WRITE
-            if (writtenBytes > 0 || lastSpin) {
-                if ((interestOps & OP_WRITE) == 0) {
-                    key.interestOps(interestOps | OP_WRITE);
-                }
-            }
-        }
+    protected int doWriteBytes(final ByteBuf byteBuf, final boolean lastSpin) throws Exception {
+        final int expectedWrittenBytes = byteBuf.readableBytes();
+        final int writtenBytes = byteBuf.readBytes(javaChannel(), expectedWrittenBytes);
+        updateOpWrite(expectedWrittenBytes, writtenBytes, lastSpin);
         return writtenBytes;
+    }
+
+    @Override
+    protected long doWriteFileRegion(FileRegion region, boolean lastSpin) throws Exception {
+        throw new UnsupportedOperationException();
     }
 
     @Override

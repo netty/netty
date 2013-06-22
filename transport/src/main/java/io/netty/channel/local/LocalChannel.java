@@ -15,8 +15,6 @@
  */
 package io.netty.channel.local;
 
-import io.netty.buffer.BufType;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
@@ -26,6 +24,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
+import io.netty.channel.MessageList;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 
@@ -34,20 +33,45 @@ import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
-import java.util.Collections;
+import java.util.ArrayDeque;
+import java.util.Queue;
 
 /**
  * A {@link Channel} for the local transport.
  */
 public class LocalChannel extends AbstractChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
+
+    private static final int MAX_READER_STACK_DEPTH = 8;
+    private static final ThreadLocal<Integer> READER_STACK_DEPTH = new ThreadLocal<Integer>() {
+        @Override
+        protected Integer initialValue() {
+            return 0;
+        }
+    };
 
     private final ChannelConfig config = new DefaultChannelConfig(this);
+    private final Queue<MessageList<Object>> inboundBuffer = new ArrayDeque<MessageList<Object>>();
+    private final Runnable readTask = new Runnable() {
+        @Override
+        public void run() {
+            ChannelPipeline pipeline = pipeline();
+            for (;;) {
+                MessageList<Object> m = inboundBuffer.poll();
+                if (m == null) {
+                    break;
+                }
+                pipeline.fireMessageReceived(m);
+            }
+            pipeline.fireChannelReadSuspended();
+        }
+    };
+
     private final Runnable shutdownHook = new Runnable() {
         @Override
         public void run() {
-            unsafe().close(unsafe().voidFuture());
+            unsafe().close(unsafe().voidPromise());
         }
     };
 
@@ -198,7 +222,7 @@ public class LocalChannel extends AbstractChannel {
     protected void doClose() throws Exception {
         LocalChannel peer = this.peer;
         if (peer != null && peer.isActive()) {
-            peer.unsafe().close(peer.unsafe().voidFuture());
+            peer.unsafe().close(unsafe().voidPromise());
             this.peer = null;
         }
     }
@@ -206,7 +230,7 @@ public class LocalChannel extends AbstractChannel {
     @Override
     protected Runnable doDeregister() throws Exception {
         if (isOpen()) {
-            unsafe().close(unsafe().voidFuture());
+            unsafe().close(unsafe().voidPromise());
         }
         ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
         return null;
@@ -219,18 +243,34 @@ public class LocalChannel extends AbstractChannel {
         }
 
         ChannelPipeline pipeline = pipeline();
-        MessageBuf<Object> buf = pipeline.inboundMessageBuffer();
-        if (buf.isEmpty()) {
+        Queue<MessageList<Object>> inboundBuffer = this.inboundBuffer;
+        if (inboundBuffer.isEmpty()) {
             readInProgress = true;
             return;
         }
 
-        pipeline.fireInboundBufferUpdated();
-        pipeline.fireChannelReadSuspended();
+        final Integer stackDepth = READER_STACK_DEPTH.get();
+        if (stackDepth < MAX_READER_STACK_DEPTH) {
+            READER_STACK_DEPTH.set(stackDepth + 1);
+            try {
+                for (;;) {
+                    MessageList<Object> received = inboundBuffer.poll();
+                    if (received == null) {
+                        break;
+                    }
+                    pipeline.fireMessageReceived(received);
+                }
+                pipeline.fireChannelReadSuspended();
+            } finally {
+                READER_STACK_DEPTH.set(stackDepth);
+            }
+        } else {
+            eventLoop().execute(readTask);
+        }
     }
 
     @Override
-    protected void doFlushMessageBuffer(MessageBuf<Object> buf) throws Exception {
+    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
         if (state < 2) {
             throw new NotYetConnectedException();
         }
@@ -241,28 +281,37 @@ public class LocalChannel extends AbstractChannel {
         final LocalChannel peer = this.peer;
         final ChannelPipeline peerPipeline = peer.pipeline();
         final EventLoop peerLoop = peer.eventLoop();
+        final int size = msgs.size();
+
+        // Use a copy because the original msgs will be recycled by AbstractChannel.
+        final MessageList<Object> msgsCopy = msgs.copy();
 
         if (peerLoop == eventLoop()) {
-            buf.drainTo(peerPipeline.inboundMessageBuffer());
+            peer.inboundBuffer.add(msgsCopy);
             finishPeerRead(peer, peerPipeline);
         } else {
-            final Object[] msgs = buf.toArray();
-            buf.clear();
             peerLoop.execute(new Runnable() {
                 @Override
                 public void run() {
-                    MessageBuf<Object> buf = peerPipeline.inboundMessageBuffer();
-                    Collections.addAll(buf, msgs);
+                    peer.inboundBuffer.add(msgsCopy);
                     finishPeerRead(peer, peerPipeline);
                 }
             });
         }
+
+        return size - index;
     }
 
     private static void finishPeerRead(LocalChannel peer, ChannelPipeline peerPipeline) {
         if (peer.readInProgress) {
             peer.readInProgress = false;
-            peerPipeline.fireInboundBufferUpdated();
+            for (;;) {
+                MessageList<Object> received = peer.inboundBuffer.poll();
+                if (received == null) {
+                    break;
+                }
+                peerPipeline.fireMessageReceived(received);
+            }
             peerPipeline.fireChannelReadSuspended();
         }
     }
@@ -277,61 +326,51 @@ public class LocalChannel extends AbstractChannel {
         @Override
         public void connect(final SocketAddress remoteAddress,
                 SocketAddress localAddress, final ChannelPromise promise) {
-            if (eventLoop().inEventLoop()) {
-                if (!ensureOpen(promise)) {
-                    return;
-                }
-
-                if (state == 2) {
-                    Exception cause = new AlreadyConnectedException();
-                    promise.setFailure(cause);
-                    pipeline().fireExceptionCaught(cause);
-                    return;
-                }
-
-                if (connectPromise != null) {
-                    throw new ConnectionPendingException();
-                }
-
-                connectPromise = promise;
-
-                if (state != 1) {
-                    // Not bound yet and no localAddress specified - get one.
-                    if (localAddress == null) {
-                        localAddress = new LocalAddress(LocalChannel.this);
-                    }
-                }
-
-                if (localAddress != null) {
-                    try {
-                        doBind(localAddress);
-                    } catch (Throwable t) {
-                        promise.setFailure(t);
-                        pipeline().fireExceptionCaught(t);
-                        close(voidFuture());
-                        return;
-                    }
-                }
-
-                Channel boundChannel = LocalChannelRegistry.get(remoteAddress);
-                if (!(boundChannel instanceof LocalServerChannel)) {
-                    Exception cause = new ChannelException("connection refused");
-                    promise.setFailure(cause);
-                    close(voidFuture());
-                    return;
-                }
-
-                LocalServerChannel serverChannel = (LocalServerChannel) boundChannel;
-                peer = serverChannel.serve(LocalChannel.this);
-            } else {
-                final SocketAddress localAddress0 = localAddress;
-                eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        connect(remoteAddress, localAddress0, promise);
-                    }
-                });
+            if (!ensureOpen(promise)) {
+                return;
             }
+
+            if (state == 2) {
+                Exception cause = new AlreadyConnectedException();
+                promise.setFailure(cause);
+                pipeline().fireExceptionCaught(cause);
+                return;
+            }
+
+            if (connectPromise != null) {
+                throw new ConnectionPendingException();
+            }
+
+            connectPromise = promise;
+
+            if (state != 1) {
+                // Not bound yet and no localAddress specified - get one.
+                if (localAddress == null) {
+                    localAddress = new LocalAddress(LocalChannel.this);
+                }
+            }
+
+            if (localAddress != null) {
+                try {
+                    doBind(localAddress);
+                } catch (Throwable t) {
+                    promise.setFailure(t);
+                    pipeline().fireExceptionCaught(t);
+                    close(voidPromise());
+                    return;
+                }
+            }
+
+            Channel boundChannel = LocalChannelRegistry.get(remoteAddress);
+            if (!(boundChannel instanceof LocalServerChannel)) {
+                Exception cause = new ChannelException("connection refused");
+                promise.setFailure(cause);
+                close(voidPromise());
+                return;
+            }
+
+            LocalServerChannel serverChannel = (LocalServerChannel) boundChannel;
+            peer = serverChannel.serve(LocalChannel.this);
         }
     }
 }

@@ -263,8 +263,7 @@ public class JZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx,
-            ByteBuf in, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
         if (finished.get()) {
             return;
         }
@@ -280,7 +279,7 @@ public class JZlibEncoder extends ZlibEncoder {
                     z.next_in_index = in.arrayOffset() + in.readerIndex();
                 } else {
                     byte[] array = new byte[inputLength];
-                    in.readBytes(array);
+                    in.getBytes(in.readerIndex(), array);
                     z.next_in = array;
                     z.next_in_index = 0;
                 }
@@ -288,16 +287,10 @@ public class JZlibEncoder extends ZlibEncoder {
 
                 // Configure output.
                 int maxOutputLength = (int) Math.ceil(inputLength * 1.001) + 12;
-                boolean outHasArray = out.hasArray();
+                out.ensureWritable(maxOutputLength);
                 z.avail_out = maxOutputLength;
-                if (outHasArray) {
-                    out.ensureWritable(maxOutputLength);
-                    z.next_out = out.array();
-                    z.next_out_index = out.arrayOffset() + out.writerIndex();
-                } else {
-                    z.next_out = new byte[maxOutputLength];
-                    z.next_out_index = 0;
-                }
+                z.next_out = out.array();
+                z.next_out_index = out.arrayOffset() + out.writerIndex();
                 int oldNextOutIndex = z.next_out_index;
 
                 // Note that Z_PARTIAL_FLUSH has been deprecated.
@@ -305,9 +298,7 @@ public class JZlibEncoder extends ZlibEncoder {
                 try {
                     resultCode = z.deflate(JZlib.Z_SYNC_FLUSH);
                 } finally {
-                    if (inHasArray) {
-                        in.skipBytes(z.next_in_index - oldNextInIndex);
-                    }
+                    in.skipBytes(z.next_in_index - oldNextInIndex);
                 }
 
                 if (resultCode != JZlib.Z_OK) {
@@ -316,11 +307,7 @@ public class JZlibEncoder extends ZlibEncoder {
 
                 int outputLength = z.next_out_index - oldNextOutIndex;
                 if (outputLength > 0) {
-                    if (outHasArray) {
-                        out.writerIndex(out.writerIndex() + outputLength);
-                    } else {
-                        out.writeBytes(z.next_out, 0, outputLength);
-                    }
+                    out.writerIndex(out.writerIndex() + outputLength);
                 }
             } finally {
                 // Deference the external references explicitly to tell the VM that

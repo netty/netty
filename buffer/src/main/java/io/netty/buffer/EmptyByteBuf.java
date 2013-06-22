@@ -761,6 +761,11 @@ public final class EmptyByteBuf implements ByteBuf {
     }
 
     @Override
+    public ByteBuffer internalNioBuffer(int index, int length) {
+        return EMPTY_BYTE_BUFFER;
+    }
+
+    @Override
     public boolean hasArray() {
         return true;
     }
@@ -801,16 +806,6 @@ public final class EmptyByteBuf implements ByteBuf {
     }
 
     @Override
-    public ByteBuf suspendIntermediaryDeallocations() {
-        return this;
-    }
-
-    @Override
-    public ByteBuf resumeIntermediaryDeallocations() {
-        return this;
-    }
-
-    @Override
     public int hashCode() {
         return 0;
     }
@@ -828,11 +823,6 @@ public final class EmptyByteBuf implements ByteBuf {
     @Override
     public String toString() {
         return str;
-    }
-
-    @Override
-    public BufType type() {
-        return BufType.BYTE;
     }
 
     @Override

@@ -31,15 +31,18 @@ import static io.netty.channel.ChannelOption.*;
 public class DefaultChannelConfig implements ChannelConfig {
 
     private static final ByteBufAllocator DEFAULT_ALLOCATOR = PooledByteBufAllocator.DEFAULT;
+    private static final RecvByteBufAllocator DEFAULT_RCVBUF_ALLOCATOR = AdaptiveRecvByteBufAllocator.DEFAULT;
     private static final int DEFAULT_CONNECT_TIMEOUT = 30000;
 
     protected final Channel channel;
 
-    private volatile ChannelHandlerByteBufType handlerByteBufType = ChannelHandlerByteBufType.PREFER_DIRECT;
     private volatile ByteBufAllocator allocator = DEFAULT_ALLOCATOR;
+    private volatile RecvByteBufAllocator rcvBufAllocator = DEFAULT_RCVBUF_ALLOCATOR;
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
     private volatile int writeSpinCount = 16;
     private volatile boolean autoRead = true;
+    private volatile int writeBufferHighWaterMark = 64 * 1024;
+    private volatile int writeBufferLowWaterMark = 32 * 1024;
 
     public DefaultChannelConfig(Channel channel) {
         if (channel == null) {
@@ -50,8 +53,7 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(null, CONNECT_TIMEOUT_MILLIS, WRITE_SPIN_COUNT, ALLOCATOR, AUTO_READ,
-                DEFAULT_HANDLER_BYTEBUF_TYPE);
+        return getOptions(null, CONNECT_TIMEOUT_MILLIS, WRITE_SPIN_COUNT, ALLOCATOR, AUTO_READ, RCVBUF_ALLOCATOR);
     }
 
     protected Map<ChannelOption<?>, Object> getOptions(
@@ -98,11 +100,11 @@ public class DefaultChannelConfig implements ChannelConfig {
         if (option == ALLOCATOR) {
             return (T) getAllocator();
         }
+        if (option == RCVBUF_ALLOCATOR) {
+            return (T) getRecvByteBufAllocator();
+        }
         if (option == AUTO_READ) {
             return (T) Boolean.valueOf(isAutoRead());
-        }
-        if (option == DEFAULT_ALLOCATOR) {
-            return (T) getDefaultHandlerByteBufType();
         }
 
         return null;
@@ -118,10 +120,10 @@ public class DefaultChannelConfig implements ChannelConfig {
             setWriteSpinCount((Integer) value);
         } else if (option == ALLOCATOR) {
             setAllocator((ByteBufAllocator) value);
+        } else if (option == RCVBUF_ALLOCATOR) {
+            setRecvByteBufAllocator((RecvByteBufAllocator) value);
         } else if (option == AUTO_READ) {
             setAutoRead((Boolean) value);
-        } else if (option == DEFAULT_HANDLER_BYTEBUF_TYPE) {
-            setDefaultHandlerByteBufType((ChannelHandlerByteBufType) value);
         } else {
             return false;
         }
@@ -181,6 +183,20 @@ public class DefaultChannelConfig implements ChannelConfig {
     }
 
     @Override
+    public RecvByteBufAllocator getRecvByteBufAllocator() {
+        return rcvBufAllocator;
+    }
+
+    @Override
+    public ChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
+        if (allocator == null) {
+            throw new NullPointerException("allocator");
+        }
+        rcvBufAllocator = allocator;
+        return this;
+    }
+
+    @Override
     public boolean isAutoRead() {
         return autoRead;
     }
@@ -196,13 +212,44 @@ public class DefaultChannelConfig implements ChannelConfig {
     }
 
     @Override
-    public ChannelHandlerByteBufType getDefaultHandlerByteBufType() {
-        return handlerByteBufType;
+    public int getWriteBufferHighWaterMark() {
+        return writeBufferHighWaterMark;
     }
 
     @Override
-    public ChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType handlerByteBufType) {
-        this.handlerByteBufType = handlerByteBufType;
+    public ChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
+        if (writeBufferHighWaterMark < getWriteBufferLowWaterMark()) {
+            throw new IllegalArgumentException(
+                    "writeBufferHighWaterMark cannot be less than " +
+                            "writeBufferLowWaterMark (" + getWriteBufferLowWaterMark() + "): " +
+                            writeBufferHighWaterMark);
+        }
+        if (writeBufferHighWaterMark < 0) {
+            throw new IllegalArgumentException(
+                    "writeBufferHighWaterMark must be >= 0");
+        }
+        this.writeBufferHighWaterMark = writeBufferHighWaterMark;
+        return this;
+    }
+
+    @Override
+    public int getWriteBufferLowWaterMark() {
+        return writeBufferLowWaterMark;
+    }
+
+    @Override
+    public ChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
+        if (writeBufferLowWaterMark > getWriteBufferHighWaterMark()) {
+            throw new IllegalArgumentException(
+                    "writeBufferLowWaterMark cannot be greater than " +
+                            "writeBufferHighWaterMark (" + getWriteBufferHighWaterMark() + "): " +
+                            writeBufferLowWaterMark);
+        }
+        if (writeBufferLowWaterMark < 0) {
+            throw new IllegalArgumentException(
+                    "writeBufferLowWaterMark must be >= 0");
+        }
+        this.writeBufferLowWaterMark = writeBufferLowWaterMark;
         return this;
     }
 }

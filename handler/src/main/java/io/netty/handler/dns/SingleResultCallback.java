@@ -23,37 +23,37 @@ import java.util.concurrent.Callable;
 /**
  * Returns a single result, as opposed to a {@link List} of results in a
  * {@link DnsCallback}.
- *
+ * 
  * @param <T>
  *            a single result for a specified type (i.e. if type is A, result
  *            would be a {@link ByteBuf})
  */
 public class SingleResultCallback<T> implements Callable<T> {
 
-    private final DnsCallback<List<T>> parent;
+	private final DnsCallback<List<T>> parent;
 
-    /**
-     * Constructs a {@link SingleResultCallback} by passing it a
-     * {@link DnsCallback}.
-     *
-     * @param parent
-     *            the {@link DnsCallback}
-     */
-    public SingleResultCallback(DnsCallback<List<T>> parent) {
-        this.parent = parent;
-    }
+	/**
+	 * Constructs a {@link SingleResultCallback} by passing it a
+	 * {@link DnsCallback}.
+	 * 
+	 * @param parent
+	 *            the {@link DnsCallback}
+	 */
+	public SingleResultCallback(DnsCallback<List<T>> parent) {
+		this.parent = parent;
+	}
 
-    /**
-     * Invokes the {@link DnsCallback}'s {@link DnsCallback#call()} method and
-     * returns the first result, if it exists, or else {@code null}.
-     */
-    @Override
-    public T call() throws InterruptedException {
-        List<T> list = parent.call();
-        if (list == null || list.isEmpty()) {
-            return null;
-        }
-        return list.get(0);
-    }
+	/**
+	 * Invokes the {@link DnsCallback}'s {@link DnsCallback#call()} method and
+	 * returns the first result, if it exists, or else {@code null}.
+	 */
+	@Override
+	public T call() throws InterruptedException {
+		List<T> list = parent.call();
+		if (list == null || list.isEmpty()) {
+			return null;
+		}
+		return list.get(0);
+	}
 
 }

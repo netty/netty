@@ -750,7 +750,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         if (value == null) {
             throw new ParseException("header not found: " + name, 0);
         }
-        return new HttpHeaderDateFormat().parse(value);
+        return HttpHeaderDateFormat.get().parse(value);
     }
 
     /**
@@ -768,7 +768,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         }
 
         try {
-            return new HttpHeaderDateFormat().parse(value);
+            return HttpHeaderDateFormat.get().parse(value);
         } catch (ParseException e) {
             return defaultValue;
         }
@@ -782,7 +782,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      */
     public static void setDateHeader(HttpMessage message, String name, Date value) {
         if (value != null) {
-            message.headers().set(name, new HttpHeaderDateFormat().format(value));
+            message.headers().set(name, HttpHeaderDateFormat.get().format(value));
         } else {
             message.headers().set(name, null);
         }
@@ -947,7 +947,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      */
     public static void setDate(HttpMessage message, Date value) {
         if (value != null) {
-            message.headers().set(Names.DATE, new HttpHeaderDateFormat().format(value));
+            message.headers().set(Names.DATE, HttpHeaderDateFormat.get().format(value));
         } else {
             message.headers().set(Names.DATE, null);
         }

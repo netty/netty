@@ -16,14 +16,39 @@
 package io.netty.util.concurrent;
 
 import java.util.concurrent.Callable;
-import java.util.concurrent.Executors;
 import java.util.concurrent.RunnableFuture;
 
 class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
+
+    static <T> Callable<T> toCallable(Runnable runnable, T result) {
+        return new RunnableAdapter<T>(runnable, result);
+    }
+
+    private static final class RunnableAdapter<T> implements Callable<T> {
+        final Runnable task;
+        final T result;
+
+        RunnableAdapter(Runnable task, T result) {
+            this.task = task;
+            this.result = result;
+        }
+
+        @Override
+        public T call() {
+            task.run();
+            return result;
+        }
+
+        @Override
+        public String toString() {
+            return "Callable(task: " + task + ", result: " + result + ')';
+        }
+    }
+
     protected final Callable<V> task;
 
     PromiseTask(EventExecutor executor, Runnable runnable, V result) {
-        this(executor, Executors.callable(runnable, result));
+        this(executor, toCallable(runnable, result));
     }
 
     PromiseTask(EventExecutor executor, Callable<V> callable) {
@@ -32,27 +57,29 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
     }
 
     @Override
-    public int hashCode() {
+    public final int hashCode() {
         return System.identityHashCode(this);
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public final boolean equals(Object obj) {
         return this == obj;
     }
 
     @Override
     public void run() {
         try {
-            V result = task.call();
-            setSuccessInternal(result);
+            if (setUncancellableInternal()) {
+                V result = task.call();
+                setSuccessInternal(result);
+            }
         } catch (Throwable e) {
             setFailureInternal(e);
         }
     }
 
     @Override
-    public Promise<V> setFailure(Throwable cause) {
+    public final Promise<V> setFailure(Throwable cause) {
         throw new IllegalStateException();
     }
 
@@ -62,7 +89,7 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
     }
 
     @Override
-    public boolean tryFailure(Throwable cause) {
+    public final boolean tryFailure(Throwable cause) {
         return false;
     }
 
@@ -71,7 +98,7 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
     }
 
     @Override
-    public Promise<V> setSuccess(V result) {
+    public final Promise<V> setSuccess(V result) {
         throw new IllegalStateException();
     }
 
@@ -81,11 +108,30 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
     }
 
     @Override
-    public boolean trySuccess(V result) {
+    public final boolean trySuccess(V result) {
         return false;
     }
 
     protected final boolean trySuccessInternal(V result) {
         return super.trySuccess(result);
+    }
+
+    @Override
+    public final boolean setUncancellable() {
+        throw new IllegalStateException();
+    }
+
+    protected final boolean setUncancellableInternal() {
+        return super.setUncancellable();
+    }
+
+    @Override
+    protected StringBuilder toStringBuilder() {
+        StringBuilder buf = super.toStringBuilder();
+        buf.setCharAt(buf.length() - 1, ',');
+        buf.append(" task: ");
+        buf.append(task);
+        buf.append(')');
+        return buf;
     }
 }

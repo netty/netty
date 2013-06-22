@@ -167,12 +167,12 @@ final class SpdySession {
     private static final class StreamState {
 
         private final byte priority;
-        private volatile boolean remoteSideClosed;
-        private volatile boolean localSideClosed;
+        private boolean remoteSideClosed;
+        private boolean localSideClosed;
         private boolean receivedReply;
         private final AtomicInteger sendWindowSize;
         private final AtomicInteger receiveWindowSize;
-        private volatile int receiveWindowSizeLowerBound;
+        private int receiveWindowSizeLowerBound;
         private final Queue<Object> pendingWriteQueue = new ConcurrentLinkedQueue<Object>();
 
         StreamState(

@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ResourceLeakDetector;
 
 import java.io.IOException;
@@ -39,7 +40,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
     private int markedReaderIndex;
     private int markedWriterIndex;
 
-    private final int maxCapacity;
+    private int maxCapacity;
 
     private SwappedByteBuf swappedBuf;
 
@@ -51,13 +52,12 @@ public abstract class AbstractByteBuf implements ByteBuf {
     }
 
     @Override
-    public BufType type() {
-        return BufType.BYTE;
-    }
-
-    @Override
     public int maxCapacity() {
         return maxCapacity;
+    }
+
+    protected final void maxCapacity(int maxCapacity) {
+        this.maxCapacity = maxCapacity;
     }
 
     @Override
@@ -221,7 +221,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
         return this;
     }
 
-    protected void adjustMarkers(int decrement) {
+    protected final void adjustMarkers(int decrement) {
         int markedReaderIndex = this.markedReaderIndex;
         if (markedReaderIndex <= decrement) {
             this.markedReaderIndex = 0;
@@ -952,6 +952,11 @@ public abstract class AbstractByteBuf implements ByteBuf {
     }
 
     @Override
+    public ByteBuffer nioBuffer(int index, int length) {
+        return internalNioBuffer(index, length).slice();
+    }
+
+    @Override
     public String toString(Charset charset) {
         return toString(readerIndex, readableBytes(), charset);
     }
@@ -971,17 +976,17 @@ public abstract class AbstractByteBuf implements ByteBuf {
             nioBuffer.flip();
         }
 
-        return BufUtil.decodeString(nioBuffer, charset);
+        return ByteBufUtil.decodeString(nioBuffer, charset);
     }
 
     @Override
     public int indexOf(int fromIndex, int toIndex, byte value) {
-        return BufUtil.indexOf(this, fromIndex, toIndex, value);
+        return ByteBufUtil.indexOf(this, fromIndex, toIndex, value);
     }
 
     @Override
     public int indexOf(int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
-        return BufUtil.indexOf(this, fromIndex, toIndex, indexFinder);
+        return ByteBufUtil.indexOf(this, fromIndex, toIndex, indexFinder);
     }
 
     @Override
@@ -1027,7 +1032,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
 
     @Override
     public int hashCode() {
-        return BufUtil.hashCode(this);
+        return ByteBufUtil.hashCode(this);
     }
 
     @Override
@@ -1036,14 +1041,14 @@ public abstract class AbstractByteBuf implements ByteBuf {
             return true;
         }
         if (o instanceof ByteBuf) {
-            return BufUtil.equals(this, (ByteBuf) o);
+            return ByteBufUtil.equals(this, (ByteBuf) o);
         }
         return false;
     }
 
     @Override
     public int compareTo(ByteBuf that) {
-        return BufUtil.compare(this, that);
+        return ByteBufUtil.compare(this, that);
     }
 
     @Override
@@ -1129,7 +1134,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
      */
     protected final void ensureAccessible() {
         if (refCnt() == 0) {
-            throw new IllegalBufferAccessException();
+            throw new IllegalReferenceCountException(0);
         }
     }
 }

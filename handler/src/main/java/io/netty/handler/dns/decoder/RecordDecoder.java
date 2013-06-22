@@ -22,24 +22,25 @@ import io.netty.handler.codec.dns.Resource;
 
 /**
  * Used for decoding resource records.
- *
+ * 
  * @param <T>
  *            the type of data to return after decoding a resource record (for
  *            example, an {@link AddressDecoder} will return a {@link ByteBuf})
  */
 public interface RecordDecoder<T> {
 
-    /**
-     * Returns a generic type {@code T} defined in a class implementing
-     * {@link RecordDecoder} after decoding a resource record when given a DNS
-     * response packet.
-     *
-     * @param response
-     *            the DNS response that contains the resource record being
-     *            decoded
-     * @param resource
-     *            the resource record being decoded
-     */
-    public T decode(DnsResponse response, Resource resource) throws DecoderException;
+	/**
+	 * Returns a generic type {@code T} defined in a class implementing
+	 * {@link RecordDecoder} after decoding a resource record when given a DNS
+	 * response packet.
+	 * 
+	 * @param response
+	 *            the DNS response that contains the resource record being
+	 *            decoded
+	 * @param resource
+	 *            the resource record being decoded
+	 */
+	public T decode(DnsResponse response, Resource resource)
+			throws DecoderException;
 
 }

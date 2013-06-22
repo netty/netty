@@ -19,14 +19,14 @@ import com.sun.nio.sctp.Association;
 import com.sun.nio.sctp.MessageInfo;
 import com.sun.nio.sctp.NotificationHandler;
 import com.sun.nio.sctp.SctpChannel;
-import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.MessageList;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.sctp.DefaultSctpChannelConfig;
 import io.netty.channel.sctp.SctpChannelConfig;
@@ -62,7 +62,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(OioSctpChannel.class);
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.MESSAGE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private final SctpChannel ch;
     private final SctpChannelConfig config;
@@ -72,6 +72,8 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     private final Selector connectSelector;
 
     private final NotificationHandler<?> notificationHandler;
+
+    private RecvByteBufAllocator.Handle allocHandle;
 
     private static SctpChannel openChannel() {
         try {
@@ -166,7 +168,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected int doReadMessages(MessageBuf<Object> buf) throws Exception {
+    protected int doReadMessages(MessageList<Object> buf) throws Exception {
         if (!readSelector.isOpen()) {
             return 0;
         }
@@ -183,7 +185,11 @@ public class OioSctpChannel extends AbstractOioMessageChannel
         Set<SelectionKey> reableKeys = readSelector.selectedKeys();
         try {
             for (SelectionKey ignored : reableKeys) {
-                ByteBuf buffer = alloc().directBuffer(config().getReceiveBufferSize());
+                RecvByteBufAllocator.Handle allocHandle = this.allocHandle;
+                if (allocHandle == null) {
+                    this.allocHandle = allocHandle = config().getRecvByteBufAllocator().newHandle();
+                }
+                ByteBuf buffer = allocHandle.allocate(config().getAllocator());
                 boolean free = true;
 
                 try {
@@ -200,6 +206,8 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                 } catch (Throwable cause) {
                     PlatformDependent.throwException(cause);
                 }  finally {
+                    int bytesRead = buffer.readableBytes();
+                    allocHandle.record(bytesRead);
                     if (free) {
                         buffer.release();
                     }
@@ -213,17 +221,31 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected void doWriteMessages(MessageBuf<Object> buf) throws Exception {
+    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
         if (!writeSelector.isOpen()) {
-            return;
+            return 0;
         }
         final int selectedKeys = writeSelector.select(SO_TIMEOUT);
         if (selectedKeys > 0) {
             final Set<SelectionKey> writableKeys = writeSelector.selectedKeys();
-            for (SelectionKey ignored : writableKeys) {
-                SctpMessage packet = (SctpMessage) buf.poll();
+            if (writableKeys.isEmpty()) {
+                return 0;
+            }
+            Iterator<SelectionKey> writableKeysIt = writableKeys.iterator();
+            int written = 0;
+            int length = msgs.size() - index;
+
+            for (;;) {
+                if (written == length) {
+                    // all written
+                    return written;
+                }
+                writableKeysIt.next();
+                writableKeysIt.remove();
+
+                SctpMessage packet = (SctpMessage) msgs.get(index ++);
                 if (packet == null) {
-                    return;
+                    return written;
                 }
                 try {
                     ByteBuf data = packet.content();
@@ -243,12 +265,17 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                     mi.streamNumber(packet.streamIdentifier());
 
                     ch.send(nioData, mi);
+                    written ++;
                 } finally {
                     packet.release();
                 }
+                if (!writableKeysIt.hasNext()) {
+                    return written;
+                }
             }
-            writableKeys.clear();
         }
+
+        return 0;
     }
 
     @Override

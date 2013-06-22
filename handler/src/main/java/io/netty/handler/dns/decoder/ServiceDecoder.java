@@ -26,26 +26,27 @@ import io.netty.handler.dns.decoder.record.ServiceRecord;
  */
 public class ServiceDecoder implements RecordDecoder<ServiceRecord> {
 
-    /**
-     * Returns a decoded SRV (service) resource record, stored as an instance of
-     * {@link ServiceRecord}.
-     *
-     * @param response
-     *            the DNS response that contains the resource record being
-     *            decoded
-     * @param resource
-     *            the resource record being decoded
-     */
-    @Override
-    public ServiceRecord decode(DnsResponse response, Resource resource) {
-        ByteBuf packet = response.content().readerIndex(resource.contentIndex());
-        int priority = packet.readShort();
-        int weight = packet.readShort();
-        int port = packet.readUnsignedShort();
-        String target = DnsResponseDecoder.readName(packet);
-        packet.release();
-        return new ServiceRecord(resource.name(), priority, weight, port,
-                target);
-    }
+	/**
+	 * Returns a decoded SRV (service) resource record, stored as an instance of
+	 * {@link ServiceRecord}.
+	 * 
+	 * @param response
+	 *            the DNS response that contains the resource record being
+	 *            decoded
+	 * @param resource
+	 *            the resource record being decoded
+	 */
+	@Override
+	public ServiceRecord decode(DnsResponse response, Resource resource) {
+		ByteBuf packet = response.content()
+				.readerIndex(resource.contentIndex());
+		int priority = packet.readShort();
+		int weight = packet.readShort();
+		int port = packet.readUnsignedShort();
+		String target = DnsResponseDecoder.readName(packet);
+		packet.release();
+		return new ServiceRecord(resource.name(), priority, weight, port,
+				target);
+	}
 
 }

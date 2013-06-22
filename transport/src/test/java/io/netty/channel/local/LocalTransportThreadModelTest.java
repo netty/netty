@@ -17,20 +17,14 @@ package io.netty.channel.local;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelHandlerUtil;
-import io.netty.channel.ChannelInboundByteHandler;
-import io.netty.channel.ChannelInboundMessageHandler;
-import io.netty.channel.ChannelInboundMessageHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOutboundByteHandler;
-import io.netty.channel.ChannelOutboundMessageHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MessageList;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutorGroup;
@@ -44,7 +38,6 @@ import java.util.HashSet;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class LocalTransportThreadModelTest {
@@ -62,11 +55,12 @@ public class LocalTransportThreadModelTest {
           .childHandler(new ChannelInitializer<LocalChannel>() {
               @Override
               public void initChannel(LocalChannel ch) throws Exception {
-                  ch.pipeline().addLast(new ChannelInboundMessageHandlerAdapter<Object>() {
-                    @Override
-                    public void messageReceived(ChannelHandlerContext ctx, Object msg) {
-                        // Discard
-                    }
+                  ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                      @Override
+                      public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) {
+                          // Discard
+                          msgs.releaseAllAndRecycle();
+                      }
                   });
               }
           });
@@ -75,8 +69,8 @@ public class LocalTransportThreadModelTest {
     }
 
     @AfterClass
-    public static void destroy() {
-        group.shutdownGracefully();
+    public static void destroy() throws Exception {
+        group.shutdownGracefully().sync();
     }
 
     @Test(timeout = 30000)
@@ -107,18 +101,21 @@ public class LocalTransportThreadModelTest {
         l.register(ch).sync().channel().connect(localAddr).sync();
 
         // Fire inbound events from all possible starting points.
-        ch.pipeline().fireInboundBufferUpdated();
-        ch.pipeline().context(h1).fireInboundBufferUpdated();
-        ch.pipeline().context(h2).fireInboundBufferUpdated();
-        ch.pipeline().context(h3).fireInboundBufferUpdated();
+        ch.pipeline().fireMessageReceived("1");
+        ch.pipeline().context(h1).fireMessageReceived("2");
+        ch.pipeline().context(h2).fireMessageReceived("3");
+        ch.pipeline().context(h3).fireMessageReceived("4");
         // Fire outbound events from all possible starting points.
-        ch.pipeline().flush();
-        ch.pipeline().context(h3).flush();
-        ch.pipeline().context(h2).flush();
-        ch.pipeline().context(h1).flush().sync();
+        ch.pipeline().write("5");
+        ch.pipeline().context(h3).write("6");
+        ch.pipeline().context(h2).write("7");
+        ch.pipeline().context(h1).write("8").sync();
+
+        ch.close().sync();
 
         // Wait until all events are handled completely.
-        while (h1.outboundThreadNames.size() < 3 || h3.inboundThreadNames.size() < 3) {
+        while (h1.outboundThreadNames.size() < 3 || h3.inboundThreadNames.size() < 3 ||
+               h1.removalThreadNames.size() < 1) {
             if (h1.exception.get() != null) {
                 throw h1.exception.get();
             }
@@ -142,6 +139,9 @@ public class LocalTransportThreadModelTest {
             Assert.assertFalse(h1.outboundThreadNames.contains(currentName));
             Assert.assertFalse(h2.outboundThreadNames.contains(currentName));
             Assert.assertFalse(h3.outboundThreadNames.contains(currentName));
+            Assert.assertFalse(h1.removalThreadNames.contains(currentName));
+            Assert.assertFalse(h2.removalThreadNames.contains(currentName));
+            Assert.assertFalse(h3.removalThreadNames.contains(currentName));
 
             // Assert that events were handled by the correct executor.
             for (String name: h1.inboundThreadNames) {
@@ -162,21 +162,33 @@ public class LocalTransportThreadModelTest {
             for (String name: h3.outboundThreadNames) {
                 Assert.assertTrue(name.startsWith("e2-"));
             }
+            for (String name: h1.removalThreadNames) {
+                Assert.assertTrue(name.startsWith("l-"));
+            }
+            for (String name: h2.removalThreadNames) {
+                Assert.assertTrue(name.startsWith("e1-"));
+            }
+            for (String name: h3.removalThreadNames) {
+                Assert.assertTrue(name.startsWith("e2-"));
+            }
 
             // Assert that the events for the same handler were handled by the same thread.
             Set<String> names = new HashSet<String>();
             names.addAll(h1.inboundThreadNames);
             names.addAll(h1.outboundThreadNames);
+            names.addAll(h1.removalThreadNames);
             Assert.assertEquals(1, names.size());
 
             names.clear();
             names.addAll(h2.inboundThreadNames);
             names.addAll(h2.outboundThreadNames);
+            names.addAll(h2.removalThreadNames);
             Assert.assertEquals(1, names.size());
 
             names.clear();
             names.addAll(h3.inboundThreadNames);
             names.addAll(h3.outboundThreadNames);
+            names.addAll(h3.removalThreadNames);
             Assert.assertEquals(1, names.size());
 
             // Count the number of events
@@ -186,6 +198,9 @@ public class LocalTransportThreadModelTest {
             Assert.assertEquals(3, h1.outboundThreadNames.size());
             Assert.assertEquals(2, h2.outboundThreadNames.size());
             Assert.assertEquals(1, h3.outboundThreadNames.size());
+            Assert.assertEquals(1, h1.removalThreadNames.size());
+            Assert.assertEquals(1, h2.removalThreadNames.size());
+            Assert.assertEquals(1, h3.removalThreadNames.size());
         } catch (AssertionError e) {
             System.out.println("H1I: " + h1.inboundThreadNames);
             System.out.println("H2I: " + h2.inboundThreadNames);
@@ -193,19 +208,22 @@ public class LocalTransportThreadModelTest {
             System.out.println("H1O: " + h1.outboundThreadNames);
             System.out.println("H2O: " + h2.outboundThreadNames);
             System.out.println("H3O: " + h3.outboundThreadNames);
+            System.out.println("H1R: " + h1.removalThreadNames);
+            System.out.println("H2R: " + h2.removalThreadNames);
+            System.out.println("H3R: " + h3.removalThreadNames);
             throw e;
         } finally {
             l.shutdownGracefully();
             e1.shutdownGracefully();
             e2.shutdownGracefully();
-            l.awaitTermination(5, TimeUnit.SECONDS);
-            e1.awaitTermination(5, TimeUnit.SECONDS);
-            e2.awaitTermination(5, TimeUnit.SECONDS);
+
+            l.terminationFuture().sync();
+            e1.terminationFuture().sync();
+            e2.terminationFuture().sync();
         }
     }
 
     @Test(timeout = 30000)
-    @Ignore("regression test")
     public void testConcurrentMessageBufferAccess() throws Throwable {
         EventLoopGroup l = new LocalEventLoopGroup(4, new DefaultThreadFactory("l"));
         EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e1"));
@@ -246,11 +264,11 @@ public class LocalTransportThreadModelTest {
                 ch.eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
-                        MessageBuf<Object> buf = ch.pipeline().inboundMessageBuffer();
+                        MessageList<Object> msgs = MessageList.newInstance(end - start);
                         for (int j = start; j < end; j ++) {
-                            buf.add(Integer.valueOf(j));
+                            msgs.add(Integer.valueOf(j));
                         }
-                        ch.pipeline().fireInboundBufferUpdated();
+                        ch.pipeline().fireMessageReceived(msgs);
                     }
                 });
             }
@@ -286,11 +304,12 @@ public class LocalTransportThreadModelTest {
                 ch.pipeline().context(h6).executor().execute(new Runnable() {
                     @Override
                     public void run() {
-                        MessageBuf<Object> buf = ch.pipeline().outboundMessageBuffer();
+                        MessageList<Object> msgs = MessageList.newInstance(end - start);
                         for (int j = start; j < end; j ++) {
-                            buf.add(Integer.valueOf(j));
+                            msgs.add(Integer.valueOf(j));
                         }
-                        ch.pipeline().flush();
+
+                        ch.pipeline().write(msgs);
                     }
                 });
             }
@@ -326,48 +345,39 @@ public class LocalTransportThreadModelTest {
             e3.shutdownGracefully();
             e4.shutdownGracefully();
             e5.shutdownGracefully();
+
+            l.terminationFuture().sync();
+            e1.terminationFuture().sync();
+            e2.terminationFuture().sync();
+            e3.terminationFuture().sync();
+            e4.terminationFuture().sync();
+            e5.terminationFuture().sync();
         }
     }
 
-    private static class ThreadNameAuditor
-            extends ChannelDuplexHandler
-            implements ChannelInboundMessageHandler<Object>,
-                       ChannelOutboundMessageHandler<Object> {
+    private static class ThreadNameAuditor extends ChannelDuplexHandler {
 
         private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
 
         private final Queue<String> inboundThreadNames = new ConcurrentLinkedQueue<String>();
         private final Queue<String> outboundThreadNames = new ConcurrentLinkedQueue<String>();
+        private final Queue<String> removalThreadNames = new ConcurrentLinkedQueue<String>();
 
         @Override
-        public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return Unpooled.messageBuffer();
+        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+            removalThreadNames.add(Thread.currentThread().getName());
         }
 
         @Override
-        public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return Unpooled.messageBuffer();
-        }
-
-        @Override
-        public void inboundBufferUpdated(
-                ChannelHandlerContext ctx) throws Exception {
-            ctx.inboundMessageBuffer().clear();
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
             inboundThreadNames.add(Thread.currentThread().getName());
-            ctx.fireInboundBufferUpdated();
+            ctx.fireMessageReceived(msgs);
         }
 
         @Override
-        public void read(ChannelHandlerContext ctx) {
-            ctx.read();
-        }
-
-        @Override
-        public void flush(ChannelHandlerContext ctx,
-                          ChannelPromise future) throws Exception {
-            ctx.outboundMessageBuffer().clear();
+        public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise future) throws Exception {
             outboundThreadNames.add(Thread.currentThread().getName());
-            ctx.flush(future);
+            ctx.write(msgs, future);
         }
 
         @Override
@@ -383,8 +393,7 @@ public class LocalTransportThreadModelTest {
      * Converts integers into a binary stream.
      */
     private static class MessageForwarder1
-            extends ChannelDuplexHandler
-            implements ChannelInboundMessageHandler<Integer>, ChannelOutboundByteHandler {
+            extends ChannelDuplexHandler {
 
         private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         private volatile int inCnt;
@@ -392,23 +401,7 @@ public class LocalTransportThreadModelTest {
         private volatile Thread t;
 
         @Override
-        public MessageBuf<Integer> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return Unpooled.messageBuffer();
-        }
-
-        @Override
-        public ByteBuf newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return ChannelHandlerUtil.allocate(ctx);
-        }
-
-        @Override
-        public void discardOutboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-            // NOOP
-        }
-
-        @Override
-        public void inboundBufferUpdated(
-                ChannelHandlerContext ctx) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
             Thread t = this.t;
             if (t == null) {
                 this.t = Thread.currentThread();
@@ -416,55 +409,44 @@ public class LocalTransportThreadModelTest {
                 Assert.assertSame(t, Thread.currentThread());
             }
 
-            MessageBuf<Integer> in = ctx.inboundMessageBuffer();
-            ByteBuf out = ctx.nextInboundByteBuffer();
+            ByteBuf out = ctx.alloc().buffer(msgs.size() * 4);
 
-            for (;;) {
-                Integer msg = in.poll();
-                if (msg == null) {
-                    break;
-                }
-
+            for (int i = 0; i < msgs.size(); i ++) {
+                int m = ((Integer) msgs.get(i)).intValue();
                 int expected = inCnt ++;
-                Assert.assertEquals(expected, msg.intValue());
-                if (out.maxCapacity() - out.writerIndex() < 4) {
-                    // Next inbound buffer is full - attempt to flush some data.
-                    ctx.fireInboundBufferUpdated();
-                }
-                out.writeInt(msg);
+                Assert.assertEquals(expected, m);
+                out.writeInt(m);
             }
 
-            ctx.fireInboundBufferUpdated();
+            ctx.fireMessageReceived(out);
         }
 
         @Override
-        public void read(ChannelHandlerContext ctx) {
-            ctx.read();
-        }
-
-        @Override
-        public void flush(ChannelHandlerContext ctx,
-                ChannelPromise future) throws Exception {
+        public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise future) throws Exception {
             Assert.assertSame(t, Thread.currentThread());
 
             // Don't let the write request go to the server-side channel - just swallow.
             boolean swallow = this == ctx.pipeline().first();
 
-            ByteBuf in = ctx.outboundByteBuffer();
-            MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
-            while (in.readableBytes() >= 4) {
-                int msg = in.readInt();
-                int expected = outCnt ++;
-                Assert.assertEquals(expected, msg);
-                if (!swallow) {
-                    out.add(msg);
+            for (int i = 0; i < msgs.size(); i ++) {
+                ByteBuf m = (ByteBuf) msgs.get(i);
+                int count = m.readableBytes() / 4;
+                MessageList<Integer> out = MessageList.newInstance(count);
+                for (int j = 0; j < count; j ++) {
+                    int actual = m.readInt();
+                    int expected = outCnt ++;
+                    Assert.assertEquals(expected, actual);
+                    if (!swallow) {
+                        out.add(actual);
+                    }
                 }
-            }
-            in.discardSomeReadBytes();
-            if (swallow) {
-                future.setSuccess();
-            } else {
-                ctx.flush(future);
+                m.release();
+
+                if (swallow) {
+                    future.setSuccess();
+                } else {
+                    ctx.write(out);
+                }
             }
         }
 
@@ -480,9 +462,7 @@ public class LocalTransportThreadModelTest {
     /**
      * Converts a binary stream into integers.
      */
-    private static class MessageForwarder2
-            extends ChannelDuplexHandler
-            implements ChannelInboundByteHandler, ChannelOutboundMessageHandler<Integer> {
+    private static class MessageForwarder2 extends ChannelDuplexHandler {
 
         private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         private volatile int inCnt;
@@ -490,25 +470,7 @@ public class LocalTransportThreadModelTest {
         private volatile Thread t;
 
         @Override
-        public ByteBuf newInboundBuffer(
-                ChannelHandlerContext ctx) throws Exception {
-            return ctx.alloc().buffer();
-        }
-
-        @Override
-        public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-            ctx.inboundByteBuffer().discardSomeReadBytes();
-        }
-
-        @Override
-        public MessageBuf<Integer> newOutboundBuffer(
-                ChannelHandlerContext ctx) throws Exception {
-            return Unpooled.messageBuffer();
-        }
-
-        @Override
-        public void inboundBufferUpdated(
-                ChannelHandlerContext ctx) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
             Thread t = this.t;
             if (t == null) {
                 this.t = Thread.currentThread();
@@ -516,49 +478,35 @@ public class LocalTransportThreadModelTest {
                 Assert.assertSame(t, Thread.currentThread());
             }
 
-            ByteBuf in = ctx.inboundByteBuffer();
-            MessageBuf<Object> out = ctx.nextInboundMessageBuffer();
-            while (in.readableBytes() >= 4) {
-                int msg = in.readInt();
-                int expected = inCnt ++;
-                Assert.assertEquals(expected, msg);
-                out.add(msg);
+            for (int i = 0; i < msgs.size(); i ++) {
+                ByteBuf m = (ByteBuf) msgs.get(i);
+                int count = m.readableBytes() / 4;
+                MessageList<Integer> out = MessageList.newInstance(count);
+                for (int j = 0; j < count; j ++) {
+                    int actual = m.readInt();
+                    int expected = inCnt ++;
+                    Assert.assertEquals(expected, actual);
+                    out.add(actual);
+                }
+                m.release();
+                ctx.fireMessageReceived(out);
             }
-            in.discardReadBytes();
-            ctx.fireInboundBufferUpdated();
         }
 
         @Override
-        public void read(ChannelHandlerContext ctx) {
-            ctx.read();
-        }
-
-        @Override
-        public void flush(final ChannelHandlerContext ctx,
-                ChannelPromise future) throws Exception {
+        public void write(
+                ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
             Assert.assertSame(t, Thread.currentThread());
 
-            MessageBuf<Integer> in = ctx.outboundMessageBuffer();
-            ByteBuf out = ctx.nextOutboundByteBuffer();
-
-            for (;;) {
-                Integer msg = in.poll();
-                if (msg == null) {
-                    break;
-                }
-
+            ByteBuf out = ctx.alloc().buffer(msgs.size() * 4);
+            for (int i = 0; i < msgs.size(); i ++) {
+                int m = (Integer) msgs.get(i);
                 int expected = outCnt ++;
-                Assert.assertEquals(expected, msg.intValue());
-
-                if (out.maxCapacity() - out.writerIndex() < 4) {
-                    // Next outbound buffer is full - attempt to flush some data.
-                    ctx.flush();
-                }
-
-                out.writeInt(msg);
+                Assert.assertEquals(expected, m);
+                out.writeInt(m);
             }
 
-            ctx.flush(future);
+            ctx.write(out);
         }
 
         @Override
@@ -573,9 +521,7 @@ public class LocalTransportThreadModelTest {
     /**
      * Simply forwards the received object to the next handler.
      */
-    private static class MessageForwarder3
-            extends ChannelDuplexHandler
-            implements ChannelInboundMessageHandler<Object>, ChannelOutboundMessageHandler<Object> {
+    private static class MessageForwarder3 extends ChannelDuplexHandler {
 
         private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         private volatile int inCnt;
@@ -583,17 +529,7 @@ public class LocalTransportThreadModelTest {
         private volatile Thread t;
 
         @Override
-        public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return Unpooled.messageBuffer();
-        }
-
-        @Override
-        public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return Unpooled.messageBuffer();
-        }
-
-        @Override
-        public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
             Thread t = this.t;
             if (t == null) {
                 this.t = Thread.currentThread();
@@ -601,44 +537,25 @@ public class LocalTransportThreadModelTest {
                 Assert.assertSame(t, Thread.currentThread());
             }
 
-            MessageBuf<Object> in = ctx.inboundMessageBuffer();
-            MessageBuf<Object> out = ctx.nextInboundMessageBuffer();
-            for (;;) {
-                Object msg = in.poll();
-                if (msg == null) {
-                    break;
-                }
-
+            for (int i = 0; i < msgs.size(); i ++) {
+                int actual = (Integer) msgs.get(i);
                 int expected = inCnt ++;
-                Assert.assertEquals(expected, msg);
-                out.add(msg);
+                Assert.assertEquals(expected, actual);
             }
-            ctx.fireInboundBufferUpdated();
+            ctx.fireMessageReceived(msgs);
         }
 
         @Override
-        public void read(ChannelHandlerContext ctx) {
-            ctx.read();
-        }
-
-        @Override
-        public void flush(ChannelHandlerContext ctx,
-                ChannelPromise future) throws Exception {
+        public void write(
+                ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
             Assert.assertSame(t, Thread.currentThread());
 
-            MessageBuf<Object> in = ctx.outboundMessageBuffer();
-            MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
-            for (;;) {
-                Object msg = in.poll();
-                if (msg == null) {
-                    break;
-                }
-
+            for (int i = 0; i < msgs.size(); i ++) {
+                int actual = (Integer) msgs.get(i);
                 int expected = outCnt ++;
-                Assert.assertEquals(expected, msg);
-                out.add(msg);
+                Assert.assertEquals(expected, actual);
             }
-            ctx.flush(future);
+            ctx.write(msgs, promise);
         }
 
         @Override
@@ -653,9 +570,7 @@ public class LocalTransportThreadModelTest {
     /**
      * Discards all received messages.
      */
-    private static class MessageDiscarder
-            extends ChannelDuplexHandler
-            implements ChannelInboundMessageHandler<Object>, ChannelOutboundMessageHandler<Object> {
+    private static class MessageDiscarder extends ChannelDuplexHandler {
 
         private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         private volatile int inCnt;
@@ -663,17 +578,7 @@ public class LocalTransportThreadModelTest {
         private volatile Thread t;
 
         @Override
-        public MessageBuf<Object> newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return Unpooled.messageBuffer();
-        }
-
-        @Override
-        public MessageBuf<Object> newOutboundBuffer(ChannelHandlerContext ctx) throws Exception {
-            return Unpooled.messageBuffer();
-        }
-
-        @Override
-        public void inboundBufferUpdated(ChannelHandlerContext ctx) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
             Thread t = this.t;
             if (t == null) {
                 this.t = Thread.currentThread();
@@ -681,40 +586,24 @@ public class LocalTransportThreadModelTest {
                 Assert.assertSame(t, Thread.currentThread());
             }
 
-            MessageBuf<Object> in = ctx.inboundMessageBuffer();
-            for (;;) {
-                Object msg = in.poll();
-                if (msg == null) {
-                    break;
-                }
+            for (int i = 0; i < msgs.size(); i ++) {
+                int actual = (Integer) msgs.get(i);
                 int expected = inCnt ++;
-                Assert.assertEquals(expected, msg);
+                Assert.assertEquals(expected, actual);
             }
         }
 
         @Override
-        public void read(ChannelHandlerContext ctx) {
-            ctx.read();
-        }
-
-        @Override
-        public void flush(ChannelHandlerContext ctx,
-                ChannelPromise future) throws Exception {
+        public void write(
+                ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
             Assert.assertSame(t, Thread.currentThread());
 
-            MessageBuf<Object> in = ctx.outboundMessageBuffer();
-            MessageBuf<Object> out = ctx.nextOutboundMessageBuffer();
-            for (;;) {
-                Object msg = in.poll();
-                if (msg == null) {
-                    break;
-                }
-
+            for (int i = 0; i < msgs.size(); i ++) {
+                int actual = (Integer) msgs.get(i);
                 int expected = outCnt ++;
-                Assert.assertEquals(expected, msg);
-                out.add(msg);
+                Assert.assertEquals(expected, actual);
             }
-            ctx.flush(future);
+            ctx.write(msgs, promise);
         }
 
         @Override

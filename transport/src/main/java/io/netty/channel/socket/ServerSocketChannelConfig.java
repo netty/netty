@@ -17,6 +17,7 @@ package io.netty.channel.socket;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
+import io.netty.channel.RecvByteBufAllocator;
 
 import java.net.ServerSocket;
 import java.net.StandardSocketOptions;
@@ -92,8 +93,8 @@ public interface ServerSocketChannelConfig extends ChannelConfig {
     ServerSocketChannelConfig setAllocator(ByteBufAllocator allocator);
 
     @Override
-    ServerSocketChannelConfig setAutoRead(boolean autoRead);
+    ServerSocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator);
 
     @Override
-    ServerSocketChannelConfig setDefaultHandlerByteBufType(ChannelHandlerByteBufType type);
+    ServerSocketChannelConfig setAutoRead(boolean autoRead);
 }

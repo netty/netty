@@ -15,21 +15,21 @@
  */
 package io.netty.handler.codec.frame;
 
-import static org.junit.Assert.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.embedded.EmbeddedByteChannel;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
-
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 public class LengthFieldBasedFrameDecoderTest {
     @Test
     public void testFailSlowTooLongFrameRecovery() throws Exception {
-        EmbeddedByteChannel ch = new EmbeddedByteChannel(
+        EmbeddedChannel ch = new EmbeddedChannel(
                 new LengthFieldBasedFrameDecoder(5, 0, 4, 0, 4, false));
 
         for (int i = 0; i < 2; i ++) {
@@ -49,7 +49,7 @@ public class LengthFieldBasedFrameDecoderTest {
 
     @Test
     public void testFailFastTooLongFrameRecovery() throws Exception {
-        EmbeddedByteChannel ch = new EmbeddedByteChannel(
+        EmbeddedChannel ch = new EmbeddedChannel(
                 new LengthFieldBasedFrameDecoder(5, 0, 4, 0, 4));
 
         for (int i = 0; i < 2; i ++) {

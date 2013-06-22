@@ -27,16 +27,12 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.Delayed;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Abstract base class for {@link EventExecutor}'s that execute all its submitted tasks in a single thread.
@@ -46,9 +42,6 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(SingleThreadEventExecutor.class);
-
-    static final ThreadLocal<SingleThreadEventExecutor> CURRENT_EVENT_LOOP =
-            new ThreadLocal<SingleThreadEventExecutor>();
 
     private static final int ST_NOT_STARTED = 1;
     private static final int ST_STARTED = 2;
@@ -62,13 +55,6 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
             // Do nothing.
         }
     };
-
-    /**
-     * Return the {@link SingleThreadEventExecutor} which belongs the current {@link Thread}.
-     */
-    public static SingleThreadEventExecutor currentEventLoop() {
-        return CURRENT_EVENT_LOOP.get();
-    }
 
     private final EventExecutorGroup parent;
     private final Queue<Runnable> taskQueue;
@@ -85,6 +71,8 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
     private volatile long gracefulShutdownQuietPeriod;
     private volatile long gracefulShutdownTimeout;
     private long gracefulShutdownStartTime;
+
+    private final Promise<?> terminationFuture = new DefaultPromise<Void>(GlobalEventExecutor.INSTANCE);
 
     /**
      * Create a new instance
@@ -107,7 +95,6 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         thread = threadFactory.newThread(new Runnable() {
             @Override
             public void run() {
-                CURRENT_EVENT_LOOP.set(SingleThreadEventExecutor.this);
                 boolean success = false;
                 updateLastExecutionTime();
                 try {
@@ -148,6 +135,8 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
                                         "An event executor terminated with " +
                                         "non-empty task queue (" + taskQueue.size() + ')');
                             }
+
+                            terminationFuture.setSuccess(null);
                         }
                     }
                 }
@@ -256,7 +245,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
             }
 
             if (nanoTime == 0L) {
-                nanoTime = nanoTime();
+                nanoTime = ScheduledFutureTask.nanoTime();
             }
 
             if (delayedTask.deadlineNanos() <= nanoTime) {
@@ -339,7 +328,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
 
             task = pollTask();
             if (task == null) {
-                lastExecutionTime = nanoTime();
+                lastExecutionTime = ScheduledFutureTask.nanoTime();
                 return true;
             }
         }
@@ -356,7 +345,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
             return false;
         }
 
-        final long deadline = nanoTime() + timeoutNanos;
+        final long deadline = ScheduledFutureTask.nanoTime() + timeoutNanos;
         long runTasks = 0;
         long lastExecutionTime;
         for (;;) {
@@ -371,7 +360,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
             // Check timeout every 64 tasks because nanoTime() is relatively expensive.
             // XXX: Hard-coded value - will make it configurable if it is really a problem.
             if ((runTasks & 0x3F) == 0) {
-                lastExecutionTime = nanoTime();
+                lastExecutionTime = ScheduledFutureTask.nanoTime();
                 if (lastExecutionTime >= deadline) {
                     break;
                 }
@@ -379,7 +368,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
 
             task = pollTask();
             if (task == null) {
-                lastExecutionTime = nanoTime();
+                lastExecutionTime = ScheduledFutureTask.nanoTime();
                 break;
             }
         }
@@ -408,7 +397,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
      * checks.
      */
     protected void updateLastExecutionTime() {
-        lastExecutionTime = nanoTime();
+        lastExecutionTime = ScheduledFutureTask.nanoTime();
     }
 
     /**
@@ -427,11 +416,6 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         if (!inEventLoop || state == ST_SHUTTING_DOWN) {
             taskQueue.add(WAKEUP_TASK);
         }
-    }
-
-    @Override
-    public boolean inEventLoop() {
-        return inEventLoop(Thread.currentThread());
     }
 
     @Override
@@ -489,14 +473,14 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         }
 
         if (ran) {
-            lastExecutionTime = nanoTime();
+            lastExecutionTime = ScheduledFutureTask.nanoTime();
         }
 
         return ran;
     }
 
     @Override
-    public void shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+    public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
         if (quietPeriod < 0) {
             throw new IllegalArgumentException("quietPeriod: " + quietPeriod + " (expected >= 0)");
         }
@@ -509,7 +493,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         }
 
         if (isShuttingDown()) {
-            return;
+            return terminationFuture();
         }
 
         boolean inEventLoop = inEventLoop();
@@ -517,7 +501,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
 
         synchronized (stateLock) {
             if (isShuttingDown()) {
-                return;
+                return terminationFuture();
             }
 
             gracefulShutdownQuietPeriod = unit.toNanos(quietPeriod);
@@ -544,6 +528,13 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         if (wakeup) {
             wakeup(inEventLoop);
         }
+
+        return terminationFuture();
+    }
+
+    @Override
+    public Future<?> terminationFuture() {
+        return terminationFuture;
     }
 
     @Override
@@ -615,7 +606,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         cancelDelayedTasks();
 
         if (gracefulShutdownStartTime == 0) {
-            gracefulShutdownStartTime = nanoTime();
+            gracefulShutdownStartTime = ScheduledFutureTask.nanoTime();
         }
 
         if (runAllTasks() || runShutdownHooks()) {
@@ -629,7 +620,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
             return false;
         }
 
-        final long nanoTime = nanoTime();
+        final long nanoTime = ScheduledFutureTask.nanoTime();
 
         if (isShutdown() || nanoTime - gracefulShutdownStartTime > gracefulShutdownTimeout) {
             return true;
@@ -714,15 +705,6 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
     // ScheduledExecutorService implementation
 
     private static final long SCHEDULE_PURGE_INTERVAL = TimeUnit.SECONDS.toNanos(1);
-    private static final long START_TIME = System.nanoTime();
-    private static final AtomicLong nextTaskId = new AtomicLong();
-    private static long nanoTime() {
-        return System.nanoTime() - START_TIME;
-    }
-
-    private static long deadlineNanos(long delay) {
-        return nanoTime() + delay;
-    }
 
     @Override
     public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
@@ -736,7 +718,8 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
             throw new IllegalArgumentException(
                     String.format("delay: %d (expected: >= 0)", delay));
         }
-        return schedule(new ScheduledFutureTask<Void>(this, command, null, deadlineNanos(unit.toNanos(delay))));
+        return schedule(new ScheduledFutureTask<Void>(
+                this, delayedTaskQueue, command, null, ScheduledFutureTask.deadlineNanos(unit.toNanos(delay))));
     }
 
     @Override
@@ -751,7 +734,8 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
             throw new IllegalArgumentException(
                     String.format("delay: %d (expected: >= 0)", delay));
         }
-        return schedule(new ScheduledFutureTask<V>(this, callable, deadlineNanos(unit.toNanos(delay))));
+        return schedule(new ScheduledFutureTask<V>(
+                this, delayedTaskQueue, callable, ScheduledFutureTask.deadlineNanos(unit.toNanos(delay))));
     }
 
     @Override
@@ -772,8 +756,8 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         }
 
         return schedule(new ScheduledFutureTask<Void>(
-                this, Executors.<Void>callable(command, null),
-                deadlineNanos(unit.toNanos(initialDelay)), unit.toNanos(period)));
+                this, delayedTaskQueue, Executors.<Void>callable(command, null),
+                ScheduledFutureTask.deadlineNanos(unit.toNanos(initialDelay)), unit.toNanos(period)));
     }
 
     @Override
@@ -794,8 +778,8 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
         }
 
         return schedule(new ScheduledFutureTask<Void>(
-                this, Executors.<Void>callable(command, null),
-                deadlineNanos(unit.toNanos(initialDelay)), -unit.toNanos(delay)));
+                this, delayedTaskQueue, Executors.<Void>callable(command, null),
+                ScheduledFutureTask.deadlineNanos(unit.toNanos(initialDelay)), -unit.toNanos(delay)));
     }
 
     private <V> ScheduledFuture<V> schedule(final ScheduledFutureTask<V> task) {
@@ -822,149 +806,10 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
             if (state == ST_NOT_STARTED) {
                 state = ST_STARTED;
                 delayedTaskQueue.add(new ScheduledFutureTask<Void>(
-                        this, Executors.<Void>callable(new PurgeTask(), null),
-                        deadlineNanos(SCHEDULE_PURGE_INTERVAL), -SCHEDULE_PURGE_INTERVAL));
+                        this, delayedTaskQueue, Executors.<Void>callable(new PurgeTask(), null),
+                        ScheduledFutureTask.deadlineNanos(SCHEDULE_PURGE_INTERVAL), -SCHEDULE_PURGE_INTERVAL));
                 thread.start();
             }
-        }
-    }
-
-    private static final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFuture<V> {
-
-        @SuppressWarnings("rawtypes")
-        private static final AtomicIntegerFieldUpdater<ScheduledFutureTask> uncancellableUpdater =
-                AtomicIntegerFieldUpdater.newUpdater(ScheduledFutureTask.class, "uncancellable");
-
-        private final long id = nextTaskId.getAndIncrement();
-        private long deadlineNanos;
-        /* 0 - no repeat, >0 - repeat at fixed rate, <0 - repeat with fixed delay */
-        private final long periodNanos;
-        @SuppressWarnings("UnusedDeclaration")
-        private volatile int uncancellable;
-
-        ScheduledFutureTask(SingleThreadEventExecutor executor, Runnable runnable, V result, long nanoTime) {
-            this(executor, Executors.callable(runnable, result), nanoTime);
-        }
-
-        ScheduledFutureTask(SingleThreadEventExecutor executor, Callable<V> callable, long nanoTime, long period) {
-            super(executor, callable);
-            if (period == 0) {
-                throw new IllegalArgumentException("period: 0 (expected: != 0)");
-            }
-            deadlineNanos = nanoTime;
-            periodNanos = period;
-        }
-
-        ScheduledFutureTask(SingleThreadEventExecutor executor, Callable<V> callable, long nanoTime) {
-            super(executor, callable);
-            deadlineNanos = nanoTime;
-            periodNanos = 0;
-        }
-
-        @Override
-        protected SingleThreadEventExecutor executor() {
-            return (SingleThreadEventExecutor) super.executor();
-        }
-
-        public long deadlineNanos() {
-            return deadlineNanos;
-        }
-
-        public long delayNanos() {
-            return Math.max(0, deadlineNanos() - nanoTime());
-        }
-
-        public long delayNanos(long currentTimeNanos) {
-            return Math.max(0, deadlineNanos() - (currentTimeNanos - START_TIME));
-        }
-
-        @Override
-        public long getDelay(TimeUnit unit) {
-            return unit.convert(delayNanos(), TimeUnit.NANOSECONDS);
-        }
-
-        @Override
-        public int compareTo(Delayed o) {
-            if (this == o) {
-                return 0;
-            }
-
-            ScheduledFutureTask<?> that = (ScheduledFutureTask<?>) o;
-            long d = deadlineNanos() - that.deadlineNanos();
-            if (d < 0) {
-                return -1;
-            } else if (d > 0) {
-                return 1;
-            } else if (id < that.id) {
-                return -1;
-            } else if (id == that.id) {
-                throw new Error();
-            } else {
-                return 1;
-            }
-        }
-
-        @Override
-        public int hashCode() {
-            return super.hashCode();
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            return super.equals(obj);
-        }
-
-        @Override
-        public void run() {
-            assert executor().inEventLoop();
-            try {
-                if (periodNanos == 0) {
-                    if (setUncancellable()) {
-                        V result = task.call();
-                        setSuccessInternal(result);
-                    }
-                } else {
-                    // check if is done as it may was cancelled
-                    if (!isDone()) {
-                        task.call();
-                        if (!executor().isShutdown()) {
-                            long p = periodNanos;
-                            if (p > 0) {
-                                deadlineNanos += p;
-                            } else {
-                                deadlineNanos = nanoTime() - p;
-                            }
-                            if (!isDone()) {
-                                executor().delayedTaskQueue.add(this);
-                            }
-                        }
-                    }
-                }
-            } catch (Throwable cause) {
-                setFailureInternal(cause);
-            }
-        }
-
-        @Override
-        public boolean isCancelled() {
-            if (cause() instanceof CancellationException) {
-                return true;
-            }
-            return false;
-        }
-
-        @Override
-        public  boolean cancel(boolean mayInterruptIfRunning) {
-            if (!isDone()) {
-                if (setUncancellable()) {
-                    return tryFailureInternal(new CancellationException());
-                }
-            }
-            return false;
-        }
-
-        private boolean setUncancellable() {
-            return uncancellableUpdater.compareAndSet(this, 0, 1);
         }
     }
 

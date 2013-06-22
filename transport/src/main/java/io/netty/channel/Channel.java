@@ -15,8 +15,6 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.ServerSocketChannel;
@@ -114,22 +112,6 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
     ChannelMetadata metadata();
 
     /**
-     * Return the last {@link ByteBuf} of the {@link ChannelPipeline} which belongs to this {@link Channel}.
-     *
-     * This method may throw an {@link NoSuchBufferException} if you try to access this buffer and the
-     * {@link ChannelPipeline} does not contain any {@link ByteBuf}.
-     */
-    ByteBuf outboundByteBuffer();
-
-    /**
-     * Return the last {@link MessageBuf} of the {@link ChannelPipeline} which belongs to this {@link Channel}.
-     *
-     * This method may throw an {@link NoSuchBufferException} if you try to access this buffer and the
-     * {@link ChannelPipeline} does not contain any {@link MessageBuf}.
-     */
-    <T> MessageBuf<T> outboundMessageBuffer();
-
-    /**
      * Returns the local address where this channel is bound to.  The returned
      * {@link SocketAddress} is supposed to be down-cast into more concrete
      * type such as {@link InetSocketAddress} to retrieve the detailed
@@ -150,7 +132,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
      *         {@code null} if this channel is not connected.
      *         If this channel is not connected but it can receive messages
      *         from arbitrary remote addresses (e.g. {@link DatagramChannel},
-     *         use {@link DatagramPacket#remoteAddress()} to determine
+     *         use {@link DatagramPacket#recipient()} to determine
      *         the origination of the received message as this method will
      *         return {@code null}.
      */
@@ -163,25 +145,31 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
     ChannelFuture closeFuture();
 
     /**
-     * <strong>Caution</strong> for transport implementations use only!
+     * Returns {@code true} if and only if the I/O thread will perform the
+     * requested write operation immediately.  Any write requests made when
+     * this method returns {@code false} are queued until the I/O thread is
+     * ready to process the queued write requests.
+     */
+    boolean isWritable();
+
+    /**
+     * Returns an <em>internal-use-only</em> object that provides unsafe operations.
      */
     Unsafe unsafe();
 
     /**
-     * <strong>Unsafe</strong> operations that should <strong>never</strong> be called
-     * from user-code. These methods are only provided to implement the actual transport.
+     * <em>Unsafe</em> operations that should <em>never</em> be called from user-code. These methods
+     * are only provided to implement the actual transport, and must be invoked from an I/O thread except for the
+     * following methods:
+     * <ul>
+     *   <li>{@link #localAddress()}</li>
+     *   <li>{@link #remoteAddress()}</li>
+     *   <li>{@link #closeForcibly()}</li>
+     *   <li>{@link #register(EventLoop, ChannelPromise)}</li>
+     *   <li>{@link #voidPromise()}</li>
+     * </ul>
      */
     interface Unsafe {
-        /**
-         * Return the internal {@link ChannelHandlerContext} that is placed before all user handlers.
-         */
-        ChannelHandlerContext headContext();
-
-        /**
-         * Return a {@link VoidChannelPromise}. This method always return the same instance.
-         */
-        ChannelPromise voidFuture();
-
         /**
          * Return the {@link SocketAddress} to which is bound local or
          * {@code null} if none.
@@ -246,10 +234,9 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
         void beginRead();
 
         /**
-         * Flush out all data that was buffered in the buffer of the {@link #headContext()} and was not
-         * flushed out yet. After that is done the {@link ChannelFuture} will get notified
+         * Schedules a write operation.
          */
-        void flush(ChannelPromise promise);
+        void write(MessageList<?> msgs, ChannelPromise promise);
 
         /**
          * Flush out all data now.
@@ -257,10 +244,10 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
         void flushNow();
 
         /**
-         * Send a {@link FileRegion} to the remote peer and notify the {@link ChannelPromise} once it completes
-         * or an error was detected. Once the {@link FileRegion} was transfered or an error was thrown it will
-         * automaticly call {@link FileRegion#release()}.
+         * Return a special ChannelPromise which can be reused and passed to the operations in {@link Unsafe}.
+         * It will never be notified of a success or error and so is only a placeholder for operations
+         * that take a {@link ChannelPromise} as argument but for which you not want to get notified.
          */
-        void sendFile(FileRegion region, ChannelPromise promise);
+        ChannelPromise voidPromise();
     }
 }

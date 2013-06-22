@@ -15,14 +15,12 @@
  */
 package io.netty.handler.codec.spdy;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelHandlerUtil;
-import io.netty.channel.ChannelInboundByteHandler;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
-import io.netty.channel.ChannelInboundMessageHandler;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.MessageList;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
@@ -31,11 +29,11 @@ import io.netty.handler.ssl.SslHandler;
 import javax.net.ssl.SSLEngine;
 
 /**
- * {@link ChannelInboundByteHandler} which is responsible to setup the {@link ChannelPipeline} either for
+ * {@link ChannelInboundHandler} which is responsible to setup the {@link ChannelPipeline} either for
  * HTTP or SPDY. This offers an easy way for users to support both at the same time while not care to
  * much about the low-level details.
  */
-public abstract class SpdyOrHttpChooser extends ChannelInboundByteHandlerAdapter {
+public abstract class SpdyOrHttpChooser extends ChannelInboundHandlerAdapter {
 
     // TODO: Replace with generic NPN handler
 
@@ -63,25 +61,13 @@ public abstract class SpdyOrHttpChooser extends ChannelInboundByteHandlerAdapter
     protected abstract SelectedProtocol getProtocol(SSLEngine engine);
 
     @Override
-    public ByteBuf newInboundBuffer(ChannelHandlerContext ctx) throws Exception {
-        return ChannelHandlerUtil.allocate(ctx);
-    }
-
-    @Override
-    public void discardInboundReadBytes(ChannelHandlerContext ctx) throws Exception {
-        // No need to discard anything because this handler will be replaced with something else very quickly.
-    }
-
-    @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> in) throws Exception {
         if (initPipeline(ctx)) {
-            ctx.nextInboundByteBuffer().writeBytes(in);
-
             // When we reached here we can remove this handler as its now clear what protocol we want to use
             // from this point on.
             ctx.pipeline().remove(this);
 
-            ctx.fireInboundBufferUpdated();
+            ctx.fireMessageReceived(in);
         }
     }
 
@@ -140,21 +126,21 @@ public abstract class SpdyOrHttpChooser extends ChannelInboundByteHandlerAdapter
     }
 
     /**
-     * Create the {@link ChannelInboundMessageHandler} that is responsible for handling the http requests
+     * Create the {@link ChannelInboundHandler} that is responsible for handling the http requests
      * when the {@link SelectedProtocol} was {@link SelectedProtocol#HTTP_1_0} or
      * {@link SelectedProtocol#HTTP_1_1}
      */
-    protected abstract ChannelInboundMessageHandler<?> createHttpRequestHandlerForHttp();
+    protected abstract ChannelInboundHandler createHttpRequestHandlerForHttp();
 
     /**
-     * Create the {@link ChannelInboundMessageHandler} that is responsible for handling the http responses
+     * Create the {@link ChannelInboundHandler} that is responsible for handling the http responses
      * when the {@link SelectedProtocol} was {@link SelectedProtocol#SPDY_2} or
      * {@link SelectedProtocol#SPDY_3}.
      *
      * Bye default this getMethod will just delecate to {@link #createHttpRequestHandlerForHttp()}, but
      * sub-classes may override this to change the behaviour.
      */
-    protected ChannelInboundMessageHandler<?> createHttpRequestHandlerForSpdy() {
+    protected ChannelInboundHandler createHttpRequestHandlerForSpdy() {
         return createHttpRequestHandlerForHttp();
     }
 }

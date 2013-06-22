@@ -20,9 +20,10 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
@@ -109,7 +110,8 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
         for (int i = FIRST_MESSAGE_SIZE; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
-            cc.write(Unpooled.wrappedBuffer(data, i, length));
+            ChannelFuture future = cc.write(Unpooled.wrappedBuffer(data, i, length));
+            future.sync();
             i += length;
         }
 
@@ -161,7 +163,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
     }
 
-    private class EchoHandler extends ChannelInboundByteHandlerAdapter {
+    private class EchoHandler extends SimpleChannelInboundHandler<ByteBuf> {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
@@ -178,9 +180,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void inboundBufferUpdated(
-                ChannelHandlerContext ctx, ByteBuf in)
-                throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
 

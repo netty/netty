@@ -54,7 +54,7 @@ public final class ServerCookieEncoder {
         if (cookie.getMaxAge() != Long.MIN_VALUE) {
             if (cookie.getVersion() == 0) {
                 addUnquoted(buf, CookieHeaderNames.EXPIRES,
-                        new HttpHeaderDateFormat().format(
+                        HttpHeaderDateFormat.get().format(
                                 new Date(System.currentTimeMillis() +
                                          cookie.getMaxAge() * 1000L)));
             } else {

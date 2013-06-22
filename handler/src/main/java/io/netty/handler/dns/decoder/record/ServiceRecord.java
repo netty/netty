@@ -22,93 +22,93 @@ package io.netty.handler.dns.decoder.record;
  */
 public class ServiceRecord {
 
-    private final int priority;
-    private final int weight;
-    private final int port;
-    private final String name;
-    private final String protocol;
-    private final String service;
-    private final String target;
+	private final int priority;
+	private final int weight;
+	private final int port;
+	private final String name;
+	private final String protocol;
+	private final String service;
+	private final String target;
 
-    /**
-     * Constructs an SRV (service) record.
-     *
-     * @param fullPath
-     *            the name first read in the SRV record which contains the
-     *            service, the protocol, and the name of the server being
-     *            queried. The format is {@code _service._protocol.hostname}, or
-     *            for example {@code _http._tcp.example.com}
-     * @param priority
-     *            relative priority of this service, range 0-65535 (lower is
-     *            higher priority)
-     * @param weight
-     *            determines how often multiple services will be used in the
-     *            event they have the same priority (greater weight means
-     *            service is used more often)
-     * @param port
-     *            the port for the service
-     * @param target
-     *            the name of the host for the service
-     */
-    public ServiceRecord(String fullPath, int priority, int weight, int port,
-            String target) {
-        String[] parts = fullPath.split("\\.", 3);
-        service = parts[0];
-        protocol = parts[1];
-        name = parts[2];
-        this.priority = priority;
-        this.weight = weight;
-        this.port = port;
-        this.target = target;
-    }
+	/**
+	 * Constructs an SRV (service) record.
+	 * 
+	 * @param fullPath
+	 *            the name first read in the SRV record which contains the
+	 *            service, the protocol, and the name of the server being
+	 *            queried. The format is {@code _service._protocol.hostname}, or
+	 *            for example {@code _http._tcp.example.com}
+	 * @param priority
+	 *            relative priority of this service, range 0-65535 (lower is
+	 *            higher priority)
+	 * @param weight
+	 *            determines how often multiple services will be used in the
+	 *            event they have the same priority (greater weight means
+	 *            service is used more often)
+	 * @param port
+	 *            the port for the service
+	 * @param target
+	 *            the name of the host for the service
+	 */
+	public ServiceRecord(String fullPath, int priority, int weight, int port,
+			String target) {
+		String[] parts = fullPath.split("\\.", 3);
+		service = parts[0];
+		protocol = parts[1];
+		name = parts[2];
+		this.priority = priority;
+		this.weight = weight;
+		this.port = port;
+		this.target = target;
+	}
 
-    /**
-     * Returns the priority for this service record.
-     */
-    public int priority() {
-        return priority;
-    }
+	/**
+	 * Returns the priority for this service record.
+	 */
+	public int priority() {
+		return priority;
+	}
 
-    /**
-     * Returns the weight of this service record.
-     */
-    public int weight() {
-        return weight;
-    }
+	/**
+	 * Returns the weight of this service record.
+	 */
+	public int weight() {
+		return weight;
+	}
 
-    /**
-     * Returns the port the service is running on.
-     */
-    public int port() {
-        return port;
-    }
+	/**
+	 * Returns the port the service is running on.
+	 */
+	public int port() {
+		return port;
+	}
 
-    /**
-     * Returns the name for the server being queried.
-     */
-    public String name() {
-        return name;
-    }
+	/**
+	 * Returns the name for the server being queried.
+	 */
+	public String name() {
+		return name;
+	}
 
-    /**
-     * Returns the protocol for the service being queried (i.e. "_tcp").
-     */
-    public String protocol() {
-        return protocol;
-    }
+	/**
+	 * Returns the protocol for the service being queried (i.e. "_tcp").
+	 */
+	public String protocol() {
+		return protocol;
+	}
 
-    /**
-     * Returns the service's name (i.e. "_http").
-     */
-    public String service() {
-        return service;
-    }
+	/**
+	 * Returns the service's name (i.e. "_http").
+	 */
+	public String service() {
+		return service;
+	}
 
-    /**
-     * Returns the name of the host for the service.
-     */
-    public String target() {
-        return target;
-    }
+	/**
+	 * Returns the name of the host for the service.
+	 */
+	public String target() {
+		return target;
+	}
 
 }

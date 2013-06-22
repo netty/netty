@@ -15,10 +15,10 @@
  */
 package io.netty.example.echo;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundByteHandlerAdapter;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MessageList;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -27,16 +27,14 @@ import java.util.logging.Logger;
  * Handler implementation for the echo server.
  */
 @Sharable
-public class EchoServerHandler extends ChannelInboundByteHandlerAdapter {
+public class EchoServerHandler extends ChannelInboundHandlerAdapter {
 
     private static final Logger logger = Logger.getLogger(
             EchoServerHandler.class.getName());
 
     @Override
-    public void inboundBufferUpdated(ChannelHandlerContext ctx, ByteBuf in) {
-        ByteBuf out = ctx.nextOutboundByteBuffer();
-        out.writeBytes(in);
-        ctx.flush();
+    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        ctx.write(msgs);
     }
 
     @Override

@@ -45,191 +45,191 @@ import java.util.concurrent.atomic.AtomicInteger;
  * IPv6 address is sufficient). If a {@link DnsCallback} fails, null will be
  * returned. For obtaining single values, as opposed to a {@link List},
  * {@link SingleResultCallback} is used.
- *
+ * 
  * @param <T>
  *            a {@link List} of all answers for a specified type (i.e. if type
  *            is A, the {@link List} would be for {@link ByteBuf}s)
  */
 public class DnsCallback<T extends List<?>> implements Callable<T> {
 
-    private static final List<Object> DEFAULT = new ArrayList<Object>();
-    private static final Map<Integer, DnsCallback<?>> callbacks = new HashMap<Integer, DnsCallback<?>>();
+	private static final List<Object> DEFAULT = new ArrayList<Object>();
+	private static final Map<Integer, DnsCallback<?>> callbacks = new HashMap<Integer, DnsCallback<?>>();
 
-    /**
-     * Called by the {@link InboundDnsMessageHandler} when a {@link DnsResponse}
-     * is received from a DNS server. This method checks all existing
-     * {@link DnsCallback}s for a callback with an id matching the
-     * {@link DnsResponse}s id and sets the value for the callback as one or
-     * more of the response's resource records (if the response contains valid
-     * resource records).
-     *
-     * @param response
-     *            the {@link DnsResponse} received from the DNS server when
-     *            queried
-     */
-    static void finish(DnsResponse response) {
-        DnsCallback<?> callback = callbacks.get(response.getHeader().getId());
-        if (callback != null) {
-            List<Resource> resources = new ArrayList<Resource>();
-            resources.addAll(response.getAnswers());
-            resources.addAll(response.getAuthorityResources());
-            resources.addAll(response.getAdditionalResources());
-            if (response.getHeader().getResponseCode() != 0) {
-                if (callback.failsIncremented() >= callback.queries.length) {
-                    callbacks.remove(response.getHeader().getId());
-                    callback.complete();
-                    if (resources.size() > 0) {
-                        for (int i = 0; i < resources.size(); i++) {
-                            resources.get(i).release();
-                        }
-                    }
-                    return;
-                }
-            }
-            for (int i = 0; i < resources.size(); i++) {
-                Resource resource = resources.get(i);
-                for (int n = 0; n < callback.queries.length; n++) {
-                    Object result = RecordDecoderFactory.decode(
-                            resource.type(), response, resource);
-                    if (result != null) {
-                        ResourceCache.submitRecord(resource.name(),
-                                resource.type(), resource.timeToLive(), result);
-                        if (callback.queries[n].getQuestions().get(0).type() == resource
-                                .type()) {
-                            callbacks.remove(response.getHeader().getId());
-                            callback.flagValid(resource.type());
-                        }
-                    }
-                }
-            }
-            callback.complete();
-        }
-    }
+	/**
+	 * Called by the {@link InboundDnsMessageHandler} when a {@link DnsResponse}
+	 * is received from a DNS server. This method checks all existing
+	 * {@link DnsCallback}s for a callback with an id matching the
+	 * {@link DnsResponse}s id and sets the value for the callback as one or
+	 * more of the response's resource records (if the response contains valid
+	 * resource records).
+	 * 
+	 * @param response
+	 *            the {@link DnsResponse} received from the DNS server when
+	 *            queried
+	 */
+	static void finish(DnsResponse response) {
+		DnsCallback<?> callback = callbacks.get(response.getHeader().getId());
+		if (callback != null) {
+			List<Resource> resources = new ArrayList<Resource>();
+			resources.addAll(response.getAnswers());
+			resources.addAll(response.getAuthorityResources());
+			resources.addAll(response.getAdditionalResources());
+			if (response.getHeader().getResponseCode() != 0) {
+				if (callback.failsIncremented() >= callback.queries.length) {
+					callbacks.remove(response.getHeader().getId());
+					callback.complete();
+					if (resources.size() > 0) {
+						for (int i = 0; i < resources.size(); i++) {
+							resources.get(i).release();
+						}
+					}
+					return;
+				}
+			}
+			for (int i = 0; i < resources.size(); i++) {
+				Resource resource = resources.get(i);
+				for (int n = 0; n < callback.queries.length; n++) {
+					Object result = RecordDecoderFactory.decode(
+							resource.type(), response, resource);
+					if (result != null) {
+						ResourceCache.submitRecord(resource.name(),
+								resource.type(), resource.timeToLive(), result);
+						if (callback.queries[n].getQuestions().get(0).type() == resource
+								.type()) {
+							callbacks.remove(response.getHeader().getId());
+							callback.flagValid(resource.type());
+						}
+					}
+				}
+			}
+			callback.complete();
+		}
+	}
 
-    private final AtomicInteger fails = new AtomicInteger();
-    private final DnsQuery[] queries;
+	private final AtomicInteger fails = new AtomicInteger();
+	private final DnsQuery[] queries;
 
-    @SuppressWarnings("unchecked")
-    private T result = (T) DEFAULT;
+	@SuppressWarnings("unchecked")
+	private T result = (T) DEFAULT;
 
-    private int serverIndex;
-    private int validType = -1;
+	private int serverIndex;
+	private int validType = -1;
 
-    /**
-     * Constructs a {@link DnsCallback} with a specified DNS server index, and
-     * an array of (or a single) query.
-     *
-     * @param serverIndex
-     *            the index at which the DNS server address is located in
-     *            {@link DnsExchangeFactory#dnsServers}, or -1 if it is not in
-     *            the {@link List}
-     * @param queries
-     *            the {@link DnsQuery}(s) this callback is listening to for
-     *            responses
-     */
-    DnsCallback(int serverIndex, DnsQuery... queries) {
-        if (queries == null) {
-            throw new NullPointerException("Argument 'queries' cannot be null.");
-        }
-        if (queries.length == 0) {
-            throw new IllegalArgumentException(
-                    "Argument 'queries' must contain minimum one valid DnsQuery.");
-        }
-        callbacks.put(queries[0].getHeader().getId(), this);
-        this.queries = queries;
-        this.serverIndex = serverIndex;
-    }
+	/**
+	 * Constructs a {@link DnsCallback} with a specified DNS server index, and
+	 * an array of (or a single) query.
+	 * 
+	 * @param serverIndex
+	 *            the index at which the DNS server address is located in
+	 *            {@link DnsExchangeFactory#dnsServers}, or -1 if it is not in
+	 *            the {@link List}
+	 * @param queries
+	 *            the {@link DnsQuery}(s) this callback is listening to for
+	 *            responses
+	 */
+	DnsCallback(int serverIndex, DnsQuery... queries) {
+		if (queries == null) {
+			throw new NullPointerException("Argument 'queries' cannot be null.");
+		}
+		if (queries.length == 0) {
+			throw new IllegalArgumentException(
+					"Argument 'queries' must contain minimum one valid DnsQuery.");
+		}
+		callbacks.put(queries[0].getHeader().getId(), this);
+		this.queries = queries;
+		this.serverIndex = serverIndex;
+	}
 
-    /**
-     * Called when a {@link DnsResponse} contains an invalid response code (not
-     * 0). Increments a counter, and cancels this callback when the counter
-     * equals the total number of {@link DnsQuery}s (meaning all queries have
-     * failed).
-     */
-    private synchronized int failsIncremented() {
-        return fails.getAndIncrement();
-    }
+	/**
+	 * Called when a {@link DnsResponse} contains an invalid response code (not
+	 * 0). Increments a counter, and cancels this callback when the counter
+	 * equals the total number of {@link DnsQuery}s (meaning all queries have
+	 * failed).
+	 */
+	private synchronized int failsIncremented() {
+		return fails.getAndIncrement();
+	}
 
-    /**
-     * Called when a response has been decided for this callback. Sets the
-     * response and notifies the callback that a response has been set so that
-     * it may stop blocking on {@link #call()}.
-     */
-    @SuppressWarnings("unchecked")
-    private void complete() {
-        if (validType != -1) {
-            Question question = queries[0].getQuestions().get(0);
-            result = (T) ResourceCache.getRecords(question.name(), validType);
-        } else {
-            result = null;
-        }
-        synchronized (this) {
-            notify();
-        }
-    }
+	/**
+	 * Called when a response has been decided for this callback. Sets the
+	 * response and notifies the callback that a response has been set so that
+	 * it may stop blocking on {@link #call()}.
+	 */
+	@SuppressWarnings("unchecked")
+	private void complete() {
+		if (validType != -1) {
+			Question question = queries[0].getQuestions().get(0);
+			result = (T) ResourceCache.getRecords(question.name(), validType);
+		} else {
+			result = null;
+		}
+		synchronized (this) {
+			notify();
+		}
+	}
 
-    /**
-     * Notifies {@link DnsCallback} that a query returned a valid result for the
-     * given resource record type.
-     *
-     * @param validType
-     *            the resource record type that should be returned by this
-     *            {@link DnsCallback} (i.e. AAAA)
-     */
-    private void flagValid(int validType) {
-        this.validType = validType;
-    }
+	/**
+	 * Notifies {@link DnsCallback} that a query returned a valid result for the
+	 * given resource record type.
+	 * 
+	 * @param validType
+	 *            the resource record type that should be returned by this
+	 *            {@link DnsCallback} (i.e. AAAA)
+	 */
+	private void flagValid(int validType) {
+		this.validType = validType;
+	}
 
-    /**
-     * Called in the event that a response from a DNS server times out. This
-     * method uses the next DNS server in line, if one exists, and attempts to
-     * re-send all queries and listen again for a response.
-     */
-    private void nextDns() {
-        if (serverIndex == -1) {
-            result = null;
-        } else {
-            byte[] dnsServerAddress = DnsExchangeFactory
-                    .getDnsServer(++serverIndex);
-            if (dnsServerAddress == null) {
-                result = null;
-            } else {
-                try {
-                    Channel channel = DnsExchangeFactory
-                            .channelForAddress(dnsServerAddress);
-                    for (int i = 0; i < queries.length; i++) {
-                        channel.write(queries[i]).sync();
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    result = null;
-                }
-            }
-        }
-    }
+	/**
+	 * Called in the event that a response from a DNS server times out. This
+	 * method uses the next DNS server in line, if one exists, and attempts to
+	 * re-send all queries and listen again for a response.
+	 */
+	private void nextDns() {
+		if (serverIndex == -1) {
+			result = null;
+		} else {
+			byte[] dnsServerAddress = DnsExchangeFactory
+					.getDnsServer(++serverIndex);
+			if (dnsServerAddress == null) {
+				result = null;
+			} else {
+				try {
+					Channel channel = DnsExchangeFactory
+							.channelForAddress(dnsServerAddress);
+					for (int i = 0; i < queries.length; i++) {
+						channel.write(queries[i]).sync();
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+					result = null;
+				}
+			}
+		}
+	}
 
-    /**
-     * Returns the result for a the queries when it is sent from a DNS server.
-     * Blocks until this response has been sent, or all DNS servers have failed,
-     * in which case null is returned.
-     */
-    @Override
-    public T call() throws InterruptedException {
-        boolean initial = true;
-        boolean finished = result != DEFAULT;
-        while (!finished) {
-            if (!initial) {
-                nextDns();
-            }
-            synchronized (this) {
-                if (result == DEFAULT) {
-                    wait(DnsExchangeFactory.REQUEST_TIMEOUT);
-                }
-                finished = result != DEFAULT;
-            }
-            initial = false;
-        }
-        return result == DEFAULT ? null : result;
-    }
+	/**
+	 * Returns the result for a the queries when it is sent from a DNS server.
+	 * Blocks until this response has been sent, or all DNS servers have failed,
+	 * in which case null is returned.
+	 */
+	@Override
+	public T call() throws InterruptedException {
+		boolean initial = true;
+		boolean finished = result != DEFAULT;
+		while (!finished) {
+			if (!initial) {
+				nextDns();
+			}
+			synchronized (this) {
+				if (result == DEFAULT) {
+					wait(DnsExchangeFactory.REQUEST_TIMEOUT);
+				}
+				finished = result != DEFAULT;
+			}
+			initial = false;
+		}
+		return result == DEFAULT ? null : result;
+	}
 
 }

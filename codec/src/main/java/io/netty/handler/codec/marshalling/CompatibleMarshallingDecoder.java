@@ -16,9 +16,9 @@
 package io.netty.handler.codec.marshalling;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.MessageBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.MessageList;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import org.jboss.marshalling.ByteInput;
@@ -55,7 +55,7 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<Void> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, MessageBuf<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, MessageList<Object> out) throws Exception {
         if (discardingTooLongFrame) {
             buffer.skipBytes(actualReadableBytes());
             checkpoint();
@@ -83,7 +83,7 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<Void> {
     }
 
     @Override
-    protected void decodeLast(ChannelHandlerContext ctx, ByteBuf buffer, MessageBuf<Object> out) throws Exception {
+    protected void decodeLast(ChannelHandlerContext ctx, ByteBuf buffer, MessageList<Object> out) throws Exception {
         switch (buffer.readableBytes()) {
         case 0:
             return;

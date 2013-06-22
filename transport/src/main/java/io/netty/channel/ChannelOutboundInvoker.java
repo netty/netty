@@ -29,8 +29,8 @@ interface ChannelOutboundInvoker {
      * completes, either because the operation was successful or because of an error.
      * <p>
      * This will result in having the
-     * {@link ChannelOperationHandler#bind(ChannelHandlerContext, SocketAddress, ChannelPromise)} method
-     * called of the next {@link ChannelOperationHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link ChannelOutboundHandler#bind(ChannelHandlerContext, SocketAddress, ChannelPromise)} method
+     * called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture bind(SocketAddress localAddress);
@@ -44,8 +44,8 @@ interface ChannelOutboundInvoker {
      * will be used.
      * <p>
      * This will result in having the
-     * {@link ChannelOperationHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
-     * method called of the next {@link ChannelOperationHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link ChannelOutboundHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
+     * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture connect(SocketAddress remoteAddress);
@@ -56,8 +56,8 @@ interface ChannelOutboundInvoker {
      * an error.
      * <p>
      * This will result in having the
-     * {@link ChannelOperationHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
-     * method called of the next {@link ChannelOperationHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link ChannelOutboundHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
+     * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress);
@@ -67,8 +67,8 @@ interface ChannelOutboundInvoker {
      * either because the operation was successful or because of an error.
      * <p>
      * This will result in having the
-     * {@link ChannelOperationHandler#disconnect(ChannelHandlerContext, ChannelPromise)}
-     * method called of the next {@link ChannelOperationHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link ChannelOutboundHandler#disconnect(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture disconnect();
@@ -81,8 +81,8 @@ interface ChannelOutboundInvoker {
      * After it is closed it is not possible to reuse it again.
      * <p>
      * This will result in having the
-     * {@link ChannelOperationHandler#close(ChannelHandlerContext, ChannelPromise)}
-     * method called of the next {@link ChannelOperationHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link ChannelOutboundHandler#close(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture close();
@@ -93,60 +93,18 @@ interface ChannelOutboundInvoker {
      * an error.
      * <p>
      * This will result in having the
-     * {@link ChannelOperationHandler#deregister(ChannelHandlerContext, ChannelPromise)}
-     * method called of the next {@link ChannelOperationHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link ChannelOutboundHandler#deregister(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture deregister();
 
     /**
-     * Request to flush all pending data which belongs to this ChannelOutboundInvoker and notify the
-     * {@link ChannelFuture} once the operation completes, either because the operation was successful or because of
-     * an error.
-     * <p>
-     * Be aware that the flush could be only partially successful. In such cases the {@link ChannelFuture} will be
-     * failed with an {@link IncompleteFlushException}. So if you are interested to know if it was partial successful
-     * you need to check if the returned {@link ChannelFuture#cause()} returns an instance of
-     * {@link IncompleteFlushException}. In such cases you may want to call {@link #flush(ChannelPromise)} or
-     * {@link #flush()} to flush the rest of the data or just close the connection via {@link #close(ChannelPromise)} or
-     * {@link #close()}  if it is not possible to recover.
-     * <p>
-     * This will result in having the
-     * {@link ChannelOperationHandler#flush(ChannelHandlerContext, ChannelPromise)}
-     * method called of the next {@link ChannelOperationHandler} contained in the  {@link ChannelPipeline} of the
-     * {@link Channel}.
-     */
-    ChannelFuture flush();
-
-    /**
      * Request to write a message via this ChannelOutboundInvoker and notify the {@link ChannelFuture}
      * once the operation completes, either because the operation was successful or because of an error.
-     *
-     * If you want to write a {@link FileRegion} use {@link #sendFile(FileRegion)}.
-     * <p>
-     * Be aware that the write could be only partially successful as the message may need to get encoded before write it
-     * to the remote peer. In such cases the {@link ChannelFuture} will be failed with a
-     * {@link IncompleteFlushException}. In such cases you may want to call {@link #flush(ChannelPromise)} or
-     * {@link #flush()} to flush the rest of the data or just close the connection via {@link #close(ChannelPromise)}
-     * or {@link #close()} if it is not possible to recover.
-     * <p>
-     * This will result in having the message added to the outbound buffer of the next {@link ChannelOutboundHandler}
-     * and the {@link ChannelOperationHandler#flush(ChannelHandlerContext, ChannelPromise)}
-     * method called of the next {@link ChannelOperationHandler} contained in the  {@link ChannelPipeline} of the
-     * {@link Channel}.
      */
-    ChannelFuture write(Object message);
-
-    /**
-     * Request to send a {@link FileRegion} via this ChannelOutboundInvoker and notify the {@link ChannelFuture}
-     * once the operation completes, either because the operation was successful or because of an error.
-     * <p>
-     * This will result in having the
-     * {@link ChannelOperationHandler#sendFile(ChannelHandlerContext, FileRegion, ChannelPromise)}
-     * method called of the next {@link ChannelOperationHandler} contained in the  {@link ChannelPipeline} of the
-     * {@link Channel}.
-     */
-    ChannelFuture sendFile(FileRegion region);
+    ChannelFuture write(Object msg);
+    ChannelFuture write(MessageList<?> msgs);
 
     /**
      * Request to bind to the given {@link SocketAddress} and notify the {@link ChannelFuture} once the operation
@@ -155,8 +113,8 @@ interface ChannelOutboundInvoker {
      * The given {@link ChannelPromise} will be notified.
      * <p>
      * This will result in having the
-     * {@link ChannelOperationHandler#bind(ChannelHandlerContext, SocketAddress, ChannelPromise)} method
-     * called of the next {@link ChannelOperationHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link ChannelOutboundHandler#bind(ChannelHandlerContext, SocketAddress, ChannelPromise)} method
+     * called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise);
@@ -173,8 +131,8 @@ interface ChannelOutboundInvoker {
      * will be used.
      * <p>
      * This will result in having the
-     * {@link ChannelOperationHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
-     * method called of the next {@link ChannelOperationHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link ChannelOutboundHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
+     * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise);
@@ -187,8 +145,8 @@ interface ChannelOutboundInvoker {
      * The given {@link ChannelPromise} will be notified and also returned.
      * <p>
      * This will result in having the
-     * {@link ChannelOperationHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
-     * method called of the next {@link ChannelOperationHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link ChannelOutboundHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}
+     * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise);
@@ -200,8 +158,8 @@ interface ChannelOutboundInvoker {
      * The given {@link ChannelPromise} will be notified.
      * <p>
      * This will result in having the
-     * {@link ChannelOperationHandler#disconnect(ChannelHandlerContext, ChannelPromise)}
-     * method called of the next {@link ChannelOperationHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link ChannelOutboundHandler#disconnect(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture disconnect(ChannelPromise promise);
@@ -215,8 +173,8 @@ interface ChannelOutboundInvoker {
      * The given {@link ChannelPromise} will be notified.
      * <p>
      * This will result in having the
-     * {@link ChannelOperationHandler#close(ChannelHandlerContext, ChannelPromise)}
-     * method called of the next {@link ChannelOperationHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link ChannelOutboundHandler#close(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture close(ChannelPromise promise);
@@ -229,79 +187,30 @@ interface ChannelOutboundInvoker {
      * The given {@link ChannelPromise} will be notified.
      * <p>
      * This will result in having the
-     * {@link ChannelOperationHandler#deregister(ChannelHandlerContext, ChannelPromise)}
-     * method called of the next {@link ChannelOperationHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link ChannelOutboundHandler#deregister(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture deregister(ChannelPromise promise);
 
     /**
      * Request to Read data from the {@link Channel} into the first inbound buffer, triggers an
-     * {@link ChannelStateHandler#inboundBufferUpdated(ChannelHandlerContext) inboundBufferUpdated} event if data was
+     * {@link ChannelInboundHandler#messageReceived(ChannelHandlerContext, MessageList)} event if data was
      * read, and triggers an
-     * {@link ChannelStateHandler#channelReadSuspended(ChannelHandlerContext) channelReadSuspended} event so the
+     * {@link ChannelInboundHandler#channelReadSuspended(ChannelHandlerContext) channelReadSuspended} event so the
      * handler can decide to continue reading.  If there's a pending read operation already, this method does nothing.
      * <p>
      * This will result in having the
-     * {@link ChannelOperationHandler#read(ChannelHandlerContext)}
-     * method called of the next {@link ChannelOperationHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link ChannelOutboundHandler#read(ChannelHandlerContext)}
+     * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     void read();
 
     /**
-     * Request to flush all pending data which belongs to this ChannelOutboundInvoker and notify the
-     * {@link ChannelFuture} once the operation completes, either because the operation was successful or because of
-     * an error.
-     * <p>
-     * Be aware that the flush could be only partially successful. In such cases the {@link ChannelFuture} will be
-     * failed with an {@link IncompleteFlushException}. So if you are interested to know if it was partial successful
-     * you need to check if the returned {@link ChannelFuture#cause()} returns an instance of
-     * {@link IncompleteFlushException}. In such cases you may want to call {@link #flush(ChannelPromise)} or
-     * {@link #flush()} to flush the rest of the data or just close the connection via {@link #close(ChannelPromise)} or
-     * {@link #close()}  if it is not possible to recover.
-     *
-     * The given {@link ChannelPromise} will be notified.
-     * <p>
-     * This will result in having the
-     * {@link ChannelOperationHandler#flush(ChannelHandlerContext, ChannelPromise)}
-     * method called of the next {@link ChannelOperationHandler} contained in the  {@link ChannelPipeline} of the
-     * {@link Channel}.
-     *
-     */
-    ChannelFuture flush(ChannelPromise promise);
-
-    /**
      * Request to write a message via this ChannelOutboundInvoker and notify the {@link ChannelFuture}
      * once the operation completes, either because the operation was successful or because of an error.
-     *
-     * If you want to write a {@link FileRegion} use {@link #sendFile(FileRegion)}.
-     * <p>
-     * Be aware that the write could be only partially successful as the message may need to get encoded before write it
-     * to the remote peer. In such cases the {@link ChannelFuture} will be failed with a
-     * {@link IncompleteFlushException}. In such cases you may want to call {@link #flush(ChannelPromise)} or
-     * {@link #flush()} to flush the rest of the data or just close the connection via {@link #close(ChannelPromise)}
-     * or {@link #close()} if it is not possible to recover.
-     *
-     * The given {@link ChannelPromise} will be notified.
-     * <p>
-     * This will result in having the message added to the outbound buffer of the next {@link ChannelOutboundHandler}
-     * and the {@link ChannelOperationHandler#flush(ChannelHandlerContext, ChannelPromise)}
-     * method called of the next {@link ChannelOperationHandler} contained in the  {@link ChannelPipeline} of the
-     * {@link Channel}.
      */
-    ChannelFuture write(Object message, ChannelPromise promise);
-
-    /**
-     * Request to send a {@link FileRegion} via this ChannelOutboundInvoker and notify the {@link ChannelFuture}
-     * once the operation completes, either because the operation was successful or because of an error.
-     *
-     * The given {@link ChannelPromise} will be notified.
-     * <p>
-     * This will result in having the
-     * {@link ChannelOperationHandler#sendFile(ChannelHandlerContext, FileRegion, ChannelPromise)}
-     * method called of the next {@link ChannelOperationHandler} contained in the  {@link ChannelPipeline} of the
-     * {@link Channel}.
-     */
-    ChannelFuture sendFile(FileRegion region, ChannelPromise promise);
+    ChannelFuture write(Object msg, ChannelPromise promise);
+    ChannelFuture write(MessageList<?> msgs, ChannelPromise promise);
 }

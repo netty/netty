@@ -17,18 +17,18 @@ package io.netty.channel.nio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelProgressivePromise;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.FileRegion;
+import io.netty.channel.MessageList;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
-import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.WritableByteChannel;
 
 /**
  * {@link AbstractNioChannel} base class for {@link Channel}s that operate on bytes.
@@ -53,67 +53,53 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     }
 
     private final class NioByteUnsafe extends AbstractNioUnsafe {
+        private RecvByteBufAllocator.Handle allocHandle;
+
         @Override
         public void read() {
             assert eventLoop().inEventLoop();
             final SelectionKey key = selectionKey();
-            if (!config().isAutoRead()) {
-                // only remove readInterestOp if needed
-                key.interestOps(key.interestOps() & ~readInterestOp);
+            final ChannelConfig config = config();
+            if (!config.isAutoRead()) {
+                int interestOps = key.interestOps();
+                if ((interestOps & readInterestOp) != 0) {
+                    // only remove readInterestOp if needed
+                    key.interestOps(interestOps & ~readInterestOp);
+                }
             }
 
             final ChannelPipeline pipeline = pipeline();
-            final ByteBuf byteBuf = pipeline.inboundByteBuffer();
-            boolean closed = false;
-            boolean read = false;
-            boolean firedChannelReadSuspended = false;
-            try {
-                expandReadBuffer(byteBuf);
-                loop: for (;;) {
-                    int localReadAmount = doReadBytes(byteBuf);
-                    if (localReadAmount > 0) {
-                        read = true;
-                    } else if (localReadAmount < 0) {
-                        closed = true;
-                        break;
-                    }
 
-                    switch (expandReadBuffer(byteBuf)) {
-                    case 0:
-                        // Read all - stop reading.
-                        break loop;
-                    case 1:
-                        // Keep reading until everything is read.
-                        break;
-                    case 2:
-                        // Let the inbound handler drain the buffer and continue reading.
-                        if (read) {
-                            read = false;
-                            pipeline.fireInboundBufferUpdated();
-                            if (!byteBuf.isWritable()) {
-                                throw new IllegalStateException(
-                                        "an inbound handler whose buffer is full must consume at " +
-                                        "least one byte.");
-                            }
-                        }
-                    }
+            RecvByteBufAllocator.Handle allocHandle = this.allocHandle;
+            if (allocHandle == null) {
+                this.allocHandle = allocHandle = config.getRecvByteBufAllocator().newHandle();
+            }
+
+            ByteBuf byteBuf = allocHandle.allocate(config.getAllocator());
+            boolean closed = false;
+            Throwable exception = null;
+            try {
+                int localReadAmount = doReadBytes(byteBuf);
+                if (localReadAmount < 0) {
+                    closed = true;
                 }
             } catch (Throwable t) {
-                if (read) {
-                    read = false;
-                    pipeline.fireInboundBufferUpdated();
+                exception = t;
+            } finally {
+                int readBytes = byteBuf.readableBytes();
+                allocHandle.record(readBytes);
+                if (readBytes != 0) {
+                    pipeline.fireMessageReceived(byteBuf);
+                } else {
+                    byteBuf.release();
                 }
 
-                if (t instanceof IOException) {
-                    closed = true;
-                } else if (!closed) {
-                    firedChannelReadSuspended = true;
-                    pipeline.fireChannelReadSuspended();
-                }
-                pipeline().fireExceptionCaught(t);
-            } finally {
-                if (read) {
-                    pipeline.fireInboundBufferUpdated();
+                if (exception != null) {
+                    if (exception instanceof IOException) {
+                        closed = true;
+                    }
+
+                    pipeline().fireExceptionCaught(exception);
                 }
 
                 if (closed) {
@@ -123,10 +109,10 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                             key.interestOps(key.interestOps() & ~readInterestOp);
                             pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                         } else {
-                            close(voidFuture());
+                            close(voidPromise());
                         }
                     }
-                } else if (!firedChannelReadSuspended) {
+                } else {
                     pipeline.fireChannelReadSuspended();
                 }
             }
@@ -134,97 +120,76 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     }
 
     @Override
-    protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
-        for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
-            int localFlushedAmount = doWriteBytes(buf, i == 0);
-            if (localFlushedAmount > 0) {
+    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
+        int size = msgs.size();
+        int writeIndex = index;
+        for (;;) {
+            if (writeIndex >= size) {
                 break;
             }
-            if (!buf.isReadable()) {
-                // Reset reader/writerIndex to 0 if the buffer is empty.
-                buf.clear();
-                break;
-            }
-        }
-    }
+            Object msg = msgs.get(writeIndex);
+            if (msg instanceof ByteBuf) {
+                ByteBuf buf = (ByteBuf) msg;
+                if (!buf.isReadable()) {
+                    buf.release();
+                    writeIndex++;
+                    continue;
+                }
+                boolean done = false;
+                for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
+                    int localFlushedAmount = doWriteBytes(buf, i == 0);
+                    if (localFlushedAmount == 0) {
+                        break;
+                    }
 
-    @Override
-    protected void doFlushFileRegion(final FileRegion region, final ChannelPromise promise) throws Exception {
-        if (javaChannel() instanceof WritableByteChannel) {
-            TransferTask transferTask = new TransferTask(region, (WritableByteChannel) javaChannel(), promise);
-            transferTask.transfer();
-        } else {
-            throw new UnsupportedOperationException("Underlying Channel is not of instance "
-                    + WritableByteChannel.class);
-        }
-    }
-
-    private final class TransferTask implements NioTask<SelectableChannel> {
-        private long writtenBytes;
-        private final FileRegion region;
-        private final WritableByteChannel wch;
-        private final ChannelPromise promise;
-
-        TransferTask(FileRegion region, WritableByteChannel wch, ChannelPromise promise) {
-            this.region = region;
-            this.wch = wch;
-            this.promise = promise;
-        }
-
-        void transfer() {
-            try {
-                for (;;) {
-                    long localWrittenBytes = region.transferTo(wch, writtenBytes);
-                    if (localWrittenBytes == 0) {
-                        // reschedule for write once the channel is writable again
-                        eventLoop().executeWhenWritable(
-                                AbstractNioByteChannel.this, this);
-                        return;
-                    } else if (localWrittenBytes == -1) {
-                        checkEOF(region, writtenBytes);
-                        promise.setSuccess();
-                        return;
-                    } else {
-                        writtenBytes += localWrittenBytes;
-                        if (promise instanceof ChannelProgressivePromise) {
-                            ((ChannelProgressivePromise) promise).setProgress(writtenBytes, region.count());
-                        }
-                        if (writtenBytes >= region.count()) {
-                            region.release();
-                            promise.setSuccess();
-                            return;
-                        }
+                    if (!buf.isReadable()) {
+                        done = true;
+                        break;
                     }
                 }
-            } catch (Throwable cause) {
-                region.release();
-                promise.setFailure(cause);
-            }
-        }
 
-        @Override
-        public void channelReady(SelectableChannel ch, SelectionKey key) throws Exception {
-            transfer();
-        }
-
-        @Override
-        public void channelUnregistered(SelectableChannel ch, Throwable cause) throws Exception {
-            if (cause != null) {
-                promise.setFailure(cause);
-                return;
-            }
-
-            if (writtenBytes < region.count()) {
-                region.release();
-                if (!isOpen()) {
-                    promise.setFailure(new ClosedChannelException());
+                if (done) {
+                    buf.release();
+                    writeIndex++;
                 } else {
-                    promise.setFailure(new IllegalStateException(
-                            "Channel was unregistered before the region could be fully written"));
+                    break;
                 }
+            } else if (msg instanceof FileRegion) {
+                FileRegion region = (FileRegion) msg;
+                boolean done = false;
+                for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
+                    long localFlushedAmount = doWriteFileRegion(region, i == 0);
+                    if (localFlushedAmount == 0) {
+                        break;
+                    }
+                    if (region.transfered() >= region.count()) {
+                        done = true;
+                        break;
+                    }
+                }
+
+                if (done) {
+                    region.release();
+                    writeIndex++;
+                } else {
+                    break;
+                }
+            } else {
+                throw new UnsupportedOperationException("unsupported message type: " + StringUtil.simpleClassName(msg));
             }
         }
+        return writeIndex - index;
     }
+
+    /**
+     * Write a {@link FileRegion}
+     *
+     * @param region        the {@link FileRegion} from which the bytes should be written
+     * @param lastSpin      {@code true} if this is the last write try
+     * @return amount       the amount of written bytes
+     * @throws Exception    thrown if an error accour
+     */
+    protected abstract long doWriteFileRegion(FileRegion region, boolean lastSpin) throws Exception;
 
     /**
      * Read bytes into the given {@link ByteBuf} and return the amount.
@@ -240,4 +205,26 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
      */
     protected abstract int doWriteBytes(ByteBuf buf, boolean lastSpin) throws Exception;
 
+    protected final void updateOpWrite(long expectedWrittenBytes, long writtenBytes, boolean lastSpin) {
+        if (writtenBytes >= expectedWrittenBytes) {
+            final SelectionKey key = selectionKey();
+            final int interestOps = key.interestOps();
+            // Wrote the outbound buffer completely - clear OP_WRITE.
+            if ((interestOps & SelectionKey.OP_WRITE) != 0) {
+                key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
+            }
+        } else {
+            // 1) Wrote nothing: buffer is full obviously - set OP_WRITE
+            // 2) Wrote partial data:
+            //    a) lastSpin is false: no need to set OP_WRITE because the caller will try again immediately.
+            //    b) lastSpin is true: set OP_WRITE because the caller will not try again.
+            if (writtenBytes == 0 || lastSpin) {
+                final SelectionKey key = selectionKey();
+                final int interestOps = key.interestOps();
+                if ((interestOps & SelectionKey.OP_WRITE) == 0) {
+                    key.interestOps(interestOps | SelectionKey.OP_WRITE);
+                }
+            }
+        }
+    }
 }

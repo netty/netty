@@ -15,7 +15,6 @@
  */
 package io.netty.channel.socket.nio;
 
-import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
@@ -23,6 +22,8 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
+import io.netty.channel.FileRegion;
+import io.netty.channel.MessageList;
 import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
@@ -33,6 +34,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 
@@ -41,11 +43,28 @@ import java.nio.channels.SocketChannel;
  */
 public class NioSocketChannel extends AbstractNioByteChannel implements io.netty.channel.socket.SocketChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(BufType.BYTE, false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioSocketChannel.class);
 
-    private final SocketChannelConfig config;
+    // Buffers to use for Gathering writes
+    private static final ThreadLocal<ByteBuffer[]> BUFFERS = new ThreadLocal<ByteBuffer[]>() {
+        @Override
+        protected ByteBuffer[] initialValue() {
+            return new ByteBuffer[128];
+        }
+    };
+
+    private static ByteBuffer[] getNioBufferArray() {
+        return BUFFERS.get();
+    }
+
+    private static ByteBuffer[] doubleNioBufferArray(ByteBuffer[] array, int size) {
+        ByteBuffer[] newArray = new ByteBuffer[array.length << 1];
+        System.arraycopy(array, 0, newArray, 0, size);
+        BUFFERS.set(newArray);
+        return newArray;
+    }
 
     private static SocketChannel newSocket() {
         try {
@@ -54,6 +73,8 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             throw new ChannelException("Failed to open a socket.", e);
         }
     }
+
+    private final SocketChannelConfig config;
 
     /**
      * Create a new instance
@@ -230,30 +251,114 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     protected int doWriteBytes(ByteBuf buf, boolean lastSpin) throws Exception {
         final int expectedWrittenBytes = buf.readableBytes();
         final int writtenBytes = buf.readBytes(javaChannel(), expectedWrittenBytes);
+        updateOpWrite(expectedWrittenBytes, writtenBytes, lastSpin);
+        return writtenBytes;
+    }
 
-        final SelectionKey key = selectionKey();
-        final int interestOps = key.interestOps();
-        if (writtenBytes >= expectedWrittenBytes) {
-            // Wrote the outbound buffer completely - clear OP_WRITE.
-            if ((interestOps & SelectionKey.OP_WRITE) != 0) {
-                key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
-            }
-        } else {
-            // Wrote something or nothing.
-            // a) If wrote something, the caller will not retry.
-            //    - Set OP_WRITE so that the event loop calls flushForcibly() later.
-            // b) If wrote nothing:
-            //    1) If 'lastSpin' is false, the caller will call this method again real soon.
-            //       - Do not update OP_WRITE.
-            //    2) If 'lastSpin' is true, the caller will not retry.
-            //       - Set OP_WRITE so that the event loop calls flushForcibly() later.
-            if (writtenBytes > 0 || lastSpin) {
-                if ((interestOps & SelectionKey.OP_WRITE) == 0) {
-                    key.interestOps(interestOps | SelectionKey.OP_WRITE);
+    @Override
+    protected long doWriteFileRegion(FileRegion region, boolean lastSpin) throws Exception {
+        final long position = region.transfered();
+        final long expectedWrittenBytes = region.count() - position;
+        final long writtenBytes = region.transferTo(javaChannel(), position);
+        updateOpWrite(expectedWrittenBytes, writtenBytes, lastSpin);
+        return writtenBytes;
+    }
+
+    @Override
+    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
+        int size = msgs.size();
+
+        // Do non-gathering write for a single buffer case.
+        if (size <= 1 || !msgs.containsOnly(ByteBuf.class)) {
+            return super.doWrite(msgs, index);
+        }
+
+        MessageList<ByteBuf> bufs = msgs.cast();
+
+        ByteBuffer[] nioBuffers = getNioBufferArray();
+        int nioBufferCnt = 0;
+        long expectedWrittenBytes = 0;
+        for (int i = index; i < size; i++) {
+            ByteBuf buf = bufs.get(i);
+            int readerIndex = buf.readerIndex();
+            int readableBytes = buf.readableBytes();
+            expectedWrittenBytes += readableBytes;
+
+            if (buf.isDirect()) {
+                int count = buf.nioBufferCount();
+                if (count == 1) {
+                    if (nioBufferCnt == nioBuffers.length) {
+                        nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCnt);
+                    }
+                    nioBuffers[nioBufferCnt ++] = buf.internalNioBuffer(readerIndex, readableBytes);
+                } else {
+                    ByteBuffer[] nioBufs = buf.nioBuffers();
+                    if (nioBufferCnt + nioBufs.length == nioBuffers.length + 1) {
+                        nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCnt);
+                    }
+                    for (ByteBuffer nioBuf: nioBufs) {
+                        if (nioBuf == null) {
+                            break;
+                        }
+                        nioBuffers[nioBufferCnt ++] = nioBuf;
+                    }
                 }
+            } else {
+                ByteBuf directBuf = alloc().directBuffer(readableBytes);
+                directBuf.writeBytes(buf, readerIndex, readableBytes);
+                buf.release();
+                bufs.set(i, directBuf);
+                if (nioBufferCnt == nioBuffers.length) {
+                    nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCnt);
+                }
+                nioBuffers[nioBufferCnt ++] = directBuf.internalNioBuffer(0, readableBytes);
             }
         }
 
-        return writtenBytes;
+        long writtenBytes = 0;
+        boolean done = false;
+        for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
+            final long localWrittenBytes = javaChannel().write(nioBuffers, 0, nioBufferCnt);
+            updateOpWrite(expectedWrittenBytes, localWrittenBytes, i == 0);
+            if (localWrittenBytes == 0) {
+                break;
+            }
+            expectedWrittenBytes -= localWrittenBytes;
+            writtenBytes += localWrittenBytes;
+            if (expectedWrittenBytes == 0) {
+                done = true;
+                break;
+            }
+        }
+
+        if (done) {
+            // release buffers
+            for (int i = index; i < size; i++) {
+                ByteBuf buf = bufs.get(i);
+                buf.release();
+            }
+            return size - index;
+        } else {
+            // Did not write all buffers completely.
+            // Release the fully written buffers and update the indexes of the partially written buffer.
+            int writtenBufs = 0;
+            for (int i = index; i < size; i++) {
+                ByteBuf buf = bufs.get(i);
+                int readable = buf.readableBytes();
+                if (readable < writtenBytes) {
+                    writtenBufs ++;
+                    buf.release();
+                    writtenBytes -= readable;
+                } else if (readable > writtenBytes) {
+                    buf.readerIndex(buf.readerIndex() + (int) writtenBytes);
+                    break;
+                } else { // readable == writtenBytes
+                    writtenBufs ++;
+                    buf.release();
+                    break;
+                }
+            }
+            return writtenBufs;
+        }
     }
 }

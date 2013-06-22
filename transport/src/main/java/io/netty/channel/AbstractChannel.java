@@ -15,10 +15,10 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.BufType;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.MessageBuf;
+import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.NotYetConnectedException;
 import java.util.Random;
 import java.util.concurrent.ConcurrentMap;
 
@@ -78,11 +79,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final Integer id;
     private final Unsafe unsafe;
     private final DefaultChannelPipeline pipeline;
+    private final ChannelOutboundBuffer outboundBuffer = new ChannelOutboundBuffer(this);
     private final ChannelFuture succeededFuture = new SucceededChannelFuture(this, null);
-    private final VoidChannelPromise voidPromise = new VoidChannelPromise(this);
+    private final VoidChannelPromise voidPromise = new VoidChannelPromise(this, true);
+    private final VoidChannelPromise unsafeVoidPromise = new VoidChannelPromise(this, false);
     private final CloseFuture closeFuture = new CloseFuture(this);
-
-    protected final ChannelFlushPromiseNotifier flushFutureNotifier = new ChannelFlushPromiseNotifier();
 
     private volatile SocketAddress localAddress;
     private volatile SocketAddress remoteAddress;
@@ -130,6 +131,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 allChannels.remove(id());
             }
         });
+    }
+
+    @Override
+    public boolean isWritable() {
+        return outboundBuffer.getWritable();
     }
 
     @Override
@@ -236,13 +242,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelFuture flush() {
-        return pipeline.flush();
+    public ChannelFuture write(Object msg) {
+        return pipeline.write(msg);
     }
 
     @Override
-    public ChannelFuture write(Object message) {
-        return pipeline.write(message);
+    public ChannelFuture write(MessageList<?> msgs) {
+        return pipeline.write(msgs);
     }
 
     @Override
@@ -276,29 +282,18 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ByteBuf outboundByteBuffer() {
-        return pipeline.outboundByteBuffer();
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <T> MessageBuf<T> outboundMessageBuffer() {
-        return pipeline.outboundMessageBuffer();
-    }
-
-    @Override
     public void read() {
         pipeline.read();
     }
 
     @Override
-    public ChannelFuture flush(ChannelPromise promise) {
-        return pipeline.flush(promise);
+    public ChannelFuture write(Object msg, ChannelPromise promise) {
+        return pipeline.write(msg, promise);
     }
 
     @Override
-    public ChannelFuture write(Object message, ChannelPromise promise) {
-        return pipeline.write(message, promise);
+    public ChannelFuture write(MessageList<?> msgs, ChannelPromise promise) {
+        return pipeline.write(msgs, promise);
     }
 
     @Override
@@ -329,45 +324,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     @Override
     public Unsafe unsafe() {
         return unsafe;
-    }
-
-    @Override
-    public ChannelFuture sendFile(FileRegion region) {
-        return pipeline.sendFile(region);
-    }
-
-    @Override
-    public ChannelFuture sendFile(FileRegion region, ChannelPromise promise) {
-        return pipeline.sendFile(region, promise);
-    }
-
-    // 0 - not expanded because the buffer is writable
-    // 1 - expanded because the buffer was not writable
-    // 2 - could not expand because the buffer was at its maximum although the buffer is not writable.
-    protected static int expandReadBuffer(ByteBuf byteBuf) {
-        final int writerIndex = byteBuf.writerIndex();
-        final int capacity = byteBuf.capacity();
-        if (capacity != writerIndex) {
-            return 0;
-        }
-
-        final int maxCapacity = byteBuf.maxCapacity();
-        if (capacity == maxCapacity) {
-            return 2;
-        }
-
-        // FIXME: Magic number
-        final int increment = 4096;
-
-        if (writerIndex + increment > maxCapacity) {
-            // Expand to maximum capacity.
-            byteBuf.capacity(maxCapacity);
-        } else {
-            // Expand by the increment.
-            byteBuf.ensureWritable(increment);
-        }
-
-        return 1;
     }
 
     /**
@@ -436,122 +392,23 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return strVal;
     }
 
+    @Override
+    public final ChannelPromise voidPromise() {
+        return voidPromise;
+    }
+
     /**
      * {@link Unsafe} implementation which sub-classes must extend and use.
      */
     protected abstract class AbstractUnsafe implements Unsafe {
 
-        private final class FlushTask {
-            final FileRegion region;
-            final ChannelPromise promise;
-            FlushTask next;
-
-            FlushTask(FileRegion region, ChannelPromise promise) {
-                this.region = region;
-                this.promise = promise;
-                promise.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        flushTaskInProgress = next;
-                        if (next != null) {
-                            try {
-                                FileRegion region = next.region;
-                                if (region == null) {
-                                    // no region present means the next flush task was to directly flush
-                                    // the outbound buffer
-                                    flushNotifierAndFlush(next.promise);
-                                } else {
-                                    // flush the region now
-                                    doFlushFileRegion(region, next.promise);
-                                }
-                            } catch (Throwable cause) {
-                                next.promise.setFailure(cause);
-                            }
-                        } else {
-                            // notify the flush futures
-                            flushFutureNotifier.notifyFlushFutures();
-                        }
-                    }
-                });
-            }
-        }
-
-        private final Runnable beginReadTask = new Runnable() {
-            @Override
-            public void run() {
-                beginRead();
-            }
-        };
-
         private final Runnable flushLaterTask = new Runnable() {
             @Override
             public void run() {
                 flushNowPending = false;
-                flush(voidFuture());
+                flush();
             }
         };
-
-        private FlushTask flushTaskInProgress;
-
-        @Override
-        public final void sendFile(final FileRegion region, final ChannelPromise promise) {
-
-            if (eventLoop().inEventLoop()) {
-                if (outboundBufSize() > 0) {
-                    flushNotifier(newPromise()).addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture cf) throws Exception {
-                            sendFile0(region, promise);
-                        }
-                    });
-                } else {
-                    // nothing pending try to send the fileRegion now!
-                    sendFile0(region, promise);
-                }
-            } else {
-                eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        sendFile(region, promise);
-                    }
-                });
-            }
-        }
-
-        private void sendFile0(FileRegion region, ChannelPromise promise) {
-            FlushTask task = flushTaskInProgress;
-            if (task == null) {
-                flushTaskInProgress = new FlushTask(region, promise);
-                try {
-                    // the first FileRegion to flush so trigger it now!
-                    doFlushFileRegion(region, promise);
-                } catch (Throwable cause) {
-                    region.release();
-                    promise.setFailure(cause);
-                }
-                return;
-            }
-
-            for (;;) {
-                FlushTask next = task.next;
-                if (next == null) {
-                    break;
-                }
-                task = next;
-            }
-            // there is something that needs to get flushed first so add it as next in the chain
-            task.next = new FlushTask(region, promise);
-        }
-
-        @Override
-        public final ChannelHandlerContext headContext() {
-            return pipeline.head;
-        }
-
-        @Override
-        public final ChannelPromise voidFuture() {
-            return voidPromise;
-        }
 
         @Override
         public final SocketAddress localAddress() {
@@ -623,7 +480,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 if (!promise.tryFailure(t)) {
                     logger.warn(
                             "Tried to fail the registration promise, but it is complete already. " +
-                            "Swallowing the cause of the registration failure:", t);
+                                    "Swallowing the cause of the registration failure:", t);
                 }
                 closeFuture.setClosed();
             }
@@ -631,114 +488,90 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final void bind(final SocketAddress localAddress, final ChannelPromise promise) {
-            if (eventLoop().inEventLoop()) {
-                if (!ensureOpen(promise)) {
-                    return;
+            if (!ensureOpen(promise)) {
+                return;
+            }
+
+            try {
+                boolean wasActive = isActive();
+
+                // See: https://github.com/netty/netty/issues/576
+                if (!PlatformDependent.isWindows() && !PlatformDependent.isRoot() &&
+                    Boolean.TRUE.equals(config().getOption(ChannelOption.SO_BROADCAST)) &&
+                    localAddress instanceof InetSocketAddress &&
+                    !((InetSocketAddress) localAddress).getAddress().isAnyLocalAddress()) {
+                    // Warn a user about the fact that a non-root user can't receive a
+                    // broadcast packet on *nix if the socket is bound on non-wildcard address.
+                    logger.warn(
+                            "A non-root user can't receive a broadcast packet if the socket " +
+                            "is not bound to a wildcard address; binding to a non-wildcard " +
+                            "address (" + localAddress + ") anyway as requested.");
                 }
 
-                try {
-                    boolean wasActive = isActive();
-
-                    // See: https://github.com/netty/netty/issues/576
-                    if (!PlatformDependent.isWindows() && !PlatformDependent.isRoot() &&
-                        Boolean.TRUE.equals(config().getOption(ChannelOption.SO_BROADCAST)) &&
-                        localAddress instanceof InetSocketAddress &&
-                        !((InetSocketAddress) localAddress).getAddress().isAnyLocalAddress()) {
-                        // Warn a user about the fact that a non-root user can't receive a
-                        // broadcast packet on *nix if the socket is bound on non-wildcard address.
-                        logger.warn(
-                                "A non-root user can't receive a broadcast packet if the socket " +
-                                "is not bound to a wildcard address; binding to a non-wildcard " +
-                                "address (" + localAddress + ") anyway as requested.");
-                    }
-
-                    doBind(localAddress);
-                    promise.setSuccess();
-                    if (!wasActive && isActive()) {
-                        pipeline.fireChannelActive();
-                    }
-                } catch (Throwable t) {
-                    promise.setFailure(t);
-                    closeIfClosed();
+                doBind(localAddress);
+                promise.setSuccess();
+                if (!wasActive && isActive()) {
+                    pipeline.fireChannelActive();
                 }
-            } else {
-                eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        bind(localAddress, promise);
-                    }
-                });
+            } catch (Throwable t) {
+                promise.setFailure(t);
+                closeIfClosed();
             }
         }
 
         @Override
         public final void disconnect(final ChannelPromise promise) {
-            if (eventLoop().inEventLoop()) {
-                try {
-                    boolean wasActive = isActive();
-                    doDisconnect();
-                    promise.setSuccess();
-                    if (wasActive && !isActive()) {
-                        invokeLater(new Runnable() {
-                            @Override
-                            public void run() {
-                                pipeline.fireChannelInactive();
-                            }
-                        });
-                    }
-                } catch (Throwable t) {
-                    promise.setFailure(t);
-                    closeIfClosed();
+            try {
+                boolean wasActive = isActive();
+                doDisconnect();
+                promise.setSuccess();
+                if (wasActive && !isActive()) {
+                    invokeLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            pipeline.fireChannelInactive();
+                        }
+                    });
                 }
-            } else {
-                eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        disconnect(promise);
-                    }
-                });
+            } catch (Throwable t) {
+                promise.setFailure(t);
+                closeIfClosed();
             }
         }
 
         @Override
         public final void close(final ChannelPromise promise) {
-            if (eventLoop().inEventLoop()) {
-                boolean wasActive = isActive();
-                if (closeFuture.setClosed()) {
-                    try {
-                        doClose();
-                        promise.setSuccess();
-                    } catch (Throwable t) {
-                        promise.setFailure(t);
-                    }
-
-                    if (closedChannelException == null) {
-                        closedChannelException = new ClosedChannelException();
-                    }
-
-                    flushFutureNotifier.notifyFlushFutures(closedChannelException);
-
-                    if (wasActive && !isActive()) {
-                        invokeLater(new Runnable() {
-                            @Override
-                            public void run() {
-                                pipeline.fireChannelInactive();
-                            }
-                        });
-                    }
-
-                    deregister(voidFuture());
-                } else {
-                    // Closed already.
+            boolean wasActive = isActive();
+            if (closeFuture.setClosed()) {
+                try {
+                    doClose();
                     promise.setSuccess();
+                } catch (Throwable t) {
+                    promise.setFailure(t);
                 }
+
+                if (closedChannelException == null) {
+                    closedChannelException = new ClosedChannelException();
+                }
+
+                // fail all queued messages
+                if (outboundBuffer.next()) {
+                    outboundBuffer.fail(closedChannelException);
+                }
+
+                if (wasActive && !isActive()) {
+                    invokeLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            pipeline.fireChannelInactive();
+                        }
+                    });
+                }
+
+                deregister(voidPromise());
             } else {
-                eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        close(promise);
-                    }
-                });
+                // Closed already.
+                promise.setSuccess();
             }
         }
 
@@ -753,45 +586,36 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final void deregister(final ChannelPromise promise) {
-            if (eventLoop().inEventLoop()) {
-                if (!registered) {
+            if (!registered) {
+                promise.setSuccess();
+                return;
+            }
+
+            Runnable postTask = null;
+            try {
+                postTask = doDeregister();
+            } catch (Throwable t) {
+                logger.warn("Unexpected exception occurred while deregistering a channel.", t);
+            } finally {
+                if (registered) {
+                    registered = false;
                     promise.setSuccess();
-                    return;
+                    invokeLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            pipeline.fireChannelUnregistered();
+                        }
+                    });
+                } else {
+                    // Some transports like local and AIO does not allow the deregistration of
+                    // an open channel.  Their doDeregister() calls close().  Consequently,
+                    // close() calls deregister() again - no need to fire channelUnregistered.
+                    promise.setSuccess();
                 }
 
-                Runnable postTask = null;
-                try {
-                    postTask = doDeregister();
-                } catch (Throwable t) {
-                    logger.warn("Unexpected exception occurred while deregistering a channel.", t);
-                } finally {
-                    if (registered) {
-                        registered = false;
-                        promise.setSuccess();
-                        invokeLater(new Runnable() {
-                            @Override
-                            public void run() {
-                                pipeline.fireChannelUnregistered();
-                            }
-                        });
-                    } else {
-                        // Some transports like local and AIO does not allow the deregistration of
-                        // an open channel.  Their doDeregister() calls close().  Consequently,
-                        // close() calls deregister() again - no need to fire channelUnregistered.
-                        promise.setSuccess();
-                    }
-
-                    if (postTask != null) {
-                        postTask.run();
-                    }
+                if (postTask != null) {
+                    postTask.run();
                 }
-            } else {
-                eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        deregister(promise);
-                    }
-                });
             }
         }
 
@@ -801,76 +625,26 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
-            if (eventLoop().inEventLoop()) {
-                try {
-                    doBeginRead();
-                } catch (final Exception e) {
-                    invokeLater(new Runnable() {
-                        @Override
-                        public void run() {
-                            pipeline.fireExceptionCaught(e);
-                        }
-                    });
-                    close(unsafe().voidFuture());
-                }
-            } else {
-                eventLoop().execute(beginReadTask);
+            try {
+                doBeginRead();
+            } catch (final Exception e) {
+                invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        pipeline.fireExceptionCaught(e);
+                    }
+                });
+                close(voidPromise());
             }
         }
 
         @Override
-        public void flush(final ChannelPromise promise) {
-            if (eventLoop().inEventLoop()) {
-                FlushTask task = flushTaskInProgress;
-                if (task != null) {
-                    // loop over the tasks to find the last one
-                    for (;;) {
-                        FlushTask t = task.next;
-                        if (t == null) {
-                            break;
-                        }
-                        task = t.next;
-                    }
-                    task.next = new FlushTask(null, promise);
-
-                    return;
-                }
-                flushNotifierAndFlush(promise);
-            } else {
-                eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        flush(promise);
-                    }
-                });
-            }
+        public void write(MessageList<?> msgs, ChannelPromise promise) {
+            outboundBuffer.add(msgs, promise);
+            flush();
         }
 
-        private void flushNotifierAndFlush(ChannelPromise promise) {
-            flushNotifier(promise);
-            flush0();
-        }
-
-        private int outboundBufSize() {
-            final int bufSize;
-            final ChannelHandlerContext ctx = headContext();
-            if (metadata().bufferType() == BufType.BYTE) {
-                bufSize = ctx.outboundByteBuffer().readableBytes();
-            } else {
-                bufSize = ctx.outboundMessageBuffer().size();
-            }
-            return bufSize;
-        }
-
-        private ChannelFuture flushNotifier(ChannelPromise promise) {
-            // Append flush future to the notification list.
-            if (promise != voidPromise) {
-                flushFutureNotifier.add(promise, outboundBufSize());
-            }
-            return promise;
-        }
-
-        private void flush0() {
+        private void flush() {
             if (!inFlushNow) { // Avoid re-entrance
                 try {
                     // Flush immediately only when there's no pending flush.
@@ -880,10 +654,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         flushNow();
                     }
                 } catch (Throwable t) {
-                    flushFutureNotifier.notifyFlushFutures(t);
-                    if (t instanceof IOException) {
-                        close(voidFuture());
-                    }
+                    outboundBuffer.fail(t);
+                    close(voidPromise());
                 }
             } else {
                 if (!flushNowPending) {
@@ -892,51 +664,94 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 }
             }
         }
+
         @Override
         public final void flushNow() {
-            if (inFlushNow || flushTaskInProgress != null) {
+            if (inFlushNow) {
                 return;
             }
 
             inFlushNow = true;
-            ChannelHandlerContext ctx = headContext();
-            Throwable cause = null;
-            try {
-                if (metadata().bufferType() == BufType.BYTE) {
-                    ByteBuf out = ctx.outboundByteBuffer();
-                    int oldSize = out.readableBytes();
-                    try {
-                        doFlushByteBuffer(out);
-                    } catch (Throwable t) {
-                        cause = t;
-                    } finally {
-                        int delta = oldSize - out.readableBytes();
-                        out.discardSomeReadBytes();
-                        flushFutureNotifier.increaseWriteCounter(delta);
-                    }
+
+            final ChannelOutboundBuffer outboundBuffer = AbstractChannel.this.outboundBuffer;
+
+            // Mark all pending write requests as failure if the channel is inactive.
+            if (!isActive()) {
+                if (isOpen()) {
+                    outboundBuffer.fail(new NotYetConnectedException());
                 } else {
-                    MessageBuf<Object> out = ctx.outboundMessageBuffer();
-                    int oldSize = out.size();
-                    try {
-                        doFlushMessageBuffer(out);
-                    } catch (Throwable t) {
-                        cause = t;
-                    } finally {
-                        flushFutureNotifier.increaseWriteCounter(oldSize - out.size());
+                    outboundBuffer.fail(new ClosedChannelException());
+                }
+                inFlushNow = false;
+                return;
+            }
+
+            try {
+                for (;;) {
+                    ChannelPromise promise = outboundBuffer.currentPromise;
+                    if (promise == null) {
+                        if (!outboundBuffer.next()) {
+                            break;
+                        }
+                        promise = outboundBuffer.currentPromise;
+                    }
+
+                    MessageList<Object> messages = outboundBuffer.currentMessages;
+                    int messageIndex = outboundBuffer.currentMessageIndex;
+                    int messageCount = messages.size();
+
+                    // Make sure the message list is not empty.
+                    if (messageCount == 0) {
+                        messages.recycle();
+                        promise.trySuccess();
+                        if (!outboundBuffer.next()) {
+                            break;
+                        } else {
+                            continue;
+                        }
+                    }
+
+                    // Make sure the promise has not been cancelled.
+                    if (promise.isCancelled()) {
+                        // If cancelled, release all unwritten messages and recycle.
+                        for (int i = messageIndex; i < messageCount; i ++) {
+                            ByteBufUtil.release(messages.get(i));
+                        }
+                        messages.recycle();
+                        if (!outboundBuffer.next()) {
+                            break;
+                        } else {
+                            continue;
+                        }
+                    }
+
+                    // Write the messages.
+                    int writtenMessages = doWrite(messages, messageIndex);
+                    outboundBuffer.currentMessageIndex = messageIndex += writtenMessages;
+                    if (messageIndex >= messageCount) {
+                        messages.recycle();
+                        promise.trySuccess();
+                        if (!outboundBuffer.next()) {
+                            break;
+                        }
+                    } else {
+                        // Could not flush the current write request completely. Try again later.
+                        break;
                     }
                 }
-
-                if (cause == null) {
-                    flushFutureNotifier.notifyFlushFutures();
-                } else {
-                    flushFutureNotifier.notifyFlushFutures(cause);
-                    if (cause instanceof IOException) {
-                        close(voidFuture());
-                    }
+            } catch (Throwable t) {
+                outboundBuffer.fail(t);
+                if (t instanceof IOException) {
+                    close(voidPromise());
                 }
             } finally {
                 inFlushNow = false;
             }
+        }
+
+        @Override
+        public ChannelPromise voidPromise() {
+            return unsafeVoidPromise;
         }
 
         protected final boolean ensureOpen(ChannelPromise promise) {
@@ -953,7 +768,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             if (isOpen()) {
                 return;
             }
-            close(voidFuture());
+            close(voidPromise());
         }
 
         private void invokeLater(Runnable task) {
@@ -1039,35 +854,31 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * Flush the content of the given {@link ByteBuf} to the remote peer.
      *
      * Sub-classes may override this as this implementation will just thrown an {@link UnsupportedOperationException}
-     */
-    protected void doFlushByteBuffer(ByteBuf buf) throws Exception {
-        throw new UnsupportedOperationException();
-    }
-
-    /**
-     * Flush the content of the given {@link MessageBuf} to the remote peer.
      *
-     * Sub-classes may override this as this implementation will just thrown an {@link UnsupportedOperationException}
+     * @return the number of written messages
      */
-    protected void doFlushMessageBuffer(MessageBuf<Object> buf) throws Exception {
-        throw new UnsupportedOperationException();
-    }
+    protected abstract int doWrite(MessageList<Object> msgs, int index) throws Exception;
 
-    /**
-     * Flush the content of the given {@link FileRegion} to the remote peer.
-     *
-     * Sub-classes may override this as this implementation will just thrown an {@link UnsupportedOperationException}
-     */
-    protected void doFlushFileRegion(FileRegion region, ChannelPromise promise) throws Exception {
-        throw new UnsupportedOperationException();
-    }
-
-    protected static void checkEOF(FileRegion region, long writtenBytes) throws IOException {
-        if (writtenBytes < region.count()) {
+    protected static void checkEOF(FileRegion region) throws IOException {
+        if (region.transfered() < region.count()) {
             throw new EOFException("Expected to be able to write "
                     + region.count() + " bytes, but only wrote "
-                    + writtenBytes);
+                    + region.transfered());
         }
+    }
+
+    /**
+     * Calculate the number of bytes a message takes up in memory. Sub-classes may override this if they use different
+     * messages then {@link ByteBuf} or {@link ByteBufHolder}. If the size can not be calculated 0 should be returned.
+     */
+    protected int calculateMessageSize(Object message) {
+        if (message instanceof ByteBuf) {
+            return ((ByteBuf) message).readableBytes();
+        }
+        if (message instanceof ByteBufHolder) {
+            return ((ByteBufHolder) message).content().readableBytes();
+        }
+        return 0;
     }
 
     /**
@@ -1075,7 +886,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     protected abstract boolean isFlushPending();
 
-    private final class CloseFuture extends DefaultChannelPromise implements ChannelFuture.Unsafe {
+    final class CloseFuture extends DefaultChannelPromise {
 
         CloseFuture(AbstractChannel ch) {
             super(ch);

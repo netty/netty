@@ -22,9 +22,25 @@ package io.netty.handler.ssl;
  */
 public final class SslHandshakeCompletionEvent {
 
+    public static final SslHandshakeCompletionEvent SUCCESS = new SslHandshakeCompletionEvent();
+
     private final Throwable cause;
 
-    SslHandshakeCompletionEvent(Throwable cause) {
+    /**
+     * Creates a new event that indicates a successful handshake.
+     */
+    private SslHandshakeCompletionEvent() {
+        cause = null;
+    }
+
+    /**
+     * Creates a new event that indicates an unsuccessful handshake.
+     * Use {@link #SUCCESS} to indicate a successful handshake.
+     */
+    public SslHandshakeCompletionEvent(Throwable cause) {
+        if (cause == null) {
+            throw new NullPointerException("cause");
+        }
         this.cause = cause;
     }
 
