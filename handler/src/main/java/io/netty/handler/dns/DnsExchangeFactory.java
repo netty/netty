@@ -50,7 +50,7 @@ import java.util.concurrent.Callable;
  * servers. The class attempts to load user's default DNS servers, but also
  * includes Google and OpenDNS DNS servers.
  */
-public class DnsExchangeFactory {
+public final class DnsExchangeFactory {
 
     /**
      * How long to wait for an answer from a DNS server after sending a query
@@ -64,18 +64,14 @@ public class DnsExchangeFactory {
     private static final Map<byte[], Channel> dnsServerChannels = new HashMap<byte[], Channel>();
     private static final Object idxLock = new Object();
 
-    private static int idx = 0;
+    private static int idx;
 
     static {
         dnsServers.add(new byte[] { 8, 8, 8, 8 }); // Google DNS servers
         dnsServers.add(new byte[] { 8, 8, 4, 4 });
         dnsServers.add(new byte[] { -48, 67, -34, -34 }); // OpenDNS servers
         dnsServers.add(new byte[] { -48, 67, -36, -36 });
-        new Thread() {
-            {
-                setDaemon(true);
-                setPriority(Thread.MIN_PRIORITY);
-            }
+        Thread thread = new Thread() {
 
             @Override
             public void run() {
@@ -102,7 +98,10 @@ public class DnsExchangeFactory {
                     logger.warn("Failed to obtain system's DNS server addresses, using defaults only.", e);
                 }
             }
-        }.start();
+        };
+        thread.setDaemon(true);
+        thread.setPriority(Thread.MIN_PRIORITY);
+        thread.start();
     }
 
     /**

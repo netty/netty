@@ -103,4 +103,7 @@ public class RecordDecoderFactory {
         decoders.remove(type);
     }
 
+    private RecordDecoderFactory() {
+    }
+
 }

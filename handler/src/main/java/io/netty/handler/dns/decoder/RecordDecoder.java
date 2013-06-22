@@ -40,6 +40,6 @@ public interface RecordDecoder<T> {
      * @param resource
      *            the resource record being decoded
      */
-    public T decode(DnsResponse response, Resource resource) throws DecoderException;
+    T decode(DnsResponse response, Resource resource) throws DecoderException;
 
 }
