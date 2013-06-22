@@ -32,7 +32,7 @@ public class ServiceRecord {
 
     /**
      * Constructs an SRV (service) record.
-     * 
+     *
      * @param fullPath
      *            the name first read in the SRV record which contains the
      *            service, the protocol, and the name of the server being

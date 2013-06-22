@@ -50,7 +50,7 @@ public class RecordDecoderFactory {
 
     /**
      * Decodes a resource record and returns the result.
-     * 
+     *
      * @param type
      *            the type of resource record (if -1 returns null)
      * @param response
@@ -81,7 +81,7 @@ public class RecordDecoderFactory {
     /**
      * Adds a new resource record decoder, or replaces an existing one for the
      * given type.
-     * 
+     *
      * @param type
      *            the type of the {@link RecordDecoder} that should be added
      *            (i.e. A or AAAA)
@@ -94,7 +94,7 @@ public class RecordDecoderFactory {
 
     /**
      * Removes the {@link RecordDecoder} with the given type.
-     * 
+     *
      * @param type
      *            the type of the {@link RecordDecoder} that should be removed
      *            (i.e. A or AAAA)

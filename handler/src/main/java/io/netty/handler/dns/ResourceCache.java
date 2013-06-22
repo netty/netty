@@ -79,7 +79,7 @@ public class ResourceCache {
 
     /**
      * Submits a record to the cache.
-     * 
+     *
      * @param name
      *            the domain name for the record
      * @param type
@@ -106,7 +106,7 @@ public class ResourceCache {
 
     /**
      * Represents a single resource record.
-     * 
+     *
      * @param <T>
      *            the type of record (i.e. for A records, this would be
      *            {@link ByteBuf})
@@ -118,7 +118,7 @@ public class ResourceCache {
 
         /**
          * Constructs the resource record.
-         * 
+         *
          * @param content
          *            the content of the record
          * @param ttl

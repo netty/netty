@@ -27,7 +27,7 @@ public class MailExchangerRecord {
 
     /**
      * Constructs an MX (mail exchanger) record.
-     * 
+     *
      * @param priority
      *            the priority of the mail exchanger, lower is more preferred
      * @param name

@@ -28,7 +28,7 @@ public class DomainDecoder implements RecordDecoder<String> {
 
     /**
      * Returns the decoded domain name for a resource record.
-     * 
+     *
      * @param response
      *            the {@link DnsResponse} received that contained the resource
      *            record being decoded

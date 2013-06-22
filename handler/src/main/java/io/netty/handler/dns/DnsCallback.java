@@ -45,7 +45,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * IPv6 address is sufficient). If a {@link DnsCallback} fails, null will be
  * returned. For obtaining single values, as opposed to a {@link List},
  * {@link SingleResultCallback} is used.
- * 
+ *
  * @param <T>
  *            a {@link List} of all answers for a specified type (i.e. if type
  *            is A, the {@link List} would be for {@link ByteBuf}s)
@@ -62,7 +62,7 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
      * {@link DnsResponse}s id and sets the value for the callback as one or
      * more of the response's resource records (if the response contains valid
      * resource records).
-     * 
+     *
      * @param response
      *            the {@link DnsResponse} received from the DNS server when
      *            queried
@@ -115,7 +115,7 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
     /**
      * Constructs a {@link DnsCallback} with a specified DNS server index, and
      * an array of (or a single) query.
-     * 
+     *
      * @param serverIndex
      *            the index at which the DNS server address is located in
      *            {@link DnsExchangeFactory#dnsServers}, or -1 if it is not in
@@ -167,7 +167,7 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
     /**
      * Notifies {@link DnsCallback} that a query returned a valid result for the
      * given resource record type.
-     * 
+     *
      * @param validType
      *            the resource record type that should be returned by this
      *            {@link DnsCallback} (i.e. AAAA)

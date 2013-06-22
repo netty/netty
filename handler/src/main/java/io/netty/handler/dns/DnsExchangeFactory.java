@@ -109,7 +109,7 @@ public class DnsExchangeFactory {
      * Checks if a DNS server can actually be connected to and queried for
      * information by running through a request. This is a
      * <strong>blocking</strong> method.
-     * 
+     *
      * @param address
      *            the DNS server being checked
      * @return {@code true} if the DNS server provides a valid response
@@ -138,7 +138,7 @@ public class DnsExchangeFactory {
 
     /**
      * Writes a {@link DnsQuery} to a specified channel.
-     * 
+     *
      * @param type
      *            the type for the {@link DnsQuery}
      * @param domain
@@ -159,7 +159,7 @@ public class DnsExchangeFactory {
 
     /**
      * Adds a DNS server to the default {@link List} of DNS servers used.
-     * 
+     *
      * @param dnsServerAddress
      *            the DNS server being added
      * @return {@code true} if the DNS server was added successfully
@@ -170,7 +170,7 @@ public class DnsExchangeFactory {
 
     /**
      * Removes a DNS server from the default {@link List} of DNS servers.
-     * 
+     *
      * @param dnsServerAddress
      *            the DNS server being removed
      * @return {@code true} if the DNS server was removed successfully
@@ -193,7 +193,7 @@ public class DnsExchangeFactory {
     /**
      * Creates a channel for a DNS server if it does not already exist, or else
      * returns the existing channel. Internal use only.
-     * 
+     *
      * @param dnsServerAddress
      *            the address of the DNS server
      * @return the {@link Channel} created
@@ -224,7 +224,7 @@ public class DnsExchangeFactory {
     /**
      * Returns a {@link Future} which can be used to obtain a {@link List}
      * either an IPv4 or IPv6 address for the specified domain.
-     * 
+     *
      * @throws UnknownHostException
      * @throws SocketException
      * @throws InterruptedException
@@ -238,7 +238,7 @@ public class DnsExchangeFactory {
      * Returns a {@link Future} which can be used to obtain a {@link List} of
      * either an IPv4 or IPv6 address for the specified domain, depending on the
      * {@code family}.
-     * 
+     *
      * @param family
      *            {@code 4} for IPv4 addresses, {@code 6} for IPv6 addresses, or
      *            {@code null} for both
@@ -263,7 +263,7 @@ public class DnsExchangeFactory {
      * Returns a {@link Future} which can be used to obtain a
      * <strong>single</strong> resource record with one of the specified
      * {@code types}.
-     * 
+     *
      * @param domain
      *            the domain name being queried
      * @param dnsServerAddress
@@ -299,7 +299,7 @@ public class DnsExchangeFactory {
      * Returns a {@link Future} which can be used to obtain a <strong>
      * {@link List}</strong> of resource records with one of the specified
      * {@code types}.
-     * 
+     *
      * @param domain
      *            the domain name being queried
      * @param dnsServerAddress
@@ -334,7 +334,7 @@ public class DnsExchangeFactory {
     /**
      * Returns a {@link Future} which can be used to obtain a {@link List} of
      * IPv4 addresses as {@link ByteBuf}s.
-     * 
+     *
      * @throws UnknownHostException
      * @throws SocketException
      * @throws InterruptedException
@@ -347,7 +347,7 @@ public class DnsExchangeFactory {
     /**
      * Returns a {@link Future} which can be used to obtain a {@link List} of
      * IPv6 addresses as {@link ByteBuf}s.
-     * 
+     *
      * @throws UnknownHostException
      * @throws SocketException
      * @throws InterruptedException
@@ -360,7 +360,7 @@ public class DnsExchangeFactory {
     /**
      * Returns a {@link Future} which can be used to obtain a {@link List} of
      * mail exchanger records as {@link MailExchangerRecord}s.
-     * 
+     *
      * @throws UnknownHostException
      * @throws SocketException
      * @throws InterruptedException
@@ -373,7 +373,7 @@ public class DnsExchangeFactory {
     /**
      * Returns a {@link Future} which can be used to obtain a {@link List} of
      * service records as {@link ServiceRecord}s.
-     * 
+     *
      * @throws UnknownHostException
      * @throws SocketException
      * @throws InterruptedException
@@ -386,7 +386,7 @@ public class DnsExchangeFactory {
     /**
      * Returns a {@link Future} which can be used to obtain a {@link List} of
      * text records as {@link String}s in a {@link List}.
-     * 
+     *
      * @throws UnknownHostException
      * @throws SocketException
      * @throws InterruptedException
@@ -399,7 +399,7 @@ public class DnsExchangeFactory {
     /**
      * Returns a {@link Future} which can be used to obtain a {@link List} of
      * canonical name records as {@link String}s.
-     * 
+     *
      * @throws UnknownHostException
      * @throws SocketException
      * @throws InterruptedException
@@ -412,7 +412,7 @@ public class DnsExchangeFactory {
     /**
      * Returns a {@link Future} which can be used to obtain a {@link List} of
      * name server records as {@link String}s.
-     * 
+     *
      * @throws UnknownHostException
      * @throws SocketException
      * @throws InterruptedException
@@ -426,7 +426,7 @@ public class DnsExchangeFactory {
      * Returns a {@link Future} which can be used to obtain a {@link List} of
      * domain names as {@link String}s when given their corresponding IP
      * address.
-     * 
+     *
      * @param ipAddress
      *            the ip address to perform a reverse lookup on
      * @throws UnknownHostException
@@ -445,7 +445,7 @@ public class DnsExchangeFactory {
      * Returns a {@link Future} which can be used to obtain a {@link List} of
      * domain names as {@link String}s when given their corresponding IP
      * address.
-     * 
+     *
      * @param ipAddress
      *            the ip address to perform a reverse lookup on
      * @throws UnknownHostException
@@ -464,7 +464,7 @@ public class DnsExchangeFactory {
 
     /**
      * Removes an inactive channel after timing out. Internal use only.
-     * 
+     *
      * @param channel
      *            the channel to be removed
      */
