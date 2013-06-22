@@ -22,59 +22,58 @@ import io.netty.buffer.ByteBufHolder;
  * A DNS response packet which is sent to a client after a server receives a
  * query.
  */
-public class DnsResponse extends DnsMessage<DnsResponseHeader> implements
-		ByteBufHolder {
+public class DnsResponse extends DnsMessage<DnsResponseHeader> implements ByteBufHolder {
 
-	private final ByteBuf rawPacket;
-	private final int originalIndex;
+    private final ByteBuf rawPacket;
+    private final int originalIndex;
 
-	public DnsResponse(ByteBuf rawPacket) {
-		this.rawPacket = rawPacket;
-		this.originalIndex = rawPacket.readerIndex();
-	}
+    public DnsResponse(ByteBuf rawPacket) {
+        this.rawPacket = rawPacket;
+        this.originalIndex = rawPacket.readerIndex();
+    }
 
-	/**
-	 * Returns the non-decoded DNS response packet, at its
-	 * <strong>original</strong> {@code readerIndex}.
-	 */
-	@Override
-	public ByteBuf content() {
-		return rawPacket.readerIndex(originalIndex);
-	}
+    /**
+     * Returns the non-decoded DNS response packet, at its
+     * <strong>original</strong> {@code readerIndex}.
+     */
+    @Override
+    public ByteBuf content() {
+        return rawPacket.readerIndex(originalIndex);
+    }
 
-	@Override
-	public int refCnt() {
-		return rawPacket.refCnt();
-	}
+    @Override
+    public int refCnt() {
+        return rawPacket.refCnt();
+    }
 
-	@Override
-	public boolean release() {
-		return rawPacket.release();
-	}
+    @Override
+    public boolean release() {
+        return rawPacket.release();
+    }
 
-	/**
-	 * Returns a deep copy of this DNS response.
-	 */
-	@Override
-	public DnsResponse copy() {
-		return DnsResponseDecoder.decodeResponse(content());
-	}
+    /**
+     * Returns a deep copy of this DNS response.
+     */
+    @Override
+    public DnsResponse copy() {
+        return DnsResponseDecoder.decodeResponse(content());
+    }
 
-	@Override
-	public DnsResponse retain() {
-		rawPacket.retain();
-		return this;
-	}
+    @Override
+    public DnsResponse retain() {
+        rawPacket.retain();
+        return this;
+    }
 
-	@Override
-	public DnsResponse retain(int increment) {
-		rawPacket.retain(increment);
-		return this;
-	}
+    @Override
+    public DnsResponse retain(int increment) {
+        rawPacket.retain(increment);
+        return this;
+    }
 
-	@Override
-	public boolean release(int decrement) {
-		return rawPacket.release(decrement);
-	}
+    @Override
+    public boolean release(int decrement) {
+        return rawPacket.release(decrement);
+    }
 
 }

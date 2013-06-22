@@ -26,22 +26,21 @@ import io.netty.handler.codec.dns.Resource;
  */
 public class DomainDecoder implements RecordDecoder<String> {
 
-	/**
-	 * Returns the decoded domain name for a resource record.
-	 * 
-	 * @param response
-	 *            the {@link DnsResponse} received that contained the resource
-	 *            record being decoded
-	 * @param resource
-	 *            the {@link Resource} being decoded
-	 */
-	@Override
-	public String decode(DnsResponse response, Resource resource) {
-		ByteBuf packet = response.content();
-		String name = DnsResponseDecoder.getName(packet,
-				resource.contentIndex());
-		packet.release();
-		return name;
-	}
+    /**
+     * Returns the decoded domain name for a resource record.
+     * 
+     * @param response
+     *            the {@link DnsResponse} received that contained the resource
+     *            record being decoded
+     * @param resource
+     *            the {@link Resource} being decoded
+     */
+    @Override
+    public String decode(DnsResponse response, Resource resource) {
+        ByteBuf packet = response.content();
+        String name = DnsResponseDecoder.getName(packet, resource.contentIndex());
+        packet.release();
+        return name;
+    }
 
 }

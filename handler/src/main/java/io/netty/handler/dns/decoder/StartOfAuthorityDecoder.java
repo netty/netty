@@ -24,33 +24,30 @@ import io.netty.handler.dns.decoder.record.StartOfAuthorityRecord;
 /**
  * Decodes SOA (start of authority) resource records.
  */
-public class StartOfAuthorityDecoder implements
-		RecordDecoder<StartOfAuthorityRecord> {
+public class StartOfAuthorityDecoder implements RecordDecoder<StartOfAuthorityRecord> {
 
-	/**
-	 * Returns a decoded SOA (start of authority) resource record, stored as an
-	 * instance of {@link StartOfAuthorityRecord}.
-	 * 
-	 * @param response
-	 *            the DNS response that contains the resource record being
-	 *            decoded
-	 * @param resource
-	 *            the resource record being decoded
-	 */
-	@Override
-	public StartOfAuthorityRecord decode(DnsResponse response, Resource resource) {
-		ByteBuf packet = response.content()
-				.readerIndex(resource.contentIndex());
-		String mName = DnsResponseDecoder.readName(packet);
-		String rName = DnsResponseDecoder.readName(packet);
-		long serial = packet.readUnsignedInt();
-		int refresh = packet.readInt();
-		int retry = packet.readInt();
-		int expire = packet.readInt();
-		long minimum = packet.readUnsignedInt();
-		packet.release();
-		return new StartOfAuthorityRecord(mName, rName, serial, refresh, retry,
-				expire, minimum);
-	}
+    /**
+     * Returns a decoded SOA (start of authority) resource record, stored as an
+     * instance of {@link StartOfAuthorityRecord}.
+     * 
+     * @param response
+     *            the DNS response that contains the resource record being
+     *            decoded
+     * @param resource
+     *            the resource record being decoded
+     */
+    @Override
+    public StartOfAuthorityRecord decode(DnsResponse response, Resource resource) {
+        ByteBuf packet = response.content().readerIndex(resource.contentIndex());
+        String mName = DnsResponseDecoder.readName(packet);
+        String rName = DnsResponseDecoder.readName(packet);
+        long serial = packet.readUnsignedInt();
+        int refresh = packet.readInt();
+        int retry = packet.readInt();
+        int expire = packet.readInt();
+        long minimum = packet.readUnsignedInt();
+        packet.release();
+        return new StartOfAuthorityRecord(mName, rName, serial, refresh, retry, expire, minimum);
+    }
 
 }

@@ -26,41 +26,39 @@ import io.netty.handler.codec.dns.Resource;
  */
 public class AddressDecoder implements RecordDecoder<ByteBuf> {
 
-	private final int octets;
+    private final int octets;
 
-	/**
-	 * Constructs an {@code AddressDecoder}, which decodes A and AAAA resource
-	 * records.
-	 * 
-	 * @param octets
-	 *            the number of octets an address has. 4 for type A records and
-	 *            16 for type AAAA records
-	 */
-	public AddressDecoder(int octets) {
-		this.octets = octets;
-	}
+    /**
+     * Constructs an {@code AddressDecoder}, which decodes A and AAAA resource
+     * records.
+     * 
+     * @param octets
+     *            the number of octets an address has. 4 for type A records and
+     *            16 for type AAAA records
+     */
+    public AddressDecoder(int octets) {
+        this.octets = octets;
+    }
 
-	/**
-	 * Returns a {@link ByteBuf} containing a decoded address from either an A
-	 * or AAAA resource record.
-	 * 
-	 * @param response
-	 *            the {@link DnsResponse} received that contained the resource
-	 *            record being decoded
-	 * @param resource
-	 *            the {@link Resource} being decoded
-	 */
-	@Override
-	public ByteBuf decode(DnsResponse response, Resource resource) {
-		ByteBuf data = resource.content().copy();
-		int size = data.writerIndex() - data.readerIndex();
-		if (data.readerIndex() != 0 || size != octets) {
-			throw new DecoderException(
-					"Invalid content length, or reader index when decoding address [index: "
-							+ data.readerIndex() + ", expected length: "
-							+ octets + ", actual: " + size + "].");
-		}
-		return data;
-	}
+    /**
+     * Returns a {@link ByteBuf} containing a decoded address from either an A
+     * or AAAA resource record.
+     * 
+     * @param response
+     *            the {@link DnsResponse} received that contained the resource
+     *            record being decoded
+     * @param resource
+     *            the {@link Resource} being decoded
+     */
+    @Override
+    public ByteBuf decode(DnsResponse response, Resource resource) {
+        ByteBuf data = resource.content().copy();
+        int size = data.writerIndex() - data.readerIndex();
+        if (data.readerIndex() != 0 || size != octets) {
+            throw new DecoderException("Invalid content length, or reader index when decoding address [index: "
+                    + data.readerIndex() + ", expected length: " + octets + ", actual: " + size + "].");
+        }
+        return data;
+    }
 
 }
