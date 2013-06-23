@@ -45,7 +45,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * IPv6 address is sufficient). If a {@link DnsCallback} fails, null will be
  * returned. For obtaining single values, as opposed to a {@link List},
  * {@link SingleResultCallback} is used.
- *
+ * 
  * @param <T>
  *            a {@link List} of all answers for a specified type (i.e. if type
  *            is A, the {@link List} would be for {@link ByteBuf}s)
@@ -62,7 +62,7 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
      * {@link DnsResponse}s id and sets the value for the callback as one or
      * more of the response's resource records (if the response contains valid
      * resource records).
-     *
+     * 
      * @param response
      *            the {@link DnsResponse} received from the DNS server when
      *            queried
@@ -84,13 +84,10 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
             for (int i = 0; i < resources.size(); i++) {
                 Resource resource = resources.get(i);
                 for (int n = 0; n < callback.queries.length; n++) {
-                    Object result = RecordDecoderFactory.getFactory().decode(
-                            resource.type(), response, resource);
+                    Object result = RecordDecoderFactory.getFactory().decode(resource.type(), response, resource);
                     if (result != null) {
-                        ResourceCache.submitRecord(resource.name(),
-                                resource.type(), resource.timeToLive(), result);
-                        if (callback.queries[n].getQuestions().get(0).type() == resource
-                                .type()) {
+                        ResourceCache.submitRecord(resource.name(), resource.type(), resource.timeToLive(), result);
+                        if (callback.queries[n].getQuestions().get(0).type() == resource.type()) {
                             callbacks.remove(response.getHeader().getId());
                             callback.flagValid(resource.type());
                         }
@@ -113,7 +110,7 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
     /**
      * Constructs a {@link DnsCallback} with a specified DNS server index, and
      * an array of (or a single) query.
-     *
+     * 
      * @param serverIndex
      *            the index at which the DNS server address is located in
      *            {@link DnsExchangeFactory#dnsServers}, or -1 if it is not in
@@ -127,8 +124,7 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
             throw new NullPointerException("Argument 'queries' cannot be null.");
         }
         if (queries.length == 0) {
-            throw new IllegalArgumentException(
-                    "Argument 'queries' must contain minimum one valid DnsQuery.");
+            throw new IllegalArgumentException("Argument 'queries' must contain minimum one valid DnsQuery.");
         }
         callbacks.put(queries[0].getHeader().getId(), this);
         this.queries = queries;
@@ -166,7 +162,7 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
     /**
      * Notifies {@link DnsCallback} that a query returned a valid result for the
      * given resource record type.
-     *
+     * 
      * @param validType
      *            the resource record type that should be returned by this
      *            {@link DnsCallback} (i.e. AAAA)
@@ -184,14 +180,12 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
         if (serverIndex == -1) {
             result = null;
         } else {
-            byte[] dnsServerAddress = DnsExchangeFactory
-                    .getDnsServer(++serverIndex);
+            byte[] dnsServerAddress = DnsExchangeFactory.getDnsServer(++serverIndex);
             if (dnsServerAddress == null) {
                 result = null;
             } else {
                 try {
-                    Channel channel = DnsExchangeFactory
-                            .channelForAddress(dnsServerAddress);
+                    Channel channel = DnsExchangeFactory.channelForAddress(dnsServerAddress);
                     for (int i = 0; i < queries.length; i++) {
                         channel.write(queries[i]).sync();
                     }

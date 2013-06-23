@@ -43,7 +43,7 @@ public class DnsCodecTest {
             InetSocketAddress address = new InetSocketAddress(InetAddress.getByAddress(dns), 53);
             Bootstrap b = new Bootstrap();
             b.group(group).channel(NioDatagramChannel.class).option(ChannelOption.SO_BROADCAST, true)
-            .handler(new Initializer());
+                    .handler(new Initializer());
             Channel ch = b.connect(address).sync().channel();
             DnsQuery query = new DnsQuery(15305);
             query.addQuestion(new Question("1.0.0.127.in-addr.arpa", DnsEntry.TYPE_PTR));
@@ -69,7 +69,7 @@ public class DnsCodecTest {
         @Override
         protected void initChannel(NioDatagramChannel ch) throws Exception {
             ch.pipeline().addLast("decoder", new DnsResponseDecoder()).addLast("encoder", new DnsQueryEncoder())
-            .addLast("handler", new Handler());
+                    .addLast("handler", new Handler());
         }
     }
 

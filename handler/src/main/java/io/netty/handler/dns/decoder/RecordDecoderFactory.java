@@ -47,8 +47,7 @@ public final class RecordDecoderFactory {
      */
     public static void setFactory(RecordDecoderFactory factory) {
         if (factory == null) {
-            throw new NullPointerException(
-                    "Cannot set record decoder factory to null.");
+            throw new NullPointerException("Cannot set record decoder factory to null.");
         }
         RecordDecoderFactory.factory = factory;
     }
@@ -85,12 +84,9 @@ public final class RecordDecoderFactory {
      * @param customDecoders
      *            if not {@code null} or empty, adds custom decoders
      */
-    public RecordDecoderFactory(boolean useDefaultDecoders,
-            Map<Integer, RecordDecoder<?>> customDecoders) {
-        if (useDefaultDecoders == false
-                && (customDecoders == null || customDecoders.isEmpty())) {
-            throw new IllegalStateException(
-                    "No decoders have been included to be used with this factory.");
+    public RecordDecoderFactory(boolean useDefaultDecoders, Map<Integer, RecordDecoder<?>> customDecoders) {
+        if (useDefaultDecoders == false && (customDecoders == null || customDecoders.isEmpty())) {
+            throw new IllegalStateException("No decoders have been included to be used with this factory.");
         }
         if (useDefaultDecoders) {
             decoders.put(DnsEntry.TYPE_A, new AddressDecoder(4));
@@ -125,8 +121,7 @@ public final class RecordDecoderFactory {
     public <T> T decode(int type, DnsResponse response, Resource resource) {
         RecordDecoder<?> decoder = decoders.get(type);
         if (decoder == null) {
-            throw new IllegalStateException(
-                    "Unsupported resource record type [id: " + type + "].");
+            throw new IllegalStateException("Unsupported resource record type [id: " + type + "].");
         }
         T result = null;
         try {

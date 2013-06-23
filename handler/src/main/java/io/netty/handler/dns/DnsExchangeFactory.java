@@ -108,7 +108,7 @@ public final class DnsExchangeFactory {
      * Checks if a DNS server can actually be connected to and queried for
      * information by running through a request. This is a
      * <strong>blocking</strong> method.
-     *
+     * 
      * @param address
      *            the DNS server being checked
      * @return {@code true} if the DNS server provides a valid response
@@ -137,7 +137,7 @@ public final class DnsExchangeFactory {
 
     /**
      * Writes a {@link DnsQuery} to a specified channel.
-     *
+     * 
      * @param type
      *            the type for the {@link DnsQuery}
      * @param domain
@@ -158,7 +158,7 @@ public final class DnsExchangeFactory {
 
     /**
      * Adds a DNS server to the default {@link List} of DNS servers used.
-     *
+     * 
      * @param dnsServerAddress
      *            the DNS server being added
      * @return {@code true} if the DNS server was added successfully
@@ -169,7 +169,7 @@ public final class DnsExchangeFactory {
 
     /**
      * Removes a DNS server from the default {@link List} of DNS servers.
-     *
+     * 
      * @param dnsServerAddress
      *            the DNS server being removed
      * @return {@code true} if the DNS server was removed successfully
@@ -192,7 +192,7 @@ public final class DnsExchangeFactory {
     /**
      * Creates a channel for a DNS server if it does not already exist, or else
      * returns the existing channel. Internal use only.
-     *
+     * 
      * @param dnsServerAddress
      *            the address of the DNS server
      * @return the {@link Channel} created
@@ -201,7 +201,7 @@ public final class DnsExchangeFactory {
      * @throws InterruptedException
      */
     protected static Channel channelForAddress(byte[] dnsServerAddress) throws UnknownHostException, SocketException,
-    InterruptedException {
+            InterruptedException {
         Channel channel = null;
         if ((channel = dnsServerChannels.get(dnsServerAddress)) != null) {
             return channel;
@@ -211,8 +211,8 @@ public final class DnsExchangeFactory {
                     InetAddress address = InetAddress.getByAddress(dnsServerAddress);
                     Bootstrap b = new Bootstrap();
                     b.group(new NioEventLoopGroup()).channel(NioDatagramChannel.class).remoteAddress(address, 53)
-                    .option(ChannelOption.SO_BROADCAST, true).option(ChannelOption.SO_SNDBUF, 1048576)
-                    .option(ChannelOption.SO_RCVBUF, 1048576).handler(new DnsClientInitializer());
+                            .option(ChannelOption.SO_BROADCAST, true).option(ChannelOption.SO_SNDBUF, 1048576)
+                            .option(ChannelOption.SO_RCVBUF, 1048576).handler(new DnsClientInitializer());
                     dnsServerChannels.put(dnsServerAddress, channel = b.connect().sync().channel());
                 }
                 return channel;
@@ -223,13 +223,13 @@ public final class DnsExchangeFactory {
     /**
      * Returns a {@link Future} which can be used to obtain a {@link List}
      * either an IPv4 or IPv6 address for the specified domain.
-     *
+     * 
      * @throws UnknownHostException
      * @throws SocketException
      * @throws InterruptedException
      */
     public static <T> Future<T> lookup(String domain) throws UnknownHostException, SocketException,
-    InterruptedException {
+            InterruptedException {
         return resolveSingle(domain, dnsServers.get(0), DnsEntry.TYPE_A, DnsEntry.TYPE_AAAA);
     }
 
@@ -237,7 +237,7 @@ public final class DnsExchangeFactory {
      * Returns a {@link Future} which can be used to obtain a {@link List} of
      * either an IPv4 or IPv6 address for the specified domain, depending on the
      * {@code family}.
-     *
+     * 
      * @param family
      *            {@code 4} for IPv4 addresses, {@code 6} for IPv6 addresses, or
      *            {@code null} for both
@@ -246,7 +246,7 @@ public final class DnsExchangeFactory {
      * @throws InterruptedException
      */
     public static <T> Future<List<T>> lookup(String domain, Integer family) throws UnknownHostException,
-    SocketException, InterruptedException {
+            SocketException, InterruptedException {
         if (family != null && family != 4 && family != 6) {
             throw new IllegalArgumentException("Family must be 4, 6, or null to indicate both 4 and 6.");
         }
@@ -262,7 +262,7 @@ public final class DnsExchangeFactory {
      * Returns a {@link Future} which can be used to obtain a
      * <strong>single</strong> resource record with one of the specified
      * {@code types}.
-     *
+     * 
      * @param domain
      *            the domain name being queried
      * @param dnsServerAddress
@@ -298,7 +298,7 @@ public final class DnsExchangeFactory {
      * Returns a {@link Future} which can be used to obtain a <strong>
      * {@link List}</strong> of resource records with one of the specified
      * {@code types}.
-     *
+     * 
      * @param domain
      *            the domain name being queried
      * @param dnsServerAddress
@@ -333,91 +333,91 @@ public final class DnsExchangeFactory {
     /**
      * Returns a {@link Future} which can be used to obtain a {@link List} of
      * IPv4 addresses as {@link ByteBuf}s.
-     *
+     * 
      * @throws UnknownHostException
      * @throws SocketException
      * @throws InterruptedException
      */
     public static Future<List<ByteBuf>> resolve4(String domain) throws UnknownHostException, SocketException,
-    InterruptedException {
+            InterruptedException {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_A);
     }
 
     /**
      * Returns a {@link Future} which can be used to obtain a {@link List} of
      * IPv6 addresses as {@link ByteBuf}s.
-     *
+     * 
      * @throws UnknownHostException
      * @throws SocketException
      * @throws InterruptedException
      */
     public static Future<List<ByteBuf>> resolve6(String domain) throws UnknownHostException, SocketException,
-    InterruptedException {
+            InterruptedException {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_AAAA);
     }
 
     /**
      * Returns a {@link Future} which can be used to obtain a {@link List} of
      * mail exchanger records as {@link MailExchangerRecord}s.
-     *
+     * 
      * @throws UnknownHostException
      * @throws SocketException
      * @throws InterruptedException
      */
     public static Future<List<MailExchangerRecord>> resolveMx(String domain) throws UnknownHostException,
-    SocketException, InterruptedException {
+            SocketException, InterruptedException {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_MX);
     }
 
     /**
      * Returns a {@link Future} which can be used to obtain a {@link List} of
      * service records as {@link ServiceRecord}s.
-     *
+     * 
      * @throws UnknownHostException
      * @throws SocketException
      * @throws InterruptedException
      */
     public static Future<List<ServiceRecord>> resolveSrv(String domain) throws UnknownHostException, SocketException,
-    InterruptedException {
+            InterruptedException {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_SRV);
     }
 
     /**
      * Returns a {@link Future} which can be used to obtain a {@link List} of
      * text records as {@link String}s in a {@link List}.
-     *
+     * 
      * @throws UnknownHostException
      * @throws SocketException
      * @throws InterruptedException
      */
     public static Future<List<List<String>>> resolveTxt(String domain) throws UnknownHostException, SocketException,
-    InterruptedException {
+            InterruptedException {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_TXT);
     }
 
     /**
      * Returns a {@link Future} which can be used to obtain a {@link List} of
      * canonical name records as {@link String}s.
-     *
+     * 
      * @throws UnknownHostException
      * @throws SocketException
      * @throws InterruptedException
      */
     public static Future<List<String>> resolveCname(String domain) throws UnknownHostException, SocketException,
-    InterruptedException {
+            InterruptedException {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_CNAME);
     }
 
     /**
      * Returns a {@link Future} which can be used to obtain a {@link List} of
      * name server records as {@link String}s.
-     *
+     * 
      * @throws UnknownHostException
      * @throws SocketException
      * @throws InterruptedException
      */
     public static Future<List<String>> resolveNs(String domain) throws UnknownHostException, SocketException,
-    InterruptedException {
+            InterruptedException {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_NS);
     }
 
@@ -425,7 +425,7 @@ public final class DnsExchangeFactory {
      * Returns a {@link Future} which can be used to obtain a {@link List} of
      * domain names as {@link String}s when given their corresponding IP
      * address.
-     *
+     * 
      * @param ipAddress
      *            the ip address to perform a reverse lookup on
      * @throws UnknownHostException
@@ -433,7 +433,7 @@ public final class DnsExchangeFactory {
      * @throws InterruptedException
      */
     public static Future<List<String>> reverse(byte[] ipAddress) throws UnknownHostException, SocketException,
-    InterruptedException {
+            InterruptedException {
         ByteBuf buf = Unpooled.wrappedBuffer(ipAddress);
         Future<List<String>> future = reverse(buf);
         buf.release();
@@ -444,7 +444,7 @@ public final class DnsExchangeFactory {
      * Returns a {@link Future} which can be used to obtain a {@link List} of
      * domain names as {@link String}s when given their corresponding IP
      * address.
-     *
+     * 
      * @param ipAddress
      *            the ip address to perform a reverse lookup on
      * @throws UnknownHostException
@@ -452,7 +452,7 @@ public final class DnsExchangeFactory {
      * @throws InterruptedException
      */
     public static Future<List<String>> reverse(ByteBuf ipAddress) throws UnknownHostException, SocketException,
-    InterruptedException {
+            InterruptedException {
         int size = ipAddress.writerIndex() - ipAddress.readerIndex();
         StringBuilder domain = new StringBuilder();
         for (int i = size - 1; i > -1; i--) {
@@ -463,7 +463,7 @@ public final class DnsExchangeFactory {
 
     /**
      * Removes an inactive channel after timing out. Internal use only.
-     *
+     * 
      * @param channel
      *            the channel to be removed
      */

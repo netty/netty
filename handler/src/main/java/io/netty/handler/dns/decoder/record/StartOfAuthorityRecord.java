@@ -31,7 +31,7 @@ public class StartOfAuthorityRecord {
 
     /**
      * Constructs an SOA (start of authority) record.
-     *
+     * 
      * @param primaryNameServer
      *            any name server that will respond authoritatively for the
      *            domain

@@ -30,8 +30,7 @@ import java.util.Set;
  */
 public final class ResourceCache {
 
-    private static final Map<String, Map<Integer, Set<Record<?>>>> recordCache
-            = new HashMap<String, Map<Integer, Set<Record<?>>>>();
+    private static final Map<String, Map<Integer, Set<Record<?>>>> recordCache = new HashMap<String, Map<Integer, Set<Record<?>>>>();
 
     /**
      * Returns a <strong>single</strong> record for the given domain
@@ -63,8 +62,7 @@ public final class ResourceCache {
         }
         List<T> results = new ArrayList<T>();
         synchronized (subresults) {
-            for (Iterator<Record<?>> iter = subresults.iterator(); iter
-                    .hasNext();) {
+            for (Iterator<Record<?>> iter = subresults.iterator(); iter.hasNext();) {
                 Record<?> record = iter.next();
                 if (System.currentTimeMillis() > record.expiration) {
                     iter.remove();
@@ -84,7 +82,7 @@ public final class ResourceCache {
 
     /**
      * Submits a record to the cache.
-     *
+     * 
      * @param name
      *            the domain name for the record
      * @param type
@@ -95,12 +93,10 @@ public final class ResourceCache {
      *            the record (i.e. for A records, this would be a
      *            {@link ByteBuf})
      */
-    public static <T> void submitRecord(String name, int type, long ttl,
-            T content) {
+    public static <T> void submitRecord(String name, int type, long ttl, T content) {
         Map<Integer, Set<Record<?>>> records = recordCache.get(name);
         if (records == null) {
-            recordCache.put(name,
-                    records = new HashMap<Integer, Set<Record<?>>>());
+            recordCache.put(name, records = new HashMap<Integer, Set<Record<?>>>());
         }
         Set<Record<?>> results = records.get(type);
         if (results == null) {
@@ -113,7 +109,7 @@ public final class ResourceCache {
 
     /**
      * Represents a single resource record.
-     *
+     * 
      * @param <T>
      *            the type of record (i.e. for A records, this would be
      *            {@link ByteBuf})
@@ -125,7 +121,7 @@ public final class ResourceCache {
 
         /**
          * Constructs the resource record.
-         *
+         * 
          * @param content
          *            the content of the record
          * @param ttl

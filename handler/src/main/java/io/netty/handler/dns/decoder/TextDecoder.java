@@ -31,7 +31,7 @@ public class TextDecoder implements RecordDecoder<List<String>> {
     /**
      * Returns a decoded TXT (text) resource record, stored as an
      * {@link ArrayList} of {@code String}s.
-     *
+     * 
      * @param response
      *            the DNS response that contains the resource record being
      *            decoded

@@ -31,7 +31,7 @@ public class AddressDecoder implements RecordDecoder<ByteBuf> {
     /**
      * Constructs an {@code AddressDecoder}, which decodes A and AAAA resource
      * records.
-     *
+     * 
      * @param octets
      *            the number of octets an address has. 4 for type A records and
      *            16 for type AAAA records
@@ -43,7 +43,7 @@ public class AddressDecoder implements RecordDecoder<ByteBuf> {
     /**
      * Returns a {@link ByteBuf} containing a decoded address from either an A
      * or AAAA resource record.
-     *
+     * 
      * @param response
      *            the {@link DnsResponse} received that contained the resource
      *            record being decoded

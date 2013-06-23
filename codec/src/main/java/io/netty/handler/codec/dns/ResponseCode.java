@@ -102,7 +102,7 @@ public enum ResponseCode {
     /**
      * Returns a formated message for an error received given an ID, or unknown
      * if the error is unsupported.
-     *
+     * 
      * @param responseCode
      *            the error code's id
      * @return formatted error message

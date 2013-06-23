@@ -35,7 +35,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
      * Retrieves a domain name given a buffer containing a DNS packet. If the
      * name contains a pointer, the position of the buffer will be set to
      * directly after the pointer's index after the name has been read.
-     *
+     * 
      * @param buf
      *            the byte buffer containing the DNS packet
      * @return the domain name for an entry
@@ -67,7 +67,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
     /**
      * Retrieves a domain name given a buffer containing a DNS packet without
      * advancing the readerIndex for the buffer.
-     *
+     * 
      * @param buf
      *            the byte buffer containing the DNS packet
      * @param offset
@@ -94,7 +94,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
 
     /**
      * Decodes a question, given a DNS packet in a byte buffer.
-     *
+     * 
      * @param buf
      *            the byte buffer containing the DNS packet
      * @return a decoded {@link Question}
@@ -108,7 +108,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
 
     /**
      * Decodes a resource record, given a DNS packet in a byte buffer.
-     *
+     * 
      * @param buf
      *            the byte buffer containing the DNS packet
      * @return a {@link Resource} record containing response data
@@ -127,7 +127,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
 
     /**
      * Decodes a DNS response header, given a DNS packet in a byte buffer.
-     *
+     * 
      * @param parent
      *            the parent {@link Message} to this header
      * @param buf
@@ -156,7 +156,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
 
     /**
      * Decodes a full DNS response packet.
-     *
+     * 
      * @param buf
      *            the raw DNS response packet
      * @return the decoded {@link DnsResponse}
@@ -191,7 +191,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
      * to a client in response to a query. This method writes the decoded
      * response to the specified {@link MessageList} to be handled by a
      * specialized message handler.
-     *
+     * 
      * @param ctx
      *            the {@link ChannelHandlerContext} this
      *            {@link DnsResponseDecoder} belongs to

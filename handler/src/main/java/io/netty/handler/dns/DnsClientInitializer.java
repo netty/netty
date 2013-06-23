@@ -31,7 +31,7 @@ public class DnsClientInitializer extends ChannelInitializer<NioDatagramChannel>
     @Override
     protected void initChannel(NioDatagramChannel channel) throws Exception {
         channel.pipeline().addLast("timeout", new ReadTimeoutHandler(30)).addLast("decoder", new DnsResponseDecoder())
-        .addLast("encoder", new DnsQueryEncoder()).addLast("handler", new InboundDnsMessageHandler());
+                .addLast("encoder", new DnsQueryEncoder()).addLast("handler", new InboundDnsMessageHandler());
     }
 
 }

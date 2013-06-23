@@ -25,7 +25,7 @@ public class Question extends DnsEntry {
 
     /**
      * Constructs a question with the default class IN (Internet).
-     *
+     * 
      * @param name
      *            the domain name being queried i.e. "www.example.com"
      * @param type
@@ -38,7 +38,7 @@ public class Question extends DnsEntry {
 
     /**
      * Constructs a question with the given class.
-     *
+     * 
      * @param name
      *            the domain name being queried i.e. "www.example.com"
      * @param type
