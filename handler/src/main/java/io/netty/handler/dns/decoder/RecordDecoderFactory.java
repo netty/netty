@@ -28,31 +28,92 @@ import java.util.Map;
  */
 public final class RecordDecoderFactory {
 
+    private static RecordDecoderFactory factory = new RecordDecoderFactory(null);
+
     /**
-     * Contains the default resource record decoders, which are for A, AAAA, MX,
-     * TXT, SRV, NS, CNAME, PTR, and SOA resource records. Decoders can be added
-     * or removed with the respective {@link #addDecoder(int, RecordDecoder)}
-     * and {@link #removeDecoder(int)} methods.
+     * Returns the active {@link RecordDecoderFactory}, which is the same as the
+     * default factory if it has not been changed by the user.
      */
-    private static final Map<Integer, RecordDecoder<?>> decoders = new HashMap<Integer, RecordDecoder<?>>();
-    static {
-        decoders.put(DnsEntry.TYPE_A, new AddressDecoder(4));
-        decoders.put(DnsEntry.TYPE_AAAA, new AddressDecoder(16));
-        decoders.put(DnsEntry.TYPE_MX, new MailExchangerDecoder());
-        decoders.put(DnsEntry.TYPE_TXT, new TextDecoder());
-        decoders.put(DnsEntry.TYPE_SRV, new ServiceDecoder());
-        RecordDecoder<?> decoder = new DomainDecoder();
-        decoders.put(DnsEntry.TYPE_NS, decoder);
-        decoders.put(DnsEntry.TYPE_CNAME, decoder);
-        decoders.put(DnsEntry.TYPE_PTR, decoder);
-        decoders.put(DnsEntry.TYPE_SOA, new StartOfAuthorityDecoder());
+    public static RecordDecoderFactory getFactory() {
+        return factory;
+    }
+
+    /**
+     * Sets the active {@link RecordDecoderFactory} to be used for decoding
+     * resource records.
+     *
+     * @param factory
+     *            the {@link RecordDecoderFactory} to use
+     */
+    public static void setFactory(RecordDecoderFactory factory) {
+        if (factory == null) {
+            throw new NullPointerException(
+                    "Cannot set record decoder factory to null.");
+        }
+        RecordDecoderFactory.factory = factory;
+    }
+
+    private final Map<Integer, RecordDecoder<?>> decoders = new HashMap<Integer, RecordDecoder<?>>();
+
+    /**
+     * Creates a new {@link RecordDecoderFactory} only using the default
+     * decoders.
+     */
+    public RecordDecoderFactory() {
+        this(true, null);
+    }
+
+    /**
+     * Creates a new {@link RecordDecoderFactory} using the default decoders and
+     * custom decoders (custom decoders override defaults).
+     *
+     * @param customDecoders
+     *            user supplied resource record decoders, mapping the resource
+     *            record's type to the decoder
+     */
+    public RecordDecoderFactory(Map<Integer, RecordDecoder<?>> customDecoders) {
+        this(true, customDecoders);
+    }
+
+    /**
+     * Creates a {@link RecordDecoderFactory} using either custom resource
+     * record decoders, default decoders, or both. If a custom decoder has the
+     * same record type as a default decoder, the default decoder is overriden.
+     *
+     * @param useDefaultDecoders
+     *            if {@code true}, adds default decoders
+     * @param customDecoders
+     *            if not {@code null} or empty, adds custom decoders
+     */
+    public RecordDecoderFactory(boolean useDefaultDecoders,
+            Map<Integer, RecordDecoder<?>> customDecoders) {
+        if (useDefaultDecoders == false
+                && (customDecoders == null || customDecoders.isEmpty())) {
+            throw new IllegalStateException(
+                    "No decoders have been included to be used with this factory.");
+        }
+        if (useDefaultDecoders) {
+            decoders.put(DnsEntry.TYPE_A, new AddressDecoder(4));
+            decoders.put(DnsEntry.TYPE_AAAA, new AddressDecoder(16));
+            decoders.put(DnsEntry.TYPE_MX, new MailExchangerDecoder());
+            decoders.put(DnsEntry.TYPE_TXT, new TextDecoder());
+            decoders.put(DnsEntry.TYPE_SRV, new ServiceDecoder());
+            RecordDecoder<?> decoder = new DomainDecoder();
+            decoders.put(DnsEntry.TYPE_NS, decoder);
+            decoders.put(DnsEntry.TYPE_CNAME, decoder);
+            decoders.put(DnsEntry.TYPE_PTR, decoder);
+            decoders.put(DnsEntry.TYPE_SOA, new StartOfAuthorityDecoder());
+        }
+        if (customDecoders != null) {
+            decoders.putAll(customDecoders);
+        }
     }
 
     /**
      * Decodes a resource record and returns the result.
      *
      * @param type
-     *            the type of resource record (if -1 returns null)
+     *            the type of resource record
      * @param response
      *            the DNS response that contains the resource record being
      *            decoded
@@ -61,13 +122,11 @@ public final class RecordDecoderFactory {
      * @return the decoded resource record
      */
     @SuppressWarnings("unchecked")
-    public static <T> T decode(int type, DnsResponse response, Resource resource) {
-        if (type == -1) {
-            return null;
-        }
+    public <T> T decode(int type, DnsResponse response, Resource resource) {
         RecordDecoder<?> decoder = decoders.get(type);
         if (decoder == null) {
-            throw new IllegalStateException("Unsupported resource record type [id: " + type + "].");
+            throw new IllegalStateException(
+                    "Unsupported resource record type [id: " + type + "].");
         }
         T result = null;
         try {
@@ -76,34 +135,6 @@ public final class RecordDecoderFactory {
             e.printStackTrace();
         }
         return result;
-    }
-
-    /**
-     * Adds a new resource record decoder, or replaces an existing one for the
-     * given type.
-     *
-     * @param type
-     *            the type of the {@link RecordDecoder} that should be added
-     *            (i.e. A or AAAA)
-     * @param decoder
-     *            the {@link RecordDecoder} being added
-     */
-    public static void addDecoder(int type, RecordDecoder<?> decoder) {
-        decoders.put(type, decoder);
-    }
-
-    /**
-     * Removes the {@link RecordDecoder} with the given type.
-     *
-     * @param type
-     *            the type of the {@link RecordDecoder} that should be removed
-     *            (i.e. A or AAAA)
-     */
-    public static void removeDecoder(int type) {
-        decoders.remove(type);
-    }
-
-    private RecordDecoderFactory() {
     }
 
 }

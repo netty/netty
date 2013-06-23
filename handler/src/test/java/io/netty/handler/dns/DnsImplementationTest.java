@@ -27,18 +27,18 @@ import org.junit.Test;
 
 public class DnsImplementationTest {
 
-    private static final String[] TOP_WEBSITES = { "facebook.com", "google.com", "youtube.com", "yahoo.com",
-        "baidu.com", "wikipedia.org", "amazon.com", "qq.com", "live.com", "taobao.com", "blogspot.com",
-        "google.co.in", "linkedin.com", "twitter.com", "yahoo.co.jp", "bing.com", "sina.com.cn", "msn.com",
-        "ebay.com", "twitter.com" };
+    private static final String[] TOP_WEBSITES = { "facebook.com",
+            "google.com", "youtube.com", "yahoo.com", "baidu.com",
+            "wikipedia.org", "amazon.com", "qq.com", "live.com", "taobao.com",
+            "blogspot.com", "google.co.in", "linkedin.com", "twitter.com",
+            "yahoo.co.jp", "bing.com", "sina.com.cn", "msn.com", "ebay.com",
+            "twitter.com" };
 
     private static final int MAX_ERRORS = 10; // Not all websites use every
     // available record type
     // (MX, AAAA, TXT, etc) so there has to be some room for error.
 
-    private static final int TRIALS_PER_WEBSITE = 2; // Make sure the cache is
-
-    // working.
+    private static final int TRIALS_PER_WEBSITE = 2;
 
     // Maybe this test should be expanded a bit, too bad websites have different
     // records available
@@ -50,27 +50,38 @@ public class DnsImplementationTest {
             try {
                 String domain = TOP_WEBSITES[i];
                 for (int n = 0; n < TRIALS_PER_WEBSITE; n++) {
-                    assertTrue("Encountered too many errors.", errors < MAX_ERRORS);
+                    assertTrue("Encountered too many errors.",
+                            errors < MAX_ERRORS);
                     Future<ByteBuf> future = DnsExchangeFactory.lookup(domain);
                     if (future.get() == null) {
-                        System.err.println("Failed to retrieve address for domain \"" + domain + "\".");
+                        System.err
+                                .println("Failed to retrieve address for domain \""
+                                        + domain + "\".");
                         errors++;
                     }
                 }
                 for (int n = 0; n < TRIALS_PER_WEBSITE; n++) {
-                    assertTrue("Encountered too many errors.", errors < MAX_ERRORS);
-                    Future<List<MailExchangerRecord>> future = DnsExchangeFactory.resolveMx(domain);
+                    assertTrue("Encountered too many errors.",
+                            errors < MAX_ERRORS);
+                    Future<List<MailExchangerRecord>> future = DnsExchangeFactory
+                            .resolveMx(domain);
                     if (future.get() == null) {
-                        System.err.println("Failed to receive mail exchanger record for domain \"" + domain + "\".");
+                        System.err
+                                .println("Failed to receive mail exchanger record for domain \""
+                                        + domain + "\".");
                         errors++;
                         break;
                     }
                 }
                 for (int n = 0; n < TRIALS_PER_WEBSITE; n++) {
-                    assertTrue("Encountered too many errors.", errors < MAX_ERRORS);
-                    Future<List<List<String>>> future = DnsExchangeFactory.resolveTxt(domain);
+                    assertTrue("Encountered too many errors.",
+                            errors < MAX_ERRORS);
+                    Future<List<List<String>>> future = DnsExchangeFactory
+                            .resolveTxt(domain);
                     if (future.get() == null) {
-                        System.err.println("Failed to receive text record for domain \"" + domain + "\".");
+                        System.err
+                                .println("Failed to receive text record for domain \""
+                                        + domain + "\".");
                         errors++;
                         break;
                     }

@@ -84,10 +84,13 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
             for (int i = 0; i < resources.size(); i++) {
                 Resource resource = resources.get(i);
                 for (int n = 0; n < callback.queries.length; n++) {
-                    Object result = RecordDecoderFactory.decode(resource.type(), response, resource);
+                    Object result = RecordDecoderFactory.getFactory().decode(
+                            resource.type(), response, resource);
                     if (result != null) {
-                        ResourceCache.submitRecord(resource.name(), resource.type(), resource.timeToLive(), result);
-                        if (callback.queries[n].getQuestions().get(0).type() == resource.type()) {
+                        ResourceCache.submitRecord(resource.name(),
+                                resource.type(), resource.timeToLive(), result);
+                        if (callback.queries[n].getQuestions().get(0).type() == resource
+                                .type()) {
                             callbacks.remove(response.getHeader().getId());
                             callback.flagValid(resource.type());
                         }
@@ -124,7 +127,8 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
             throw new NullPointerException("Argument 'queries' cannot be null.");
         }
         if (queries.length == 0) {
-            throw new IllegalArgumentException("Argument 'queries' must contain minimum one valid DnsQuery.");
+            throw new IllegalArgumentException(
+                    "Argument 'queries' must contain minimum one valid DnsQuery.");
         }
         callbacks.put(queries[0].getHeader().getId(), this);
         this.queries = queries;
@@ -180,12 +184,14 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
         if (serverIndex == -1) {
             result = null;
         } else {
-            byte[] dnsServerAddress = DnsExchangeFactory.getDnsServer(++serverIndex);
+            byte[] dnsServerAddress = DnsExchangeFactory
+                    .getDnsServer(++serverIndex);
             if (dnsServerAddress == null) {
                 result = null;
             } else {
                 try {
-                    Channel channel = DnsExchangeFactory.channelForAddress(dnsServerAddress);
+                    Channel channel = DnsExchangeFactory
+                            .channelForAddress(dnsServerAddress);
                     for (int i = 0; i < queries.length; i++) {
                         channel.write(queries[i]).sync();
                     }
