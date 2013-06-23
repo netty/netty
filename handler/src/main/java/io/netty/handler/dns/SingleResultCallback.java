@@ -23,7 +23,7 @@ import java.util.concurrent.Callable;
 /**
  * Returns a single result, as opposed to a {@link List} of results in a
  * {@link DnsCallback}.
- * 
+ *
  * @param <T>
  *            a single result for a specified type (i.e. if type is A, result
  *            would be a {@link ByteBuf})
@@ -35,7 +35,7 @@ public class SingleResultCallback<T> implements Callable<T> {
     /**
      * Constructs a {@link SingleResultCallback} by passing it a
      * {@link DnsCallback}.
-     * 
+     *
      * @param parent
      *            the {@link DnsCallback}
      */

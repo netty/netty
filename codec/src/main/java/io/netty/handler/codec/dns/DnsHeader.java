@@ -97,7 +97,7 @@ public class DnsHeader {
 
     /**
      * Returns the 4 bit opcode used for the {@link DnsMessage}.
-     * 
+     *
      * @see #OPCODE_QUERY
      * @see #OPCODE_IQUERY
      */
@@ -107,7 +107,7 @@ public class DnsHeader {
 
     /**
      * Returns the type of {@link DnsMessage}.
-     * 
+     *
      * @see #TYPE_QUERY
      * @see #TYPE_HEADER
      */
@@ -125,7 +125,7 @@ public class DnsHeader {
 
     /**
      * Sets the opcode for this {@link DnsMessage}.
-     * 
+     *
      * @param opcode
      *            opcode to set
      * @return the header to allow method chaining
@@ -138,7 +138,7 @@ public class DnsHeader {
     /**
      * Sets whether a name server is directed to pursue a query recursively or
      * not.
-     * 
+     *
      * @param recursionDesired
      *            if set to {@code true}, pursues query recursively
      * @return the header to allow method chaining
@@ -150,7 +150,7 @@ public class DnsHeader {
 
     /**
      * Sets the {@link DnsMessage} type.
-     * 
+     *
      * @param type
      *            message type
      * @return the header to allow method chaining
@@ -162,7 +162,7 @@ public class DnsHeader {
 
     /**
      * Sets the id for this {@link DnsMessage}.
-     * 
+     *
      * @param id
      *            a unique 2 byte unsigned identifier
      * @return the header to allow method chaining

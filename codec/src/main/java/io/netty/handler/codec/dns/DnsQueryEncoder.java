@@ -32,7 +32,7 @@ public class DnsQueryEncoder extends MessageToByteEncoder<DnsQuery> {
     /**
      * Encodes the information in a {@link DnsQueryHeader} and writes it to the
      * specified {@link ByteBuf}. The header is always 12 bytes long.
-     * 
+     *
      * @param header
      *            the query header being encoded
      * @param buf
@@ -54,7 +54,7 @@ public class DnsQueryEncoder extends MessageToByteEncoder<DnsQuery> {
     /**
      * Encodes the information in a {@link Question} and writes it to the
      * specified {@link ByteBuf}.
-     * 
+     *
      * @param question
      *            the question being encoded
      * @param buf
@@ -73,7 +73,7 @@ public class DnsQueryEncoder extends MessageToByteEncoder<DnsQuery> {
 
     /**
      * Encodes a query and writes it to a {@link ByteBuf}.
-     * 
+     *
      * @param query
      *            the {@link DnsQuery} being encoded
      * @param buf
@@ -91,7 +91,7 @@ public class DnsQueryEncoder extends MessageToByteEncoder<DnsQuery> {
      * Encodes a query and writes it to a {@link ByteBuf}. Queries are sent to a
      * DNS server and a response will be returned from the server. The encoded
      * ByteBuf is written to the specified {@link MessageList}.
-     * 
+     *
      * @param ctx
      *            the {@link ChannelHandlerContext} this {@link DnsQueryEncoder}
      *            belongs to

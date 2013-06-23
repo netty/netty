@@ -30,7 +30,7 @@ public class Resource extends DnsEntry implements ByteBufHolder {
 
     /**
      * Constructs a resource record.
-     * 
+     *
      * @param name
      *            the domain name
      * @param type

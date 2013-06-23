@@ -29,7 +29,7 @@ public class MailExchangerDecoder implements RecordDecoder<MailExchangerRecord> 
     /**
      * Returns a decoded MX (mail exchanger) resource record, stored as an
      * instance of {@link MailExchangerRecord}.
-     * 
+     *
      * @param response
      *            the {@link DnsResponse} received that contained the resource
      *            record being decoded
