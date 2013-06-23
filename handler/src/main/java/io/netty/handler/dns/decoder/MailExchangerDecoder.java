@@ -41,7 +41,6 @@ public class MailExchangerDecoder implements RecordDecoder<MailExchangerRecord> 
         ByteBuf packet = response.content().readerIndex(resource.contentIndex());
         int priority = packet.readShort();
         String name = DnsResponseDecoder.readName(packet);
-        packet.release();
         return new MailExchangerRecord(priority, name);
     }
 

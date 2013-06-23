@@ -43,7 +43,7 @@ public class DnsImplementationTest {
     // Maybe this test should be expanded a bit, too bad websites have different
     // records available
     @Test
-    public void test() {
+    public void test() throws Exception {
         int errors = 0;
         System.out.println("Conducting DNS unit test.");
         for (int i = 0; i < TOP_WEBSITES.length; i++) {

@@ -46,7 +46,6 @@ public class StartOfAuthorityDecoder implements RecordDecoder<StartOfAuthorityRe
         int retry = packet.readInt();
         int expire = packet.readInt();
         long minimum = packet.readUnsignedInt();
-        packet.release();
         return new StartOfAuthorityRecord(mName, rName, serial, refresh, retry, expire, minimum);
     }
 

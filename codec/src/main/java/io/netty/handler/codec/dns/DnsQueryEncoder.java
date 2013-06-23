@@ -18,7 +18,7 @@ package io.netty.handler.codec.dns;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.MessageList;
-import io.netty.handler.codec.MessageToMessageEncoder;
+import io.netty.handler.codec.MessageToByteEncoder;
 
 import java.util.List;
 
@@ -27,7 +27,7 @@ import java.util.List;
  * class also contains methods for encoding parts of DnsQuery's such as the
  * header and questions.
  */
-public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
+public class DnsQueryEncoder extends MessageToByteEncoder<DnsQuery> {
 
     /**
      * Encodes the information in a {@link DnsQueryHeader} and writes it to the
@@ -98,15 +98,13 @@ public class DnsQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
      * @param query
      *            the query being encoded
      * @param out
-     *            the {@link MessageList} to which encoded messages should be
-     *            added
+     *            the {@link ByteBuf} to which encoded messages should be
+     *            written
      * @throws Exception
      */
     @Override
-    protected void encode(ChannelHandlerContext ctx, DnsQuery query, MessageList<Object> out) throws Exception {
-        ByteBuf buf = ctx.alloc().buffer(512);
-        encodeQuery(query, buf);
-        out.add(buf);
+    protected void encode(ChannelHandlerContext ctx, DnsQuery query, ByteBuf out) throws Exception {
+        encodeQuery(query, out);
     }
 
 }

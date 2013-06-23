@@ -70,22 +70,17 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
     static void finish(DnsResponse response) {
         DnsCallback<?> callback = callbacks.get(response.getHeader().getId());
         if (callback != null) {
-            List<Resource> resources = new ArrayList<Resource>();
-            resources.addAll(response.getAnswers());
-            resources.addAll(response.getAuthorityResources());
-            resources.addAll(response.getAdditionalResources());
             if (response.getHeader().getResponseCode() != 0) {
                 if (callback.failsIncremented() >= callback.queries.length) {
                     callbacks.remove(response.getHeader().getId());
                     callback.complete();
-                    if (resources.size() > 0) {
-                        for (int i = 0; i < resources.size(); i++) {
-                            resources.get(i).release();
-                        }
-                    }
                     return;
                 }
             }
+            List<Resource> resources = new ArrayList<Resource>();
+            resources.addAll(response.getAnswers());
+            resources.addAll(response.getAuthorityResources());
+            resources.addAll(response.getAdditionalResources());
             for (int i = 0; i < resources.size(); i++) {
                 Resource resource = resources.get(i);
                 for (int n = 0; n < callback.queries.length; n++) {

@@ -43,7 +43,6 @@ public class ServiceDecoder implements RecordDecoder<ServiceRecord> {
         int weight = packet.readShort();
         int port = packet.readUnsignedShort();
         String target = DnsResponseDecoder.readName(packet);
-        packet.release();
         return new ServiceRecord(resource.name(), priority, weight, port, target);
     }
 
