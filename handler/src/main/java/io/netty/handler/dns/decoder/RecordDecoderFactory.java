@@ -85,7 +85,7 @@ public final class RecordDecoderFactory {
      *            if not {@code null} or empty, adds custom decoders
      */
     public RecordDecoderFactory(boolean useDefaultDecoders, Map<Integer, RecordDecoder<?>> customDecoders) {
-        if (useDefaultDecoders == false && (customDecoders == null || customDecoders.isEmpty())) {
+        if (!useDefaultDecoders && (customDecoders == null || customDecoders.isEmpty())) {
             throw new IllegalStateException("No decoders have been included to be used with this factory.");
         }
         if (useDefaultDecoders) {
