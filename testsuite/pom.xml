@@ -29,6 +29,11 @@
   <name>Netty/Testsuite</name>
 
   <dependencies>
+      <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-transport-socket</artifactId>
+          <version>${project.version}</version>
+      </dependency>
     <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>netty-transport-sctp</artifactId>
