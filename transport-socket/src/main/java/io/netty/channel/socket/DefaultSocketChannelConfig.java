@@ -23,6 +23,8 @@ import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.internal.PlatformDependent;
 
+import java.net.PasswordAuthentication;
+import java.net.Proxy;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.Map;
@@ -33,10 +35,13 @@ import static io.netty.channel.ChannelOption.*;
  * The default {@link SocketChannelConfig} implementation.
  */
 public class DefaultSocketChannelConfig extends DefaultChannelConfig
-                                        implements SocketChannelConfig {
+        implements SocketChannelConfig {
 
     protected final Socket javaSocket;
     private volatile boolean allowHalfClosure;
+
+    private Proxy proxy = Proxy.NO_PROXY;
+    private PasswordAuthentication passwordAuthentication;
 
     /**
      * Creates a new instance.
@@ -99,6 +104,12 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
         if (option == ChannelOption.ALLOW_HALF_CLOSURE) {
             return (T) Boolean.valueOf(isAllowHalfClosure());
         }
+        if (option == PROXY) {
+            return (T) proxy();
+        }
+        if (option == PROXY_PASSWORD_AUTHENTICATION) {
+            return (T) proxyPasswordAuthentication();
+        }
 
         return super.getOption(option);
     }
@@ -123,6 +134,10 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
             setTrafficClass((Integer) value);
         } else if (option == ChannelOption.ALLOW_HALF_CLOSURE) {
             setAllowHalfClosure((Boolean) value);
+        } else if (option == PROXY) {
+            setProxy((Proxy) value);
+        } else if (option == PROXY_PASSWORD_AUTHENTICATION) {
+            setProxyPasswordAuthentication((PasswordAuthentication) value);
         } else {
             return super.setOption(option, value);
         }
@@ -319,5 +334,27 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     @Override
     public SocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
         return (SocketChannelConfig) super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
+    }
+
+    @Override
+    public Proxy proxy() {
+        return this.proxy;
+    }
+
+    @Override
+    public SocketChannelConfig setProxy(Proxy proxy) {
+        this.proxy = proxy;
+        return this;
+    }
+
+    @Override
+    public PasswordAuthentication proxyPasswordAuthentication() {
+        return this.passwordAuthentication;
+    }
+
+    @Override
+    public SocketChannelConfig setProxyPasswordAuthentication(PasswordAuthentication passwordAuthentication) {
+        this.passwordAuthentication = passwordAuthentication;
+        return this;
     }
 }

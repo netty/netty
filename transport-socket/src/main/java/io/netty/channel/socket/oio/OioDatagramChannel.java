@@ -170,7 +170,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
 
     @Override
     protected void doConnect(SocketAddress remoteAddress,
-            SocketAddress localAddress) throws Exception {
+            SocketAddress localAddress, ChannelPromise promise) throws Exception {
         if (localAddress != null) {
             socket.bind(localAddress);
         }
@@ -179,6 +179,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
         try {
             socket.connect(remoteAddress);
             success = true;
+            promise.setSuccess();
         } finally {
             if (!success) {
                 try {
