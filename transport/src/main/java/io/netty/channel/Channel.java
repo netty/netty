@@ -15,10 +15,6 @@
  */
 package io.netty.channel;
 
-import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.DatagramPacket;
-import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.util.AttributeMap;
 
 import java.net.InetSocketAddress;
@@ -49,9 +45,9 @@ import java.net.SocketAddress;
  * <h3>Channels are hierarchical</h3>
  * <p>
  * A {@link Channel} can have a {@linkplain #parent() parent} depending on
- * how it was created.  For instance, a {@link SocketChannel}, that was accepted
- * by {@link ServerSocketChannel}, will return the {@link ServerSocketChannel}
- * as its parent on {@link #parent()}.
+ * how it was created.  For instance, a {@link io.netty.channel.socket.SocketChannel}, that was accepted
+ * by {@link io.netty.channel.socket.ServerSocketChannel}, will return the
+ * {@link io.netty.channel.socket.ServerSocketChannel} as its parent on {@link #parent()}.
  * <p>
  * The semantics of the hierarchical structure depends on the transport
  * implementation where the {@link Channel} belongs to.  For example, you could
@@ -64,7 +60,7 @@ import java.net.SocketAddress;
  * Some transports exposes additional operations that is specific to the
  * transport.  Down-cast the {@link Channel} to sub-type to invoke such
  * operations.  For example, with the old I/O datagram transport, multicast
- * join / leave operations are provided by {@link DatagramChannel}.
+ * join / leave operations are provided by {@link io.netty.channel.socket.DatagramChannel}.
  */
 public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPropertyAccess, Comparable<Channel> {
 
@@ -125,14 +121,14 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
     /**
      * Returns the remote address where this channel is connected to.  The
      * returned {@link SocketAddress} is supposed to be down-cast into more
-     * concrete type such as {@link InetSocketAddress} to retrieve the detailed
+     * concrete type suchio.netty.channel.socket. as {@link InetSocketAddress} to retrieve the detailed
      * information.
      *
      * @return the remote address of this channel.
      *         {@code null} if this channel is not connected.
      *         If this channel is not connected but it can receive messages
-     *         from arbitrary remote addresses (e.g. {@link DatagramChannel},
-     *         use {@link DatagramPacket#recipient()} to determine
+     *         from arbitrary remote addresses (e.g. {@link io.netty.channel.socket.DatagramChannel},
+     *         use {@link io.netty.channel.socket.DatagramPacket#recipient()} to determine
      *         the origination of the received message as this method will
      *         return {@code null}.
      */

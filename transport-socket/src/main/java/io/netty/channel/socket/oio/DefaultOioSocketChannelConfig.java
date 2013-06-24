@@ -23,6 +23,8 @@ import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.SocketChannel;
 
 import java.io.IOException;
+import java.net.PasswordAuthentication;
+import java.net.Proxy;
 import java.net.Socket;
 import java.util.Map;
 
@@ -163,6 +165,18 @@ public class DefaultOioSocketChannelConfig extends DefaultSocketChannelConfig im
     @Override
     public OioSocketChannelConfig setAutoRead(boolean autoRead) {
         super.setAutoRead(autoRead);
+        return this;
+    }
+
+    @Override
+    public OioSocketChannelConfig setProxy(Proxy proxy) {
+        super.setProxy(proxy);
+        return this;
+    }
+
+    @Override
+    public OioSocketChannelConfig setProxyPasswordAuthentication(PasswordAuthentication passwordAuthentication) {
+        super.setProxyPasswordAuthentication(passwordAuthentication);
         return this;
     }
 }

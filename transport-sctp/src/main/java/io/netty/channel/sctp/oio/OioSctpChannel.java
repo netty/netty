@@ -353,7 +353,8 @@ public class OioSctpChannel extends AbstractOioMessageChannel
 
     @Override
     protected void doConnect(SocketAddress remoteAddress,
-                             SocketAddress localAddress) throws Exception {
+                             SocketAddress localAddress,
+                             ChannelPromise promise) throws Exception {
         if (localAddress != null) {
             ch.bind(localAddress);
         }

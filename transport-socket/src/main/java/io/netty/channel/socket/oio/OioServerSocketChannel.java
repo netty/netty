@@ -17,6 +17,7 @@ package io.netty.channel.socket.oio;
 
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.MessageList;
 import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.socket.ServerSocketChannel;
@@ -189,7 +190,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
 
     @Override
     protected void doConnect(
-            SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+            SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) throws Exception {
         throw new UnsupportedOperationException();
     }
 

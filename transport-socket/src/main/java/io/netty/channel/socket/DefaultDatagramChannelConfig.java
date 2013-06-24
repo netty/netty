@@ -62,40 +62,42 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
     public Map<ChannelOption<?>, Object> getOptions() {
         return getOptions(
                 super.getOptions(),
-                SO_BROADCAST, SO_RCVBUF, SO_SNDBUF, SO_REUSEADDR, IP_MULTICAST_LOOP_DISABLED,
-                IP_MULTICAST_ADDR, IP_MULTICAST_IF, IP_MULTICAST_TTL, IP_TOS);
+                ChannelOption.SO_BROADCAST, ChannelOption.SO_RCVBUF, ChannelOption.SO_SNDBUF,
+                ChannelOption.SO_REUSEADDR, ChannelOption.IP_MULTICAST_LOOP_DISABLED,
+                ChannelOption.IP_MULTICAST_ADDR, ChannelOption.IP_MULTICAST_IF,
+                ChannelOption.IP_MULTICAST_TTL, ChannelOption.IP_TOS);
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getOption(ChannelOption<T> option) {
-        if (option == SO_BROADCAST) {
+        if (option == ChannelOption.SO_BROADCAST) {
             return (T) Boolean.valueOf(isBroadcast());
         }
-        if (option == SO_RCVBUF) {
+        if (option == ChannelOption.SO_RCVBUF) {
             return (T) Integer.valueOf(getReceiveBufferSize());
         }
-        if (option == SO_SNDBUF) {
+        if (option == ChannelOption.SO_SNDBUF) {
             return (T) Integer.valueOf(getSendBufferSize());
         }
-        if (option == SO_REUSEADDR) {
+        if (option == ChannelOption.SO_REUSEADDR) {
             return (T) Boolean.valueOf(isReuseAddress());
         }
-        if (option == IP_MULTICAST_LOOP_DISABLED) {
+        if (option == ChannelOption.IP_MULTICAST_LOOP_DISABLED) {
             return (T) Boolean.valueOf(isLoopbackModeDisabled());
         }
-        if (option == IP_MULTICAST_ADDR) {
+        if (option == ChannelOption.IP_MULTICAST_ADDR) {
             T i = (T) getInterface();
             return i;
         }
-        if (option == IP_MULTICAST_IF) {
+        if (option == ChannelOption.IP_MULTICAST_IF) {
             T i = (T) getNetworkInterface();
             return i;
         }
-        if (option == IP_MULTICAST_TTL) {
+        if (option == ChannelOption.IP_MULTICAST_TTL) {
             return (T) Integer.valueOf(getTimeToLive());
         }
-        if (option == IP_TOS) {
+        if (option == ChannelOption.IP_TOS) {
             return (T) Integer.valueOf(getTrafficClass());
         }
 
@@ -106,23 +108,23 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
     public <T> boolean setOption(ChannelOption<T> option, T value) {
         validate(option, value);
 
-        if (option == SO_BROADCAST) {
+        if (option == ChannelOption.SO_BROADCAST) {
             setBroadcast((Boolean) value);
-        } else if (option == SO_RCVBUF) {
+        } else if (option == ChannelOption.SO_RCVBUF) {
             setReceiveBufferSize((Integer) value);
-        } else if (option == SO_SNDBUF) {
+        } else if (option == ChannelOption.SO_SNDBUF) {
             setSendBufferSize((Integer) value);
-        } else if (option == SO_REUSEADDR) {
+        } else if (option == ChannelOption.SO_REUSEADDR) {
             setReuseAddress((Boolean) value);
-        } else if (option == IP_MULTICAST_LOOP_DISABLED) {
+        } else if (option == ChannelOption.IP_MULTICAST_LOOP_DISABLED) {
             setLoopbackModeDisabled((Boolean) value);
-        } else if (option == IP_MULTICAST_ADDR) {
+        } else if (option == ChannelOption.IP_MULTICAST_ADDR) {
             setInterface((InetAddress) value);
-        } else if (option == IP_MULTICAST_IF) {
+        } else if (option == ChannelOption.IP_MULTICAST_IF) {
             setNetworkInterface((NetworkInterface) value);
-        } else if (option == IP_MULTICAST_TTL) {
+        } else if (option == ChannelOption.IP_MULTICAST_TTL) {
             setTimeToLive((Integer) value);
-        } else if (option == IP_TOS) {
+        } else if (option == ChannelOption.IP_TOS) {
             setTrafficClass((Integer) value);
         } else {
             return super.setOption(option, value);

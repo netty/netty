@@ -22,6 +22,8 @@ import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.RecvByteBufAllocator;
 
+import java.net.PasswordAuthentication;
+import java.net.Proxy;
 import java.net.Socket;
 import java.net.StandardSocketOptions;
 
@@ -155,6 +157,14 @@ public interface SocketChannelConfig extends ChannelConfig {
      * is closed automatically.
      */
     SocketChannelConfig setAllowHalfClosure(boolean allowHalfClosure);
+
+    SocketChannelConfig setProxy(Proxy proxy);
+
+    Proxy proxy();
+
+    SocketChannelConfig setProxyPasswordAuthentication(PasswordAuthentication passwordAuthentication);
+
+    PasswordAuthentication proxyPasswordAuthentication();
 
     @Override
     SocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);

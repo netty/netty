@@ -13,14 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
-
 
 /**
- * A {@link Channel} that accepts an incoming connection attempt and creates
- * its child {@link Channel}s by accepting them.  {@link io.netty.channel.socket.ServerSocketChannel} is
- * a good example.
+ * Old blocking I/O based socket channel API implementation - recommended for
+ * a small number of connections (&lt; 1000).
  */
-public interface ServerChannel extends Channel {
-    // This is a tag interface.
-}
+package io.netty.hander.codec.socks;

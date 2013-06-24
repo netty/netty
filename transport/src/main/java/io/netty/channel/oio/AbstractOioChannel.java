@@ -69,8 +69,8 @@ public abstract class AbstractOioChannel extends AbstractChannel {
 
             try {
                 boolean wasActive = isActive();
-                doConnect(remoteAddress, localAddress);
-                promise.setSuccess();
+                doConnect(remoteAddress, localAddress, promise);
+//                promise.setSuccess();
                 if (!wasActive && isActive()) {
                     pipeline().fireChannelActive();
                 }
@@ -100,7 +100,9 @@ public abstract class AbstractOioChannel extends AbstractChannel {
      * Connect to the remote peer using the given localAddress if one is specified or {@code null} otherwise.
      */
     protected abstract void doConnect(
-            SocketAddress remoteAddress, SocketAddress localAddress) throws Exception;
+            SocketAddress remoteAddress,
+            SocketAddress localAddress,
+            ChannelPromise promise) throws Exception;
 
     @Override
     protected void doBeginRead() throws Exception {

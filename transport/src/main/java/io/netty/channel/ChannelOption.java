@@ -21,6 +21,8 @@ import io.netty.util.internal.PlatformDependent;
 
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.net.PasswordAuthentication;
+import java.net.Proxy;
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -29,7 +31,7 @@ import java.util.concurrent.ConcurrentMap;
  * of {@link ChannelConfig} and may depend on the nature of the transport it belongs
  * to.
  *
- * @param <T>   the type of the value which is valid for the {@link ChannelOption}
+ * @param <T> the type of the value which is valid for the {@link ChannelOption}
  */
 public class ChannelOption<T> extends UniqueName {
 
@@ -89,6 +91,11 @@ public class ChannelOption<T> extends UniqueName {
             new ChannelOption<Long>("AIO_READ_TIMEOUT");
     public static final ChannelOption<Long> AIO_WRITE_TIMEOUT =
             new ChannelOption<Long>("AIO_WRITE_TIMEOUT");
+
+    public static final ChannelOption<Proxy> PROXY =
+            new ChannelOption<Proxy>("PROXY");
+    public static final ChannelOption<PasswordAuthentication> PROXY_PASSWORD_AUTHENTICATION =
+            new ChannelOption<PasswordAuthentication>("PROXY_PASSWORD_AUTHENTICATION");
 
     /**
      * Create a new {@link ChannelOption} with the given name. The name needs to be
