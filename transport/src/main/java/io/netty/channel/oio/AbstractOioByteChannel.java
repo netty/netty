@@ -22,7 +22,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.FileRegion;
 import io.netty.channel.MessageList;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.channel.ChannelInputShutdownEvent;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;

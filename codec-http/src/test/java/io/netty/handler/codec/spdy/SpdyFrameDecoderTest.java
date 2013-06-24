@@ -22,15 +22,13 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.util.NetUtil;
+import io.netty.channel.local.LocalAddress;
+import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalEventLoopGroup;
+import io.netty.channel.local.LocalServerChannel;
 import org.junit.AfterClass;
 import org.junit.Test;
 
-import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.List;
 
@@ -39,7 +37,8 @@ import static org.junit.Assert.*;
 
 public class SpdyFrameDecoderTest {
 
-    private static final EventLoopGroup group = new NioEventLoopGroup();
+    private static final EventLoopGroup group = new LocalEventLoopGroup();
+    private static String LOCAL_ID = "SpdyFrameDecoderTest";
 
     @AfterClass
     public static void destroy() throws Exception {
@@ -48,6 +47,7 @@ public class SpdyFrameDecoderTest {
 
     @Test
     public void testTooLargeHeaderNameOnSynStreamRequest() throws Exception {
+        final LocalAddress addr = new LocalAddress(LOCAL_ID);
         for (int version = SPDY_MIN_VERSION; version <= SPDY_MAX_VERSION; version++) {
             final int finalVersion = version;
             List<Integer> headerSizes = Arrays.asList(90, 900);
@@ -57,10 +57,10 @@ public class SpdyFrameDecoderTest {
                 final CaptureHandler captureHandler = new CaptureHandler();
                 ServerBootstrap sb = new ServerBootstrap();
                 sb.group(group);
-                sb.channel(NioServerSocketChannel.class);
-                sb.childHandler(new ChannelInitializer<SocketChannel>() {
+                sb.channel(LocalServerChannel.class);
+                sb.childHandler(new ChannelInitializer<LocalChannel>() {
                     @Override
-                    protected void initChannel(SocketChannel ch) throws Exception {
+                    protected void initChannel(LocalChannel ch) throws Exception {
                         ch.pipeline().addLast(
                                 new SpdyFrameDecoder(finalVersion, 10000, maxHeaderSize),
                                 new SpdySessionHandler(finalVersion, true),
@@ -70,18 +70,15 @@ public class SpdyFrameDecoderTest {
 
                 Bootstrap cb = new Bootstrap();
                 cb.group(group);
-                cb.channel(NioSocketChannel.class);
-                cb.handler(new ChannelInitializer<SocketChannel>() {
+                cb.channel(LocalChannel.class);
+                cb.handler(new ChannelInitializer<LocalChannel>() {
                     @Override
-                    protected void initChannel(SocketChannel ch) throws Exception {
+                    protected void initChannel(LocalChannel ch) throws Exception {
                         ch.pipeline().addLast(new SpdyFrameEncoder(finalVersion));
                     }
                 });
-                Channel sc = sb.bind(0).sync().channel();
-                int port = ((InetSocketAddress) sc.localAddress()).getPort();
-
-                Channel cc = cb.connect(NetUtil.LOCALHOST, port).sync().channel();
-
+                Channel sc = sb.bind(addr).sync().channel();
+                Channel cc = cb.connect(addr).sync().channel();
                 sendAndWaitForFrame(cc, frame, captureHandler);
 
                 assertNotNull("version " + version + ", not null message",

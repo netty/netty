@@ -17,7 +17,7 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.channel.socket.SocketChannelConfig;
+
 
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -26,7 +26,7 @@ import java.util.Map.Entry;
 import static io.netty.channel.ChannelOption.*;
 
 /**
- * The default {@link SocketChannelConfig} implementation.
+ * The default {@link io.netty.channel.socket.SocketChannelConfig} implementation.
  */
 public class DefaultChannelConfig implements ChannelConfig {
 

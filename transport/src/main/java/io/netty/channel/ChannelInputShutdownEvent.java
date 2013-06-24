@@ -13,10 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.socket;
-
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
+package io.netty.channel;
 
 /**
  * Special event which will be fired and passed to the

@@ -16,8 +16,6 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.socket.SocketChannelConfig;
-
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 import java.util.Map;
@@ -26,11 +24,12 @@ import java.util.Map;
  * A set of configuration properties of a {@link Channel}.
  * <p>
  * Please down-cast to more specific configuration type such as
- * {@link SocketChannelConfig} or use {@link #setOptions(Map)} to set the
+ * {@link io.netty.channel.socket.SocketChannelConfig} or use {@link #setOptions(Map)} to set the
  * transport-specific properties:
  * <pre>
  * {@link Channel} ch = ...;
- * {@link SocketChannelConfig} cfg = <strong>({@link SocketChannelConfig}) ch.getConfig();</strong>
+ * {@link io.netty.channel.socket.SocketChannelConfig} cfg = <strong>(
+ * {@link io.netty.channel.socket.SocketChannelConfig}) ch.getConfig();</strong>
  * cfg.setTcpNoDelay(false);
  * </pre>
  *
@@ -58,7 +57,7 @@ import java.util.Map;
  * <p>
  * More options are available in the sub-types of {@link ChannelConfig}.  For
  * example, you can configure the parameters which are specific to a TCP/IP
- * socket as explained in {@link SocketChannelConfig}.
+ * socket as explained in {@link io.netty.channel.socket.SocketChannelConfig}.
  */
 public interface ChannelConfig {
 

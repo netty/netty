@@ -62,35 +62,41 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     public Map<ChannelOption<?>, Object> getOptions() {
         return getOptions(
                 super.getOptions(),
-                SO_RCVBUF, SO_SNDBUF, TCP_NODELAY, SO_KEEPALIVE, SO_REUSEADDR, SO_LINGER, IP_TOS,
-                ALLOW_HALF_CLOSURE);
+                ChannelOption.SO_RCVBUF,
+                ChannelOption.SO_SNDBUF,
+                ChannelOption.TCP_NODELAY,
+                ChannelOption.SO_KEEPALIVE,
+                ChannelOption.SO_REUSEADDR,
+                ChannelOption.SO_LINGER,
+                ChannelOption.IP_TOS,
+                ChannelOption.ALLOW_HALF_CLOSURE);
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getOption(ChannelOption<T> option) {
-        if (option == SO_RCVBUF) {
+        if (option == ChannelOption.SO_RCVBUF) {
             return (T) Integer.valueOf(getReceiveBufferSize());
         }
-        if (option == SO_SNDBUF) {
+        if (option == ChannelOption.SO_SNDBUF) {
             return (T) Integer.valueOf(getSendBufferSize());
         }
-        if (option == TCP_NODELAY) {
+        if (option == ChannelOption.TCP_NODELAY) {
             return (T) Boolean.valueOf(isTcpNoDelay());
         }
-        if (option == SO_KEEPALIVE) {
+        if (option == ChannelOption.SO_KEEPALIVE) {
             return (T) Boolean.valueOf(isKeepAlive());
         }
-        if (option == SO_REUSEADDR) {
+        if (option == ChannelOption.SO_REUSEADDR) {
             return (T) Boolean.valueOf(isReuseAddress());
         }
-        if (option == SO_LINGER) {
+        if (option == ChannelOption.SO_LINGER) {
             return (T) Integer.valueOf(getSoLinger());
         }
-        if (option == IP_TOS) {
+        if (option == ChannelOption.IP_TOS) {
             return (T) Integer.valueOf(getTrafficClass());
         }
-        if (option == ALLOW_HALF_CLOSURE) {
+        if (option == ChannelOption.ALLOW_HALF_CLOSURE) {
             return (T) Boolean.valueOf(isAllowHalfClosure());
         }
 
@@ -101,21 +107,21 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
     public <T> boolean setOption(ChannelOption<T> option, T value) {
         validate(option, value);
 
-        if (option == SO_RCVBUF) {
+        if (option == ChannelOption.SO_RCVBUF) {
             setReceiveBufferSize((Integer) value);
-        } else if (option == SO_SNDBUF) {
+        } else if (option == ChannelOption.SO_SNDBUF) {
             setSendBufferSize((Integer) value);
-        } else if (option == TCP_NODELAY) {
+        } else if (option == ChannelOption.TCP_NODELAY) {
             setTcpNoDelay((Boolean) value);
-        } else if (option == SO_KEEPALIVE) {
+        } else if (option == ChannelOption.SO_KEEPALIVE) {
             setKeepAlive((Boolean) value);
-        } else if (option == SO_REUSEADDR) {
+        } else if (option == ChannelOption.SO_REUSEADDR) {
             setReuseAddress((Boolean) value);
-        } else if (option == SO_LINGER) {
+        } else if (option == ChannelOption.SO_LINGER) {
             setSoLinger((Integer) value);
-        } else if (option == IP_TOS) {
+        } else if (option == ChannelOption.IP_TOS) {
             setTrafficClass((Integer) value);
-        } else if (option == ALLOW_HALF_CLOSURE) {
+        } else if (option == ChannelOption.ALLOW_HALF_CLOSURE) {
             setAllowHalfClosure((Boolean) value);
         } else {
             return super.setOption(option, value);
