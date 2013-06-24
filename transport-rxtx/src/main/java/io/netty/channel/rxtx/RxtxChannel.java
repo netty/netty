@@ -61,7 +61,10 @@ public class RxtxChannel extends OioByteStreamChannel {
     }
 
     @Override
-    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+    protected void doConnect(
+            SocketAddress remoteAddress,
+            SocketAddress localAddress,
+            ChannelPromise promise) throws Exception {
         RxtxDeviceAddress remote = (RxtxDeviceAddress) remoteAddress;
         final CommPortIdentifier cpi = CommPortIdentifier.getPortIdentifier(remote.value());
         final CommPort commPort = cpi.open(getClass().getName(), 1000);
@@ -73,10 +76,10 @@ public class RxtxChannel extends OioByteStreamChannel {
 
     protected void doInit() throws Exception {
         serialPort.setSerialPortParams(
-            config().getOption(BAUD_RATE),
-            config().getOption(DATA_BITS).value(),
-            config().getOption(STOP_BITS).value(),
-            config().getOption(PARITY_BIT).value()
+                config().getOption(BAUD_RATE),
+                config().getOption(DATA_BITS).value(),
+                config().getOption(STOP_BITS).value(),
+                config().getOption(PARITY_BIT).value()
         );
         serialPort.setDTR(config().getOption(DTR));
         serialPort.setRTS(config().getOption(RTS));
@@ -118,7 +121,7 @@ public class RxtxChannel extends OioByteStreamChannel {
     protected void doClose() throws Exception {
         open = false;
         try {
-           super.doClose();
+            super.doClose();
         } finally {
             if (serialPort != null) {
                 serialPort.removeEventListener();
@@ -139,7 +142,7 @@ public class RxtxChannel extends OioByteStreamChannel {
 
             try {
                 final boolean wasActive = isActive();
-                doConnect(remoteAddress, localAddress);
+                doConnect(remoteAddress, localAddress, promise);
 
                 int waitTime = config().getOption(WAIT_TIME);
                 if (waitTime > 0) {
@@ -157,7 +160,7 @@ public class RxtxChannel extends OioByteStreamChannel {
                                 closeIfClosed();
                             }
                         }
-                   }, waitTime, TimeUnit.MILLISECONDS);
+                    }, waitTime, TimeUnit.MILLISECONDS);
                 } else {
                     doInit();
                     promise.setSuccess();
