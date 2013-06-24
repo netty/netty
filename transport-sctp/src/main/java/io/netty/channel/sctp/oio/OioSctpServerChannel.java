@@ -281,7 +281,7 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
 
     @Override
     protected void doConnect(
-            SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+            SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) throws Exception {
         throw new UnsupportedOperationException();
     }
 
