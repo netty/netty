@@ -29,10 +29,26 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
- * Datastructure which holds messages.
+ * A simple array-backed list that holds one or more messages.
  *
- * You should call {@link #recycle()} once you are done with using it.
- * @param <T>
+ * <h3>Recycling a {@link MessageList}</h3>
+ * <p>
+ * A {@link MessageList} is internally managed by a thread-local object pool to keep the GC pressure minimal.
+ * To return the {@link MessageList} to the pool, you must call one of the following methods: {@link #recycle()},
+ * {@link #releaseAllAndRecycle()}, or {@link #releaseAllAndRecycle(int)}.  If the list is returned to the pool (i.e.
+ * recycled), it will be reused when you attempts to get a {@link MessageList} via {@link #newInstance()}.
+ * </p><p>
+ * If you don't think recycling a {@link MessageList} isn't worth, it is also fine not to recycle it.  Because of this
+ * relaxed contract, you can also decide not to wrap your code with a {@code try-finally} block only to recycle a
+ * list.  However, if you decided to recycle it, you must keep in mind that:
+ * <ul>
+ * <li>you must make sure you do not access the list once it has been recycled.</li>
+ * <li>If you are given with a {@link MessageList} as a parameter of your handler, it means it is your handler's
+ *     responsibility to release the messages in it and to recycle it.</li>
+ * </ul>
+ * </p>
+ *
+ * @param <T> the type of the contained messages
  */
 public final class MessageList<T> implements Iterable<T> {
 
@@ -302,6 +318,19 @@ public final class MessageList<T> implements Iterable<T> {
         return copy;
     }
 
+    /**
+     * Casts the type parameter of this list to a different type parameter.  This method is often useful when you have
+     * to deal with multiple messages and do not want to down-cast the messages every time you access the list.
+     *
+     * <pre>
+     * public void messageReceived(ChannelHandlerContext ctx, MessageList&lt;Object&gt; msgs) {
+     *     MessageList&lt;MyMessage&gt; cast = msgs.cast();
+     *     for (MyMessage m: cast) { // or: for (MyMessage m: msgs.&lt;MyMessage&gt;cast())
+     *         ...
+     *     }
+     * }
+     * </pre>
+     */
     @SuppressWarnings("unchecked")
     public <U> MessageList<U> cast() {
         return (MessageList<U>) this;
