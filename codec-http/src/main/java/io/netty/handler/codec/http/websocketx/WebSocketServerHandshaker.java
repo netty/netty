@@ -217,6 +217,9 @@ public abstract class WebSocketServerHandshaker {
      *            the {@link ChannelPromise} to be notified when the closing handshake is done
      */
     public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise promise) {
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
         return channel.write(frame, promise).addListener(ChannelFutureListener.CLOSE);
     }
 
