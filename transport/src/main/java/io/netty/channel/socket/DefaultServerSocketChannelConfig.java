@@ -146,17 +146,26 @@ public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public ServerSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-        return (ServerSocketChannelConfig) super.setConnectTimeoutMillis(connectTimeoutMillis);
+        super.setConnectTimeoutMillis(connectTimeoutMillis);
+        return this;
+    }
+
+    @Override
+    public ServerSocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
+        super.setMaxMessagesPerRead(maxMessagesPerRead);
+        return this;
     }
 
     @Override
     public ServerSocketChannelConfig setWriteSpinCount(int writeSpinCount) {
-        return (ServerSocketChannelConfig) super.setWriteSpinCount(writeSpinCount);
+        super.setWriteSpinCount(writeSpinCount);
+        return this;
     }
 
     @Override
     public ServerSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
-        return (ServerSocketChannelConfig) super.setAllocator(allocator);
+        super.setAllocator(allocator);
+        return this;
     }
 
     @Override
@@ -167,16 +176,19 @@ public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
 
     @Override
     public ServerSocketChannelConfig setAutoRead(boolean autoRead) {
-        return (ServerSocketChannelConfig) super.setAutoRead(autoRead);
+        super.setAutoRead(autoRead);
+        return this;
     }
 
     @Override
     public ServerSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-        return (ServerSocketChannelConfig) super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
+        super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
+        return this;
     }
 
     @Override
     public ServerSocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-        return (ServerSocketChannelConfig) super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
+        super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
+        return this;
     }
 }

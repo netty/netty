@@ -119,6 +119,22 @@ public interface ChannelConfig {
     ChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
 
     /**
+     * Returns the maximum number of messages in a {@link MessageList} of
+     * a {@link ChannelInboundHandler#messageReceived(ChannelHandlerContext, MessageList) messageReceived()} event.
+     * If this value is greater than 1, an event loop might attempt to read multiple times to fill multiple messages
+     * into the {@link MessageList}.
+     */
+    int getMaxMessagesPerRead();
+
+    /**
+     * Sets the maximum number of messages in a {@link MessageList} of
+     * a {@link ChannelInboundHandler#messageReceived(ChannelHandlerContext, MessageList) messageReceived()} event.
+     * If this value is greater than 1, an event loop might attempt to read multiple times to fill multiple messages
+     * into the {@link MessageList}.
+     */
+    ChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead);
+
+    /**
      * Returns the maximum loop count for a write operation until
      * {@link WritableByteChannel#write(ByteBuffer)} returns a non-zero value.
      * It is similar to what a spin lock is used for in concurrency programming.

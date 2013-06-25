@@ -349,17 +349,26 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
 
     @Override
     public DatagramChannelConfig setWriteSpinCount(int writeSpinCount) {
-        return (DatagramChannelConfig) super.setWriteSpinCount(writeSpinCount);
+        super.setWriteSpinCount(writeSpinCount);
+        return this;
     }
 
     @Override
     public DatagramChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-        return (DatagramChannelConfig) super.setConnectTimeoutMillis(connectTimeoutMillis);
+        super.setConnectTimeoutMillis(connectTimeoutMillis);
+        return this;
+    }
+
+    @Override
+    public DatagramChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
+        super.setMaxMessagesPerRead(maxMessagesPerRead);
+        return this;
     }
 
     @Override
     public DatagramChannelConfig setAllocator(ByteBufAllocator allocator) {
-        return (DatagramChannelConfig) super.setAllocator(allocator);
+        super.setAllocator(allocator);
+        return this;
     }
 
     @Override
@@ -370,16 +379,19 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
 
     @Override
     public DatagramChannelConfig setAutoRead(boolean autoRead) {
-        return (DatagramChannelConfig) super.setAutoRead(autoRead);
+        super.setAutoRead(autoRead);
+        return this;
     }
 
     @Override
     public DatagramChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-        return (DatagramChannelConfig) super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
+        super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
+        return this;
     }
 
     @Override
     public DatagramChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-        return (DatagramChannelConfig) super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
+        super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
+        return this;
     }
 }

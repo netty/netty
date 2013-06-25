@@ -115,6 +115,12 @@ public class DefaultOioServerSocketChannelConfig extends DefaultServerSocketChan
     }
 
     @Override
+    public OioServerSocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
+        super.setMaxMessagesPerRead(maxMessagesPerRead);
+        return this;
+    }
+
+    @Override
     public OioServerSocketChannelConfig setWriteSpinCount(int writeSpinCount) {
         super.setWriteSpinCount(writeSpinCount);
         return this;
