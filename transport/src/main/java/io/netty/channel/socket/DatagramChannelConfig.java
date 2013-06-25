@@ -156,6 +156,9 @@ public interface DatagramChannelConfig extends ChannelConfig {
     DatagramChannelConfig setNetworkInterface(NetworkInterface networkInterface);
 
     @Override
+    DatagramChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead);
+
+    @Override
     DatagramChannelConfig setWriteSpinCount(int writeSpinCount);
 
     @Override

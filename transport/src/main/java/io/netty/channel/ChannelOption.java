@@ -42,6 +42,8 @@ public class ChannelOption<T> extends UniqueName {
 
     public static final ChannelOption<Integer> CONNECT_TIMEOUT_MILLIS =
             new ChannelOption<Integer>("CONNECT_TIMEOUT_MILLIS");
+    public static final ChannelOption<Integer> MAX_MESSAGES_PER_READ =
+            new ChannelOption<Integer>("MAX_MESSAGES_PER_READ");
     public static final ChannelOption<Integer> WRITE_SPIN_COUNT =
             new ChannelOption<Integer>("WRITE_SPIN_COUNT");
     public static final ChannelOption<Integer> WRITE_BUFFER_HIGH_WATER_MARK =

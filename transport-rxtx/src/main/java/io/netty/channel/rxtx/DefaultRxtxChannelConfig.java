@@ -199,17 +199,26 @@ final class DefaultRxtxChannelConfig extends DefaultChannelConfig implements Rxt
 
     @Override
     public RxtxChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-        return (RxtxChannelConfig) super.setConnectTimeoutMillis(connectTimeoutMillis);
+        super.setConnectTimeoutMillis(connectTimeoutMillis);
+        return this;
+    }
+
+    @Override
+    public RxtxChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
+        super.setMaxMessagesPerRead(maxMessagesPerRead);
+        return this;
     }
 
     @Override
     public RxtxChannelConfig setWriteSpinCount(int writeSpinCount) {
-        return (RxtxChannelConfig) super.setWriteSpinCount(writeSpinCount);
+        super.setWriteSpinCount(writeSpinCount);
+        return this;
     }
 
     @Override
     public RxtxChannelConfig setAllocator(ByteBufAllocator allocator) {
-        return (RxtxChannelConfig) super.setAllocator(allocator);
+        super.setAllocator(allocator);
+        return this;
     }
 
     @Override
@@ -220,16 +229,19 @@ final class DefaultRxtxChannelConfig extends DefaultChannelConfig implements Rxt
 
     @Override
     public RxtxChannelConfig setAutoRead(boolean autoRead) {
-        return (RxtxChannelConfig) super.setAutoRead(autoRead);
+        super.setAutoRead(autoRead);
+        return this;
     }
 
     @Override
     public RxtxChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-        return (RxtxChannelConfig) super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
+        super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
+        return this;
     }
 
     @Override
     public RxtxChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-        return (RxtxChannelConfig) super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
+        super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
+        return this;
     }
 }
