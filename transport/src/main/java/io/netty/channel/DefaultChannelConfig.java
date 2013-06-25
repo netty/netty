@@ -39,7 +39,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     private volatile ByteBufAllocator allocator = DEFAULT_ALLOCATOR;
     private volatile RecvByteBufAllocator rcvBufAllocator = DEFAULT_RCVBUF_ALLOCATOR;
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
-    private volatile int maxMessagesPerRead = 16;
+    private volatile int maxMessagesPerRead = 1;
     private volatile int writeSpinCount = 16;
     private volatile boolean autoRead = true;
     private volatile int writeBufferHighWaterMark = 64 * 1024;
