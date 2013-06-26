@@ -20,8 +20,17 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
+import io.netty.testsuite.util.TestUtils;
 import io.netty.util.internal.SystemPropertyUtil;
+import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
+
+import java.io.IOException;
+import java.net.ConnectException;
+import java.net.InetSocketAddress;
+import java.net.NoRouteToHostException;
+import java.net.Socket;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
@@ -48,6 +57,27 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
 
     @Test
     public void testConnectCancellation() throws Throwable {
+        // Check if the test can be executed or should be skipped because of no network/internet connection
+        // See https://github.com/netty/netty/issues/1474
+        boolean noRoute = false;
+        Socket socket = new Socket();
+        try {
+            socket.connect(new InetSocketAddress(BAD_HOST, 8080), 10);
+        } catch (ConnectException e) {
+            noRoute = true;
+            // is thrown for no route to host when using Socket connect
+        } catch (Exception e) {
+            // ignore
+        } finally {
+            try {
+                socket.close();
+            } catch (IOException e) {
+                // ignore
+            }
+        }
+
+        Assume.assumeFalse(
+                "No route to host, so skip the test as it may be because of no network connection ", noRoute);
         run();
     }
 
