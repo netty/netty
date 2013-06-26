@@ -101,11 +101,12 @@ public class FileServer {
                     ctx.write("Not a file: " + file + '\n');
                     return;
                 }
-                MessageList<Object> out = MessageList.newInstance();
                 ctx.write(file + " " + file.length() + '\n');
+                MessageList<Object> out = MessageList.newInstance();
                 FileRegion region = new DefaultFileRegion(new FileInputStream(file).getChannel(), 0, file.length());
                 out.add(region);
                 out.add("\n");
+                ctx.write(out);
             } else {
                 ctx.write("File not found: " + file + '\n');
             }
