@@ -987,6 +987,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
     }
 
     @Override
+    @Deprecated
     public int indexOf(int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
         return ByteBufUtil.indexOf(this, fromIndex, toIndex, indexFinder);
     }
@@ -997,6 +998,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
     }
 
     @Override
+    @Deprecated
     public int bytesBefore(ByteBufIndexFinder indexFinder) {
         return bytesBefore(readerIndex(), readableBytes(), indexFinder);
     }
@@ -1008,6 +1010,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
     }
 
     @Override
+    @Deprecated
     public int bytesBefore(int length, ByteBufIndexFinder indexFinder) {
         checkReadableBytes(length);
         return bytesBefore(readerIndex(), length, indexFinder);
@@ -1023,8 +1026,8 @@ public abstract class AbstractByteBuf implements ByteBuf {
     }
 
     @Override
-    public int bytesBefore(int index, int length,
-            ByteBufIndexFinder indexFinder) {
+    @Deprecated
+    public int bytesBefore(int index, int length, ByteBufIndexFinder indexFinder) {
         int endIndex = indexOf(index, index + length, indexFinder);
         if (endIndex < 0) {
             return -1;
