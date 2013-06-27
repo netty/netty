@@ -725,8 +725,8 @@ public final class SwappedByteBuf implements ByteBuf {
     }
 
     @Override
-    public int forEachByte(int index, int length, ByteBufProcessor processor) {
-        return buf.forEachByte(index, length, new SwappedByteBufProcessor(processor));
+    public int forEachByte(int fromIndex, int toIndex, ByteBufProcessor processor) {
+        return buf.forEachByte(fromIndex, toIndex, new SwappedByteBufProcessor(processor));
     }
 
     @Override

@@ -1709,11 +1709,20 @@ public interface ByteBuf extends ReferenceCounted, Comparable<ByteBuf> {
 
     /**
      * Iterates over the specified area of this buffer with the specified {@code processor}.
+     * <ul>
+     * <li>If {@code fromIndex} is less than {@code toIndex}, the iteration is performed in an ascending order.
+     * ({@code [fromIndex, fromIndex&#41} i.e. {@code fromIndex}, {@code (fromIndex + 1)},  .. {@code (toIndex - 1)})
+     * </li>
+     * <li>If {@code fromIndex} is greater than {@code toIndex}, the iteration is performed in a descending order.
+     * ({@code [toIndex, fromIndex&#41} i.e. {@code (fromIndex)}, {@code (fromIndex - 1)}, ... {@code toIndex + 1})
+     * </li>
+     * <li>If {@code fromIndex} is equal to {@code toIndex}, {@code -1} is returned immediately.</li>
+     * </ul>
      *
      * @return {@code -1} if the processor iterated to or beyond the end of the specified area.
      *         If the {@code processor} raised {@link ByteBufProcessor#ABORT}, the last-visited index will be returned.
      */
-    int forEachByte(int index, int length, ByteBufProcessor processor);
+    int forEachByte(int fromIndex, int toIndex, ByteBufProcessor processor);
 
     /**
      * Returns a copy of this buffer's readable bytes.  Modifying the content
