@@ -709,6 +709,17 @@ public final class EmptyByteBuf implements ByteBuf {
     }
 
     @Override
+    public int forEachByte(ByteBufProcessor processor) {
+        return -1;
+    }
+
+    @Override
+    public int forEachByte(int index, int length, ByteBufProcessor processor) {
+        checkIndex(index, length);
+        return -1;
+    }
+
+    @Override
     public ByteBuf copy() {
         return this;
     }

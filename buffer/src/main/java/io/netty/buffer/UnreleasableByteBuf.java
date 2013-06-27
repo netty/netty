@@ -722,6 +722,16 @@ final class UnreleasableByteBuf implements ByteBuf {
     }
 
     @Override
+    public int forEachByte(ByteBufProcessor processor) {
+        return buf.forEachByte(processor);
+    }
+
+    @Override
+    public int forEachByte(int index, int length, ByteBufProcessor processor) {
+        return buf.forEachByte(index, length, processor);
+    }
+
+    @Override
     public ByteBuf copy() {
         return buf.copy();
     }

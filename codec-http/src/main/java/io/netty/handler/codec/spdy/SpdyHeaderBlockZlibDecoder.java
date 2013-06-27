@@ -15,13 +15,13 @@
  */
 package io.netty.handler.codec.spdy;
 
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
+
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
 class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
 
@@ -43,7 +43,7 @@ class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
         int numBytes;
         do {
             numBytes = decompress(frame);
-        } while (!decompressed.readable() && numBytes > 0);
+        } while (!decompressed.isReadable() && numBytes > 0);
     }
 
     private void setInput(ByteBuf compressed) {
@@ -54,7 +54,7 @@ class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
 
     private int decompress(SpdyHeadersFrame frame) throws Exception {
         if (decompressed == null) {
-            decompressed = decompressed = Unpooled.buffer(8192);
+            decompressed = Unpooled.buffer(8192);
         }
         try {
             int numBytes = decompressor.inflate(out);

@@ -15,10 +15,10 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.MessageList;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.TypeParameterMatcher;
 
@@ -81,7 +81,7 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAd
                     try {
                         decode(ctx, cast, out);
                     } finally {
-                        ByteBufUtil.release(cast);
+                        ReferenceCountUtil.release(cast);
                     }
                 } else {
                     out.add(m);

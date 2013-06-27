@@ -1691,6 +1691,22 @@ public interface ByteBuf extends ReferenceCounted, Comparable<ByteBuf> {
     int bytesBefore(int index, int length, ByteBufIndexFinder indexFinder);
 
     /**
+     * Iterates over the readable bytes of this buffer with the specified {@code processor}.
+     *
+     * @return {@code -1} if the processor iterated to or beyond the end of the readable bytes.
+     *         If the {@code processor} raised {@link ByteBufProcessor#ABORT}, the last-visited index will be returned.
+     */
+    int forEachByte(ByteBufProcessor processor);
+
+    /**
+     * Iterates over the specified area of this buffer with the specified {@code processor}.
+     *
+     * @return {@code -1} if the processor iterated to or beyond the end of the specified area.
+     *         If the {@code processor} raised {@link ByteBufProcessor#ABORT}, the last-visited index will be returned.
+     */
+    int forEachByte(int index, int length, ByteBufProcessor processor);
+
+    /**
      * Returns a copy of this buffer's readable bytes.  Modifying the content
      * of the returned buffer or this buffer does not affect each other at all.
      * This method is identical to {@code buf.copy(buf.readerIndex(), buf.readableBytes())}.

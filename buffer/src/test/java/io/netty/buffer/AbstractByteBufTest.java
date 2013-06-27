@@ -1647,4 +1647,50 @@ public abstract class AbstractByteBufTest {
         buffer.readerIndex(buffer.writerIndex());
         buffer.discardReadBytes();
     }
+
+    @Test
+    public void testForEachByte() {
+        buffer.clear();
+        for (int i = 0; i < CAPACITY; i ++) {
+            buffer.writeByte(i + 1);
+        }
+
+        buffer.setIndex(CAPACITY / 4, CAPACITY * 3 / 4);
+        assertThat(buffer.forEachByte(new ByteBufProcessor() {
+            int i = CAPACITY / 4;
+
+            @Override
+            public int process(ByteBuf buf, int index, byte value) throws Exception {
+                assertThat(value, is((byte) (i + 1)));
+                assertThat(index, is(i));
+                i++;
+                return 1;
+            }
+        }), is(-1));
+    }
+
+    @Test
+    public void testForEachByteAbort() {
+        buffer.clear();
+        for (int i = 0; i < CAPACITY; i ++) {
+            buffer.writeByte(i + 1);
+        }
+
+        final int stop = CAPACITY / 2;
+        assertThat(buffer.forEachByte(CAPACITY / 3, CAPACITY / 3, new ByteBufProcessor() {
+            int i = CAPACITY / 3;
+
+            @Override
+            public int process(ByteBuf buf, int index, byte value) throws Exception {
+                assertThat(value, is((byte) (i + 1)));
+                assertThat(index, is(i));
+                i++;
+
+                if (index == stop) {
+                    throw ABORT;
+                }
+                return 1;
+            }
+        }), is(stop));
+    }
 }
