@@ -721,12 +721,22 @@ public final class SwappedByteBuf implements ByteBuf {
 
     @Override
     public int forEachByte(ByteBufProcessor processor) {
-        return buf.forEachByte(new SwappedByteBufProcessor(processor));
+        return buf.forEachByte(new WrappedByteBufProcessor(this, processor));
     }
 
     @Override
     public int forEachByte(int fromIndex, int toIndex, ByteBufProcessor processor) {
-        return buf.forEachByte(fromIndex, toIndex, new SwappedByteBufProcessor(processor));
+        return buf.forEachByte(fromIndex, toIndex, new WrappedByteBufProcessor(this, processor));
+    }
+
+    @Override
+    public int forEachByteDesc(ByteBufProcessor processor) {
+        return buf.forEachByteDesc(new WrappedByteBufProcessor(this, processor));
+    }
+
+    @Override
+    public int forEachByteDesc(int toIndex, int fromIndex, ByteBufProcessor processor) {
+        return buf.forEachByteDesc(toIndex, fromIndex, new WrappedByteBufProcessor(this, processor));
     }
 
     @Override
@@ -895,23 +905,6 @@ public final class SwappedByteBuf implements ByteBuf {
         @Override
         public boolean find(ByteBuf buffer, int guessedIndex) {
             return indexFinder.find(SwappedByteBuf.this, guessedIndex);
-        }
-    }
-
-    private final class SwappedByteBufProcessor implements ByteBufProcessor {
-
-        private final ByteBufProcessor processor;
-
-        SwappedByteBufProcessor(ByteBufProcessor processor) {
-            if (processor == null) {
-                throw new NullPointerException("processor");
-            }
-            this.processor = processor;
-        }
-
-        @Override
-        public int process(ByteBuf buf, int index, byte value) throws Exception {
-            return processor.process(SwappedByteBuf.this, index, value);
         }
     }
 }
