@@ -17,6 +17,8 @@ package io.netty.buffer;
 
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ResourceLeakDetector;
+import io.netty.util.Signal;
+import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -1028,6 +1030,44 @@ public abstract class AbstractByteBuf implements ByteBuf {
             return -1;
         }
         return endIndex - index;
+    }
+
+    @Override
+    public int forEachByte(ByteBufProcessor processor) {
+        int index = readerIndex;
+        int length = writerIndex - index;
+        return forEach0(index, length, processor);
+    }
+
+    @Override
+    public int forEachByte(int index, int length, ByteBufProcessor processor) {
+        checkIndex(index, length);
+        return forEach0(index, length, processor);
+    }
+
+    private int forEach0(int index, int length, ByteBufProcessor processor) {
+        if (processor == null) {
+            throw new NullPointerException("processor");
+        }
+
+        if (length == 0) {
+            return -1;
+        }
+
+        final int end = index + length;
+        int i = index;
+        try {
+            do {
+                i += processor.process(this, i, _getByte(i));
+            } while (i < end);
+        } catch (Signal signal) {
+            signal.expect(ByteBufProcessor.ABORT);
+            return i;
+        } catch (Exception e) {
+            PlatformDependent.throwException(e);
+        }
+
+        return -1;
     }
 
     @Override

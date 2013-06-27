@@ -336,51 +336,76 @@ public final class MessageList<T> implements Iterable<T> {
         return (MessageList<U>) this;
     }
 
-    public boolean forEach(MessageListProcessor<? super T> proc) {
+    /**
+     * Iterates over the messages in this list with the specified {@code processor}.
+     *
+     * @return {@code -1} if the processor iterated to or beyond the end of the readable bytes.
+     *         If the {@code processor} raised {@link MessageListProcessor#ABORT}, the last-visited index will be
+     *         returned.
+     */
+    public int forEach(MessageListProcessor<? super T> proc) {
         if (proc == null) {
             throw new NullPointerException("proc");
+        }
+
+        final int size = this.size;
+        if (size == 0) {
+            return -1;
         }
 
         @SuppressWarnings("unchecked")
         MessageListProcessor<T> p = (MessageListProcessor<T>) proc;
 
-        int size = this.size;
+        int i = 0;
         try {
-            for (int i = 0; i < size; i ++) {
+            do {
                 i += p.process(this, i, elements[i]);
-            }
+            } while (i < size);
         } catch (Signal abort) {
             abort.expect(MessageListProcessor.ABORT);
-            return false;
+            return i;
         } catch (Exception e) {
             PlatformDependent.throwException(e);
         }
 
-        return true;
+        return -1;
     }
 
-    public boolean forEach(int index, int length, MessageListProcessor<? super T> proc) {
+    /**
+     * Iterates over the messages in this list with the specified {@code processor}.
+     *
+     * @return {@code -1} if the processor iterated to or beyond the end of the specified area.
+     *         If the {@code processor} raised {@link MessageListProcessor#ABORT}, the last-visited index will be
+     *         returned.
+     */
+    public int forEach(int index, int length, MessageListProcessor<? super T> proc) {
         checkRange(index, length);
         if (proc == null) {
             throw new NullPointerException("proc");
         }
 
+        if (size == 0) {
+            return -1;
+        }
+
         @SuppressWarnings("unchecked")
         MessageListProcessor<T> p = (MessageListProcessor<T>) proc;
 
-        int end = index + length;
+        final int end = index + length;
+
+        int i = index;
         try {
-            for (int i = index; i < end;) {
+            do {
                 i += p.process(this, i, elements[i]);
-            }
+            } while (i < end);
         } catch (Signal abort) {
             abort.expect(MessageListProcessor.ABORT);
-            return false;
+            return i;
         } catch (Exception e) {
             PlatformDependent.throwException(e);
         }
 
-        return true;
+        return -1;
     }
 
     @Override
