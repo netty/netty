@@ -239,6 +239,12 @@ public class DefaultUdtChannelConfig extends DefaultChannelConfig implements
     }
 
     @Override
+    public UdtChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
+        super.setMaxMessagesPerRead(maxMessagesPerRead);
+        return this;
+    }
+
+    @Override
     public UdtChannelConfig setWriteSpinCount(int writeSpinCount) {
         super.setWriteSpinCount(writeSpinCount);
         return this;

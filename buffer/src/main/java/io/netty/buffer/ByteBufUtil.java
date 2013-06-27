@@ -277,6 +277,7 @@ public final class ByteBufUtil {
      * The default implementation of {@link ByteBuf#indexOf(int, int, ByteBufIndexFinder)}.
      * This method is useful when implementing a new buffer type.
      */
+    @Deprecated
     public static int indexOf(ByteBuf buffer, int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
         if (fromIndex <= toIndex) {
             return firstIndexOf(buffer, fromIndex, toIndex, indexFinder);
@@ -347,8 +348,8 @@ public final class ByteBufUtil {
         return -1;
     }
 
-    private static int firstIndexOf(
-            ByteBuf buffer, int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
+    @SuppressWarnings("deprecation")
+    private static int firstIndexOf(ByteBuf buffer, int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
         fromIndex = Math.max(fromIndex, 0);
         if (fromIndex >= toIndex || buffer.capacity() == 0) {
             return -1;
@@ -363,8 +364,8 @@ public final class ByteBufUtil {
         return -1;
     }
 
-    private static int lastIndexOf(
-            ByteBuf buffer, int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
+    @SuppressWarnings("deprecation")
+    private static int lastIndexOf(ByteBuf buffer, int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
         fromIndex = Math.min(fromIndex, buffer.capacity());
         if (fromIndex < 0 || buffer.capacity() == 0) {
             return -1;

@@ -237,4 +237,35 @@ public abstract class WebSocketClientHandshaker {
      */
     protected abstract ChannelOutboundHandler newWebSocketEncoder();
 
+    /**
+     * Performs the closing handshake
+     *
+     * @param channel
+     *            Channel
+     * @param frame
+     *            Closing Frame that was received
+     */
+    public ChannelFuture close(Channel channel, CloseWebSocketFrame frame) {
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
+        return close(channel, frame, channel.newPromise());
+    }
+
+    /**
+     * Performs the closing handshake
+     *
+     * @param channel
+     *            Channel
+     * @param frame
+     *            Closing Frame that was received
+     * @param promise
+     *            the {@link ChannelPromise} to be notified when the closing handshake is done
+     */
+    public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise promise) {
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
+        return channel.write(frame, promise);
+    }
 }

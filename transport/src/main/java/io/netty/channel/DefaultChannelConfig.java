@@ -39,6 +39,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     private volatile ByteBufAllocator allocator = DEFAULT_ALLOCATOR;
     private volatile RecvByteBufAllocator rcvBufAllocator = DEFAULT_RCVBUF_ALLOCATOR;
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
+    private volatile int maxMessagesPerRead = 1;
     private volatile int writeSpinCount = 16;
     private volatile boolean autoRead = true;
     private volatile int writeBufferHighWaterMark = 64 * 1024;
@@ -53,7 +54,10 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(null, CONNECT_TIMEOUT_MILLIS, WRITE_SPIN_COUNT, ALLOCATOR, AUTO_READ, RCVBUF_ALLOCATOR);
+        return getOptions(
+                null,
+                CONNECT_TIMEOUT_MILLIS, MAX_MESSAGES_PER_READ, WRITE_SPIN_COUNT,
+                ALLOCATOR, AUTO_READ, RCVBUF_ALLOCATOR);
     }
 
     protected Map<ChannelOption<?>, Object> getOptions(
@@ -94,6 +98,9 @@ public class DefaultChannelConfig implements ChannelConfig {
         if (option == CONNECT_TIMEOUT_MILLIS) {
             return (T) Integer.valueOf(getConnectTimeoutMillis());
         }
+        if (option == MAX_MESSAGES_PER_READ) {
+            return (T) Integer.valueOf(getMaxMessagesPerRead());
+        }
         if (option == WRITE_SPIN_COUNT) {
             return (T) Integer.valueOf(getWriteSpinCount());
         }
@@ -116,6 +123,8 @@ public class DefaultChannelConfig implements ChannelConfig {
 
         if (option == CONNECT_TIMEOUT_MILLIS) {
             setConnectTimeoutMillis((Integer) value);
+        } else if (option == MAX_MESSAGES_PER_READ) {
+            setMaxMessagesPerRead((Integer) value);
         } else if (option == WRITE_SPIN_COUNT) {
             setWriteSpinCount((Integer) value);
         } else if (option == ALLOCATOR) {
@@ -150,6 +159,20 @@ public class DefaultChannelConfig implements ChannelConfig {
                     "connectTimeoutMillis: %d (expected: >= 0)", connectTimeoutMillis));
         }
         this.connectTimeoutMillis = connectTimeoutMillis;
+        return this;
+    }
+
+    @Override
+    public int getMaxMessagesPerRead() {
+        return maxMessagesPerRead;
+    }
+
+    @Override
+    public ChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
+        if (maxMessagesPerRead <= 0) {
+            throw new IllegalArgumentException("maxMessagesPerRead: " + maxMessagesPerRead + " (expected: > 0)");
+        }
+        this.maxMessagesPerRead = maxMessagesPerRead;
         return this;
     }
 

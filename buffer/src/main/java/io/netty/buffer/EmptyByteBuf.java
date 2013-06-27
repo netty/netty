@@ -668,6 +668,7 @@ public final class EmptyByteBuf implements ByteBuf {
     }
 
     @Override
+    @Deprecated
     public int indexOf(int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
         checkIndex(fromIndex);
         checkIndex(toIndex);
@@ -680,6 +681,7 @@ public final class EmptyByteBuf implements ByteBuf {
     }
 
     @Override
+    @Deprecated
     public int bytesBefore(ByteBufIndexFinder indexFinder) {
         return -1;
     }
@@ -691,6 +693,7 @@ public final class EmptyByteBuf implements ByteBuf {
     }
 
     @Override
+    @Deprecated
     public int bytesBefore(int length, ByteBufIndexFinder indexFinder) {
         checkLength(length);
         return -1;
@@ -703,7 +706,19 @@ public final class EmptyByteBuf implements ByteBuf {
     }
 
     @Override
+    @Deprecated
     public int bytesBefore(int index, int length, ByteBufIndexFinder indexFinder) {
+        checkIndex(index, length);
+        return -1;
+    }
+
+    @Override
+    public int forEachByte(ByteBufProcessor processor) {
+        return -1;
+    }
+
+    @Override
+    public int forEachByte(int index, int length, ByteBufProcessor processor) {
         checkIndex(index, length);
         return -1;
     }

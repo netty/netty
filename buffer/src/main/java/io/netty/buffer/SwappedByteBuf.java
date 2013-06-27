@@ -681,6 +681,7 @@ public final class SwappedByteBuf implements ByteBuf {
     }
 
     @Override
+    @Deprecated
     public int indexOf(int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
         return buf.indexOf(fromIndex, toIndex, indexFinder);
     }
@@ -691,8 +692,9 @@ public final class SwappedByteBuf implements ByteBuf {
     }
 
     @Override
+    @Deprecated
     public int bytesBefore(ByteBufIndexFinder indexFinder) {
-        return buf.bytesBefore(indexFinder);
+        return buf.bytesBefore(new SwappedByteBufIndexFinder(indexFinder));
     }
 
     @Override
@@ -701,8 +703,9 @@ public final class SwappedByteBuf implements ByteBuf {
     }
 
     @Override
+    @Deprecated
     public int bytesBefore(int length, ByteBufIndexFinder indexFinder) {
-        return buf.bytesBefore(length, indexFinder);
+        return buf.bytesBefore(length, new SwappedByteBufIndexFinder(indexFinder));
     }
 
     @Override
@@ -711,8 +714,19 @@ public final class SwappedByteBuf implements ByteBuf {
     }
 
     @Override
+    @Deprecated
     public int bytesBefore(int index, int length, ByteBufIndexFinder indexFinder) {
-        return buf.bytesBefore(index, length, indexFinder);
+        return buf.bytesBefore(index, length, new SwappedByteBufIndexFinder(indexFinder));
+    }
+
+    @Override
+    public int forEachByte(ByteBufProcessor processor) {
+        return buf.forEachByte(new SwappedByteBufProcessor(processor));
+    }
+
+    @Override
+    public int forEachByte(int index, int length, ByteBufProcessor processor) {
+        return buf.forEachByte(index, length, new SwappedByteBufProcessor(processor));
     }
 
     @Override
@@ -865,5 +879,39 @@ public final class SwappedByteBuf implements ByteBuf {
     @Override
     public String toString() {
         return "Swapped(" + buf.toString() + ')';
+    }
+
+    @SuppressWarnings("deprecation")
+    private final class SwappedByteBufIndexFinder implements ByteBufIndexFinder {
+        private final ByteBufIndexFinder indexFinder;
+
+        SwappedByteBufIndexFinder(ByteBufIndexFinder indexFinder) {
+            if (indexFinder == null) {
+                throw new NullPointerException("indexFinder");
+            }
+            this.indexFinder = indexFinder;
+        }
+
+        @Override
+        public boolean find(ByteBuf buffer, int guessedIndex) {
+            return indexFinder.find(SwappedByteBuf.this, guessedIndex);
+        }
+    }
+
+    private final class SwappedByteBufProcessor implements ByteBufProcessor {
+
+        private final ByteBufProcessor processor;
+
+        SwappedByteBufProcessor(ByteBufProcessor processor) {
+            if (processor == null) {
+                throw new NullPointerException("processor");
+            }
+            this.processor = processor;
+        }
+
+        @Override
+        public int process(ByteBuf buf, int index, byte value) throws Exception {
+            return processor.process(SwappedByteBuf.this, index, value);
+        }
     }
 }

@@ -19,7 +19,7 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ByteBufUtil;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -228,7 +228,7 @@ final class ChannelOutboundBuffer {
             try {
                 for (int i = currentMessageIndex; i < currentMessages.size(); i++) {
                     Object msg = currentMessages.get(i);
-                    ByteBufUtil.release(msg);
+                    ReferenceCountUtil.release(msg);
                 }
             } finally {
                 currentMessages.recycle();

@@ -17,6 +17,8 @@ package io.netty.buffer;
 
 
 /**
+ * @deprecated Use {@link ByteBufProcessor} instead.
+ *
  * Locates an index of data in a {@link ByteBuf}.
  * <p>
  * This interface enables the sequential search for the data which meets more
@@ -25,6 +27,7 @@ package io.netty.buffer;
  * {@link ByteBuf#bytesBefore(int, int, ByteBufIndexFinder)}
  * for more explanation.
  */
+@Deprecated
 public interface ByteBufIndexFinder {
 
     /**
@@ -38,8 +41,11 @@ public interface ByteBufIndexFinder {
     boolean find(ByteBuf buffer, int guessedIndex);
 
     /**
+     * @deprecated Use {@link ByteBufProcessor#FIND_NUL} instead.
+     *
      * Index finder which locates a {@code NUL (0x00)} byte.
      */
+    @Deprecated
     ByteBufIndexFinder NUL = new ByteBufIndexFinder() {
         @Override
         public boolean find(ByteBuf buffer, int guessedIndex) {
@@ -48,8 +54,11 @@ public interface ByteBufIndexFinder {
     };
 
     /**
+     * @deprecated Use {@link ByteBufProcessor#FIND_NON_NUL} instead.
+     *
      * Index finder which locates a non-{@code NUL (0x00)} byte.
      */
+    @Deprecated
     ByteBufIndexFinder NOT_NUL = new ByteBufIndexFinder() {
         @Override
         public boolean find(ByteBuf buffer, int guessedIndex) {
@@ -58,8 +67,11 @@ public interface ByteBufIndexFinder {
     };
 
     /**
+     * @deprecated Use {@link ByteBufProcessor#FIND_CR} instead.
+     *
      * Index finder which locates a {@code CR ('\r')} byte.
      */
+    @Deprecated
     ByteBufIndexFinder CR = new ByteBufIndexFinder() {
         @Override
         public boolean find(ByteBuf buffer, int guessedIndex) {
@@ -68,8 +80,11 @@ public interface ByteBufIndexFinder {
     };
 
     /**
+     * @deprecated Use {@link ByteBufProcessor#FIND_NON_CR} instead.
+     *
      * Index finder which locates a non-{@code CR ('\r')} byte.
      */
+    @Deprecated
     ByteBufIndexFinder NOT_CR = new ByteBufIndexFinder() {
         @Override
         public boolean find(ByteBuf buffer, int guessedIndex) {
@@ -78,8 +93,11 @@ public interface ByteBufIndexFinder {
     };
 
     /**
+     * @deprecated Use {@link ByteBufProcessor#FIND_LF} instead.
+     *
      * Index finder which locates a {@code LF ('\n')} byte.
      */
+    @Deprecated
     ByteBufIndexFinder LF = new ByteBufIndexFinder() {
         @Override
         public boolean find(ByteBuf buffer, int guessedIndex) {
@@ -88,8 +106,11 @@ public interface ByteBufIndexFinder {
     };
 
     /**
+     * @deprecated Use {@link ByteBufProcessor#FIND_NON_LF} instead.
+     *
      * Index finder which locates a non-{@code LF ('\n')} byte.
      */
+    @Deprecated
     ByteBufIndexFinder NOT_LF = new ByteBufIndexFinder() {
         @Override
         public boolean find(ByteBuf buffer, int guessedIndex) {
@@ -98,8 +119,11 @@ public interface ByteBufIndexFinder {
     };
 
     /**
+     * @deprecated Use {@link ByteBufProcessor#FIND_CRLF} instead.
+     *
      * Index finder which locates a {@code CR ('\r')} or {@code LF ('\n')}.
      */
+    @Deprecated
     ByteBufIndexFinder CRLF = new ByteBufIndexFinder() {
         @Override
         public boolean find(ByteBuf buffer, int guessedIndex) {
@@ -109,9 +133,11 @@ public interface ByteBufIndexFinder {
     };
 
     /**
-     * Index finder which locates a byte which is neither a {@code CR ('\r')}
-     * nor a {@code LF ('\n')}.
+     * @deprecated Use {@link ByteBufProcessor#FIND_NON_CRLF} instead.
+     *
+     * Index finder which locates a byte which is neither a {@code CR ('\r')} nor a {@code LF ('\n')}.
      */
+    @Deprecated
     ByteBufIndexFinder NOT_CRLF = new ByteBufIndexFinder() {
         @Override
         public boolean find(ByteBuf buffer, int guessedIndex) {
@@ -121,9 +147,11 @@ public interface ByteBufIndexFinder {
     };
 
     /**
-     * Index finder which locates a linear whitespace
-     * ({@code ' '} and {@code '\t'}).
+     * @deprecated Use {@link ByteBufProcessor#FIND_LINEAR_WHITESPACE} instead.
+     *
+     * Index finder which locates a linear whitespace ({@code ' '} and {@code '\t'}).
      */
+    @Deprecated
     ByteBufIndexFinder LINEAR_WHITESPACE = new ByteBufIndexFinder() {
         @Override
         public boolean find(ByteBuf buffer, int guessedIndex) {
@@ -133,9 +161,11 @@ public interface ByteBufIndexFinder {
     };
 
     /**
-     * Index finder which locates a byte which is not a linear whitespace
-     * (neither {@code ' '} nor {@code '\t'}).
+     * @deprecated Use {@link ByteBufProcessor#FIND_NON_LINEAR_WHITESPACE} instead.
+     *
+     * Index finder which locates a byte which is not a linear whitespace (neither {@code ' '} nor {@code '\t'}).
      */
+    @Deprecated
     ByteBufIndexFinder NOT_LINEAR_WHITESPACE = new ByteBufIndexFinder() {
         @Override
         public boolean find(ByteBuf buffer, int guessedIndex) {

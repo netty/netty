@@ -160,6 +160,9 @@ public interface SocketChannelConfig extends ChannelConfig {
     SocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
 
     @Override
+    SocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead);
+
+    @Override
     SocketChannelConfig setWriteSpinCount(int writeSpinCount);
 
     @Override

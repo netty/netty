@@ -16,6 +16,7 @@
 package io.netty.channel.nio;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.MessageList;
 
@@ -54,29 +55,32 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 }
             }
 
+            final ChannelConfig config = config();
+            final int maxMessagesPerRead = config.getMaxMessagesPerRead();
+            final boolean autoRead = config.isAutoRead();
             final ChannelPipeline pipeline = pipeline();
             boolean closed = false;
             MessageList<Object> msgBuf = MessageList.newInstance();
             Throwable exception = null;
-            loop: for (;;) {
-                try {
-                    for (;;) {
-                        int localRead = doReadMessages(msgBuf);
-                        if (localRead == 0) {
-                            break loop;
-                        }
-                        if (localRead < 0) {
-                            closed = true;
-                            break loop;
-                        }
-                        if (!config().isAutoRead()) {
-                            break loop;
-                        }
+            int readMessages = 0;
+            try {
+                for (;;) {
+                    int localRead = doReadMessages(msgBuf);
+                    if (localRead == 0) {
+                        break;
                     }
-                } catch (Throwable t) {
-                    exception = t;
-                    break;
+                    if (localRead < 0) {
+                        closed = true;
+                        break;
+                    }
+
+                    readMessages += localRead;
+                    if (readMessages >= maxMessagesPerRead | !autoRead) {
+                        break;
+                    }
                 }
+            } catch (Throwable t) {
+                exception = t;
             }
 
             pipeline.fireMessageReceived(msgBuf);
@@ -86,7 +90,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                     closed = true;
                 }
 
-                pipeline().fireExceptionCaught(exception);
+                pipeline.fireExceptionCaught(exception);
             }
 
             if (closed) {

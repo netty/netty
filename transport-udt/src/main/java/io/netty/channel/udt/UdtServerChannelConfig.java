@@ -49,6 +49,9 @@ public interface UdtServerChannelConfig extends UdtChannelConfig {
     UdtServerChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
 
     @Override
+    UdtServerChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead);
+
+    @Override
     UdtServerChannelConfig setWriteSpinCount(int writeSpinCount);
 
     @Override

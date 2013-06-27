@@ -156,18 +156,27 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
     }
 
     @Override
+    public SctpServerChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
+        super.setMaxMessagesPerRead(maxMessagesPerRead);
+        return this;
+    }
+
+    @Override
     public SctpServerChannelConfig setWriteSpinCount(int writeSpinCount) {
-        return (SctpServerChannelConfig) super.setWriteSpinCount(writeSpinCount);
+        super.setWriteSpinCount(writeSpinCount);
+        return this;
     }
 
     @Override
     public SctpServerChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-        return (SctpServerChannelConfig) super.setConnectTimeoutMillis(connectTimeoutMillis);
+        super.setConnectTimeoutMillis(connectTimeoutMillis);
+        return this;
     }
 
     @Override
     public SctpServerChannelConfig setAllocator(ByteBufAllocator allocator) {
-        return (SctpServerChannelConfig) super.setAllocator(allocator);
+        super.setAllocator(allocator);
+        return this;
     }
 
     @Override
@@ -178,16 +187,19 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
 
     @Override
     public SctpServerChannelConfig setAutoRead(boolean autoRead) {
-        return (SctpServerChannelConfig) super.setAutoRead(autoRead);
+        super.setAutoRead(autoRead);
+        return this;
     }
 
     @Override
     public SctpServerChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-        return (SctpServerChannelConfig) super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
+        super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
+        return this;
     }
 
     @Override
     public SctpServerChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-        return (SctpServerChannelConfig) super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
+        super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
+        return this;
     }
 }

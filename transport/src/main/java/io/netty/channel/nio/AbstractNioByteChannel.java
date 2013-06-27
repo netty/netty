@@ -16,6 +16,7 @@
 package io.netty.channel.nio;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOption;
@@ -75,24 +76,48 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 this.allocHandle = allocHandle = config.getRecvByteBufAllocator().newHandle();
             }
 
-            ByteBuf byteBuf = allocHandle.allocate(config.getAllocator());
+            final ByteBufAllocator allocator = config.getAllocator();
+            final int maxMessagesPerRead = config.getMaxMessagesPerRead();
+            final MessageList<ByteBuf> messages = MessageList.newInstance();
+
             boolean closed = false;
             Throwable exception = null;
+            ByteBuf byteBuf = null;
             try {
-                int localReadAmount = doReadBytes(byteBuf);
-                if (localReadAmount < 0) {
-                    closed = true;
+                for (;;) {
+                    byteBuf = allocHandle.allocate(allocator);
+                    int localReadAmount = doReadBytes(byteBuf);
+                    if (localReadAmount == 0) {
+                        byteBuf.release();
+                        byteBuf = null;
+                        break;
+                    }
+                    if (localReadAmount < 0) {
+                        closed = true;
+                        byteBuf.release();
+                        byteBuf = null;
+                        break;
+                    }
+
+                    messages.add(byteBuf);
+                    allocHandle.record(localReadAmount);
+                    byteBuf = null;
+                    if (messages.size() == maxMessagesPerRead) {
+                        break;
+                    }
                 }
             } catch (Throwable t) {
                 exception = t;
             } finally {
-                int readBytes = byteBuf.readableBytes();
-                allocHandle.record(readBytes);
-                if (readBytes != 0) {
-                    pipeline.fireMessageReceived(byteBuf);
-                } else {
-                    byteBuf.release();
+                if (byteBuf != null) {
+                    if (byteBuf.isReadable()) {
+                        messages.add(byteBuf);
+                    } else {
+                        byteBuf.release();
+                    }
                 }
+
+                pipeline.fireMessageReceived(messages);
 
                 if (exception != null) {
                     if (exception instanceof IOException) {

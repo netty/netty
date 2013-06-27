@@ -15,8 +15,8 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel.Unsafe;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.internal.PlatformDependent;
@@ -970,7 +970,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
                         "Discarded inbound message {} that reached at the tail of the pipeline. " +
                                 "Please check your pipeline configuration.", m);
 
-                ByteBufUtil.release(m);
+                ReferenceCountUtil.release(m);
             }
 
             if (length != 1) {

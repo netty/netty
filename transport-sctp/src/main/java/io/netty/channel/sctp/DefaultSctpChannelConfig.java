@@ -177,6 +177,12 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
     }
 
     @Override
+    public SctpChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
+        super.setMaxMessagesPerRead(maxMessagesPerRead);
+        return this;
+    }
+
+    @Override
     public SctpChannelConfig setWriteSpinCount(int writeSpinCount) {
         return (SctpChannelConfig) super.setWriteSpinCount(writeSpinCount);
     }

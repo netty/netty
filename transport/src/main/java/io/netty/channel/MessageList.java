@@ -29,10 +29,26 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
- * Datastructure which holds messages.
+ * A simple array-backed list that holds one or more messages.
  *
- * You should call {@link #recycle()} once you are done with using it.
- * @param <T>
+ * <h3>Recycling a {@link MessageList}</h3>
+ * <p>
+ * A {@link MessageList} is internally managed by a thread-local object pool to keep the GC pressure minimal.
+ * To return the {@link MessageList} to the pool, you must call one of the following methods: {@link #recycle()},
+ * {@link #releaseAllAndRecycle()}, or {@link #releaseAllAndRecycle(int)}.  If the list is returned to the pool (i.e.
+ * recycled), it will be reused when you attempts to get a {@link MessageList} via {@link #newInstance()}.
+ * </p><p>
+ * If you don't think recycling a {@link MessageList} isn't worth, it is also fine not to recycle it.  Because of this
+ * relaxed contract, you can also decide not to wrap your code with a {@code try-finally} block only to recycle a
+ * list.  However, if you decided to recycle it, you must keep in mind that:
+ * <ul>
+ * <li>you must make sure you do not access the list once it has been recycled.</li>
+ * <li>If you are given with a {@link MessageList} as a parameter of your handler, it means it is your handler's
+ *     responsibility to release the messages in it and to recycle it.</li>
+ * </ul>
+ * </p>
+ *
+ * @param <T> the type of the contained messages
  */
 public final class MessageList<T> implements Iterable<T> {
 
@@ -302,56 +318,94 @@ public final class MessageList<T> implements Iterable<T> {
         return copy;
     }
 
+    /**
+     * Casts the type parameter of this list to a different type parameter.  This method is often useful when you have
+     * to deal with multiple messages and do not want to down-cast the messages every time you access the list.
+     *
+     * <pre>
+     * public void messageReceived(ChannelHandlerContext ctx, MessageList&lt;Object&gt; msgs) {
+     *     MessageList&lt;MyMessage&gt; cast = msgs.cast();
+     *     for (MyMessage m: cast) { // or: for (MyMessage m: msgs.&lt;MyMessage&gt;cast())
+     *         ...
+     *     }
+     * }
+     * </pre>
+     */
     @SuppressWarnings("unchecked")
     public <U> MessageList<U> cast() {
         return (MessageList<U>) this;
     }
 
-    public boolean forEach(MessageListProcessor<? super T> proc) {
+    /**
+     * Iterates over the messages in this list with the specified {@code processor}.
+     *
+     * @return {@code -1} if the processor iterated to or beyond the end of the readable bytes.
+     *         If the {@code processor} raised {@link MessageListProcessor#ABORT}, the last-visited index will be
+     *         returned.
+     */
+    public int forEach(MessageListProcessor<? super T> proc) {
         if (proc == null) {
             throw new NullPointerException("proc");
+        }
+
+        final int size = this.size;
+        if (size == 0) {
+            return -1;
         }
 
         @SuppressWarnings("unchecked")
         MessageListProcessor<T> p = (MessageListProcessor<T>) proc;
 
-        int size = this.size;
+        int i = 0;
         try {
-            for (int i = 0; i < size; i ++) {
+            do {
                 i += p.process(this, i, elements[i]);
-            }
+            } while (i < size);
         } catch (Signal abort) {
             abort.expect(MessageListProcessor.ABORT);
-            return false;
+            return i;
         } catch (Exception e) {
             PlatformDependent.throwException(e);
         }
 
-        return true;
+        return -1;
     }
 
-    public boolean forEach(int index, int length, MessageListProcessor<? super T> proc) {
+    /**
+     * Iterates over the messages in this list with the specified {@code processor}.
+     *
+     * @return {@code -1} if the processor iterated to or beyond the end of the specified area.
+     *         If the {@code processor} raised {@link MessageListProcessor#ABORT}, the last-visited index will be
+     *         returned.
+     */
+    public int forEach(int index, int length, MessageListProcessor<? super T> proc) {
         checkRange(index, length);
         if (proc == null) {
             throw new NullPointerException("proc");
         }
 
+        if (size == 0) {
+            return -1;
+        }
+
         @SuppressWarnings("unchecked")
         MessageListProcessor<T> p = (MessageListProcessor<T>) proc;
 
-        int end = index + length;
+        final int end = index + length;
+
+        int i = index;
         try {
-            for (int i = index; i < end;) {
+            do {
                 i += p.process(this, i, elements[i]);
-            }
+            } while (i < end);
         } catch (Signal abort) {
             abort.expect(MessageListProcessor.ABORT);
-            return false;
+            return i;
         } catch (Exception e) {
             PlatformDependent.throwException(e);
         }
 
-        return true;
+        return -1;
     }
 
     @Override

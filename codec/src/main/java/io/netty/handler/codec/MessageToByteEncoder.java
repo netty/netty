@@ -16,11 +16,11 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.MessageList;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.TypeParameterMatcher;
 
 
@@ -99,7 +99,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
                     try {
                         encode(ctx, cast, buf);
                     } finally {
-                        ByteBufUtil.release(cast);
+                        ReferenceCountUtil.release(cast);
                     }
                 } else {
                     if (buf != null && buf.isReadable()) {
