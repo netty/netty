@@ -18,8 +18,8 @@ package io.netty.channel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.util.DefaultAttributeMap;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -715,7 +715,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     if (promise.isCancelled()) {
                         // If cancelled, release all unwritten messages and recycle.
                         for (int i = messageIndex; i < messageCount; i ++) {
-                            ByteBufUtil.release(messages.get(i));
+                            ReferenceCountUtil.release(messages.get(i));
                         }
                         messages.recycle();
                         if (!outboundBuffer.next()) {

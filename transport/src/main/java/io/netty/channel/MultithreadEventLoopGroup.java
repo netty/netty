@@ -31,7 +31,7 @@ public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutor
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(MultithreadEventLoopGroup.class);
 
-    public static final int DEFAULT_EVENT_LOOP_THREADS;
+    private static final int DEFAULT_EVENT_LOOP_THREADS;
 
     static {
         DEFAULT_EVENT_LOOP_THREADS = Math.max(1, SystemPropertyUtil.getInt(
@@ -43,7 +43,7 @@ public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutor
     }
 
     protected MultithreadEventLoopGroup(int nThreads, ThreadFactory threadFactory, Object... args) {
-        super(nThreads, threadFactory, args);
+        super(nThreads == 0? DEFAULT_EVENT_LOOP_THREADS : nThreads, threadFactory, args);
     }
 
     @Override

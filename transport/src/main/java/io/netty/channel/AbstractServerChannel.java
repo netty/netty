@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ByteBufUtil;
+import io.netty.util.ReferenceCountUtil;
 
 import java.net.SocketAddress;
 
@@ -81,7 +81,7 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
             reject(promise);
             int size = msgs.size();
             for (int i = 0; i < size; i ++) {
-                ByteBufUtil.release(msgs.get(i));
+                ReferenceCountUtil.release(msgs.get(i));
             }
         }
 

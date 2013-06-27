@@ -26,10 +26,10 @@ import java.util.concurrent.ThreadFactory;
 public class LocalEventLoopGroup extends MultithreadEventLoopGroup {
 
     /**
-     * Create a new instance which used {@link #DEFAULT_EVENT_LOOP_THREADS} number of Threads
+     * Create a new instance with the default number of threads.
      */
     public LocalEventLoopGroup() {
-        this(DEFAULT_EVENT_LOOP_THREADS);
+        this(0);
     }
 
     /**
