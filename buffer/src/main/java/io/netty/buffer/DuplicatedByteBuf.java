@@ -291,5 +291,10 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
     public ByteBuffer internalNioBuffer(int index, int length) {
         return buffer.internalNioBuffer(index, length);
     }
+
+    @Override
+    public int forEachByte(int fromIndex, int toIndex, ByteBufProcessor processor) {
+        return buffer.forEachByte(fromIndex, toIndex, processor);
+    }
 }
 
