@@ -719,7 +719,20 @@ public final class EmptyByteBuf implements ByteBuf {
 
     @Override
     public int forEachByte(int fromIndex, int toIndex, ByteBufProcessor processor) {
-        if (fromIndex != 0 && fromIndex != toIndex) {
+        if (fromIndex != 0 || fromIndex != toIndex) {
+            throw new IndexOutOfBoundsException();
+        }
+        return -1;
+    }
+
+    @Override
+    public int forEachByteDesc(ByteBufProcessor processor) {
+        return -1;
+    }
+
+    @Override
+    public int forEachByteDesc(int toIndex, int fromIndex, ByteBufProcessor processor) {
+        if (toIndex != 0 || toIndex != fromIndex) {
             throw new IndexOutOfBoundsException();
         }
         return -1;

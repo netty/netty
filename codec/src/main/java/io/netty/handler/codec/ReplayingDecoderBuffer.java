@@ -378,7 +378,7 @@ final class ReplayingDecoderBuffer implements ByteBuf {
     @Override
     public int forEachByte(ByteBufProcessor processor) {
         int ret = buffer.forEachByte(processor);
-        if (ret < 0) {
+        if (!terminated && ret < 0) {
             throw REPLAY;
         } else {
             return ret;
@@ -387,21 +387,6 @@ final class ReplayingDecoderBuffer implements ByteBuf {
 
     @Override
     public int forEachByte(int fromIndex, int toIndex, ByteBufProcessor processor) {
-        if (fromIndex < toIndex) {
-            return forEachByteAsc(fromIndex, toIndex, processor);
-        } else if (fromIndex > toIndex) {
-            return forEachByteDesc(fromIndex, toIndex, processor);
-        } else {
-            checkIndex(fromIndex, 0);
-            return -1;
-        }
-    }
-
-    private int forEachByteAsc(int fromIndex, int toIndex, ByteBufProcessor processor) {
-        if (fromIndex < 0) {
-            throw new IndexOutOfBoundsException("fromIndex: " + fromIndex);
-        }
-
         final int writerIndex = buffer.writerIndex();
         if (fromIndex >= writerIndex) {
             throw REPLAY;
@@ -419,16 +404,22 @@ final class ReplayingDecoderBuffer implements ByteBuf {
         }
     }
 
-    private int forEachByteDesc(int fromIndex, int toIndex, ByteBufProcessor processor) {
-        if (toIndex < -1) {
-            throw new IndexOutOfBoundsException("toIndex: " + toIndex);
+    @Override
+    public int forEachByteDesc(ByteBufProcessor processor) {
+        if (terminated) {
+            return buffer.forEachByteDesc(processor);
+        } else {
+            throw new UnreplayableOperationException();
         }
+    }
 
-        if (fromIndex >= buffer.writerIndex()) {
+    @Override
+    public int forEachByteDesc(int toIndex, int fromIndex, ByteBufProcessor processor) {
+        if (fromIndex > buffer.writerIndex()) {
             throw REPLAY;
         }
 
-        return buffer.forEachByte(fromIndex, toIndex, processor);
+        return buffer.forEachByteDesc(toIndex, fromIndex, processor);
     }
 
     @Override

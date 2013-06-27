@@ -1663,8 +1663,8 @@ public abstract class AbstractByteBufTest {
 
             @Override
             public int process(ByteBuf buf, int index, byte value) throws Exception {
-                assertThat(value, is((byte) (i + 1)));
                 assertThat(index, is(i));
+                assertThat(value, is((byte) (i + 1)));
                 i ++;
                 lastIndex.set(index);
                 return 1;
@@ -1687,9 +1687,9 @@ public abstract class AbstractByteBufTest {
 
             @Override
             public int process(ByteBuf buf, int index, byte value) throws Exception {
-                assertThat(value, is((byte) (i + 1)));
                 assertThat(index, is(i));
-                i ++;
+                assertThat(value, is((byte) (i + 1)));
+                i++;
 
                 if (index == stop) {
                     throw ABORT;
@@ -1707,20 +1707,19 @@ public abstract class AbstractByteBufTest {
         }
 
         final AtomicInteger lastIndex = new AtomicInteger();
-        buffer.setIndex(CAPACITY / 4, CAPACITY * 3 / 4);
-        assertThat(buffer.forEachByte(CAPACITY * 3 / 4, CAPACITY / 4, new ByteBufProcessor() {
-            int i = CAPACITY * 3 / 4;
+        assertThat(buffer.forEachByteDesc(CAPACITY / 4, CAPACITY * 3 / 4, new ByteBufProcessor() {
+            int i = CAPACITY * 3 / 4 - 1;
 
             @Override
             public int process(ByteBuf buf, int index, byte value) throws Exception {
-                assertThat(value, is((byte) (i + 1)));
                 assertThat(index, is(i));
-                i --;
+                assertThat(value, is((byte) (i + 1)));
+                i--;
                 lastIndex.set(index);
                 return 1;
             }
         }), is(-1));
 
-        assertThat(lastIndex.get(), is(CAPACITY / 4 + 1));
+        assertThat(lastIndex.get(), is(CAPACITY / 4));
     }
 }

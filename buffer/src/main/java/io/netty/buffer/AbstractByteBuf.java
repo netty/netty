@@ -767,7 +767,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
     @Override
     public ByteBuf writeByte(int value) {
         ensureWritable(1);
-        setByte(writerIndex ++, value);
+        setByte(writerIndex++, value);
         return this;
     }
 
@@ -1042,28 +1042,22 @@ public abstract class AbstractByteBuf implements ByteBuf {
 
     @Override
     public int forEachByte(int fromIndex, int toIndex, ByteBufProcessor processor) {
-        if (fromIndex < toIndex) {
-            return forEachByteAsc(fromIndex, toIndex, processor);
-        } else if (fromIndex > toIndex) {
-            return forEachByteDesc(fromIndex, toIndex, processor);
-        } else {
-            checkIndex(fromIndex);
-            return -1;
-        }
-    }
-
-    private int forEachByteAsc(int fromIndex, int toIndex, ByteBufProcessor processor) {
-        if (fromIndex < 0 || toIndex > capacity()) {
+        if (fromIndex < 0 || fromIndex > toIndex || toIndex > capacity()) {
             throw new IndexOutOfBoundsException(String.format(
-                    "fromIndex: %d, toIndex: %d (expected: 0 <= fromIndex < toIndex <= capacity(%d))",
+                    "fromIndex: %d, toIndex: %d (expected: 0 <= fromIndex <= toIndex <= capacity(%d))",
                     fromIndex, toIndex, capacity()));
         }
+
         return forEachByteAsc0(fromIndex, toIndex, processor);
     }
 
     private int forEachByteAsc0(int fromIndex, int toIndex, ByteBufProcessor processor) {
         if (processor == null) {
             throw new NullPointerException("processor");
+        }
+
+        if (fromIndex == toIndex) {
+            return -1;
         }
 
         int i = fromIndex;
@@ -1081,22 +1075,32 @@ public abstract class AbstractByteBuf implements ByteBuf {
         return -1;
     }
 
-    private int forEachByteDesc(int fromIndex, int toIndex, ByteBufProcessor processor) {
-        if (toIndex < -1 || fromIndex >= capacity()) {
+    @Override
+    public int forEachByteDesc(ByteBufProcessor processor) {
+        return forEachByteDesc0(readerIndex, writerIndex, processor);
+    }
+
+    @Override
+    public int forEachByteDesc(int toIndex, int fromIndex, ByteBufProcessor processor) {
+        if (toIndex < 0 || toIndex > fromIndex || fromIndex > capacity()) {
             throw new IndexOutOfBoundsException(String.format(
-                    "fromIndex: %d, toIndex: %d (expected: -1 <= toIndex < fromIndex < capacity(%d))",
-                    fromIndex, toIndex, capacity()));
+                    "toIndex: %d, fromIndex: %d (expected: 0 <= toIndex <= fromIndex <= capacity(%d))",
+                    toIndex, fromIndex, capacity()));
         }
 
+        return forEachByteDesc0(toIndex, fromIndex, processor);
+    }
+
+    private int forEachByteDesc0(int toIndex, int fromIndex, ByteBufProcessor processor) {
         if (processor == null) {
             throw new NullPointerException("processor");
         }
 
-        int i = fromIndex;
+        int i = fromIndex - 1;
         try {
             do {
                 i -= processor.process(this, i, _getByte(i));
-            } while (i > toIndex);
+            } while (i >= toIndex);
         } catch (Signal signal) {
             signal.expect(ByteBufProcessor.ABORT);
             return i;

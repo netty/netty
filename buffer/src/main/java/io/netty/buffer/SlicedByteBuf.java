@@ -276,7 +276,19 @@ public class SlicedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public int forEachByte(int fromIndex, int toIndex, ByteBufProcessor processor) {
-        int ret = buffer.forEachByte(fromIndex + adjustment, toIndex + adjustment, new SlicedByteBufProcessor(processor));
+        int ret = buffer.forEachByte(
+                fromIndex + adjustment, toIndex + adjustment, new SlicedByteBufProcessor(processor));
+        if (ret >= adjustment) {
+            return ret - adjustment;
+        } else {
+            return -1;
+        }
+    }
+
+    @Override
+    public int forEachByteDesc(int toIndex, int fromIndex, ByteBufProcessor processor) {
+        int ret = buffer.forEachByteDesc(
+                toIndex + adjustment, fromIndex + adjustment, new SlicedByteBufProcessor(processor));
         if (ret >= adjustment) {
             return ret - adjustment;
         } else {

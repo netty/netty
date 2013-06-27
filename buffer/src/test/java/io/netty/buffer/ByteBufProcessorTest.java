@@ -43,16 +43,16 @@ public class ByteBufProcessorTest {
     public void testBackward() {
         ByteBuf buf = Unpooled.copiedBuffer("abc\r\n\ndef\r\rghi\n\njkl\0\0mno  \t\tx", CharsetUtil.ISO_8859_1);
 
-        assertEquals(27, buf.forEachByte(buf.capacity() - 1, -1, ByteBufProcessor.FIND_LINEAR_WHITESPACE));
-        assertEquals(23, buf.forEachByte(27, -1, ByteBufProcessor.FIND_NON_LINEAR_WHITESPACE));
-        assertEquals(20, buf.forEachByte(23, -1, ByteBufProcessor.FIND_NUL));
-        assertEquals(18, buf.forEachByte(20, -1, ByteBufProcessor.FIND_NON_NUL));
-        assertEquals(15, buf.forEachByte(18, -1, ByteBufProcessor.FIND_LF));
-        assertEquals(13, buf.forEachByte(15, -1, ByteBufProcessor.FIND_NON_LF));
-        assertEquals(10, buf.forEachByte(13, -1, ByteBufProcessor.FIND_CR));
-        assertEquals(8,  buf.forEachByte(10, -1, ByteBufProcessor.FIND_NON_CR));
-        assertEquals(5,  buf.forEachByte(8,  -1, ByteBufProcessor.FIND_CRLF));
-        assertEquals(2,  buf.forEachByte(5,  -1, ByteBufProcessor.FIND_NON_CRLF));
-        assertEquals(-1, buf.forEachByte(2,  -1, ByteBufProcessor.FIND_CRLF));
+        assertEquals(27, buf.forEachByteDesc(0, buf.writerIndex(), ByteBufProcessor.FIND_LINEAR_WHITESPACE));
+        assertEquals(23, buf.forEachByteDesc(0, 28, ByteBufProcessor.FIND_NON_LINEAR_WHITESPACE));
+        assertEquals(20, buf.forEachByteDesc(0, 24, ByteBufProcessor.FIND_NUL));
+        assertEquals(18, buf.forEachByteDesc(0, 21, ByteBufProcessor.FIND_NON_NUL));
+        assertEquals(15, buf.forEachByteDesc(0, 19, ByteBufProcessor.FIND_LF));
+        assertEquals(13, buf.forEachByteDesc(0, 16, ByteBufProcessor.FIND_NON_LF));
+        assertEquals(10, buf.forEachByteDesc(0, 14, ByteBufProcessor.FIND_CR));
+        assertEquals(8,  buf.forEachByteDesc(0, 11, ByteBufProcessor.FIND_NON_CR));
+        assertEquals(5,  buf.forEachByteDesc(0, 9, ByteBufProcessor.FIND_CRLF));
+        assertEquals(2,  buf.forEachByteDesc(0, 6, ByteBufProcessor.FIND_NON_CRLF));
+        assertEquals(-1, buf.forEachByteDesc(0, 3, ByteBufProcessor.FIND_CRLF));
     }
 }

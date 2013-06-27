@@ -1700,7 +1700,7 @@ public interface ByteBuf extends ReferenceCounted, Comparable<ByteBuf> {
     int bytesBefore(int index, int length, ByteBufIndexFinder indexFinder);
 
     /**
-     * Iterates over the readable bytes of this buffer with the specified {@code processor}.
+     * Iterates over the readable bytes of this buffer with the specified {@code processor} in ascending order.
      *
      * @return {@code -1} if the processor iterated to or beyond the end of the readable bytes.
      *         If the {@code processor} raised {@link ByteBufProcessor#ABORT}, the last-visited index will be returned.
@@ -1708,21 +1708,30 @@ public interface ByteBuf extends ReferenceCounted, Comparable<ByteBuf> {
     int forEachByte(ByteBufProcessor processor);
 
     /**
-     * Iterates over the specified area of this buffer with the specified {@code processor}.
-     * <ul>
-     * <li>If {@code fromIndex} is less than {@code toIndex}, the iteration is performed in an ascending order.
+     * Iterates over the specified area of this buffer with the specified {@code processor} in ascending order.
      * ({@code [fromIndex, fromIndex&#41} i.e. {@code fromIndex}, {@code (fromIndex + 1)},  .. {@code (toIndex - 1)})
-     * </li>
-     * <li>If {@code fromIndex} is greater than {@code toIndex}, the iteration is performed in a descending order.
-     * ({@code [toIndex, fromIndex&#41} i.e. {@code (fromIndex)}, {@code (fromIndex - 1)}, ... {@code toIndex + 1})
-     * </li>
-     * <li>If {@code fromIndex} is equal to {@code toIndex}, {@code -1} is returned immediately.</li>
-     * </ul>
      *
      * @return {@code -1} if the processor iterated to or beyond the end of the specified area.
      *         If the {@code processor} raised {@link ByteBufProcessor#ABORT}, the last-visited index will be returned.
      */
     int forEachByte(int fromIndex, int toIndex, ByteBufProcessor processor);
+
+    /**
+     * Iterates over the readable bytes of this buffer with the specified {@code processor} in descending order.
+     *
+     * @return {@code -1} if the processor iterated to or beyond the beginning of the readable bytes.
+     *         If the {@code processor} raised {@link ByteBufProcessor#ABORT}, the last-visited index will be returned.
+     */
+    int forEachByteDesc(ByteBufProcessor processor);
+
+    /**
+     * Iterates over the specified area of this buffer with the specified {@code processor} in descending order.
+     * ({@code [toIndex, fromIndex&#41} i.e. {@code (fromIndex - 1)}, {@code (fromIndex - 2)}, ... {@code toIndex})
+     *
+     * @return {@code -1} if the processor iterated to or beyond the beginning of the specified area.
+     *         If the {@code processor} raised {@link ByteBufProcessor#ABORT}, the last-visited index will be returned.
+     */
+    int forEachByteDesc(int toIndex, int fromIndex, ByteBufProcessor processor);
 
     /**
      * Returns a copy of this buffer's readable bytes.  Modifying the content
