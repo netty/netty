@@ -378,7 +378,7 @@ final class ReplayingDecoderBuffer implements ByteBuf {
     @Override
     public int forEachByte(ByteBufProcessor processor) {
         int ret = buffer.forEachByte(processor);
-        if (ret < 0 && !terminated) {
+        if (ret < 0) {
             throw REPLAY;
         } else {
             return ret;
@@ -386,23 +386,49 @@ final class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
-    public int forEachByte(int index, int length, ByteBufProcessor processor) {
-        int writerIndex = buffer.writerIndex();
+    public int forEachByte(int fromIndex, int toIndex, ByteBufProcessor processor) {
+        if (fromIndex < toIndex) {
+            return forEachByteAsc(fromIndex, toIndex, processor);
+        } else if (fromIndex > toIndex) {
+            return forEachByteDesc(fromIndex, toIndex, processor);
+        } else {
+            checkIndex(fromIndex, 0);
+            return -1;
+        }
+    }
 
-        if (index >= writerIndex) {
+    private int forEachByteAsc(int fromIndex, int toIndex, ByteBufProcessor processor) {
+        if (fromIndex < 0) {
+            throw new IndexOutOfBoundsException("fromIndex: " + fromIndex);
+        }
+
+        final int writerIndex = buffer.writerIndex();
+        if (fromIndex >= writerIndex) {
             throw REPLAY;
         }
 
-        if (terminated || index + length <= writerIndex) {
-            return buffer.forEachByte(index, length, processor);
+        if (toIndex <= writerIndex) {
+            return buffer.forEachByte(fromIndex, toIndex, processor);
         }
 
-        int ret = buffer.forEachByte(index, writerIndex - index, processor);
+        int ret = buffer.forEachByte(fromIndex, writerIndex, processor);
         if (ret < 0) {
             throw REPLAY;
         } else {
             return ret;
         }
+    }
+
+    private int forEachByteDesc(int fromIndex, int toIndex, ByteBufProcessor processor) {
+        if (toIndex < -1) {
+            throw new IndexOutOfBoundsException("toIndex: " + toIndex);
+        }
+
+        if (fromIndex >= buffer.writerIndex()) {
+            throw REPLAY;
+        }
+
+        return buffer.forEachByte(fromIndex, toIndex, processor);
     }
 
     @Override

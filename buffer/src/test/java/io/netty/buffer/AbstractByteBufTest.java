@@ -30,6 +30,7 @@ import java.util.HashSet;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.netty.buffer.Unpooled.*;
 import static io.netty.util.internal.EmptyArrays.*;
@@ -1655,6 +1656,7 @@ public abstract class AbstractByteBufTest {
             buffer.writeByte(i + 1);
         }
 
+        final AtomicInteger lastIndex = new AtomicInteger();
         buffer.setIndex(CAPACITY / 4, CAPACITY * 3 / 4);
         assertThat(buffer.forEachByte(new ByteBufProcessor() {
             int i = CAPACITY / 4;
@@ -1663,10 +1665,13 @@ public abstract class AbstractByteBufTest {
             public int process(ByteBuf buf, int index, byte value) throws Exception {
                 assertThat(value, is((byte) (i + 1)));
                 assertThat(index, is(i));
-                i++;
+                i ++;
+                lastIndex.set(index);
                 return 1;
             }
         }), is(-1));
+
+        assertThat(lastIndex.get(), is(CAPACITY * 3 / 4 - 1));
     }
 
     @Test
@@ -1677,14 +1682,14 @@ public abstract class AbstractByteBufTest {
         }
 
         final int stop = CAPACITY / 2;
-        assertThat(buffer.forEachByte(CAPACITY / 3, CAPACITY / 3, new ByteBufProcessor() {
+        assertThat(buffer.forEachByte(CAPACITY / 3, CAPACITY * 2 / 3, new ByteBufProcessor() {
             int i = CAPACITY / 3;
 
             @Override
             public int process(ByteBuf buf, int index, byte value) throws Exception {
                 assertThat(value, is((byte) (i + 1)));
                 assertThat(index, is(i));
-                i++;
+                i ++;
 
                 if (index == stop) {
                     throw ABORT;
@@ -1692,5 +1697,30 @@ public abstract class AbstractByteBufTest {
                 return 1;
             }
         }), is(stop));
+    }
+
+    @Test
+    public void testForEachByteDesc() {
+        buffer.clear();
+        for (int i = 0; i < CAPACITY; i ++) {
+            buffer.writeByte(i + 1);
+        }
+
+        final AtomicInteger lastIndex = new AtomicInteger();
+        buffer.setIndex(CAPACITY / 4, CAPACITY * 3 / 4);
+        assertThat(buffer.forEachByte(CAPACITY * 3 / 4, CAPACITY / 4, new ByteBufProcessor() {
+            int i = CAPACITY * 3 / 4;
+
+            @Override
+            public int process(ByteBuf buf, int index, byte value) throws Exception {
+                assertThat(value, is((byte) (i + 1)));
+                assertThat(index, is(i));
+                i --;
+                lastIndex.set(index);
+                return 1;
+            }
+        }), is(-1));
+
+        assertThat(lastIndex.get(), is(CAPACITY / 4 + 1));
     }
 }
