@@ -681,6 +681,7 @@ public final class SwappedByteBuf implements ByteBuf {
     }
 
     @Override
+    @Deprecated
     public int indexOf(int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
         return buf.indexOf(fromIndex, toIndex, indexFinder);
     }
@@ -691,6 +692,7 @@ public final class SwappedByteBuf implements ByteBuf {
     }
 
     @Override
+    @Deprecated
     public int bytesBefore(ByteBufIndexFinder indexFinder) {
         return buf.bytesBefore(new SwappedByteBufIndexFinder(indexFinder));
     }
@@ -701,6 +703,7 @@ public final class SwappedByteBuf implements ByteBuf {
     }
 
     @Override
+    @Deprecated
     public int bytesBefore(int length, ByteBufIndexFinder indexFinder) {
         return buf.bytesBefore(length, new SwappedByteBufIndexFinder(indexFinder));
     }
@@ -711,6 +714,7 @@ public final class SwappedByteBuf implements ByteBuf {
     }
 
     @Override
+    @Deprecated
     public int bytesBefore(int index, int length, ByteBufIndexFinder indexFinder) {
         return buf.bytesBefore(index, length, new SwappedByteBufIndexFinder(indexFinder));
     }
@@ -877,6 +881,7 @@ public final class SwappedByteBuf implements ByteBuf {
         return "Swapped(" + buf.toString() + ')';
     }
 
+    @SuppressWarnings("deprecation")
     private final class SwappedByteBufIndexFinder implements ByteBufIndexFinder {
         private final ByteBufIndexFinder indexFinder;
 

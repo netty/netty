@@ -176,15 +176,12 @@ import java.nio.charset.UnsupportedCharsetException;
  *
  * <h3>Search operations</h3>
  *
- * Various {@link #indexOf(int, int, byte)} methods help you locate an index of
- * a value which meets a certain criteria.  Complicated dynamic sequential
- * search can be done with {@link ByteBufIndexFinder} as well as simple
- * static single byte search.
- * <p>
- * If you are decoding variable length data such as NUL-terminated string, you
- * will find {@link #bytesBefore(byte)} also useful.
+ * For simple single-byte searches, use {@link #indexOf(int, int, byte)} and {@link #bytesBefore(int, int, byte)}.
+ * {@link #bytesBefore(byte)} is especially useful when you deal with a {@code NUL}-terminated string.
+ * For complicated searches, use {@link #forEachByte(int, int, ByteBufProcessor)} with a {@link ByteBufProcessor}
+ * implementation.
  *
- * <h3>Mark and reset</h3>
+ *  <h3>Mark and reset</h3>
  *
  * There are two marker indexes in every buffer. One is for storing
  * {@link #readerIndex() readerIndex} and the other is for storing
@@ -1577,6 +1574,8 @@ public interface ByteBuf extends ReferenceCounted, Comparable<ByteBuf> {
     int indexOf(int fromIndex, int toIndex, byte value);
 
     /**
+     * @deprecated Use {@link #forEachByte(int, int, ByteBufProcessor)} instead.
+     *
      * Locates the first place where the specified {@code indexFinder}
      * returns {@code true}.  The search takes place from the specified
      * {@code fromIndex} (inclusive) to the specified {@code toIndex}
@@ -1592,6 +1591,7 @@ public interface ByteBuf extends ReferenceCounted, Comparable<ByteBuf> {
      *         returned {@code true}.  {@code -1} if the {@code indexFinder}
      *         did not return {@code true} at all.
      */
+    @Deprecated
     int indexOf(int fromIndex, int toIndex, ByteBufIndexFinder indexFinder);
 
     /**
@@ -1608,6 +1608,8 @@ public interface ByteBuf extends ReferenceCounted, Comparable<ByteBuf> {
     int bytesBefore(byte value);
 
     /**
+     * @deprecated Use {@link #forEachByte(ByteBufProcessor)} instead.
+     *
      * Locates the first place where the specified {@code indexFinder} returns
      * {@code true}.  The search takes place from the current {@code readerIndex}
      * (inclusive) to the current {@code writerIndex}.
@@ -1620,6 +1622,7 @@ public interface ByteBuf extends ReferenceCounted, Comparable<ByteBuf> {
      *         {@code true}.  {@code -1} if the {@code indexFinder} did not
      *         return {@code true} at all.
      */
+    @Deprecated
     int bytesBefore(ByteBufIndexFinder indexFinder);
 
     /**
@@ -1639,6 +1642,8 @@ public interface ByteBuf extends ReferenceCounted, Comparable<ByteBuf> {
     int bytesBefore(int length, byte value);
 
     /**
+     * @deprecated Use {@link #forEachByte(int, int, ByteBufProcessor)} instead.
+     *
      * Locates the first place where the specified {@code indexFinder} returns
      * {@code true}.  The search starts the current {@code readerIndex}
      * (inclusive) and lasts for the specified {@code length}.
@@ -1654,6 +1659,7 @@ public interface ByteBuf extends ReferenceCounted, Comparable<ByteBuf> {
      * @throws IndexOutOfBoundsException
      *         if {@code length} is greater than {@code this.readableBytes}
      */
+    @Deprecated
     int bytesBefore(int length, ByteBufIndexFinder indexFinder);
 
     /**
@@ -1673,6 +1679,8 @@ public interface ByteBuf extends ReferenceCounted, Comparable<ByteBuf> {
     int bytesBefore(int index, int length, byte value);
 
     /**
+     * @deprecated Use {@link #forEachByte(int, int, ByteBufProcessor)} instead.
+     *
      * Locates the first place where the specified {@code indexFinder} returns
      * {@code true}.  The search starts the specified {@code index} (inclusive)
      * and lasts for the specified {@code length}.
@@ -1688,6 +1696,7 @@ public interface ByteBuf extends ReferenceCounted, Comparable<ByteBuf> {
      * @throws IndexOutOfBoundsException
      *         if {@code index + length} is greater than {@code this.capacity}
      */
+    @Deprecated
     int bytesBefore(int index, int length, ByteBufIndexFinder indexFinder);
 
     /**

@@ -19,7 +19,148 @@ package io.netty.buffer;
 import io.netty.util.Signal;
 
 public interface ByteBufProcessor {
+
     Signal ABORT = new Signal(ByteBufProcessor.class.getName() + ".ABORT");
+
+    /**
+     * Aborts on a {@code NUL (0x00)}.
+     */
+    ByteBufProcessor FIND_NUL = new ByteBufProcessor() {
+        @Override
+        public int process(ByteBuf buf, int index, byte value) throws Exception {
+            if (value == 0) {
+                throw ABORT;
+            } else {
+                return 1;
+            }
+        }
+    };
+
+    /**
+     * Aborts on a non-{@code NUL (0x00)}.
+     */
+    ByteBufProcessor FIND_NON_NUL = new ByteBufProcessor() {
+        @Override
+        public int process(ByteBuf buf, int index, byte value) throws Exception {
+            if (value != 0) {
+                throw ABORT;
+            } else {
+                return 1;
+            }
+        }
+    };
+
+    /**
+     * Aborts on a {@code CR ('\r')}.
+     */
+    ByteBufProcessor FIND_CR = new ByteBufProcessor() {
+        @Override
+        public int process(ByteBuf buf, int index, byte value) throws Exception {
+            if (value == '\r') {
+                throw ABORT;
+            } else {
+                return 1;
+            }
+        }
+    };
+
+    /**
+     * Aborts on a non-{@code CR ('\r')}.
+     */
+    ByteBufProcessor FIND_NON_CR = new ByteBufProcessor() {
+        @Override
+        public int process(ByteBuf buf, int index, byte value) throws Exception {
+            if (value != '\r') {
+                throw ABORT;
+            } else {
+                return 1;
+            }
+        }
+    };
+
+    /**
+     * Aborts on a {@code LF ('\n')}.
+     */
+    ByteBufProcessor FIND_LF = new ByteBufProcessor() {
+        @Override
+        public int process(ByteBuf buf, int index, byte value) throws Exception {
+            if (value == '\n') {
+                throw ABORT;
+            } else {
+                return 1;
+            }
+        }
+    };
+
+    /**
+     * Aborts on a non-{@code LF ('\n')}.
+     */
+    ByteBufProcessor FIND_NON_LF = new ByteBufProcessor() {
+        @Override
+        public int process(ByteBuf buf, int index, byte value) throws Exception {
+            if (value != '\n') {
+                throw ABORT;
+            } else {
+                return 1;
+            }
+        }
+    };
+
+    /**
+     * Aborts on a {@code CR ('\r')} or a {@code LF ('\n')}.
+     */
+    ByteBufProcessor FIND_CRLF = new ByteBufProcessor() {
+        @Override
+        public int process(ByteBuf buf, int index, byte value) throws Exception {
+            if (value == '\r' || value == '\n') {
+                throw ABORT;
+            } else {
+                return 1;
+            }
+        }
+    };
+
+    /**
+     * Aborts on a byte which is neither a {@code CR ('\r')} nor a {@code LF ('\n')}.
+     */
+    ByteBufProcessor FIND_NON_CRLF = new ByteBufProcessor() {
+        @Override
+        public int process(ByteBuf buf, int index, byte value) throws Exception {
+            if (value != '\r' && value != '\n') {
+                throw ABORT;
+            } else {
+                return 1;
+            }
+        }
+    };
+
+    /**
+     * Aborts on a linear whitespace (a ({@code ' '} or a {@code '\t'}).
+     */
+    ByteBufProcessor FIND_LINEAR_WHITESPACE = new ByteBufProcessor() {
+        @Override
+        public int process(ByteBuf buf, int index, byte value) throws Exception {
+            if (value == ' ' || value == '\t') {
+                throw ABORT;
+            } else {
+                return 1;
+            }
+        }
+    };
+
+    /**
+     * Aborts on a byte which is not a linear whitespace (neither {@code ' '} nor {@code '\t'}).
+     */
+    ByteBufProcessor FIND_NON_LINEAR_WHITESPACE = new ByteBufProcessor() {
+        @Override
+        public int process(ByteBuf buf, int index, byte value) throws Exception {
+            if (value != ' ' && value != '\t') {
+                throw ABORT;
+            } else {
+                return 1;
+            }
+        }
+    };
 
     /**
      * @return the number of elements processed. {@link ByteBuf#forEachByte(ByteBufProcessor)} will determine

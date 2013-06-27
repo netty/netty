@@ -307,6 +307,7 @@ final class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
+    @Deprecated
     public int indexOf(int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
         int endIndex = buffer.indexOf(fromIndex, toIndex, indexFinder);
         if (endIndex < 0) {
@@ -325,6 +326,7 @@ final class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
+    @Deprecated
     public int bytesBefore(ByteBufIndexFinder indexFinder) {
         int bytes = buffer.bytesBefore(indexFinder);
         if (bytes < 0) {
@@ -344,6 +346,7 @@ final class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
+    @Deprecated
     public int bytesBefore(int length, ByteBufIndexFinder indexFinder) {
         checkReadableBytes(length);
         int bytes = buffer.bytesBefore(length, indexFinder);
@@ -363,6 +366,7 @@ final class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
+    @Deprecated
     public int bytesBefore(int index, int length, ByteBufIndexFinder indexFinder) {
         int bytes = buffer.bytesBefore(index, length, indexFinder);
         if (bytes < 0) {
