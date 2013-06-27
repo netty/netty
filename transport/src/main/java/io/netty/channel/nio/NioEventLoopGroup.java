@@ -29,15 +29,15 @@ import java.util.concurrent.ThreadFactory;
 public class NioEventLoopGroup extends MultithreadEventLoopGroup {
 
     /**
-     * Create a new instance using {@link #DEFAULT_EVENT_LOOP_THREADS} number of threads, the default
-     * {@link ThreadFactory} and  the {@link SelectorProvider} which is returned by {@link SelectorProvider#provider()}.
+     * Create a new instance using the default number of threads, the default {@link ThreadFactory} and
+     * the {@link SelectorProvider} which is returned by {@link SelectorProvider#provider()}.
      */
     public NioEventLoopGroup() {
-        this(DEFAULT_EVENT_LOOP_THREADS);
+        this(0);
     }
 
     /**
-     * Create a new instance using nThreads number of threads, {@link ThreadFactory} and the
+     * Create a new instance using the specified number of threads, {@link ThreadFactory} and the
      * {@link SelectorProvider} which is returned by {@link SelectorProvider#provider()}.
      */
     public NioEventLoopGroup(int nThreads) {
@@ -45,7 +45,7 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
     }
 
     /**
-     * Create a new instance using nThreads number of threads, the given {@link ThreadFactory} and the
+     * Create a new instance using the specified number of threads, the given {@link ThreadFactory} and the
      * {@link SelectorProvider} which is returned by {@link SelectorProvider#provider()}.
      */
     public NioEventLoopGroup(int nThreads, ThreadFactory threadFactory) {
@@ -53,7 +53,7 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
     }
 
     /**
-     * Create a new instance using nThreads number of threads, the given {@link ThreadFactory} and the given
+     * Create a new instance using the specified number of threads, the given {@link ThreadFactory} and the given
      * {@link SelectorProvider}.
      */
     public NioEventLoopGroup(
