@@ -87,8 +87,19 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
         encoder.write(ctx, msgs, promise);
     }
 
+    /**
+     * @see MessageToByteEncoder#encode(ChannelHandlerContext, Object, ByteBuf)
+     */
     protected abstract void encode(ChannelHandlerContext ctx, I msg, ByteBuf out) throws Exception;
+
+    /**
+     * @see ByteToMessageDecoder#decode(ChannelHandlerContext, ByteBuf, MessageList)
+     */
     protected abstract void decode(ChannelHandlerContext ctx, ByteBuf in, MessageList<Object> out) throws Exception;
+
+    /**
+     * @see ByteToMessageDecoder#decodeLast(ChannelHandlerContext, ByteBuf, MessageList)
+     */
     protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, MessageList<Object> out) throws Exception {
         decode(ctx, in, out);
     }
