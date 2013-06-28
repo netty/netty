@@ -362,7 +362,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
             in.skipBytes(localBytesToDiscard);
             bytesToDiscard -= localBytesToDiscard;
             this.bytesToDiscard = bytesToDiscard;
-            failIfNecessary(ctx, false);
+            failIfNecessary(false);
             return null;
         }
 
@@ -394,7 +394,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
             tooLongFrameLength = frameLength;
             bytesToDiscard = frameLength - in.readableBytes();
             in.skipBytes(in.readableBytes());
-            failIfNecessary(ctx, true);
+            failIfNecessary(true);
             return null;
         }
 
@@ -445,7 +445,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
         return frameLength;
     }
 
-    private void failIfNecessary(ChannelHandlerContext ctx, boolean firstDetectionOfTooLongFrame) {
+    private void failIfNecessary(boolean firstDetectionOfTooLongFrame) {
         if (bytesToDiscard == 0) {
             // Reset to the initial state and tell the handlers that
             // the frame was too large.
