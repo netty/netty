@@ -16,10 +16,12 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
 
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.net.SocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -27,88 +29,75 @@ import java.util.NoSuchElementException;
 
 
 /**
- * A list of {@link ChannelHandler}s which handles or intercepts
- * inbound and outbount operations of a {@link Channel}.  {@link ChannelPipeline}
- * implements an advanced form of the
- * <a href="http://java.sun.com/blueprints/corej2eepatterns/Patterns/InterceptingFilter.html">Intercepting
- * Filter</a> pattern to give a user full control over how an event is handled
- * and how the {@link ChannelHandler}s in the pipeline interact with each other.
+ * A list of {@link ChannelHandler}s which handles or intercepts inbound events and outbount operations of a
+ * {@link Channel}.  {@link ChannelPipeline} implements an advanced form of the
+ * <a href="http://www.oracle.com/technetwork/java/interceptingfilter-142169.html">Intercepting Filter</a> pattern
+ * to give a user full control over how an event is handled and how the {@link ChannelHandler}s in a pipeline
+ * interact with each other.
  *
  * <h3>Creation of a pipeline</h3>
  *
- * For each new channel, a new pipeline iscreated and attached to the
- * channel.  Once attached, the coupling between the channel and the pipeline
- * is permanent; the channel cannot attach another pipeline to it nor detach
- * the current pipeline from it. All of this is handled for you and you not need
- * to take care of this.
- * <p>
- *
+ * Each channel has its own pipeline and it is created automatically when a new channel is created.
  *
  * <h3>How an event flows in a pipeline</h3>
  *
- * The following diagram describes how I/O is processed by
- * {@link ChannelHandler}s in a {@link ChannelPipeline} typically.
- * A I/O-operation can be handled by either a {@link ChannelInboundHandler}
- * or a {@link ChannelOutboundHandler} and be forwarded to the closest
- * handler by calling either one of the methods defined in the
- * {@link ChannelInboundInvoker} interface for inbound I/O or by one
- * of the methods defined in the {@link ChannelOutboundInvoker} interface
- * for outbound I/O. {@link ChannelPipeline} extends both of them.
+ * The following diagram describes how I/O events are processed by {@link ChannelHandler}s in a {@link ChannelPipeline}
+ * typically. An I/O event is handled by either a {@link ChannelInboundHandler} or a {@link ChannelOutboundHandler}
+ * and be forwarded to its closest handler by calling the event propagation methods defined in
+ * {@link ChannelHandlerContext}, such as {@link ChannelHandlerContext#fireMessageReceived(MessageList)} and
+ * {@link ChannelHandlerContext#write(MessageList)}.
  *
  * <pre>
- *                                                  I/O Request
- *                                             via {@link Channel} or
- *                                         {@link ChannelHandlerContext}
- *                                                       |
- *  +----------------------------------------------------+-----------------+
- *  |                           ChannelPipeline          |                 |
- *  |                                                   \|/                |
- *  |    +----------------------+            +-----------+------------+    |
- *  |    | Inbound Handler  N   |            | Outbound Handler  1    |    |
- *  |    +----------+-----------+            +-----------+------------+    |
- *  |              /|\                                   |                 |
- *  |               |                                   \|/                |
- *  |    +----------+-----------+            +-----------+------------+    |
- *  |    | Inbound Handler N-1  |            |   Outbound Handler  2  |    |
- *  |    +----------+-----------+            +-----------+------------+    |
- *  |              /|\                                   .                 |
- *  |               .                                    .                 |
- *  | [{@link ChannelInboundInvoker}]   [{@link ChannelOutboundInvoker}()] |
- *  |        [ method call]                    [method call]               |
- *  |               .                                    .                 |
- *  |               .                                   \|/                |
- *  |    +----------+-----------+            +-----------+------------+    |
- *  |    | Inbound Handler  2   |            | Outbound Handler M-1   |    |
- *  |    +----------+-----------+            +-----------+------------+    |
- *  |              /|\                                   |                 |
- *  |               |                                   \|/                |
- *  |    +----------+-----------+            +-----------+------------+    |
- *  |    | Inbound Handler  1   |            | Outbound Handler  M    |    |
- *  |    +----------+-----------+            +-----------+------------+    |
- *  |              /|\                                   |                 |
- *  +---------------+------------------------------------+-----------------+
- *                  |                                   \|/
- *  +---------------+------------------------------------+-----------------+
- *  |               |                                    |                 |
- *  |       [ Socket.read() ]                     [ Socket.write() ]       |
- *  |                                                                      |
- *  |  Netty Internal I/O Threads (Transport Implementation)               |
- *  +----------------------------------------------------------------------+
+ *                                                 I/O Request
+ *                                            via {@link Channel} or
+ *                                        {@link ChannelHandlerContext}
+ *                                                      |
+ *  +---------------------------------------------------+---------------+
+ *  |                           ChannelPipeline         |               |
+ *  |                                                  \|/              |
+ *  |    +---------------------+            +-----------+----------+    |
+ *  |    | Inbound Handler  N  |            | Outbound Handler  1  |    |
+ *  |    +----------+----------+            +-----------+----------+    |
+ *  |              /|\                                  |               |
+ *  |               |                                  \|/              |
+ *  |    +----------+----------+            +-----------+----------+    |
+ *  |    | Inbound Handler N-1 |            | Outbound Handler  2  |    |
+ *  |    +----------+----------+            +-----------+----------+    |
+ *  |              /|\                                  .               |
+ *  |               .                                   .               |
+ *  | ChannelHandlerContext.fireIN_EVT() ChannelHandlerContext.OUT_EVT()|
+ *  |        [ method call]                       [method call]         |
+ *  |               .                                   .               |
+ *  |               .                                  \|/              |
+ *  |    +----------+----------+            +-----------+----------+    |
+ *  |    | Inbound Handler  2  |            | Outbound Handler M-1 |    |
+ *  |    +----------+----------+            +-----------+----------+    |
+ *  |              /|\                                  |               |
+ *  |               |                                  \|/              |
+ *  |    +----------+----------+            +-----------+----------+    |
+ *  |    | Inbound Handler  1  |            | Outbound Handler  M  |    |
+ *  |    +----------+----------+            +-----------+----------+    |
+ *  |              /|\                                  |               |
+ *  +---------------+-----------------------------------+---------------+
+ *                  |                                  \|/
+ *  +---------------+-----------------------------------+---------------+
+ *  |               |                                   |               |
+ *  |       [ Socket.read() ]                    [ Socket.write() ]     |
+ *  |                                                                   |
+ *  |  Netty Internal I/O Threads (Transport Implementation)            |
+ *  +-------------------------------------------------------------------+
  * </pre>
- * An inbound event is handled by the inbound handlers in the bottom-up
- * direction as shown on the left side of the diagram.  An inbound handler
- * usually handles the inbound data generated by the I/O thread on the bottom
- * of the diagram.  The inbound data is often read from a remote peer via the
- * actual input operation such as {@link InputStream#read(byte[])}.
- * If an inbound event goes beyond the top inbound handler, it is discarded
- * silently.
+ * An inbound event is handled by the inbound handlers in the bottom-up direction as shown on the left side of the
+ * diagram.  An inbound handler usually handles the inbound data generated by the I/O thread on the bottom of the
+ * diagram.  The inbound data is often read from a remote peer via the actual input operation such as
+ * {@link SocketChannel#read(ByteBuffer)}.  If an inbound event goes beyond the top inbound handler, it is discarded
+ * silently, or logged if it needs your attention.
  * <p>
- * A outbound event is handled by the outbound handler in the top-down
- * direction as shown on the right side of the diagram.  A outbound handler
- * usually generates or transforms the outbound traffic such as write requests.
- * If a outbound event goes beyond the bottom outbound handler, it is
- * handled by an I/O thread associated with the {@link Channel}. The I/O thread
- * often performs the actual output operation such as {@link OutputStream#write(byte[])}.
+ * An outbound event is handled by the outbound handler in the top-down direction as shown on the right side of the
+ * diagram.  An outbound handler usually generates or transforms the outbound traffic such as write requests.
+ * If an outbound event goes beyond the bottom outbound handler, it is handled by an I/O thread associated with the
+ * {@link Channel}. The I/O thread often performs the actual output operation such as
+ * {@link SocketChannel#write(ByteBuffer)}.
  * <p>
  * For example, let us assume that we created the following pipeline:
  * <pre>
@@ -119,60 +108,112 @@ import java.util.NoSuchElementException;
  * p.addLast("4", new OutboundHandlerB());
  * p.addLast("5", new InboundOutboundHandlerX());
  * </pre>
- * In the example above, the class whose name starts with {@code Inbound} means
- * it is an inbound handler.  The class whose name starts with
- * {@code Outbound} means it is a outbound handler.
+ * In the example above, the class whose name starts with {@code Inbound} means it is an inbound handler.
+ * The class whose name starts with {@code Outbound} means it is a outbound handler.
  * <p>
- * In the given example configuration, the handler evaluation order is 1, 2, 3,
- * 4, 5 when an event goes inbound.  When an event goes outbound, the order
- * is 5, 4, 3, 2, 1.  On top of this principle, {@link ChannelPipeline} skips
+ * In the given example configuration, the handler evaluation order is 1, 2, 3, 4, 5 when an event goes inbound.
+ * When an event goes outbound, the order is 5, 4, 3, 2, 1.  On top of this principle, {@link ChannelPipeline} skips
  * the evaluation of certain handlers to shorten the stack depth:
  * <ul>
- * <li>3 and 4 don't implement {@link ChannelInboundHandler}, and therefore the
- *     actual evaluation order of an inbound event will be: 1, 2, and 5.</li>
- * <li>1, 2, and 5 don't implement {@link ChannelOutboundHandler}, and
- *     therefore the actual evaluation order of a outbound event will be:
- *     4 and 3.</li>
- * <li>If 5 implements both
- *     {@link ChannelInboundHandler} and {@link ChannelOutboundHandler}, the
- *     evaluation order of an inbound and a outbound event could be 125 and
- *     543 respectively.</li>
+ * <li>3 and 4 don't implement {@link ChannelInboundHandler}, and therefore the actual evaluation order of an inbound
+ *     event will be: 1, 2, and 5.</li>
+ * <li>1 and 2 implement {@link ChannelOutboundHandler}, and therefore the actual evaluation order of a
+ *     outbound event will be: 5, 4, and 3.</li>
+ * <li>If 5 implements both {@link ChannelInboundHandler} and {@link ChannelOutboundHandler}, the evaluation order of
+ *     an inbound and a outbound event could be 125 and 543 respectively.</li>
  * </ul>
+ *
+ * <h3>Forwarding an event to the next handler</h3>
+ *
+ * As you might noticed in the diagram shows, a handler has to invoke the event propagation methods in
+ * {@link ChannelHandlerContext} to forward an event to its next handler.  Those methods include:
+ * <ul>
+ * <li>Inbound event propagation methods:
+ *     <ul>
+ *     <li>{@link ChannelHandlerContext#fireChannelRegistered()}</li>
+ *     <li>{@link ChannelHandlerContext#fireChannelActive()}</li>
+ *     <li>{@link ChannelHandlerContext#fireMessageReceived(MessageList)}</li>
+ *     <li>{@link ChannelHandlerContext#fireExceptionCaught(Throwable)}</li>
+ *     <li>{@link ChannelHandlerContext#fireUserEventTriggered(Object)}</li>
+ *     <li>{@link ChannelHandlerContext#fireChannelReadSuspended()}</li>
+ *     <li>{@link ChannelHandlerContext#fireChannelWritabilityChanged()}</li>
+ *     <li>{@link ChannelHandlerContext#fireChannelInactive()}</li>
+ *     <li>{@link ChannelHandlerContext#fireChannelUnregistered()}</li>
+ *     </ul>
+ * </li>
+ * <li>Outbound event propagation methods:
+ *     <ul>
+ *     <li>{@link ChannelHandlerContext#bind(SocketAddress, ChannelPromise)}</li>
+ *     <li>{@link ChannelHandlerContext#connect(SocketAddress, SocketAddress, ChannelPromise)}</li>
+ *     <li>{@link ChannelHandlerContext#write(MessageList)}</li>
+ *     <li>{@link ChannelHandlerContext#read()}</li>
+ *     <li>{@link ChannelHandlerContext#disconnect(ChannelPromise)}</li>
+ *     <li>{@link ChannelHandlerContext#close(ChannelPromise)}</li>
+ *     <li>{@link ChannelHandlerContext#deregister(ChannelPromise)}</li>
+ *     </ul>
+ * </li>
+ * </ul>
+ *
+ * and the following example shows how the event propagation is usually done:
+ *
+ * <pre>
+ * public class MyInboundHandler extends {@link ChannelInboundHandlerAdapter} {
+ *     {@code @Override}
+ *     public void channelActive({@link ChannelHandlerContext} ctx) {
+ *         System.out.println("Connected!");
+ *         ctx.fireChannelActive();
+ *     }
+ * }
+ *
+ * public clas MyOutboundHandler extends {@link ChannelOutboundHandlerAdapter} {
+ *     {@code @Override}
+ *     public void close({@link ChannelHandlerContext} ctx, {@link ChannelPromise} promise) {
+ *         System.out.println("Closing ..");
+ *         ctx.close(promise);
+ *     }
+ * }
+ * </pre>
  *
  * <h3>Building a pipeline</h3>
  * <p>
- * A user is supposed to have one or more {@link ChannelHandler}s in a
- * pipeline to receive I/O events (e.g. read) and to request I/O operations
- * (e.g. write and close).  For example, a typical server will have the following
- * handlers in each channel's pipeline, but your mileage may vary depending on
- * the complexity and characteristics of the protocol and business logic:
+ * A user is supposed to have one or more {@link ChannelHandler}s in a pipeline to receive I/O events (e.g. read) and
+ * to request I/O operations (e.g. write and close).  For example, a typical server will have the following handlers
+ * in each channel's pipeline, but your mileage may vary depending on the complexity and characteristics of the
+ * protocol and business logic:
  *
  * <ol>
- * <li>Protocol Decoder - translates binary data (e.g. {@link ByteBuf})
- *                        into a Java object.</li>
+ * <li>Protocol Decoder - translates binary data (e.g. {@link ByteBuf}) into a Java object.</li>
  * <li>Protocol Encoder - translates a Java object into binary data.</li>
- * <li>Business Logic Handler - performs the actual business logic
- *                              (e.g. database access).</li>
+ * <li>Business Logic Handler - performs the actual business logic (e.g. database access).</li>
  * </ol>
  *
  * and it could be represented as shown in the following example:
  *
  * <pre>
- * {@link ChannelPipeline} pipeline = ...;
+ * static final {@link EventExecutorGroup} group = new {@link DefaultEventExecutorGroup}(16);
+ * ...
+ *
+ * {@link ChannelPipeline} pipeline = ch.pipeline();
+ *
  * pipeline.addLast("decoder", new MyProtocolDecoder());
  * pipeline.addLast("encoder", new MyProtocolEncoder());
- * pipeline.addLast("handler", new MyBusinessLogicHandler());
+ *
+ * // Tell the pipeline to run MyBusinessLogicHandler's event handler methods
+ * // in a different thread than an I/O thread so that the I/O thread is not blocked by
+ * // a time-consuming task.
+ * // If your business logic is fully asynchronous or finished very quickly, you don't
+ * // need to specify a group.
+ * pipeline.addLast(group, "handler", new MyBusinessLogicHandler());
  * </pre>
  *
  * <h3>Thread safety</h3>
  * <p>
- * A {@link ChannelHandler} can be added or removed at any time because a
- * {@link ChannelPipeline} is thread safe. For example, you can insert an
- * encryption handler when sensitive information is about to be exchanged,
- * and remove it after the exchange.
+ * A {@link ChannelHandler} can be added or removed at any time because a {@link ChannelPipeline} is thread safe.
+ * For example, you can insert an encryption handler when sensitive information is about to be exchanged, and remove it
+ * after the exchange.
  */
-public interface ChannelPipeline extends ChannelInboundInvoker, ChannelOutboundInvoker,
-        Iterable<Entry<String, ChannelHandler>> {
+public interface ChannelPipeline
+         extends ChannelInboundInvoker, ChannelOutboundInvoker, Iterable<Entry<String, ChannelHandler>> {
 
     /**
      * Inserts a {@link ChannelHandler} at the first position of this pipeline.
