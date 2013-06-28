@@ -232,16 +232,20 @@ public class SpdyFrameDecoder extends FrameDecoder {
 
         case READ_HEADER_BLOCK:
             int compressedBytes = Math.min(buffer.readableBytes(), length);
-            length -= compressedBytes;
+            ChannelBuffer compressed = buffer.slice(buffer.readerIndex(), compressedBytes);
 
             try {
-                headerBlockDecoder.decode(buffer.readSlice(compressedBytes), spdyHeadersFrame);
+                headerBlockDecoder.decode(compressed, spdyHeadersFrame);
             } catch (Exception e) {
                 state = State.FRAME_ERROR;
                 spdyHeadersFrame = null;
                 Channels.fireExceptionCaught(ctx, e);
                 return null;
             }
+
+            int readBytes = compressedBytes - compressed.readableBytes();
+            buffer.skipBytes(readBytes);
+            length -= readBytes;
 
             if (spdyHeadersFrame != null &&
                     (spdyHeadersFrame.isInvalid() || spdyHeadersFrame.isTruncated())) {
