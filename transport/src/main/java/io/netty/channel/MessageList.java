@@ -267,13 +267,14 @@ public final class MessageList<T> implements Iterable<T> {
         int i = srcIdx;
         try {
             if (byteBufsOnly) {
-                for (; i < srcEndIdx; i ++) {
+                while (i < srcEndIdx) {
                     T m = src[srcIdx];
                     if (m == null) {
                         throw new NullPointerException("src[" + srcIdx + ']');
                     }
 
                     elements[dstIdx ++] = m;
+                    i ++;
 
                     if (!(m instanceof ByteBuf)) {
                         byteBufsOnly = false;
@@ -297,7 +298,7 @@ public final class MessageList<T> implements Iterable<T> {
             }
         }
 
-        assert dstIdx == newSize;
+        assert dstIdx == newSize : String.format("dstIdx(%d) != newSize(%d)", dstIdx, newSize);
         size = newSize;
 
         return this;
