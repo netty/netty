@@ -119,7 +119,7 @@ public final class MessageList<T> implements Iterable<T> {
     public boolean releaseAll() {
         boolean releasedAll = true;
         int size = this.size;
-        for (int i = 0; i < size; i++) {
+        for (int i = 0; i < size; i ++) {
             releasedAll &= ReferenceCountUtil.release(elements[i]);
         }
         return releasedAll;
@@ -132,7 +132,7 @@ public final class MessageList<T> implements Iterable<T> {
     public boolean releaseAll(int decrement) {
         boolean releasedAll = true;
         int size = this.size;
-        for (int i = 0; i < size; i++) {
+        for (int i = 0; i < size; i ++) {
             releasedAll &= ReferenceCountUtil.release(elements[i], decrement);
         }
         return releasedAll;
@@ -226,7 +226,7 @@ public final class MessageList<T> implements Iterable<T> {
         if (value == null) {
             throw new NullPointerException("value");
         }
-        modifications++;
+        modifications ++;
         int oldSize = size;
         int newSize = oldSize + 1;
         ensureCapacity(newSize);
@@ -253,22 +253,52 @@ public final class MessageList<T> implements Iterable<T> {
      * and return itself.
      */
     public MessageList<T> add(T[] src, int srcIdx, int srcLen) {
-        checkElements(src, srcIdx, srcLen);
+        if (src == null) {
+            throw new NullPointerException("src");
+        }
 
-        modifications++;
-        int oldSize = size;
-        int newSize = oldSize + srcLen;
+        modifications ++;
+
+        int dstIdx = size;
+        final int newSize = dstIdx + srcLen;
         ensureCapacity(newSize);
-        System.arraycopy(src, srcIdx, elements, oldSize, srcLen);
-        size = newSize;
-        if (byteBufsOnly) {
-            for (int i = srcIdx; i < srcIdx; i++) {
-                if (!(src[i] instanceof ByteBuf)) {
-                    byteBufsOnly = false;
-                    break;
+
+        final int srcEndIdx = srcIdx + srcLen;
+        int i = srcIdx;
+        try {
+            if (byteBufsOnly) {
+                for (; i < srcEndIdx; i ++) {
+                    T m = src[srcIdx];
+                    if (m == null) {
+                        throw new NullPointerException("src[" + srcIdx + ']');
+                    }
+
+                    elements[dstIdx ++] = m;
+
+                    if (!(m instanceof ByteBuf)) {
+                        byteBufsOnly = false;
+                        break;
+                    }
                 }
             }
+
+            for (; i < srcEndIdx; i ++) {
+                T m = src[srcIdx];
+                if (m == null) {
+                    throw new NullPointerException("src[" + srcIdx + ']');
+                }
+
+                elements[dstIdx ++] = m;
+            }
+        } finally {
+            if (dstIdx != newSize) {
+                // Could not finish iteration.
+                Arrays.fill(elements, size, dstIdx, null);
+            }
         }
+
+        assert dstIdx == newSize;
+        size = newSize;
 
         return this;
     }
@@ -284,7 +314,7 @@ public final class MessageList<T> implements Iterable<T> {
      * Add the messages contained in the given {@link MessageList}, using the given src index and src length, to this
      * {@link MessageList} and return itself.
      */
-    public MessageList<T> add(MessageList<T>  src, int srcIdx, int srcLen) {
+    public MessageList<T> add(MessageList<T> src, int srcIdx, int srcLen) {
         return add(src.elements, srcIdx, srcLen);
     }
 
@@ -292,7 +322,7 @@ public final class MessageList<T> implements Iterable<T> {
      * Clear all messages and return itself.
      */
     public MessageList<T> clear() {
-        modifications++;
+        modifications ++;
         Arrays.fill(elements, 0, size, null);
         byteBufsOnly = true;
         size = 0;
@@ -414,6 +444,23 @@ public final class MessageList<T> implements Iterable<T> {
     }
 
     /**
+     * Returns the backing array of this list.  Use this array when you want to iterate over the list fast:
+     * <pre>
+     * {@link MessageList} list = ...;
+     * for (Object m: list.array()) {
+     *     if (m == null) {
+     *         break;
+     *     }
+     *
+     *     handleMessage(m);
+     * }
+     * </pre>
+     */
+    public T[] array() {
+        return elements;
+    }
+
+    /**
      * Returns {@code true} if all messages contained in this {@link MessageList} are assignment-compatible with the
      * object represented by this {@link Class}.
      */
@@ -474,18 +521,6 @@ public final class MessageList<T> implements Iterable<T> {
         }
     }
 
-    private void checkElements(T[] src, int srcIdx, int srcLen) {
-        if (src == null) {
-            throw new NullPointerException("src");
-        }
-        int end = srcIdx + srcLen;
-        for (int i = srcIdx; i < end; i ++) {
-            if (src[i] == null) {
-                throw new NullPointerException("src[" + i + ']');
-            }
-        }
-    }
-
     private final class MessageListIterator implements Iterator<T> {
         private int index;
         private int expectedModifications = modifications;
@@ -508,7 +543,7 @@ public final class MessageList<T> implements Iterable<T> {
         public T next() {
             checkConcurrentModifications();
             if (hasNext()) {
-                return elements[index++];
+                return elements[index ++];
             }
             throw new NoSuchElementException();
         }
