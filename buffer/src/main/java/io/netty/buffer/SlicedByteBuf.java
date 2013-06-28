@@ -275,9 +275,8 @@ public class SlicedByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
-    public int forEachByte(int fromIndex, int toIndex, ByteBufProcessor processor) {
-        int ret = buffer.forEachByte(
-                fromIndex + adjustment, toIndex + adjustment, new SlicedByteBufProcessor(processor));
+    public int forEachByte(int index, int length, ByteBufProcessor processor) {
+        int ret = buffer.forEachByte(index + adjustment, length, processor);
         if (ret >= adjustment) {
             return ret - adjustment;
         } else {
@@ -286,29 +285,12 @@ public class SlicedByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
-    public int forEachByteDesc(int toIndex, int fromIndex, ByteBufProcessor processor) {
-        int ret = buffer.forEachByteDesc(
-                toIndex + adjustment, fromIndex + adjustment, new SlicedByteBufProcessor(processor));
+    public int forEachByteDesc(int index, int length, ByteBufProcessor processor) {
+        int ret = buffer.forEachByteDesc(index + adjustment, length, processor);
         if (ret >= adjustment) {
             return ret - adjustment;
         } else {
             return -1;
-        }
-    }
-
-    private final class SlicedByteBufProcessor implements ByteBufProcessor {
-        private final ByteBufProcessor processor;
-
-        SlicedByteBufProcessor(ByteBufProcessor processor) {
-            if (processor == null) {
-                throw new NullPointerException("processor");
-            }
-            this.processor = processor;
-        }
-
-        @Override
-        public int process(ByteBuf buf, int index, byte value) throws Exception {
-            return processor.process(buf, index - adjustment, value);
         }
     }
 }

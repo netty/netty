@@ -296,13 +296,13 @@ public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
-    public int forEachByte(int fromIndex, int toIndex, ByteBufProcessor processor) {
-        return buffer.forEachByte(fromIndex, toIndex, new WrappedByteBufProcessor(this, processor));
+    public int forEachByte(int index, int length, ByteBufProcessor processor) {
+        return buffer.forEachByte(index, length, processor);
     }
 
     @Override
-    public int forEachByteDesc(int toIndex, int fromIndex, ByteBufProcessor processor) {
-        return buffer.forEachByteDesc(toIndex, fromIndex, new WrappedByteBufProcessor(this, processor));
+    public int forEachByteDesc(int index, int length, ByteBufProcessor processor) {
+        return buffer.forEachByteDesc(index, length, processor);
     }
 
     @Override

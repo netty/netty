@@ -359,7 +359,7 @@ public final class MessageList<T> implements Iterable<T> {
         int i = 0;
         try {
             do {
-                i += p.process(this, i, elements[i]);
+                i += p.process(elements[i]);
             } while (i < size);
         } catch (Signal abort) {
             abort.expect(MessageListProcessor.ABORT);
@@ -396,7 +396,7 @@ public final class MessageList<T> implements Iterable<T> {
         int i = index;
         try {
             do {
-                i += p.process(this, i, elements[i]);
+                i += p.process(elements[i]);
             } while (i < end);
         } catch (Signal abort) {
             abort.expect(MessageListProcessor.ABORT);

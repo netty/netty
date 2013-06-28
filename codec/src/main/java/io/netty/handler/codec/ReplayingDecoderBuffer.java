@@ -386,17 +386,17 @@ final class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
-    public int forEachByte(int fromIndex, int toIndex, ByteBufProcessor processor) {
+    public int forEachByte(int index, int length, ByteBufProcessor processor) {
         final int writerIndex = buffer.writerIndex();
-        if (fromIndex >= writerIndex) {
+        if (index >= writerIndex) {
             throw REPLAY;
         }
 
-        if (toIndex <= writerIndex) {
-            return buffer.forEachByte(fromIndex, toIndex, processor);
+        if (index + length <= writerIndex) {
+            return buffer.forEachByte(index, length, processor);
         }
 
-        int ret = buffer.forEachByte(fromIndex, writerIndex, processor);
+        int ret = buffer.forEachByte(index, writerIndex - index, processor);
         if (ret < 0) {
             throw REPLAY;
         } else {
@@ -414,12 +414,12 @@ final class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
-    public int forEachByteDesc(int toIndex, int fromIndex, ByteBufProcessor processor) {
-        if (fromIndex > buffer.writerIndex()) {
+    public int forEachByteDesc(int index, int length, ByteBufProcessor processor) {
+        if (index + length > buffer.writerIndex()) {
             throw REPLAY;
         }
 
-        return buffer.forEachByteDesc(toIndex, fromIndex, processor);
+        return buffer.forEachByteDesc(index, length, processor);
     }
 
     @Override

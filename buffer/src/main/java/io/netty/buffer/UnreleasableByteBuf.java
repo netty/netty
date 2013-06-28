@@ -727,22 +727,22 @@ final class UnreleasableByteBuf implements ByteBuf {
 
     @Override
     public int forEachByte(ByteBufProcessor processor) {
-        return buf.forEachByte(new WrappedByteBufProcessor(this, processor));
+        return buf.forEachByte(processor);
     }
 
     @Override
-    public int forEachByte(int fromIndex, int toIndex, ByteBufProcessor processor) {
-        return buf.forEachByte(fromIndex, toIndex, new WrappedByteBufProcessor(this, processor));
+    public int forEachByte(int index, int length, ByteBufProcessor processor) {
+        return buf.forEachByte(index, length, processor);
     }
 
     @Override
     public int forEachByteDesc(ByteBufProcessor processor) {
-        return buf.forEachByteDesc(new WrappedByteBufProcessor(this, processor));
+        return buf.forEachByteDesc(processor);
     }
 
     @Override
-    public int forEachByteDesc(int toIndex, int fromIndex, ByteBufProcessor processor) {
-        return buf.forEachByteDesc(toIndex, fromIndex, new WrappedByteBufProcessor(this, processor));
+    public int forEachByteDesc(int index, int length, ByteBufProcessor processor) {
+        return buf.forEachByteDesc(index, length, processor);
     }
 
     @Override
