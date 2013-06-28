@@ -125,10 +125,23 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     }
 
     private static void encodeHeader(ByteBuf buf, String header, String value) {
-        buf.writeBytes(header.getBytes(CharsetUtil.US_ASCII));
-        buf.writeBytes(HEADER_SEPARATOR);
-        buf.writeBytes(value.getBytes(CharsetUtil.US_ASCII));
-        buf.writeBytes(CRLF);
+        byte [] tmp = new byte[4 + header.length() + value.length()];
+
+        int pos = encodeAscii(header, tmp, 0);
+        tmp[pos++] = ':';
+        tmp[pos++] = ' ';
+        pos = encodeAscii(value, tmp, pos);
+        tmp[pos++] = '\r';
+        tmp[pos++] = '\n';
+        buf.writeBytes(tmp, 0, pos);
+    }
+
+    private static int encodeAscii(String s, byte[] buf, int pos) {
+        int i = 0;
+        for (; i < s.length(); i++) {
+            buf[pos + i] = (byte) s.charAt(i);
+        }
+        return pos + i;
     }
 
     protected abstract void encodeInitialLine(ByteBuf buf, H message) throws Exception;
