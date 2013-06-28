@@ -570,7 +570,7 @@ public final class MessageList<T> implements Iterable<T> {
 
         @Override
         public void remove() {
-           throw new UnsupportedOperationException("Read-Only");
+           throw new UnsupportedOperationException();
         }
     }
 }
