@@ -123,8 +123,15 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN> extends Cha
         return outboundMsgMatcher.match(msg);
     }
 
+    /**
+     * @see MessageToMessageEncoder#encode(ChannelHandlerContext, Object, MessageList)
+     */
     protected abstract void encode(ChannelHandlerContext ctx, OUTBOUND_IN msg, MessageList<Object> out)
             throws Exception;
+
+    /**
+     * @see MessageToMessageDecoder#decode(ChannelHandlerContext, Object, MessageList)
+     */
     protected abstract void decode(ChannelHandlerContext ctx, INBOUND_IN msg, MessageList<Object> out)
             throws Exception;
 }
