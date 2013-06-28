@@ -81,7 +81,6 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
             // Try to read length of name
             if (encoded.readableBytes() < lengthFieldSize) {
                 encoded.resetReaderIndex();
-                encoded.discardReadBytes();
                 return;
             }
             int nameLength = readLengthField(encoded);
@@ -100,7 +99,6 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
             // Try to read name
             if (encoded.readableBytes() < nameLength) {
                 encoded.resetReaderIndex();
-                encoded.discardReadBytes();
                 return;
             }
             byte[] nameBytes = new byte[nameLength];
@@ -116,7 +114,6 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
             // Try to read length of value
             if (encoded.readableBytes() < lengthFieldSize) {
                 encoded.resetReaderIndex();
-                encoded.discardReadBytes();
                 return;
             }
             int valueLength = readLengthField(encoded);
@@ -149,7 +146,6 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
             // Try to read value
             if (encoded.readableBytes() < valueLength) {
                 encoded.resetReaderIndex();
-                encoded.discardReadBytes();
                 return;
             }
             byte[] valueBytes = new byte[valueLength];
