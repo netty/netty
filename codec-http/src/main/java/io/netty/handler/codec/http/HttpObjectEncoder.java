@@ -130,6 +130,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         buf.writeBytes(HEADER_SEPARATOR);
         encodeAscii(value, buf);
         buf.writeBytes(CRLF);
+
     }
 
     private static void encodeAscii(String s, ByteBuf buf) {
