@@ -230,16 +230,20 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
 
         case READ_HEADER_BLOCK:
             int compressedBytes = Math.min(buffer.readableBytes(), length);
-            length -= compressedBytes;
+            ByteBuf compressed = buffer.slice(buffer.readerIndex(), compressedBytes);
 
             try {
-                headerBlockDecoder.decode(buffer.readSlice(compressedBytes), spdyHeadersFrame);
+                headerBlockDecoder.decode(compressed, spdyHeadersFrame);
             } catch (Exception e) {
                 state = State.FRAME_ERROR;
                 spdyHeadersFrame = null;
                 ctx.fireExceptionCaught(e);
                 return;
             }
+
+            int readBytes = compressedBytes - compressed.readableBytes();
+            buffer.skipBytes(readBytes);
+            length -= readBytes;
 
             if (spdyHeadersFrame != null &&
                     (spdyHeadersFrame.isInvalid() || spdyHeadersFrame.isTruncated())) {
