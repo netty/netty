@@ -315,7 +315,26 @@ public final class MessageList<T> implements Iterable<T> {
      * {@link MessageList} and return itself.
      */
     public MessageList<T> add(MessageList<T> src, int srcIdx, int srcLen) {
-        return add(src.elements, srcIdx, srcLen);
+        if (src == null) {
+            throw new NullPointerException("src");
+        }
+
+        if (srcIdx > src.size - srcLen) {
+            throw new IndexOutOfBoundsException(String.format(
+                    "srcIdx(%d) + srcLen(%d) > src.size(%d)", srcIdx, srcLen, src.size));
+        }
+
+        modifications ++;
+
+        final int dstIdx = size;
+        final int newSize = dstIdx + srcLen;
+        ensureCapacity(newSize);
+
+        byteBufsOnly &= src.byteBufsOnly;
+        System.arraycopy(src.elements, srcIdx, elements, dstIdx, srcLen);
+
+        size = newSize;
+        return this;
     }
 
     /**
