@@ -69,6 +69,7 @@ class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
             if (frame != null) {
                 decompressed.writeBytes(out, 0, numBytes);
                 super.decode(decompressed, frame);
+                decompressed.discardReadBytes();
             }
             return numBytes;
         } catch (DataFormatException e) {
