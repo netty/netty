@@ -29,5 +29,5 @@ public interface MessageListProcessor<T> {
      *         allowed where a negative value advances the index in the opposite direction and zero leaves the index
      *         as-is.
      */
-    int process(MessageList<T> messages, int index, T value) throws Exception;
+    int process(T value) throws Exception;
 }

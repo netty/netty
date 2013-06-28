@@ -24,26 +24,28 @@ import static org.junit.Assert.*;
 public class ByteBufProcessorTest {
     @Test
     public void testForward() {
-        ByteBuf buf = Unpooled.copiedBuffer("abc\r\n\ndef\r\rghi\n\njkl\0\0mno  \t\tx", CharsetUtil.ISO_8859_1);
+        final ByteBuf buf = Unpooled.copiedBuffer("abc\r\n\ndef\r\rghi\n\njkl\0\0mno  \t\tx", CharsetUtil.ISO_8859_1);
+        final int length = buf.readableBytes();
 
-        assertEquals(3,  buf.forEachByte(0,  buf.capacity(), ByteBufProcessor.FIND_CRLF));
-        assertEquals(6,  buf.forEachByte(3,  buf.capacity(), ByteBufProcessor.FIND_NON_CRLF));
-        assertEquals(9,  buf.forEachByte(6,  buf.capacity(), ByteBufProcessor.FIND_CR));
-        assertEquals(11, buf.forEachByte(9,  buf.capacity(), ByteBufProcessor.FIND_NON_CR));
-        assertEquals(14, buf.forEachByte(11, buf.capacity(), ByteBufProcessor.FIND_LF));
-        assertEquals(16, buf.forEachByte(14, buf.capacity(), ByteBufProcessor.FIND_NON_LF));
-        assertEquals(19, buf.forEachByte(16, buf.capacity(), ByteBufProcessor.FIND_NUL));
-        assertEquals(21, buf.forEachByte(19, buf.capacity(), ByteBufProcessor.FIND_NON_NUL));
-        assertEquals(24, buf.forEachByte(21, buf.capacity(), ByteBufProcessor.FIND_LINEAR_WHITESPACE));
-        assertEquals(28, buf.forEachByte(24, buf.capacity(), ByteBufProcessor.FIND_NON_LINEAR_WHITESPACE));
-        assertEquals(-1, buf.forEachByte(28, buf.capacity(), ByteBufProcessor.FIND_LINEAR_WHITESPACE));
+        assertEquals(3,  buf.forEachByte(0,  length, ByteBufProcessor.FIND_CRLF));
+        assertEquals(6,  buf.forEachByte(3,  length - 3, ByteBufProcessor.FIND_NON_CRLF));
+        assertEquals(9,  buf.forEachByte(6,  length - 6, ByteBufProcessor.FIND_CR));
+        assertEquals(11, buf.forEachByte(9,  length - 9, ByteBufProcessor.FIND_NON_CR));
+        assertEquals(14, buf.forEachByte(11, length - 11, ByteBufProcessor.FIND_LF));
+        assertEquals(16, buf.forEachByte(14, length - 14, ByteBufProcessor.FIND_NON_LF));
+        assertEquals(19, buf.forEachByte(16, length - 16, ByteBufProcessor.FIND_NUL));
+        assertEquals(21, buf.forEachByte(19, length - 19, ByteBufProcessor.FIND_NON_NUL));
+        assertEquals(24, buf.forEachByte(21, length - 21, ByteBufProcessor.FIND_LINEAR_WHITESPACE));
+        assertEquals(28, buf.forEachByte(24, length - 24, ByteBufProcessor.FIND_NON_LINEAR_WHITESPACE));
+        assertEquals(-1, buf.forEachByte(28, length - 28, ByteBufProcessor.FIND_LINEAR_WHITESPACE));
     }
 
     @Test
     public void testBackward() {
-        ByteBuf buf = Unpooled.copiedBuffer("abc\r\n\ndef\r\rghi\n\njkl\0\0mno  \t\tx", CharsetUtil.ISO_8859_1);
+        final ByteBuf buf = Unpooled.copiedBuffer("abc\r\n\ndef\r\rghi\n\njkl\0\0mno  \t\tx", CharsetUtil.ISO_8859_1);
+        final int length = buf.readableBytes();
 
-        assertEquals(27, buf.forEachByteDesc(0, buf.writerIndex(), ByteBufProcessor.FIND_LINEAR_WHITESPACE));
+        assertEquals(27, buf.forEachByteDesc(0, length, ByteBufProcessor.FIND_LINEAR_WHITESPACE));
         assertEquals(23, buf.forEachByteDesc(0, 28, ByteBufProcessor.FIND_NON_LINEAR_WHITESPACE));
         assertEquals(20, buf.forEachByteDesc(0, 24, ByteBufProcessor.FIND_NUL));
         assertEquals(18, buf.forEachByteDesc(0, 21, ByteBufProcessor.FIND_NON_NUL));

@@ -1662,11 +1662,10 @@ public abstract class AbstractByteBufTest {
             int i = CAPACITY / 4;
 
             @Override
-            public int process(ByteBuf buf, int index, byte value) throws Exception {
-                assertThat(index, is(i));
+            public int process(byte value) throws Exception {
                 assertThat(value, is((byte) (i + 1)));
+                lastIndex.set(i);
                 i ++;
-                lastIndex.set(index);
                 return 1;
             }
         }), is(-1));
@@ -1682,18 +1681,17 @@ public abstract class AbstractByteBufTest {
         }
 
         final int stop = CAPACITY / 2;
-        assertThat(buffer.forEachByte(CAPACITY / 3, CAPACITY * 2 / 3, new ByteBufProcessor() {
+        assertThat(buffer.forEachByte(CAPACITY / 3, CAPACITY / 3, new ByteBufProcessor() {
             int i = CAPACITY / 3;
 
             @Override
-            public int process(ByteBuf buf, int index, byte value) throws Exception {
-                assertThat(index, is(i));
+            public int process(byte value) throws Exception {
                 assertThat(value, is((byte) (i + 1)));
-                i++;
-
-                if (index == stop) {
+                if (i == stop) {
                     throw ABORT;
                 }
+
+                i ++;
                 return 1;
             }
         }), is(stop));
@@ -1707,15 +1705,14 @@ public abstract class AbstractByteBufTest {
         }
 
         final AtomicInteger lastIndex = new AtomicInteger();
-        assertThat(buffer.forEachByteDesc(CAPACITY / 4, CAPACITY * 3 / 4, new ByteBufProcessor() {
+        assertThat(buffer.forEachByteDesc(CAPACITY / 4, CAPACITY * 2 / 4, new ByteBufProcessor() {
             int i = CAPACITY * 3 / 4 - 1;
 
             @Override
-            public int process(ByteBuf buf, int index, byte value) throws Exception {
-                assertThat(index, is(i));
+            public int process(byte value) throws Exception {
                 assertThat(value, is((byte) (i + 1)));
-                i--;
-                lastIndex.set(index);
+                lastIndex.set(i);
+                i --;
                 return 1;
             }
         }), is(-1));
