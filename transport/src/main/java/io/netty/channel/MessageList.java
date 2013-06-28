@@ -203,7 +203,7 @@ public final class MessageList<T> implements Iterable<T> {
      * no message stored in the given index.
      */
     public T get(int index) {
-        checkExclusive(index);
+        checkIndex(index);
         return elements[index];
     }
 
@@ -211,7 +211,7 @@ public final class MessageList<T> implements Iterable<T> {
      * Sets the message on the given index.
      */
     public MessageList<T> set(int index, T value) {
-        checkExclusive(index);
+        checkIndex(index);
         if (value == null) {
             throw new NullPointerException("value");
         }
@@ -529,7 +529,7 @@ public final class MessageList<T> implements Iterable<T> {
         return (T[]) new Object[initialCapacity];
     }
 
-    private void checkExclusive(int index) {
+    private void checkIndex(int index) {
         if (index >= size) {
             throw new IndexOutOfBoundsException(String.valueOf(index));
         }
