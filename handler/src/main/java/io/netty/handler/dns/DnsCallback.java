@@ -204,19 +204,15 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
      */
     @Override
     public T call() throws InterruptedException {
-        boolean initial = true;
-        boolean finished = result != DEFAULT;
-        while (!finished) {
-            if (!initial) {
-                nextDns();
-            }
+        while (result != DEFAULT) {
             synchronized (this) {
                 if (result == DEFAULT) {
                     wait(DnsExchangeFactory.REQUEST_TIMEOUT);
                 }
-                finished = result != DEFAULT;
             }
-            initial = false;
+            if (result != DEFAULT) {
+                nextDns();
+            }
         }
         return result == DEFAULT ? null : result;
     }
