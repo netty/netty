@@ -36,14 +36,14 @@ public class DnsImplementationTest {
     // available record type
     // (MX, AAAA, TXT, etc) so there has to be some room for error.
 
-    private static final int TRIALS_PER_WEBSITE = 2;
+    private static final int TRIALS_PER_WEBSITE = 20;
 
     // Maybe this test should be expanded a bit, too bad websites have different
     // records available
     @Test
     public void test() throws Exception {
         int errors = 0;
-        System.out.println("Conducting DNS unit test.");
+        System.out.println("Conducting DNS unit test. ");
         for (int i = 0; i < TOP_WEBSITES.length; i++) {
             try {
                 String domain = TOP_WEBSITES[i];
@@ -53,6 +53,7 @@ public class DnsImplementationTest {
                     if (future.get() == null) {
                         System.err.println("Failed to retrieve address for domain \"" + domain + "\".");
                         errors++;
+                        break;
                     }
                 }
                 for (int n = 0; n < TRIALS_PER_WEBSITE; n++) {
