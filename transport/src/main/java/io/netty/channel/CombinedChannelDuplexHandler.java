@@ -187,4 +187,14 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
     public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
         outboundHandler.write(ctx, msgs, promise);
     }
+
+    @Override
+    public void channelReadSuspended(ChannelHandlerContext ctx) throws Exception {
+        inboundHandler.channelReadSuspended(ctx);
+    }
+
+    @Override
+    public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+        inboundHandler.channelWritabilityChanged(ctx);
+    }
 }
