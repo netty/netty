@@ -117,12 +117,6 @@ public abstract class AbstractByteBuf implements ByteBuf {
     }
 
     @Override
-    @Deprecated
-    public final boolean readable() {
-        return isReadable();
-    }
-
-    @Override
     public boolean isReadable(int numBytes) {
         return writerIndex - readerIndex >= numBytes;
     }
@@ -130,12 +124,6 @@ public abstract class AbstractByteBuf implements ByteBuf {
     @Override
     public boolean isWritable() {
         return capacity() > writerIndex;
-    }
-
-    @Override
-    @Deprecated
-    public final boolean writable() {
-        return isWritable();
     }
 
     @Override
@@ -262,12 +250,6 @@ public abstract class AbstractByteBuf implements ByteBuf {
         // Adjust to the new capacity.
         capacity(newCapacity);
         return this;
-    }
-
-    @Override
-    @Deprecated
-    public final ByteBuf ensureWritableBytes(int minWritableBytes) {
-        return ensureWritable(minWritableBytes);
     }
 
     @Override

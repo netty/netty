@@ -153,20 +153,8 @@ final class UnreleasableByteBuf implements ByteBuf {
     }
 
     @Override
-    @Deprecated
-    public boolean readable() {
-        return buf.readable();
-    }
-
-    @Override
     public boolean isWritable() {
         return buf.isWritable();
-    }
-
-    @Override
-    @Deprecated
-    public boolean writable() {
-        return buf.writable();
     }
 
     @Override
@@ -214,13 +202,6 @@ final class UnreleasableByteBuf implements ByteBuf {
     @Override
     public ByteBuf ensureWritable(int minWritableBytes) {
         buf.ensureWritable(minWritableBytes);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public ByteBuf ensureWritableBytes(int minWritableBytes) {
-        buf.ensureWritableBytes(minWritableBytes);
         return this;
     }
 

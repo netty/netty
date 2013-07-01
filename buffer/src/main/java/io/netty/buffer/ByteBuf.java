@@ -397,12 +397,6 @@ public interface ByteBuf extends ReferenceCounted, Comparable<ByteBuf> {
     boolean isReadable(int size);
 
     /**
-     * @deprecated Use {@link #isReadable()} or {@link #isReadable(int)} instead.
-     */
-    @Deprecated
-    boolean readable();
-
-    /**
      * Returns {@code true}
      * if and only if {@code (this.capacity - this.writerIndex)} is greater
      * than {@code 0}.
@@ -414,12 +408,6 @@ public interface ByteBuf extends ReferenceCounted, Comparable<ByteBuf> {
      * elements.
      */
     boolean isWritable(int size);
-
-    /**
-     * @deprecated Use {@link #isWritable()} or {@link #isWritable(int)} instead.
-     */
-    @Deprecated
-    boolean writable();
 
     /**
      * Sets the {@code readerIndex} and {@code writerIndex} of this buffer to
@@ -498,12 +486,6 @@ public interface ByteBuf extends ReferenceCounted, Comparable<ByteBuf> {
      *         if {@link #writerIndex()} + {@code minWritableBytes} > {@link #maxCapacity()}
      */
     ByteBuf ensureWritable(int minWritableBytes);
-
-    /**
-     * @deprecated Use {@link #ensureWritable(int)} instead.
-     */
-    @Deprecated
-    ByteBuf ensureWritableBytes(int minWritableBytes);
 
     /**
      * Tries to make sure the number of {@linkplain #writableBytes() the writable bytes}

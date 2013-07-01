@@ -168,19 +168,7 @@ public final class EmptyByteBuf implements ByteBuf {
     }
 
     @Override
-    @Deprecated
-    public boolean readable() {
-        return false;
-    }
-
-    @Override
     public boolean isWritable() {
-        return false;
-    }
-
-    @Override
-    @Deprecated
-    public boolean writable() {
         return false;
     }
 
@@ -228,12 +216,6 @@ public final class EmptyByteBuf implements ByteBuf {
             throw new IndexOutOfBoundsException();
         }
         return this;
-    }
-
-    @Override
-    @Deprecated
-    public ByteBuf ensureWritableBytes(int minWritableBytes) {
-        return ensureWritable(minWritableBytes);
     }
 
     @Override

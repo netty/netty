@@ -137,24 +137,12 @@ public final class SwappedByteBuf implements ByteBuf {
     }
 
     @Override
-    @Deprecated
-    public boolean readable() {
-        return buf.isReadable();
-    }
-
-    @Override
     public boolean isReadable(int size) {
         return buf.isReadable(size);
     }
 
     @Override
     public boolean isWritable() {
-        return buf.isWritable();
-    }
-
-    @Override
-    @Deprecated
-    public boolean writable() {
         return buf.isWritable();
     }
 
@@ -208,13 +196,6 @@ public final class SwappedByteBuf implements ByteBuf {
     @Override
     public ByteBuf ensureWritable(int writableBytes) {
         buf.ensureWritable(writableBytes);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public ByteBuf ensureWritableBytes(int minWritableBytes) {
-        buf.ensureWritable(minWritableBytes);
         return this;
     }
 
