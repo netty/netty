@@ -561,7 +561,7 @@ public final class PlatformDependent {
             return true;
         } catch (Throwable t) {
             logger.debug("Javassist: unavailable");
-            logger.info(
+            logger.debug(
                     "You don't have Javassist in your class path or you don't have enough permission " +
                     "to load dynamically generated classes.  Please check the configuration for better performance.");
             return false;
