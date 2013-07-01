@@ -262,11 +262,6 @@ public abstract class WebSocketServerHandshaker {
         return selectedSubprotocol;
     }
 
-    @Deprecated
-    protected void setSelectedSubprotocol(String value) {
-        selectedSubprotocol = value;
-    }
-
     /**
      * Returns the decoder to use after handshake is complete.
      */
