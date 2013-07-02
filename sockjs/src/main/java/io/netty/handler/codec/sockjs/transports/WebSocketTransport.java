@@ -202,7 +202,6 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
 
     public void exceptionCaught(final ChannelHandlerContext ctx, final Throwable cause) throws Exception {
         if (cause instanceof JsonParseException) {
-            logger.debug("Could not parse json", cause);
             ctx.close();
         } else if (cause instanceof WebSocketHandshakeException) {
             final HttpRequest request = ctx.attr(REQUEST_KEY).get();
