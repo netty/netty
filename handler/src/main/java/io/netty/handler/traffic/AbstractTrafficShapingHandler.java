@@ -234,7 +234,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
             if (wait >= MINIMAL_WAIT) { // At least 10ms seems a minimal
                 // time in order to
                 // try to limit the traffic
-                if (!ctx.attr(READ_SUSPENDED).get()) {
+                if (!isSuspended(ctx)) {
                     ctx.attr(READ_SUSPENDED).set(true);
 
                     // Create a Runnable to reactive the read if needed. If one was create before it will just be
@@ -266,10 +266,17 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
 
     @Override
     public void read(ChannelHandlerContext ctx) {
-        Boolean suspended = ctx.attr(READ_SUSPENDED).get();
-        if (suspended == null || Boolean.FALSE.equals(suspended)) {
+        if (!isSuspended(ctx)) {
             ctx.read();
         }
+    }
+
+    private static boolean isSuspended(ChannelHandlerContext ctx) {
+        Boolean suspended = ctx.attr(READ_SUSPENDED).get();
+        if (suspended == null || Boolean.FALSE.equals(suspended)) {
+            return false;
+        }
+        return true;
     }
 
     @Override
