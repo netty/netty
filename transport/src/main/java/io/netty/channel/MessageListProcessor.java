@@ -25,7 +25,9 @@ public interface MessageListProcessor<T> {
     /**
      * @return the number of elements processed. {@link MessageList#forEach(MessageListProcessor)} will determine
      *         the index of the next element to be processed based on this value.  Usually, an implementation will
-     *         return {@code 1} to advance the index by {@code 1}.
+     *         return {@code 1} to advance the index by {@code 1}.  Note that returning a non-positive value is
+     *         allowed where a negative value advances the index in the opposite direction and zero leaves the index
+     *         as-is.
      */
-    int process(MessageList<T> messages, int index, T value) throws Exception;
+    int process(T value) throws Exception;
 }

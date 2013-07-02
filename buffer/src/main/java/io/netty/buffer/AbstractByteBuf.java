@@ -117,12 +117,6 @@ public abstract class AbstractByteBuf implements ByteBuf {
     }
 
     @Override
-    @Deprecated
-    public final boolean readable() {
-        return isReadable();
-    }
-
-    @Override
     public boolean isReadable(int numBytes) {
         return writerIndex - readerIndex >= numBytes;
     }
@@ -130,12 +124,6 @@ public abstract class AbstractByteBuf implements ByteBuf {
     @Override
     public boolean isWritable() {
         return capacity() > writerIndex;
-    }
-
-    @Override
-    @Deprecated
-    public final boolean writable() {
-        return isWritable();
     }
 
     @Override
@@ -262,12 +250,6 @@ public abstract class AbstractByteBuf implements ByteBuf {
         // Adjust to the new capacity.
         capacity(newCapacity);
         return this;
-    }
-
-    @Override
-    @Deprecated
-    public final ByteBuf ensureWritableBytes(int minWritableBytes) {
-        return ensureWritable(minWritableBytes);
     }
 
     @Override
@@ -767,7 +749,7 @@ public abstract class AbstractByteBuf implements ByteBuf {
     @Override
     public ByteBuf writeByte(int value) {
         ensureWritable(1);
-        setByte(writerIndex ++, value);
+        setByte(writerIndex++, value);
         return this;
     }
 
@@ -1039,16 +1021,16 @@ public abstract class AbstractByteBuf implements ByteBuf {
     public int forEachByte(ByteBufProcessor processor) {
         int index = readerIndex;
         int length = writerIndex - index;
-        return forEach0(index, length, processor);
+        return forEachByteAsc0(index, length, processor);
     }
 
     @Override
     public int forEachByte(int index, int length, ByteBufProcessor processor) {
         checkIndex(index, length);
-        return forEach0(index, length, processor);
+        return forEachByteAsc0(index, length, processor);
     }
 
-    private int forEach0(int index, int length, ByteBufProcessor processor) {
+    private int forEachByteAsc0(int index, int length, ByteBufProcessor processor) {
         if (processor == null) {
             throw new NullPointerException("processor");
         }
@@ -1057,12 +1039,49 @@ public abstract class AbstractByteBuf implements ByteBuf {
             return -1;
         }
 
-        final int end = index + length;
+        final int endIndex = index + length;
         int i = index;
         try {
             do {
-                i += processor.process(this, i, _getByte(i));
-            } while (i < end);
+                i += processor.process(_getByte(i));
+            } while (i < endIndex);
+        } catch (Signal signal) {
+            signal.expect(ByteBufProcessor.ABORT);
+            return i;
+        } catch (Exception e) {
+            PlatformDependent.throwException(e);
+        }
+
+        return -1;
+    }
+
+    @Override
+    public int forEachByteDesc(ByteBufProcessor processor) {
+        int index = readerIndex;
+        int length = writerIndex - index;
+        return forEachByteDesc0(index, length, processor);
+    }
+
+    @Override
+    public int forEachByteDesc(int index, int length, ByteBufProcessor processor) {
+        checkIndex(index, length);
+        return forEachByteDesc0(index, length, processor);
+    }
+
+    private int forEachByteDesc0(int index, int length, ByteBufProcessor processor) {
+        if (processor == null) {
+            throw new NullPointerException("processor");
+        }
+
+        if (length == 0) {
+            return -1;
+        }
+
+        int i = index + length - 1;
+        try {
+            do {
+                i -= processor.process(_getByte(i));
+            } while (i >= index);
         } catch (Signal signal) {
             signal.expect(ByteBufProcessor.ABORT);
             return i;

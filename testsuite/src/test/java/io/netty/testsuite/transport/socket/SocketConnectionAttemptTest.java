@@ -20,16 +20,14 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
-import io.netty.testsuite.util.TestUtils;
 import io.netty.util.internal.SystemPropertyUtil;
-import org.junit.Assert;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
-import java.net.NoRouteToHostException;
 import java.net.Socket;
 
 import static org.hamcrest.CoreMatchers.*;
@@ -38,6 +36,11 @@ import static org.junit.Assert.*;
 public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
 
     private static final String BAD_HOST = SystemPropertyUtil.get("io.netty.testsuite.badHost", "255.255.255.0");
+
+    static {
+        InternalLoggerFactory.getInstance(SocketConnectionAttemptTest.class).debug(
+                "-Dio.netty.testsuite.badHost: {}", BAD_HOST);
+    }
 
     @Test(timeout = 30000)
     public void testConnectTimeout() throws Throwable {

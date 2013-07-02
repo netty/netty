@@ -38,6 +38,9 @@ import io.netty.util.internal.StringUtil;
  *         }
  *     }
  * </pre>
+ *
+ * Be aware that sub-classes of {@link ByteToMessageDecoder} <strong>MUST NOT</strong>
+ * annotated with {@link @Sharable}.
  */
 public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter {
 
@@ -45,6 +48,12 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     private boolean singleDecode;
     private boolean decodeWasNull;
     private MessageList<Object> out;
+
+    protected ByteToMessageDecoder() {
+        if (getClass().isAnnotationPresent(Sharable.class)) {
+            throw new IllegalStateException("@Sharable annotation is not allowed");
+        }
+    }
 
     /**
      * If set then only one message is decoded on each {@link #messageReceived(ChannelHandlerContext, MessageList)}

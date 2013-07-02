@@ -27,7 +27,7 @@ public interface ByteBufProcessor {
      */
     ByteBufProcessor FIND_NUL = new ByteBufProcessor() {
         @Override
-        public int process(ByteBuf buf, int index, byte value) throws Exception {
+        public int process(byte value) throws Exception {
             if (value == 0) {
                 throw ABORT;
             } else {
@@ -41,7 +41,7 @@ public interface ByteBufProcessor {
      */
     ByteBufProcessor FIND_NON_NUL = new ByteBufProcessor() {
         @Override
-        public int process(ByteBuf buf, int index, byte value) throws Exception {
+        public int process(byte value) throws Exception {
             if (value != 0) {
                 throw ABORT;
             } else {
@@ -55,7 +55,7 @@ public interface ByteBufProcessor {
      */
     ByteBufProcessor FIND_CR = new ByteBufProcessor() {
         @Override
-        public int process(ByteBuf buf, int index, byte value) throws Exception {
+        public int process(byte value) throws Exception {
             if (value == '\r') {
                 throw ABORT;
             } else {
@@ -69,7 +69,7 @@ public interface ByteBufProcessor {
      */
     ByteBufProcessor FIND_NON_CR = new ByteBufProcessor() {
         @Override
-        public int process(ByteBuf buf, int index, byte value) throws Exception {
+        public int process(byte value) throws Exception {
             if (value != '\r') {
                 throw ABORT;
             } else {
@@ -83,7 +83,7 @@ public interface ByteBufProcessor {
      */
     ByteBufProcessor FIND_LF = new ByteBufProcessor() {
         @Override
-        public int process(ByteBuf buf, int index, byte value) throws Exception {
+        public int process(byte value) throws Exception {
             if (value == '\n') {
                 throw ABORT;
             } else {
@@ -97,7 +97,7 @@ public interface ByteBufProcessor {
      */
     ByteBufProcessor FIND_NON_LF = new ByteBufProcessor() {
         @Override
-        public int process(ByteBuf buf, int index, byte value) throws Exception {
+        public int process(byte value) throws Exception {
             if (value != '\n') {
                 throw ABORT;
             } else {
@@ -111,7 +111,7 @@ public interface ByteBufProcessor {
      */
     ByteBufProcessor FIND_CRLF = new ByteBufProcessor() {
         @Override
-        public int process(ByteBuf buf, int index, byte value) throws Exception {
+        public int process(byte value) throws Exception {
             if (value == '\r' || value == '\n') {
                 throw ABORT;
             } else {
@@ -125,7 +125,7 @@ public interface ByteBufProcessor {
      */
     ByteBufProcessor FIND_NON_CRLF = new ByteBufProcessor() {
         @Override
-        public int process(ByteBuf buf, int index, byte value) throws Exception {
+        public int process(byte value) throws Exception {
             if (value != '\r' && value != '\n') {
                 throw ABORT;
             } else {
@@ -139,7 +139,7 @@ public interface ByteBufProcessor {
      */
     ByteBufProcessor FIND_LINEAR_WHITESPACE = new ByteBufProcessor() {
         @Override
-        public int process(ByteBuf buf, int index, byte value) throws Exception {
+        public int process(byte value) throws Exception {
             if (value == ' ' || value == '\t') {
                 throw ABORT;
             } else {
@@ -153,7 +153,7 @@ public interface ByteBufProcessor {
      */
     ByteBufProcessor FIND_NON_LINEAR_WHITESPACE = new ByteBufProcessor() {
         @Override
-        public int process(ByteBuf buf, int index, byte value) throws Exception {
+        public int process(byte value) throws Exception {
             if (value != ' ' && value != '\t') {
                 throw ABORT;
             } else {
@@ -165,7 +165,9 @@ public interface ByteBufProcessor {
     /**
      * @return the number of elements processed. {@link ByteBuf#forEachByte(ByteBufProcessor)} will determine
      *         the index of the next byte to be processed based on this value.  Usually, an implementation will
-     *         return {@code 1} to advance the index by {@code 1}.
+     *         return {@code 1} to advance the index by {@code 1}.  Note that returning a non-positive value is
+     *         allowed where a negative value advances the index in the opposite direction and zero leaves the index
+     *         as-is.
      */
-    int process(ByteBuf buf, int index, byte value) throws Exception;
+    int process(byte value) throws Exception;
 }

@@ -397,12 +397,6 @@ public interface ByteBuf extends ReferenceCounted, Comparable<ByteBuf> {
     boolean isReadable(int size);
 
     /**
-     * @deprecated Use {@link #isReadable()} or {@link #isReadable(int)} instead.
-     */
-    @Deprecated
-    boolean readable();
-
-    /**
      * Returns {@code true}
      * if and only if {@code (this.capacity - this.writerIndex)} is greater
      * than {@code 0}.
@@ -414,12 +408,6 @@ public interface ByteBuf extends ReferenceCounted, Comparable<ByteBuf> {
      * elements.
      */
     boolean isWritable(int size);
-
-    /**
-     * @deprecated Use {@link #isWritable()} or {@link #isWritable(int)} instead.
-     */
-    @Deprecated
-    boolean writable();
 
     /**
      * Sets the {@code readerIndex} and {@code writerIndex} of this buffer to
@@ -498,12 +486,6 @@ public interface ByteBuf extends ReferenceCounted, Comparable<ByteBuf> {
      *         if {@link #writerIndex()} + {@code minWritableBytes} > {@link #maxCapacity()}
      */
     ByteBuf ensureWritable(int minWritableBytes);
-
-    /**
-     * @deprecated Use {@link #ensureWritable(int)} instead.
-     */
-    @Deprecated
-    ByteBuf ensureWritableBytes(int minWritableBytes);
 
     /**
      * Tries to make sure the number of {@linkplain #writableBytes() the writable bytes}
@@ -1700,7 +1682,7 @@ public interface ByteBuf extends ReferenceCounted, Comparable<ByteBuf> {
     int bytesBefore(int index, int length, ByteBufIndexFinder indexFinder);
 
     /**
-     * Iterates over the readable bytes of this buffer with the specified {@code processor}.
+     * Iterates over the readable bytes of this buffer with the specified {@code processor} in ascending order.
      *
      * @return {@code -1} if the processor iterated to or beyond the end of the readable bytes.
      *         If the {@code processor} raised {@link ByteBufProcessor#ABORT}, the last-visited index will be returned.
@@ -1708,12 +1690,30 @@ public interface ByteBuf extends ReferenceCounted, Comparable<ByteBuf> {
     int forEachByte(ByteBufProcessor processor);
 
     /**
-     * Iterates over the specified area of this buffer with the specified {@code processor}.
+     * Iterates over the specified area of this buffer with the specified {@code processor} in ascending order.
+     * (i.e. {@code index}, {@code (index + 1)},  .. {@code (index + length - 1)})
      *
      * @return {@code -1} if the processor iterated to or beyond the end of the specified area.
      *         If the {@code processor} raised {@link ByteBufProcessor#ABORT}, the last-visited index will be returned.
      */
     int forEachByte(int index, int length, ByteBufProcessor processor);
+
+    /**
+     * Iterates over the readable bytes of this buffer with the specified {@code processor} in descending order.
+     *
+     * @return {@code -1} if the processor iterated to or beyond the beginning of the readable bytes.
+     *         If the {@code processor} raised {@link ByteBufProcessor#ABORT}, the last-visited index will be returned.
+     */
+    int forEachByteDesc(ByteBufProcessor processor);
+
+    /**
+     * Iterates over the specified area of this buffer with the specified {@code processor} in descending order.
+     * (i.e. {@code (index + length - 1)}, {@code (index + length - 2)}, ... {@code index})
+     *
+     * @return {@code -1} if the processor iterated to or beyond the beginning of the specified area.
+     *         If the {@code processor} raised {@link ByteBufProcessor#ABORT}, the last-visited index will be returned.
+     */
+    int forEachByteDesc(int index, int length, ByteBufProcessor processor);
 
     /**
      * Returns a copy of this buffer's readable bytes.  Modifying the content

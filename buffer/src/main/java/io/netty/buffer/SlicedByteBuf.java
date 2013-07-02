@@ -273,4 +273,24 @@ public class SlicedByteBuf extends AbstractDerivedByteBuf {
         checkIndex(index, length);
         return buffer.internalNioBuffer(index + adjustment, length);
     }
+
+    @Override
+    public int forEachByte(int index, int length, ByteBufProcessor processor) {
+        int ret = buffer.forEachByte(index + adjustment, length, processor);
+        if (ret >= adjustment) {
+            return ret - adjustment;
+        } else {
+            return -1;
+        }
+    }
+
+    @Override
+    public int forEachByteDesc(int index, int length, ByteBufProcessor processor) {
+        int ret = buffer.forEachByteDesc(index + adjustment, length, processor);
+        if (ret >= adjustment) {
+            return ret - adjustment;
+        } else {
+            return -1;
+        }
+    }
 }

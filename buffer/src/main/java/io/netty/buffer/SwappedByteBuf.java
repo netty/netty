@@ -137,24 +137,12 @@ public final class SwappedByteBuf implements ByteBuf {
     }
 
     @Override
-    @Deprecated
-    public boolean readable() {
-        return buf.isReadable();
-    }
-
-    @Override
     public boolean isReadable(int size) {
         return buf.isReadable(size);
     }
 
     @Override
     public boolean isWritable() {
-        return buf.isWritable();
-    }
-
-    @Override
-    @Deprecated
-    public boolean writable() {
         return buf.isWritable();
     }
 
@@ -208,13 +196,6 @@ public final class SwappedByteBuf implements ByteBuf {
     @Override
     public ByteBuf ensureWritable(int writableBytes) {
         buf.ensureWritable(writableBytes);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public ByteBuf ensureWritableBytes(int minWritableBytes) {
-        buf.ensureWritable(minWritableBytes);
         return this;
     }
 
@@ -721,12 +702,22 @@ public final class SwappedByteBuf implements ByteBuf {
 
     @Override
     public int forEachByte(ByteBufProcessor processor) {
-        return buf.forEachByte(new SwappedByteBufProcessor(processor));
+        return buf.forEachByte(processor);
     }
 
     @Override
     public int forEachByte(int index, int length, ByteBufProcessor processor) {
-        return buf.forEachByte(index, length, new SwappedByteBufProcessor(processor));
+        return buf.forEachByte(index, length, processor);
+    }
+
+    @Override
+    public int forEachByteDesc(ByteBufProcessor processor) {
+        return buf.forEachByteDesc(processor);
+    }
+
+    @Override
+    public int forEachByteDesc(int index, int length, ByteBufProcessor processor) {
+        return buf.forEachByteDesc(index, length, processor);
     }
 
     @Override
@@ -895,23 +886,6 @@ public final class SwappedByteBuf implements ByteBuf {
         @Override
         public boolean find(ByteBuf buffer, int guessedIndex) {
             return indexFinder.find(SwappedByteBuf.this, guessedIndex);
-        }
-    }
-
-    private final class SwappedByteBufProcessor implements ByteBufProcessor {
-
-        private final ByteBufProcessor processor;
-
-        SwappedByteBufProcessor(ByteBufProcessor processor) {
-            if (processor == null) {
-                throw new NullPointerException("processor");
-            }
-            this.processor = processor;
-        }
-
-        @Override
-        public int process(ByteBuf buf, int index, byte value) throws Exception {
-            return processor.process(SwappedByteBuf.this, index, value);
         }
     }
 }

@@ -38,7 +38,7 @@ public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutor
                 "io.netty.eventLoopThreads", Runtime.getRuntime().availableProcessors() * 2));
 
         if (logger.isDebugEnabled()) {
-            logger.debug("io.netty.eventLoopThreads: {}", DEFAULT_EVENT_LOOP_THREADS);
+            logger.debug("-Dio.netty.eventLoopThreads: {}", DEFAULT_EVENT_LOOP_THREADS);
         }
     }
 

@@ -15,15 +15,16 @@
  */
 package io.netty.buffer;
 
-import static org.junit.Assert.*;
 import io.netty.util.CharsetUtil;
-
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 
 /**
  * Tests the index-finding capabilities of channel buffers
  */
+@SuppressWarnings("deprecation")
 public class ByteBufIndexFinderTest {
 
     @Test

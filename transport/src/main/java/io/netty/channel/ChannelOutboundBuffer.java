@@ -41,6 +41,7 @@ final class ChannelOutboundBuffer {
 
     private int head;
     private int tail;
+    private boolean inFail;
     private final AbstractChannel channel;
 
     private int pendingOutboundBytes;
@@ -213,26 +214,40 @@ final class ChannelOutboundBuffer {
     }
 
     void fail(Throwable cause) {
-        if (currentPromise == null) {
-            if (!next()) {
-                return;
-            }
+        // Make sure that this method does not reenter.  A listener added to the current promise can be notified by the
+        // current thread in the tryFailure() call of the loop below, and the listener can trigger another fail() call
+        // indirectly (usually by closing the channel.)
+        //
+        // See https://github.com/netty/netty/issues/1501
+        if (inFail) {
+            return;
         }
 
-        do {
-            if (!(currentPromise instanceof VoidChannelPromise) && !currentPromise.tryFailure(cause)) {
-                logger.warn("Promise done already:", cause);
+        try {
+            inFail = true;
+            if (currentPromise == null) {
+                if (!next()) {
+                    return;
+                }
             }
 
-            // Release all failed messages.
-            try {
-                for (int i = currentMessageIndex; i < currentMessages.size(); i++) {
-                    Object msg = currentMessages.get(i);
-                    ReferenceCountUtil.release(msg);
+            do {
+                if (!(currentPromise instanceof VoidChannelPromise) && !currentPromise.tryFailure(cause)) {
+                    logger.warn("Promise done already:", cause);
                 }
-            } finally {
-                currentMessages.recycle();
-            }
-        } while(next());
+
+                // Release all failed messages.
+                try {
+                    for (int i = currentMessageIndex; i < currentMessages.size(); i++) {
+                        Object msg = currentMessages.get(i);
+                        ReferenceCountUtil.release(msg);
+                    }
+                } finally {
+                    currentMessages.recycle();
+                }
+            } while(next());
+        } finally {
+            inFail = false;
+        }
     }
 }
