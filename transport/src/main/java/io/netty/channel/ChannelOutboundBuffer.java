@@ -214,13 +214,15 @@ final class ChannelOutboundBuffer {
     }
 
     void fail(Throwable cause) {
-        // We need to check if we already process the fail here as the notification of the future may trigger some
-        // other event which will also call ChannelOutboundBuffer and so set currentMessage and currentPromise to
-        // null.
+        // Make sure that this method does not reenter.  A listener added to the current promise can be notified by the
+        // current thread in the tryFailure() call of the loop below, and the listener can trigger another fail() call
+        // indirectly (usually by closing the channel.)
+        //
         // See https://github.com/netty/netty/issues/1501
         if (inFail) {
             return;
         }
+
         try {
             inFail = true;
             if (currentPromise == null) {
