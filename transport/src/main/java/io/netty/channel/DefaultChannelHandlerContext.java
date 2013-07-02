@@ -485,7 +485,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (localAddress == null) {
             throw new NullPointerException("localAddress");
         }
-        validateFuture(promise, false);
+        validatePromise(promise, false);
         return findContextOutbound().invokeBind(localAddress, promise);
     }
 
@@ -522,7 +522,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (remoteAddress == null) {
             throw new NullPointerException("remoteAddress");
         }
-        validateFuture(promise, false);
+        validatePromise(promise, false);
         return findContextOutbound().invokeConnect(remoteAddress, localAddress, promise);
     }
 
@@ -553,7 +553,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelFuture disconnect(ChannelPromise promise) {
-        validateFuture(promise, false);
+        validatePromise(promise, false);
 
         // Translate disconnect to close if the channel has no notion of disconnect-reconnect.
         // So far, UDP/IP is the only transport that has such behavior.
@@ -590,7 +590,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelFuture close(ChannelPromise promise) {
-        validateFuture(promise, false);
+        validatePromise(promise, false);
         return findContextOutbound().invokeClose(promise);
     }
 
@@ -620,7 +620,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelFuture deregister(ChannelPromise promise) {
-        validateFuture(promise, false);
+        validatePromise(promise, false);
         return findContextOutbound().invokeDeregister(promise);
     }
 
@@ -689,12 +689,15 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelFuture write(MessageList<?> msgs, ChannelPromise promise) {
+        if (msgs == null) {
+            throw new NullPointerException("msgs");
+        }
+        validatePromise(promise, true);
+
         return findContextOutbound().invokeWrite(msgs, promise);
     }
 
     private ChannelFuture invokeWrite(final MessageList<?> msgs, final ChannelPromise promise) {
-        validateFuture(promise, true);
-
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
             invokeWrite0(msgs, promise);
@@ -790,21 +793,21 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         return new FailedChannelFuture(channel(), executor(), cause);
     }
 
-    private void validateFuture(ChannelFuture future, boolean allowUnsafe) {
-        if (future == null) {
-            throw new NullPointerException("future");
+    private void validatePromise(ChannelFuture promise, boolean allowUnsafe) {
+        if (promise == null) {
+            throw new NullPointerException("promise");
         }
-        if (future.channel() != channel()) {
+        if (promise.channel() != channel()) {
             throw new IllegalArgumentException(String.format(
-                    "future.channel does not match: %s (expected: %s)", future.channel(), channel()));
+                    "promise.channel does not match: %s (expected: %s)", promise.channel(), channel()));
         }
-        if (future.isDone()) {
+        if (promise.isDone()) {
             throw new IllegalArgumentException("future already done");
         }
-        if (!allowUnsafe && future instanceof VoidChannelPromise) {
+        if (!allowUnsafe && promise instanceof VoidChannelPromise) {
             throw new IllegalArgumentException("VoidChannelPromise not allowed for this operation");
         }
-        if (future instanceof AbstractChannel.CloseFuture) {
+        if (promise instanceof AbstractChannel.CloseFuture) {
             throw new IllegalArgumentException("AbstractChannel.CloseFuture may not send through the pipeline");
         }
     }
