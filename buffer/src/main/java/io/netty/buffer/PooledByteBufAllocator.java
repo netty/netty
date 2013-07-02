@@ -77,19 +77,19 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator {
                                 PlatformDependent.maxDirectMemory() / defaultChunkSize / 2 / 3)));
 
         if (logger.isDebugEnabled()) {
-            logger.debug("io.netty.allocator.numHeapArenas: {}", DEFAULT_NUM_HEAP_ARENA);
-            logger.debug("io.netty.allocator.numDirectArenas: {}", DEFAULT_NUM_DIRECT_ARENA);
+            logger.debug("-Dio.netty.allocator.numHeapArenas: {}", DEFAULT_NUM_HEAP_ARENA);
+            logger.debug("-Dio.netty.allocator.numDirectArenas: {}", DEFAULT_NUM_DIRECT_ARENA);
             if (pageSizeFallbackCause == null) {
-                logger.debug("io.netty.allocator.pageSize: {}", DEFAULT_PAGE_SIZE);
+                logger.debug("-Dio.netty.allocator.pageSize: {}", DEFAULT_PAGE_SIZE);
             } else {
-                logger.debug("io.netty.allocator.pageSize: {}", DEFAULT_PAGE_SIZE, pageSizeFallbackCause);
+                logger.debug("-Dio.netty.allocator.pageSize: {}", DEFAULT_PAGE_SIZE, pageSizeFallbackCause);
             }
             if (maxOrderFallbackCause == null) {
-                logger.debug("io.netty.allocator.maxOrder: {}", DEFAULT_MAX_ORDER);
+                logger.debug("-Dio.netty.allocator.maxOrder: {}", DEFAULT_MAX_ORDER);
             } else {
-                logger.debug("io.netty.allocator.maxOrder: {}", DEFAULT_MAX_ORDER, maxOrderFallbackCause);
+                logger.debug("-Dio.netty.allocator.maxOrder: {}", DEFAULT_MAX_ORDER, maxOrderFallbackCause);
             }
-            logger.debug("io.netty.allocator.chunkSize: {}", DEFAULT_PAGE_SIZE << DEFAULT_MAX_ORDER);
+            logger.debug("-Dio.netty.allocator.chunkSize: {}", DEFAULT_PAGE_SIZE << DEFAULT_MAX_ORDER);
         }
     }
 
