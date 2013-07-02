@@ -288,6 +288,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
                         framePayload = payloadBuffer;
                     } else if (payloadBuffer != null) {
                         framePayload.writeBytes(payloadBuffer);
+                        payloadBuffer.release();
                     }
 
                     // Unmask data if needed
