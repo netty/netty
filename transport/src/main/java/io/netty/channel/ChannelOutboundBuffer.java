@@ -41,6 +41,7 @@ final class ChannelOutboundBuffer {
 
     private int head;
     private int tail;
+    private boolean inFail;
     private final AbstractChannel channel;
 
     private int pendingOutboundBytes;
@@ -213,33 +214,38 @@ final class ChannelOutboundBuffer {
     }
 
     void fail(Throwable cause) {
-        if (currentPromise == null) {
-            if (!next()) {
-                return;
-            }
+        // We need to check if we already process the fail here as the notification of the future may trigger some
+        // other event which will also call ChannelOutboundBuffer and so set currentMessage and currentPromise to
+        // null.
+        // See https://github.com/netty/netty/issues/1501
+        if (inFail) {
+            return;
         }
-
-        do {
-            if (!(currentPromise instanceof VoidChannelPromise) && !currentPromise.tryFailure(cause)) {
-                logger.warn("Promise done already:", cause);
-            } else {
-                // We need to check for next here as the notification of the future may trigger some other event
-                // which will also call ChannelOutboundBuffer and so set currentMessage and currentPromise to null.
-                // See https://github.com/netty/netty/issues/1501
+        try {
+            inFail = true;
+            if (currentPromise == null) {
                 if (!next()) {
                     return;
                 }
             }
 
-            // Release all failed messages.
-            try {
-                for (int i = currentMessageIndex; i < currentMessages.size(); i++) {
-                    Object msg = currentMessages.get(i);
-                    ReferenceCountUtil.release(msg);
+            do {
+                if (!(currentPromise instanceof VoidChannelPromise) && !currentPromise.tryFailure(cause)) {
+                    logger.warn("Promise done already:", cause);
                 }
-            } finally {
-                currentMessages.recycle();
-            }
-        } while(next());
+
+                // Release all failed messages.
+                try {
+                    for (int i = currentMessageIndex; i < currentMessages.size(); i++) {
+                        Object msg = currentMessages.get(i);
+                        ReferenceCountUtil.release(msg);
+                    }
+                } finally {
+                    currentMessages.recycle();
+                }
+            } while(next());
+        } finally {
+            inFail = false;
+        }
     }
 }
