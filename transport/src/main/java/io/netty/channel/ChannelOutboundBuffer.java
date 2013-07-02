@@ -222,6 +222,13 @@ final class ChannelOutboundBuffer {
         do {
             if (!(currentPromise instanceof VoidChannelPromise) && !currentPromise.tryFailure(cause)) {
                 logger.warn("Promise done already:", cause);
+            } else {
+                // We need to check for next here as the notification of the future may trigger some other event
+                // which will also call ChannelOutboundBuffer and so set currentMessage and currentPromise to null.
+                // See https://github.com/netty/netty/issues/1501
+                if (!next()) {
+                    return;
+                }
             }
 
             // Release all failed messages.
