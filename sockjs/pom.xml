@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.0.0.CR7-SNAPSHOT</version>
+    <version>4.0.0.CR10-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
