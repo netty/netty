@@ -6,7 +6,8 @@ of this version is based on.
 
 ### Disclaminer
 Currently the haproxy test in the [SockJSProtocol](http://sockjs.github.io/sockjs-protocol/sockjs-protocol-0.3.3.html) does
-not pass. The issue here is that when HAProxy tries to send an WebSocket Hixie 76 upgrade reqeust it need to be able
+not pass.  
+The issue here is that when HAProxy tries to send an WebSocket Hixie 76 upgrade reqeust it need to be able
 to send the request headers and receive the response before it sends the actualy nouce. The test, test_haproxy and 
 I'm assuming HAProxy itself, does not set a _Content-Length_ header. The default HttpObjectDecoder in
 Netty does a check while decoding to see if a _Content-Lenght_ header exists, which is our case it does not. It then 
@@ -16,7 +17,7 @@ body in this request. Setting the _Content-Length_ to 0 allows the test_haproxy 
 how to fix this. I don't think that there should really be a case where the body of a Hixie 74 upgrade request does not
 have the nounce in the body of the request. So perhaps a workaround specific to sockjs should be put inplace.
 
-The equivalent of the above python test suite can be found in _src/test/io/netty/handler/sockjs/SockJSProtocolTest.java_.
+The equivalent of the above python test suite can be found in _src/test/io/netty/handler/codec/sockjs/protocol/SockJSProtocolTest.java_.
 
 ## Protocol
 The SockJS client API if very similar to the WebSocket API which is intentional. The idea is to hide the transport 

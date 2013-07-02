@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.netty.handler.codec.sockjs.handlers;
+package io.netty.handler.codec.sockjs.protocol;
 
 import static io.netty.handler.codec.http.HttpHeaders.Names.CACHE_CONTROL;
 import static io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION;
@@ -75,7 +75,9 @@ import io.netty.handler.codec.sockjs.Config;
 import io.netty.handler.codec.sockjs.EchoService;
 import io.netty.handler.codec.sockjs.SockJSService;
 import io.netty.handler.codec.sockjs.SockJSServiceFactory;
-import io.netty.handler.codec.sockjs.protocol.PreludeFrame;
+import io.netty.handler.codec.sockjs.handlers.CorsInboundHandler;
+import io.netty.handler.codec.sockjs.handlers.CorsOutboundHandler;
+import io.netty.handler.codec.sockjs.handlers.SockJSHandler;
 import io.netty.handler.codec.sockjs.transports.EventSourceTransport;
 import io.netty.handler.codec.sockjs.transports.Transports;
 import io.netty.handler.codec.sockjs.transports.WebSocketTransport;
