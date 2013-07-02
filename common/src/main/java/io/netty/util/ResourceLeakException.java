@@ -16,6 +16,8 @@
 
 package io.netty.util;
 
+import io.netty.util.internal.StringUtil;
+
 import java.util.Arrays;
 
 public class ResourceLeakException extends RuntimeException {
@@ -63,5 +65,16 @@ public class ResourceLeakException extends RuntimeException {
         }
 
         return Arrays.equals(cachedStackTrace, ((ResourceLeakException) o).cachedStackTrace);
+    }
+
+    @Override
+    public String toString() {
+        final StringBuilder builder = new StringBuilder();
+        builder.append(this.getClass().getCanonicalName()).append(": ").append(getMessage());
+        for (StackTraceElement element : cachedStackTrace) {
+          builder.append(StringUtil.NEWLINE).append("  at ").append(element);
+        }
+
+        return builder.toString();
     }
 }
