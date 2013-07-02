@@ -268,7 +268,7 @@ public final class MessageList<T> implements Iterable<T> {
         try {
             if (byteBufsOnly) {
                 while (i < srcEndIdx) {
-                    T m = src[srcIdx];
+                    T m = src[i];
                     if (m == null) {
                         throw new NullPointerException("src[" + srcIdx + ']');
                     }
@@ -284,7 +284,7 @@ public final class MessageList<T> implements Iterable<T> {
             }
 
             for (; i < srcEndIdx; i ++) {
-                T m = src[srcIdx];
+                T m = src[i];
                 if (m == null) {
                     throw new NullPointerException("src[" + srcIdx + ']');
                 }
