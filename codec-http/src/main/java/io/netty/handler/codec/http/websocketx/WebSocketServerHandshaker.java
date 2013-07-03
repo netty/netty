@@ -177,8 +177,8 @@ public abstract class WebSocketServerHandshaker {
                                     new IllegalStateException("No HttpDecoder and no HttpServerCodec in the pipeline"));
                             return;
                         }
-                        p.addBefore(ctx.name(), "wsencoder", newWebsocketDecoder());
-                        p.replace(ctx.name(), "wsdecoder", newWebSocketEncoder());
+                        p.addBefore(ctx.name(), "wsdecoder", newWebsocketDecoder());
+                        p.replace(ctx.name(), "wsencoder", newWebSocketEncoder());
                     } else {
                         p.replace(ctx.name(), "wsdecoder", newWebsocketDecoder());
 
