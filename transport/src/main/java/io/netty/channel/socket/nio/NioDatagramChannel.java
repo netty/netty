@@ -17,7 +17,6 @@ package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
@@ -30,6 +29,7 @@ import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
@@ -255,8 +255,7 @@ public final class NioDatagramChannel
         } else if (m instanceof ByteBuf) {
             data = (ByteBuf) m;
         } else {
-            ByteBufUtil.release(o);
-            throw new ChannelException("unsupported message type: " + StringUtil.simpleClassName(o));
+            throw new UnsupportedOperationException("unsupported message type: " + StringUtil.simpleClassName(0));
         }
 
         int dataLen = data.readableBytes();
@@ -293,7 +292,7 @@ public final class NioDatagramChannel
         }
 
         // Wrote a packet - free the message.
-        ByteBufUtil.release(o);
+        ReferenceCountUtil.release(o);
 
         if (index + 1 == msgs.size()) {
             // Wrote the outbound buffer completely - clear OP_WRITE.

@@ -17,7 +17,6 @@ package io.netty.channel.socket.oio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
@@ -31,6 +30,7 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.DefaultDatagramChannelConfig;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
@@ -263,27 +263,23 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
         } else if (m instanceof ByteBuf) {
             data = (ByteBuf) m;
         } else {
-            ByteBufUtil.release(o);
-            throw new ChannelException("unsupported message type: " + StringUtil.simpleClassName(o));
+            throw new UnsupportedOperationException("unsupported message type: " + StringUtil.simpleClassName(o));
         }
 
-        try {
-            int length = data.readableBytes();
-            if (remoteAddress != null) {
-                tmpPacket.setSocketAddress(remoteAddress);
-            }
-            if (data.hasArray()) {
-                tmpPacket.setData(data.array(), data.arrayOffset() + data.readerIndex(), length);
-            } else {
-                byte[] tmp = new byte[length];
-                data.getBytes(data.readerIndex(), tmp);
-                tmpPacket.setData(tmp);
-            }
-            socket.send(tmpPacket);
-            return 1;
-        } finally {
-            ByteBufUtil.release(o);
+        int length = data.readableBytes();
+        if (remoteAddress != null) {
+            tmpPacket.setSocketAddress(remoteAddress);
         }
+        if (data.hasArray()) {
+            tmpPacket.setData(data.array(), data.arrayOffset() + data.readerIndex(), length);
+        } else {
+            byte[] tmp = new byte[length];
+            data.getBytes(data.readerIndex(), tmp);
+            tmpPacket.setData(tmp);
+        }
+        socket.send(tmpPacket);
+        ReferenceCountUtil.release(o);
+        return 1;
     }
 
     @Override
