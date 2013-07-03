@@ -123,12 +123,15 @@ public abstract class WebSocketServerHandshaker {
     }
 
     /**
-     * Performs the opening handshake
+     * Performs the opening handshake. When call this method you <strong>MUST NOT</strong> retain the
+     * {@link FullHttpRequest} which is passed in.
      *
      * @param channel
-     *            Channel
+     *              Channel
      * @param req
-     *            HTTP Request
+     *              HTTP Request
+     * @return future
+     *              The {@link ChannelFuture} which is notified once the opening handshake completes
      */
     public ChannelFuture handshake(Channel channel, FullHttpRequest req) {
         return handshake(channel, req, null, channel.newPromise());
@@ -136,6 +139,8 @@ public abstract class WebSocketServerHandshaker {
 
     /**
      * Performs the opening handshake
+     *
+     * When call this method you <strong>MUST NOT</strong> retain the {@link FullHttpRequest} which is passed in.
      *
      * @param channel
      *            Channel
@@ -145,6 +150,8 @@ public abstract class WebSocketServerHandshaker {
      *            Extra headers to add to the handshake response or {@code null} if no extra headers should be added
      * @param promise
      *            the {@link ChannelPromise} to be notified when the opening handshake is done
+     * @return future
+     *            the {@link ChannelFuture} which is notified when the opening handshake is done
      */
     public final ChannelFuture handshake(Channel channel, FullHttpRequest req,
                                             HttpHeaders responseHeaders, final ChannelPromise promise) {
