@@ -15,8 +15,6 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelOutboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -130,12 +128,12 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
     }
 
     @Override
-    protected ChannelInboundHandler newWebsocketDecoder() {
+    protected WebSocketFrameDecoder newWebsocketDecoder() {
         return new WebSocket13FrameDecoder(true, allowExtensions, maxFramePayloadLength());
     }
 
     @Override
-    protected ChannelOutboundHandler newWebSocketEncoder() {
+    protected WebSocketFrameEncoder newWebSocketEncoder() {
         return new WebSocket13FrameEncoder(false);
     }
 }

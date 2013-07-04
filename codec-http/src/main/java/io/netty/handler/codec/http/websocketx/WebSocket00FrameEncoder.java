@@ -27,7 +27,7 @@ import io.netty.handler.codec.MessageToByteEncoder;
  * <tt>WebSocketServer</tt> example located in the {@code io.netty.example.http.websocket} package.
  */
 @Sharable
-public class WebSocket00FrameEncoder extends MessageToByteEncoder<WebSocketFrame> {
+public class WebSocket00FrameEncoder extends MessageToByteEncoder<WebSocketFrame> implements WebSocketFrameEncoder {
 
     @Override
     protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, ByteBuf out) throws Exception {

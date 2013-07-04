@@ -19,8 +19,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -272,11 +270,11 @@ public abstract class WebSocketServerHandshaker {
     /**
      * Returns the decoder to use after handshake is complete.
      */
-    protected abstract ChannelInboundHandler newWebsocketDecoder();
+    protected abstract WebSocketFrameDecoder newWebsocketDecoder();
 
     /**
      * Returns the encoder to use after the handshake is complete.
      */
-    protected abstract ChannelOutboundHandler newWebSocketEncoder();
+    protected abstract WebSocketFrameEncoder newWebSocketEncoder();
 
 }
