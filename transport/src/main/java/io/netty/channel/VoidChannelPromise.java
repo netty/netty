@@ -19,7 +19,6 @@ import io.netty.util.concurrent.AbstractFuture;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
 
 final class VoidChannelPromise extends AbstractFuture<Void> implements ChannelPromise {
@@ -167,7 +166,6 @@ final class VoidChannelPromise extends AbstractFuture<Void> implements ChannelPr
 
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
-        fireException(new CancellationException());
         return false;
     }
 
