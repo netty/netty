@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.channels.Channels;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.WritableByteChannel;
 
@@ -30,6 +31,20 @@ import java.nio.channels.WritableByteChannel;
  * Abstract base class for OIO Channels that are based on streams.
  */
 public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
+
+    private static final InputStream CLOSED_IN = new InputStream() {
+        @Override
+        public int read() {
+            return -1;
+        }
+    };
+
+    private static final OutputStream CLOSED_OUT = new OutputStream() {
+        @Override
+        public void write(int b) throws IOException {
+            throw new ClosedChannelException();
+        }
+    };
 
     private InputStream is;
     private OutputStream os;
@@ -68,7 +83,17 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
 
     @Override
     public boolean isActive() {
-        return is != null && os != null;
+        InputStream is = this.is;
+        if (is == null || is == CLOSED_IN) {
+            return false;
+        }
+
+        OutputStream os = this.os;
+        if (os == null || os == CLOSED_OUT) {
+            return false;
+        }
+
+        return true;
     }
 
     @Override
@@ -122,29 +147,19 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
 
     @Override
     protected void doClose() throws Exception {
-        IOException ex = null;
+        InputStream is = this.is;
+        OutputStream os = this.os;
+        this.is = CLOSED_IN;
+        this.os = CLOSED_OUT;
 
         try {
             if (is != null) {
                 is.close();
             }
-        } catch (IOException e) {
-            ex = e;
-        }
-
-        try {
+        } finally {
             if (os != null) {
                 os.close();
             }
-        } catch (IOException e) {
-            ex = e;
-        }
-
-        is = null;
-        os = null;
-
-        if (ex != null) {
-            throw ex;
         }
     }
 }
