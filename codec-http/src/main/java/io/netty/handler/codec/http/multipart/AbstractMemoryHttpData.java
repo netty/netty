@@ -103,7 +103,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
                 cbb.addComponent(buffer);
                 cbb.writerIndex(cbb.writerIndex() + buffer.readableBytes());
             } else {
-                CompositeByteBuf cbb = compositeBuffer();
+                CompositeByteBuf cbb = compositeBuffer(Integer.MAX_VALUE);
                 cbb.addComponents(byteBuf, buffer);
                 cbb.writerIndex(byteBuf.readableBytes() + buffer.readableBytes());
                 byteBuf = cbb;
@@ -142,7 +142,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         if (byteBuf != null) {
             byteBuf.release();
         }
-        byteBuf = wrappedBuffer(byteBuffer);
+        byteBuf = wrappedBuffer(Integer.MAX_VALUE, byteBuffer);
         size = newsize;
         completed = true;
     }
