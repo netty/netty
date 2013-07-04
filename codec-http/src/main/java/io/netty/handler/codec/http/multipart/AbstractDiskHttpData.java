@@ -99,55 +99,67 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         if (buffer == null) {
             throw new NullPointerException("buffer");
         }
-        size = buffer.readableBytes();
-        if (definedSize > 0 && definedSize < size) {
-            throw new IOException("Out of size: " + size + " > " + definedSize);
+        try {
+            size = buffer.readableBytes();
+            if (definedSize > 0 && definedSize < size) {
+                throw new IOException("Out of size: " + size + " > " + definedSize);
+            }
+            if (file == null) {
+                file = tempFile();
+            }
+            if (buffer.readableBytes() == 0) {
+                // empty file
+                file.createNewFile();
+                return;
+            }
+            FileOutputStream outputStream = new FileOutputStream(file);
+            FileChannel localfileChannel = outputStream.getChannel();
+            ByteBuffer byteBuffer = buffer.nioBuffer();
+            int written = 0;
+            while (written < size) {
+                written += localfileChannel.write(byteBuffer);
+            }
+            buffer.readerIndex(buffer.readerIndex() + written);
+            localfileChannel.force(false);
+            localfileChannel.close();
+            outputStream.close();
+            completed = true;
+        } finally {
+            // Release the buffer as it was retained before and we not need a reference to it at all
+            // See https://github.com/netty/netty/issues/1516
+            buffer.release();
         }
-        if (file == null) {
-            file = tempFile();
-        }
-        if (buffer.readableBytes() == 0) {
-            // empty file
-            file.createNewFile();
-            return;
-        }
-        FileOutputStream outputStream = new FileOutputStream(file);
-        FileChannel localfileChannel = outputStream.getChannel();
-        ByteBuffer byteBuffer = buffer.nioBuffer();
-        int written = 0;
-        while (written < size) {
-            written += localfileChannel.write(byteBuffer);
-        }
-        buffer.readerIndex(buffer.readerIndex() + written);
-        localfileChannel.force(false);
-        localfileChannel.close();
-        outputStream.close();
-        completed = true;
     }
 
     @Override
     public void addContent(ByteBuf buffer, boolean last)
             throws IOException {
         if (buffer != null) {
-            int localsize = buffer.readableBytes();
-            if (definedSize > 0 && definedSize < size + localsize) {
-                throw new IOException("Out of size: " + (size + localsize) +
-                        " > " + definedSize);
+            try {
+                int localsize = buffer.readableBytes();
+                if (definedSize > 0 && definedSize < size + localsize) {
+                    throw new IOException("Out of size: " + (size + localsize) +
+                            " > " + definedSize);
+                }
+                ByteBuffer byteBuffer = buffer.nioBufferCount() == 1 ? buffer.nioBuffer() : buffer.copy().nioBuffer();
+                int written = 0;
+                if (file == null) {
+                    file = tempFile();
+                }
+                if (fileChannel == null) {
+                    FileOutputStream outputStream = new FileOutputStream(file);
+                    fileChannel = outputStream.getChannel();
+                }
+                while (written < localsize) {
+                    written += fileChannel.write(byteBuffer);
+                }
+                size += localsize;
+                buffer.readerIndex(buffer.readerIndex() + written);
+            } finally {
+                // Release the buffer as it was retained before and we not need a reference to it at all
+                // See https://github.com/netty/netty/issues/1516
+                buffer.release();
             }
-            ByteBuffer byteBuffer = buffer.nioBufferCount() == 1 ? buffer.nioBuffer() : buffer.copy().nioBuffer();
-            int written = 0;
-            if (file == null) {
-                file = tempFile();
-            }
-            if (fileChannel == null) {
-                FileOutputStream outputStream = new FileOutputStream(file);
-                fileChannel = outputStream.getChannel();
-            }
-            while (written < localsize) {
-                written += fileChannel.write(byteBuffer);
-            }
-            size += localsize;
-            buffer.readerIndex(buffer.readerIndex() + written);
         }
         if (last) {
             if (file == null) {
