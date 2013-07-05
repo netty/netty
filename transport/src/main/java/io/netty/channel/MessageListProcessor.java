@@ -16,18 +16,11 @@
 
 package io.netty.channel;
 
-import io.netty.util.Signal;
-
 public interface MessageListProcessor<T> {
 
-    Signal ABORT = new Signal(MessageListProcessor.class.getName() + ".ABORT");
-
     /**
-     * @return the number of elements processed. {@link MessageList#forEach(MessageListProcessor)} will determine
-     *         the index of the next element to be processed based on this value.  Usually, an implementation will
-     *         return {@code 1} to advance the index by {@code 1}.  Note that returning a non-positive value is
-     *         allowed where a negative value advances the index in the opposite direction and zero leaves the index
-     *         as-is.
+     * @return {@code true} if the processor wants to continue the loop and handle the next message in the list.
+     *         {@code false} if the processor wants to stop handling messages and abort the loop.
      */
-    int process(T value) throws Exception;
+    boolean process(T value) throws Exception;
 }

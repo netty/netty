@@ -20,7 +20,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.Signal;
 import io.netty.util.internal.PlatformDependent;
 
 import java.util.Arrays;
@@ -390,8 +389,7 @@ public final class MessageList<T> implements Iterable<T> {
      * Iterates over the messages in this list with the specified {@code processor}.
      *
      * @return {@code -1} if the processor iterated to or beyond the end of the readable bytes.
-     *         If the {@code processor} raised {@link MessageListProcessor#ABORT}, the last-visited index will be
-     *         returned.
+     *         The last-visited index If the {@link MessageListProcessor#process(Object)} returned {@code false}.
      */
     public int forEach(MessageListProcessor<? super T> proc) {
         if (proc == null) {
@@ -409,11 +407,12 @@ public final class MessageList<T> implements Iterable<T> {
         int i = 0;
         try {
             do {
-                i += p.process(elements[i]);
+                if (p.process(elements[i])) {
+                    i ++;
+                } else {
+                    return i;
+                }
             } while (i < size);
-        } catch (Signal abort) {
-            abort.expect(MessageListProcessor.ABORT);
-            return i;
         } catch (Exception e) {
             PlatformDependent.throwException(e);
         }
@@ -425,8 +424,7 @@ public final class MessageList<T> implements Iterable<T> {
      * Iterates over the messages in this list with the specified {@code processor}.
      *
      * @return {@code -1} if the processor iterated to or beyond the end of the specified area.
-     *         If the {@code processor} raised {@link MessageListProcessor#ABORT}, the last-visited index will be
-     *         returned.
+     *         The last-visited index If the {@link MessageListProcessor#process(Object)} returned {@code false}.
      */
     public int forEach(int index, int length, MessageListProcessor<? super T> proc) {
         checkRange(index, length);
@@ -446,11 +444,12 @@ public final class MessageList<T> implements Iterable<T> {
         int i = index;
         try {
             do {
-                i += p.process(elements[i]);
+                if (p.process(elements[i])) {
+                    i ++;
+                } else {
+                    return i;
+                }
             } while (i < end);
-        } catch (Signal abort) {
-            abort.expect(MessageListProcessor.ABORT);
-            return i;
         } catch (Exception e) {
             PlatformDependent.throwException(e);
         }
@@ -542,8 +541,9 @@ public final class MessageList<T> implements Iterable<T> {
     }
 
     private final class MessageListIterator implements Iterator<T> {
+
+        private final int expectedModifications = modifications;
         private int index;
-        private int expectedModifications = modifications;
 
         private void checkConcurrentModifications() {
             if (expectedModifications != modifications) {

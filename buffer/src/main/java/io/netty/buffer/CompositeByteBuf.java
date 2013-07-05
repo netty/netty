@@ -171,6 +171,22 @@ public interface CompositeByteBuf extends ByteBuf, Iterable<ByteBuf> {
     ByteBuf componentAtOffset(int offset);
 
     /**
+     * Return the internal {@link ByteBuf} on the specified index.  Note that updating the indexes of the returned
+     * buffer will lead to an undefined behavior of this buffer.
+     *
+     * @param cIndex the index for which the {@link ByteBuf} should be returned
+     */
+    ByteBuf internalComponent(int cIndex);
+
+    /**
+     * Return the internal {@link ByteBuf} on the specified offset.  Note that updating the indexes of the returned
+     * buffer will lead to an undefined behavior of this buffer.
+     *
+     * @param offset the offset for which the {@link ByteBuf} should be returned
+     */
+    ByteBuf internalComponentAtOffset(int offset);
+
+    /**
      * Discard all {@link ByteBuf}s which are read.
      *
      * @return self    this instance
