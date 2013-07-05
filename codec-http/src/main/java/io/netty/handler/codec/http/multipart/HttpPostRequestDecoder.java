@@ -33,7 +33,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -42,8 +41,11 @@ import static io.netty.buffer.Unpooled.*;
 
 /**
  * This decoder will decode Body and can handle POST BODY.
+ *
+ * You <strong>MUST</strong> call {@link #destroy()} after completion to release all resources.
+ *
  */
-public class HttpPostRequestDecoder implements Iterator<InterfaceHttpData> {
+public class HttpPostRequestDecoder {
     /**
      * Factory used to create InterfaceHttpData
      */
@@ -125,6 +127,8 @@ public class HttpPostRequestDecoder implements Iterator<InterfaceHttpData> {
      * The current Attribute that is currently in decode process
      */
     private Attribute currentAttribute;
+
+    private boolean destroyed;
 
     /**
      *
@@ -273,12 +277,19 @@ public class HttpPostRequestDecoder implements Iterator<InterfaceHttpData> {
         }
     }
 
+    private void checkDestroyed() {
+        if (destroyed) {
+            throw new IllegalStateException(HttpPostRequestDecoder.class.getSimpleName() + " was destroyed already");
+        }
+    }
+
     /**
      * True if this request is a Multipart request
      *
      * @return True if this request is a Multipart request
      */
     public boolean isMultipart() {
+        checkDestroyed();
         return isMultipart;
     }
 
@@ -293,6 +304,8 @@ public class HttpPostRequestDecoder implements Iterator<InterfaceHttpData> {
      *             Need more chunks
      */
     public List<InterfaceHttpData> getBodyHttpDatas() throws NotEnoughDataDecoderException {
+        checkDestroyed();
+
         if (!isLastChunk) {
             throw new NotEnoughDataDecoderException();
         }
@@ -311,6 +324,8 @@ public class HttpPostRequestDecoder implements Iterator<InterfaceHttpData> {
      *             need more chunks
      */
     public List<InterfaceHttpData> getBodyHttpDatas(String name) throws NotEnoughDataDecoderException {
+        checkDestroyed();
+
         if (!isLastChunk) {
             throw new NotEnoughDataDecoderException();
         }
@@ -330,6 +345,8 @@ public class HttpPostRequestDecoder implements Iterator<InterfaceHttpData> {
      *             need more chunks
      */
     public InterfaceHttpData getBodyHttpData(String name) throws NotEnoughDataDecoderException {
+        checkDestroyed();
+
         if (!isLastChunk) {
             throw new NotEnoughDataDecoderException();
         }
@@ -350,6 +367,8 @@ public class HttpPostRequestDecoder implements Iterator<InterfaceHttpData> {
      *             errors
      */
     public HttpPostRequestDecoder offer(HttpContent content) throws ErrorDataDecoderException {
+        checkDestroyed();
+
         // Maybe we should better not copy here for performance reasons but this will need
         // more care by teh caller to release the content in a correct manner later
         // So maybe something to optimize on a later stage
@@ -380,6 +399,8 @@ public class HttpPostRequestDecoder implements Iterator<InterfaceHttpData> {
      *             No more data will be available
      */
     public boolean hasNext() throws EndOfDataDecoderException {
+        checkDestroyed();
+
         if (currentStatus == MultiPartStatus.EPILOGUE) {
             // OK except if end of list
             if (bodyListHttpDataRank >= bodyListHttpData.size()) {
@@ -394,11 +415,16 @@ public class HttpPostRequestDecoder implements Iterator<InterfaceHttpData> {
      * is called, there is no more available InterfaceHttpData. A subsequent
      * call to offer(httpChunk) could enable more data.
      *
+     * Be sure to call {@link InterfaceHttpData#release()} after you are done
+     * with processing to make sure to not leak any resources
+     *
      * @return the next available InterfaceHttpData or null if none
      * @throws EndOfDataDecoderException
      *             No more data will be available
      */
     public InterfaceHttpData next() throws EndOfDataDecoderException {
+        checkDestroyed();
+
         if (hasNext()) {
             return bodyListHttpData.get(bodyListHttpDataRank++);
         }
@@ -1173,9 +1199,30 @@ public class HttpPostRequestDecoder implements Iterator<InterfaceHttpData> {
     }
 
     /**
+     * Destroy the {@link HttpPostRequestDecoder} and release all it resources. After this method
+     * was called it is not possible to operate on it anymore.
+     */
+    public void destroy() {
+        checkDestroyed();
+
+        cleanFiles();
+        if (undecodedChunk != null && undecodedChunk.refCnt() > 0) {
+            undecodedChunk.release();
+            undecodedChunk = null;
+        }
+
+        // release all data which was not yet pulled
+        for (int i = bodyListHttpDataRank; i < bodyListHttpData.size(); i++) {
+            bodyListHttpData.get(i).release();
+        }
+    }
+
+    /**
      * Clean all HttpDatas (on Disk) for the current request.
      */
     public void cleanFiles() {
+        checkDestroyed();
+
         factory.cleanRequestHttpDatas(request);
     }
 
@@ -1183,6 +1230,8 @@ public class HttpPostRequestDecoder implements Iterator<InterfaceHttpData> {
      * Remove the given FileUpload from the list of FileUploads to clean
      */
     public void removeHttpDataFromClean(InterfaceHttpData data) {
+        checkDestroyed();
+
         factory.removeHttpDataFromClean(request, data);
     }
 
@@ -2041,11 +2090,6 @@ public class HttpPostRequestDecoder implements Iterator<InterfaceHttpData> {
             array[i] = headers.get(i);
         }
         return array;
-    }
-
-    @Override
-    public void remove() {
-        throw new UnsupportedOperationException();
     }
 
     /**
