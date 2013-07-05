@@ -78,7 +78,7 @@ import java.nio.charset.UnsupportedCharsetException;
  * current {@link #readerIndex() readerIndex} and increase it by the number of
  * read bytes.  If the argument of the read operation is also a
  * {@link ByteBuf} and no destination index is specified, the specified
- * buffer's {@link #readerIndex() readerIndex} is increased together.
+ * buffer's {@link #writerIndex() writerIndex} is increased together.
  * <p>
  * If there's not enough content left, {@link IndexOutOfBoundsException} is
  * raised.  The default value of newly allocated, wrapped or copied buffer's
@@ -181,7 +181,7 @@ import java.nio.charset.UnsupportedCharsetException;
  * For complicated searches, use {@link #forEachByte(int, int, ByteBufProcessor)} with a {@link ByteBufProcessor}
  * implementation.
  *
- *  <h3>Mark and reset</h3>
+ * <h3>Mark and reset</h3>
  *
  * There are two marker indexes in every buffer. One is for storing
  * {@link #readerIndex() readerIndex} and the other is for storing
