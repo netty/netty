@@ -17,6 +17,7 @@ package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.AbstractReferenceCounted;
 
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -26,7 +27,7 @@ import java.util.List;
  * This Attribute is only for Encoder use to insert special command between object if needed
  * (like Multipart Mixed mode)
  */
-final class InternalAttribute implements InterfaceHttpData {
+final class InternalAttribute extends AbstractReferenceCounted implements InterfaceHttpData {
     private final List<ByteBuf> value = new ArrayList<ByteBuf>();
     private final Charset charset;
     private int size;
@@ -116,5 +117,10 @@ final class InternalAttribute implements InterfaceHttpData {
     @Override
     public String getName() {
         return "InternalAttribute";
+    }
+
+    @Override
+    protected void deallocate() {
+        // Do nothing
     }
 }

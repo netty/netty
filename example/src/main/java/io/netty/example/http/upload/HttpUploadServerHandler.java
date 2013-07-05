@@ -44,7 +44,6 @@ import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.EndOfDataDecoderException;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.ErrorDataDecoderException;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.IncompatibleDataDecoderException;
-import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.NotEnoughDataDecoderException;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData.HttpDataType;
 import io.netty.util.CharsetUtil;
@@ -192,7 +191,6 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
                 readHttpDataChunkByChunk();
                 // example of reading only if at the end
                 if (chunk instanceof LastHttpContent) {
-                    readHttpDataAllReceive(ctx.channel());
                     writeResponse(ctx.channel());
                     readingChunks = false;
 
@@ -205,30 +203,9 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
     private void reset() {
         request = null;
 
-        // clean previous FileUpload if Any
-        decoder.cleanFiles();
+        // destroy the decoder to release all resources
+        decoder.destroy();
         decoder = null;
-    }
-
-    /**
-     * Example of reading all InterfaceHttpData from finished transfer
-     */
-    private void readHttpDataAllReceive(Channel channel) {
-        List<InterfaceHttpData> datas;
-        try {
-            datas = decoder.getBodyHttpDatas();
-        } catch (NotEnoughDataDecoderException e1) {
-            // Should not be!
-            e1.printStackTrace();
-            responseContent.append(e1.getMessage());
-            writeResponse(channel);
-            channel.close();
-            return;
-        }
-        for (InterfaceHttpData data : datas) {
-            writeHttpData(data);
-        }
-        responseContent.append("\r\n\r\nEND OF CONTENT AT FINAL END\r\n");
     }
 
     /**
