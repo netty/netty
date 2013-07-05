@@ -64,6 +64,8 @@ public class HttpContentEncoderTest {
         chunk = (HttpContent) ch.readOutbound();
         assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("1"));
 
+        chunk = (HttpContent) ch.readOutbound();
+        assertThat(chunk.content().isReadable(), is(false));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
         assertThat(ch.readOutbound(), is(nullValue()));
     }
@@ -91,7 +93,11 @@ public class HttpContentEncoderTest {
         chunk = (HttpContent) ch.readOutbound();
         assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("1"));
 
+        assertThat(chunk, is(instanceOf(HttpContent.class)));
+        chunk = (HttpContent) ch.readOutbound();
+        assertThat(chunk.content().isReadable(), is(false));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
+
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 
@@ -106,11 +112,11 @@ public class HttpContentEncoderTest {
         ch.writeOutbound(res);
 
         assertEncodedResponse(ch);
-
-        LastHttpContent c = (LastHttpContent) ch.readOutbound();
+        HttpContent c = (HttpContent) ch.readOutbound();
         assertThat(c.content().readableBytes(), is(2));
         assertThat(c.content().toString(CharsetUtil.US_ASCII), is("42"));
-
+        LastHttpContent last = (LastHttpContent) ch.readOutbound();
+        assertThat(last.content().readableBytes(), is(0));
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 
@@ -129,6 +135,10 @@ public class HttpContentEncoderTest {
         ch.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT);
         HttpContent chunk = (HttpContent) ch.readOutbound();
         assertThat(chunk.content().toString(CharsetUtil.US_ASCII), is("0"));
+        assertThat(chunk, is(instanceOf(HttpContent.class)));
+
+        chunk = (HttpContent) ch.readOutbound();
+        assertThat(chunk.content().isReadable(), is(false));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
         assertThat(ch.readOutbound(), is(nullValue()));
     }
