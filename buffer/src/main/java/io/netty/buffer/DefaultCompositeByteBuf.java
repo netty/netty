@@ -947,12 +947,22 @@ public class DefaultCompositeByteBuf extends AbstractReferenceCountedByteBuf imp
 
     @Override
     public ByteBuf component(int cIndex) {
+        return internalComponent(cIndex).duplicate();
+    }
+
+    @Override
+    public ByteBuf componentAtOffset(int offset) {
+        return internalComponentAtOffset(offset).duplicate();
+    }
+
+    @Override
+    public ByteBuf internalComponent(int cIndex) {
         checkComponentIndex(cIndex);
         return components.get(cIndex).buf;
     }
 
     @Override
-    public ByteBuf componentAtOffset(int offset) {
+    public ByteBuf internalComponentAtOffset(int offset) {
         return findComponent(offset).buf;
     }
 
