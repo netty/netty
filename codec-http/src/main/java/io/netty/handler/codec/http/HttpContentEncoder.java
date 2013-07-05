@@ -163,7 +163,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
             case AWAIT_CONTENT: {
                 ensureContent(msg);
                 encodeContent((HttpContent) msg, out);
-                if (msg instanceof LastHttpContent) {
+                if (out.get(out.size() - 1)  instanceof LastHttpContent) {
                     state = State.AWAIT_HEADERS;
                 }
                 break;
