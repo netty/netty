@@ -207,6 +207,32 @@ public final class MessageList<T> implements Iterable<T> {
     }
 
     /**
+     * Returns the first message in this list.
+     *
+     * @throws NoSuchElementException if this list is empty
+     */
+    public T first() {
+        if (size != 0) {
+            return elements[0];
+        } else {
+            throw new NoSuchElementException();
+        }
+    }
+
+    /**
+     * Returns the last message in this list.
+     *
+     * @throws NoSuchElementException if this list is empty
+     */
+    public T last() {
+        if (size != 0) {
+            return elements[size - 1];
+        } else {
+            throw new NoSuchElementException();
+        }
+    }
+
+    /**
      * Sets the message on the given index.
      */
     public MessageList<T> set(int index, T value) {
