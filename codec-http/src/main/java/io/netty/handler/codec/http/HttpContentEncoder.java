@@ -17,7 +17,6 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.MessageList;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -163,9 +162,8 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
             }
             case AWAIT_CONTENT: {
                 ensureContent(msg);
-                HttpContent[] encoded = encodeContent((HttpContent) msg);
-                out.add(encoded);
-                if (encoded[encoded.length - 1] instanceof LastHttpContent) {
+                encodeContent((HttpContent) msg, out);
+                if (msg instanceof LastHttpContent) {
                     state = State.AWAIT_HEADERS;
                 }
                 break;
@@ -198,31 +196,18 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         }
     }
 
-    private HttpContent[] encodeContent(HttpContent c) {
-        ByteBuf newContent = Unpooled.buffer();
+    private void encodeContent(HttpContent c, MessageList<Object> out) {
         ByteBuf content = c.content();
 
-        encode(content, newContent);
+        encode(content, out);
 
         if (c instanceof LastHttpContent) {
-            ByteBuf lastProduct = Unpooled.buffer();
-            finishEncode(lastProduct);
+            finishEncode(out);
 
             // Generate an additional chunk if the decoder produced
             // the last product on closure,
-            if (lastProduct.isReadable()) {
-                if (newContent.isReadable()) {
-                    return new HttpContent[] {
-                            new DefaultHttpContent(newContent), new DefaultLastHttpContent(lastProduct)};
-                } else {
-                    return new HttpContent[] { new DefaultLastHttpContent(lastProduct) };
-                }
-            } else {
-                return new HttpContent[] { new DefaultLastHttpContent(newContent) };
-            }
+            out.add(LastHttpContent.EMPTY_LAST_CONTENT);
         }
-
-        return new HttpContent[] { new DefaultHttpContent(newContent) };
     }
 
     /**
@@ -271,30 +256,26 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         }
     }
 
-    private void encode(ByteBuf in, ByteBuf out) {
+    private void encode(ByteBuf in, MessageList<Object> out) {
         // call retain here as it will call release after its written to the channel
         encoder.writeOutbound(in.retain());
         fetchEncoderOutput(out);
     }
 
-    private void finishEncode(ByteBuf out) {
+    private void finishEncode(MessageList<Object> out) {
         if (encoder.finish()) {
             fetchEncoderOutput(out);
         }
         encoder = null;
     }
 
-    private void fetchEncoderOutput(ByteBuf out) {
+    private void fetchEncoderOutput(MessageList<Object> out) {
         for (;;) {
             ByteBuf buf = (ByteBuf) encoder.readOutbound();
             if (buf == null) {
                 break;
             }
-            out.writeBytes(buf);
-
-            // Need to release the buffer after write it
-            // See https://github.com/netty/netty/issues/1524
-            buf.release();
+            out.add(new DefaultHttpContent(buf));
         }
     }
 
