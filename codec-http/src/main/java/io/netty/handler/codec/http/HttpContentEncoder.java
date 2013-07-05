@@ -256,7 +256,18 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     private void cleanup() {
         if (encoder != null) {
             // Clean-up the previous encoder if not cleaned up correctly.
-            finishEncode(Unpooled.buffer());
+            if (encoder.finish()) {
+                for (;;) {
+                    ByteBuf buf = (ByteBuf) encoder.readOutbound();
+                    if (buf == null) {
+                        break;
+                    }
+                    // Release the buffer
+                    // https://github.com/netty/netty/issues/1524
+                    buf.release();
+                }
+            }
+            encoder = null;
         }
     }
 
@@ -280,6 +291,10 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                 break;
             }
             out.writeBytes(buf);
+
+            // Need to release the buffer after write it
+            // See https://github.com/netty/netty/issues/1524
+            buf.release();
         }
     }
 
