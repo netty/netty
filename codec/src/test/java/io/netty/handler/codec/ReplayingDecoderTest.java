@@ -16,7 +16,6 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufIndexFinder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -57,9 +56,9 @@ public class ReplayingDecoderTest {
 
         @Override
         protected void decode(ChannelHandlerContext ctx, ByteBuf in, MessageList<Object> out) {
-            ByteBuf msg = in.readBytes(in.bytesBefore(ByteBufIndexFinder.LF));
-            in.skipBytes(1);
+            ByteBuf msg = in.readBytes(in.bytesBefore((byte) '\n'));
             out.add(msg);
+            in.skipBytes(1);
         }
     }
 
@@ -98,6 +97,7 @@ public class ReplayingDecoderTest {
         assertEquals(Unpooled.wrappedBuffer(new byte[] {'C' }), ch.readInbound());
         assertNull("Must be null as it must only decode one frame", ch.readInbound());
 
+        ch.read();
         ch.finish();
         assertEquals(Unpooled.wrappedBuffer(new byte[] {'B' }), ch.readInbound());
         assertNull(ch.readInbound());

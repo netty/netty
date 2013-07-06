@@ -226,19 +226,6 @@ public final class ByteBufUtil {
     }
 
     /**
-     * The default implementation of {@link ByteBuf#indexOf(int, int, ByteBufIndexFinder)}.
-     * This method is useful when implementing a new buffer type.
-     */
-    @Deprecated
-    public static int indexOf(ByteBuf buffer, int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
-        if (fromIndex <= toIndex) {
-            return firstIndexOf(buffer, fromIndex, toIndex, indexFinder);
-        } else {
-            return lastIndexOf(buffer, fromIndex, toIndex, indexFinder);
-        }
-    }
-
-    /**
      * Toggles the endianness of the specified 16-bit short integer.
      */
     public static short swapShort(short value) {
@@ -293,38 +280,6 @@ public final class ByteBufUtil {
 
         for (int i = fromIndex - 1; i >= toIndex; i --) {
             if (buffer.getByte(i) == value) {
-                return i;
-            }
-        }
-
-        return -1;
-    }
-
-    @SuppressWarnings("deprecation")
-    private static int firstIndexOf(ByteBuf buffer, int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
-        fromIndex = Math.max(fromIndex, 0);
-        if (fromIndex >= toIndex || buffer.capacity() == 0) {
-            return -1;
-        }
-
-        for (int i = fromIndex; i < toIndex; i ++) {
-            if (indexFinder.find(buffer, i)) {
-                return i;
-            }
-        }
-
-        return -1;
-    }
-
-    @SuppressWarnings("deprecation")
-    private static int lastIndexOf(ByteBuf buffer, int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
-        fromIndex = Math.min(fromIndex, buffer.capacity());
-        if (fromIndex < 0 || buffer.capacity() == 0) {
-            return -1;
-        }
-
-        for (int i = fromIndex - 1; i >= toIndex; i --) {
-            if (indexFinder.find(buffer, i)) {
                 return i;
             }
         }

@@ -1556,27 +1556,6 @@ public interface ByteBuf extends ReferenceCounted, Comparable<ByteBuf> {
     int indexOf(int fromIndex, int toIndex, byte value);
 
     /**
-     * @deprecated Use {@link #forEachByte(int, int, ByteBufProcessor)} instead.
-     *
-     * Locates the first place where the specified {@code indexFinder}
-     * returns {@code true}.  The search takes place from the specified
-     * {@code fromIndex} (inclusive) to the specified {@code toIndex}
-     * (exclusive).
-     * <p>
-     * If {@code fromIndex} is greater than {@code toIndex}, the search is
-     * performed in a reversed order.
-     * <p>
-     * This method does not modify {@code readerIndex} or {@code writerIndex} of
-     * this buffer.
-     *
-     * @return the absolute index where the specified {@code indexFinder}
-     *         returned {@code true}.  {@code -1} if the {@code indexFinder}
-     *         did not return {@code true} at all.
-     */
-    @Deprecated
-    int indexOf(int fromIndex, int toIndex, ByteBufIndexFinder indexFinder);
-
-    /**
      * Locates the first occurrence of the specified {@code value} in this
      * buffer.  The search takes place from the current {@code readerIndex}
      * (inclusive) to the current {@code writerIndex} (exclusive).
@@ -1588,24 +1567,6 @@ public interface ByteBuf extends ReferenceCounted, Comparable<ByteBuf> {
      *         and the first occurrence if found. {@code -1} otherwise.
      */
     int bytesBefore(byte value);
-
-    /**
-     * @deprecated Use {@link #forEachByte(ByteBufProcessor)} instead.
-     *
-     * Locates the first place where the specified {@code indexFinder} returns
-     * {@code true}.  The search takes place from the current {@code readerIndex}
-     * (inclusive) to the current {@code writerIndex}.
-     * <p>
-     * This method does not modify {@code readerIndex} or {@code writerIndex} of
-     * this buffer.
-     *
-     * @return the number of bytes between the current {@code readerIndex}
-     *         and the first place where the {@code indexFinder} returned
-     *         {@code true}.  {@code -1} if the {@code indexFinder} did not
-     *         return {@code true} at all.
-     */
-    @Deprecated
-    int bytesBefore(ByteBufIndexFinder indexFinder);
 
     /**
      * Locates the first occurrence of the specified {@code value} in this
@@ -1624,27 +1585,6 @@ public interface ByteBuf extends ReferenceCounted, Comparable<ByteBuf> {
     int bytesBefore(int length, byte value);
 
     /**
-     * @deprecated Use {@link #forEachByte(int, int, ByteBufProcessor)} instead.
-     *
-     * Locates the first place where the specified {@code indexFinder} returns
-     * {@code true}.  The search starts the current {@code readerIndex}
-     * (inclusive) and lasts for the specified {@code length}.
-     * <p>
-     * This method does not modify {@code readerIndex} or {@code writerIndex} of
-     * this buffer.
-     *
-     * @return the number of bytes between the current {@code readerIndex}
-     *         and the first place where the {@code indexFinder} returned
-     *         {@code true}.  {@code -1} if the {@code indexFinder} did not
-     *         return {@code true} at all.
-     *
-     * @throws IndexOutOfBoundsException
-     *         if {@code length} is greater than {@code this.readableBytes}
-     */
-    @Deprecated
-    int bytesBefore(int length, ByteBufIndexFinder indexFinder);
-
-    /**
      * Locates the first occurrence of the specified {@code value} in this
      * buffer.  The search starts from the specified {@code index} (inclusive)
      * and lasts for the specified {@code length}.
@@ -1659,27 +1599,6 @@ public interface ByteBuf extends ReferenceCounted, Comparable<ByteBuf> {
      *         if {@code index + length} is greater than {@code this.capacity}
      */
     int bytesBefore(int index, int length, byte value);
-
-    /**
-     * @deprecated Use {@link #forEachByte(int, int, ByteBufProcessor)} instead.
-     *
-     * Locates the first place where the specified {@code indexFinder} returns
-     * {@code true}.  The search starts the specified {@code index} (inclusive)
-     * and lasts for the specified {@code length}.
-     * <p>
-     * This method does not modify {@code readerIndex} or {@code writerIndex} of
-     * this buffer.
-     *
-     * @return the number of bytes between the specified {@code index}
-     *         and the first place where the {@code indexFinder} returned
-     *         {@code true}.  {@code -1} if the {@code indexFinder} did not
-     *         return {@code true} at all.
-     *
-     * @throws IndexOutOfBoundsException
-     *         if {@code index + length} is greater than {@code this.capacity}
-     */
-    @Deprecated
-    int bytesBefore(int index, int length, ByteBufIndexFinder indexFinder);
 
     /**
      * Iterates over the readable bytes of this buffer with the specified {@code processor} in ascending order.
