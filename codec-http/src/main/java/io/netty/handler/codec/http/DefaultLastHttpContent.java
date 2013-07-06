@@ -55,6 +55,13 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
     }
 
     @Override
+    public LastHttpContent duplicate() {
+        DefaultLastHttpContent copy = new DefaultLastHttpContent(content().duplicate());
+        copy.trailingHeaders().set(trailingHeaders());
+        return copy;
+    }
+
+    @Override
     public LastHttpContent retain(int increment) {
         super.retain(increment);
         return this;

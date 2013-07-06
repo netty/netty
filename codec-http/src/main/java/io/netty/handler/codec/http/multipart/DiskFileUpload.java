@@ -179,6 +179,21 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
     }
 
     @Override
+    public FileUpload duplicate() {
+        DiskFileUpload upload = new DiskFileUpload(getName(),
+                getFilename(), getContentType(), getContentTransferEncoding(), getCharset(), size);
+        ByteBuf buf = content();
+        if (buf != null) {
+            try {
+                upload.setContent(buf.duplicate());
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+        return upload;
+    }
+
+    @Override
     public FileUpload retain(int increment) {
         super.retain(increment);
         return this;

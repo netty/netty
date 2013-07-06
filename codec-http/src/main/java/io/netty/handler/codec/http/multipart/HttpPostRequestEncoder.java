@@ -1146,6 +1146,15 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
         }
 
         @Override
+        public FullHttpRequest duplicate() {
+            DefaultFullHttpRequest duplicate = new DefaultFullHttpRequest(
+                    getProtocolVersion(), getMethod(), getUri(), content().duplicate());
+            duplicate.headers().set(headers());
+            duplicate.trailingHeaders().set(trailingHeaders());
+            return duplicate;
+        }
+
+        @Override
         public FullHttpRequest retain(int increment) {
             content.retain(increment);
             return this;

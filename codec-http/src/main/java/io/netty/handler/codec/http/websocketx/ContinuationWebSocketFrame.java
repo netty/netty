@@ -125,6 +125,11 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
     }
 
     @Override
+    public ContinuationWebSocketFrame duplicate() {
+        return new ContinuationWebSocketFrame(isFinalFragment(), rsv(), content().duplicate(), aggregatedText());
+    }
+
+    @Override
     public ContinuationWebSocketFrame retain() {
         super.retain();
         return this;
