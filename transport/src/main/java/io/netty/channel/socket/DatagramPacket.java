@@ -48,6 +48,11 @@ public final class DatagramPacket
     }
 
     @Override
+    public DatagramPacket duplicate() {
+        return new DatagramPacket(content().duplicate(), recipient(), sender());
+    }
+
+    @Override
     public DatagramPacket retain() {
         super.retain();
         return this;

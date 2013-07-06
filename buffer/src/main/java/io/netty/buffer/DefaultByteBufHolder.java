@@ -46,6 +46,11 @@ public class DefaultByteBufHolder implements ByteBufHolder {
     }
 
     @Override
+    public ByteBufHolder duplicate() {
+        return new DefaultByteBufHolder(data.duplicate());
+    }
+
+    @Override
     public int refCnt() {
         return data.refCnt();
     }

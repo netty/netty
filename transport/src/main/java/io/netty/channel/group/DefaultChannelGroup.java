@@ -251,7 +251,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
         if (message instanceof ByteBuf) {
             return ((ByteBuf) message).duplicate().retain();
         } else if (message instanceof ByteBufHolder) {
-            return ((ByteBufHolder) message).copy();
+            return ((ByteBufHolder) message).duplicate().retain();
         } else {
             return ReferenceCountUtil.retain(message);
         }

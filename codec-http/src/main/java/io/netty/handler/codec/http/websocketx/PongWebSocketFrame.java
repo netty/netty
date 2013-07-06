@@ -60,6 +60,11 @@ public class PongWebSocketFrame extends WebSocketFrame {
     }
 
     @Override
+    public PongWebSocketFrame duplicate() {
+        return new PongWebSocketFrame(isFinalFragment(), rsv(), content().duplicate());
+    }
+
+    @Override
     public PongWebSocketFrame retain() {
         super.retain();
         return this;
