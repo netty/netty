@@ -650,21 +650,7 @@ public final class EmptyByteBuf implements ByteBuf {
     }
 
     @Override
-    @Deprecated
-    public int indexOf(int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
-        checkIndex(fromIndex);
-        checkIndex(toIndex);
-        return -1;
-    }
-
-    @Override
     public int bytesBefore(byte value) {
-        return -1;
-    }
-
-    @Override
-    @Deprecated
-    public int bytesBefore(ByteBufIndexFinder indexFinder) {
         return -1;
     }
 
@@ -675,21 +661,7 @@ public final class EmptyByteBuf implements ByteBuf {
     }
 
     @Override
-    @Deprecated
-    public int bytesBefore(int length, ByteBufIndexFinder indexFinder) {
-        checkLength(length);
-        return -1;
-    }
-
-    @Override
     public int bytesBefore(int index, int length, byte value) {
-        checkIndex(index, length);
-        return -1;
-    }
-
-    @Override
-    @Deprecated
-    public int bytesBefore(int index, int length, ByteBufIndexFinder indexFinder) {
         checkIndex(index, length);
         return -1;
     }
