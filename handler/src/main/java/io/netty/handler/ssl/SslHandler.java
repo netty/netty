@@ -956,7 +956,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private void notifyHandshakeFailure(Throwable cause) {
         if (handshakePromise.tryFailure(cause)) {
             ctx.fireUserEventTriggered(new SslHandshakeCompletionEvent(cause));
-            ctx.pipeline().fireExceptionCaught(cause);
+            ctx.close();
         }
     }
 

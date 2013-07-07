@@ -248,7 +248,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                     break;
                 }
             }
-        } catch (CodecException e) {
+        } catch (DecoderException e) {
             throw e;
         } catch (Throwable cause) {
             throw new DecoderException(cause);
