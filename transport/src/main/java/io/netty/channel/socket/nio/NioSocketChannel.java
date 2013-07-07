@@ -28,6 +28,7 @@ import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -265,21 +266,22 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
-        int size = msgs.size();
+    protected int doWrite(MessageList<Object> msgs, final int index) throws Exception {
+        final int size = msgs.size();
 
         // Do non-gathering write for a single buffer case.
         if (size <= 1 || !msgs.containsOnly(ByteBuf.class)) {
             return super.doWrite(msgs, index);
         }
 
-        MessageList<ByteBuf> bufs = msgs.cast();
+        final Object[] bufs = msgs.array();
 
         ByteBuffer[] nioBuffers = getNioBufferArray();
         int nioBufferCnt = 0;
         long expectedWrittenBytes = 0;
         for (int i = index; i < size; i++) {
-            ByteBuf buf = bufs.get(i);
+            ByteBuf buf = (ByteBuf) bufs[i];
+
             int readerIndex = buf.readerIndex();
             int readableBytes = buf.readableBytes();
             expectedWrittenBytes += readableBytes;
@@ -307,7 +309,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                 ByteBuf directBuf = alloc().directBuffer(readableBytes);
                 directBuf.writeBytes(buf, readerIndex, readableBytes);
                 buf.release();
-                bufs.set(i, directBuf);
+                bufs[i] = directBuf;
                 if (nioBufferCnt == nioBuffers.length) {
                     nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCnt);
                 }
@@ -315,10 +317,11 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             }
         }
 
+        final SocketChannel ch = javaChannel();
         long writtenBytes = 0;
         boolean done = false;
         for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
-            final long localWrittenBytes = javaChannel().write(nioBuffers, 0, nioBufferCnt);
+            final long localWrittenBytes = ch.write(nioBuffers, 0, nioBufferCnt);
             updateOpWrite(expectedWrittenBytes, localWrittenBytes, i == 0);
             if (localWrittenBytes == 0) {
                 break;
@@ -334,8 +337,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         if (done) {
             // release buffers
             for (int i = index; i < size; i++) {
-                ByteBuf buf = bufs.get(i);
-                buf.release();
+                ((ReferenceCounted) bufs[i]).release();
             }
             return size - index;
         } else {
@@ -343,14 +345,16 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             // Release the fully written buffers and update the indexes of the partially written buffer.
             int writtenBufs = 0;
             for (int i = index; i < size; i++) {
-                ByteBuf buf = bufs.get(i);
-                int readable = buf.readableBytes();
-                if (readable < writtenBytes) {
+                final ByteBuf buf = (ByteBuf) bufs[i];
+                final int readerIndex = buf.readerIndex();
+                final int readableBytes = buf.writerIndex() - readerIndex;
+
+                if (readableBytes < writtenBytes) {
                     writtenBufs ++;
                     buf.release();
-                    writtenBytes -= readable;
-                } else if (readable > writtenBytes) {
-                    buf.readerIndex(buf.readerIndex() + (int) writtenBytes);
+                    writtenBytes -= readableBytes;
+                } else if (readableBytes > writtenBytes) {
+                    buf.readerIndex(readerIndex + (int) writtenBytes);
                     break;
                 } else { // readable == writtenBytes
                     writtenBufs ++;
