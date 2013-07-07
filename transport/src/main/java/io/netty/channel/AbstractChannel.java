@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -30,7 +31,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
-import java.util.Random;
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -42,15 +42,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     static final ConcurrentMap<Integer, Channel> allChannels = PlatformDependent.newConcurrentHashMap();
 
-    private static final Random random = new Random();
-
     /**
      * Generates a negative unique integer ID.  This method generates only
      * negative integers to avoid conflicts with user-specified IDs where only
      * non-negative integers are allowed.
      */
     private static Integer allocateId(Channel channel) {
-        int idVal = random.nextInt();
+        int idVal = ThreadLocalRandom.current().nextInt();
         if (idVal > 0) {
             idVal = -idVal;
         } else if (idVal == 0) {
