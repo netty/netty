@@ -29,6 +29,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.stream.ChunkedMessageInput;
+import io.netty.util.internal.ThreadLocalRandom;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,7 +41,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
-import java.util.Random;
 import java.util.regex.Pattern;
 
 import static io.netty.buffer.Unpooled.*;
@@ -265,8 +265,7 @@ public class HttpPostRequestEncoder implements ChunkedMessageInput<HttpContent> 
      */
     private static String getNewMultipartDelimiter() {
         // construct a generated delimiter
-        Random random = new Random();
-        return Long.toHexString(random.nextLong()).toLowerCase();
+        return Long.toHexString(ThreadLocalRandom.current().nextLong()).toLowerCase();
     }
 
     /**
