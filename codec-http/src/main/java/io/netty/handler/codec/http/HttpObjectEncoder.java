@@ -23,7 +23,6 @@ import io.netty.util.CharsetUtil;
 
 import java.util.Map;
 
-import static io.netty.buffer.Unpooled.*;
 import static io.netty.handler.codec.http.HttpConstants.*;
 
 /**
@@ -42,9 +41,9 @@ import static io.netty.handler.codec.http.HttpConstants.*;
 public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageToMessageEncoder<HttpObject> {
     private static final byte[] CRLF = { CR, LF };
     private static final byte[] ZERO_CRLF = { '0', CR, LF };
-    private static final ByteBuf ZERO_CRLF_CRLF_BUF =
-            unreleasableBuffer(directBuffer(5, 5).writeBytes(ZERO_CRLF).writeBytes(CRLF));
+    private static final byte[] ZERO_CRLF_CRLF = { '0', CR, LF, CR, LF };
     private static final byte[] HEADER_SEPARATOR = { COLON, SP};
+
     private static final int ST_INIT = 0;
     private static final int ST_CONTENT_NON_CHUNK = 1;
     private static final int ST_CONTENT_CHUNK = 2;
@@ -95,13 +94,13 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                     buf.writeBytes(CRLF);
                     out.add(buf);
                     out.add(content.retain());
-                    out.add(wrappedBuffer(CRLF));
+                    out.add(ctx.alloc().buffer(CRLF.length).writeBytes(CRLF));
                 }
 
                 if (chunk instanceof LastHttpContent) {
                     HttpHeaders headers = ((LastHttpContent) chunk).trailingHeaders();
                     if (headers.isEmpty()) {
-                        out.add(ZERO_CRLF_CRLF_BUF.duplicate());
+                        out.add(ctx.alloc().buffer(ZERO_CRLF_CRLF.length).writeBytes(ZERO_CRLF_CRLF));
                     } else {
                         ByteBuf buf = ctx.alloc().buffer();
                         buf.writeBytes(ZERO_CRLF);
