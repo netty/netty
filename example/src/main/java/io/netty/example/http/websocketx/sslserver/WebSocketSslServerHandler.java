@@ -123,7 +123,7 @@ public class WebSocketSslServerHandler extends SimpleChannelInboundHandler<Objec
         // Send the uppercase string back.
         String request = ((TextWebSocketFrame) frame).text();
         if (logger.isLoggable(Level.FINE)) {
-            logger.fine(String.format("Channel %s received %s", ctx.channel().id(), request));
+            logger.fine(String.format("Channel %s received %s", ctx.channel().hashCode(), request));
         }
         ctx.channel().write(new TextWebSocketFrame(request.toUpperCase()));
     }

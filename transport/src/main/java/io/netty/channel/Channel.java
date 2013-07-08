@@ -69,11 +69,6 @@ import java.net.SocketAddress;
 public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPropertyAccess, Comparable<Channel> {
 
     /**
-     * Returns the unique integer ID of this channel. The returned value MUST be non {@code null}.
-     */
-    Integer id();
-
-    /**
      * Return the {@link EventLoop} this {@link Channel} was registered too.
      */
     EventLoop eventLoop();

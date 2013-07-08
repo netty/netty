@@ -31,7 +31,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * A skeletal {@link Channel} implementation.
@@ -40,37 +39,19 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractChannel.class);
 
-    static final ConcurrentMap<Integer, Channel> allChannels = PlatformDependent.newConcurrentHashMap();
-
     /**
      * Generates a negative unique integer ID.  This method generates only
      * negative integers to avoid conflicts with user-specified IDs where only
      * non-negative integers are allowed.
      */
-    private static Integer allocateId(Channel channel) {
+    private static Integer allocateId() {
         int idVal = ThreadLocalRandom.current().nextInt();
         if (idVal > 0) {
             idVal = -idVal;
         } else if (idVal == 0) {
             idVal = -1;
         }
-
-        Integer id;
-        for (;;) {
-            id = Integer.valueOf(idVal);
-            // Loop until a unique ID is acquired.
-            // It should be found in one loop practically.
-            if (allChannels.putIfAbsent(id, channel) == null) {
-                // Successfully acquired.
-                return id;
-            } else {
-                // Taken by other channel at almost the same moment.
-                idVal --;
-                if (idVal >= 0) {
-                    idVal = -1;
-                }
-            }
-        }
+        return idVal;
     }
 
     private final Channel parent;
@@ -108,13 +89,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     protected AbstractChannel(Channel parent, Integer id) {
         if (id == null) {
-            id = allocateId(this);
+            id = allocateId();
         } else {
             if (id.intValue() < 0) {
                 throw new IllegalArgumentException("id: " + id + " (expected: >= 0)");
-            }
-            if (allChannels.putIfAbsent(id, this) != null) {
-                throw new IllegalArgumentException("duplicate ID: " + id);
             }
         }
 
@@ -122,23 +100,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         this.id = id;
         unsafe = newUnsafe();
         pipeline = new DefaultChannelPipeline(this);
-
-        closeFuture().addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                allChannels.remove(id());
-            }
-        });
     }
 
     @Override
     public boolean isWritable() {
         return outboundBuffer.getWritable();
-    }
-
-    @Override
-    public final Integer id() {
-        return id;
     }
 
     @Override
@@ -346,17 +312,17 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return this == o;
     }
 
-    /**
-     * Compares the {@linkplain #id() ID} of the two channels.
-     */
     @Override
     public final int compareTo(Channel o) {
-        return id().compareTo(o.id());
+        if (o instanceof AbstractChannel) {
+            return id.compareTo(((AbstractChannel) o).id);
+        }
+        return id.compareTo(Integer.valueOf(o.hashCode()));
     }
 
     /**
      * Returns the {@link String} representation of this channel.  The returned
-     * string contains the {@linkplain #id() ID}, {@linkplain #localAddress() local address},
+     * string contains the {@linkplain #hashCode()} ID}, {@linkplain #localAddress() local address},
      * and {@linkplain #remoteAddress() remote address} of this channel for
      * easier identification.
      */
