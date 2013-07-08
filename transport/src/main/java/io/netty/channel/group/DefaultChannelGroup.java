@@ -186,7 +186,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             new LinkedHashMap<Integer, ChannelFuture>(size());
 
         for (Channel c: serverChannels.values()) {
-            futures.put(c.id(), c.close().awaitUninterruptibly());
+            futures.put(c.id(), c.close());
         }
         for (Channel c: nonServerChannels.values()) {
             futures.put(c.id(), c.close());
