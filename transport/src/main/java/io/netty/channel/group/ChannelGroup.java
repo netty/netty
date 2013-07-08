@@ -97,13 +97,6 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
     String name();
 
     /**
-     * Returns the {@link Channel} whose ID matches the specified integer.
-     *
-     * @return the matching {@link Channel} if found. {@code null} otherwise.
-     */
-    Channel find(Integer id);
-
-    /**
      * Writes the specified {@code message} to all {@link Channel}s in this
      * group. If the specified {@code message} is an instance of
      * {@link ByteBuf}, it is automatically
