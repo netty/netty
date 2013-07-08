@@ -808,7 +808,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         return packetLength;
     }
 
-    @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws SSLException {
         int packetLength = this.packetLength;
         if (packetLength == 0) {
