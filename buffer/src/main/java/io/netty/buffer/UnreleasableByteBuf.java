@@ -30,7 +30,7 @@ import java.nio.charset.Charset;
  * A {@link ByteBuf} implementation that wraps another buffer to prevent a user from increasing or decreasing the
  * wrapped buffer's reference count.
  */
-final class UnreleasableByteBuf implements ByteBuf {
+final class UnreleasableByteBuf extends ByteBuf {
 
     private final ByteBuf buf;
     private SwappedByteBuf swappedBuf;
