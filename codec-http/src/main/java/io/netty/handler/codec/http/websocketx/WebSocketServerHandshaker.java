@@ -158,7 +158,7 @@ public abstract class WebSocketServerHandshaker {
             logger.debug(String.format("%s WS Version %s server handshake", channel, version()));
         }
         FullHttpResponse response = newHandshakeResponse(req, responseHeaders);
-        channel.write(response).addListener(new ChannelFutureListener() {
+        channel.write(response).flush().addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.isSuccess()) {
@@ -225,7 +225,7 @@ public abstract class WebSocketServerHandshaker {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
-        return channel.write(frame, promise).addListener(ChannelFutureListener.CLOSE);
+        return channel.write(frame).flush(promise).addListener(ChannelFutureListener.CLOSE);
     }
 
     /**

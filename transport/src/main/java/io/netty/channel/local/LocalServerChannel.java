@@ -20,7 +20,6 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
-import io.netty.channel.MessageList;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
@@ -131,9 +130,14 @@ public class LocalServerChannel extends AbstractServerChannel {
             return;
         }
 
-        Object[] messages = inboundBuffer.toArray();
-        inboundBuffer.clear();
-        pipeline.fireMessageReceived(messages);
+        for (;;) {
+            Object m = inboundBuffer.poll();
+            if (m == null) {
+                break;
+            }
+            pipeline.fireMessageReceived(m);
+        }
+        pipeline.fireMessageReceivedLast();
         pipeline.fireChannelReadSuspended();
     }
 
@@ -149,16 +153,14 @@ public class LocalServerChannel extends AbstractServerChannel {
             inboundBuffer.add(child);
             if (acceptInProgress) {
                 acceptInProgress = false;
-                MessageList<Object> messages = MessageList.newInstance();
                 for (;;) {
                     Object m = inboundBuffer.poll();
                     if (m == null) {
                         break;
                     }
-                    messages.add(m);
+                    pipeline.fireMessageReceived(m);
                 }
-                inboundBuffer.clear();
-                pipeline.fireMessageReceived(messages);
+                pipeline.fireMessageReceivedLast();
                 pipeline.fireChannelReadSuspended();
             }
         } else {

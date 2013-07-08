@@ -21,7 +21,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.MessageList;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -57,21 +56,18 @@ public class EchoByteHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
 
-        log.info("ECHO active {}", NioUdtProvider.socketUDT(ctx.channel())
-                .toStringOptions());
+        log.info("ECHO active {}", NioUdtProvider.socketUDT(ctx.channel()).toStringOptions());
 
-        ctx.write(message);
+        ctx.write(message).flush();
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-        for (int i = 0; i < msgs.size(); i ++) {
-            ByteBuf buf = (ByteBuf) msgs.get(i);
-            if (meter != null) {
-                meter.mark(buf.readableBytes());
-            }
+    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+        ByteBuf buf = (ByteBuf) msg;
+        if (meter != null) {
+            meter.mark(buf.readableBytes());
         }
-        ctx.write(msgs);
+        ctx.write(msg).flush();
     }
 
     @Override

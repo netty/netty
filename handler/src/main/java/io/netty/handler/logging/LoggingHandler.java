@@ -21,7 +21,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.MessageList;
 import io.netty.util.internal.logging.InternalLogLevel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -292,49 +291,45 @@ public class LoggingHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-        logMessages(ctx, "RECEIVED", msgs);
-        ctx.fireMessageReceived(msgs);
+    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+        logMessage(ctx, "RECEIVED", msg);
+        ctx.fireMessageReceived(msg);
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
-        logMessages(ctx, "WRITE", msgs);
-        ctx.write(msgs, promise);
+    public void write(ChannelHandlerContext ctx, Object msg) throws Exception {
+        logMessage(ctx, "WRITE", msg);
+        ctx.write(msg);
     }
 
-    private void logMessages(ChannelHandlerContext ctx, String eventName, MessageList<Object> msgs) {
+    @Override
+    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         if (logger.isEnabled(internalLevel)) {
-            int size = msgs.size();
-            if (size == 0) {
-                logger.log(internalLevel, format(ctx, formatEmptyMessageList(eventName)));
-            } else {
-                for (int i = 0; i < size; i ++) {
-                    logger.log(internalLevel, format(ctx, formatMessage(eventName, i + 1, size, msgs.get(i))));
-                }
-            }
+            logger.log(internalLevel, format(ctx, "FLUSH"));
+        }
+        ctx.flush(promise);
+    }
+
+    private void logMessage(ChannelHandlerContext ctx, String eventName, Object msg) {
+        if (logger.isEnabled(internalLevel)) {
+            logger.log(internalLevel, format(ctx, formatMessage(eventName, msg)));
         }
     }
 
-    protected String formatEmptyMessageList(String eventName) {
-        return eventName + "(empty)";
-    }
-
-    protected String formatMessage(String eventName, int seq, int size, Object msg) {
+    protected String formatMessage(String eventName, Object msg) {
         if (msg instanceof ByteBuf) {
-            return formatByteBuf(eventName, seq, size, (ByteBuf) msg);
+            return formatByteBuf(eventName, (ByteBuf) msg);
         } else {
-            return formatNonByteBuf(eventName, seq, size, msg);
+            return formatNonByteBuf(eventName, msg);
         }
     }
 
-    protected String formatByteBuf(String eventName, int seq, int size, ByteBuf buf) {
+    protected String formatByteBuf(String eventName, ByteBuf buf) {
         int length = buf.readableBytes();
         int rows = length / 16 + (length % 15 == 0? 0 : 1) + 4;
         StringBuilder dump = new StringBuilder(rows * 80 + eventName.length() + 16);
 
-        dump.append(eventName).append('(').append(seq).append('/').append(size).append(", ");
-        dump.append(length).append('B').append(')');
+        dump.append(eventName).append('(').append(length).append('B').append(')');
         dump.append(
                 NEWLINE + "         +-------------------------------------------------+" +
                         NEWLINE + "         |  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f |" +
@@ -380,7 +375,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
         return dump.toString();
     }
 
-    protected String formatNonByteBuf(String eventName, int seq, int size, Object msg) {
-        return eventName + '(' + seq + '/' + size + "): " + msg;
+    protected String formatNonByteBuf(String eventName, Object msg) {
+        return eventName + ": " + msg;
     }
 }

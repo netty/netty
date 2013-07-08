@@ -61,7 +61,7 @@ public class SecureChatServerHandler extends SimpleChannelInboundHandler<String>
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
+    public void messageReceived0(ChannelHandlerContext ctx, String msg) throws Exception {
         // Send the received message to all channels but the current one.
         for (Channel c: channels) {
             if (c != ctx.channel()) {

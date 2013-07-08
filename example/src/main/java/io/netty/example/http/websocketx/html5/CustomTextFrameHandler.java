@@ -21,7 +21,7 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 
 public class CustomTextFrameHandler extends SimpleChannelInboundHandler<TextWebSocketFrame> {
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, TextWebSocketFrame frame) throws Exception {
+    protected void messageReceived0(ChannelHandlerContext ctx, TextWebSocketFrame frame) throws Exception {
         String request = frame.text();
         ctx.channel().write(new TextWebSocketFrame(request.toUpperCase()));
     }

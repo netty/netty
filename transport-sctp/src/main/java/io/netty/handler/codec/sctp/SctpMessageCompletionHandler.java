@@ -20,11 +20,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.MessageList;
 import io.netty.channel.sctp.SctpMessage;
 import io.netty.handler.codec.MessageToMessageDecoder;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -36,7 +36,7 @@ public class SctpMessageCompletionHandler extends MessageToMessageDecoder<SctpMe
     private final Map<Integer, ByteBuf> fragments = new HashMap<Integer, ByteBuf>();
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, SctpMessage msg, MessageList<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, SctpMessage msg, List<Object> out) throws Exception {
         final ByteBuf byteBuf = msg.content();
         final int protocolIdentifier = msg.protocolIdentifier();
         final int streamIdentifier = msg.streamIdentifier();

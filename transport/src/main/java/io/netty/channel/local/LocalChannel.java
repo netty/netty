@@ -24,7 +24,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
-import io.netty.channel.MessageList;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 
@@ -52,18 +51,19 @@ public class LocalChannel extends AbstractChannel {
     };
 
     private final ChannelConfig config = new DefaultChannelConfig(this);
-    private final Queue<MessageList<Object>> inboundBuffer = new ArrayDeque<MessageList<Object>>();
+    private final Queue<Object> inboundBuffer = new ArrayDeque<Object>();
     private final Runnable readTask = new Runnable() {
         @Override
         public void run() {
             ChannelPipeline pipeline = pipeline();
             for (;;) {
-                MessageList<Object> m = inboundBuffer.poll();
+                Object m = inboundBuffer.poll();
                 if (m == null) {
                     break;
                 }
                 pipeline.fireMessageReceived(m);
             }
+            pipeline.fireMessageReceivedLast();
             pipeline.fireChannelReadSuspended();
         }
     };
@@ -239,7 +239,7 @@ public class LocalChannel extends AbstractChannel {
         }
 
         ChannelPipeline pipeline = pipeline();
-        Queue<MessageList<Object>> inboundBuffer = this.inboundBuffer;
+        Queue<Object> inboundBuffer = this.inboundBuffer;
         if (inboundBuffer.isEmpty()) {
             readInProgress = true;
             return;
@@ -250,12 +250,13 @@ public class LocalChannel extends AbstractChannel {
             READER_STACK_DEPTH.set(stackDepth + 1);
             try {
                 for (;;) {
-                    MessageList<Object> received = inboundBuffer.poll();
+                    Object received = inboundBuffer.poll();
                     if (received == null) {
                         break;
                     }
                     pipeline.fireMessageReceived(received);
                 }
+                pipeline.fireMessageReceivedLast();
                 pipeline.fireChannelReadSuspended();
             } finally {
                 READER_STACK_DEPTH.set(stackDepth);
@@ -266,7 +267,7 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
+    protected int doWrite(Object[] msgs, int msgsLength, int startIndex) throws Exception {
         if (state < 2) {
             throw new NotYetConnectedException();
         }
@@ -277,37 +278,42 @@ public class LocalChannel extends AbstractChannel {
         final LocalChannel peer = this.peer;
         final ChannelPipeline peerPipeline = peer.pipeline();
         final EventLoop peerLoop = peer.eventLoop();
-        final int size = msgs.size();
-
-        // Use a copy because the original msgs will be recycled by AbstractChannel.
-        final MessageList<Object> msgsCopy = msgs.copy();
 
         if (peerLoop == eventLoop()) {
-            peer.inboundBuffer.add(msgsCopy);
+            for (int i = startIndex; i < msgsLength; i ++) {
+                peer.inboundBuffer.add(msgs[i]);
+            }
             finishPeerRead(peer, peerPipeline);
         } else {
+            // Use a copy because the original msgs will be recycled by AbstractChannel.
+            final Object[] msgsCopy = new Object[msgsLength - startIndex];
+            System.arraycopy(msgs, startIndex, msgsCopy, 0, msgsCopy.length);
+
             peerLoop.execute(new Runnable() {
                 @Override
                 public void run() {
-                    peer.inboundBuffer.add(msgsCopy);
+                    for (Object o: msgsCopy) {
+                        peer.inboundBuffer.add(o);
+                    }
                     finishPeerRead(peer, peerPipeline);
                 }
             });
         }
 
-        return size - index;
+        return msgsLength - startIndex;
     }
 
     private static void finishPeerRead(LocalChannel peer, ChannelPipeline peerPipeline) {
         if (peer.readInProgress) {
             peer.readInProgress = false;
             for (;;) {
-                MessageList<Object> received = peer.inboundBuffer.poll();
+                Object received = peer.inboundBuffer.poll();
                 if (received == null) {
                     break;
                 }
                 peerPipeline.fireMessageReceived(received);
             }
+            peerPipeline.fireMessageReceivedLast();
             peerPipeline.fireChannelReadSuspended();
         }
     }

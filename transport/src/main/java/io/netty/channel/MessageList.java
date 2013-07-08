@@ -85,7 +85,7 @@ import java.util.NoSuchElementException;
  *
  * @param <T> the type of the contained messages
  */
-public final class MessageList<T> implements Iterable<T> {
+final class MessageList<T> implements Iterable<T> {
 
     private static final int DEFAULT_INITIAL_CAPACITY = 8;
     private static final int MIN_INITIAL_CAPACITY = 4;

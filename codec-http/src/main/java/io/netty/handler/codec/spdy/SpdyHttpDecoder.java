@@ -17,7 +17,6 @@ package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.MessageList;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -31,6 +30,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -91,7 +91,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, SpdyFrame msg, MessageList<Object> out)
+    protected void decode(ChannelHandlerContext ctx, SpdyFrame msg, List<Object> out)
             throws Exception {
         if (msg instanceof SpdySynStreamFrame) {
 

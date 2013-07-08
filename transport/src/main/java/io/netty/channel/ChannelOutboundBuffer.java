@@ -34,17 +34,18 @@ final class ChannelOutboundBuffer {
     ChannelPromise currentPromise;
     MessageList<Object> currentMessages;
     int currentMessageIndex;
-    private int currentMessageListSize;
+    private long currentMessageListSize;
 
     private ChannelPromise[] promises;
     private MessageList<Object>[] messages;
+    private long[] messageListSizes;
 
     private int head;
     private int tail;
     private boolean inFail;
     private final AbstractChannel channel;
 
-    private int pendingOutboundBytes;
+    private long pendingOutboundBytes;
 
     private static final AtomicIntegerFieldUpdater<ChannelOutboundBuffer> WRITABLE_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(ChannelOutboundBuffer.class, "writable");
@@ -80,20 +81,29 @@ final class ChannelOutboundBuffer {
 
         promises = new ChannelPromise[initialCapacity];
         messages = new MessageList[initialCapacity];
+        messageListSizes = new long[initialCapacity];
         this.channel = channel;
     }
 
-    @SuppressWarnings("unchecked")
-    void add(MessageList<?> msgs, ChannelPromise promise) {
+    void addMessage(Object msg) {
+        int tail = this.tail;
+        MessageList<Object> msgs = messages[tail];
+        if (msgs == null) {
+            messages[tail] = msgs = MessageList.newInstance();
+        }
+        msgs.add(msg);
+
+        int size = channel.calculateMessageSize(msg);
+        messageListSizes[tail] += size;
+        incrementPendingOutboundBytes(size);
+    }
+
+    void addPromise(ChannelPromise promise) {
         int tail = this.tail;
         promises[tail] = promise;
-        messages[tail] = (MessageList<Object>) msgs;
-
         if ((this.tail = tail + 1 & promises.length - 1) == head) {
             doubleCapacity();
         }
-
-        incrementPendingOutboundBytes(messageListSize(msgs));
     }
 
     private void incrementPendingOutboundBytes(int size) {
@@ -101,7 +111,7 @@ final class ChannelOutboundBuffer {
             return;
         }
 
-        int newWriteBufferSize = pendingOutboundBytes += size;
+        long newWriteBufferSize = pendingOutboundBytes += size;
         int highWaterMark = channel.config().getWriteBufferHighWaterMark();
 
         if (newWriteBufferSize > highWaterMark) {
@@ -111,12 +121,12 @@ final class ChannelOutboundBuffer {
         }
     }
 
-    private void decrementPendingOutboundBytes(int size) {
+    private void decrementPendingOutboundBytes(long size) {
         if (size == 0) {
             return;
         }
 
-        int newWriteBufferSize =  pendingOutboundBytes -= size;
+        long newWriteBufferSize = pendingOutboundBytes -= size;
         int lowWaterMark = channel.config().getWriteBufferLowWaterMark();
 
         if (newWriteBufferSize == 0 || newWriteBufferSize < lowWaterMark) {
@@ -149,11 +159,18 @@ final class ChannelOutboundBuffer {
         System.arraycopy(messages, 0, a2, r, p);
         messages = a2;
 
+        long[] a3 = new long[newCapacity];
+        System.arraycopy(messageListSizes, p, a3, 0, r);
+        System.arraycopy(messageListSizes, 0, a3, r, p);
+        messageListSizes = a3;
+
         head = 0;
         tail = n;
     }
 
     boolean next() {
+        // FIXME: pendingOutboundBytes should be decreased when the messages are flushed.
+
         decrementPendingOutboundBytes(currentMessageListSize);
 
         int h = head;
@@ -169,21 +186,14 @@ final class ChannelOutboundBuffer {
         currentPromise = e;
         currentMessages = messages[h];
         currentMessageIndex = 0;
-        currentMessageListSize = messageListSize(currentMessages);
+        currentMessageListSize = messageListSizes[h];
 
         promises[h] = null;
         messages[h] = null;
+        messageListSizes[h] = 0;
 
         head = h + 1 & promises.length - 1;
         return true;
-    }
-
-    private int messageListSize(MessageList<?> messages) {
-        int size = 0;
-        for (int i = 0; i < messages.size(); i++) {
-            size += channel.calculateMessageSize(messages.get(i));
-        }
-        return size;
     }
 
     boolean getWritable() {
@@ -208,6 +218,7 @@ final class ChannelOutboundBuffer {
             do {
                 promises[i] = null;
                 messages[i] = null;
+                messageListSizes[i] = 0;
                 i = i + 1 & mask;
             } while (i != tail);
         }
@@ -233,17 +244,19 @@ final class ChannelOutboundBuffer {
 
             do {
                 if (!(currentPromise instanceof VoidChannelPromise) && !currentPromise.tryFailure(cause)) {
-                    logger.warn("Promise done already:", cause);
+                    logger.warn("Promise done already: {} - new exception is:", currentPromise, cause);
                 }
 
-                // Release all failed messages.
-                try {
-                    for (int i = currentMessageIndex; i < currentMessages.size(); i++) {
-                        Object msg = currentMessages.get(i);
-                        ReferenceCountUtil.release(msg);
+                if (currentMessages != null) {
+                    // Release all failed messages.
+                    try {
+                        for (int i = currentMessageIndex; i < currentMessages.size(); i++) {
+                            Object msg = currentMessages.get(i);
+                            ReferenceCountUtil.release(msg);
+                        }
+                    } finally {
+                        currentMessages.recycle();
                     }
-                } finally {
-                    currentMessages.recycle();
                 }
             } while(next());
         } finally {

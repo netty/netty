@@ -24,11 +24,9 @@ package io.netty.channel;
  * {@link ChannelPipeline}. Sub-classes may override a method implementation to change this.
  * </p>
  * <p>
- * Be aware that messages are not released after the {@link #messageReceived(ChannelHandlerContext, MessageList)}
- * method returns automatically. This is done for make it as flexible as possible and get the most out of
- * performance. Because of this you need to explicit call {@link MessageList#releaseAllAndRecycle()} if you
- * consumed all the messages. Because this is such a common need {@link SimpleChannelInboundHandler} is provided ,
- * which will automatically release messages and the {@link MessageList} after processing is done.
+ * Be aware that messages are not released after the {@link #messageReceived(ChannelHandlerContext, Object)}
+ * method returns automatically. If you are looking for a {@link ChannelInboundHandler} implementation that
+ * releases the received messages automatically, please see {@link SimpleChannelInboundHandler}.
  * </p>
  */
 public class ChannelInboundHandlerAdapter extends ChannelHandlerAdapter implements ChannelInboundHandler {
@@ -88,14 +86,19 @@ public class ChannelInboundHandlerAdapter extends ChannelHandlerAdapter implemen
     }
 
     /**
-     * Calls {@link ChannelHandlerContext#fireMessageReceived(MessageList)} to forward
+     * Calls {@link ChannelHandlerContext#fireMessageReceived(Object)} to forward
      * to the next {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-        ctx.fireMessageReceived(msgs);
+    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+        ctx.fireMessageReceived(msg);
+    }
+
+    @Override
+    public void messageReceivedLast(ChannelHandlerContext ctx) throws Exception {
+        ctx.fireMessageReceivedLast();
     }
 
     /**

@@ -20,7 +20,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.MessageList;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -53,18 +52,17 @@ public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
     private WebSocketServerHandshaker handshaker;
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-        MessageList<Object> out = MessageList.newInstance(msgs.size());
-        for (int i = 0; i < msgs.size(); i++) {
-            Object msg = msgs.get(i);
-            if (msg instanceof FullHttpRequest) {
-                handleHttpRequest(ctx, (FullHttpRequest) msg);
-            } else if (msg instanceof WebSocketFrame) {
-                handleWebSocketFrame(ctx, (WebSocketFrame) msg, out);
-            }
+    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+        if (msg instanceof FullHttpRequest) {
+            handleHttpRequest(ctx, (FullHttpRequest) msg);
+        } else if (msg instanceof WebSocketFrame) {
+            handleWebSocketFrame(ctx, (WebSocketFrame) msg);
         }
-        msgs.recycle();
-        ctx.write(out);
+    }
+
+    @Override
+    public void messageReceivedLast(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
     }
 
     private void handleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest req)
@@ -92,7 +90,7 @@ public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
         }
     }
 
-    private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame, MessageList<Object> out) {
+    private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame) {
         if (logger.isLoggable(Level.FINE)) {
             logger.fine(String.format(
                     "Channel %s received %s", ctx.channel().hashCode(), frame.getClass().getSimpleName()));
@@ -101,13 +99,13 @@ public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
         if (frame instanceof CloseWebSocketFrame) {
             handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
         } else if (frame instanceof PingWebSocketFrame) {
-            out.add(new PongWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.content()));
+            ctx.write(new PongWebSocketFrame(frame.isFinalFragment(), frame.rsv(), frame.content()));
         } else if (frame instanceof TextWebSocketFrame) {
-            out.add(frame);
+            ctx.write(frame);
         } else if (frame instanceof BinaryWebSocketFrame) {
-            out.add(frame);
+            ctx.write(frame);
         } else if (frame instanceof ContinuationWebSocketFrame) {
-            out.add(frame);
+            ctx.write(frame);
         } else if (frame instanceof PongWebSocketFrame) {
             frame.release();
             // Ignore
@@ -126,7 +124,7 @@ public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
         }
 
         // Send the response and close the connection if necessary.
-        ChannelFuture f = ctx.channel().write(res);
+        ChannelFuture f = ctx.channel().write(res).flush();
         if (!isKeepAlive(req) || res.getStatus().code() != 200) {
             f.addListener(ChannelFutureListener.CLOSE);
         }

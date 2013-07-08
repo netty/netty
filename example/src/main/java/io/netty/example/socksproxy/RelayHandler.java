@@ -19,7 +19,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.MessageList;
+import io.netty.util.ReferenceCountUtil;
 
 
 public final class RelayHandler extends ChannelInboundHandlerAdapter {
@@ -41,9 +41,11 @@ public final class RelayHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (relayChannel.isActive()) {
-            relayChannel.write(msgs);
+            relayChannel.write(msg).flush();
+        } else {
+            ReferenceCountUtil.release(msg);
         }
     }
 

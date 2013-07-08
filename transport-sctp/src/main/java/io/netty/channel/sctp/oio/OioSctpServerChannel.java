@@ -21,11 +21,9 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.MessageList;
 import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.sctp.DefaultSctpServerChannelConfig;
 import io.netty.channel.sctp.SctpServerChannelConfig;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -38,6 +36,7 @@ import java.nio.channels.Selector;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -179,7 +178,7 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected int doReadMessages(MessageList<Object> buf) throws Exception {
+    protected int doReadMessages(List<Object> buf) throws Exception {
         if (!isActive()) {
             return -1;
         }
@@ -286,11 +285,7 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
-        int size = msgs.size();
-        for (int i = index; i < size; i ++) {
-            ReferenceCountUtil.release(msgs.get(i));
-        }
+    protected int doWrite(Object[] msgs, int msgsLength, int startIndex) throws Exception {
         throw new UnsupportedOperationException();
     }
 }

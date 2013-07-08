@@ -48,7 +48,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
             assertFalse(ch.isOutputShutdown());
 
             s = ss.accept();
-            ch.write(Unpooled.wrappedBuffer(new byte[] { 1 })).sync();
+            ch.write(Unpooled.wrappedBuffer(new byte[] { 1 })).flush().sync();
             assertEquals(1, s.getInputStream().read());
 
             assertTrue(h.ch.isOpen());
@@ -86,7 +86,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        public void messageReceived0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
             queue.offer(msg.readByte());
         }
     }

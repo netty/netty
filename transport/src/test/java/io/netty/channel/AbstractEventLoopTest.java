@@ -64,7 +64,7 @@ public abstract class AbstractEventLoopTest {
 
     private static final class TestChannelHandler2 extends ChannelDuplexHandler {
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception { }
+        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception { }
     }
 
     protected abstract EventLoopGroup newEventLoopGroup();

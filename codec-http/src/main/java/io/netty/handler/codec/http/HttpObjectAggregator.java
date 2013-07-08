@@ -15,20 +15,21 @@
  */
 package io.netty.handler.codec.http;
 
+import static io.netty.handler.codec.http.HttpHeaders.is100ContinueExpected;
+import static io.netty.handler.codec.http.HttpHeaders.removeTransferEncodingChunked;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MessageList;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 
-import static io.netty.handler.codec.http.HttpHeaders.*;
+import java.util.List;
 
 /**
  * A {@link ChannelHandler} that aggregates an {@link HttpMessage}
@@ -108,7 +109,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, HttpObject msg, MessageList<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, HttpObject msg, List<Object> out) throws Exception {
         FullHttpMessage currentMessage = this.currentMessage;
 
         if (msg instanceof HttpMessage) {

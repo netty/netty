@@ -18,10 +18,11 @@ package io.netty.handler.codec.bytes;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MessageList;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.MessageToMessageDecoder;
+
+import java.util.List;
 
 /**
  * Decodes a received {@link ByteBuf} into an array of bytes.
@@ -49,7 +50,7 @@ import io.netty.handler.codec.MessageToMessageDecoder;
  */
 public class ByteArrayDecoder extends MessageToMessageDecoder<ByteBuf> {
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf msg, MessageList<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out) throws Exception {
         byte[] array;
         if (msg.hasArray()) {
             if (msg.arrayOffset() == 0 && msg.readableBytes() == msg.capacity()) {

@@ -21,7 +21,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 public class LocalEchoClientHandler extends SimpleChannelInboundHandler<Object> {
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void messageReceived0(ChannelHandlerContext ctx, Object msg) throws Exception {
         // Print as received
         System.out.println(msg);
     }

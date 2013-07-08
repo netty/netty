@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MessageList;
 import io.netty.util.Signal;
 import io.netty.util.internal.StringUtil;
 
@@ -106,7 +105,7 @@ import io.netty.util.internal.StringUtil;
  *   private final Queue&lt;Integer&gt; values = new LinkedList&lt;Integer&gt;();
  *
  *   {@code @Override}
- *   public void decode(.., {@link ByteBuf} in, {@link MessageList} out) throws Exception {
+ *   public void decode(.., {@link ByteBuf} in, List&lt;Object&gt; out) throws Exception {
  *
  *     // A message contains 2 integers.
  *     values.offer(buffer.readInt());
@@ -126,7 +125,7 @@ import io.netty.util.internal.StringUtil;
  *   private final Queue&lt;Integer&gt; values = new LinkedList&lt;Integer&gt;();
  *
  *   {@code @Override}
- *   public void decode(.., {@link ByteBuf} buffer, {@link MessageList} out) throws Exception {
+ *   public void decode(.., {@link ByteBuf} buffer, List&lt;Object&gt; out) throws Exception {
  *
  *     // Revert the state of the variable that might have been changed
  *     // since the last partial decode.
@@ -179,7 +178,7 @@ import io.netty.util.internal.StringUtil;
  *
  *   {@code @Override}
  *   protected void decode({@link ChannelHandlerContext} ctx,
- *                           {@link ByteBuf} in, {@link MessageList} out) throws Exception {
+ *                           {@link ByteBuf} in, List&lt;Object&gt; out) throws Exception {
  *     switch (state()) {
  *     case READ_LENGTH:
  *       length = buf.readInt();
@@ -207,7 +206,7 @@ import io.netty.util.internal.StringUtil;
  *
  *   {@code @Override}
  *   protected void decode({@link ChannelHandlerContext} ctx,
- *                           {@link ByteBuf} in, {@link MessageList} out) throws Exception {
+ *                           {@link ByteBuf} in, List&lt;Object&gt; out) throws Exception {
  *     if (!readLength) {
  *       length = buf.readInt();
  *       <strong>readLength = true;</strong>
@@ -238,7 +237,7 @@ import io.netty.util.internal.StringUtil;
  *
  *     {@code @Override}
  *     protected Object decode({@link ChannelHandlerContext} ctx,
- *                             {@link ByteBuf} in, {@link MessageList} out) {
+ *                             {@link ByteBuf} in, List&lt;Object&gt; out) {
  *         ...
  *         // Decode the first message
  *         Object firstMessage = ...;
@@ -320,7 +319,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        MessageList<Object> out = MessageList.newInstance();
+        CodecOutput out = CodecOutput.newInstance();
         try {
             replayable.terminate();
             callDecode(ctx, internalBuffer(), out);
@@ -338,13 +337,15 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                 cumulation = null;
             }
 
-            ctx.fireMessageReceived(out);
+            for (int i = 0; i < out.size(); i ++) {
+                ctx.fireMessageReceived(out.get(i));
+            }
             ctx.fireChannelInactive();
         }
     }
 
     @Override
-    protected void callDecode(ChannelHandlerContext ctx, ByteBuf in, MessageList<Object> out) {
+    protected void callDecode(ChannelHandlerContext ctx, ByteBuf in, CodecOutput out) {
         replayable.setCumulation(in);
         try {
             while (in.isReadable()) {

@@ -17,8 +17,7 @@ package io.netty.example.worldclock;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.MessageList;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.example.worldclock.WorldClockProtocol.Continent;
 import io.netty.example.worldclock.WorldClockProtocol.LocalTime;
 import io.netty.example.worldclock.WorldClockProtocol.LocalTimes;
@@ -35,7 +34,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
-public class WorldClockClientHandler extends ChannelInboundHandlerAdapter {
+public class WorldClockClientHandler extends SimpleChannelInboundHandler<LocalTimes> {
 
     private static final Logger logger = Logger.getLogger(
             WorldClockClientHandler.class.getName());
@@ -45,6 +44,10 @@ public class WorldClockClientHandler extends ChannelInboundHandlerAdapter {
     // Stateful properties
     private volatile Channel channel;
     private final BlockingQueue<LocalTimes> answer = new LinkedBlockingQueue<LocalTimes>();
+
+    public WorldClockClientHandler() {
+        super(false);
+    }
 
     public List<String> getLocalTimes(Collection<String> cities) {
         Locations.Builder builder = Locations.newBuilder();
@@ -96,11 +99,8 @@ public class WorldClockClientHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-        for (int i = 0; i < msgs.size(); i++) {
-            answer.add((LocalTimes) msgs.get(i));
-        }
-        msgs.recycle();
+    public void messageReceived0(ChannelHandlerContext ctx, LocalTimes times) throws Exception {
+        answer.add(times);
     }
 
     @Override

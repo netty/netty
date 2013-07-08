@@ -16,8 +16,7 @@
 package io.netty.example.worldclock;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.MessageList;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.example.worldclock.WorldClockProtocol.Continent;
 import io.netty.example.worldclock.WorldClockProtocol.DayOfWeek;
 import io.netty.example.worldclock.WorldClockProtocol.LocalTime;
@@ -32,41 +31,38 @@ import java.util.logging.Logger;
 
 import static java.util.Calendar.*;
 
-public class WorldClockServerHandler extends ChannelInboundHandlerAdapter {
+public class WorldClockServerHandler extends SimpleChannelInboundHandler<Locations> {
 
     private static final Logger logger = Logger.getLogger(
             WorldClockServerHandler.class.getName());
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-        int size = msgs.size();
-        MessageList<Object> out = MessageList.newInstance(size);
-        for (int i = 0; i < size; i++) {
-            Locations locations = (Locations) msgs.get(i);
-            long currentTime = System.currentTimeMillis();
+    public void messageReceived0(ChannelHandlerContext ctx, Locations locations) throws Exception {
+        long currentTime = System.currentTimeMillis();
 
-            LocalTimes.Builder builder = LocalTimes.newBuilder();
-            for (Location l: locations.getLocationList()) {
-                TimeZone tz = TimeZone.getTimeZone(
-                        toString(l.getContinent()) + '/' + l.getCity());
-                Calendar calendar = getInstance(tz);
-                calendar.setTimeInMillis(currentTime);
+        LocalTimes.Builder builder = LocalTimes.newBuilder();
+        for (Location l: locations.getLocationList()) {
+            TimeZone tz = TimeZone.getTimeZone(
+                    toString(l.getContinent()) + '/' + l.getCity());
+            Calendar calendar = getInstance(tz);
+            calendar.setTimeInMillis(currentTime);
 
-                builder.addLocalTime(LocalTime.newBuilder().
-                        setYear(calendar.get(YEAR)).
-                        setMonth(calendar.get(MONTH) + 1).
-                        setDayOfMonth(calendar.get(DAY_OF_MONTH)).
-                        setDayOfWeek(DayOfWeek.valueOf(calendar.get(DAY_OF_WEEK))).
-                        setHour(calendar.get(HOUR_OF_DAY)).
-                        setMinute(calendar.get(MINUTE)).
-                        setSecond(calendar.get(SECOND)).build());
-            }
-
-            out.add(builder.build());
+            builder.addLocalTime(LocalTime.newBuilder().
+                    setYear(calendar.get(YEAR)).
+                    setMonth(calendar.get(MONTH) + 1).
+                    setDayOfMonth(calendar.get(DAY_OF_MONTH)).
+                    setDayOfWeek(DayOfWeek.valueOf(calendar.get(DAY_OF_WEEK))).
+                    setHour(calendar.get(HOUR_OF_DAY)).
+                    setMinute(calendar.get(MINUTE)).
+                    setSecond(calendar.get(SECOND)).build());
         }
 
-        msgs.recycle();
-        ctx.write(out);
+        ctx.write(builder.build());
+    }
+
+    @Override
+    public void messageReceivedLast(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
     }
 
     @Override

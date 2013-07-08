@@ -255,7 +255,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
             deflater.end();
         }
 
-        return ctx.write(footer, promise);
+        return ctx.write(footer).flush(promise);
     }
 
     @Override

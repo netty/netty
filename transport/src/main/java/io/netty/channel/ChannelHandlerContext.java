@@ -179,11 +179,14 @@ public interface ChannelHandlerContext
     ChannelHandlerContext fireMessageReceived(Object msg);
 
     @Override
-    ChannelHandlerContext fireMessageReceived(MessageList<?> msgs);
+    ChannelHandlerContext fireMessageReceivedLast();
 
     @Override
     ChannelHandlerContext fireChannelReadSuspended();
 
     @Override
     ChannelHandlerContext fireChannelWritabilityChanged();
+
+    @Override
+    ChannelHandlerContext write(Object msg);
 }

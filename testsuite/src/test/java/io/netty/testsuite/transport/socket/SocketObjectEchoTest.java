@@ -21,7 +21,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.MessageList;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
@@ -32,7 +31,7 @@ import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public class SocketObjectEchoTest extends AbstractSocketTest {
 
@@ -83,7 +82,7 @@ public class SocketObjectEchoTest extends AbstractSocketTest {
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.connect().sync().channel();
         for (String element : data) {
-            cc.write(element);
+            cc.write(element).flush();
         }
 
         while (ch.counter < data.length) {
@@ -139,9 +138,6 @@ public class SocketObjectEchoTest extends AbstractSocketTest {
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
 
-        EchoHandler() {
-        }
-
         @Override
         public void channelActive(ChannelHandlerContext ctx)
                 throws Exception {
@@ -149,18 +145,19 @@ public class SocketObjectEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-            for (int i = 0; i < msgs.size(); i ++) {
-                String msg = (String) msgs.get(i);
-                assertEquals(data[counter], msg);
+        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+            assertEquals(data[counter], msg);
 
-                if (channel.parent() != null) {
-                    channel.write(msg);
-                }
-
-                counter ++;
+            if (channel.parent() != null) {
+                channel.write(msg);
             }
-            msgs.recycle();
+
+            counter ++;
+        }
+
+        @Override
+        public void messageReceivedLast(ChannelHandlerContext ctx) throws Exception {
+            ctx.flush();
         }
 
         @Override

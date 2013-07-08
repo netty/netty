@@ -78,12 +78,13 @@ interface ChannelInboundInvoker {
     /**
      * A {@link Channel} received bytes which are now ready to read from its inbound buffer.
      *
-     * This will result in having the {@link ChannelInboundHandler#messageReceived(ChannelHandlerContext, MessageList)}
+     * This will result in having the {@link ChannelInboundHandler#messageReceived(ChannelHandlerContext, Object)}
      * method  called of the next {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelInboundInvoker fireMessageReceived(Object msg);
-    ChannelInboundInvoker fireMessageReceived(MessageList<?> msgs);
+
+    ChannelInboundInvoker fireMessageReceivedLast();
 
     /**
      * Triggers an {@link ChannelInboundHandler#channelReadSuspended(ChannelHandlerContext) channelReadSuspended}

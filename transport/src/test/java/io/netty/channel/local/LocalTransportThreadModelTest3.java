@@ -22,17 +22,11 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MessageList;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutorGroup;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
 
 import java.util.Deque;
 import java.util.LinkedList;
@@ -40,6 +34,12 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedDeque;
+
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
 
 public class LocalTransportThreadModelTest3 {
 
@@ -71,9 +71,9 @@ public class LocalTransportThreadModelTest3 {
                     public void initChannel(LocalChannel ch) throws Exception {
                         ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                             @Override
-                            public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) {
+                            public void messageReceived(ChannelHandlerContext ctx, Object msg) {
                                 // Discard
-                                msgs.releaseAllAndRecycle();
+                                ReferenceCountUtil.release(msg);
                             }
                         });
                     }
@@ -303,15 +303,14 @@ public class LocalTransportThreadModelTest3 {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
             if (inbound) {
                 events.add(EventType.MESSAGE_RECEIVED);
             }
         }
 
         @Override
-        public void write(
-                ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
+        public void write(ChannelHandlerContext ctx, Object msg) throws Exception {
             if (!inbound) {
                 events.add(EventType.WRITE);
             }

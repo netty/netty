@@ -19,7 +19,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.MessageList;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
@@ -105,7 +104,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
     public static final int HTTP_CACHE_SECONDS = 60;
 
     @Override
-    public void messageReceived(
+    public void messageReceived0(
             ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
         if (!request.getDecoderResult().isSuccess()) {
             sendError(ctx, BAD_REQUEST);
@@ -177,15 +176,14 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
             response.headers().set(CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
         }
 
-        MessageList<Object> out = MessageList.newInstance();
         // Write the initial line and the header.
-        out.add(response);
+        ctx.write(response);
         // Write the content.
-        out.add(new ChunkedFile(raf, 0, fileLength, 8192));
+        ctx.write(new ChunkedFile(raf, 0, fileLength, 8192));
         // Write the end marker
-        out.add(LastHttpContent.EMPTY_LAST_CONTENT);
+        ctx.write(LastHttpContent.EMPTY_LAST_CONTENT);
 
-        ChannelFuture writeFuture = ctx.write(out);
+        ChannelFuture writeFuture = ctx.flush();
         // Decide whether to close the connection or not.
         if (!isKeepAlive(request)) {
             // Close the connection when the whole content is written out.
@@ -279,7 +277,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         response.content().writeBytes(Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8));
 
         // Close the connection as soon as the error message is sent.
-        ctx.write(response).addListener(ChannelFutureListener.CLOSE);
+        ctx.write(response).flush().addListener(ChannelFutureListener.CLOSE);
     }
 
     private static void sendRedirect(ChannelHandlerContext ctx, String newUri) {
@@ -287,7 +285,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         response.headers().set(LOCATION, newUri);
 
         // Close the connection as soon as the error message is sent.
-        ctx.write(response).addListener(ChannelFutureListener.CLOSE);
+        ctx.write(response).flush().addListener(ChannelFutureListener.CLOSE);
     }
 
     private static void sendError(ChannelHandlerContext ctx, HttpResponseStatus status) {
@@ -296,7 +294,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
 
         // Close the connection as soon as the error message is sent.
-        ctx.write(response).addListener(ChannelFutureListener.CLOSE);
+        ctx.write(response).flush().addListener(ChannelFutureListener.CLOSE);
     }
 
     /**
@@ -310,7 +308,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         setDateHeader(response);
 
         // Close the connection as soon as the error message is sent.
-        ctx.write(response).addListener(ChannelFutureListener.CLOSE);
+        ctx.write(response).flush().addListener(ChannelFutureListener.CLOSE);
     }
 
     /**

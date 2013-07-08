@@ -86,7 +86,7 @@ public class SctpEchoTest extends AbstractSctpTest {
 
         for (int i = 0; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
-            cc.write(Unpooled.wrappedBuffer(data, i, length));
+            cc.write(Unpooled.wrappedBuffer(data, i, length)).flush();
             i += length;
         }
 
@@ -149,7 +149,7 @@ public class SctpEchoTest extends AbstractSctpTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void messageReceived0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
 
@@ -159,7 +159,7 @@ public class SctpEchoTest extends AbstractSctpTest {
             }
 
             if (channel.parent() != null) {
-                channel.write(Unpooled.wrappedBuffer(actual));
+                channel.write(Unpooled.wrappedBuffer(actual)).flush();
             }
 
             counter += actual.length;

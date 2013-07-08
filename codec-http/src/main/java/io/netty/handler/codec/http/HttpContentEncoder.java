@@ -18,7 +18,6 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.MessageList;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.handler.codec.http.HttpHeaders.Names;
@@ -26,6 +25,7 @@ import io.netty.handler.codec.http.HttpHeaders.Values;
 import io.netty.util.ReferenceCountUtil;
 
 import java.util.ArrayDeque;
+import java.util.List;
 import java.util.Queue;
 
 /**
@@ -69,7 +69,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, HttpRequest msg, MessageList<Object> out)
+    protected void decode(ChannelHandlerContext ctx, HttpRequest msg, List<Object> out)
             throws Exception {
         String acceptedEncoding = msg.headers().get(HttpHeaders.Names.ACCEPT_ENCODING);
         if (acceptedEncoding == null) {
@@ -80,7 +80,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, HttpObject msg, MessageList<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, HttpObject msg, List<Object> out) throws Exception {
         final boolean isFull = msg instanceof HttpResponse && msg instanceof LastHttpContent;
         switch (state) {
             case AWAIT_HEADERS: {
@@ -163,7 +163,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
             case AWAIT_CONTENT: {
                 ensureContent(msg);
                 encodeContent((HttpContent) msg, out);
-                if (out.last()  instanceof LastHttpContent) {
+                if (msg  instanceof LastHttpContent) {
                     state = State.AWAIT_HEADERS;
                 }
                 break;
@@ -196,7 +196,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         }
     }
 
-    private void encodeContent(HttpContent c, MessageList<Object> out) {
+    private void encodeContent(HttpContent c, List<Object> out) {
         ByteBuf content = c.content();
 
         encode(content, out);
@@ -256,20 +256,20 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         }
     }
 
-    private void encode(ByteBuf in, MessageList<Object> out) {
+    private void encode(ByteBuf in, List<Object> out) {
         // call retain here as it will call release after its written to the channel
         encoder.writeOutbound(in.retain());
         fetchEncoderOutput(out);
     }
 
-    private void finishEncode(MessageList<Object> out) {
+    private void finishEncode(List<Object> out) {
         if (encoder.finish()) {
             fetchEncoderOutput(out);
         }
         encoder = null;
     }
 
-    private void fetchEncoderOutput(MessageList<Object> out) {
+    private void fetchEncoderOutput(List<Object> out) {
         for (;;) {
             ByteBuf buf = (ByteBuf) encoder.readOutbound();
             if (buf == null) {

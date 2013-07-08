@@ -95,7 +95,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
+    public void messageReceived0(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
         if (msg instanceof HttpRequest) {
             HttpRequest request = this.request = (HttpRequest) msg;
             URI uri = new URI(request.getUri());
@@ -313,7 +313,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
             }
         }
         // Write the response.
-        ChannelFuture future = channel.write(response);
+        ChannelFuture future = channel.write(response).flush();
         // Close the connection after the write operation is done if necessary.
         if (close) {
             future.addListener(ChannelFutureListener.CLOSE);

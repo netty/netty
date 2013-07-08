@@ -23,6 +23,7 @@ import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalServerChannel;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -60,8 +61,8 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-                msgs.releaseAllAndRecycle();
+            public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+                ReferenceCountUtil.release(msg);
             }
         });
 
@@ -134,7 +135,7 @@ public class DefaultChannelPipelineTest {
         StringInboundHandler handler = new StringInboundHandler();
         setUp(handler);
 
-        peer.write(holder).sync();
+        peer.write(holder).flush().sync();
 
         assertTrue(free.await(10, TimeUnit.SECONDS));
         assertTrue(handler.called);
@@ -144,18 +145,11 @@ public class DefaultChannelPipelineTest {
         boolean called;
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
             called = true;
-            MessageList<Object> out = MessageList.newInstance();
-            for (int i = 0; i < msgs.size(); i ++) {
-                Object m = msgs.get(i);
-                if (!(m instanceof String)) {
-                    out.add(m);
-                }
+            if (!(msg instanceof String)) {
+                ctx.fireMessageReceived(msg);
             }
-
-            msgs.recycle();
-            ctx.fireMessageReceived(out);
         }
     }
 
@@ -492,29 +486,29 @@ public class DefaultChannelPipelineTest {
         final MessageList<Object> outboundBuffer = MessageList.newInstance();
 
         @Override
-        public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise)
-                throws Exception {
-            for (int i = 0; i < msgs.size(); i++) {
-                outboundBuffer.add(msgs.get(i));
-            }
-            msgs.recycle();
+        public void write(ChannelHandlerContext ctx, Object msg) throws Exception {
+            outboundBuffer.add(msg);
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-            for (int i = 0; i < msgs.size(); i++) {
-                inboundBuffer.add(msgs.get(i));
-            }
-            msgs.recycle();
+        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+            inboundBuffer.add(msg);
         }
 
         @Override
         public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
             if (!inboundBuffer.isEmpty()) {
-                ctx.fireMessageReceived(inboundBuffer);
+                for (Object o: inboundBuffer) {
+                    ctx.fireMessageReceived(o);
+                }
+                ctx.fireMessageReceivedLast();
+                inboundBuffer.recycle();
             }
             if (!outboundBuffer.isEmpty()) {
-                ctx.write(outboundBuffer);
+                for (Object o: outboundBuffer) {
+                    ctx.write(o);
+                }
+                ctx.flush();
             }
         }
     }
