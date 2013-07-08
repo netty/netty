@@ -45,7 +45,7 @@ public class SslHandlerTest {
 
         try {
             // Push the second part of the 5-byte handshake message.
-            ch.writeInbound(Unpooled.wrappedBuffer(new byte[]{2, 0, 0, 1, 0}));
+            ch.writeInbound(Unpooled.wrappedBuffer(new byte[]{ 2, 0, 0, 1, 0 }));
             fail();
         } catch (DecoderException e) {
             // The pushed message is invalid, so it should raise an exception if it decoded the message correctly.

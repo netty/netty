@@ -153,7 +153,7 @@ import java.util.regex.Pattern;
 public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundHandler {
 
     private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(SslHandler.class);
+            InternalLoggerFactory.getInstance(SslHandler.class);
 
     private static final Pattern IGNORABLE_CLASS_IN_STACK = Pattern.compile(
             "^.*(?:Socket|Datagram|Sctp|Udt)Channel.*$");
@@ -367,13 +367,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     @Override
     public void disconnect(final ChannelHandlerContext ctx,
-            final ChannelPromise promise) throws Exception {
+                           final ChannelPromise promise) throws Exception {
         closeOutboundAndChannel(ctx, promise, true);
     }
 
     @Override
     public void close(final ChannelHandlerContext ctx,
-            final ChannelPromise promise) throws Exception {
+                      final ChannelPromise promise) throws Exception {
         closeOutboundAndChannel(ctx, promise, false);
     }
 
@@ -446,7 +446,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     for (;;) {
                         PendingWrite w = pendingUnencryptedWrites.poll();
                         if (w == null) {
-                           break;
+                            break;
                         }
                         failed = true;
                         w.fail(SSLENGINE_CLOSED);
@@ -610,7 +610,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             if (logger.isDebugEnabled()) {
                 logger.debug(
                         "Swallowing a harmless 'connection reset by peer / broken pipe' error that occurred " +
-                        "while writing close_notify in response to the peer's close_notify", cause);
+                                "while writing close_notify in response to the peer's close_notify", cause);
             }
 
             // Close the connection explicitly just in case the transport
@@ -728,15 +728,15 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         // SSLv3 or TLS - Check ContentType
         boolean tls;
         switch (buffer.getUnsignedByte(first)) {
-        case 20:  // change_cipher_spec
-        case 21:  // alert
-        case 22:  // handshake
-        case 23:  // application_data
-            tls = true;
-            break;
-        default:
-            // SSLv2 or bad data
-            tls = false;
+            case 20:  // change_cipher_spec
+            case 21:  // alert
+            case 22:  // handshake
+            case 23:  // application_data
+                tls = true;
+                break;
+            default:
+                // SSLv2 or bad data
+                tls = false;
         }
 
         if (tls) {
@@ -889,11 +889,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             in.skipBytes(result.bytesConsumed());
             out.writerIndex(out.writerIndex() + result.bytesProduced());
             switch (result.getStatus()) {
-            case BUFFER_OVERFLOW:
-                out.ensureWritable(engine.getSession().getApplicationBufferSize());
-                break;
-            default:
-                return result;
+                case BUFFER_OVERFLOW:
+                    out.ensureWritable(engine.getSession().getApplicationBufferSize());
+                    break;
+                default:
+                    return result;
             }
         }
     }
@@ -1061,7 +1061,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 public void run() {
                     logger.warn(
                             ctx.channel() + " last write attempt timed out." +
-                                            " Force-closing the connection.");
+                                    " Force-closing the connection.");
                     ctx.close(promise);
                 }
             }, closeNotifyTimeoutMillis, TimeUnit.MILLISECONDS);
