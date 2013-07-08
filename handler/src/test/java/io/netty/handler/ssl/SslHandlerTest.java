@@ -45,11 +45,35 @@ public class SslHandlerTest {
 
         try {
             // Push the second part of the 5-byte handshake message.
-            ch.writeInbound(Unpooled.wrappedBuffer(new byte[]{2, 0, 0, 1, 0}));
+            ch.writeInbound(Unpooled.wrappedBuffer(new byte[]{ 2, 0, 0, 1, 0 }));
             fail();
         } catch (DecoderException e) {
             // The pushed message is invalid, so it should raise an exception if it decoded the message correctly.
             assertThat(e.getCause(), is(instanceOf(SSLProtocolException.class)));
+        }
+    }
+
+    @Test
+    public void testTruncatedPacket2() throws Exception {
+        SSLEngine engine = SSLContext.getDefault().createSSLEngine();
+        engine.setUseClientMode(false);
+
+        EmbeddedChannel ch = new EmbeddedChannel(new SslHandler(engine));
+
+        // Push the first part of a 5-byte handshake message.
+        ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 22, 3, 1, 0, 3, 0, 0, 0, 22, 3, 1, 0, 5 }));
+
+        // Should decode nothing yet.
+        assertThat(ch.readInbound(), is(nullValue()));
+
+        try {
+            // Push the second part of the 5-byte handshake message.
+            ch.writeInbound(Unpooled.wrappedBuffer(new byte[]{ 2, 0, 0, 1, 0 }));
+            fail();
+        } catch (DecoderException e) {
+            // The pushed message is invalid, so it should raise an exception if it decoded the message correctly.
+            assertThat(e.getCause(), is(instanceOf(SSLProtocolException.class)));
+            e.getCause().printStackTrace();
         }
     }
 }

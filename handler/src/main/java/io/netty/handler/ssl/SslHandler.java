@@ -792,7 +792,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         final ByteBuf in = internalBuffer();
 
         // Check if the packet length was parsed yet, if so we can skip the parsing
-        final int readableBytes = in.readableBytes();
+        final int readerIndex = in.readerIndex();
+        final int writerIndex = in.writerIndex();
+        final int readableBytes = writerIndex - readerIndex;
         int packetLength = this.packetLength;
         if (packetLength == 0) {
             if (readableBytes < 5) {
@@ -818,6 +820,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             return;
         }
 
+        in.writerIndex(readerIndex + packetLength);
         boolean wrapLater = false;
         int bytesProduced = 0;
         try {
@@ -872,6 +875,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         } finally {
             // reset the packet length so it will be parsed again on the next call
             this.packetLength = 0;
+            in.writerIndex(writerIndex);
 
             if (bytesProduced > 0) {
                 ByteBuf decodeOut = this.decodeOut;
