@@ -155,7 +155,7 @@ public abstract class WebSocketServerHandshaker {
                                             HttpHeaders responseHeaders, final ChannelPromise promise) {
 
         if (logger.isDebugEnabled()) {
-            logger.debug(String.format("Channel %s WS Version %s server handshake", version(), channel.id()));
+            logger.debug(String.format("Channel %s WS Version %s server handshake", version(), channel.hashCode()));
         }
         FullHttpResponse response = newHandshakeResponse(req, responseHeaders);
         channel.write(response).addListener(new ChannelFutureListener() {
