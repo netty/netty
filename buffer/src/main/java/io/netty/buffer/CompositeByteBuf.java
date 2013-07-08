@@ -34,9 +34,9 @@ import java.util.List;
 import java.util.ListIterator;
 
 /**
- * A virtual buffer which shows multiple buffers as a single merged buffer.  It
- * is recommended to use {@link Unpooled#wrappedBuffer(ByteBuf...)}
- * instead of calling the constructor explicitly.
+ * A virtual buffer which shows multiple buffers as a single merged buffer.  It is recommended to use
+ * {@link ByteBufAllocator#compositeBuffer()} or {@link Unpooled#wrappedBuffer(ByteBuf...)} instead of calling the
+ * constructor explicitly.
  */
 public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
 
