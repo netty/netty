@@ -23,7 +23,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.FileRegion;
-import io.netty.channel.MessageList;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
@@ -94,7 +93,7 @@ public class FileServer {
 
     private static final class FileHandler extends SimpleChannelInboundHandler<String> {
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
+        public void messageReceived0(ChannelHandlerContext ctx, String msg) throws Exception {
             File file = new File(msg);
             if (file.exists()) {
                 if (!file.isFile()) {
@@ -102,11 +101,10 @@ public class FileServer {
                     return;
                 }
                 ctx.write(file + " " + file.length() + '\n');
-                MessageList<Object> out = MessageList.newInstance();
                 FileRegion region = new DefaultFileRegion(new FileInputStream(file).getChannel(), 0, file.length());
-                out.add(region);
-                out.add("\n");
-                ctx.write(out);
+                ctx.write(region);
+                ctx.write("\n");
+                ctx.flush();
             } else {
                 ctx.write("File not found: " + file + '\n');
             }

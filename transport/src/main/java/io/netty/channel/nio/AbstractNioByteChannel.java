@@ -22,7 +22,6 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.FileRegion;
-import io.netty.channel.MessageList;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.util.internal.StringUtil;
@@ -76,11 +75,11 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
             final ByteBufAllocator allocator = config.getAllocator();
             final int maxMessagesPerRead = config.getMaxMessagesPerRead();
-            final MessageList<ByteBuf> messages = MessageList.newInstance();
 
             boolean closed = false;
             Throwable exception = null;
             ByteBuf byteBuf = null;
+            int messages = 0;
             try {
                 for (;;) {
                     byteBuf = allocHandle.allocate(allocator);
@@ -97,10 +96,10 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                         break;
                     }
 
-                    messages.add(byteBuf);
+                    pipeline.fireMessageReceived(byteBuf);
                     allocHandle.record(localReadAmount);
                     byteBuf = null;
-                    if (messages.size() == maxMessagesPerRead) {
+                    if (++ messages == maxMessagesPerRead) {
                         break;
                     }
                 }
@@ -109,13 +108,15 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             } finally {
                 if (byteBuf != null) {
                     if (byteBuf.isReadable()) {
-                        messages.add(byteBuf);
+                        pipeline.fireMessageReceived(byteBuf);
                     } else {
                         byteBuf.release();
                     }
                 }
 
-                pipeline.fireMessageReceived(messages);
+                if (messages != 0) {
+                    pipeline.fireMessageReceivedLast();
+                }
 
                 if (exception != null) {
                     if (exception instanceof IOException) {
@@ -143,14 +144,13 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     }
 
     @Override
-    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
-        int size = msgs.size();
-        int writeIndex = index;
+    protected int doWrite(Object[] msgs, int msgsLength, int startIndex) throws Exception {
+        int writeIndex = startIndex;
         for (;;) {
-            if (writeIndex >= size) {
+            if (writeIndex >= msgsLength) {
                 break;
             }
-            Object msg = msgs.get(writeIndex);
+            Object msg = msgs[writeIndex];
             if (msg instanceof ByteBuf) {
                 ByteBuf buf = (ByteBuf) msg;
                 if (!buf.isReadable()) {
@@ -201,7 +201,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 throw new UnsupportedOperationException("unsupported message type: " + StringUtil.simpleClassName(msg));
             }
         }
-        return writeIndex - index;
+        return writeIndex - startIndex;
     }
 
     /**

@@ -18,7 +18,6 @@ package io.netty.example.udt.echo.message;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.MessageList;
 import io.netty.channel.udt.nio.NioUdtProvider;
 
 import java.util.logging.Level;
@@ -45,7 +44,12 @@ public class MsgEchoServerHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-        ctx.write(msgs);
+    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+        ctx.write(msg);
+    }
+
+    @Override
+    public void messageReceivedLast(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
     }
 }

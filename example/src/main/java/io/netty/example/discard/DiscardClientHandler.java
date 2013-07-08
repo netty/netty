@@ -19,8 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.MessageList;
+import io.netty.channel.SimpleChannelInboundHandler;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -28,7 +27,7 @@ import java.util.logging.Logger;
 /**
  * Handles a client-side channel.
  */
-public class DiscardClientHandler extends ChannelInboundHandlerAdapter {
+public class DiscardClientHandler extends SimpleChannelInboundHandler<Object> {
 
     private static final Logger logger = Logger.getLogger(
             DiscardClientHandler.class.getName());
@@ -63,9 +62,8 @@ public class DiscardClientHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+    public void messageReceived0(ChannelHandlerContext ctx, Object msg) throws Exception {
         // Server is supposed to send nothing, but if it sends something, discard it.
-        msgs.releaseAllAndRecycle();
     }
 
     @Override
@@ -84,7 +82,7 @@ public class DiscardClientHandler extends ChannelInboundHandlerAdapter {
     private void generateTraffic() {
         // Flush the outbound buffer to the socket.
         // Once flushed, generate the same amount of traffic again.
-        ctx.write(content.duplicate().retain()).addListener(trafficGenerator);
+        ctx.write(content.duplicate().retain()).flush().addListener(trafficGenerator);
     }
 
     private final ChannelFutureListener trafficGenerator = new ChannelFutureListener() {

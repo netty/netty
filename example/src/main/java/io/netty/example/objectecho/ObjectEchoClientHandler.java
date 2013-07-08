@@ -17,7 +17,6 @@ package io.netty.example.objectecho;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.MessageList;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,9 +56,14 @@ public class ObjectEchoClientHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
         // Echo back the received object to the server.
-        ctx.write(msgs);
+        ctx.write(msg);
+    }
+
+    @Override
+    public void messageReceivedLast(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
     }
 
     @Override

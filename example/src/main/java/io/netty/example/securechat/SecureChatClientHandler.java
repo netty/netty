@@ -30,7 +30,7 @@ public class SecureChatClientHandler extends SimpleChannelInboundHandler<String>
             SecureChatClientHandler.class.getName());
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
+    public void messageReceived0(ChannelHandlerContext ctx, String msg) throws Exception {
         System.err.println(msg);
     }
 

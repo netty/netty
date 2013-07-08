@@ -20,8 +20,7 @@ import com.yammer.metrics.core.Meter;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.MessageList;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.udt.UdtMessage;
 import io.netty.channel.udt.nio.NioUdtProvider;
 
@@ -35,13 +34,14 @@ import java.util.logging.Logger;
  * activation.
  */
 public class MsgEchoPeerHandler extends
-        ChannelInboundHandlerAdapter {
+        SimpleChannelInboundHandler<UdtMessage> {
 
     private static final Logger log = Logger.getLogger(MsgEchoPeerHandler.class.getName());
 
     private final UdtMessage message;
 
     public MsgEchoPeerHandler(final int messageSize) {
+        super(false);
         final ByteBuf byteBuf = Unpooled.buffer(messageSize);
         for (int i = 0; i < byteBuf.capacity(); i++) {
             byteBuf.writeByte((byte) i);
@@ -66,13 +66,14 @@ public class MsgEchoPeerHandler extends
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> messages) throws Exception {
-        MessageList<UdtMessage> msgs = messages.cast();
+    public void messageReceived0(ChannelHandlerContext ctx, UdtMessage message) throws Exception {
+        meter.mark(message.content().readableBytes());
 
-        for (int i = 0; i < msgs.size(); i++) {
-            UdtMessage message = msgs.get(i);
-            meter.mark(message.content().readableBytes());
-        }
-        ctx.write(msgs);
+        ctx.write(message);
+    }
+
+    @Override
+    public void messageReceivedLast(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
     }
 }

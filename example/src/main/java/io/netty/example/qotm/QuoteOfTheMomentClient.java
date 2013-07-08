@@ -55,7 +55,7 @@ public class QuoteOfTheMomentClient {
             // Broadcast the QOTM request to port 8080.
             ch.write(new DatagramPacket(
                     Unpooled.copiedBuffer("QOTM?", CharsetUtil.UTF_8),
-                    new InetSocketAddress("255.255.255.255", port))).sync();
+                    new InetSocketAddress("255.255.255.255", port))).flush().sync();
 
             // QuoteOfTheMomentClientHandler will close the DatagramChannel when a
             // response is received.  If the channel is not closed within 5 seconds,

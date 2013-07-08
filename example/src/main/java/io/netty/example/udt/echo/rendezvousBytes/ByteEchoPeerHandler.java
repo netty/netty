@@ -20,8 +20,7 @@ import com.yammer.metrics.core.Meter;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.MessageList;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.udt.nio.NioUdtProvider;
 
 import java.util.concurrent.TimeUnit;
@@ -33,7 +32,7 @@ import java.util.logging.Logger;
  * traffic between the echo client and server by sending the first message to
  * the server on activation.
  */
-public class ByteEchoPeerHandler extends ChannelInboundHandlerAdapter {
+public class ByteEchoPeerHandler extends SimpleChannelInboundHandler<ByteBuf> {
     private static final Logger log = Logger.getLogger(ByteEchoPeerHandler.class.getName());
     private final ByteBuf message;
 
@@ -41,6 +40,7 @@ public class ByteEchoPeerHandler extends ChannelInboundHandlerAdapter {
             "bytes", TimeUnit.SECONDS);
 
     public ByteEchoPeerHandler(final int messageSize) {
+        super(false);
         message = Unpooled.buffer(messageSize);
         for (int i = 0; i < message.capacity(); i++) {
             message.writeByte((byte) i);
@@ -60,13 +60,14 @@ public class ByteEchoPeerHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-        MessageList<ByteBuf> buffers = msgs.cast();
+    public void messageReceived0(ChannelHandlerContext ctx, ByteBuf buf) throws Exception {
+        meter.mark(buf.readableBytes());
 
-        for (int i = 0; i < buffers.size(); i++) {
-            ByteBuf buf = buffers.get(i);
-            meter.mark(buf.readableBytes());
-        }
-        ctx.write(buffers);
+        ctx.write(buf);
+    }
+
+    @Override
+    public void messageReceivedLast(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
     }
 }

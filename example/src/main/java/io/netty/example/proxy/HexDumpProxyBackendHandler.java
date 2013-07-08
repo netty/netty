@@ -21,7 +21,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.MessageList;
 
 public class HexDumpProxyBackendHandler extends ChannelInboundHandlerAdapter {
 
@@ -38,8 +37,8 @@ public class HexDumpProxyBackendHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-        inboundChannel.write(msgs).addListener(new ChannelFutureListener() {
+    public void messageReceived(final ChannelHandlerContext ctx, Object msg) throws Exception {
+        inboundChannel.write(msg).flush().addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.isSuccess()) {

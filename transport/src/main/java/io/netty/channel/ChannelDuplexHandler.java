@@ -90,7 +90,12 @@ public class ChannelDuplexHandler extends ChannelInboundHandlerAdapter implement
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
-        ctx.write(msgs, promise);
+    public void write(ChannelHandlerContext ctx, Object msg) throws Exception {
+        ctx.write(msg);
+    }
+
+    @Override
+    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        ctx.flush(promise);
     }
 }

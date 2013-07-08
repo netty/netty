@@ -23,7 +23,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.MessageList;
 
 public class HexDumpProxyFrontendHandler extends ChannelInboundHandlerAdapter {
 
@@ -64,9 +63,9 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+    public void messageReceived(final ChannelHandlerContext ctx, Object msg) throws Exception {
         if (outboundChannel.isActive()) {
-            outboundChannel.write(msgs).addListener(new ChannelFutureListener() {
+            outboundChannel.write(msg).flush().addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
                     if (future.isSuccess()) {
@@ -98,7 +97,7 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundHandlerAdapter {
      */
     static void closeOnFlush(Channel ch) {
         if (ch.isActive()) {
-            ch.write(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+            ch.write(Unpooled.EMPTY_BUFFER).flush().addListener(ChannelFutureListener.CLOSE);
         }
     }
 }

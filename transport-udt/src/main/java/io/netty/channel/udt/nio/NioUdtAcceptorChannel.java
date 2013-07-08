@@ -18,7 +18,6 @@ package io.netty.channel.udt.nio;
 import com.barchart.udt.TypeUDT;
 import com.barchart.udt.nio.ServerSocketChannelUDT;
 import io.netty.channel.ChannelException;
-import io.netty.channel.MessageList;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.udt.DefaultUdtServerChannelConfig;
 import io.netty.channel.udt.UdtServerChannel;
@@ -94,7 +93,7 @@ public abstract class NioUdtAcceptorChannel extends AbstractNioMessageChannel im
     }
 
     @Override
-    protected int doWriteMessages(MessageList<Object> msg, int index, boolean lastSpin) throws Exception {
+    protected int doWriteMessages(Object[] msgs, int msgLength, int startIndex, boolean lastSpin) throws Exception {
         throw new UnsupportedOperationException();
     }
 

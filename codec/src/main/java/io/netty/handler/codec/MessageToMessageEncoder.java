@@ -17,11 +17,11 @@ package io.netty.handler.codec;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.MessageList;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.TypeParameterMatcher;
+
+import java.util.List;
 
 /**
  * {@link ChannelOutboundHandlerAdapter} which encodes from one message to an other message
@@ -33,7 +33,7 @@ import io.netty.util.internal.TypeParameterMatcher;
  *             {@link MessageToMessageEncoder}&lt;{@link Integer}&gt; {
  *
  *         {@code @Override}
- *         public void encode({@link ChannelHandlerContext} ctx, {@link Integer} message, {@link MessageList} out)
+ *         public void encode({@link ChannelHandlerContext} ctx, {@link Integer} message, List&lt;Object&gt; out)
  *                 throws {@link Exception} {
  *             out.add(message.toString());
  *         }
@@ -61,54 +61,41 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerA
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
-        MessageList<Object> out = MessageList.newInstance();
-        boolean success = false;
+    public void write(ChannelHandlerContext ctx, Object msg) throws Exception {
+        CodecOutput out = CodecOutput.newInstance();
         try {
-            int size = msgs.size();
-            for (int i = 0; i < size; i ++) {
-                // handler was removed in the loop so now copy over all remaining messages
-                if (ctx.isRemoved()) {
-                    out.add(msgs, i, size - i);
-                    break;
+            if (acceptOutboundMessage(msg)) {
+                @SuppressWarnings("unchecked")
+                I cast = (I) msg;
+                try {
+                    encode(ctx, cast, out);
+                } finally {
+                    ReferenceCountUtil.release(cast);
                 }
-                Object m = msgs.get(i);
-                if (acceptOutboundMessage(m)) {
-                    @SuppressWarnings("unchecked")
-                    I cast = (I) m;
-                    try {
-                        encode(ctx, cast, out);
-                    } finally {
-                        ReferenceCountUtil.release(cast);
-                    }
-                } else {
-                    out.add(m);
-                }
+            } else {
+                out.add(msg);
             }
-            success = true;
-        } catch (CodecException e) {
+        } catch (EncoderException e) {
             throw e;
         } catch (Throwable t) {
             throw new EncoderException(t);
         } finally {
-            msgs.recycle();
-            if (success) {
-                ctx.write(out, promise);
-            } else {
-                out.releaseAllAndRecycle();
+            for (int i = 0; i < out.size(); i ++) {
+                ctx.write(out.get(i));
             }
+            out.recycle();
         }
     }
 
     /**
-     * Encode from one message to an other. This method will be called till either the {@link MessageList} has nothing
+     * Encode from one message to an other. This method will be called till either the {@link CodecOutput} has nothing
      * left or till this method returns {@code null}.
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link MessageToMessageEncoder} belongs to
      * @param msg           the message to encode to an other one
-     * @param out           the {@link MessageList} into which the encoded msg should be added
+     * @param out           the {@link CodecOutput} into which the encoded msg should be added
      *                      needs to do some kind of aggragation
      * @throws Exception    is thrown if an error accour
      */
-    protected abstract void encode(ChannelHandlerContext ctx, I msg, MessageList<Object> out) throws Exception;
+    protected abstract void encode(ChannelHandlerContext ctx, I msg, List<Object> out) throws Exception;
 }

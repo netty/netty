@@ -21,7 +21,6 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.FileRegion;
-import io.netty.channel.MessageList;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.util.internal.StringUtil;
 
@@ -80,11 +79,14 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
         boolean closed = false;
         boolean read = false;
         boolean firedInboundBufferSuspeneded = false;
+        Throwable exception = null;
+        boolean readMessage = false;
         try {
             for (;;) {
                 int localReadAmount = doReadBytes(byteBuf);
                 if (localReadAmount > 0) {
                     read = true;
+                    readMessage = true;
                 } else if (localReadAmount < 0) {
                     closed = true;
                 }
@@ -119,20 +121,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                 }
             }
         } catch (Throwable t) {
-            if (read) {
-                read = false;
-                pipeline.fireMessageReceived(byteBuf);
-            }
-
-            if (t instanceof IOException) {
-                closed = true;
-                pipeline.fireExceptionCaught(t);
-            } else {
-                firedInboundBufferSuspeneded = true;
-                pipeline.fireChannelReadSuspended();
-                pipeline.fireExceptionCaught(t);
-                unsafe().close(voidPromise());
-            }
+            exception = t;
         } finally {
             if (read) {
                 pipeline.fireMessageReceived(byteBuf);
@@ -140,6 +129,21 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                 // nothing read into the buffer so release it
                 byteBuf.release();
             }
+            if (readMessage) {
+                pipeline.fireMessageReceivedLast();
+            }
+            if (exception != null) {
+                if (exception instanceof IOException) {
+                    closed = true;
+                    pipeline().fireExceptionCaught(exception);
+                } else {
+                    firedInboundBufferSuspeneded = true;
+                    pipeline.fireChannelReadSuspended();
+                    pipeline.fireExceptionCaught(exception);
+                    unsafe().close(voidPromise());
+                }
+            }
+
             if (closed) {
                 inputShutdown = true;
                 if (isOpen()) {
@@ -156,14 +160,13 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
     }
 
     @Override
-    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
-        int size = msgs.size();
-        int writeIndex = index;
+    protected int doWrite(Object[] msgs, int msgsLength, int startIndex) throws Exception {
+        int writeIndex = startIndex;
         for (;;) {
-            if (writeIndex >= size) {
+            if (writeIndex >= msgsLength) {
                 break;
             }
-            Object msg = msgs.get(writeIndex);
+            Object msg = msgs[writeIndex];
             if (msg instanceof ByteBuf) {
                 ByteBuf buf = (ByteBuf) msg;
                 while (buf.isReadable()) {
@@ -180,7 +183,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                 throw new UnsupportedOperationException("unsupported message type: " + StringUtil.simpleClassName(msg));
             }
         }
-        return writeIndex - index;
+        return writeIndex - startIndex;
     }
 
     /**

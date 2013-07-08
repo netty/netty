@@ -41,6 +41,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private ChannelFuture succeededFuture;
 
     // Lazily instantiated tasks used to trigger events to a handler with different executor.
+    private Runnable invokeMessageReceivedLastTask;
     private Runnable invokeChannelReadSuspendedTask;
     private Runnable invokeRead0Task;
     private Runnable invokeChannelWritableStateChangedTask;
@@ -340,43 +341,64 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public ChannelHandlerContext fireMessageReceived(Object msg) {
+    public ChannelHandlerContext fireMessageReceived(final Object msg) {
         if (msg == null) {
             throw new NullPointerException("msg");
         }
-        return fireMessageReceived(MessageList.newInstance(msg));
-    }
 
-    @Override
-    public ChannelHandlerContext fireMessageReceived(final MessageList<?> msgs) {
-        if (msgs == null) {
-            throw new NullPointerException("msgs");
-        }
-
-        if (msgs.isEmpty()) {
-            msgs.recycle();
-            return this;
+        // FIXME: Remove once refactoring is done.
+        if (msg instanceof MessageList) {
+            throw new IllegalStateException();
         }
 
         final DefaultChannelHandlerContext next = findContextInbound();
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            next.invokeMessageReceived(msgs);
+            next.invokeMessageReceived(msg);
         } else {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    next.invokeMessageReceived(msgs);
+                    next.invokeMessageReceived(msg);
                 }
             });
         }
         return this;
     }
 
-    private void invokeMessageReceived(MessageList<?> msgs) {
+    private void invokeMessageReceived(Object msg) {
         ChannelInboundHandler handler = (ChannelInboundHandler) handler();
         try {
-            handler.messageReceived(this, msgs.cast());
+            handler.messageReceived(this, msg);
+        } catch (Throwable t) {
+            notifyHandlerException(t);
+        }
+    }
+
+    @Override
+    public ChannelHandlerContext fireMessageReceivedLast() {
+        final DefaultChannelHandlerContext next = findContextInbound();
+        EventExecutor executor = next.executor();
+        if (executor.inEventLoop()) {
+            next.invokeMessageReceivedLast();
+        } else {
+            Runnable task = next.invokeMessageReceivedLastTask;
+            if (task == null) {
+                next.invokeMessageReceivedLastTask = task = new Runnable() {
+                    @Override
+                    public void run() {
+                        next.invokeMessageReceivedLast();
+                    }
+                };
+            }
+            executor.execute(task);
+        }
+        return this;
+    }
+
+    private void invokeMessageReceivedLast() {
+        try {
+            ((ChannelInboundHandler) handler()).messageReceivedLast(this);
         } catch (Throwable t) {
             notifyHandlerException(t);
         }
@@ -471,13 +493,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public ChannelFuture write(Object msg) {
-        return write(msg, newPromise());
-    }
-
-    @Override
-    public ChannelFuture write(MessageList<?> msgs) {
-        return write(msgs, newPromise());
+    public ChannelFuture flush() {
+        return flush(newPromise());
     }
 
     @Override
@@ -649,8 +666,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public void read() {
+    public ChannelHandlerContext read() {
         findContextOutbound().invokeRead();
+        return this;
     }
 
     private void invokeRead() {
@@ -680,32 +698,53 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public ChannelFuture write(Object msg, final ChannelPromise promise) {
+    public ChannelHandlerContext write(Object msg) {
         if (msg == null) {
             throw new NullPointerException("msg");
         }
-        return write(MessageList.newInstance(msg), promise);
+
+        findContextOutbound().invokeWrite(msg);
+        return this;
     }
 
-    @Override
-    public ChannelFuture write(MessageList<?> msgs, ChannelPromise promise) {
-        if (msgs == null) {
-            throw new NullPointerException("msgs");
-        }
-        validatePromise(promise, true);
-
-        return findContextOutbound().invokeWrite(msgs, promise);
-    }
-
-    private ChannelFuture invokeWrite(final MessageList<?> msgs, final ChannelPromise promise) {
+    private void invokeWrite(final Object msg) {
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            invokeWrite0(msgs, promise);
+            invokeWrite0(msg);
         } else {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    invokeWrite0(msgs, promise);
+                    invokeWrite0(msg);
+                }
+            });
+        }
+    }
+
+    private void invokeWrite0(Object msg) {
+        ChannelOutboundHandler handler = (ChannelOutboundHandler) handler();
+        try {
+            handler.write(this, msg);
+        } catch (Throwable t) {
+            notifyHandlerException(t);
+        }
+    }
+
+    @Override
+    public ChannelFuture flush(ChannelPromise promise) {
+        validatePromise(promise, true);
+        return findContextOutbound().invokeFlush(promise);
+    }
+
+    private ChannelFuture invokeFlush(final ChannelPromise promise) {
+        EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            invokeFlush0(promise);
+        } else {
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    invokeFlush0(promise);
                 }
             });
         }
@@ -713,13 +752,24 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         return promise;
     }
 
-    private void invokeWrite0(MessageList<?> msgs, ChannelPromise promise) {
-        ChannelOutboundHandler handler = (ChannelOutboundHandler) handler();
+    private void invokeFlush0(ChannelPromise promise) {
         try {
-            handler.write(this, msgs.cast(), promise);
+            ((ChannelOutboundHandler) handler()).flush(this, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
         }
+    }
+
+    @Override
+    public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
+        write(msg);
+        return flush(promise);
+    }
+
+    @Override
+    public ChannelFuture writeAndFlush(Object msg) {
+        write(msg);
+        return flush();
     }
 
     private static void notifyOutboundHandlerException(Throwable cause, ChannelPromise promise) {

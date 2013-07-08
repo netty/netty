@@ -19,8 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.MessageList;
-import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpRequest;
@@ -31,20 +30,13 @@ import static io.netty.handler.codec.http.HttpHeaders.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 
-public class HttpHelloWorldServerHandler extends SimpleChannelInboundHandler<Object> {
+public class HttpHelloWorldServerHandler extends ChannelInboundHandlerAdapter {
     private static final ByteBuf CONTENT =
             Unpooled.unreleasableBuffer(Unpooled.copiedBuffer("Hello World", CharsetUtil.US_ASCII));
 
-    private MessageList<Object> out;
     @Override
-    protected void beginMessageReceived(ChannelHandlerContext ctx) {
-        out = MessageList.newInstance();
-    }
-
-    @Override
-    protected void endMessageReceived(ChannelHandlerContext ctx) {
-        ctx.write(out);
-        out = null;
+    public void messageReceivedLast(ChannelHandlerContext ctx) {
+        ctx.flush();
     }
 
     @Override
@@ -53,7 +45,7 @@ public class HttpHelloWorldServerHandler extends SimpleChannelInboundHandler<Obj
             HttpRequest req = (HttpRequest) msg;
 
             if (is100ContinueExpected(req)) {
-                out.add(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE));
+                ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE)).flush();
             }
             boolean keepAlive = isKeepAlive(req);
             FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, CONTENT.duplicate());
@@ -61,11 +53,9 @@ public class HttpHelloWorldServerHandler extends SimpleChannelInboundHandler<Obj
             response.headers().set(CONTENT_LENGTH, response.content().readableBytes());
 
             if (!keepAlive) {
-                out.add(response);
-                ctx.write(out).addListener(ChannelFutureListener.CLOSE);
-                out = MessageList.newInstance();
+                ctx.write(response).flush().addListener(ChannelFutureListener.CLOSE);
             } else {
-                out.add(response);
+                ctx.write(response);
                 response.headers().set(CONNECTION, Values.KEEP_ALIVE);
             }
         }

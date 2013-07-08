@@ -16,11 +16,9 @@
 package io.netty.example.sctp;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.MessageList;
 import io.netty.channel.sctp.SctpMessage;
 
 import java.util.logging.Level;
@@ -57,8 +55,13 @@ public class SctpEchoClientHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> messages) throws Exception {
-        ctx.write(messages);
+    public void messageReceived(ChannelHandlerContext ctx,  Object msg) throws Exception {
+        ctx.write(msg);
+    }
+
+    @Override
+    public void messageReceivedLast(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
     }
 
     @Override

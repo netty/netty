@@ -159,7 +159,7 @@ public abstract class WebSocketClientHandshaker {
         } else {
             decoder.setSingleDecode(true);
         }
-        channel.write(request).addListener(new ChannelFutureListener() {
+        channel.write(request).flush().addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) {
                 if (future.isSuccess()) {
@@ -264,6 +264,6 @@ public abstract class WebSocketClientHandshaker {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
-        return channel.write(frame, promise);
+        return channel.write(frame).flush(promise);
     }
 }

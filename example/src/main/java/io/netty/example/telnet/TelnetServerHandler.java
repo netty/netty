@@ -43,7 +43,7 @@ public class TelnetServerHandler extends SimpleChannelInboundHandler<String> {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, String request) throws Exception {
+    public void messageReceived0(ChannelHandlerContext ctx, String request) throws Exception {
 
         // Generate and write a response.
         String response;
@@ -59,7 +59,7 @@ public class TelnetServerHandler extends SimpleChannelInboundHandler<String> {
 
         // We do not need to write a ChannelBuffer here.
         // We know the encoder inserted at TelnetPipelineFactory will do the conversion.
-        ChannelFuture future = ctx.write(response);
+        ChannelFuture future = ctx.write(response).flush();
 
         // Close the connection after sending 'Have a good day!'
         // if the client has sent 'bye'.

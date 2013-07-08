@@ -25,7 +25,6 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.MessageList;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.sctp.DefaultSctpChannelConfig;
@@ -47,6 +46,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -259,7 +259,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     }
 
     @Override
-    protected int doReadMessages(MessageList<Object> buf) throws Exception {
+    protected int doReadMessages(List<Object> buf) throws Exception {
         SctpChannel ch = javaChannel();
 
         RecvByteBufAllocator.Handle allocHandle = this.allocHandle;
@@ -292,8 +292,8 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     }
 
     @Override
-    protected int doWriteMessages(MessageList<Object> msgs, int index, boolean lastSpin) throws Exception {
-        SctpMessage packet = (SctpMessage) msgs.get(index);
+    protected int doWriteMessages(Object[] msgs, int msgLength, int startIndex, boolean lastSpin) throws Exception {
+        SctpMessage packet = (SctpMessage) msgs[startIndex];
         ByteBuf data = packet.content();
         int dataLen = data.readableBytes();
         ByteBuffer nioData;
@@ -330,7 +330,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         // packet was written free up buffer
         packet.release();
 
-        if (index + 1 == msgs.size()) {
+        if (msgLength == 1) {
             // Wrote the outbound buffer completely - clear OP_WRITE.
             if ((interestOps & SelectionKey.OP_WRITE) != 0) {
                 key.interestOps(interestOps & ~SelectionKey.OP_WRITE);

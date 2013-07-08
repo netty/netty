@@ -15,6 +15,7 @@
  */
 package io.netty.channel.local;
 
+import static org.junit.Assert.assertEquals;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
@@ -22,12 +23,11 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.MessageList;
-import org.junit.Test;
+import io.netty.util.ReferenceCountUtil;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.*;
+import org.junit.Test;
 
 public class LocalTransportThreadModelTest2 {
 
@@ -107,14 +107,15 @@ public class LocalTransportThreadModelTest2 {
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             for (int i = 0; i < messageCountPerRun; i ++) {
-                lastWriteFuture = ctx.channel().write(name + ' ' + i);
+                ctx.channel().write(name + ' ' + i);
             }
+            lastWriteFuture = ctx.channel().flush();
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-            count.addAndGet(msgs.size());
-            msgs.releaseAllAndRecycle();
+        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+            count.incrementAndGet();
+            ReferenceCountUtil.release(msg);
         }
     }
 }

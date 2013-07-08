@@ -23,7 +23,6 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
-import io.netty.channel.MessageList;
 import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
@@ -265,21 +264,22 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    protected int doWrite(MessageList<Object> msgs, final int index) throws Exception {
-        final int size = msgs.size();
-
+    protected int doWrite(Object[] msgs, int msgsLength, final int startIndex) throws Exception {
         // Do non-gathering write for a single buffer case.
-        if (size <= 1 || !msgs.containsOnly(ByteBuf.class)) {
-            return super.doWrite(msgs, index);
+        if (msgsLength <= 1) {
+            return super.doWrite(msgs, msgsLength, startIndex);
         }
-
-        final Object[] bufs = msgs.array();
 
         ByteBuffer[] nioBuffers = getNioBufferArray();
         int nioBufferCnt = 0;
         long expectedWrittenBytes = 0;
-        for (int i = index; i < size; i++) {
-            ByteBuf buf = (ByteBuf) bufs[i];
+        for (int i = startIndex; i < msgsLength; i++) {
+            Object m = msgs[i];
+            if (!(m instanceof ByteBuf)) {
+                return super.doWrite(msgs, msgsLength, startIndex);
+            }
+
+            ByteBuf buf = (ByteBuf) m;
 
             int readerIndex = buf.readerIndex();
             int readableBytes = buf.readableBytes();
@@ -308,7 +308,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                 ByteBuf directBuf = alloc().directBuffer(readableBytes);
                 directBuf.writeBytes(buf, readerIndex, readableBytes);
                 buf.release();
-                bufs[i] = directBuf;
+                msgs[i] = directBuf;
                 if (nioBufferCnt == nioBuffers.length) {
                     nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCnt);
                 }
@@ -335,16 +335,16 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
         if (done) {
             // release buffers
-            for (int i = index; i < size; i++) {
-                ((ReferenceCounted) bufs[i]).release();
+            for (int i = startIndex; i < msgsLength; i++) {
+                ((ReferenceCounted) msgs[i]).release();
             }
-            return size - index;
+            return msgsLength - startIndex;
         } else {
             // Did not write all buffers completely.
             // Release the fully written buffers and update the indexes of the partially written buffer.
             int writtenBufs = 0;
-            for (int i = index; i < size; i++) {
-                final ByteBuf buf = (ByteBuf) bufs[i];
+            for (int i = startIndex; i < msgsLength; i++) {
+                final ByteBuf buf = (ByteBuf) msgs[i];
                 final int readerIndex = buf.readerIndex();
                 final int readableBytes = buf.writerIndex() - readerIndex;
 

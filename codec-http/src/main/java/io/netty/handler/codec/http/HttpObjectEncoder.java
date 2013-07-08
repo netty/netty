@@ -15,15 +15,17 @@
  */
 package io.netty.handler.codec.http;
 
+import static io.netty.handler.codec.http.HttpConstants.COLON;
+import static io.netty.handler.codec.http.HttpConstants.CR;
+import static io.netty.handler.codec.http.HttpConstants.LF;
+import static io.netty.handler.codec.http.HttpConstants.SP;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.MessageList;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.CharsetUtil;
 
+import java.util.List;
 import java.util.Map;
-
-import static io.netty.handler.codec.http.HttpConstants.*;
 
 /**
  * Encodes an {@link HttpMessage} or an {@link HttpContent} into
@@ -52,7 +54,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     private int state = ST_INIT;
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, HttpObject msg, MessageList<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, HttpObject msg, List<Object> out) throws Exception {
         if (msg instanceof HttpMessage) {
             if (state != ST_INIT) {
                 throw new IllegalStateException("unexpected message type: " + msg.getClass().getSimpleName());

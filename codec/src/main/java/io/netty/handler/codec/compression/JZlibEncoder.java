@@ -343,10 +343,10 @@ public class JZlibEncoder extends ZlibEncoder {
         }
     }
 
-    private ChannelFuture finishEncode(ChannelHandlerContext ctx, ChannelPromise future) {
+    private ChannelFuture finishEncode(ChannelHandlerContext ctx, ChannelPromise promise) {
         if (!finished.compareAndSet(false, true)) {
-            future.setSuccess();
-            return future;
+            promise.setSuccess();
+            return promise;
         }
 
         ByteBuf footer;
@@ -366,8 +366,8 @@ public class JZlibEncoder extends ZlibEncoder {
                 // Write the ADLER32 checksum (stream footer).
                 int resultCode = z.deflate(JZlib.Z_FINISH);
                 if (resultCode != JZlib.Z_OK && resultCode != JZlib.Z_STREAM_END) {
-                    future.setFailure(ZlibUtil.deflaterException(z, "compression failure", resultCode));
-                    return future;
+                    promise.setFailure(ZlibUtil.deflaterException(z, "compression failure", resultCode));
+                    return promise;
                 } else if (z.next_out_index != 0) {
                     footer = Unpooled.wrappedBuffer(out, 0, z.next_out_index);
                 } else {
@@ -385,8 +385,7 @@ public class JZlibEncoder extends ZlibEncoder {
             }
         }
 
-        ctx.write(footer, future);
-        return future;
+        return ctx.write(footer).flush(promise);
     }
 
     @Override

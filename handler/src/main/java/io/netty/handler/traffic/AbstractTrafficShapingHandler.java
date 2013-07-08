@@ -18,8 +18,6 @@ package io.netty.handler.traffic;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.MessageList;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
@@ -210,19 +208,16 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
     }
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx, final MessageList<Object> msgs) throws Exception {
-        MessageList<ByteBuf> buffers = msgs.cast();
-        long size = 0;
-        for (int i = 0; i < buffers.size(); i++) {
-           size += buffers.get(i).readableBytes();
-        }
+    public void messageReceived(final ChannelHandlerContext ctx, final Object msg) throws Exception {
+        ByteBuf buf = (ByteBuf) msg;
+        long size = buf.readableBytes();
         long curtime = System.currentTimeMillis();
 
         if (trafficCounter != null) {
             trafficCounter.bytesRecvFlowControl(size);
             if (readLimit == 0) {
                 // no action
-                ctx.fireMessageReceived(msgs);
+                ctx.fireMessageReceived(msg);
 
                 return;
             }
@@ -253,7 +248,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                     Runnable bufferUpdateTask = new Runnable() {
                         @Override
                         public void run() {
-                            ctx.fireMessageReceived(msgs);
+                            ctx.fireMessageReceived(msg);
                         }
                     };
                     ctx.executor().schedule(bufferUpdateTask, wait, TimeUnit.MILLISECONDS);
@@ -261,7 +256,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                 }
             }
         }
-        ctx.fireMessageReceived(msgs);
+        ctx.fireMessageReceived(msg);
     }
 
     @Override
@@ -280,18 +275,15 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, final MessageList<Object> msgs, final ChannelPromise promise)
+    public void write(final ChannelHandlerContext ctx, final Object msg)
             throws Exception {
         long curtime = System.currentTimeMillis();
-        long size = 0;
-        for (int i = 0; i < msgs.size(); i++) {
-            size += ((ByteBuf) msgs.get(i)).readableBytes();
-        }
+        long size = ((ByteBuf) msg).readableBytes();
 
         if (trafficCounter != null) {
             trafficCounter.bytesWriteFlowControl(size);
             if (writeLimit == 0) {
-                ctx.write(msgs, promise);
+                ctx.write(msg);
                 return;
             }
             // compute the number of ms to wait before continue with the
@@ -303,13 +295,13 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                 ctx.executor().schedule(new Runnable() {
                     @Override
                     public void run() {
-                        ctx.write(msgs, promise);
+                        ctx.write(msg);
                     }
                 }, wait, TimeUnit.MILLISECONDS);
                 return;
             }
         }
-        ctx.write(msgs, promise);
+        ctx.write(msg);
     }
 
     /**

@@ -20,7 +20,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MessageList;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -51,42 +50,39 @@ class WebSocketServerProtocolHandshakeHandler
     }
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-        MessageList<FullHttpRequest> requests = msgs.cast();
-        for (int i = 0; i < requests.size(); i++) {
-            FullHttpRequest req = requests.get(i);
-            if (req.getMethod() != GET) {
-                sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN));
-                return;
-            }
+    public void messageReceived(final ChannelHandlerContext ctx, Object msg) throws Exception {
+        FullHttpRequest req = (FullHttpRequest) msg;
+        if (req.getMethod() != GET) {
+            sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN));
+            return;
+        }
 
-            final WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
-                    getWebSocketLocation(ctx.pipeline(), req, websocketPath), subprotocols, allowExtensions);
-            final WebSocketServerHandshaker handshaker = wsFactory.newHandshaker(req);
-            if (handshaker == null) {
-                WebSocketServerHandshakerFactory.sendUnsupportedWebSocketVersionResponse(ctx.channel());
-            } else {
-                final ChannelFuture handshakeFuture = handshaker.handshake(ctx.channel(), req);
-                handshakeFuture.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        if (!future.isSuccess()) {
-                            ctx.fireExceptionCaught(future.cause());
-                        } else {
-                            ctx.fireUserEventTriggered(
-                                    WebSocketServerProtocolHandler.ServerHandshakeStateEvent.HANDSHAKE_COMPLETE);
-                        }
+        final WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
+                getWebSocketLocation(ctx.pipeline(), req, websocketPath), subprotocols, allowExtensions);
+        final WebSocketServerHandshaker handshaker = wsFactory.newHandshaker(req);
+        if (handshaker == null) {
+            WebSocketServerHandshakerFactory.sendUnsupportedWebSocketVersionResponse(ctx.channel());
+        } else {
+            final ChannelFuture handshakeFuture = handshaker.handshake(ctx.channel(), req);
+            handshakeFuture.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    if (!future.isSuccess()) {
+                        ctx.fireExceptionCaught(future.cause());
+                    } else {
+                        ctx.fireUserEventTriggered(
+                                WebSocketServerProtocolHandler.ServerHandshakeStateEvent.HANDSHAKE_COMPLETE);
                     }
-                });
-                WebSocketServerProtocolHandler.setHandshaker(ctx, handshaker);
-                ctx.pipeline().replace(this, "WS403Responder",
-                        WebSocketServerProtocolHandler.forbiddenHttpRequestResponder());
-            }
+                }
+            });
+            WebSocketServerProtocolHandler.setHandshaker(ctx, handshaker);
+            ctx.pipeline().replace(this, "WS403Responder",
+                    WebSocketServerProtocolHandler.forbiddenHttpRequestResponder());
         }
     }
 
     private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
-        ChannelFuture f = ctx.channel().write(res);
+        ChannelFuture f = ctx.channel().write(res).flush();
         if (!isKeepAlive(req) || res.getStatus().code() != 200) {
             f.addListener(ChannelFutureListener.CLOSE);
         }

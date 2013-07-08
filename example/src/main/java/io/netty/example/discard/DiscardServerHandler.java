@@ -16,8 +16,7 @@
 package io.netty.example.discard;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.MessageList;
+import io.netty.channel.SimpleChannelInboundHandler;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -25,14 +24,14 @@ import java.util.logging.Logger;
 /**
  * Handles a server-side channel.
  */
-public class DiscardServerHandler extends ChannelInboundHandlerAdapter {
+public class DiscardServerHandler extends SimpleChannelInboundHandler<Object> {
 
     private static final Logger logger = Logger.getLogger(
             DiscardServerHandler.class.getName());
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-        msgs.releaseAllAndRecycle();
+    public void messageReceived0(ChannelHandlerContext ctx, Object msg) throws Exception {
+        // discard
     }
 
     @Override

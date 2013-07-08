@@ -22,7 +22,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoop;
-import io.netty.channel.MessageList;
 import io.netty.channel.ServerChannel;
 import io.netty.util.CharsetUtil;
 
@@ -108,19 +107,6 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
      *         the operation is done for all channels
      */
     ChannelGroupFuture write(Object message);
-
-    /**
-     * Writes the specified {@code messages} to all {@link Channel}s in this
-     * group. If the specified {@code messages} are an instance of
-     * {@link ByteBuf}, it is automatically
-     * {@linkplain ByteBuf#duplicate() duplicated} to avoid a race
-     * condition. Please note that this operation is asynchronous as
-     * {@link Channel#write(Object)} is.
-     *
-     * @return the {@link ChannelGroupFuture} instance that notifies when
-     *         the operation is done for all channels
-     */
-    ChannelGroupFuture write(MessageList<Object> messages);
 
     /**
      * Disconnects all {@link Channel}s in this group from their remote peers.

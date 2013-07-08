@@ -21,7 +21,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.MessageList;
 import io.netty.channel.udt.UdtMessage;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.util.internal.logging.InternalLogger;
@@ -57,10 +56,8 @@ public class EchoMessageHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
-
-        log.info("ECHO active {}", NioUdtProvider.socketUDT(ctx.channel())
-                .toStringOptions());
-        ctx.write(message);
+        log.info("ECHO active {}", NioUdtProvider.socketUDT(ctx.channel()).toStringOptions());
+        ctx.write(message).flush();
     }
 
     @Override
@@ -70,13 +67,11 @@ public class EchoMessageHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-        for (int i = 0; i < msgs.size(); i ++) {
-            UdtMessage udtMsg = (UdtMessage) msgs.get(i);
-            if (meter != null) {
-                meter.mark(udtMsg.content().readableBytes());
-            }
+    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+        UdtMessage udtMsg = (UdtMessage) msg;
+        if (meter != null) {
+            meter.mark(udtMsg.content().readableBytes());
         }
-        ctx.write(msgs);
+        ctx.write(msg).flush();
     }
 }
