@@ -32,7 +32,7 @@ import java.nio.charset.Charset;
 /**
  * A skeletal implementation of a buffer.
  */
-public abstract class AbstractByteBuf implements ByteBuf {
+public abstract class AbstractByteBuf extends ByteBuf {
 
     static final ResourceLeakDetector<ByteBuf> leakDetector = new ResourceLeakDetector<ByteBuf>(ByteBuf.class);
 
