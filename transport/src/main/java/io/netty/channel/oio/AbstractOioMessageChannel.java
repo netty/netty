@@ -26,8 +26,8 @@ import java.io.IOException;
  */
 public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
 
-    protected AbstractOioMessageChannel(Channel parent, Integer id) {
-        super(parent, id);
+    protected AbstractOioMessageChannel(Channel parent) {
+        super(parent);
     }
 
     @Override

@@ -36,10 +36,10 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     /**
-     * @see AbstractOioByteChannel#AbstractOioByteChannel(Channel, Integer)
+     * @see AbstractOioByteChannel#AbstractOioByteChannel(Channel)
      */
-    protected AbstractOioByteChannel(Channel parent, Integer id) {
-        super(parent, id);
+    protected AbstractOioByteChannel(Channel parent) {
+        super(parent);
     }
 
     protected boolean isInputShutdown() {

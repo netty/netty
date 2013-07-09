@@ -62,7 +62,7 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
      * Create a new instance
      */
     public NioSctpServerChannel() {
-        super(null, null, newSocket(), SelectionKey.OP_ACCEPT);
+        super(null, newSocket(), SelectionKey.OP_ACCEPT);
         config = new DefaultSctpServerChannelConfig(this, javaChannel());
     }
 
@@ -139,7 +139,7 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
         if (ch == null) {
             return 0;
         }
-        buf.add(new NioSctpChannel(this, null, ch));
+        buf.add(new NioSctpChannel(this, ch));
         return 1;
     }
 

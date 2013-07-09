@@ -47,6 +47,42 @@ import java.util.NoSuchElementException;
  * </ul>
  * </p>
  *
+ * <h3>Consuming the messages from a {@link MessageList} efficiently yet safely</h3>
+ * <p>
+ * The following example shows how to iterate over the list which contains {@code ReferenceCounted} messages safely
+ * (i.e. without leaking them) while consuming the messages.
+ * </p>
+ * <pre>
+ * public void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageList}&lt;Object&gt; msgs) {
+ *     final int size = msgs.size();
+ *     final Object[] in = msgs.array();
+ *     boolean success = false;
+ *     try {
+ *         for (int i = 0; i < size; i ++) {
+ *             Object m = in[i];
+ *
+ *             // Handle the message.
+ *             doSomethingWithMessage(m);
+ *
+ *             // Release the handled message.
+ *             {@link ReferenceCountUtil#release(Object) ReferenceCountUtil.release(m)};
+ *
+ *             // To prevent {@link #releaseAllAndRecycle()} from releasing the message again,
+ *             // replace the message with a dummy object.
+ *             in[i] = MessageList.NONE;
+ *         }
+ *
+ *         success = true;
+ *     } finally {
+ *         if (success) {
+ *             {@link #recycle() msgs.recycle()};
+ *         } else {
+ *             {@link #releaseAllAndRecycle() msgs.releaseAllAndRecycle()};
+ *         }
+ *     }
+ * }
+ * </pre>
+ *
  * @param <T> the type of the contained messages
  */
 public final class MessageList<T> implements Iterable<T> {
@@ -240,7 +276,13 @@ public final class MessageList<T> implements Iterable<T> {
         if (value == null) {
             throw new NullPointerException("value");
         }
+
         elements[index] = value;
+
+        if (byteBufsOnly && !(value instanceof ByteBuf)) {
+            byteBufsOnly = false;
+        }
+
         return this;
     }
 

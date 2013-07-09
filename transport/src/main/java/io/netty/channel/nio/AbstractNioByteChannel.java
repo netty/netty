@@ -40,12 +40,10 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
      * Create a new instance
      *
      * @param parent            the parent {@link Channel} by which this instance was created. May be {@code null}
-     * @param id                the id of this instance or {@code null} if one should be generated
      * @param ch                the underlying {@link SelectableChannel} on which it operates
      */
-    protected AbstractNioByteChannel(
-            Channel parent, Integer id, SelectableChannel ch) {
-        super(parent, id, ch, SelectionKey.OP_READ);
+    protected AbstractNioByteChannel(Channel parent, SelectableChannel ch) {
+        super(parent, ch, SelectionKey.OP_READ);
     }
 
     @Override

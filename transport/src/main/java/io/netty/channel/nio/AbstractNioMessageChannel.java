@@ -30,11 +30,10 @@ import java.nio.channels.SelectionKey;
 public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
 
     /**
-     * @see {@link AbstractNioChannel#AbstractNioChannel(Channel, Integer, SelectableChannel, int)}
+     * @see {@link AbstractNioChannel#AbstractNioChannel(Channel, SelectableChannel, int)}
      */
-    protected AbstractNioMessageChannel(
-            Channel parent, Integer id, SelectableChannel ch, int readInterestOp) {
-        super(parent, id, ch, readInterestOp);
+    protected AbstractNioMessageChannel(Channel parent, SelectableChannel ch, int readInterestOp) {
+        super(parent, ch, readInterestOp);
     }
 
     @Override

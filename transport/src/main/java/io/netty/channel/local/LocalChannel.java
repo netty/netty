@@ -83,15 +83,11 @@ public class LocalChannel extends AbstractChannel {
     private volatile boolean readInProgress;
 
     public LocalChannel() {
-        this(null);
-    }
-
-    public LocalChannel(Integer id) {
-        super(null, id);
+        super(null);
     }
 
     LocalChannel(LocalServerChannel parent, LocalChannel peer) {
-        super(parent, null);
+        super(parent);
         this.peer = peer;
         localAddress = parent.localAddress();
         remoteAddress = peer.localAddress();

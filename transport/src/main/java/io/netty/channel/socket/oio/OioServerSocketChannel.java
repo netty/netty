@@ -70,17 +70,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
      * @param socket    the {@link ServerSocket} which is used by this instance
      */
     public OioServerSocketChannel(ServerSocket socket) {
-        this(null, socket);
-    }
-
-    /**
-     * Create a new instance from the given {@link ServerSocket}
-     *
-     * @param id        the id which should be used for this instance or {@code null} if a new one should be generated
-     * @param socket    the {@link ServerSocket} which is used by this instance
-     */
-    public OioServerSocketChannel(Integer id, ServerSocket socket) {
-        super(null, id);
+        super(null);
         if (socket == null) {
             throw new NullPointerException("socket");
         }
@@ -163,7 +153,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
             Socket s = socket.accept();
             try {
                 if (s != null) {
-                    buf.add(new OioSocketChannel(this, null, s));
+                    buf.add(new OioSocketChannel(this, s));
                     return 1;
                 }
             } catch (Throwable t) {
