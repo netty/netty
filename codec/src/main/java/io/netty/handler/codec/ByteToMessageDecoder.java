@@ -101,9 +101,13 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     @Override
     public final void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         ByteBuf buf = internalBuffer();
+        int readable = buf.readableBytes();
         if (buf.isReadable()) {
-            ctx.fireChannelRead(buf);
+            ByteBuf bytes = buf.readBytes(readable);
+            buf.release();
+            ctx.fireChannelRead(bytes);
         }
+        cumulation = null;
         ctx.fireChannelReadComplete();
         handlerRemoved0(ctx);
     }
@@ -123,11 +127,11 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 if (cumulation == null) {
                     cumulation = data;
                     try {
-                        callDecode(ctx, data, out);
+                        callDecode(ctx, cumulation, out);
                     } finally {
-                        if (!data.isReadable()) {
+                        if (cumulation != null && !cumulation.isReadable()) {
+                            cumulation.release();
                             cumulation = null;
-                            data.release();
                         }
                     }
                 } else {
@@ -141,11 +145,13 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                         cumulation.writeBytes(data);
                         callDecode(ctx, cumulation, out);
                     } finally {
-                        if (!cumulation.isReadable()) {
-                            cumulation.release();
-                            cumulation = null;
-                        } else {
-                            cumulation.discardSomeReadBytes();
+                        if (cumulation != null) {
+                            if (!cumulation.isReadable()) {
+                                cumulation.release();
+                                cumulation = null;
+                            } else {
+                                cumulation.discardSomeReadBytes();
+                            }
                         }
                         data.release();
                     }
