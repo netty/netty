@@ -41,11 +41,10 @@ import static java.nio.channels.SelectionKey.*;
  * <p>
  * Note: send/receive must use {@link UdtMessage} in the pipeline
  */
-public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel
-        implements UdtChannel {
+public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel implements UdtChannel {
 
-    private static final InternalLogger logger = InternalLoggerFactory
-            .getInstance(NioUdtMessageConnectorChannel.class);
+    private static final InternalLogger logger =
+            InternalLoggerFactory.getInstance(NioUdtMessageConnectorChannel.class);
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
@@ -55,9 +54,8 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel
         this(TypeUDT.DATAGRAM);
     }
 
-    public NioUdtMessageConnectorChannel(final Channel parent,
-            final Integer id, final SocketChannelUDT channelUDT) {
-        super(parent, id, channelUDT, OP_READ);
+    public NioUdtMessageConnectorChannel(final Channel parent, final SocketChannelUDT channelUDT) {
+        super(parent, channelUDT, OP_READ);
         try {
             channelUDT.configureBlocking(false);
             switch (channelUDT.socketUDT().status()) {
@@ -82,7 +80,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel
     }
 
     public NioUdtMessageConnectorChannel(final SocketChannelUDT channelUDT) {
-        this(null, channelUDT.socketUDT().id(), channelUDT);
+        this(null, channelUDT);
     }
 
     public NioUdtMessageConnectorChannel(final TypeUDT type) {

@@ -37,7 +37,7 @@ public class NioUdtByteAcceptorChannel extends NioUdtAcceptorChannel {
         if (channelUDT == null) {
             return 0;
         } else {
-            buf.add(new NioUdtByteConnectorChannel(this, channelUDT.socketUDT().id(), channelUDT));
+            buf.add(new NioUdtByteConnectorChannel(this, channelUDT));
             return 1;
         }
     }

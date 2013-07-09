@@ -88,17 +88,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
      * @param socket    the {@link MulticastSocket} which is used by this instance
      */
     public OioDatagramChannel(MulticastSocket socket) {
-        this(null, socket);
-    }
-
-    /**
-     * Create a new instance from the given {@link MulticastSocket}.
-     *
-     * @param id        the id which should be used for this instance or {@code null} if a new one should be generated
-     * @param socket    the {@link MulticastSocket} which is used by this instance
-     */
-    public OioDatagramChannel(Integer id, MulticastSocket socket) {
-        super(null, id);
+        super(null);
 
         boolean success = false;
         try {

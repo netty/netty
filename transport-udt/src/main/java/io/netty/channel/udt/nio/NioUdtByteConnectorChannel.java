@@ -37,11 +37,10 @@ import static java.nio.channels.SelectionKey.*;
 /**
  * Byte Channel Connector for UDT Streams.
  */
-public class NioUdtByteConnectorChannel extends AbstractNioByteChannel
-        implements UdtChannel {
+public class NioUdtByteConnectorChannel extends AbstractNioByteChannel implements UdtChannel {
 
-    private static final InternalLogger logger = InternalLoggerFactory
-            .getInstance(NioUdtByteConnectorChannel.class);
+    private static final InternalLogger logger =
+            InternalLoggerFactory.getInstance(NioUdtByteConnectorChannel.class);
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
@@ -51,9 +50,8 @@ public class NioUdtByteConnectorChannel extends AbstractNioByteChannel
         this(TypeUDT.STREAM);
     }
 
-    public NioUdtByteConnectorChannel(final Channel parent, final Integer id,
-            final SocketChannelUDT channelUDT) {
-        super(parent, id, channelUDT);
+    public NioUdtByteConnectorChannel(final Channel parent, final SocketChannelUDT channelUDT) {
+        super(parent, channelUDT);
         try {
             channelUDT.configureBlocking(false);
             switch (channelUDT.socketUDT().status()) {
@@ -78,7 +76,7 @@ public class NioUdtByteConnectorChannel extends AbstractNioByteChannel
     }
 
     public NioUdtByteConnectorChannel(final SocketChannelUDT channelUDT) {
-        this(null, channelUDT.socketUDT().id(), channelUDT);
+        this(null, channelUDT);
     }
 
     public NioUdtByteConnectorChannel(final TypeUDT type) {

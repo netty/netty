@@ -34,16 +34,15 @@ import static java.nio.channels.SelectionKey.*;
 /**
  * Common base for Netty Byte/Message UDT Stream/Datagram acceptors.
  */
-public abstract class NioUdtAcceptorChannel extends AbstractNioMessageChannel
-        implements UdtServerChannel {
+public abstract class NioUdtAcceptorChannel extends AbstractNioMessageChannel implements UdtServerChannel {
 
-    protected static final InternalLogger logger = InternalLoggerFactory
-            .getInstance(NioUdtAcceptorChannel.class);
+    protected static final InternalLogger logger =
+            InternalLoggerFactory.getInstance(NioUdtAcceptorChannel.class);
 
     private final UdtServerChannelConfig config;
 
     protected NioUdtAcceptorChannel(final ServerSocketChannelUDT channelUDT) {
-        super(null, channelUDT.socketUDT().id(), channelUDT, OP_ACCEPT);
+        super(null, channelUDT, OP_ACCEPT);
         try {
             channelUDT.configureBlocking(false);
             config = new DefaultUdtServerChannelConfig(this, channelUDT, true);

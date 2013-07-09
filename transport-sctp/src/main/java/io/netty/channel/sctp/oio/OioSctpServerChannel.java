@@ -80,17 +80,7 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
      * @param sch    the {@link SctpServerChannel} which is used by this instance
      */
     public OioSctpServerChannel(SctpServerChannel sch) {
-        this(null, sch);
-    }
-
-    /**
-     * Create a new instance from the given {@link SctpServerChannel}
-     *
-     * @param id        the id which should be used for this instance or {@code null} if a new one should be generated
-     * @param sch       the {@link SctpServerChannel} which is used by this instance
-     */
-    public OioSctpServerChannel(Integer id, SctpServerChannel sch) {
-        super(null, id);
+        super(null);
         if (sch == null) {
             throw new NullPointerException("sctp server channel");
         }
@@ -206,7 +196,7 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
                     if (key.isAcceptable()) {
                         s = sch.accept();
                         if (s != null) {
-                            buf.add(new OioSctpChannel(this, null, s));
+                            buf.add(new OioSctpChannel(this, s));
                             acceptedChannels ++;
                         }
                     }

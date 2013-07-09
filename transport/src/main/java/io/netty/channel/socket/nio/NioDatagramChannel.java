@@ -110,17 +110,7 @@ public final class NioDatagramChannel
      * Create a new instance from the given {@link DatagramChannel}.
      */
     public NioDatagramChannel(DatagramChannel socket) {
-        this(null, socket);
-    }
-
-    /**
-     * Create a new instance from the given {@link DatagramChannel}.
-     *
-     * @param id        the id to use for this instance or {@code null} if a new one should be generated.
-     * @param socket    the {@link DatagramChannel} which will be used
-     */
-    public NioDatagramChannel(Integer id, DatagramChannel socket) {
-        super(null, id, socket, SelectionKey.OP_READ);
+        super(null, socket, SelectionKey.OP_READ);
         config = new NioDatagramChannelConfig(this, socket);
     }
 

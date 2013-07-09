@@ -55,10 +55,9 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
      *
      * @param parent    the parent {@link Channel} which was used to create this instance. This can be null if the
      *                  {@link} has no parent as it was created by your self.
-     * @param id        the id which should be used for this instance or {@code null} if a new one should be generated
      */
-    protected OioByteStreamChannel(Channel parent, Integer id) {
-        super(parent, id);
+    protected OioByteStreamChannel(Channel parent) {
+        super(parent);
     }
 
     /**

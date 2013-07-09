@@ -47,22 +47,6 @@ public class LocalServerChannel extends AbstractServerChannel {
     private volatile LocalAddress localAddress;
     private volatile boolean acceptInProgress;
 
-    /**
-     * Creates a new instance
-     */
-    public LocalServerChannel() {
-        this(null);
-    }
-
-    /**
-     * Create a new instance
-     *
-     * @param id    the id to use or {@code null} if a new id should be generated
-     */
-    public LocalServerChannel(Integer id) {
-        super(id);
-    }
-
     @Override
     public ChannelConfig config() {
         return config;

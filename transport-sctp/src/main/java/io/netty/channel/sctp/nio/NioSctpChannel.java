@@ -86,7 +86,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
      * Create a new instance using {@link SctpChannel}
      */
     public NioSctpChannel(SctpChannel sctpChannel) {
-        this(null, null, sctpChannel);
+        this(null, sctpChannel);
     }
 
     /**
@@ -94,12 +94,10 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
      *
      * @param parent        the {@link Channel} which is the parent of this {@link NioSctpChannel}
      *                      or {@code null}.
-     * @param id            the id to use for this instance or {@code null} if a new once should be
-     *                      generated
      * @param sctpChannel   the underlying {@link SctpChannel}
      */
-    public NioSctpChannel(Channel parent, Integer id, SctpChannel sctpChannel) {
-        super(parent, id, sctpChannel, SelectionKey.OP_READ);
+    public NioSctpChannel(Channel parent, SctpChannel sctpChannel) {
+        super(parent, sctpChannel, SelectionKey.OP_READ);
         try {
             sctpChannel.configureBlocking(false);
             config = new DefaultSctpChannelConfig(this, sctpChannel);

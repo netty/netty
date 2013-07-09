@@ -39,23 +39,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractChannel.class);
 
-    /**
-     * Generates a negative unique integer ID.  This method generates only
-     * negative integers to avoid conflicts with user-specified IDs where only
-     * non-negative integers are allowed.
-     */
-    private static Integer allocateId() {
-        int idVal = ThreadLocalRandom.current().nextInt();
-        if (idVal > 0) {
-            idVal = -idVal;
-        } else if (idVal == 0) {
-            idVal = -1;
-        }
-        return idVal;
-    }
-
     private final Channel parent;
-    private final Integer id;
+    private final long hashCode = ThreadLocalRandom.current().nextLong();
     private final Unsafe unsafe;
     private final DefaultChannelPipeline pipeline;
     private final ChannelOutboundBuffer outboundBuffer = new ChannelOutboundBuffer(this);
@@ -80,24 +65,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     /**
      * Creates a new instance.
      *
-     * @param id
-     *        the unique non-negative integer ID of this channel.
-     *        Specify {@code null} to auto-generate a unique negative integer
-     *        ID.
      * @param parent
      *        the parent of this channel. {@code null} if there's no parent.
      */
-    protected AbstractChannel(Channel parent, Integer id) {
-        if (id == null) {
-            id = allocateId();
-        } else {
-            if (id.intValue() < 0) {
-                throw new IllegalArgumentException("id: " + id + " (expected: >= 0)");
-            }
-        }
-
+    protected AbstractChannel(Channel parent) {
         this.parent = parent;
-        this.id = id;
         unsafe = newUnsafe();
         pipeline = new DefaultChannelPipeline(this);
     }
@@ -300,7 +272,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     @Override
     public final int hashCode() {
-        return id;
+        return (int) hashCode;
     }
 
     /**
@@ -314,10 +286,25 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public final int compareTo(Channel o) {
-        if (o instanceof AbstractChannel) {
-            return id.compareTo(((AbstractChannel) o).id);
+        if (this == o) {
+            return 0;
         }
-        return id.compareTo(Integer.valueOf(o.hashCode()));
+
+        long ret = hashCode - o.hashCode();
+        if (ret > 0) {
+            return 1;
+        }
+        if (ret < 0) {
+            return -1;
+        }
+
+        ret = System.identityHashCode(this) - System.identityHashCode(o);
+        if (ret != 0) {
+            return (int) ret;
+        }
+
+        // Jackpot! - different objects with same hashes
+        throw new Error();
     }
 
     /**
@@ -345,11 +332,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 srcAddr = remoteAddr;
                 dstAddr = localAddr;
             }
-            strVal = String.format("[id: 0x%08x, %s %s %s]", id, srcAddr, active? "=>" : ":>", dstAddr);
+            strVal = String.format("[id: 0x%08x, %s %s %s]", (int) hashCode, srcAddr, active? "=>" : ":>", dstAddr);
         } else if (localAddr != null) {
-            strVal = String.format("[id: 0x%08x, %s]", id, localAddr);
+            strVal = String.format("[id: 0x%08x, %s]", (int) hashCode, localAddr);
         } else {
-            strVal = String.format("[id: 0x%08x]", id);
+            strVal = String.format("[id: 0x%08x]", (int) hashCode);
         }
 
         strValActive = active;
