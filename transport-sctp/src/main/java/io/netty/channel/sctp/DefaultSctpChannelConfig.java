@@ -26,7 +26,6 @@ import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 
 import static io.netty.channel.sctp.SctpChannelOption.*;
@@ -88,8 +87,7 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
         } else if (option == SCTP_NODELAY) {
             setSctpNoDelay((Boolean) value);
         } else if (option == SCTP_INIT_MAXSTREAMS) {
-            List<Integer> minMax = (List<Integer>) value;
-            setInitMaxStreams(SctpStandardSocketOptions.InitMaxStreams.create(minMax.get(0), minMax.get(1)));
+            setInitMaxStreams((SctpStandardSocketOptions.InitMaxStreams) value);
         } else {
             return super.setOption(option, value);
         }
