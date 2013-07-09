@@ -88,8 +88,8 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
         } else if (option == SCTP_NODELAY) {
             setSctpNoDelay((Boolean) value);
         } else if (option == SCTP_INIT_MAXSTREAMS) {
-            List<Integer> streams = (List<Integer>) value;
-            setInitMaxStreams(SctpStandardSocketOptions.InitMaxStreams.create(streams.get(0), streams.get(1)));
+            List<Integer> minMax = (List<Integer>) value;
+            setInitMaxStreams(SctpStandardSocketOptions.InitMaxStreams.create(minMax.get(0), minMax.get(1)));
         } else {
             return super.setOption(option, value);
         }
