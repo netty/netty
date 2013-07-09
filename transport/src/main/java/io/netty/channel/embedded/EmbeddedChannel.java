@@ -147,9 +147,9 @@ public class EmbeddedChannel extends AbstractChannel {
 
         ChannelPipeline p = pipeline();
         for (Object m: msgs) {
-            p.fireMessageReceived(m);
+            p.fireChannelRead(m);
         }
-        p.fireMessageReceivedLast();
+        p.fireChannelReadComplete();
         runPendingTasks();
         checkException();
         return !lastInboundBuffer.isEmpty();
@@ -311,7 +311,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
     private final class LastInboundHandler extends ChannelInboundHandlerAdapter {
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             lastInboundBuffer.add(msg);
         }
 

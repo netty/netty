@@ -31,14 +31,14 @@ public class ObjectEchoServerHandler extends ChannelInboundHandlerAdapter {
             ObjectEchoServerHandler.class.getName());
 
     @Override
-    public void messageReceived(
+    public void channelRead(
             ChannelHandlerContext ctx, Object msg) throws Exception {
         // Echo back the received object to the client.
         ctx.write(msg);
     }
 
     @Override
-    public void messageReceivedLast(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         ctx.flush();
     }
 

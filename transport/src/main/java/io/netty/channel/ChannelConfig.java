@@ -120,7 +120,7 @@ public interface ChannelConfig {
 
     /**
      * Returns the maximum number of messages in a {@link MessageList} of
-     * a {@link ChannelInboundHandler#messageReceived(ChannelHandlerContext, MessageList) messageReceived()} event.
+     * a {@link ChannelInboundHandler#channelRead(ChannelHandlerContext, Object) channelRead()} event.
      * If this value is greater than 1, an event loop might attempt to read multiple times to fill multiple messages
      * into the {@link MessageList}.
      */
@@ -128,7 +128,7 @@ public interface ChannelConfig {
 
     /**
      * Sets the maximum number of messages in a {@link MessageList} of
-     * a {@link ChannelInboundHandler#messageReceived(ChannelHandlerContext, MessageList) messageReceived()} event.
+     * a {@link ChannelInboundHandler#channelRead(ChannelHandlerContext, Object) channelRead()} event.
      * If this value is greater than 1, an event loop might attempt to read multiple times to fill multiple messages
      * into the {@link MessageList}.
      */

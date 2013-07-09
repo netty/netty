@@ -40,7 +40,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
 
         sb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
             @Override
-            public void messageReceived0(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+            public void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
                 assertEquals(1, msg.content().readInt());
                 latch.countDown();
             }
@@ -48,7 +48,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
 
         cb.handler(new SimpleChannelInboundHandler<Object>() {
             @Override
-            public void messageReceived0(ChannelHandlerContext ctx, Object msgs) throws Exception {
+            public void channelRead0(ChannelHandlerContext ctx, Object msgs) throws Exception {
                 // Nothing will be sent.
             }
         });

@@ -50,12 +50,12 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
     private final StringBuilder buf = new StringBuilder();
 
     @Override
-    public void messageReceivedLast(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         ctx.flush();
     }
 
     @Override
-    protected void messageReceived0(ChannelHandlerContext ctx, Object msg) {
+    protected void channelRead0(ChannelHandlerContext ctx, Object msg) {
         if (msg instanceof HttpRequest) {
             HttpRequest request = this.request = (HttpRequest) msg;
 

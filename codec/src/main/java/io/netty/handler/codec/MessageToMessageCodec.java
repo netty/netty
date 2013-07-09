@@ -96,8 +96,8 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN> extends Cha
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-        decoder.messageReceived(ctx, msg);
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        decoder.channelRead(ctx, msg);
     }
 
     @Override
@@ -124,13 +124,13 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN> extends Cha
     }
 
     /**
-     * @see MessageToMessageEncoder#encode(ChannelHandlerContext, Object, CodecOutput)
+     * @see MessageToMessageEncoder#encode(ChannelHandlerContext, Object, List)
      */
     protected abstract void encode(ChannelHandlerContext ctx, OUTBOUND_IN msg, List<Object> out)
             throws Exception;
 
     /**
-     * @see MessageToMessageDecoder#decode(ChannelHandlerContext, Object, CodecOutput)
+     * @see MessageToMessageDecoder#decode(ChannelHandlerContext, Object, List)
      */
     protected abstract void decode(ChannelHandlerContext ctx, INBOUND_IN msg, List<Object> out)
             throws Exception;

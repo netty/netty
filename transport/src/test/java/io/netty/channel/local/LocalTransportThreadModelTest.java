@@ -27,18 +27,17 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutorGroup;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
 
 import java.util.HashSet;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicReference;
-
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
 
 public class LocalTransportThreadModelTest {
 
@@ -57,7 +56,7 @@ public class LocalTransportThreadModelTest {
               public void initChannel(LocalChannel ch) throws Exception {
                   ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                       @Override
-                      public void messageReceived(ChannelHandlerContext ctx, Object msg) {
+                      public void channelRead(ChannelHandlerContext ctx, Object msg) {
                           // Discard
                           ReferenceCountUtil.release(msg);
                       }
@@ -101,10 +100,10 @@ public class LocalTransportThreadModelTest {
         l.register(ch).sync().channel().connect(localAddr).sync();
 
         // Fire inbound events from all possible starting points.
-        ch.pipeline().fireMessageReceived("1");
-        ch.pipeline().context(h1).fireMessageReceived("2");
-        ch.pipeline().context(h2).fireMessageReceived("3");
-        ch.pipeline().context(h3).fireMessageReceived("4");
+        ch.pipeline().fireChannelRead("1");
+        ch.pipeline().context(h1).fireChannelRead("2");
+        ch.pipeline().context(h2).fireChannelRead("3");
+        ch.pipeline().context(h3).fireChannelRead("4");
         // Fire outbound events from all possible starting points.
         ch.pipeline().write("5");
         ch.pipeline().context(h3).write("6");
@@ -266,7 +265,7 @@ public class LocalTransportThreadModelTest {
                     @Override
                     public void run() {
                         for (int j = start; j < end; j ++) {
-                            ch.pipeline().fireMessageReceived(Integer.valueOf(j));
+                            ch.pipeline().fireChannelRead(Integer.valueOf(j));
                         }
                     }
                 });
@@ -366,9 +365,9 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             inboundThreadNames.add(Thread.currentThread().getName());
-            ctx.fireMessageReceived(msg);
+            ctx.fireChannelRead(msg);
         }
 
         @Override
@@ -397,7 +396,7 @@ public class LocalTransportThreadModelTest {
         private volatile Thread t;
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             Thread t = this.t;
             if (t == null) {
                 this.t = Thread.currentThread();
@@ -411,7 +410,7 @@ public class LocalTransportThreadModelTest {
             Assert.assertEquals(expected, m);
             out.writeInt(m);
 
-            ctx.fireMessageReceived(out);
+            ctx.fireChannelRead(out);
         }
 
         @Override
@@ -454,7 +453,7 @@ public class LocalTransportThreadModelTest {
         private volatile Thread t;
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             Thread t = this.t;
             if (t == null) {
                 this.t = Thread.currentThread();
@@ -468,7 +467,7 @@ public class LocalTransportThreadModelTest {
                 int actual = m.readInt();
                 int expected = inCnt ++;
                 Assert.assertEquals(expected, actual);
-                ctx.fireMessageReceived(actual);
+                ctx.fireChannelRead(actual);
             }
             m.release();
         }
@@ -506,7 +505,7 @@ public class LocalTransportThreadModelTest {
         private volatile Thread t;
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             Thread t = this.t;
             if (t == null) {
                 this.t = Thread.currentThread();
@@ -518,7 +517,7 @@ public class LocalTransportThreadModelTest {
             int expected = inCnt ++;
             Assert.assertEquals(expected, actual);
 
-            ctx.fireMessageReceived(msg);
+            ctx.fireChannelRead(msg);
         }
 
         @Override
@@ -552,7 +551,7 @@ public class LocalTransportThreadModelTest {
         private volatile Thread t;
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             Thread t = this.t;
             if (t == null) {
                 this.t = Thread.currentThread();

@@ -32,12 +32,12 @@ public class ByteEchoServerHandler extends ChannelInboundHandlerAdapter {
     private static final Logger log = Logger.getLogger(ByteEchoServerHandler.class.getName());
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx, Object msg) {
+    public void channelRead(final ChannelHandlerContext ctx, Object msg) {
         ctx.write(msg);
     }
 
     @Override
-    public void messageReceivedLast(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         ctx.flush();
     }
 

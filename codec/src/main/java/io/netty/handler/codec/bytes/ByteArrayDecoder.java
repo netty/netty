@@ -43,7 +43,7 @@ import java.util.List;
  * and then you can use an array of bytes instead of a {@link ByteBuf}
  * as a message:
  * <pre>
- * void messageReceived({@link ChannelHandlerContext} ctx, byte[] bytes) {
+ * void channelRead({@link ChannelHandlerContext} ctx, byte[] bytes) {
  *     ...
  * }
  * </pre>

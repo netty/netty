@@ -190,9 +190,9 @@ interface ChannelOutboundInvoker {
 
     /**
      * Request to Read data from the {@link Channel} into the first inbound buffer, triggers an
-     * {@link ChannelInboundHandler#messageReceived(ChannelHandlerContext, Object)} event if data was
-     * read, and triggers an
-     * {@link ChannelInboundHandler#channelReadSuspended(ChannelHandlerContext) channelReadSuspended} event so the
+     * {@link ChannelInboundHandler#channelRead(ChannelHandlerContext, Object)} event if data was
+     * read, and triggers a
+     * {@link ChannelInboundHandler#channelReadComplete(ChannelHandlerContext) channelReadComplete} event so the
      * handler can decide to continue reading.  If there's a pending read operation already, this method does nothing.
      * <p>
      * This will result in having the

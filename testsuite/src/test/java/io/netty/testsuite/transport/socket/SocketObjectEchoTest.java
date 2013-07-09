@@ -31,7 +31,7 @@ import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 public class SocketObjectEchoTest extends AbstractSocketTest {
 
@@ -145,7 +145,7 @@ public class SocketObjectEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             assertEquals(data[counter], msg);
 
             if (channel.parent() != null) {
@@ -156,7 +156,7 @@ public class SocketObjectEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceivedLast(ChannelHandlerContext ctx) throws Exception {
+        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
             ctx.flush();
         }
 

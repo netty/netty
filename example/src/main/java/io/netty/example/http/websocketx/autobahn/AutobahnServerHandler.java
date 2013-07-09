@@ -52,7 +52,7 @@ public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
     private WebSocketServerHandshaker handshaker;
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof FullHttpRequest) {
             handleHttpRequest(ctx, (FullHttpRequest) msg);
         } else if (msg instanceof WebSocketFrame) {
@@ -61,7 +61,7 @@ public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void messageReceivedLast(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         ctx.flush();
     }
 

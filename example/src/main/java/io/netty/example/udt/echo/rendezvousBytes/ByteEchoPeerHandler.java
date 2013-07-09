@@ -60,14 +60,14 @@ public class ByteEchoPeerHandler extends SimpleChannelInboundHandler<ByteBuf> {
     }
 
     @Override
-    public void messageReceived0(ChannelHandlerContext ctx, ByteBuf buf) throws Exception {
+    public void channelRead0(ChannelHandlerContext ctx, ByteBuf buf) throws Exception {
         meter.mark(buf.readableBytes());
 
         ctx.write(buf);
     }
 
     @Override
-    public void messageReceivedLast(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         ctx.flush();
     }
 }

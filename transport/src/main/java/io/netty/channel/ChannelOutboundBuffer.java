@@ -32,12 +32,12 @@ final class ChannelOutboundBuffer {
     private static final int MIN_INITIAL_CAPACITY = 8;
 
     ChannelPromise currentPromise;
-    MessageList<Object> currentMessages;
+    MessageList currentMessages;
     int currentMessageIndex;
     private long currentMessageListSize;
 
     private ChannelPromise[] promises;
-    private MessageList<Object>[] messages;
+    private MessageList[] messages;
     private long[] messageListSizes;
 
     private int head;
@@ -87,7 +87,7 @@ final class ChannelOutboundBuffer {
 
     void addMessage(Object msg) {
         int tail = this.tail;
-        MessageList<Object> msgs = messages[tail];
+        MessageList msgs = messages[tail];
         if (msgs == null) {
             messages[tail] = msgs = MessageList.newInstance();
         }
@@ -154,7 +154,7 @@ final class ChannelOutboundBuffer {
         promises = a1;
 
         @SuppressWarnings("unchecked")
-        MessageList<Object>[] a2 = new MessageList[newCapacity];
+        MessageList[] a2 = new MessageList[newCapacity];
         System.arraycopy(messages, p, a2, 0, r);
         System.arraycopy(messages, 0, a2, r, p);
         messages = a2;
@@ -249,9 +249,11 @@ final class ChannelOutboundBuffer {
 
                 if (currentMessages != null) {
                     // Release all failed messages.
+                    Object[] array = currentMessages.array();
+                    final int size = currentMessages.size();
                     try {
-                        for (int i = currentMessageIndex; i < currentMessages.size(); i++) {
-                            Object msg = currentMessages.get(i);
+                        for (int i = currentMessageIndex; i < size; i++) {
+                            Object msg = array[i];
                             ReferenceCountUtil.release(msg);
                         }
                     } finally {

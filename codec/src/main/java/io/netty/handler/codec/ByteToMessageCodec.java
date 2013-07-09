@@ -78,8 +78,8 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-        decoder.messageReceived(ctx, msg);
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        decoder.channelRead(ctx, msg);
     }
 
     @Override

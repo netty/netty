@@ -44,7 +44,7 @@ import java.util.NoSuchElementException;
  * The following diagram describes how I/O events are processed by {@link ChannelHandler}s in a {@link ChannelPipeline}
  * typically. An I/O event is handled by either a {@link ChannelInboundHandler} or a {@link ChannelOutboundHandler}
  * and be forwarded to its closest handler by calling the event propagation methods defined in
- * {@link ChannelHandlerContext}, such as {@link ChannelHandlerContext#fireMessageReceived(Object)} and
+ * {@link ChannelHandlerContext}, such as {@link ChannelHandlerContext#fireChannelRead(Object)} and
  * {@link ChannelHandlerContext#write(Object)}.
  *
  * <pre>
@@ -132,11 +132,10 @@ import java.util.NoSuchElementException;
  *     <ul>
  *     <li>{@link ChannelHandlerContext#fireChannelRegistered()}</li>
  *     <li>{@link ChannelHandlerContext#fireChannelActive()}</li>
- *     <li>{@link ChannelHandlerContext#fireMessageReceived(Object)}</li>
- *     <li>{@link ChannelHandlerContext#fireMessageReceivedLast()}</li>
+ *     <li>{@link ChannelHandlerContext#fireChannelRead(Object)}</li>
+ *     <li>{@link ChannelHandlerContext#fireChannelReadComplete()}</li>
  *     <li>{@link ChannelHandlerContext#fireExceptionCaught(Throwable)}</li>
  *     <li>{@link ChannelHandlerContext#fireUserEventTriggered(Object)}</li>
- *     <li>{@link ChannelHandlerContext#fireChannelReadSuspended()}</li>
  *     <li>{@link ChannelHandlerContext#fireChannelWritabilityChanged()}</li>
  *     <li>{@link ChannelHandlerContext#fireChannelInactive()}</li>
  *     <li>{@link ChannelHandlerContext#fireChannelUnregistered()}</li>
@@ -614,13 +613,10 @@ public interface ChannelPipeline
     ChannelPipeline fireUserEventTriggered(Object event);
 
     @Override
-    ChannelPipeline fireMessageReceived(Object msg);
+    ChannelPipeline fireChannelRead(Object msg);
 
     @Override
-    ChannelPipeline fireMessageReceivedLast();
-
-    @Override
-    ChannelPipeline fireChannelReadSuspended();
+    ChannelPipeline fireChannelReadComplete();
 
     @Override
     ChannelPipeline fireChannelWritabilityChanged();

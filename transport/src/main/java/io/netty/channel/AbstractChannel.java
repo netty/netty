@@ -653,7 +653,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         promise = outboundBuffer.currentPromise;
                     }
 
-                    MessageList<Object> messages = outboundBuffer.currentMessages;
+                    MessageList messages = outboundBuffer.currentMessages;
 
                     // Make sure the message list is not empty.
                     if (messages == null) {

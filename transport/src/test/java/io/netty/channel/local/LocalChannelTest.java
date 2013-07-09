@@ -15,11 +15,6 @@
  */
 package io.netty.channel.local;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.AbstractChannel;
@@ -30,11 +25,13 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.junit.Test;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.CountDownLatch;
 
-import org.junit.Test;
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.*;
 
 public class LocalChannelTest {
 
@@ -74,7 +71,7 @@ public class LocalChannelTest {
                 @Override
                 public void run() {
                     // Send a message event up the pipeline.
-                    cc.pipeline().fireMessageReceived("Hello, World");
+                    cc.pipeline().fireChannelRead("Hello, World");
                     latch.countDown();
                 }
             });
@@ -145,7 +142,7 @@ public class LocalChannelTest {
 
     static class TestHandler extends ChannelInboundHandlerAdapter {
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             logger.info(String.format("Received mesage: %s", msg));
         }
     }

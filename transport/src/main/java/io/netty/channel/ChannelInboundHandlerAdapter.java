@@ -24,7 +24,7 @@ package io.netty.channel;
  * {@link ChannelPipeline}. Sub-classes may override a method implementation to change this.
  * </p>
  * <p>
- * Be aware that messages are not released after the {@link #messageReceived(ChannelHandlerContext, Object)}
+ * Be aware that messages are not released after the {@link #channelRead(ChannelHandlerContext, Object)}
  * method returns automatically. If you are looking for a {@link ChannelInboundHandler} implementation that
  * releases the received messages automatically, please see {@link SimpleChannelInboundHandler}.
  * </p>
@@ -74,31 +74,21 @@ public class ChannelInboundHandlerAdapter extends ChannelHandlerAdapter implemen
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         ctx.fireChannelInactive();
     }
+
     /**
-     * Calls {@link ChannelHandlerContext#fireChannelReadSuspended()} to forward
+     * Calls {@link ChannelHandlerContext#fireChannelRead(Object)} to forward
      * to the next {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void channelReadSuspended(ChannelHandlerContext ctx) throws Exception {
-        ctx.fireChannelReadSuspended();
-    }
-
-    /**
-     * Calls {@link ChannelHandlerContext#fireMessageReceived(Object)} to forward
-     * to the next {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
-     *
-     * Sub-classes may override this method to change behavior.
-     */
-    @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-        ctx.fireMessageReceived(msg);
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        ctx.fireChannelRead(msg);
     }
 
     @Override
-    public void messageReceivedLast(ChannelHandlerContext ctx) throws Exception {
-        ctx.fireMessageReceivedLast();
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        ctx.fireChannelReadComplete();
     }
 
     /**

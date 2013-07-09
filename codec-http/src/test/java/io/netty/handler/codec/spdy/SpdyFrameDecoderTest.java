@@ -131,7 +131,7 @@ public class SpdyFrameDecoderTest {
         public volatile Object message;
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object m) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object m) throws Exception {
             message = m;
         }
 

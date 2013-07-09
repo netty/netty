@@ -41,8 +41,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private ChannelFuture succeededFuture;
 
     // Lazily instantiated tasks used to trigger events to a handler with different executor.
-    private Runnable invokeMessageReceivedLastTask;
-    private Runnable invokeChannelReadSuspendedTask;
+    private Runnable invokeChannelReadCompleteTask;
     private Runnable invokeRead0Task;
     private Runnable invokeChannelWritableStateChangedTask;
 
@@ -341,7 +340,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public ChannelHandlerContext fireMessageReceived(final Object msg) {
+    public ChannelHandlerContext fireChannelRead(final Object msg) {
         if (msg == null) {
             throw new NullPointerException("msg");
         }
@@ -354,40 +353,40 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         final DefaultChannelHandlerContext next = findContextInbound();
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            next.invokeMessageReceived(msg);
+            next.invokeChannelRead(msg);
         } else {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    next.invokeMessageReceived(msg);
+                    next.invokeChannelRead(msg);
                 }
             });
         }
         return this;
     }
 
-    private void invokeMessageReceived(Object msg) {
+    private void invokeChannelRead(Object msg) {
         ChannelInboundHandler handler = (ChannelInboundHandler) handler();
         try {
-            handler.messageReceived(this, msg);
+            handler.channelRead(this, msg);
         } catch (Throwable t) {
             notifyHandlerException(t);
         }
     }
 
     @Override
-    public ChannelHandlerContext fireMessageReceivedLast() {
+    public ChannelHandlerContext fireChannelReadComplete() {
         final DefaultChannelHandlerContext next = findContextInbound();
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            next.invokeMessageReceivedLast();
+            next.invokeChannelReadComplete();
         } else {
-            Runnable task = next.invokeMessageReceivedLastTask;
+            Runnable task = next.invokeChannelReadCompleteTask;
             if (task == null) {
-                next.invokeMessageReceivedLastTask = task = new Runnable() {
+                next.invokeChannelReadCompleteTask = task = new Runnable() {
                     @Override
                     public void run() {
-                        next.invokeMessageReceivedLast();
+                        next.invokeChannelReadComplete();
                     }
                 };
             }
@@ -396,38 +395,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         return this;
     }
 
-    private void invokeMessageReceivedLast() {
+    private void invokeChannelReadComplete() {
         try {
-            ((ChannelInboundHandler) handler()).messageReceivedLast(this);
-        } catch (Throwable t) {
-            notifyHandlerException(t);
-        }
-    }
-
-    @Override
-    public ChannelHandlerContext fireChannelReadSuspended() {
-        final DefaultChannelHandlerContext next = findContextInbound();
-        EventExecutor executor = next.executor();
-        if (executor.inEventLoop()) {
-            next.invokeChannelReadSuspended();
-        } else {
-            Runnable task = next.invokeChannelReadSuspendedTask;
-            if (task == null) {
-                next.invokeChannelReadSuspendedTask = task = new Runnable() {
-                    @Override
-                    public void run() {
-                        next.invokeChannelReadSuspended();
-                    }
-                };
-            }
-            executor.execute(task);
-        }
-        return this;
-    }
-
-    private void invokeChannelReadSuspended() {
-        try {
-            ((ChannelInboundHandler) handler()).channelReadSuspended(this);
+            ((ChannelInboundHandler) handler()).channelReadComplete(this);
         } catch (Throwable t) {
             notifyHandlerException(t);
         }
@@ -445,7 +415,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                 next.invokeChannelWritableStateChangedTask = task = new Runnable() {
                     @Override
                     public void run() {
-                        next.invokeChannelReadSuspended();
+                        next.invokeChannelWritabilityChanged();
                     }
                 };
             }

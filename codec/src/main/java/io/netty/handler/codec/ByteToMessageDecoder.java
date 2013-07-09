@@ -56,7 +56,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     }
 
     /**
-     * If set then only one message is decoded on each {@link #messageReceived(ChannelHandlerContext, Object)}
+     * If set then only one message is decoded on each {@link #channelRead(ChannelHandlerContext, Object)}
      * call. This may be useful if you need to do some protocol upgrade and want to make sure nothing is mixed up.
      *
      * Default is {@code false} as this has performance impacts.
@@ -67,7 +67,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
 
     /**
      * If {@code true} then only one message is decoded on each
-     * {@link #messageReceived(ChannelHandlerContext, Object)} call.
+     * {@link #channelRead(ChannelHandlerContext, Object)} call.
      *
      * Default is {@code false} as this has performance impacts.
      */
@@ -102,9 +102,9 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     public final void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         ByteBuf buf = internalBuffer();
         if (buf.isReadable()) {
-            ctx.fireMessageReceived(buf);
+            ctx.fireChannelRead(buf);
         }
-        ctx.fireMessageReceivedLast();
+        ctx.fireChannelReadComplete();
         handlerRemoved0(ctx);
     }
 
@@ -115,7 +115,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception { }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         CodecOutput out = CodecOutput.newInstance();
         try {
             if (msg instanceof ByteBuf) {
@@ -163,7 +163,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             }
 
             for (int i = 0; i < out.size(); i ++) {
-                ctx.fireMessageReceived(out.get(i));
+                ctx.fireChannelRead(out.get(i));
             }
 
             out.recycle();
@@ -171,14 +171,14 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     }
 
     @Override
-    public void channelReadSuspended(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         if (decodeWasNull) {
             decodeWasNull = false;
             if (!ctx.channel().config().isAutoRead()) {
                 ctx.read();
             }
         }
-        super.channelReadSuspended(ctx);
+        ctx.fireChannelReadComplete();
     }
 
     @Override
@@ -202,7 +202,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             }
 
             for (int i = 0; i < out.size(); i ++) {
-                ctx.fireMessageReceived(out.get(i));
+                ctx.fireChannelRead(out.get(i));
             }
             ctx.fireChannelInactive();
         }
@@ -256,7 +256,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      * Is called one last time when the {@link ChannelHandlerContext} goes in-active. Which means the
      * {@link #channelInactive(ChannelHandlerContext)} was triggered.
      *
-     * By default this will just call {@link #decode(ChannelHandlerContext, ByteBuf, CodecOutput)} but sub-classes may
+     * By default this will just call {@link #decode(ChannelHandlerContext, ByteBuf, List)} but sub-classes may
      * override this for some special cleanup operation.
      */
     protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {

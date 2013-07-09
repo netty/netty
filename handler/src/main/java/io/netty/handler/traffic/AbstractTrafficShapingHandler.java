@@ -208,7 +208,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
     }
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx, final Object msg) throws Exception {
+    public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
         ByteBuf buf = (ByteBuf) msg;
         long size = buf.readableBytes();
         long curtime = System.currentTimeMillis();
@@ -217,7 +217,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
             trafficCounter.bytesRecvFlowControl(size);
             if (readLimit == 0) {
                 // no action
-                ctx.fireMessageReceived(msg);
+                ctx.fireChannelRead(msg);
 
                 return;
             }
@@ -248,7 +248,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                     Runnable bufferUpdateTask = new Runnable() {
                         @Override
                         public void run() {
-                            ctx.fireMessageReceived(msg);
+                            ctx.fireChannelRead(msg);
                         }
                     };
                     ctx.executor().schedule(bufferUpdateTask, wait, TimeUnit.MILLISECONDS);
@@ -256,7 +256,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                 }
             }
         }
-        ctx.fireMessageReceived(msg);
+        ctx.fireChannelRead(msg);
     }
 
     @Override

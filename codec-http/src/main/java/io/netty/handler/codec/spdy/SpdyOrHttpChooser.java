@@ -60,13 +60,13 @@ public abstract class SpdyOrHttpChooser extends ChannelInboundHandlerAdapter {
     protected abstract SelectedProtocol getProtocol(SSLEngine engine);
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (initPipeline(ctx)) {
             // When we reached here we can remove this handler as its now clear what protocol we want to use
             // from this point on.
             ctx.pipeline().remove(this);
 
-            ctx.fireMessageReceived(msg);
+            ctx.fireChannelRead(msg);
         }
     }
 

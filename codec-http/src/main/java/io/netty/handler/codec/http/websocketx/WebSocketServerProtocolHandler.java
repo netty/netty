@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
@@ -30,6 +29,8 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.AttributeKey;
 
 import java.util.List;
+
+import static io.netty.handler.codec.http.HttpVersion.*;
 
 /**
  * This handler does all the heavy lifting for you to run a websocket server.
@@ -123,13 +124,13 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     static ChannelHandler forbiddenHttpRequestResponder() {
         return new ChannelInboundHandlerAdapter() {
             @Override
-            public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                 if (msg instanceof FullHttpRequest) {
                     FullHttpResponse response =
                             new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.FORBIDDEN);
                     ctx.channel().write(response).flush();
                 } else {
-                    ctx.fireMessageReceived(msg);
+                    ctx.fireChannelRead(msg);
                 }
             }
         };

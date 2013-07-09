@@ -338,7 +338,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
             }
 
             for (int i = 0; i < out.size(); i ++) {
-                ctx.fireMessageReceived(out.get(i));
+                ctx.fireChannelRead(out.get(i));
             }
             ctx.fireChannelInactive();
         }

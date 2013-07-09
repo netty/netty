@@ -167,7 +167,7 @@ public class UDTClientServerConnectionTest {
         }
 
         @Override
-        public void messageReceived0(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
             log.info("Client received: " + msg);
         }
     }
@@ -320,7 +320,7 @@ public class UDTClientServerConnectionTest {
         }
 
         @Override
-        public void messageReceived0(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
             log.info("Server received: " + msg);
         }
     }

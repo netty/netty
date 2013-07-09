@@ -48,10 +48,10 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
         }
 
         for (int i = 0; i < readBuf.size(); i ++) {
-            pipeline.fireMessageReceived(readBuf.get(i));
+            pipeline.fireChannelRead(readBuf.get(i));
         }
         readBuf.clear();
-        pipeline.fireMessageReceivedLast();
+        pipeline.fireChannelReadComplete();
 
         if (exception != null) {
             if (exception instanceof IOException) {
@@ -65,8 +65,6 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
             if (isOpen()) {
                 unsafe().close(unsafe().voidPromise());
             }
-        } else {
-            pipeline.fireChannelReadSuspended();
         }
     }
 

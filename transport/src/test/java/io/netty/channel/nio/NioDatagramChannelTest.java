@@ -24,11 +24,10 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
-
-import java.net.InetSocketAddress;
-
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.net.InetSocketAddress;
 
 
 public class NioDatagramChannelTest {
@@ -47,7 +46,7 @@ public class NioDatagramChannelTest {
                         .option(ChannelOption.SO_BROADCAST, true)
                         .handler(new ChannelInboundHandlerAdapter() {
                             @Override
-                            public void messageReceived(ChannelHandlerContext ctx, Object msg) {
+                            public void channelRead(ChannelHandlerContext ctx, Object msg) {
                                 // Discard
                                 ReferenceCountUtil.release(msg);
                             }

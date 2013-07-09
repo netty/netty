@@ -226,7 +226,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
 
         @Override
         @SuppressWarnings("unchecked")
-        public void messageReceived(ChannelHandlerContext ctx, Object msg) {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
             Channel child = (Channel) msg;
 
             child.pipeline().addLast(childHandler);

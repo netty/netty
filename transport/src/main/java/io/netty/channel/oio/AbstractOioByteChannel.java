@@ -78,15 +78,12 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
         ByteBuf byteBuf = alloc().buffer();
         boolean closed = false;
         boolean read = false;
-        boolean firedInboundBufferSuspeneded = false;
         Throwable exception = null;
-        boolean readMessage = false;
         try {
             for (;;) {
                 int localReadAmount = doReadBytes(byteBuf);
                 if (localReadAmount > 0) {
                     read = true;
-                    readMessage = true;
                 } else if (localReadAmount < 0) {
                     closed = true;
                 }
@@ -102,7 +99,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                     if (capacity == maxCapacity) {
                         if (read) {
                             read = false;
-                            pipeline.fireMessageReceived(byteBuf);
+                            pipeline.fireChannelRead(byteBuf);
                             byteBuf = alloc().buffer();
                         }
                     } else {
@@ -124,21 +121,18 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
             exception = t;
         } finally {
             if (read) {
-                pipeline.fireMessageReceived(byteBuf);
+                pipeline.fireChannelRead(byteBuf);
             } else {
                 // nothing read into the buffer so release it
                 byteBuf.release();
             }
-            if (readMessage) {
-                pipeline.fireMessageReceivedLast();
-            }
+
+            pipeline.fireChannelReadComplete();
             if (exception != null) {
                 if (exception instanceof IOException) {
                     closed = true;
                     pipeline().fireExceptionCaught(exception);
                 } else {
-                    firedInboundBufferSuspeneded = true;
-                    pipeline.fireChannelReadSuspended();
                     pipeline.fireExceptionCaught(exception);
                     unsafe().close(voidPromise());
                 }
@@ -153,8 +147,6 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                         unsafe().close(unsafe().voidPromise());
                     }
                 }
-            } else if (!firedInboundBufferSuspeneded) {
-                pipeline.fireChannelReadSuspended();
             }
         }
     }

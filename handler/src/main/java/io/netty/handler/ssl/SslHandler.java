@@ -540,7 +540,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         List<Object> messageList = new ArrayList<Object>();
         decode(ctx, internalBuffer(),  messageList);
         for (int i = 0; i < messageList.size(); i++) {
-            ctx.fireMessageReceived(messageList.get(i));
+            ctx.fireChannelRead(messageList.get(i));
         }
     }
 
@@ -808,6 +808,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         return packetLength;
     }
 
+    @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws SSLException {
         int packetLength = this.packetLength;
         if (packetLength == 0) {

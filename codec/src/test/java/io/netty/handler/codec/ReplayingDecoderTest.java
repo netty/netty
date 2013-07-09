@@ -15,17 +15,16 @@
  */
 package io.netty.handler.codec;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
+import org.junit.Test;
 
 import java.util.List;
 
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 public class ReplayingDecoderTest {
 
@@ -82,9 +81,9 @@ public class ReplayingDecoderTest {
 
     private static final class BloatedLineDecoder extends ChannelInboundHandlerAdapter {
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             ctx.pipeline().replace(this, "less-bloated", new LineDecoder());
-            ctx.pipeline().fireMessageReceived(msg);
+            ctx.pipeline().fireChannelRead(msg);
         }
     }
 

@@ -95,7 +95,7 @@ import java.util.concurrent.TimeUnit;
  * <pre>
  * // BAD - NEVER DO THIS
  * {@code @Override}
- * public void messageReceived({@link ChannelHandlerContext} ctx, GoodByeMessage msg) {
+ * public void channelRead({@link ChannelHandlerContext} ctx, GoodByeMessage msg) {
  *     {@link ChannelFuture} future = ctx.channel().close();
  *     future.awaitUninterruptibly();
  *     // Perform post-closure operation
@@ -104,7 +104,7 @@ import java.util.concurrent.TimeUnit;
  *
  * // GOOD
  * {@code @Override}
- * public void messageReceived({@link ChannelHandlerContext} ctx,  GoodByeMessage msg) {
+ * public void channelRead({@link ChannelHandlerContext} ctx,  GoodByeMessage msg) {
  *     {@link ChannelFuture} future = ctx.channel().close();
  *     future.addListener(new {@link ChannelFutureListener}() {
  *         public void operationComplete({@link ChannelFuture} future) {
