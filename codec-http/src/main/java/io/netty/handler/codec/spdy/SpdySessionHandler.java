@@ -22,8 +22,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.internal.EmptyArrays;
 
-import java.util.ArrayDeque;
-import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -54,8 +52,6 @@ public class SpdySessionHandler
     private final Object flowControlLock = new Object();
 
     private final AtomicInteger pings = new AtomicInteger();
-
-    private final Queue<Object> outboundBuffer = new ArrayDeque<Object>();
 
     private boolean sentGoAwayFrame;
     private boolean receivedGoAwayFrame;
@@ -397,44 +393,19 @@ public class SpdySessionHandler
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg) throws Exception {
-        outboundBuffer.add(msg);
-    }
+        if (msg instanceof SpdyDataFrame ||
+            msg instanceof SpdySynStreamFrame ||
+            msg instanceof SpdySynReplyFrame ||
+            msg instanceof SpdyRstStreamFrame ||
+            msg instanceof SpdySettingsFrame ||
+            msg instanceof SpdyPingFrame ||
+            msg instanceof SpdyGoAwayFrame ||
+            msg instanceof SpdyHeadersFrame ||
+            msg instanceof SpdyWindowUpdateFrame) {
 
-    @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        try {
-            for (;;) {
-                Object msg = outboundBuffer.poll();
-                if (msg == null) {
-                    break;
-                }
-
-                if (msg instanceof SpdyDataFrame ||
-                        msg instanceof SpdySynStreamFrame ||
-                        msg instanceof SpdySynReplyFrame ||
-                        msg instanceof SpdyRstStreamFrame ||
-                        msg instanceof SpdySettingsFrame ||
-                        msg instanceof SpdyPingFrame ||
-                        msg instanceof SpdyGoAwayFrame ||
-                        msg instanceof SpdyHeadersFrame ||
-                        msg instanceof SpdyWindowUpdateFrame) {
-                    try {
-                        handleOutboundMessage(ctx, msg);
-                    } catch (SpdyProtocolException e) {
-                        if (e == PROTOCOL_EXCEPTION) {
-                            // On the case of PROTOCOL_EXCEPTION, fail the promise directly
-                            // See #1211
-                            promise.setFailure(PROTOCOL_EXCEPTION);
-                            return;
-                        }
-                    }
-                } else {
-                    ctx.write(msg);
-                }
-            }
-            ctx.flush(promise);
-        } finally {
-            outboundBuffer.clear();
+            handleOutboundMessage(ctx, msg);
+        } else {
+            ctx.write(msg);
         }
     }
 

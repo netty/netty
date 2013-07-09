@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
+import io.netty.util.internal.StringUtil;
 
 import java.net.SocketAddress;
 
@@ -33,6 +34,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private final DefaultChannelPipeline pipeline;
     private final String name;
     private final ChannelHandler handler;
+    private Throwable lastWriteException;
     private boolean removed;
 
     // Will be set to null if no child executor should be used, otherwise it will be set to the
@@ -696,7 +698,13 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         try {
             handler.write(this, msg);
         } catch (Throwable t) {
-            notifyHandlerException(t);
+            if (lastWriteException == null) {
+                lastWriteException = t;
+            } else if (logger.isWarnEnabled()) {
+                logger.warn(
+                        "More than one exception was raised by " + StringUtil.simpleClassName(handler) + ".write()." +
+                        "Will fail the subsequent flush() with the first one and log others.", t);
+            }
         }
     }
 
@@ -723,6 +731,13 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     private void invokeFlush0(ChannelPromise promise) {
+        Throwable lastWriteException = this.lastWriteException;
+        if (lastWriteException != null) {
+            this.lastWriteException = null;
+            promise.setFailure(lastWriteException);
+            return;
+        }
+
         try {
             ((ChannelOutboundHandler) handler()).flush(this, promise);
         } catch (Throwable t) {
