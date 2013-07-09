@@ -149,7 +149,7 @@ public class SctpEchoTest extends AbstractSctpTest {
         }
 
         @Override
-        public void messageReceived0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
 

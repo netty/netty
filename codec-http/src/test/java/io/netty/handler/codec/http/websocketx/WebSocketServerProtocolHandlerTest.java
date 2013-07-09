@@ -160,7 +160,7 @@ public class WebSocketServerProtocolHandlerTest {
         private String content;
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             assertNull(content);
             content = "processed: " + ((TextWebSocketFrame) msg).text();
         }

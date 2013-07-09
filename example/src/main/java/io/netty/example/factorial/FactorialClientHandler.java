@@ -39,7 +39,6 @@ public class FactorialClientHandler extends SimpleChannelInboundHandler<BigInteg
             FactorialClientHandler.class.getName());
 
     private ChannelHandlerContext ctx;
-    private int i = 1;
     private int receivedMessages;
     private final int count;
     final BlockingQueue<BigInteger> answer = new LinkedBlockingQueue<BigInteger>();
@@ -70,7 +69,7 @@ public class FactorialClientHandler extends SimpleChannelInboundHandler<BigInteg
     }
 
     @Override
-    public void messageReceived0(ChannelHandlerContext ctx, final BigInteger msg) {
+    public void channelRead0(ChannelHandlerContext ctx, final BigInteger msg) {
         receivedMessages ++;
         if (receivedMessages == count) {
             // Offer the answer after closing the connection.

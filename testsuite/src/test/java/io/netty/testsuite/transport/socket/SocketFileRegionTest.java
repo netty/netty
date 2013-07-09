@@ -72,7 +72,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
 
         ChannelInboundHandler ch = new SimpleChannelInboundHandler<Object>() {
             @Override
-            public void messageReceived0(ChannelHandlerContext ctx, Object msg) throws Exception {
+            public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
             }
 
             @Override
@@ -131,7 +131,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
 

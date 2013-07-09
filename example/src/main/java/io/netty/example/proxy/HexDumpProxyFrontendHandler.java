@@ -63,7 +63,7 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
         if (outboundChannel.isActive()) {
             outboundChannel.write(msg).flush().addListener(new ChannelFutureListener() {
                 @Override

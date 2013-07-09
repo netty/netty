@@ -15,7 +15,9 @@
  */
 package io.netty.handler.codec.protobuf;
 
-import static io.netty.buffer.Unpooled.wrappedBuffer;
+import com.google.protobuf.Message;
+import com.google.protobuf.MessageLite;
+import com.google.protobuf.MessageLiteOrBuilder;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
@@ -26,9 +28,7 @@ import io.netty.handler.codec.MessageToMessageEncoder;
 
 import java.util.List;
 
-import com.google.protobuf.Message;
-import com.google.protobuf.MessageLite;
-import com.google.protobuf.MessageLiteOrBuilder;
+import static io.netty.buffer.Unpooled.*;
 
 /**
  * Encodes the requested <a href="http://code.google.com/p/protobuf/">Google
@@ -50,7 +50,7 @@ import com.google.protobuf.MessageLiteOrBuilder;
  * and then you can use a {@code MyMessage} instead of a {@link ByteBuf}
  * as a message:
  * <pre>
- * void messageReceived({@link ChannelHandlerContext} ctx, MyMessage req) {
+ * void channelRead({@link ChannelHandlerContext} ctx, MyMessage req) {
  *     MyMessage res = MyMessage.newBuilder().setText(
  *                               "Did you say '" + req.getText() + "'?").build();
  *     ch.write(res);

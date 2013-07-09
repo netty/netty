@@ -46,7 +46,7 @@ public class HttpObjectAggregatorTest {
         assertFalse(embedder.writeInbound(chunk1));
         assertFalse(embedder.writeInbound(chunk2));
 
-        // this should trigger a messageReceived event so return true
+        // this should trigger a channelRead event so return true
         assertTrue(embedder.writeInbound(chunk3));
         assertTrue(embedder.finish());
         DefaultFullHttpRequest aggratedMessage = (DefaultFullHttpRequest) embedder.readInbound();
@@ -87,7 +87,7 @@ public class HttpObjectAggregatorTest {
         assertFalse(embedder.writeInbound(chunk1));
         assertFalse(embedder.writeInbound(chunk2));
 
-        // this should trigger a messageReceived event so return true
+        // this should trigger a channelRead event so return true
         assertTrue(embedder.writeInbound(trailer));
         assertTrue(embedder.finish());
         DefaultFullHttpRequest aggratedMessage = (DefaultFullHttpRequest) embedder.readInbound();
@@ -172,7 +172,7 @@ public class HttpObjectAggregatorTest {
         assertFalse(embedder.writeInbound(chunk1));
         assertFalse(embedder.writeInbound(chunk2));
 
-        // this should trigger a messageReceived event so return true
+        // this should trigger a channelRead event so return true
         assertTrue(embedder.writeInbound(chunk3));
         assertTrue(embedder.finish());
         FullHttpRequest aggratedMessage = (FullHttpRequest) embedder.readInbound();

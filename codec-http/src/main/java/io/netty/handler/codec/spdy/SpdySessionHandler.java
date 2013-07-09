@@ -84,7 +84,7 @@ public class SpdySessionHandler
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof SpdyDataFrame) {
 
             /*
@@ -378,7 +378,7 @@ public class SpdySessionHandler
             }
         }
 
-        ctx.fireMessageReceived(msg);
+        ctx.fireChannelRead(msg);
     }
 
     @Override
@@ -658,13 +658,13 @@ public class SpdySessionHandler
      * Note: this is only called by the worker thread
      */
     private void issueStreamError(ChannelHandlerContext ctx, int streamId, SpdyStreamStatus status) {
-        boolean fireMessageReceived = !spdySession.isRemoteSideClosed(streamId);
+        boolean fireChannelRead = !spdySession.isRemoteSideClosed(streamId);
         removeStream(ctx, streamId);
 
         SpdyRstStreamFrame spdyRstStreamFrame = new DefaultSpdyRstStreamFrame(streamId, status);
         ctx.write(spdyRstStreamFrame).flush();
-        if (fireMessageReceived) {
-            ctx.fireMessageReceived(spdyRstStreamFrame);
+        if (fireChannelRead) {
+            ctx.fireChannelRead(spdyRstStreamFrame);
         }
     }
 
@@ -800,7 +800,7 @@ public class SpdySessionHandler
                         halfCloseStream(streamId, false);
                     }
 
-                    ctx.fireMessageReceived(spdyDataFrame);
+                    ctx.fireChannelRead(spdyDataFrame);
                 } else {
                     // We can send a partial frame
                     spdySession.updateSendWindowSize(streamId, -1 * newWindowSize);
@@ -826,7 +826,7 @@ public class SpdySessionHandler
                     //    }
                     //});
 
-                    ctx.fireMessageReceived(partialDataFrame);
+                    ctx.fireChannelRead(partialDataFrame);
 
                     newWindowSize = 0;
                 }

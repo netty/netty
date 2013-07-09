@@ -88,7 +88,7 @@ import java.nio.channels.Channels;
  *   // This handler will receive a sequence of increasing integers starting
  *   // from 1.
  *   {@code @Override}
- *   public void messageReceived({@link ChannelHandlerContext} ctx, {@link Integer} integer) {
+ *   public void channelRead({@link ChannelHandlerContext} ctx, {@link Integer} integer) {
  *     {@link Attribute}&lt{@link Integer}&gt attr = ctx.getAttr(counter);
  *     Integer a = ctx.getAttr(counter).get();
  *
@@ -176,13 +176,10 @@ public interface ChannelHandlerContext
     ChannelHandlerContext fireUserEventTriggered(Object event);
 
     @Override
-    ChannelHandlerContext fireMessageReceived(Object msg);
+    ChannelHandlerContext fireChannelRead(Object msg);
 
     @Override
-    ChannelHandlerContext fireMessageReceivedLast();
-
-    @Override
-    ChannelHandlerContext fireChannelReadSuspended();
+    ChannelHandlerContext fireChannelReadComplete();
 
     @Override
     ChannelHandlerContext fireChannelWritabilityChanged();

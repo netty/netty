@@ -247,10 +247,10 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         lastReadTime = System.currentTimeMillis();
         firstReaderIdleEvent = firstAllIdleEvent = true;
-        ctx.fireMessageReceived(msg);
+        ctx.fireChannelRead(msg);
     }
 
     @Override

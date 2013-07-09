@@ -64,15 +64,16 @@ public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandl
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         boolean release = true;
         try {
             if (acceptInboundMessage(msg)) {
+                @SuppressWarnings("unchecked")
                 I imsg = (I) msg;
-                messageReceived0(ctx, imsg);
+                channelRead0(ctx, imsg);
             } else {
                 release = false;
-                ctx.fireMessageReceived(msg);
+                ctx.fireChannelRead(msg);
             }
         } finally {
             if (autoRelease && release) {
@@ -89,5 +90,5 @@ public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandl
      * @param msg           the message to handle
      * @throws Exception    is thrown if an error accour
      */
-    protected abstract void messageReceived0(ChannelHandlerContext ctx, I msg) throws Exception;
+    protected abstract void channelRead0(ChannelHandlerContext ctx, I msg) throws Exception;
 }

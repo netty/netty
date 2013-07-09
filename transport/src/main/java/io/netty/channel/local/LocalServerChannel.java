@@ -135,10 +135,9 @@ public class LocalServerChannel extends AbstractServerChannel {
             if (m == null) {
                 break;
             }
-            pipeline.fireMessageReceived(m);
+            pipeline.fireChannelRead(m);
         }
-        pipeline.fireMessageReceivedLast();
-        pipeline.fireChannelReadSuspended();
+        pipeline.fireChannelReadComplete();
     }
 
     LocalChannel serve(final LocalChannel peer) {
@@ -158,10 +157,9 @@ public class LocalServerChannel extends AbstractServerChannel {
                     if (m == null) {
                         break;
                     }
-                    pipeline.fireMessageReceived(m);
+                    pipeline.fireChannelRead(m);
                 }
-                pipeline.fireMessageReceivedLast();
-                pipeline.fireChannelReadSuspended();
+                pipeline.fireChannelReadComplete();
             }
         } else {
             eventLoop().execute(new Runnable() {

@@ -61,10 +61,9 @@ public class LocalChannel extends AbstractChannel {
                 if (m == null) {
                     break;
                 }
-                pipeline.fireMessageReceived(m);
+                pipeline.fireChannelRead(m);
             }
-            pipeline.fireMessageReceivedLast();
-            pipeline.fireChannelReadSuspended();
+            pipeline.fireChannelReadComplete();
         }
     };
 
@@ -254,10 +253,9 @@ public class LocalChannel extends AbstractChannel {
                     if (received == null) {
                         break;
                     }
-                    pipeline.fireMessageReceived(received);
+                    pipeline.fireChannelRead(received);
                 }
-                pipeline.fireMessageReceivedLast();
-                pipeline.fireChannelReadSuspended();
+                pipeline.fireChannelReadComplete();
             } finally {
                 READER_STACK_DEPTH.set(stackDepth);
             }
@@ -311,10 +309,9 @@ public class LocalChannel extends AbstractChannel {
                 if (received == null) {
                     break;
                 }
-                peerPipeline.fireMessageReceived(received);
+                peerPipeline.fireChannelRead(received);
             }
-            peerPipeline.fireMessageReceivedLast();
-            peerPipeline.fireChannelReadSuspended();
+            peerPipeline.fireChannelReadComplete();
         }
     }
 

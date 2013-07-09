@@ -67,7 +67,7 @@ public class EchoMessageHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         UdtMessage udtMsg = (UdtMessage) msg;
         if (meter != null) {
             meter.mark(udtMsg.content().readableBytes());

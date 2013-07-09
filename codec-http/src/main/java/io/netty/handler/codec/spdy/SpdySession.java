@@ -102,7 +102,7 @@ final class SpdySession {
     }
 
     /*
-     * hasReceivedReply and receivedReply are only called from messageReceived
+     * hasReceivedReply and receivedReply are only called from channelRead()
      * no need to synchronize access to the StreamState
      */
     boolean hasReceivedReply(int streamID) {

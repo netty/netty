@@ -84,10 +84,10 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             }
 
             for (int i = 0; i < readBuf.size(); i ++) {
-                pipeline.fireMessageReceived(readBuf.get(i));
+                pipeline.fireChannelRead(readBuf.get(i));
             }
             readBuf.clear();
-            pipeline.fireMessageReceivedLast();
+            pipeline.fireChannelReadComplete();
 
             if (exception != null) {
                 if (exception instanceof IOException) {
@@ -101,8 +101,6 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 if (isOpen()) {
                     close(voidPromise());
                 }
-            } else {
-                pipeline.fireChannelReadSuspended();
             }
         }
     }
@@ -126,10 +124,8 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
 
     /**
      * Write messages to the underlying {@link java.nio.channels.Channel}.
-     * @param msg           Object to write
      * @param lastSpin      {@code true} if this is the last write try
-     * @return written      the amount of written messages
-     * @throws Exception    thrown if an error accour
+     * @return the number of written messages
      */
     protected abstract int doWriteMessages(
             Object[] msgs, int msgLength, int startIndex, boolean lastSpin) throws Exception;

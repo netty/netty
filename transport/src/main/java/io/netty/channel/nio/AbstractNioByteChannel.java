@@ -96,7 +96,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                         break;
                     }
 
-                    pipeline.fireMessageReceived(byteBuf);
+                    pipeline.fireChannelRead(byteBuf);
                     allocHandle.record(localReadAmount);
                     byteBuf = null;
                     if (++ messages == maxMessagesPerRead) {
@@ -108,15 +108,13 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             } finally {
                 if (byteBuf != null) {
                     if (byteBuf.isReadable()) {
-                        pipeline.fireMessageReceived(byteBuf);
+                        pipeline.fireChannelRead(byteBuf);
                     } else {
                         byteBuf.release();
                     }
                 }
 
-                if (messages != 0) {
-                    pipeline.fireMessageReceivedLast();
-                }
+                pipeline.fireChannelReadComplete();
 
                 if (exception != null) {
                     if (exception instanceof IOException) {
@@ -136,8 +134,6 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                             close(voidPromise());
                         }
                     }
-                } else {
-                    pipeline.fireChannelReadSuspended();
                 }
             }
         }

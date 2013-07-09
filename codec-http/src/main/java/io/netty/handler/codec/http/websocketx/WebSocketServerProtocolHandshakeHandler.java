@@ -50,7 +50,7 @@ class WebSocketServerProtocolHandshakeHandler
     }
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
         FullHttpRequest req = (FullHttpRequest) msg;
         if (req.getMethod() != GET) {
             sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN));

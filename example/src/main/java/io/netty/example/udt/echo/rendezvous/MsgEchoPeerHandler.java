@@ -66,14 +66,14 @@ public class MsgEchoPeerHandler extends
     }
 
     @Override
-    public void messageReceived0(ChannelHandlerContext ctx, UdtMessage message) throws Exception {
+    public void channelRead0(ChannelHandlerContext ctx, UdtMessage message) throws Exception {
         meter.mark(message.content().readableBytes());
 
         ctx.write(message);
     }
 
     @Override
-    public void messageReceivedLast(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         ctx.flush();
     }
 }

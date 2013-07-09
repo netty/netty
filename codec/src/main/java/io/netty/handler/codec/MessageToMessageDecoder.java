@@ -64,7 +64,7 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAd
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         CodecOutput out = CodecOutput.newInstance();
         try {
             if (acceptInboundMessage(msg)) {
@@ -84,7 +84,7 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAd
             throw new DecoderException(e);
         } finally {
             for (int i = 0; i < out.size(); i ++) {
-                ctx.fireMessageReceived(out.get(i));
+                ctx.fireChannelRead(out.get(i));
             }
             out.recycle();
         }

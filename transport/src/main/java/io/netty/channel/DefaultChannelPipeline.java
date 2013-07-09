@@ -776,20 +776,14 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelPipeline fireMessageReceived(Object msg) {
-        head.fireMessageReceived(msg);
+    public ChannelPipeline fireChannelRead(Object msg) {
+        head.fireChannelRead(msg);
         return this;
     }
 
     @Override
-    public ChannelPipeline fireMessageReceivedLast() {
-        head.fireMessageReceivedLast();
-        return this;
-    }
-
-    @Override
-    public ChannelPipeline fireChannelReadSuspended() {
-        head.fireChannelReadSuspended();
+    public ChannelPipeline fireChannelReadComplete() {
+        head.fireChannelReadComplete();
         if (channel.config().isAutoRead()) {
             read();
         }
@@ -943,9 +937,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         public void channelInactive(ChannelHandlerContext ctx) throws Exception { }
 
         @Override
-        public void channelReadSuspended(ChannelHandlerContext ctx) throws Exception { }
-
-        @Override
         public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception { }
 
         @Override
@@ -965,7 +956,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             try {
                 logger.debug(
                         "Discarded inbound message {} that reached at the tail of the pipeline. " +
@@ -976,7 +967,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void messageReceivedLast(ChannelHandlerContext ctx) throws Exception { }
+        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception { }
     }
 
     static final class HeadHandler implements ChannelOutboundHandler {

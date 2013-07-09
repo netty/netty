@@ -69,7 +69,7 @@ import java.lang.annotation.Target;
  *     <b>private boolean loggedIn;</b>
  *
  *     {@code @Override}
- *     public void messageReceived({@link ChannelHandlerContext} ctx, Message message) {
+ *     public void channelRead({@link ChannelHandlerContext} ctx, Message message) {
  *         {@link Channel} ch = e.getChannel();
  *         if (message instanceof LoginMessage) {
  *             authenticate((LoginMessage) message);
@@ -120,11 +120,11 @@ import java.lang.annotation.Target;
  *   // This handler will receive a sequence of increasing integers starting
  *   // from 1.
  *   {@code @Override}
- *   public void messageReceived({@link ChannelHandlerContext} ctx, {@link Integer} integer) {
+ *   public void channelRead({@link ChannelHandlerContext} ctx, {@link Integer} integer) {
  *     {@link Attribute}&lt{@link Boolean}&gt attr = ctx.getAttr(auth);
  *
  *     {@code @Override}
- *     public void messageReceived({@link ChannelHandlerContext} ctx, Message message) {
+ *     public void channelRead({@link ChannelHandlerContext} ctx, Message message) {
  *         {@link Channel} ch = ctx.channel();
  *         if (message instanceof LoginMessage) {
  *             authenticate((LoginMessage) o);

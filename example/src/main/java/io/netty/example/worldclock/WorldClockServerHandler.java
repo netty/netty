@@ -37,7 +37,7 @@ public class WorldClockServerHandler extends SimpleChannelInboundHandler<Locatio
             WorldClockServerHandler.class.getName());
 
     @Override
-    public void messageReceived0(ChannelHandlerContext ctx, Locations locations) throws Exception {
+    public void channelRead0(ChannelHandlerContext ctx, Locations locations) throws Exception {
         long currentTime = System.currentTimeMillis();
 
         LocalTimes.Builder builder = LocalTimes.newBuilder();
@@ -61,7 +61,7 @@ public class WorldClockServerHandler extends SimpleChannelInboundHandler<Locatio
     }
 
     @Override
-    public void messageReceivedLast(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         ctx.flush();
     }
 

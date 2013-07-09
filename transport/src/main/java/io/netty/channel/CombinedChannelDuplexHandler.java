@@ -144,13 +144,13 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
-        inboundHandler.messageReceived(ctx, msg);
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        inboundHandler.channelRead(ctx, msg);
     }
 
     @Override
-    public void messageReceivedLast(ChannelHandlerContext ctx) throws Exception {
-        inboundHandler.messageReceivedLast(ctx);
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        inboundHandler.channelReadComplete(ctx);
     }
 
     @Override
@@ -196,11 +196,6 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
     @Override
     public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         outboundHandler.flush(ctx, promise);
-    }
-
-    @Override
-    public void channelReadSuspended(ChannelHandlerContext ctx) throws Exception {
-        inboundHandler.channelReadSuspended(ctx);
     }
 
     @Override
