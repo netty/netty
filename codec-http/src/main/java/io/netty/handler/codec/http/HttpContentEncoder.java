@@ -123,15 +123,13 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                 // If unable to encode, pass through.
                 if (result == null) {
                     if (isFull) {
-                        // As an unchunked response
+                        // Set the content length.
                         res.headers().remove(Names.TRANSFER_ENCODING);
                         res.headers().set(Names.CONTENT_LENGTH, ((ByteBufHolder) res).content().readableBytes());
                         out.add(ReferenceCountUtil.retain(res));
                     } else {
-                        // As a chunked response
-                        res.headers().remove(Names.CONTENT_LENGTH);
-                        res.headers().set(Names.TRANSFER_ENCODING, Values.CHUNKED);
                         out.add(res);
+                        // Pass through all following contents.
                         state = State.PASS_THROUGH;
                     }
                     break;
