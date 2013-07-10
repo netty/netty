@@ -103,10 +103,24 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
      * condition. Please note that this operation is asynchronous as
      * {@link Channel#write(Object)} is.
      *
+     * @return itself
+     */
+    ChannelGroup write(Object message);
+
+    /**
+     * Flush all {@link Channel}s in this
+     * group.  Please note that this operation is asynchronous as
+     * {@link Channel#flush()} is.
+     *
      * @return the {@link ChannelGroupFuture} instance that notifies when
      *         the operation is done for all channels
      */
-    ChannelGroupFuture write(Object message);
+    ChannelGroupFuture flush();
+
+    /**
+     * Shortcut for calling {@link #write(Object)} and {@link #flush()}.
+     */
+    ChannelGroupFuture flushAndWrite(Object message);
 
     /**
      * Disconnects all {@link Channel}s in this group from their remote peers.
