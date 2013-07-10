@@ -85,13 +85,11 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerA
             if (out.isEmpty()) {
                 promise.setSuccess();
             } else {
-                for (int i = 0; i < out.size(); i ++) {
-                    if (i == out.size() - 1) {
-                        ctx.write(out.get(i), promise);
-                    } else {
-                        ctx.write(out.get(i));
-                    }
+                final int sizeMinusOne = out.size() - 1;
+                for (int i = 0; i < sizeMinusOne; i ++) {
+                    ctx.write(out.get(i));
                 }
+                ctx.write(out.get(sizeMinusOne), promise);
             }
             out.recycle();
         }
