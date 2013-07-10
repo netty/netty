@@ -257,11 +257,9 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     }
 
     private void encode(ByteBuf in, List<Object> out) {
-        if (in.isReadable()) {
-            // call retain here as it will call release after its written to the channel
-            encoder.writeOutbound(in.retain());
-            fetchEncoderOutput(out);
-        }
+        // call retain here as it will call release after its written to the channel
+        encoder.writeOutbound(in.retain());
+        fetchEncoderOutput(out);
     }
 
     private void finishEncode(List<Object> out) {
@@ -276,6 +274,9 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
             ByteBuf buf = (ByteBuf) encoder.readOutbound();
             if (buf == null) {
                 break;
+            }
+            if (!buf.isReadable()) {
+                continue;
             }
             out.add(new DefaultHttpContent(buf));
         }
