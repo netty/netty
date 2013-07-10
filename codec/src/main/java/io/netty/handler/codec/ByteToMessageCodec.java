@@ -18,6 +18,7 @@ package io.netty.handler.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 import io.netty.util.internal.TypeParameterMatcher;
 
 import java.util.List;
@@ -83,8 +84,8 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg) throws Exception {
-        encoder.write(ctx, msg);
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        encoder.write(ctx, msg, promise);
     }
 
     /**

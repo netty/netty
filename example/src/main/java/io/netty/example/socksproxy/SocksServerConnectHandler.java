@@ -43,7 +43,7 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
         CallbackNotifier cb = new CallbackNotifier() {
             @Override
             public void onSuccess(final ChannelHandlerContext outboundCtx) {
-                ctx.channel().write(new SocksCmdResponse(SocksCmdStatus.SUCCESS, request.addressType())).flush()
+                ctx.channel().writeAndFlush(new SocksCmdResponse(SocksCmdStatus.SUCCESS, request.addressType()))
                              .addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture channelFuture) throws Exception {

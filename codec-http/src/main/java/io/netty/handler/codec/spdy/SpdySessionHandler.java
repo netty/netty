@@ -159,7 +159,7 @@ public class SpdySessionHandler
                     while (spdyDataFrame.content().readableBytes() > initialReceiveWindowSize) {
                         SpdyDataFrame partialDataFrame = new DefaultSpdyDataFrame(streamId,
                                 spdyDataFrame.content().readSlice(initialReceiveWindowSize).retain());
-                        ctx.write(partialDataFrame).flush();
+                        ctx.writeAndFlush(partialDataFrame);
                     }
                 }
 
@@ -169,7 +169,7 @@ public class SpdySessionHandler
                     spdySession.updateReceiveWindowSize(streamId, deltaWindowSize);
                     SpdyWindowUpdateFrame spdyWindowUpdateFrame =
                             new DefaultSpdyWindowUpdateFrame(streamId, deltaWindowSize);
-                    ctx.write(spdyWindowUpdateFrame).flush();
+                    ctx.writeAndFlush(spdyWindowUpdateFrame);
                 }
             }
 
@@ -307,7 +307,7 @@ public class SpdySessionHandler
             SpdyPingFrame spdyPingFrame = (SpdyPingFrame) msg;
 
             if (isRemoteInitiatedID(spdyPingFrame.getId())) {
-                ctx.write(spdyPingFrame).flush();
+                ctx.writeAndFlush(spdyPingFrame);
                 return;
             }
 
@@ -392,7 +392,7 @@ public class SpdySessionHandler
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         if (msg instanceof SpdyDataFrame ||
             msg instanceof SpdySynStreamFrame ||
             msg instanceof SpdySynReplyFrame ||
@@ -403,13 +403,13 @@ public class SpdySessionHandler
             msg instanceof SpdyHeadersFrame ||
             msg instanceof SpdyWindowUpdateFrame) {
 
-            handleOutboundMessage(ctx, msg);
+            handleOutboundMessage(ctx, msg, promise);
         } else {
-            ctx.write(msg);
+            ctx.write(msg, promise);
         }
     }
 
-    private void handleOutboundMessage(ChannelHandlerContext ctx, Object msg) throws Exception {
+    private void handleOutboundMessage(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         if (msg instanceof SpdyDataFrame) {
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
@@ -470,7 +470,7 @@ public class SpdySessionHandler
                         //    }
                         //});
 
-                        ctx.write(partialDataFrame);
+                        ctx.write(partialDataFrame, promise);
                         return;
                     } else {
                         // Window size is large enough to send entire data frame
@@ -599,7 +599,7 @@ public class SpdySessionHandler
             throw PROTOCOL_EXCEPTION;
         }
 
-        ctx.write(msg);
+        ctx.write(msg, promise);
     }
 
     /*
@@ -633,7 +633,7 @@ public class SpdySessionHandler
         removeStream(ctx, streamId);
 
         SpdyRstStreamFrame spdyRstStreamFrame = new DefaultSpdyRstStreamFrame(streamId, status);
-        ctx.write(spdyRstStreamFrame).flush();
+        ctx.writeAndFlush(spdyRstStreamFrame);
         if (fireChannelRead) {
             ctx.fireChannelRead(spdyRstStreamFrame);
         }
@@ -827,7 +827,7 @@ public class SpdySessionHandler
         if (!sentGoAwayFrame) {
             sentGoAwayFrame = true;
             SpdyGoAwayFrame spdyGoAwayFrame = new DefaultSpdyGoAwayFrame(lastGoodStreamId, status);
-            return ctx.write(spdyGoAwayFrame).flush();
+            return ctx.writeAndFlush(spdyGoAwayFrame);
         } else {
             return ctx.newSucceededFuture();
         }

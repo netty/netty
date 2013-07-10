@@ -59,7 +59,7 @@ public class TelnetServerHandler extends SimpleChannelInboundHandler<String> {
 
         // We do not need to write a ChannelBuffer here.
         // We know the encoder inserted at TelnetPipelineFactory will do the conversion.
-        ChannelFuture future = ctx.write(response).flush();
+        ChannelFuture future = ctx.writeAndFlush(response);
 
         // Close the connection after sending 'Have a good day!'
         // if the client has sent 'bye'.

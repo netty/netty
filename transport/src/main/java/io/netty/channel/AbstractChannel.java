@@ -178,8 +178,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelFuture flush() {
-        return pipeline.flush();
+    public Channel flush() {
+        pipeline.flush();
+        return this;
     }
 
     @Override
@@ -219,14 +220,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public Channel write(Object msg) {
-        pipeline.write(msg);
-        return this;
+    public ChannelFuture write(Object msg) {
+        return pipeline.write(msg);
     }
 
     @Override
-    public ChannelFuture flush(ChannelPromise promise) {
-        return pipeline.flush(promise);
+    public ChannelFuture write(Object msg, ChannelPromise promise) {
+        return pipeline.write(msg, promise);
     }
 
     @Override
@@ -589,14 +589,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public void write(Object msg) {
-            outboundBuffer.addMessage(msg);
+        public void write(Object msg, ChannelPromise promise) {
+            outboundBuffer.addMessage(msg, promise);
         }
 
         @Override
-        public void flush(final ChannelPromise promise) {
-            outboundBuffer.addPromise(promise);
-
+        public void flush() {
             if (!inFlushNow) { // Avoid re-entrance
                 try {
                     // Flush immediately only when there's no pending flush.
@@ -615,7 +613,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     eventLoop().execute(new Runnable() {
                         @Override
                         public void run() {
-                            flush(promise);
+                            flush();
                         }
                     });
                 }

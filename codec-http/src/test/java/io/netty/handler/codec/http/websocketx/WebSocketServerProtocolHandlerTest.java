@@ -146,13 +146,13 @@ public class WebSocketServerProtocolHandlerTest {
     private class MockOutboundHandler extends ChannelOutboundHandlerAdapter {
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
             responses.add((FullHttpResponse) msg);
+            promise.setSuccess();
         }
 
         @Override
-        public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-            promise.setSuccess();
+        public void flush(ChannelHandlerContext ctx) throws Exception {
         }
     }
 

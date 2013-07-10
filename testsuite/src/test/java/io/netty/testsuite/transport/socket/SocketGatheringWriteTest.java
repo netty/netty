@@ -85,7 +85,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
             }
             i += length;
         }
-        assertNotEquals(cc.voidPromise(), cc.flush().sync());
+        assertNotEquals(cc.voidPromise(), cc.writeAndFlush(Unpooled.EMPTY_BUFFER).sync());
 
         while (sh.counter < data.length) {
             if (sh.exception.get() != null) {

@@ -124,7 +124,7 @@ public class LocalChannelTest {
         // Close the channel and write something.
         cc.close().sync();
         try {
-            cc.write(new Object()).flush().sync();
+            cc.writeAndFlush(new Object()).sync();
             fail("must raise a ClosedChannelException");
         } catch (Exception e) {
             assertThat(e, is(instanceOf(ClosedChannelException.class)));

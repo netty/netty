@@ -105,7 +105,7 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
      *
      * @return itself
      */
-    ChannelGroup write(Object message);
+    ChannelGroupFuture write(Object message);
 
     /**
      * Flush all {@link Channel}s in this
@@ -115,7 +115,7 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
      * @return the {@link ChannelGroupFuture} instance that notifies when
      *         the operation is done for all channels
      */
-    ChannelGroupFuture flush();
+    ChannelGroup flush();
 
     /**
      * Shortcut for calling {@link #write(Object)} and {@link #flush()}.

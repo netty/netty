@@ -185,5 +185,5 @@ public interface ChannelHandlerContext
     ChannelHandlerContext fireChannelWritabilityChanged();
 
     @Override
-    ChannelHandlerContext write(Object msg);
+    ChannelHandlerContext flush();
 }

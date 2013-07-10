@@ -297,17 +297,17 @@ public class LoggingHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         logMessage(ctx, "WRITE", msg);
-        ctx.write(msg);
+        ctx.write(msg, promise);
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void flush(ChannelHandlerContext ctx) throws Exception {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "FLUSH"));
         }
-        ctx.flush(promise);
+        ctx.flush();
     }
 
     private void logMessage(ChannelHandlerContext ctx, String eventName, Object msg) {

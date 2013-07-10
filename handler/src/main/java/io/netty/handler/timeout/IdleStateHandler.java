@@ -254,7 +254,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         promise.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
@@ -262,7 +262,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
                 firstWriterIdleEvent = firstAllIdleEvent = true;
             }
         });
-        ctx.flush(promise);
+        ctx.write(msg, promise);
     }
 
     private void initialize(ChannelHandlerContext ctx) {

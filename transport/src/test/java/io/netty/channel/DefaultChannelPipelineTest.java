@@ -137,7 +137,7 @@ public class DefaultChannelPipelineTest {
         StringInboundHandler handler = new StringInboundHandler();
         setUp(handler);
 
-        peer.write(holder).flush().sync();
+        peer.writeAndFlush(holder).sync();
 
         assertTrue(free.await(10, TimeUnit.SECONDS));
         assertTrue(handler.called);
@@ -488,7 +488,7 @@ public class DefaultChannelPipelineTest {
         final Queue<Object> outboundBuffer = new ArrayDeque<Object>();
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
             outboundBuffer.add(msg);
         }
 

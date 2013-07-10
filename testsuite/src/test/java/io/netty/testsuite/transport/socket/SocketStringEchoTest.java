@@ -85,7 +85,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         Channel cc = cb.connect().sync().channel();
         for (String element : data) {
             String delimiter = random.nextBoolean() ? "\r\n" : "\n";
-            cc.write(element + delimiter).flush();
+            cc.writeAndFlush(element + delimiter);
         }
 
         while (ch.counter < data.length) {

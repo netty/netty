@@ -134,7 +134,7 @@ public class ChunkedWriteHandlerTest {
         };
 
         EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
-        ch.write(input).flush().addListener(listener).syncUninterruptibly();
+        ch.writeAndFlush(input).addListener(listener).syncUninterruptibly();
         ch.checkException();
         ch.finish();
 
@@ -172,7 +172,7 @@ public class ChunkedWriteHandlerTest {
         };
 
         EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
-        ch.write(input).flush().syncUninterruptibly();
+        ch.writeAndFlush(input).syncUninterruptibly();
         ch.checkException();
         assertTrue(ch.finish());
 

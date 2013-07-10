@@ -18,6 +18,7 @@ package io.netty.handler.traffic;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
@@ -275,7 +276,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, final Object msg)
+    public void write(final ChannelHandlerContext ctx, final Object msg, ChannelPromise promise)
             throws Exception {
         long curtime = System.currentTimeMillis();
         long size = ((ByteBuf) msg).readableBytes();
@@ -301,7 +302,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                 return;
             }
         }
-        ctx.write(msg);
+        ctx.write(msg, promise);
     }
 
     /**

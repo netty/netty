@@ -17,6 +17,7 @@ package io.netty.handler.codec;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.RecyclableArrayList;
@@ -62,7 +63,7 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerA
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         RecyclableArrayList out = RecyclableArrayList.newInstance();
         try {
             if (acceptOutboundMessage(msg)) {
@@ -81,8 +82,16 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerA
         } catch (Throwable t) {
             throw new EncoderException(t);
         } finally {
-            for (int i = 0; i < out.size(); i ++) {
-                ctx.write(out.get(i));
+            if (out.isEmpty()) {
+                promise.setSuccess();
+            } else {
+                for (int i = 0; i < out.size(); i ++) {
+                    if (i == out.size() - 1) {
+                        ctx.write(out.get(i), promise);
+                    } else {
+                        ctx.write(out.get(i));
+                    }
+                }
             }
             out.recycle();
         }

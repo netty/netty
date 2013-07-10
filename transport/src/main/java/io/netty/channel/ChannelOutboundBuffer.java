@@ -85,7 +85,7 @@ final class ChannelOutboundBuffer {
         this.channel = channel;
     }
 
-    void addMessage(Object msg) {
+    void addMessage(Object msg, ChannelPromise promise) {
         int tail = this.tail;
         MessageList msgs = messages[tail];
         if (msgs == null) {
@@ -93,17 +93,14 @@ final class ChannelOutboundBuffer {
         }
         msgs.add(msg);
 
-        int size = channel.calculateMessageSize(msg);
-        messageListSizes[tail] += size;
-        incrementPendingOutboundBytes(size);
-    }
-
-    void addPromise(ChannelPromise promise) {
-        int tail = this.tail;
         promises[tail] = promise;
         if ((this.tail = tail + 1 & promises.length - 1) == head) {
             doubleCapacity();
         }
+
+        int size = channel.calculateMessageSize(msg);
+        messageListSizes[tail] += size;
+        incrementPendingOutboundBytes(size);
     }
 
     private void incrementPendingOutboundBytes(int size) {
