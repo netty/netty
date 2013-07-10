@@ -19,10 +19,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MessageList;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
@@ -169,7 +167,7 @@ public class UDTClientServerConnectionTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
             log.info("Client received: " + msg);
         }
     }
@@ -284,7 +282,7 @@ public class UDTClientServerConnectionTest {
     }
 
     static class ServerHandler extends
-            ChannelInboundHandlerAdapter {
+            SimpleChannelInboundHandler<Object> {
 
         static final Logger log = LoggerFactory.getLogger(ServerHandler.class);
 
@@ -322,11 +320,8 @@ public class UDTClientServerConnectionTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-            for (int i = 0; i < msgs.size(); i ++) {
-                log.info("Server received: " + msgs.get(i));
-            }
-            msgs.releaseAllAndRecycle();
+        public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+            log.info("Server received: " + msg);
         }
     }
     static final Logger log = LoggerFactory

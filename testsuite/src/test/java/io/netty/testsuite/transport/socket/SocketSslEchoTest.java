@@ -101,7 +101,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.connect().sync().channel();
         Future<Channel> hf = cc.pipeline().get(SslHandler.class).handshakeFuture();
-        cc.write(Unpooled.wrappedBuffer(data, 0, FIRST_MESSAGE_SIZE));
+        cc.writeAndFlush(Unpooled.wrappedBuffer(data, 0, FIRST_MESSAGE_SIZE));
         final AtomicBoolean firstByteWriteFutureDone = new AtomicBoolean();
 
         hf.sync();
@@ -110,7 +110,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
         for (int i = FIRST_MESSAGE_SIZE; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
-            ChannelFuture future = cc.write(Unpooled.wrappedBuffer(data, i, length));
+            ChannelFuture future = cc.writeAndFlush(Unpooled.wrappedBuffer(data, i, length));
             future.sync();
             i += length;
         }
@@ -180,7 +180,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
 
@@ -194,6 +194,11 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             }
 
             counter += actual.length;
+        }
+
+        @Override
+        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+            ctx.flush();
         }
 
         @Override

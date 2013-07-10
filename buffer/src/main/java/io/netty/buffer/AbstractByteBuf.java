@@ -17,7 +17,6 @@ package io.netty.buffer;
 
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ResourceLeakDetector;
-import io.netty.util.Signal;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -33,7 +32,7 @@ import java.nio.charset.Charset;
 /**
  * A skeletal implementation of a buffer.
  */
-public abstract class AbstractByteBuf implements ByteBuf {
+public abstract class AbstractByteBuf extends ByteBuf {
 
     static final ResourceLeakDetector<ByteBuf> leakDetector = new ResourceLeakDetector<ByteBuf>(ByteBuf.class);
 
@@ -117,12 +116,6 @@ public abstract class AbstractByteBuf implements ByteBuf {
     }
 
     @Override
-    @Deprecated
-    public final boolean readable() {
-        return isReadable();
-    }
-
-    @Override
     public boolean isReadable(int numBytes) {
         return writerIndex - readerIndex >= numBytes;
     }
@@ -130,12 +123,6 @@ public abstract class AbstractByteBuf implements ByteBuf {
     @Override
     public boolean isWritable() {
         return capacity() > writerIndex;
-    }
-
-    @Override
-    @Deprecated
-    public final boolean writable() {
-        return isWritable();
     }
 
     @Override
@@ -262,12 +249,6 @@ public abstract class AbstractByteBuf implements ByteBuf {
         // Adjust to the new capacity.
         capacity(newCapacity);
         return this;
-    }
-
-    @Override
-    @Deprecated
-    public final ByteBuf ensureWritableBytes(int minWritableBytes) {
-        return ensureWritable(minWritableBytes);
     }
 
     @Override
@@ -987,20 +968,8 @@ public abstract class AbstractByteBuf implements ByteBuf {
     }
 
     @Override
-    @Deprecated
-    public int indexOf(int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
-        return ByteBufUtil.indexOf(this, fromIndex, toIndex, indexFinder);
-    }
-
-    @Override
     public int bytesBefore(byte value) {
         return bytesBefore(readerIndex(), readableBytes(), value);
-    }
-
-    @Override
-    @Deprecated
-    public int bytesBefore(ByteBufIndexFinder indexFinder) {
-        return bytesBefore(readerIndex(), readableBytes(), indexFinder);
     }
 
     @Override
@@ -1010,25 +979,8 @@ public abstract class AbstractByteBuf implements ByteBuf {
     }
 
     @Override
-    @Deprecated
-    public int bytesBefore(int length, ByteBufIndexFinder indexFinder) {
-        checkReadableBytes(length);
-        return bytesBefore(readerIndex(), length, indexFinder);
-    }
-
-    @Override
     public int bytesBefore(int index, int length, byte value) {
         int endIndex = indexOf(index, index + length, value);
-        if (endIndex < 0) {
-            return -1;
-        }
-        return endIndex - index;
-    }
-
-    @Override
-    @Deprecated
-    public int bytesBefore(int index, int length, ByteBufIndexFinder indexFinder) {
-        int endIndex = indexOf(index, index + length, indexFinder);
         if (endIndex < 0) {
             return -1;
         }
@@ -1061,11 +1013,12 @@ public abstract class AbstractByteBuf implements ByteBuf {
         int i = index;
         try {
             do {
-                i += processor.process(_getByte(i));
+                if (processor.process(_getByte(i))) {
+                    i ++;
+                } else {
+                    return i;
+                }
             } while (i < endIndex);
-        } catch (Signal signal) {
-            signal.expect(ByteBufProcessor.ABORT);
-            return i;
         } catch (Exception e) {
             PlatformDependent.throwException(e);
         }
@@ -1098,11 +1051,12 @@ public abstract class AbstractByteBuf implements ByteBuf {
         int i = index + length - 1;
         try {
             do {
-                i -= processor.process(_getByte(i));
+                if (processor.process(_getByte(i))) {
+                    i --;
+                } else {
+                    return i;
+                }
             } while (i >= index);
-        } catch (Signal signal) {
-            signal.expect(ByteBufProcessor.ABORT);
-            return i;
         } catch (Exception e) {
             PlatformDependent.throwException(e);
         }

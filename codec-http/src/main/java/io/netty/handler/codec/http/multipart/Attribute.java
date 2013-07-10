@@ -35,6 +35,9 @@ public interface Attribute extends HttpData {
     Attribute copy();
 
     @Override
+    Attribute duplicate();
+
+    @Override
     Attribute retain();
 
     @Override

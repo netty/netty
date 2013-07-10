@@ -776,20 +776,14 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelPipeline fireMessageReceived(Object msg) {
-        head.fireMessageReceived(msg);
+    public ChannelPipeline fireChannelRead(Object msg) {
+        head.fireChannelRead(msg);
         return this;
     }
 
     @Override
-    public ChannelPipeline fireMessageReceived(MessageList<?> msgs) {
-        head.fireMessageReceived(msgs);
-        return this;
-    }
-
-    @Override
-    public ChannelPipeline fireChannelReadSuspended() {
-        head.fireChannelReadSuspended();
+    public ChannelPipeline fireChannelReadComplete() {
+        head.fireChannelReadComplete();
         if (channel.config().isAutoRead()) {
             read();
         }
@@ -833,13 +827,9 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelFuture write(Object msg) {
-        return tail.write(msg);
-    }
-
-    @Override
-    public ChannelFuture write(MessageList<?> msgs) {
-        return tail.write(msgs);
+    public ChannelPipeline flush() {
+        tail.flush();
+        return this;
     }
 
     @Override
@@ -873,8 +863,14 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public void read() {
+    public ChannelPipeline read() {
         tail.read();
+        return this;
+    }
+
+    @Override
+    public ChannelFuture write(Object msg) {
+        return tail.write(msg);
     }
 
     @Override
@@ -883,8 +879,13 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelFuture write(MessageList<?> msgs, ChannelPromise promise) {
-        return tail.write(msgs, promise);
+    public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
+        return tail.writeAndFlush(msg, promise);
+    }
+
+    @Override
+    public ChannelFuture writeAndFlush(Object msg) {
+        return tail.writeAndFlush(msg);
     }
 
     private void checkDuplicateName(String name) {
@@ -936,9 +937,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         public void channelInactive(ChannelHandlerContext ctx) throws Exception { }
 
         @Override
-        public void channelReadSuspended(ChannelHandlerContext ctx) throws Exception { }
-
-        @Override
         public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception { }
 
         @Override
@@ -958,27 +956,18 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-            int length = msgs.size();
-            if (length == 0) {
-                return;
-            }
-
-            for (int i = 0; i < length; i ++) {
-                Object m = msgs.get(i);
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            try {
                 logger.debug(
                         "Discarded inbound message {} that reached at the tail of the pipeline. " +
-                                "Please check your pipeline configuration.", m);
-
-                ReferenceCountUtil.release(m);
-            }
-
-            if (length != 1) {
-                logger.warn(
-                        "Discarded {} inbound message(s) that reached at the tail of the pipeline. " +
-                        "Please check your pipeline configuration.", length);
+                                "Please check your pipeline configuration.", msg);
+            } finally {
+                ReferenceCountUtil.release(msg);
             }
         }
+
+        @Override
+        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception { }
     }
 
     static final class HeadHandler implements ChannelOutboundHandler {
@@ -1035,9 +1024,13 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void write(
-                ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
-            unsafe.write(msgs, promise);
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+            unsafe.write(msg, promise);
+        }
+
+        @Override
+        public void flush(ChannelHandlerContext ctx) throws Exception {
+            unsafe.flush();
         }
 
         @Override

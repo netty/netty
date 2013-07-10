@@ -20,9 +20,9 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.Test;
@@ -71,7 +71,7 @@ public class LocalChannelTest {
                 @Override
                 public void run() {
                     // Send a message event up the pipeline.
-                    cc.pipeline().fireMessageReceived("Hello, World");
+                    cc.pipeline().fireChannelRead("Hello, World");
                     latch.countDown();
                 }
             });
@@ -124,7 +124,7 @@ public class LocalChannelTest {
         // Close the channel and write something.
         cc.close().sync();
         try {
-            cc.write(new Object()).sync();
+            cc.writeAndFlush(new Object()).sync();
             fail("must raise a ClosedChannelException");
         } catch (Exception e) {
             assertThat(e, is(instanceOf(ClosedChannelException.class)));
@@ -140,9 +140,9 @@ public class LocalChannelTest {
         clientGroup.terminationFuture().sync();
     }
 
-    static class TestHandler extends SimpleChannelInboundHandler<Object> {
+    static class TestHandler extends ChannelInboundHandlerAdapter {
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             logger.info(String.format("Received mesage: %s", msg));
         }
     }

@@ -53,7 +53,7 @@ public class QuoteOfTheMomentClient {
             Channel ch = b.bind(0).sync().channel();
 
             // Broadcast the QOTM request to port 8080.
-            ch.write(new DatagramPacket(
+            ch.writeAndFlush(new DatagramPacket(
                     Unpooled.copiedBuffer("QOTM?", CharsetUtil.UTF_8),
                     new InetSocketAddress("255.255.255.255", port))).sync();
 

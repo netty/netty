@@ -16,8 +16,6 @@
 package io.netty.buffer;
 
 import io.netty.util.CharsetUtil;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ReferenceCounted;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -41,52 +39,6 @@ public final class ByteBufUtil {
             HEXDUMP_TABLE[ i << 1     ] = DIGITS[i >>> 4 & 0x0F];
             HEXDUMP_TABLE[(i << 1) + 1] = DIGITS[i       & 0x0F];
         }
-    }
-
-    /**
-     * Try to call {@link ReferenceCounted#retain()} if the specified message implements {@link ReferenceCounted}.
-     * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.
-     *
-     * @deprecated use {@link ReferenceCountUtil#retain(Object)}
-     */
-    @SuppressWarnings("unchecked")
-    @Deprecated
-    public static <T> T retain(T msg) {
-        return ReferenceCountUtil.retain(msg);
-    }
-
-    /**
-     * Try to call {@link ReferenceCounted#retain()} if the specified message implements {@link ReferenceCounted}.
-     * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.
-     *
-     * @deprecated use {@link ReferenceCountUtil#retain(Object, int)}
-     */
-    @SuppressWarnings("unchecked")
-    @Deprecated
-    public static <T> T retain(T msg, int increment) {
-        return ReferenceCountUtil.retain(msg, increment);
-    }
-
-    /**
-     * Try to call {@link ReferenceCounted#release()} if the specified message implements {@link ReferenceCounted}.
-     * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.
-     *
-     * @deprecated use {@link ReferenceCountUtil#release(Object)}
-     */
-    @Deprecated
-    public static boolean release(Object msg) {
-        return ReferenceCountUtil.release(msg);
-    }
-
-    /**
-     * Try to call {@link ReferenceCounted#release()} if the specified message implements {@link ReferenceCounted}.
-     * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.
-     *
-     * @deprecated use {@link ReferenceCountUtil#release(Object, int)}
-     */
-    @Deprecated
-    public static boolean release(Object msg, int decrement) {
-        return ReferenceCountUtil.release(msg, decrement);
     }
 
     /**
@@ -274,19 +226,6 @@ public final class ByteBufUtil {
     }
 
     /**
-     * The default implementation of {@link ByteBuf#indexOf(int, int, ByteBufIndexFinder)}.
-     * This method is useful when implementing a new buffer type.
-     */
-    @Deprecated
-    public static int indexOf(ByteBuf buffer, int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
-        if (fromIndex <= toIndex) {
-            return firstIndexOf(buffer, fromIndex, toIndex, indexFinder);
-        } else {
-            return lastIndexOf(buffer, fromIndex, toIndex, indexFinder);
-        }
-    }
-
-    /**
      * Toggles the endianness of the specified 16-bit short integer.
      */
     public static short swapShort(short value) {
@@ -341,38 +280,6 @@ public final class ByteBufUtil {
 
         for (int i = fromIndex - 1; i >= toIndex; i --) {
             if (buffer.getByte(i) == value) {
-                return i;
-            }
-        }
-
-        return -1;
-    }
-
-    @SuppressWarnings("deprecation")
-    private static int firstIndexOf(ByteBuf buffer, int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
-        fromIndex = Math.max(fromIndex, 0);
-        if (fromIndex >= toIndex || buffer.capacity() == 0) {
-            return -1;
-        }
-
-        for (int i = fromIndex; i < toIndex; i ++) {
-            if (indexFinder.find(buffer, i)) {
-                return i;
-            }
-        }
-
-        return -1;
-    }
-
-    @SuppressWarnings("deprecation")
-    private static int lastIndexOf(ByteBuf buffer, int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
-        fromIndex = Math.min(fromIndex, buffer.capacity());
-        if (fromIndex < 0 || buffer.capacity() == 0) {
-            return -1;
-        }
-
-        for (int i = fromIndex - 1; i >= toIndex; i --) {
-            if (indexFinder.find(buffer, i)) {
                 return i;
             }
         }

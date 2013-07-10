@@ -146,6 +146,21 @@ public class MemoryFileUpload extends AbstractMemoryHttpData implements FileUplo
     }
 
     @Override
+    public FileUpload duplicate() {
+        MemoryFileUpload upload = new MemoryFileUpload(getName(), getFilename(), getContentType(),
+                getContentTransferEncoding(), getCharset(), size);
+        ByteBuf buf = content();
+        if (buf != null) {
+            try {
+                upload.setContent(buf.duplicate());
+                return upload;
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+        return upload;
+    }
+    @Override
     public FileUpload retain() {
         super.retain();
         return this;

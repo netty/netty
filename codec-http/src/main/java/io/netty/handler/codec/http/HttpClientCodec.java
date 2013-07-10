@@ -19,10 +19,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.CombinedChannelDuplexHandler;
-import io.netty.channel.MessageList;
 import io.netty.handler.codec.PrematureChannelClosureException;
 
 import java.util.ArrayDeque;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -86,7 +86,7 @@ public final class HttpClientCodec
 
         @Override
         protected void encode(
-                ChannelHandlerContext ctx, HttpObject msg, MessageList<Object> out) throws Exception {
+                ChannelHandlerContext ctx, HttpObject msg, List<Object> out) throws Exception {
             if (msg instanceof HttpRequest && !done) {
                 queue.offer(((HttpRequest) msg).getMethod());
             }
@@ -110,7 +110,7 @@ public final class HttpClientCodec
 
         @Override
         protected void decode(
-                ChannelHandlerContext ctx, ByteBuf buffer, MessageList<Object> out) throws Exception {
+                ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
             if (done) {
                 int readable = actualReadableBytes();
                 if (readable == 0) {

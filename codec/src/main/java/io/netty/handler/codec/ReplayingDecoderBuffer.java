@@ -17,7 +17,6 @@ package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufIndexFinder;
 import io.netty.buffer.ByteBufProcessor;
 import io.netty.buffer.SwappedByteBuf;
 import io.netty.buffer.Unpooled;
@@ -34,7 +33,7 @@ import java.nio.charset.Charset;
 /**
  * Special {@link ByteBuf} implementation which is used by the {@link ReplayingDecoder}
  */
-final class ReplayingDecoderBuffer implements ByteBuf {
+final class ReplayingDecoderBuffer extends ByteBuf {
 
     private static final Signal REPLAY = ReplayingDecoder.REPLAY;
 
@@ -149,12 +148,6 @@ final class ReplayingDecoderBuffer implements ByteBuf {
 
     @Override
     public ByteBuf ensureWritable(int writableBytes) {
-        throw new UnreplayableOperationException();
-    }
-
-    @Override
-    @Deprecated
-    public ByteBuf ensureWritableBytes(int writableBytes) {
         throw new UnreplayableOperationException();
     }
 
@@ -307,28 +300,8 @@ final class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
-    @Deprecated
-    public int indexOf(int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
-        int endIndex = buffer.indexOf(fromIndex, toIndex, indexFinder);
-        if (endIndex < 0) {
-            throw REPLAY;
-        }
-        return endIndex;
-    }
-
-    @Override
     public int bytesBefore(byte value) {
         int bytes = buffer.bytesBefore(value);
-        if (bytes < 0) {
-            throw REPLAY;
-        }
-        return bytes;
-    }
-
-    @Override
-    @Deprecated
-    public int bytesBefore(ByteBufIndexFinder indexFinder) {
-        int bytes = buffer.bytesBefore(indexFinder);
         if (bytes < 0) {
             throw REPLAY;
         }
@@ -346,29 +319,8 @@ final class ReplayingDecoderBuffer implements ByteBuf {
     }
 
     @Override
-    @Deprecated
-    public int bytesBefore(int length, ByteBufIndexFinder indexFinder) {
-        checkReadableBytes(length);
-        int bytes = buffer.bytesBefore(length, indexFinder);
-        if (bytes < 0) {
-            throw REPLAY;
-        }
-        return bytes;
-    }
-
-    @Override
     public int bytesBefore(int index, int length, byte value) {
         int bytes = buffer.bytesBefore(index, length, value);
-        if (bytes < 0) {
-            throw REPLAY;
-        }
-        return bytes;
-    }
-
-    @Override
-    @Deprecated
-    public int bytesBefore(int index, int length, ByteBufIndexFinder indexFinder) {
-        int bytes = buffer.bytesBefore(index, length, indexFinder);
         if (bytes < 0) {
             throw REPLAY;
         }
@@ -457,12 +409,6 @@ final class ReplayingDecoderBuffer implements ByteBuf {
     @Override
     public boolean isReadable() {
         return terminated? buffer.isReadable() : true;
-    }
-
-    @Override
-    @Deprecated
-    public boolean readable() {
-        return isReadable();
     }
 
     @Override
@@ -809,12 +755,6 @@ final class ReplayingDecoderBuffer implements ByteBuf {
 
     @Override
     public boolean isWritable() {
-        return false;
-    }
-
-    @Override
-    @Deprecated
-    public boolean writable() {
         return false;
     }
 

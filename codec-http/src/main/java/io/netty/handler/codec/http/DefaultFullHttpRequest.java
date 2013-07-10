@@ -100,4 +100,13 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
         copy.trailingHeaders().set(trailingHeaders());
         return copy;
     }
+
+    @Override
+    public FullHttpRequest duplicate() {
+        DefaultFullHttpRequest duplicate = new DefaultFullHttpRequest(
+                getProtocolVersion(), getMethod(), getUri(), content().duplicate());
+        duplicate.headers().set(headers());
+        duplicate.trailingHeaders().set(trailingHeaders());
+        return duplicate;
+    }
 }

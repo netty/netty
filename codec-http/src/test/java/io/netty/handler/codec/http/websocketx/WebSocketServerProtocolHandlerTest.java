@@ -17,10 +17,9 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.MessageList;
-import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -147,22 +146,23 @@ public class WebSocketServerProtocolHandlerTest {
     private class MockOutboundHandler extends ChannelOutboundHandlerAdapter {
 
         @Override
-        public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise)
-                throws Exception {
-            for (int i = 0; i < msgs.size(); i++) {
-                responses.add((FullHttpResponse) msgs.get(i));
-            }
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+            responses.add((FullHttpResponse) msg);
             promise.setSuccess();
+        }
+
+        @Override
+        public void flush(ChannelHandlerContext ctx) throws Exception {
         }
     }
 
-    private static class CustomTextFrameHandler extends SimpleChannelInboundHandler<TextWebSocketFrame> {
+    private static class CustomTextFrameHandler extends ChannelInboundHandlerAdapter {
         private String content;
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, TextWebSocketFrame msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             assertNull(content);
-            content = "processed: " + msg.text();
+            content = "processed: " + ((TextWebSocketFrame) msg).text();
         }
 
         String getContent() {

@@ -16,6 +16,8 @@
 package io.netty.handler.stream;
 
 
+import io.netty.channel.ChannelHandlerContext;
+
 /**
  * A data stream of indefinite length which is consumed by {@link ChunkedWriteHandler}.
  */
@@ -33,13 +35,16 @@ public interface ChunkedInput<B> {
     void close() throws Exception;
 
     /**
-     * Fetches a chunked data from the stream.  The chunk is then
-     * transfered to the given buffer.  Once this method returns the last chunk
+     * Fetches a chunked data from the stream. Once this method returns the last chunk
      * and thus the stream has reached at its end, any subsequent {@link #isEndOfInput()}
      * call must return {@code false}.
      *
-     * @param buffer    read the next chunk and transfer it to the given buffer
+     * @return the fetched chunk.
+     *         {@code null} if there is no data left in the stream.
+     *         Please note that {@code null} does not necessarily mean that the
+     *         stream has reached at its end.  In a slow stream, the next chunk
+     *         might be unavailable just momentarily.
      */
-    boolean readChunk(B buffer) throws Exception;
+    B readChunk(ChannelHandlerContext ctx) throws Exception;
 
 }

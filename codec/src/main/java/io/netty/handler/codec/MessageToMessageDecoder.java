@@ -17,10 +17,12 @@ package io.netty.handler.codec;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.MessageList;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.TypeParameterMatcher;
+
+import java.util.List;
 
 /**
  * {@link ChannelInboundHandlerAdapter} which decodes from one message to an other message.
@@ -35,7 +37,7 @@ import io.netty.util.internal.TypeParameterMatcher;
  *
  *         {@code @Override}
  *         public void decode({@link ChannelHandlerContext} ctx, {@link String} message,
- *                 {@link MessageList} out) throws {@link Exception} {
+ *                            List&lt;Object&gt; out) throws {@link Exception} {
  *             out.add(message.length());
  *         }
  *     }
@@ -63,48 +65,40 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAd
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-        MessageList<Object> out = MessageList.newInstance();
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        RecyclableArrayList out = RecyclableArrayList.newInstance();
         try {
-            int size = msgs.size();
-            for (int i = 0; i < size; i ++) {
-                // handler was removed in the loop so now copy over all remaining messages
-                if (ctx.isRemoved()) {
-                    out.add(msgs, i, size - i);
-                    return;
+            if (acceptInboundMessage(msg)) {
+                @SuppressWarnings("unchecked")
+                I cast = (I) msg;
+                try {
+                    decode(ctx, cast, out);
+                } finally {
+                    ReferenceCountUtil.release(cast);
                 }
-
-                Object m = msgs.get(i);
-                if (acceptInboundMessage(m)) {
-                    @SuppressWarnings("unchecked")
-                    I cast = (I) m;
-                    try {
-                        decode(ctx, cast, out);
-                    } finally {
-                        ReferenceCountUtil.release(cast);
-                    }
-                } else {
-                    out.add(m);
-                }
+            } else {
+                out.add(msg);
             }
         } catch (DecoderException e) {
             throw e;
         } catch (Exception e) {
             throw new DecoderException(e);
         } finally {
-            msgs.recycle();
-            ctx.fireMessageReceived(out);
+            for (int i = 0; i < out.size(); i ++) {
+                ctx.fireChannelRead(out.get(i));
+            }
+            out.recycle();
         }
     }
 
     /**
-     * Decode from one message to an other. This method will be called till either the {@link MessageList} has
-     * nothing left or till this method returns {@code null}.
+     * Decode from one message to an other. This method will be called for each written message that can be handled
+     * by this encoder.
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link MessageToMessageDecoder} belongs to
      * @param msg           the message to decode to an other one
-     * @param out           the {@link MessageList} to which decoded messages should be added
+     * @param out           the {@link List} to which decoded messages should be added
      * @throws Exception    is thrown if an error accour
      */
-    protected abstract void decode(ChannelHandlerContext ctx, I msg, MessageList<Object> out) throws Exception;
+    protected abstract void decode(ChannelHandlerContext ctx, I msg, List<Object> out) throws Exception;
 }

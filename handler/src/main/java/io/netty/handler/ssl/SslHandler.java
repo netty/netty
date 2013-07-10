@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -26,7 +27,6 @@ import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.MessageList;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
@@ -35,6 +35,7 @@ import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -49,7 +50,8 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayDeque;
-import java.util.Queue;
+import java.util.Deque;
+import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -150,12 +152,10 @@ import java.util.regex.Pattern;
  * For more details see
  * <a href="https://github.com/netty/netty/issues/832">#832</a> in our issue tracker.
  */
-public class SslHandler
-        extends ByteToMessageDecoder
-        implements ChannelOutboundHandler {
+public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundHandler {
 
     private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(SslHandler.class);
+            InternalLoggerFactory.getInstance(SslHandler.class);
 
     private static final Pattern IGNORABLE_CLASS_IN_STACK = Pattern.compile(
             "^.*(?:Socket|Datagram|Sctp|Udt)Channel.*$");
@@ -182,7 +182,10 @@ public class SslHandler
     private final LazyChannelPromise handshakePromise = new LazyChannelPromise();
     private final LazyChannelPromise sslCloseFuture = new LazyChannelPromise();
     private final CloseNotifyListener closeNotifyWriteListener = new CloseNotifyListener();
-    private final Queue<PendingWrite> pendingUnencryptedWrites = new ArrayDeque<PendingWrite>();
+    private final Deque<PendingWrite> pendingUnencryptedWrites = new ArrayDeque<PendingWrite>();
+
+    private int packetLength;
+    private ByteBuf decodeOut;
 
     private volatile long handshakeTimeoutMillis = 10000;
     private volatile long closeNotifyTimeoutMillis = 3000;
@@ -318,7 +321,8 @@ public class SslHandler
                 engine.closeOutbound();
                 future.addListener(closeNotifyWriteListener);
                 try {
-                    write(ctx, MessageList.<Object>newInstance(Unpooled.EMPTY_BUFFER), future);
+                    write(ctx, Unpooled.EMPTY_BUFFER, future);
+                    flush(ctx);
                 } catch (Exception e) {
                     if (!future.tryFailure(e)) {
                         logger.warn("flush() raised a masked exception.", e);
@@ -343,9 +347,17 @@ public class SslHandler
     }
 
     @Override
-    protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
+    public void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
         if (decodeOut != null) {
             decodeOut.release();
+            decodeOut = null;
+        }
+        for (;;) {
+            PendingWrite write = pendingUnencryptedWrites.poll();
+            if (write == null) {
+                break;
+            }
+            write.fail(new ChannelException("Pending write on removal of SslHandler"));
         }
     }
 
@@ -367,13 +379,13 @@ public class SslHandler
 
     @Override
     public void disconnect(final ChannelHandlerContext ctx,
-            final ChannelPromise promise) throws Exception {
+                           final ChannelPromise promise) throws Exception {
         closeOutboundAndChannel(ctx, promise, true);
     }
 
     @Override
     public void close(final ChannelHandlerContext ctx,
-            final ChannelPromise promise) throws Exception {
+                      final ChannelPromise promise) throws Exception {
         closeOutboundAndChannel(ctx, promise, false);
     }
 
@@ -383,37 +395,31 @@ public class SslHandler
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise)
-            throws Exception {
+    public void flush(ChannelHandlerContext ctx) throws Exception {
         // Do not encrypt the first write request if this handler is
         // created with startTLS flag turned on.
         if (startTls && !sentFirstMessage) {
             sentFirstMessage = true;
-            ctx.write(msgs, promise);
+            for (;;) {
+                PendingWrite pendingWrite = pendingUnencryptedWrites.poll();
+                if (pendingWrite == null) {
+                    break;
+                }
+                ctx.write(pendingWrite.buf, pendingWrite.promise);
+            }
+            ctx.flush();
             return;
         }
-        try {
-            if (msgs.isEmpty()) {
-                // if the MessageList is empty we need to add an empty buffer as pending write as otherwise
-                // the promise will never be notified.
-                // See https://github.com/netty/netty/issues/1475
-                pendingUnencryptedWrites.add(new PendingWrite(Unpooled.EMPTY_BUFFER, promise));
-            } else {
-                for (int i = 0; i < msgs.size(); i++) {
-                    ByteBuf msg = (ByteBuf) msgs.get(i);
-                    ChannelPromise cp;
-                    if (i + 1 == msgs.size()) {
-                        cp = promise;
-                    } else {
-                        cp = ctx.newPromise();
-                    }
-                    pendingUnencryptedWrites.add(new PendingWrite(msg, cp));
-                }
-            }
-            flush0(ctx);
-        } finally {
-            msgs.recycle();
+        if (pendingUnencryptedWrites.isEmpty()) {
+            pendingUnencryptedWrites.add(new PendingWrite(Unpooled.EMPTY_BUFFER, null));
         }
+        flush0(ctx);
+    }
+
+    @Override
+    public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
+            throws Exception {
+        pendingUnencryptedWrites.add(new PendingWrite((ByteBuf) msg, promise));
     }
 
     private void flush0(ChannelHandlerContext ctx) throws SSLException {
@@ -422,12 +428,12 @@ public class SslHandler
         ChannelPromise promise = null;
         try {
             for (;;) {
-                if (out == null) {
-                    out = ctx.alloc().buffer();
-                }
                 PendingWrite pending = pendingUnencryptedWrites.peek();
                 if (pending == null) {
                     break;
+                }
+                if (out == null) {
+                    out = ctx.alloc().buffer();
                 }
                 SSLEngineResult result = wrap(engine, pending.buf, out);
 
@@ -446,7 +452,7 @@ public class SslHandler
                     for (;;) {
                         PendingWrite w = pendingUnencryptedWrites.poll();
                         if (w == null) {
-                           break;
+                            break;
                         }
                         failed = true;
                         w.fail(SSLENGINE_CLOSED);
@@ -459,10 +465,10 @@ public class SslHandler
                     switch (result.getHandshakeStatus()) {
                         case NEED_WRAP:
                             if (promise != null) {
-                                ctx.write(out, promise);
+                                ctx.writeAndFlush(out, promise);
                                 promise = null;
                             } else {
-                                ctx.write(out);
+                                ctx.writeAndFlush(out);
                             }
                             out = ctx.alloc().buffer();
                             continue;
@@ -495,7 +501,7 @@ public class SslHandler
             }
 
             if (unwrapLater) {
-                decode0(ctx);
+                unwrapLater(ctx);
             }
         } catch (SSLException e) {
             setHandshakeFailure(e);
@@ -503,9 +509,9 @@ public class SslHandler
         } finally {
             if (out != null && out.isReadable()) {
                 if (promise != null) {
-                    ctx.write(out, promise);
+                    ctx.writeAndFlush(out, promise);
                 } else {
-                    ctx.write(out);
+                    ctx.writeAndFlush(out);
                 }
                 out = null;
             } else if (promise != null) {
@@ -514,6 +520,18 @@ public class SslHandler
             if (out != null) {
                 out.release();
             }
+        }
+    }
+
+    private void unwrapLater(ChannelHandlerContext ctx) throws SSLException {
+        RecyclableArrayList out = RecyclableArrayList.newInstance();
+        try {
+            decode(ctx, internalBuffer(),  out);
+            for (int i = 0; i < out.size(); i++) {
+                ctx.fireChannelRead(out.get(i));
+            }
+        } finally {
+            out.recycle();
         }
     }
 
@@ -528,7 +546,7 @@ public class SslHandler
                 SSLEngineResult result = wrap(engine, Unpooled.EMPTY_BUFFER, out);
 
                 if (result.bytesProduced() > 0) {
-                    ctx.write(out);
+                    ctx.writeAndFlush(out);
                     out = null;
                 }
 
@@ -567,7 +585,7 @@ public class SslHandler
             }
 
             if (unwrapLater) {
-                decode0(ctx);
+                unwrapLater(ctx);
             }
         } catch (SSLException e) {
             setHandshakeFailure(e);
@@ -610,7 +628,7 @@ public class SslHandler
             if (logger.isDebugEnabled()) {
                 logger.debug(
                         "Swallowing a harmless 'connection reset by peer / broken pipe' error that occurred " +
-                        "while writing close_notify in response to the peer's close_notify", cause);
+                                "while writing close_notify in response to the peer's close_notify", cause);
             }
 
             // Close the connection explicitly just in case the transport
@@ -702,6 +720,9 @@ public class SslHandler
      *                  Is thrown if the given {@link ByteBuf} has not at least 5 bytes to read.
      */
     public static boolean isEncrypted(ByteBuf buffer) {
+        if (buffer.readableBytes() < 5) {
+            throw new IllegalArgumentException("buffer must have at least 5 readable bytes");
+        }
         return getEncryptedPacketLength(buffer) != -1;
     }
 
@@ -719,32 +740,29 @@ public class SslHandler
      *                  Is thrown if the given {@link ByteBuf} has not at least 5 bytes to read.
      */
     private static int getEncryptedPacketLength(ByteBuf buffer) {
-        if (buffer.readableBytes() < 5) {
-            throw new IllegalArgumentException("buffer must have at least 5 readable bytes");
-        }
-
+        int first = buffer.readerIndex();
         int packetLength = 0;
 
         // SSLv3 or TLS - Check ContentType
         boolean tls;
-        switch (buffer.getUnsignedByte(buffer.readerIndex())) {
-        case 20:  // change_cipher_spec
-        case 21:  // alert
-        case 22:  // handshake
-        case 23:  // application_data
-            tls = true;
-            break;
-        default:
-            // SSLv2 or bad data
-            tls = false;
+        switch (buffer.getUnsignedByte(first)) {
+            case 20:  // change_cipher_spec
+            case 21:  // alert
+            case 22:  // handshake
+            case 23:  // application_data
+                tls = true;
+                break;
+            default:
+                // SSLv2 or bad data
+                tls = false;
         }
 
         if (tls) {
             // SSLv3 or TLS - Check ProtocolVersion
-            int majorVersion = buffer.getUnsignedByte(buffer.readerIndex() + 1);
+            int majorVersion = buffer.getUnsignedByte(first + 1);
             if (majorVersion == 3) {
                 // SSLv3 or TLS
-                packetLength = (getShort(buffer, buffer.readerIndex() + 3) & 0xFFFF) + 5;
+                packetLength = (buffer.getUnsignedShort(first + 3)) + 5;
                 if (packetLength <= 5) {
                     // Neither SSLv3 or TLSv1 (i.e. SSLv2 or bad data)
                     tls = false;
@@ -758,16 +776,14 @@ public class SslHandler
         if (!tls) {
             // SSLv2 or bad data - Check the version
             boolean sslv2 = true;
-            int headerLength = (buffer.getUnsignedByte(
-                    buffer.readerIndex()) & 0x80) != 0 ? 2 : 3;
-            int majorVersion = buffer.getUnsignedByte(
-                    buffer.readerIndex() + headerLength + 1);
+            int headerLength = (buffer.getUnsignedByte(first) & 0x80) != 0 ? 2 : 3;
+            int majorVersion = buffer.getUnsignedByte(first + headerLength + 1);
             if (majorVersion == 2 || majorVersion == 3) {
                 // SSLv2
                 if (headerLength == 2) {
-                    packetLength = (getShort(buffer, buffer.readerIndex()) & 0x7FFF) + 2;
+                    packetLength = (buffer.getShort(first) & 0x7FFF) + 2;
                 } else {
-                    packetLength = (getShort(buffer, buffer.readerIndex()) & 0x3FFF) + 3;
+                    packetLength = (buffer.getShort(first) & 0x3FFF) + 3;
                 }
                 if (packetLength <= headerLength) {
                     sslv2 = false;
@@ -784,33 +800,47 @@ public class SslHandler
     }
 
     @Override
-    public void decode(final ChannelHandlerContext ctx, ByteBuf in, MessageList<Object> out) throws Exception {
-        decode0(ctx);
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws SSLException {
+        int packetLength = this.packetLength;
+        if (packetLength == 0) {
+            // the previous packet was consumed so try to read the length of the next packet
+            final int readableBytes = in.readableBytes();
+            if (readableBytes < 5) {
+                // not enough bytes readable to read the packet length
+                return;
+            }
+
+            packetLength = getEncryptedPacketLength(in);
+            if (packetLength == -1) {
+                // Not an SSL/TLS packet
+                NotSslRecordException e = new NotSslRecordException(
+                        "not an SSL/TLS record: " + ByteBufUtil.hexDump(in));
+                in.skipBytes(readableBytes);
+                ctx.fireExceptionCaught(e);
+                setHandshakeFailure(e);
+                return;
+            }
+
+            assert packetLength > 0;
+            this.packetLength = packetLength;
+        }
+
+        if (in.readableBytes() < packetLength) {
+            // wait until the whole packet can be read
+            return;
+        }
+
+        try {
+            // slice out the whole packet so unwrap will only be called with complete packets
+            int readerIndex = in.readerIndex();
+            in.skipBytes(packetLength);
+            unwrap(ctx, in.nioBuffer(readerIndex, packetLength), out);
+        } finally {
+            this.packetLength = 0;
+        }
     }
 
-    private ByteBuf decodeOut;
-
-    private void decode0(final ChannelHandlerContext ctx) throws SSLException {
-        final ByteBuf in = internalBuffer();
-
-        if (in.readableBytes() < 5) {
-            return;
-        }
-
-        int packetLength = getEncryptedPacketLength(in);
-
-        if (packetLength == -1) {
-            // Bad data - discard the buffer and raise an exception.
-            NotSslRecordException e = new NotSslRecordException(
-                    "not an SSL/TLS record: " + ByteBufUtil.hexDump(in));
-            in.skipBytes(in.readableBytes());
-            ctx.fireExceptionCaught(e);
-            setHandshakeFailure(e);
-            return;
-        }
-
-        assert packetLength > 0;
-
+    private void unwrap(ChannelHandlerContext ctx, ByteBuffer packet, List<Object> out) throws SSLException {
         boolean wrapLater = false;
         int bytesProduced = 0;
         try {
@@ -819,9 +849,8 @@ public class SslHandler
                 if (decodeOut == null) {
                     decodeOut = ctx.alloc().buffer();
                 }
-                SSLEngineResult result = unwrap(engine, in, decodeOut);
+                SSLEngineResult result = unwrap(engine, packet, decodeOut);
                 bytesProduced += result.bytesProduced();
-
                 switch (result.getStatus()) {
                     case CLOSED:
                         // notify about the CLOSED state of the SSLEngine. See #137
@@ -866,32 +895,22 @@ public class SslHandler
             if (bytesProduced > 0) {
                 ByteBuf decodeOut = this.decodeOut;
                 this.decodeOut = null;
-                ctx.fireMessageReceived(decodeOut);
+                out.add(decodeOut);
             }
         }
     }
 
-    /**
-     * Reads a big-endian short integer from the buffer.  Please note that we do not use
-     * {@link ByteBuf#getShort(int)} because it might be a little-endian buffer.
-     */
-    private static short getShort(ByteBuf buf, int offset) {
-        return (short) (buf.getByte(offset) << 8 | buf.getByte(offset + 1) & 0xFF);
-    }
-
-    private static SSLEngineResult unwrap(SSLEngine engine, ByteBuf in, ByteBuf out) throws SSLException {
-        ByteBuffer in0 = in.nioBuffer();
+    private static SSLEngineResult unwrap(SSLEngine engine, ByteBuffer in, ByteBuf out) throws SSLException {
         for (;;) {
             ByteBuffer out0 = out.nioBuffer(out.writerIndex(), out.writableBytes());
-            SSLEngineResult result = engine.unwrap(in0, out0);
-            in.skipBytes(result.bytesConsumed());
+            SSLEngineResult result = engine.unwrap(in, out0);
             out.writerIndex(out.writerIndex() + result.bytesProduced());
             switch (result.getStatus()) {
-            case BUFFER_OVERFLOW:
-                out.ensureWritable(engine.getSession().getApplicationBufferSize());
-                break;
-            default:
-                return result;
+                case BUFFER_OVERFLOW:
+                    out.ensureWritable(engine.getSession().getApplicationBufferSize());
+                    break;
+                default:
+                    return result;
             }
         }
     }
@@ -954,7 +973,7 @@ public class SslHandler
     private void notifyHandshakeFailure(Throwable cause) {
         if (handshakePromise.tryFailure(cause)) {
             ctx.fireUserEventTriggered(new SslHandshakeCompletionEvent(cause));
-            ctx.pipeline().fireExceptionCaught(cause);
+            ctx.close();
         }
     }
 
@@ -972,7 +991,8 @@ public class SslHandler
         engine.closeOutbound();
 
         ChannelPromise closeNotifyFuture = ctx.newPromise().addListener(closeNotifyWriteListener);
-        write(ctx, MessageList.<Object>newInstance(Unpooled.EMPTY_BUFFER), closeNotifyFuture);
+        write(ctx, Unpooled.EMPTY_BUFFER, closeNotifyFuture);
+        flush(ctx);
         safeClose(ctx, closeNotifyFuture, promise);
     }
 
@@ -1059,7 +1079,7 @@ public class SslHandler
                 public void run() {
                     logger.warn(
                             ctx.channel() + " last write attempt timed out." +
-                                            " Force-closing the connection.");
+                                    " Force-closing the connection.");
                     ctx.close(promise);
                 }
             }, closeNotifyTimeoutMillis, TimeUnit.MILLISECONDS);
@@ -1110,14 +1130,21 @@ public class SslHandler
     private static final class PendingWrite {
         final ByteBuf buf;
         final ChannelPromise promise;
+
         PendingWrite(ByteBuf buf, ChannelPromise promise) {
             this.buf = buf;
             this.promise = promise;
         }
 
+        PendingWrite(ByteBuf buf) {
+            this(buf, null);
+        }
+
         void fail(Throwable cause) {
             buf.release();
-            promise.setFailure(cause);
+            if (promise != null) {
+                promise.setFailure(cause);
+            }
         }
     }
 }

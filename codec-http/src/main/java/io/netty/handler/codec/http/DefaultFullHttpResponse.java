@@ -95,4 +95,13 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
         copy.trailingHeaders().set(trailingHeaders());
         return copy;
     }
+
+    @Override
+    public FullHttpResponse duplicate() {
+        DefaultFullHttpResponse duplicate = new DefaultFullHttpResponse(getProtocolVersion(), getStatus(),
+                content().duplicate());
+        duplicate.headers().set(headers());
+        duplicate.trailingHeaders().set(trailingHeaders());
+        return duplicate;
+    }
 }

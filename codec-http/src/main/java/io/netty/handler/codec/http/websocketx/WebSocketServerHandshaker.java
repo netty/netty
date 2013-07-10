@@ -19,8 +19,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -123,12 +121,15 @@ public abstract class WebSocketServerHandshaker {
     }
 
     /**
-     * Performs the opening handshake
+     * Performs the opening handshake. When call this method you <strong>MUST NOT</strong> retain the
+     * {@link FullHttpRequest} which is passed in.
      *
      * @param channel
-     *            Channel
+     *              Channel
      * @param req
-     *            HTTP Request
+     *              HTTP Request
+     * @return future
+     *              The {@link ChannelFuture} which is notified once the opening handshake completes
      */
     public ChannelFuture handshake(Channel channel, FullHttpRequest req) {
         return handshake(channel, req, null, channel.newPromise());
@@ -136,6 +137,8 @@ public abstract class WebSocketServerHandshaker {
 
     /**
      * Performs the opening handshake
+     *
+     * When call this method you <strong>MUST NOT</strong> retain the {@link FullHttpRequest} which is passed in.
      *
      * @param channel
      *            Channel
@@ -145,15 +148,17 @@ public abstract class WebSocketServerHandshaker {
      *            Extra headers to add to the handshake response or {@code null} if no extra headers should be added
      * @param promise
      *            the {@link ChannelPromise} to be notified when the opening handshake is done
+     * @return future
+     *            the {@link ChannelFuture} which is notified when the opening handshake is done
      */
     public final ChannelFuture handshake(Channel channel, FullHttpRequest req,
                                             HttpHeaders responseHeaders, final ChannelPromise promise) {
 
         if (logger.isDebugEnabled()) {
-            logger.debug(String.format("Channel %s WS Version %s server handshake", version(), channel.id()));
+            logger.debug(String.format("%s WS Version %s server handshake", channel, version()));
         }
         FullHttpResponse response = newHandshakeResponse(req, responseHeaders);
-        channel.write(response).addListener(new ChannelFutureListener() {
+        channel.writeAndFlush(response).addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.isSuccess()) {
@@ -170,8 +175,8 @@ public abstract class WebSocketServerHandshaker {
                                     new IllegalStateException("No HttpDecoder and no HttpServerCodec in the pipeline"));
                             return;
                         }
-                        p.addBefore(ctx.name(), "wsencoder", newWebsocketDecoder());
-                        p.replace(ctx.name(), "wsdecoder", newWebSocketEncoder());
+                        p.addBefore(ctx.name(), "wsdecoder", newWebsocketDecoder());
+                        p.replace(ctx.name(), "wsencoder", newWebSocketEncoder());
                     } else {
                         p.replace(ctx.name(), "wsdecoder", newWebsocketDecoder());
 
@@ -220,7 +225,7 @@ public abstract class WebSocketServerHandshaker {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
-        return channel.write(frame, promise).addListener(ChannelFutureListener.CLOSE);
+        return channel.writeAndFlush(frame, promise).addListener(ChannelFutureListener.CLOSE);
     }
 
     /**
@@ -262,19 +267,14 @@ public abstract class WebSocketServerHandshaker {
         return selectedSubprotocol;
     }
 
-    @Deprecated
-    protected void setSelectedSubprotocol(String value) {
-        selectedSubprotocol = value;
-    }
-
     /**
      * Returns the decoder to use after handshake is complete.
      */
-    protected abstract ChannelInboundHandler newWebsocketDecoder();
+    protected abstract WebSocketFrameDecoder newWebsocketDecoder();
 
     /**
      * Returns the encoder to use after the handshake is complete.
      */
-    protected abstract ChannelOutboundHandler newWebSocketEncoder();
+    protected abstract WebSocketFrameEncoder newWebSocketEncoder();
 
 }

@@ -153,7 +153,7 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
 
     @Override
     public CompositeByteBuf compositeHeapBuffer(int maxNumComponents) {
-        return new DefaultCompositeByteBuf(this, false, maxNumComponents);
+        return new CompositeByteBuf(this, false, maxNumComponents);
     }
 
     @Override
@@ -163,7 +163,7 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
 
     @Override
     public CompositeByteBuf compositeDirectBuffer(int maxNumComponents) {
-        return new DefaultCompositeByteBuf(this, true, maxNumComponents);
+        return new CompositeByteBuf(this, true, maxNumComponents);
     }
 
     private static void validate(int initialCapacity, int maxCapacity) {

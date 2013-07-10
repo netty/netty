@@ -25,7 +25,8 @@ import java.net.SocketAddress;
  * <ul>
  * <li>{@link #connect(SocketAddress, ChannelPromise)}</li>
  * <li>{@link #disconnect(ChannelPromise)}</li>
- * <li>{@link ChannelOutboundInvoker#write(Object, ChannelPromise)}</li>
+ * <li>{@link #write(Object, ChannelPromise)}</li>
+ * <li>{@link #flush()}</li>
  * <li>and the shortcut methods which calls the methods mentioned above
  * </ul>
  */
@@ -36,8 +37,8 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     /**
      * Creates a new instance.
      */
-    protected AbstractServerChannel(Integer id) {
-        super(null, id);
+    protected AbstractServerChannel() {
+        super(null);
     }
 
     @Override
@@ -71,18 +72,20 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
+    protected int doWrite(Object[] msgs, int msgsLength, int startIndex) throws Exception {
         throw new UnsupportedOperationException();
     }
 
     private final class DefaultServerUnsafe extends AbstractUnsafe {
         @Override
-        public void write(MessageList<?> msgs, ChannelPromise promise) {
+        public void write(Object msg, ChannelPromise promise) {
+            ReferenceCountUtil.release(msg);
             reject(promise);
-            int size = msgs.size();
-            for (int i = 0; i < size; i ++) {
-                ReferenceCountUtil.release(msgs.get(i));
-            }
+        }
+
+        @Override
+        public void flush() {
+            // ignore
         }
 
         @Override

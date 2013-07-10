@@ -17,7 +17,8 @@ package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.MessageList;
+
+import java.util.List;
 
 /**
  * A decoder that splits the received {@link ByteBuf}s on line endings.
@@ -69,7 +70,7 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, MessageList<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         Object decoded = decode(ctx, in);
         if (decoded != null) {
             out.add(decoded);

@@ -231,6 +231,11 @@ public class MixedFileUpload implements FileUpload {
     }
 
     @Override
+    public FileUpload duplicate() {
+        return fileUpload.duplicate();
+    }
+
+    @Override
     public ByteBuf content() {
         return fileUpload.content();
     }

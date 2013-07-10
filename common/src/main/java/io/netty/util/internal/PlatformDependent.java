@@ -73,7 +73,7 @@ public final class PlatformDependent {
 
     static {
         if (logger.isDebugEnabled()) {
-            logger.debug("io.netty.noPreferDirect: {}", !DIRECT_BUFFER_PREFERRED);
+            logger.debug("-Dio.netty.noPreferDirect: {}", !DIRECT_BUFFER_PREFERRED);
         }
 
         if (!hasUnsafe()) {
@@ -446,12 +446,14 @@ public final class PlatformDependent {
     }
 
     private static boolean hasUnsafe0() {
+        boolean noUnsafe = SystemPropertyUtil.getBoolean("io.netty.noUnsafe", false);
+        logger.debug("-Dio.netty.noUnsafe: {}", noUnsafe);
+
         if (isAndroid()) {
             logger.debug("sun.misc.Unsafe: unavailable (Android)");
             return false;
         }
 
-        boolean noUnsafe = SystemPropertyUtil.getBoolean("io.netty.noUnsafe", false);
         if (noUnsafe) {
             logger.debug("sun.misc.Unsafe: unavailable (io.netty.noUnsafe)");
             return false;
@@ -550,6 +552,8 @@ public final class PlatformDependent {
 
     private static boolean hasJavassist0() {
         boolean noJavassist = SystemPropertyUtil.getBoolean("io.netty.noJavassist", false);
+        logger.debug("-Dio.netty.noJavassist: {}", noJavassist);
+
         if (noJavassist) {
             logger.debug("Javassist: unavailable (io.netty.noJavassist)");
             return false;
@@ -561,7 +565,7 @@ public final class PlatformDependent {
             return true;
         } catch (Throwable t) {
             logger.debug("Javassist: unavailable");
-            logger.info(
+            logger.debug(
                     "You don't have Javassist in your class path or you don't have enough permission " +
                     "to load dynamically generated classes.  Please check the configuration for better performance.");
             return false;

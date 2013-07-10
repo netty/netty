@@ -69,7 +69,7 @@ import java.nio.ByteBuffer;
  * href="https://github.com/joewalnes/webbit">webbit</a> and modified.
  * </p>
  */
-public class WebSocket08FrameEncoder extends MessageToByteEncoder<WebSocketFrame> {
+public class WebSocket08FrameEncoder extends MessageToByteEncoder<WebSocketFrame> implements WebSocketFrameEncoder {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocket08FrameEncoder.class);
 

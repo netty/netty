@@ -52,6 +52,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioEventLoop.class);
 
     private static final int CLEANUP_INTERVAL = 256; // XXX Hard-coded value, but won't need customization.
+
     private static final boolean DISABLE_KEYSET_OPTIMIZATION =
             SystemPropertyUtil.getBoolean("io.netty.noKeySetOptimization", false);
 
@@ -84,8 +85,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         SELECTOR_AUTO_REBUILD_THRESHOLD = selectorAutoRebuildThreshold;
 
         if (logger.isDebugEnabled()) {
-            logger.debug("io.netty.noKeySetOptimization: {}", DISABLE_KEYSET_OPTIMIZATION);
-            logger.debug("io.netty.selectorAutoRebuildThreshold: {}", SELECTOR_AUTO_REBUILD_THRESHOLD);
+            logger.debug("-Dio.netty.noKeySetOptimization: {}", DISABLE_KEYSET_OPTIMIZATION);
+            logger.debug("-Dio.netty.selectorAutoRebuildThreshold: {}", SELECTOR_AUTO_REBUILD_THRESHOLD);
         }
     }
 
@@ -470,6 +471,13 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
             if (needsToSelectAgain) {
                 selectAgain();
+                // Need to flip the optimized selectedKeys to get the right reference to the array
+                // and reset the index to -1 which will then set to 0 on the for loop
+                // to start over again.
+                //
+                // See https://github.com/netty/netty/issues/1523
+                selectedKeys = this.selectedKeys.flip();
+                i = -1;
             }
         }
     }

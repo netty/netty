@@ -17,7 +17,6 @@ package io.netty.example.objectecho;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.MessageList;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -32,10 +31,15 @@ public class ObjectEchoServerHandler extends ChannelInboundHandlerAdapter {
             ObjectEchoServerHandler.class.getName());
 
     @Override
-    public void messageReceived(
-            ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+    public void channelRead(
+            ChannelHandlerContext ctx, Object msg) throws Exception {
         // Echo back the received object to the client.
-        ctx.write(msgs);
+        ctx.write(msg);
+    }
+
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
     }
 
     @Override

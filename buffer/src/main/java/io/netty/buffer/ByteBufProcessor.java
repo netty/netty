@@ -16,23 +16,15 @@
 
 package io.netty.buffer;
 
-import io.netty.util.Signal;
-
 public interface ByteBufProcessor {
-
-    Signal ABORT = new Signal(ByteBufProcessor.class.getName() + ".ABORT");
 
     /**
      * Aborts on a {@code NUL (0x00)}.
      */
     ByteBufProcessor FIND_NUL = new ByteBufProcessor() {
         @Override
-        public int process(byte value) throws Exception {
-            if (value == 0) {
-                throw ABORT;
-            } else {
-                return 1;
-            }
+        public boolean process(byte value) throws Exception {
+            return value != 0;
         }
     };
 
@@ -41,12 +33,8 @@ public interface ByteBufProcessor {
      */
     ByteBufProcessor FIND_NON_NUL = new ByteBufProcessor() {
         @Override
-        public int process(byte value) throws Exception {
-            if (value != 0) {
-                throw ABORT;
-            } else {
-                return 1;
-            }
+        public boolean process(byte value) throws Exception {
+            return value == 0;
         }
     };
 
@@ -55,12 +43,8 @@ public interface ByteBufProcessor {
      */
     ByteBufProcessor FIND_CR = new ByteBufProcessor() {
         @Override
-        public int process(byte value) throws Exception {
-            if (value == '\r') {
-                throw ABORT;
-            } else {
-                return 1;
-            }
+        public boolean process(byte value) throws Exception {
+            return value != '\r';
         }
     };
 
@@ -69,12 +53,8 @@ public interface ByteBufProcessor {
      */
     ByteBufProcessor FIND_NON_CR = new ByteBufProcessor() {
         @Override
-        public int process(byte value) throws Exception {
-            if (value != '\r') {
-                throw ABORT;
-            } else {
-                return 1;
-            }
+        public boolean process(byte value) throws Exception {
+            return value == '\r';
         }
     };
 
@@ -83,12 +63,8 @@ public interface ByteBufProcessor {
      */
     ByteBufProcessor FIND_LF = new ByteBufProcessor() {
         @Override
-        public int process(byte value) throws Exception {
-            if (value == '\n') {
-                throw ABORT;
-            } else {
-                return 1;
-            }
+        public boolean process(byte value) throws Exception {
+            return value != '\n';
         }
     };
 
@@ -97,12 +73,8 @@ public interface ByteBufProcessor {
      */
     ByteBufProcessor FIND_NON_LF = new ByteBufProcessor() {
         @Override
-        public int process(byte value) throws Exception {
-            if (value != '\n') {
-                throw ABORT;
-            } else {
-                return 1;
-            }
+        public boolean process(byte value) throws Exception {
+            return value == '\n';
         }
     };
 
@@ -111,12 +83,8 @@ public interface ByteBufProcessor {
      */
     ByteBufProcessor FIND_CRLF = new ByteBufProcessor() {
         @Override
-        public int process(byte value) throws Exception {
-            if (value == '\r' || value == '\n') {
-                throw ABORT;
-            } else {
-                return 1;
-            }
+        public boolean process(byte value) throws Exception {
+            return value != '\r' && value != '\n';
         }
     };
 
@@ -125,12 +93,8 @@ public interface ByteBufProcessor {
      */
     ByteBufProcessor FIND_NON_CRLF = new ByteBufProcessor() {
         @Override
-        public int process(byte value) throws Exception {
-            if (value != '\r' && value != '\n') {
-                throw ABORT;
-            } else {
-                return 1;
-            }
+        public boolean process(byte value) throws Exception {
+            return value == '\r' || value == '\n';
         }
     };
 
@@ -139,12 +103,8 @@ public interface ByteBufProcessor {
      */
     ByteBufProcessor FIND_LINEAR_WHITESPACE = new ByteBufProcessor() {
         @Override
-        public int process(byte value) throws Exception {
-            if (value == ' ' || value == '\t') {
-                throw ABORT;
-            } else {
-                return 1;
-            }
+        public boolean process(byte value) throws Exception {
+            return value != ' ' && value != '\t';
         }
     };
 
@@ -153,21 +113,14 @@ public interface ByteBufProcessor {
      */
     ByteBufProcessor FIND_NON_LINEAR_WHITESPACE = new ByteBufProcessor() {
         @Override
-        public int process(byte value) throws Exception {
-            if (value != ' ' && value != '\t') {
-                throw ABORT;
-            } else {
-                return 1;
-            }
+        public boolean process(byte value) throws Exception {
+            return value == ' ' || value == '\t';
         }
     };
 
     /**
-     * @return the number of elements processed. {@link ByteBuf#forEachByte(ByteBufProcessor)} will determine
-     *         the index of the next byte to be processed based on this value.  Usually, an implementation will
-     *         return {@code 1} to advance the index by {@code 1}.  Note that returning a non-positive value is
-     *         allowed where a negative value advances the index in the opposite direction and zero leaves the index
-     *         as-is.
+     * @return {@code true} if the processor wants to continue the loop and handle the next byte in the buffer.
+     *         {@code false} if the processor wants to stop handling bytes and abort the loop.
      */
-    int process(byte value) throws Exception;
+    boolean process(byte value) throws Exception;
 }

@@ -76,20 +76,15 @@ interface ChannelInboundInvoker {
     ChannelInboundInvoker fireUserEventTriggered(Object event);
 
     /**
-     * A {@link Channel} received bytes which are now ready to read from its inbound buffer.
+     * A {@link Channel} received a message.
      *
-     * This will result in having the {@link ChannelInboundHandler#messageReceived(ChannelHandlerContext, MessageList)}
+     * This will result in having the {@link ChannelInboundHandler#channelRead(ChannelHandlerContext, Object)}
      * method  called of the next {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    ChannelInboundInvoker fireMessageReceived(Object msg);
-    ChannelInboundInvoker fireMessageReceived(MessageList<?> msgs);
+    ChannelInboundInvoker fireChannelRead(Object msg);
 
-    /**
-     * Triggers an {@link ChannelInboundHandler#channelReadSuspended(ChannelHandlerContext) channelReadSuspended}
-     * event to the next {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
-     */
-    ChannelInboundInvoker fireChannelReadSuspended();
+    ChannelInboundInvoker fireChannelReadComplete();
 
     /**
      * Triggers an {@link ChannelInboundHandler#channelWritabilityChanged(ChannelHandlerContext)}

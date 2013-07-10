@@ -18,11 +18,12 @@ package io.netty.channel.nio;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MessageList;
 
 import java.io.IOException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * {@link AbstractNioChannel} base class for {@link Channel}s that operate on messages.
@@ -30,11 +31,10 @@ import java.nio.channels.SelectionKey;
 public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
 
     /**
-     * @see {@link AbstractNioChannel#AbstractNioChannel(Channel, Integer, SelectableChannel, int)}
+     * @see {@link AbstractNioChannel#AbstractNioChannel(Channel, SelectableChannel, int)}
      */
-    protected AbstractNioMessageChannel(
-            Channel parent, Integer id, SelectableChannel ch, int readInterestOp) {
-        super(parent, id, ch, readInterestOp);
+    protected AbstractNioMessageChannel(Channel parent, SelectableChannel ch, int readInterestOp) {
+        super(parent, ch, readInterestOp);
     }
 
     @Override
@@ -43,6 +43,9 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
     }
 
     private final class NioMessageUnsafe extends AbstractNioUnsafe {
+
+        private final List<Object> readBuf = new ArrayList<Object>();
+
         @Override
         public void read() {
             assert eventLoop().inEventLoop();
@@ -60,12 +63,10 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             final boolean autoRead = config.isAutoRead();
             final ChannelPipeline pipeline = pipeline();
             boolean closed = false;
-            MessageList<Object> msgBuf = MessageList.newInstance();
             Throwable exception = null;
-            int readMessages = 0;
             try {
                 for (;;) {
-                    int localRead = doReadMessages(msgBuf);
+                    int localRead = doReadMessages(readBuf);
                     if (localRead == 0) {
                         break;
                     }
@@ -74,8 +75,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                         break;
                     }
 
-                    readMessages += localRead;
-                    if (readMessages >= maxMessagesPerRead | !autoRead) {
+                    if (readBuf.size() >= maxMessagesPerRead | !autoRead) {
                         break;
                     }
                 }
@@ -83,7 +83,11 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 exception = t;
             }
 
-            pipeline.fireMessageReceived(msgBuf);
+            for (int i = 0; i < readBuf.size(); i ++) {
+                pipeline.fireChannelRead(readBuf.get(i));
+            }
+            readBuf.clear();
+            pipeline.fireChannelReadComplete();
 
             if (exception != null) {
                 if (exception instanceof IOException) {
@@ -97,17 +101,15 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 if (isOpen()) {
                     close(voidPromise());
                 }
-            } else {
-                pipeline.fireChannelReadSuspended();
             }
         }
     }
 
     @Override
-    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
+    protected int doWrite(Object[] msgs, int msgsLength, int startIndex) throws Exception {
         final int writeSpinCount = config().getWriteSpinCount() - 1;
         for (int i = writeSpinCount; i >= 0; i --) {
-            int written = doWriteMessages(msgs, index, i == 0);
+            int written = doWriteMessages(msgs, msgsLength, startIndex, i == 0);
             if (written > 0) {
                 return written;
             }
@@ -118,14 +120,13 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
     /**
      * Read messages into the given array and return the amount which was read.
      */
-    protected abstract int doReadMessages(MessageList<Object> buf) throws Exception;
+    protected abstract int doReadMessages(List<Object> buf) throws Exception;
 
     /**
      * Write messages to the underlying {@link java.nio.channels.Channel}.
-     * @param msg           Object to write
      * @param lastSpin      {@code true} if this is the last write try
-     * @return written      the amount of written messages
-     * @throws Exception    thrown if an error accour
+     * @return the number of written messages
      */
-    protected abstract int doWriteMessages(MessageList<Object> msg, int index, boolean lastSpin) throws Exception;
+    protected abstract int doWriteMessages(
+            Object[] msgs, int msgLength, int startIndex, boolean lastSpin) throws Exception;
 }

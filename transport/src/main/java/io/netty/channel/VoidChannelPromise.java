@@ -19,7 +19,6 @@ import io.netty.util.concurrent.AbstractFuture;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
 
 final class VoidChannelPromise extends AbstractFuture<Void> implements ChannelPromise {
@@ -150,9 +149,7 @@ final class VoidChannelPromise extends AbstractFuture<Void> implements ChannelPr
     }
     @Override
     public VoidChannelPromise setFailure(Throwable cause) {
-        if (fireException) {
-            channel.pipeline().fireExceptionCaught(cause);
-        }
+        fireException(cause);
         return this;
     }
 
@@ -163,17 +160,12 @@ final class VoidChannelPromise extends AbstractFuture<Void> implements ChannelPr
 
     @Override
     public boolean tryFailure(Throwable cause) {
-        if (fireException) {
-            channel.pipeline().fireExceptionCaught(cause);
-        }
+        fireException(cause);
         return false;
     }
 
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
-        if (fireException) {
-            channel.pipeline().fireExceptionCaught(new CancellationException());
-        }
         return false;
     }
 
@@ -199,5 +191,15 @@ final class VoidChannelPromise extends AbstractFuture<Void> implements ChannelPr
     @Override
     public Void getNow() {
         return null;
+    }
+
+    private void fireException(Throwable cause) {
+        // Only fire the exception if the channel is open and registered
+        // if not the pipeline is not setup and so it would hit the tail
+        // of the pipeline.
+        // See https://github.com/netty/netty/issues/1517
+        if (fireException && channel.isRegistered()) {
+            channel.pipeline().fireExceptionCaught(cause);
+        }
     }
 }

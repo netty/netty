@@ -21,7 +21,6 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.FileRegion;
-import io.netty.channel.MessageList;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.util.internal.StringUtil;
 
@@ -36,10 +35,10 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     /**
-     * @see AbstractOioByteChannel#AbstractOioByteChannel(Channel, Integer)
+     * @see AbstractOioByteChannel#AbstractOioByteChannel(Channel)
      */
-    protected AbstractOioByteChannel(Channel parent, Integer id) {
-        super(parent, id);
+    protected AbstractOioByteChannel(Channel parent) {
+        super(parent);
     }
 
     protected boolean isInputShutdown() {
@@ -79,7 +78,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
         ByteBuf byteBuf = alloc().buffer();
         boolean closed = false;
         boolean read = false;
-        boolean firedInboundBufferSuspeneded = false;
+        Throwable exception = null;
         try {
             for (;;) {
                 int localReadAmount = doReadBytes(byteBuf);
@@ -100,7 +99,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                     if (capacity == maxCapacity) {
                         if (read) {
                             read = false;
-                            pipeline.fireMessageReceived(byteBuf);
+                            pipeline.fireChannelRead(byteBuf);
                             byteBuf = alloc().buffer();
                         }
                     } else {
@@ -119,27 +118,26 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                 }
             }
         } catch (Throwable t) {
-            if (read) {
-                read = false;
-                pipeline.fireMessageReceived(byteBuf);
-            }
-
-            if (t instanceof IOException) {
-                closed = true;
-                pipeline.fireExceptionCaught(t);
-            } else {
-                firedInboundBufferSuspeneded = true;
-                pipeline.fireChannelReadSuspended();
-                pipeline.fireExceptionCaught(t);
-                unsafe().close(voidPromise());
-            }
+            exception = t;
         } finally {
             if (read) {
-                pipeline.fireMessageReceived(byteBuf);
+                pipeline.fireChannelRead(byteBuf);
             } else {
                 // nothing read into the buffer so release it
                 byteBuf.release();
             }
+
+            pipeline.fireChannelReadComplete();
+            if (exception != null) {
+                if (exception instanceof IOException) {
+                    closed = true;
+                    pipeline().fireExceptionCaught(exception);
+                } else {
+                    pipeline.fireExceptionCaught(exception);
+                    unsafe().close(voidPromise());
+                }
+            }
+
             if (closed) {
                 inputShutdown = true;
                 if (isOpen()) {
@@ -149,21 +147,18 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                         unsafe().close(unsafe().voidPromise());
                     }
                 }
-            } else if (!firedInboundBufferSuspeneded) {
-                pipeline.fireChannelReadSuspended();
             }
         }
     }
 
     @Override
-    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
-        int size = msgs.size();
-        int writeIndex = index;
+    protected int doWrite(Object[] msgs, int msgsLength, int startIndex) throws Exception {
+        int writeIndex = startIndex;
         for (;;) {
-            if (writeIndex >= size) {
+            if (writeIndex >= msgsLength) {
                 break;
             }
-            Object msg = msgs.get(writeIndex);
+            Object msg = msgs[writeIndex];
             if (msg instanceof ByteBuf) {
                 ByteBuf buf = (ByteBuf) msg;
                 while (buf.isReadable()) {
@@ -180,7 +175,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
                 throw new UnsupportedOperationException("unsupported message type: " + StringUtil.simpleClassName(msg));
             }
         }
-        return writeIndex - index;
+        return writeIndex - startIndex;
     }
 
     /**

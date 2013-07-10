@@ -18,7 +18,6 @@ package io.netty.channel.udt.nio;
 import com.barchart.udt.TypeUDT;
 import com.barchart.udt.nio.ServerSocketChannelUDT;
 import io.netty.channel.ChannelException;
-import io.netty.channel.MessageList;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.udt.DefaultUdtServerChannelConfig;
 import io.netty.channel.udt.UdtServerChannel;
@@ -34,16 +33,15 @@ import static java.nio.channels.SelectionKey.*;
 /**
  * Common base for Netty Byte/Message UDT Stream/Datagram acceptors.
  */
-public abstract class NioUdtAcceptorChannel extends AbstractNioMessageChannel
-        implements UdtServerChannel {
+public abstract class NioUdtAcceptorChannel extends AbstractNioMessageChannel implements UdtServerChannel {
 
-    protected static final InternalLogger logger = InternalLoggerFactory
-            .getInstance(NioUdtAcceptorChannel.class);
+    protected static final InternalLogger logger =
+            InternalLoggerFactory.getInstance(NioUdtAcceptorChannel.class);
 
     private final UdtServerChannelConfig config;
 
     protected NioUdtAcceptorChannel(final ServerSocketChannelUDT channelUDT) {
-        super(null, channelUDT.socketUDT().id(), channelUDT, OP_ACCEPT);
+        super(null, channelUDT, OP_ACCEPT);
         try {
             channelUDT.configureBlocking(false);
             config = new DefaultUdtServerChannelConfig(this, channelUDT, true);
@@ -95,7 +93,7 @@ public abstract class NioUdtAcceptorChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected int doWriteMessages(MessageList<Object> msg, int index, boolean lastSpin) throws Exception {
+    protected int doWriteMessages(Object[] msgs, int msgLength, int startIndex, boolean lastSpin) throws Exception {
         throw new UnsupportedOperationException();
     }
 

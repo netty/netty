@@ -39,11 +39,11 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
     private final Bootstrap b = new Bootstrap();
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx, final SocksCmdRequest request) throws Exception {
+    public void channelRead0(final ChannelHandlerContext ctx, final SocksCmdRequest request) throws Exception {
         CallbackNotifier cb = new CallbackNotifier() {
             @Override
             public void onSuccess(final ChannelHandlerContext outboundCtx) {
-                ctx.channel().write(new SocksCmdResponse(SocksCmdStatus.SUCCESS, request.addressType()))
+                ctx.channel().writeAndFlush(new SocksCmdResponse(SocksCmdStatus.SUCCESS, request.addressType()))
                              .addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture channelFuture) throws Exception {

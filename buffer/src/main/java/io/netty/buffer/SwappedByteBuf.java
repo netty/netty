@@ -24,7 +24,7 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 
-public final class SwappedByteBuf implements ByteBuf {
+public final class SwappedByteBuf extends ByteBuf {
 
     private final ByteBuf buf;
     private final ByteOrder order;
@@ -137,24 +137,12 @@ public final class SwappedByteBuf implements ByteBuf {
     }
 
     @Override
-    @Deprecated
-    public boolean readable() {
-        return buf.isReadable();
-    }
-
-    @Override
     public boolean isReadable(int size) {
         return buf.isReadable(size);
     }
 
     @Override
     public boolean isWritable() {
-        return buf.isWritable();
-    }
-
-    @Override
-    @Deprecated
-    public boolean writable() {
         return buf.isWritable();
     }
 
@@ -208,13 +196,6 @@ public final class SwappedByteBuf implements ByteBuf {
     @Override
     public ByteBuf ensureWritable(int writableBytes) {
         buf.ensureWritable(writableBytes);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public ByteBuf ensureWritableBytes(int minWritableBytes) {
-        buf.ensureWritable(minWritableBytes);
         return this;
     }
 
@@ -681,20 +662,8 @@ public final class SwappedByteBuf implements ByteBuf {
     }
 
     @Override
-    @Deprecated
-    public int indexOf(int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
-        return buf.indexOf(fromIndex, toIndex, indexFinder);
-    }
-
-    @Override
     public int bytesBefore(byte value) {
         return buf.bytesBefore(value);
-    }
-
-    @Override
-    @Deprecated
-    public int bytesBefore(ByteBufIndexFinder indexFinder) {
-        return buf.bytesBefore(new SwappedByteBufIndexFinder(indexFinder));
     }
 
     @Override
@@ -703,20 +672,8 @@ public final class SwappedByteBuf implements ByteBuf {
     }
 
     @Override
-    @Deprecated
-    public int bytesBefore(int length, ByteBufIndexFinder indexFinder) {
-        return buf.bytesBefore(length, new SwappedByteBufIndexFinder(indexFinder));
-    }
-
-    @Override
     public int bytesBefore(int index, int length, byte value) {
         return buf.bytesBefore(index, length, value);
-    }
-
-    @Override
-    @Deprecated
-    public int bytesBefore(int index, int length, ByteBufIndexFinder indexFinder) {
-        return buf.bytesBefore(index, length, new SwappedByteBufIndexFinder(indexFinder));
     }
 
     @Override
@@ -889,22 +846,5 @@ public final class SwappedByteBuf implements ByteBuf {
     @Override
     public String toString() {
         return "Swapped(" + buf.toString() + ')';
-    }
-
-    @SuppressWarnings("deprecation")
-    private final class SwappedByteBufIndexFinder implements ByteBufIndexFinder {
-        private final ByteBufIndexFinder indexFinder;
-
-        SwappedByteBufIndexFinder(ByteBufIndexFinder indexFinder) {
-            if (indexFinder == null) {
-                throw new NullPointerException("indexFinder");
-            }
-            this.indexFinder = indexFinder;
-        }
-
-        @Override
-        public boolean find(ByteBuf buffer, int guessedIndex) {
-            return indexFinder.find(SwappedByteBuf.this, guessedIndex);
-        }
     }
 }

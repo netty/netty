@@ -86,6 +86,13 @@ public class DefaultSpdyDataFrame extends DefaultSpdyStreamFrame implements Spdy
     }
 
     @Override
+    public SpdyDataFrame duplicate() {
+        SpdyDataFrame frame = new DefaultSpdyDataFrame(getStreamId(), content().duplicate());
+        frame.setLast(isLast());
+        return frame;
+    }
+
+    @Override
     public int refCnt() {
         return data.refCnt();
     }

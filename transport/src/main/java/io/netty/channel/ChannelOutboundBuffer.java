@@ -31,19 +31,19 @@ final class ChannelOutboundBuffer {
 
     private static final int MIN_INITIAL_CAPACITY = 8;
 
-    ChannelPromise currentPromise;
-    MessageList<Object> currentMessages;
+    MessageList currentMessages;
     int currentMessageIndex;
-    private int currentMessageListSize;
+    private long currentMessageListSize;
 
-    private ChannelPromise[] promises;
-    private MessageList<Object>[] messages;
+    private MessageList[] messages;
+    private long[] messageListSizes;
 
     private int head;
     private int tail;
+    private boolean inFail;
     private final AbstractChannel channel;
 
-    private int pendingOutboundBytes;
+    private long pendingOutboundBytes;
 
     private static final AtomicIntegerFieldUpdater<ChannelOutboundBuffer> WRITABLE_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(ChannelOutboundBuffer.class, "writable");
@@ -77,22 +77,34 @@ final class ChannelOutboundBuffer {
             initialCapacity = MIN_INITIAL_CAPACITY;
         }
 
-        promises = new ChannelPromise[initialCapacity];
         messages = new MessageList[initialCapacity];
+        messageListSizes = new long[initialCapacity];
         this.channel = channel;
     }
 
-    @SuppressWarnings("unchecked")
-    void add(MessageList<?> msgs, ChannelPromise promise) {
+    void addMessage(Object msg, ChannelPromise promise) {
         int tail = this.tail;
-        promises[tail] = promise;
-        messages[tail] = (MessageList<Object>) msgs;
-
-        if ((this.tail = tail + 1 & promises.length - 1) == head) {
-            doubleCapacity();
+        MessageList msgs = messages[tail];
+        if (msgs == null) {
+            messages[tail] = msgs = MessageList.newInstance();
         }
 
-        incrementPendingOutboundBytes(messageListSize(msgs));
+        msgs.add(msg, promise);
+
+        int size = channel.calculateMessageSize(msg);
+        messageListSizes[tail] += size;
+        incrementPendingOutboundBytes(size);
+    }
+
+    void addFlush() {
+        int tail = this.tail;
+        if (messages[tail] == null) {
+            return;
+        }
+
+        if ((this.tail = tail + 1 & messages.length - 1) == head) {
+            doubleCapacity();
+        }
     }
 
     private void incrementPendingOutboundBytes(int size) {
@@ -100,7 +112,7 @@ final class ChannelOutboundBuffer {
             return;
         }
 
-        int newWriteBufferSize = pendingOutboundBytes += size;
+        long newWriteBufferSize = pendingOutboundBytes += size;
         int highWaterMark = channel.config().getWriteBufferHighWaterMark();
 
         if (newWriteBufferSize > highWaterMark) {
@@ -110,12 +122,12 @@ final class ChannelOutboundBuffer {
         }
     }
 
-    private void decrementPendingOutboundBytes(int size) {
+    private void decrementPendingOutboundBytes(long size) {
         if (size == 0) {
             return;
         }
 
-        int newWriteBufferSize =  pendingOutboundBytes -= size;
+        long newWriteBufferSize = pendingOutboundBytes -= size;
         int lowWaterMark = channel.config().getWriteBufferLowWaterMark();
 
         if (newWriteBufferSize == 0 || newWriteBufferSize < lowWaterMark) {
@@ -130,59 +142,51 @@ final class ChannelOutboundBuffer {
         assert head == tail;
 
         int p = head;
-        int n = promises.length;
+        int n = messages.length;
         int r = n - p; // number of elements to the right of p
         int newCapacity = n << 1;
         if (newCapacity < 0) {
             throw new IllegalStateException("Sorry, deque too big");
         }
 
-        ChannelPromise[] a1 = new ChannelPromise[newCapacity];
-        System.arraycopy(promises, p, a1, 0, r);
-        System.arraycopy(promises, 0, a1, r, p);
-        promises = a1;
-
         @SuppressWarnings("unchecked")
-        MessageList<Object>[] a2 = new MessageList[newCapacity];
-        System.arraycopy(messages, p, a2, 0, r);
-        System.arraycopy(messages, 0, a2, r, p);
-        messages = a2;
+        MessageList[] a1 = new MessageList[newCapacity];
+        System.arraycopy(messages, p, a1, 0, r);
+        System.arraycopy(messages, 0, a1, r, p);
+        messages = a1;
+
+        long[] a2 = new long[newCapacity];
+        System.arraycopy(messageListSizes, p, a2, 0, r);
+        System.arraycopy(messageListSizes, 0, a2, r, p);
+        messageListSizes = a2;
 
         head = 0;
         tail = n;
     }
 
     boolean next() {
+        // FIXME: pendingOutboundBytes should be decreased when the messages are flushed.
+
         decrementPendingOutboundBytes(currentMessageListSize);
 
         int h = head;
 
-        ChannelPromise e = promises[h]; // Element is null if deque empty
+        MessageList e = messages[h]; // Element is null if deque empty
         if (e == null) {
             currentMessageListSize = 0;
-            currentPromise = null;
             currentMessages = null;
             return false;
         }
 
-        currentPromise = e;
         currentMessages = messages[h];
         currentMessageIndex = 0;
-        currentMessageListSize = messageListSize(currentMessages);
+        currentMessageListSize = messageListSizes[h];
 
-        promises[h] = null;
         messages[h] = null;
+        messageListSizes[h] = 0;
 
-        head = h + 1 & promises.length - 1;
+        head = h + 1 & messages.length - 1;
         return true;
-    }
-
-    private int messageListSize(MessageList<?> messages) {
-        int size = 0;
-        for (int i = 0; i < messages.size(); i++) {
-            size += channel.calculateMessageSize(messages.get(i));
-        }
-        return size;
     }
 
     boolean getWritable() {
@@ -190,7 +194,7 @@ final class ChannelOutboundBuffer {
     }
 
     int size() {
-        return tail - head & promises.length - 1;
+        return tail - head & messages.length - 1;
     }
 
     boolean isEmpty() {
@@ -202,37 +206,55 @@ final class ChannelOutboundBuffer {
         int tail = this.tail;
         if (head != tail) {
             this.head = this.tail = 0;
-            final int mask = promises.length - 1;
+            final int mask = messages.length - 1;
             int i = head;
             do {
-                promises[i] = null;
                 messages[i] = null;
+                messageListSizes[i] = 0;
                 i = i + 1 & mask;
             } while (i != tail);
         }
     }
 
     void fail(Throwable cause) {
-        if (currentPromise == null) {
-            if (!next()) {
-                return;
-            }
+        // Make sure that this method does not reenter.  A listener added to the current promise can be notified by the
+        // current thread in the tryFailure() call of the loop below, and the listener can trigger another fail() call
+        // indirectly (usually by closing the channel.)
+        //
+        // See https://github.com/netty/netty/issues/1501
+        if (inFail) {
+            return;
         }
 
-        do {
-            if (!(currentPromise instanceof VoidChannelPromise) && !currentPromise.tryFailure(cause)) {
-                logger.warn("Promise done already:", cause);
+        try {
+            inFail = true;
+            if (currentMessages == null) {
+                if (!next()) {
+                    return;
+                }
             }
 
-            // Release all failed messages.
-            try {
-                for (int i = currentMessageIndex; i < currentMessages.size(); i++) {
-                    Object msg = currentMessages.get(i);
-                    ReferenceCountUtil.release(msg);
+            do {
+                if (currentMessages != null) {
+                    // Release all failed messages.
+                    Object[] messages = currentMessages.messages();
+                    ChannelPromise[] promises = currentMessages.promises();
+                    final int size = currentMessages.size();
+                    try {
+                        for (int i = currentMessageIndex; i < size; i++) {
+                            ReferenceCountUtil.release(messages[i]);
+                            ChannelPromise p = promises[i];
+                            if (!(p instanceof VoidChannelPromise) && !p.tryFailure(cause)) {
+                                logger.warn("Promise done already: {} - new exception is:", p, cause);
+                            }
+                        }
+                    } finally {
+                        currentMessages.recycle();
+                    }
                 }
-            } finally {
-                currentMessages.recycle();
-            }
-        } while(next());
+            } while(next());
+        } finally {
+            inFail = false;
+        }
     }
 }

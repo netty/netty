@@ -19,9 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.MessageList;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
@@ -45,11 +43,10 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
     public void testMulticast(Bootstrap sb, Bootstrap cb) throws Throwable {
         MulticastTestHandler mhandler = new MulticastTestHandler();
 
-        sb.handler(new ChannelInboundHandlerAdapter() {
+        sb.handler(new SimpleChannelInboundHandler<Object>() {
             @Override
-            public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
                 // Nothing will be sent.
-                msgs.releaseAllAndRecycle();
             }
         });
 
@@ -76,7 +73,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
 
         cc.joinGroup(groupAddress, NetUtil.LOOPBACK_IF).sync();
 
-        sc.write(new DatagramPacket(Unpooled.copyInt(1), groupAddress)).sync();
+        sc.writeAndFlush(new DatagramPacket(Unpooled.copyInt(1), groupAddress)).sync();
         assertTrue(mhandler.await());
 
         // leave the group
@@ -86,7 +83,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         Thread.sleep(1000);
 
         // we should not receive a message anymore as we left the group before
-        sc.write(new DatagramPacket(Unpooled.copyInt(1), groupAddress)).sync();
+        sc.writeAndFlush(new DatagramPacket(Unpooled.copyInt(1), groupAddress)).sync();
         mhandler.await();
 
         sc.close().awaitUninterruptibly();
@@ -100,7 +97,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         private volatile boolean fail;
 
         @Override
-        protected void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+        protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
             if (done) {
                 fail = true;
             }

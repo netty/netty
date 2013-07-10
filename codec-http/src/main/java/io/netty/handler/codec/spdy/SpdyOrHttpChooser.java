@@ -20,7 +20,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MessageList;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
@@ -61,13 +60,13 @@ public abstract class SpdyOrHttpChooser extends ChannelInboundHandlerAdapter {
     protected abstract SelectedProtocol getProtocol(SSLEngine engine);
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> in) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (initPipeline(ctx)) {
             // When we reached here we can remove this handler as its now clear what protocol we want to use
             // from this point on.
             ctx.pipeline().remove(this);
 
-            ctx.fireMessageReceived(in);
+            ctx.fireChannelRead(msg);
         }
     }
 

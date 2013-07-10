@@ -17,8 +17,6 @@ package io.netty.handler.codec.spdy;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.MessageList;
-import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -274,7 +272,7 @@ public class SpdySessionHandlerTest {
 
     // Echo Handler opens 4 half-closed streams on session connection
     // and then sets the number of concurrent streams to 3
-    private static class EchoHandler extends SimpleChannelInboundHandler<Object> {
+    private static class EchoHandler extends ChannelInboundHandlerAdapter {
         private final int closeSignal;
         private final boolean server;
 
@@ -290,22 +288,22 @@ public class SpdySessionHandlerTest {
             SpdySynStreamFrame spdySynStreamFrame =
                     new DefaultSpdySynStreamFrame(streamId, 0, (byte) 0);
             spdySynStreamFrame.setLast(true);
-            ctx.write(spdySynStreamFrame);
+            ctx.writeAndFlush(spdySynStreamFrame);
             spdySynStreamFrame.setStreamId(spdySynStreamFrame.getStreamId() + 2);
-            ctx.write(spdySynStreamFrame);
+            ctx.writeAndFlush(spdySynStreamFrame);
             spdySynStreamFrame.setStreamId(spdySynStreamFrame.getStreamId() + 2);
-            ctx.write(spdySynStreamFrame);
+            ctx.writeAndFlush(spdySynStreamFrame);
             spdySynStreamFrame.setStreamId(spdySynStreamFrame.getStreamId() + 2);
-            ctx.write(spdySynStreamFrame);
+            ctx.writeAndFlush(spdySynStreamFrame);
 
             // Limit the number of concurrent streams to 3
             SpdySettingsFrame spdySettingsFrame = new DefaultSpdySettingsFrame();
             spdySettingsFrame.setValue(SpdySettingsFrame.SETTINGS_MAX_CONCURRENT_STREAMS, 3);
-            ctx.write(spdySettingsFrame);
+            ctx.writeAndFlush(spdySettingsFrame);
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             if (msg instanceof SpdySynStreamFrame) {
 
                 SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;
@@ -317,7 +315,7 @@ public class SpdySessionHandlerTest {
                         spdySynReplyFrame.headers().add(entry.getKey(), entry.getValue());
                     }
 
-                    ctx.write(spdySynReplyFrame);
+                    ctx.writeAndFlush(spdySynReplyFrame);
                 }
                 return;
             }
@@ -330,7 +328,7 @@ public class SpdySessionHandlerTest {
                     msg instanceof SpdyPingFrame ||
                     msg instanceof SpdyHeadersFrame) {
 
-                ctx.write(msg);
+                ctx.writeAndFlush(msg);
                 return;
             }
 

@@ -23,14 +23,17 @@ import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalServerChannel;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Test;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -60,8 +63,8 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-                msgs.releaseAllAndRecycle();
+            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                ReferenceCountUtil.release(msg);
             }
         });
 
@@ -134,7 +137,7 @@ public class DefaultChannelPipelineTest {
         StringInboundHandler handler = new StringInboundHandler();
         setUp(handler);
 
-        peer.write(holder).sync();
+        peer.writeAndFlush(holder).sync();
 
         assertTrue(free.await(10, TimeUnit.SECONDS));
         assertTrue(handler.called);
@@ -144,18 +147,11 @@ public class DefaultChannelPipelineTest {
         boolean called;
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             called = true;
-            MessageList<Object> out = MessageList.newInstance();
-            for (int i = 0; i < msgs.size(); i ++) {
-                Object m = msgs.get(i);
-                if (!(m instanceof String)) {
-                    out.add(m);
-                }
+            if (!(msg instanceof String)) {
+                ctx.fireChannelRead(msg);
             }
-
-            msgs.recycle();
-            ctx.fireMessageReceived(out);
         }
     }
 
@@ -338,11 +334,11 @@ public class DefaultChannelPipelineTest {
             public void run() {
                 ChannelPipeline p = self.pipeline();
                 handler1.inboundBuffer.add(8);
-                assertEquals(8, handler1.inboundBuffer.get(0));
+                assertEquals(8, handler1.inboundBuffer.peek());
                 assertTrue(handler2.inboundBuffer.isEmpty());
                 p.remove(handler1);
                 assertEquals(1, handler2.inboundBuffer.size());
-                assertEquals(8, handler2.inboundBuffer.get(0));
+                assertEquals(8, handler2.inboundBuffer.peek());
             }
         }).sync();
     }
@@ -359,11 +355,11 @@ public class DefaultChannelPipelineTest {
             public void run() {
                 ChannelPipeline p = self.pipeline();
                 handler2.outboundBuffer.add(8);
-                assertEquals(8, handler2.outboundBuffer.get(0));
+                assertEquals(8, handler2.outboundBuffer.peek());
                 assertTrue(handler1.outboundBuffer.isEmpty());
                 p.remove(handler2);
                 assertEquals(1, handler1.outboundBuffer.size());
-                assertEquals(8, handler1.outboundBuffer.get(0));
+                assertEquals(8, handler1.outboundBuffer.peek());
             }
         }).sync();
     }
@@ -380,10 +376,10 @@ public class DefaultChannelPipelineTest {
             public void run() {
                 ChannelPipeline p = self.pipeline();
                 handler1.outboundBuffer.add(8);
-                assertEquals(8, handler1.outboundBuffer.get(0));
+                assertEquals(8, handler1.outboundBuffer.peek());
                 assertTrue(handler2.outboundBuffer.isEmpty());
                 p.replace(handler1, "handler2", handler2);
-                assertEquals(8, handler2.outboundBuffer.get(0));
+                assertEquals(8, handler2.outboundBuffer.peek());
             }
         }).sync();
     }
@@ -402,14 +398,14 @@ public class DefaultChannelPipelineTest {
                 handler1.inboundBuffer.add(8);
                 handler1.outboundBuffer.add(8);
 
-                assertEquals(8, handler1.inboundBuffer.get(0));
-                assertEquals(8, handler1.outboundBuffer.get(0));
+                assertEquals(8, handler1.inboundBuffer.peek());
+                assertEquals(8, handler1.outboundBuffer.peek());
                 assertTrue(handler2.inboundBuffer.isEmpty());
                 assertTrue(handler2.outboundBuffer.isEmpty());
 
                 p.replace(handler1, "handler2", handler2);
-                assertEquals(8, handler2.outboundBuffer.get(0));
-                assertEquals(8, handler2.inboundBuffer.get(0));
+                assertEquals(8, handler2.outboundBuffer.peek());
+                assertEquals(8, handler2.inboundBuffer.peek());
             }
         }).sync();
     }
@@ -429,15 +425,15 @@ public class DefaultChannelPipelineTest {
                 handler2.inboundBuffer.add(8);
                 handler2.outboundBuffer.add(8);
 
-                assertEquals(8, handler2.inboundBuffer.get(0));
-                assertEquals(8, handler2.outboundBuffer.get(0));
+                assertEquals(8, handler2.inboundBuffer.peek());
+                assertEquals(8, handler2.outboundBuffer.peek());
 
                 assertEquals(0, handler1.outboundBuffer.size());
                 assertEquals(0, handler3.inboundBuffer.size());
 
                 p.remove(handler2);
-                assertEquals(8, handler3.inboundBuffer.get(0));
-                assertEquals(8, handler1.outboundBuffer.get(0));
+                assertEquals(8, handler3.inboundBuffer.peek());
+                assertEquals(8, handler1.outboundBuffer.peek());
             }
         }).sync();
     }
@@ -488,33 +484,32 @@ public class DefaultChannelPipelineTest {
     private static class TestHandler extends ChannelDuplexHandler { }
 
     private static class BufferedTestHandler extends ChannelDuplexHandler {
-        final MessageList<Object> inboundBuffer = MessageList.newInstance();
-        final MessageList<Object> outboundBuffer = MessageList.newInstance();
+        final Queue<Object> inboundBuffer = new ArrayDeque<Object>();
+        final Queue<Object> outboundBuffer = new ArrayDeque<Object>();
 
         @Override
-        public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise)
-                throws Exception {
-            for (int i = 0; i < msgs.size(); i++) {
-                outboundBuffer.add(msgs.get(i));
-            }
-            msgs.recycle();
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+            outboundBuffer.add(msg);
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-            for (int i = 0; i < msgs.size(); i++) {
-                inboundBuffer.add(msgs.get(i));
-            }
-            msgs.recycle();
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            inboundBuffer.add(msg);
         }
 
         @Override
         public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
             if (!inboundBuffer.isEmpty()) {
-                ctx.fireMessageReceived(inboundBuffer);
+                for (Object o: inboundBuffer) {
+                    ctx.fireChannelRead(o);
+                }
+                ctx.fireChannelReadComplete();
             }
             if (!outboundBuffer.isEmpty()) {
-                ctx.write(outboundBuffer);
+                for (Object o: outboundBuffer) {
+                    ctx.write(o);
+                }
+                ctx.flush();
             }
         }
     }

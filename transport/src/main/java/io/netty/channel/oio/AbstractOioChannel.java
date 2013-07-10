@@ -42,10 +42,10 @@ public abstract class AbstractOioChannel extends AbstractChannel {
     };
 
     /**
-     * @see AbstractChannel#AbstractChannel(Channel, Integer)
+     * @see AbstractChannel#AbstractChannel(Channel)
      */
-    protected AbstractOioChannel(Channel parent, Integer id) {
-        super(parent, id);
+    protected AbstractOioChannel(Channel parent) {
+        super(parent);
     }
 
     @Override

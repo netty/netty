@@ -16,13 +16,13 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufIndexFinder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.MessageList;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Test;
+
+import java.util.List;
 
 import static org.junit.Assert.*;
 
@@ -56,10 +56,10 @@ public class ReplayingDecoderTest {
         }
 
         @Override
-        protected void decode(ChannelHandlerContext ctx, ByteBuf in, MessageList<Object> out) {
-            ByteBuf msg = in.readBytes(in.bytesBefore(ByteBufIndexFinder.LF));
-            in.skipBytes(1);
+        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+            ByteBuf msg = in.readBytes(in.bytesBefore((byte) '\n'));
             out.add(msg);
+            in.skipBytes(1);
         }
     }
 
@@ -81,9 +81,9 @@ public class ReplayingDecoderTest {
 
     private static final class BloatedLineDecoder extends ChannelInboundHandlerAdapter {
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             ctx.pipeline().replace(this, "less-bloated", new LineDecoder());
-            ctx.pipeline().fireMessageReceived(msgs);
+            ctx.pipeline().fireChannelRead(msg);
         }
     }
 
@@ -98,6 +98,7 @@ public class ReplayingDecoderTest {
         assertEquals(Unpooled.wrappedBuffer(new byte[] {'C' }), ch.readInbound());
         assertNull("Must be null as it must only decode one frame", ch.readInbound());
 
+        ch.read();
         ch.finish();
         assertEquals(Unpooled.wrappedBuffer(new byte[] {'B' }), ch.readInbound());
         assertNull(ch.readInbound());

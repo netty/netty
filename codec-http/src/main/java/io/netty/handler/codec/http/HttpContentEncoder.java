@@ -17,9 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.MessageList;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.handler.codec.http.HttpHeaders.Names;
@@ -27,6 +25,7 @@ import io.netty.handler.codec.http.HttpHeaders.Values;
 import io.netty.util.ReferenceCountUtil;
 
 import java.util.ArrayDeque;
+import java.util.List;
 import java.util.Queue;
 
 /**
@@ -70,7 +69,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, HttpRequest msg, MessageList<Object> out)
+    protected void decode(ChannelHandlerContext ctx, HttpRequest msg, List<Object> out)
             throws Exception {
         String acceptedEncoding = msg.headers().get(HttpHeaders.Names.ACCEPT_ENCODING);
         if (acceptedEncoding == null) {
@@ -81,7 +80,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, HttpObject msg, MessageList<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, HttpObject msg, List<Object> out) throws Exception {
         final boolean isFull = msg instanceof HttpResponse && msg instanceof LastHttpContent;
         switch (state) {
             case AWAIT_HEADERS: {
@@ -163,9 +162,8 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
             }
             case AWAIT_CONTENT: {
                 ensureContent(msg);
-                HttpContent[] encoded = encodeContent((HttpContent) msg);
-                out.add(encoded);
-                if (encoded[encoded.length - 1] instanceof LastHttpContent) {
+                encodeContent((HttpContent) msg, out);
+                if (msg  instanceof LastHttpContent) {
                     state = State.AWAIT_HEADERS;
                 }
                 break;
@@ -198,31 +196,18 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         }
     }
 
-    private HttpContent[] encodeContent(HttpContent c) {
-        ByteBuf newContent = Unpooled.buffer();
+    private void encodeContent(HttpContent c, List<Object> out) {
         ByteBuf content = c.content();
 
-        encode(content, newContent);
+        encode(content, out);
 
         if (c instanceof LastHttpContent) {
-            ByteBuf lastProduct = Unpooled.buffer();
-            finishEncode(lastProduct);
+            finishEncode(out);
 
             // Generate an additional chunk if the decoder produced
             // the last product on closure,
-            if (lastProduct.isReadable()) {
-                if (newContent.isReadable()) {
-                    return new HttpContent[] {
-                            new DefaultHttpContent(newContent), new DefaultLastHttpContent(lastProduct)};
-                } else {
-                    return new HttpContent[] { new DefaultLastHttpContent(lastProduct) };
-                }
-            } else {
-                return new HttpContent[] { new DefaultLastHttpContent(newContent) };
-            }
+            out.add(LastHttpContent.EMPTY_LAST_CONTENT);
         }
-
-        return new HttpContent[] { new DefaultHttpContent(newContent) };
     }
 
     /**
@@ -256,30 +241,45 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     private void cleanup() {
         if (encoder != null) {
             // Clean-up the previous encoder if not cleaned up correctly.
-            finishEncode(Unpooled.buffer());
+            if (encoder.finish()) {
+                for (;;) {
+                    ByteBuf buf = (ByteBuf) encoder.readOutbound();
+                    if (buf == null) {
+                        break;
+                    }
+                    // Release the buffer
+                    // https://github.com/netty/netty/issues/1524
+                    buf.release();
+                }
+            }
+            encoder = null;
         }
     }
 
-    private void encode(ByteBuf in, ByteBuf out) {
+    private void encode(ByteBuf in, List<Object> out) {
         // call retain here as it will call release after its written to the channel
         encoder.writeOutbound(in.retain());
         fetchEncoderOutput(out);
     }
 
-    private void finishEncode(ByteBuf out) {
+    private void finishEncode(List<Object> out) {
         if (encoder.finish()) {
             fetchEncoderOutput(out);
         }
         encoder = null;
     }
 
-    private void fetchEncoderOutput(ByteBuf out) {
+    private void fetchEncoderOutput(List<Object> out) {
         for (;;) {
             ByteBuf buf = (ByteBuf) encoder.readOutbound();
             if (buf == null) {
                 break;
             }
-            out.writeBytes(buf);
+            if (!buf.isReadable()) {
+                buf.release();
+                continue;
+            }
+            out.add(new DefaultHttpContent(buf));
         }
     }
 

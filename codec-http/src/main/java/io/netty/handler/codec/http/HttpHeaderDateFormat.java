@@ -37,12 +37,13 @@ final class HttpHeaderDateFormat extends SimpleDateFormat {
     private final SimpleDateFormat format1 = new HttpHeaderDateFormatObsolete1();
     private final SimpleDateFormat format2 = new HttpHeaderDateFormatObsolete2();
 
-    private static ThreadLocal<HttpHeaderDateFormat> dateFormatThreadLocal = new ThreadLocal<HttpHeaderDateFormat>() {
-        @Override
-        protected HttpHeaderDateFormat initialValue() {
-            return new HttpHeaderDateFormat();
-        }
-    };
+    private static final ThreadLocal<HttpHeaderDateFormat> dateFormatThreadLocal =
+            new ThreadLocal<HttpHeaderDateFormat>() {
+                @Override
+                protected HttpHeaderDateFormat initialValue() {
+                    return new HttpHeaderDateFormat();
+                }
+            };
 
     static HttpHeaderDateFormat get() {
         return dateFormatThreadLocal.get();

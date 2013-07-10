@@ -94,13 +94,24 @@ public class ChannelOutboundHandlerAdapter extends ChannelHandlerAdapter impleme
     }
 
     /**
-     * Calls {@link ChannelHandlerContext#write(MessageList, ChannelPromise)} to forward
+     * Calls {@link ChannelHandlerContext#write(Object)} to forward
      * to the next {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
      *
      * Sub-classes may override this method to change behavior.
      */
     @Override
-    public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
-        ctx.write(msgs, promise);
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        ctx.write(msg, promise);
+    }
+
+    /**
+     * Calls {@link ChannelHandlerContext#flush()} to forward
+     * to the next {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
+     *
+     * Sub-classes may override this method to change behavior.
+     */
+    @Override
+    public void flush(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
     }
 }

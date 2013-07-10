@@ -21,7 +21,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
-import io.netty.channel.MessageList;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.udt.DefaultUdtChannelConfig;
 import io.netty.channel.udt.UdtChannel;
@@ -33,6 +32,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
+import java.util.List;
 
 import static java.nio.channels.SelectionKey.*;
 
@@ -41,11 +41,10 @@ import static java.nio.channels.SelectionKey.*;
  * <p>
  * Note: send/receive must use {@link UdtMessage} in the pipeline
  */
-public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel
-        implements UdtChannel {
+public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel implements UdtChannel {
 
-    private static final InternalLogger logger = InternalLoggerFactory
-            .getInstance(NioUdtMessageConnectorChannel.class);
+    private static final InternalLogger logger =
+            InternalLoggerFactory.getInstance(NioUdtMessageConnectorChannel.class);
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
@@ -55,9 +54,8 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel
         this(TypeUDT.DATAGRAM);
     }
 
-    public NioUdtMessageConnectorChannel(final Channel parent,
-            final Integer id, final SocketChannelUDT channelUDT) {
-        super(parent, id, channelUDT, OP_READ);
+    public NioUdtMessageConnectorChannel(final Channel parent, final SocketChannelUDT channelUDT) {
+        super(parent, channelUDT, OP_READ);
         try {
             channelUDT.configureBlocking(false);
             switch (channelUDT.socketUDT().status()) {
@@ -82,7 +80,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel
     }
 
     public NioUdtMessageConnectorChannel(final SocketChannelUDT channelUDT) {
-        this(null, channelUDT.socketUDT().id(), channelUDT);
+        this(null, channelUDT);
     }
 
     public NioUdtMessageConnectorChannel(final TypeUDT type) {
@@ -141,7 +139,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected int doReadMessages(MessageList<Object> buf) throws Exception {
+    protected int doReadMessages(List<Object> buf) throws Exception {
 
         final int maximumMessageSize = config.getReceiveBufferSize();
 
@@ -169,9 +167,9 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected int doWriteMessages(MessageList<Object> msgs, int index, boolean lastSpin) throws Exception {
+    protected int doWriteMessages(Object[] msgs, int msgLength, int startIndex, boolean lastSpin) throws Exception {
         // expects a message
-        final UdtMessage message = (UdtMessage) msgs.get(index);
+        final UdtMessage message = (UdtMessage) msgs[startIndex];
 
         final ByteBuf byteBuf = message.content();
 
@@ -204,7 +202,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel
         }
 
         // wrote the message queue completely - clear OP_WRITE.
-        if (index + 1 == msgs.size()) {
+        if (msgLength == 1) {
             if ((interestOps & OP_WRITE) != 0) {
                 key.interestOps(interestOps & ~OP_WRITE);
             }

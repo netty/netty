@@ -23,11 +23,11 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
-import io.netty.channel.MessageList;
 import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -87,18 +87,17 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
      * Create a new instance using the given {@link SocketChannel}.
      */
     public NioSocketChannel(SocketChannel socket) {
-        this(null, null, socket);
+        this(null, socket);
     }
 
     /**
      * Create a new instance
      *
      * @param parent    the {@link Channel} which created this instance or {@code null} if it was created by the user
-     * @param id        the id to use for this instance or {@code null} if a new one should be generated
      * @param socket    the {@link SocketChannel} which will be used
      */
-    public NioSocketChannel(Channel parent, Integer id, SocketChannel socket) {
-        super(parent, id, socket);
+    public NioSocketChannel(Channel parent, SocketChannel socket) {
+        super(parent, socket);
         try {
             socket.configureBlocking(false);
         } catch (IOException e) {
@@ -265,21 +264,23 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
-        int size = msgs.size();
-
+    protected int doWrite(Object[] msgs, int msgsLength, final int startIndex) throws Exception {
         // Do non-gathering write for a single buffer case.
-        if (size <= 1 || !msgs.containsOnly(ByteBuf.class)) {
-            return super.doWrite(msgs, index);
+        if (msgsLength <= 1) {
+            return super.doWrite(msgs, msgsLength, startIndex);
         }
-
-        MessageList<ByteBuf> bufs = msgs.cast();
 
         ByteBuffer[] nioBuffers = getNioBufferArray();
         int nioBufferCnt = 0;
         long expectedWrittenBytes = 0;
-        for (int i = index; i < size; i++) {
-            ByteBuf buf = bufs.get(i);
+        for (int i = startIndex; i < msgsLength; i++) {
+            Object m = msgs[i];
+            if (!(m instanceof ByteBuf)) {
+                return super.doWrite(msgs, msgsLength, startIndex);
+            }
+
+            ByteBuf buf = (ByteBuf) m;
+
             int readerIndex = buf.readerIndex();
             int readableBytes = buf.readableBytes();
             expectedWrittenBytes += readableBytes;
@@ -307,7 +308,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                 ByteBuf directBuf = alloc().directBuffer(readableBytes);
                 directBuf.writeBytes(buf, readerIndex, readableBytes);
                 buf.release();
-                bufs.set(i, directBuf);
+                msgs[i] = directBuf;
                 if (nioBufferCnt == nioBuffers.length) {
                     nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCnt);
                 }
@@ -315,10 +316,11 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             }
         }
 
+        final SocketChannel ch = javaChannel();
         long writtenBytes = 0;
         boolean done = false;
         for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
-            final long localWrittenBytes = javaChannel().write(nioBuffers, 0, nioBufferCnt);
+            final long localWrittenBytes = ch.write(nioBuffers, 0, nioBufferCnt);
             updateOpWrite(expectedWrittenBytes, localWrittenBytes, i == 0);
             if (localWrittenBytes == 0) {
                 break;
@@ -333,24 +335,25 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
         if (done) {
             // release buffers
-            for (int i = index; i < size; i++) {
-                ByteBuf buf = bufs.get(i);
-                buf.release();
+            for (int i = startIndex; i < msgsLength; i++) {
+                ((ReferenceCounted) msgs[i]).release();
             }
-            return size - index;
+            return msgsLength - startIndex;
         } else {
             // Did not write all buffers completely.
             // Release the fully written buffers and update the indexes of the partially written buffer.
             int writtenBufs = 0;
-            for (int i = index; i < size; i++) {
-                ByteBuf buf = bufs.get(i);
-                int readable = buf.readableBytes();
-                if (readable < writtenBytes) {
+            for (int i = startIndex; i < msgsLength; i++) {
+                final ByteBuf buf = (ByteBuf) msgs[i];
+                final int readerIndex = buf.readerIndex();
+                final int readableBytes = buf.writerIndex() - readerIndex;
+
+                if (readableBytes < writtenBytes) {
                     writtenBufs ++;
                     buf.release();
-                    writtenBytes -= readable;
-                } else if (readable > writtenBytes) {
-                    buf.readerIndex(buf.readerIndex() + (int) writtenBytes);
+                    writtenBytes -= readableBytes;
+                } else if (readableBytes > writtenBytes) {
+                    buf.readerIndex(readerIndex + (int) writtenBytes);
                     break;
                 } else { // readable == writtenBytes
                     writtenBufs ++;

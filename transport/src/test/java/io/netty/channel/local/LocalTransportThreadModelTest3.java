@@ -24,7 +24,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MessageList;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutorGroup;
@@ -46,7 +46,7 @@ public class LocalTransportThreadModelTest3 {
     enum EventType {
         EXCEPTION_CAUGHT,
         USER_EVENT,
-        READ_SUSPEND,
+        MESSAGE_RECEIVED_LAST,
         INACTIVE,
         ACTIVE,
         UNREGISTERED,
@@ -71,9 +71,9 @@ public class LocalTransportThreadModelTest3 {
                     public void initChannel(LocalChannel ch) throws Exception {
                         ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                             @Override
-                            public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) {
+                            public void channelRead(ChannelHandlerContext ctx, Object msg) {
                                 // Discard
-                                msgs.releaseAllAndRecycle();
+                                ReferenceCountUtil.release(msg);
                             }
                         });
                     }
@@ -179,10 +179,10 @@ public class LocalTransportThreadModelTest3 {
                         ch.pipeline().fireExceptionCaught(cause);
                         break;
                     case MESSAGE_RECEIVED:
-                        ch.pipeline().fireMessageReceived("");
+                        ch.pipeline().fireChannelRead("");
                         break;
-                    case READ_SUSPEND:
-                        ch.pipeline().fireChannelReadSuspended();
+                    case MESSAGE_RECEIVED_LAST:
+                        ch.pipeline().fireChannelReadComplete();
                         break;
                     case USER_EVENT:
                         ch.pipeline().fireUserEventTriggered("");
@@ -236,7 +236,7 @@ public class LocalTransportThreadModelTest3 {
         EventType[] events;
         if (inbound) {
             events = new EventType[] {
-                    EventType.USER_EVENT, EventType.MESSAGE_RECEIVED, EventType.READ_SUSPEND,
+                    EventType.USER_EVENT, EventType.MESSAGE_RECEIVED, EventType.MESSAGE_RECEIVED_LAST,
                     EventType.EXCEPTION_CAUGHT};
         } else {
             events = new EventType[] {
@@ -276,9 +276,9 @@ public class LocalTransportThreadModelTest3 {
         }
 
         @Override
-        public void channelReadSuspended(ChannelHandlerContext ctx) throws Exception {
+        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
             if (inbound) {
-                events.add(EventType.READ_SUSPEND);
+                events.add(EventType.MESSAGE_RECEIVED_LAST);
             }
         }
 
@@ -303,18 +303,18 @@ public class LocalTransportThreadModelTest3 {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             if (inbound) {
                 events.add(EventType.MESSAGE_RECEIVED);
             }
         }
 
         @Override
-        public void write(
-                ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
             if (!inbound) {
                 events.add(EventType.WRITE);
             }
+            promise.setSuccess();
         }
 
         @Override

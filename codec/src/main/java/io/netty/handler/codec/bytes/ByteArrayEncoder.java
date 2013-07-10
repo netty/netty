@@ -20,10 +20,11 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MessageList;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.MessageToMessageEncoder;
+
+import java.util.List;
 
 /**
  * Encodes the requested array of bytes into a {@link ByteBuf}.
@@ -44,7 +45,7 @@ import io.netty.handler.codec.MessageToMessageEncoder;
  * and then you can use an array of bytes instead of a {@link ByteBuf}
  * as a message:
  * <pre>
- * void messageReceived({@link ChannelHandlerContext} ctx, byte[] bytes) {
+ * void channelRead({@link ChannelHandlerContext} ctx, byte[] bytes) {
  *     ...
  * }
  * </pre>
@@ -52,7 +53,7 @@ import io.netty.handler.codec.MessageToMessageEncoder;
 @Sharable
 public class ByteArrayEncoder extends MessageToMessageEncoder<byte[]> {
     @Override
-    protected void encode(ChannelHandlerContext ctx, byte[] msg, MessageList<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, byte[] msg, List<Object> out) throws Exception {
         out.add(Unpooled.wrappedBuffer(msg));
     }
 }

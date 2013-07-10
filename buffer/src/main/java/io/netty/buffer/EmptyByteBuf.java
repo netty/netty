@@ -31,7 +31,7 @@ import java.nio.charset.Charset;
 /**
  * An empty {@link ByteBuf} whose capacity and maximum capacity are all {@code 0}.
  */
-public final class EmptyByteBuf implements ByteBuf {
+public final class EmptyByteBuf extends ByteBuf {
 
     private static final ByteBuffer EMPTY_BYTE_BUFFER = ByteBuffer.allocateDirect(0);
     private static final long EMPTY_BYTE_BUFFER_ADDRESS;
@@ -168,19 +168,7 @@ public final class EmptyByteBuf implements ByteBuf {
     }
 
     @Override
-    @Deprecated
-    public boolean readable() {
-        return false;
-    }
-
-    @Override
     public boolean isWritable() {
-        return false;
-    }
-
-    @Override
-    @Deprecated
-    public boolean writable() {
         return false;
     }
 
@@ -228,12 +216,6 @@ public final class EmptyByteBuf implements ByteBuf {
             throw new IndexOutOfBoundsException();
         }
         return this;
-    }
-
-    @Override
-    @Deprecated
-    public ByteBuf ensureWritableBytes(int minWritableBytes) {
-        return ensureWritable(minWritableBytes);
     }
 
     @Override
@@ -668,21 +650,7 @@ public final class EmptyByteBuf implements ByteBuf {
     }
 
     @Override
-    @Deprecated
-    public int indexOf(int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
-        checkIndex(fromIndex);
-        checkIndex(toIndex);
-        return -1;
-    }
-
-    @Override
     public int bytesBefore(byte value) {
-        return -1;
-    }
-
-    @Override
-    @Deprecated
-    public int bytesBefore(ByteBufIndexFinder indexFinder) {
         return -1;
     }
 
@@ -693,21 +661,7 @@ public final class EmptyByteBuf implements ByteBuf {
     }
 
     @Override
-    @Deprecated
-    public int bytesBefore(int length, ByteBufIndexFinder indexFinder) {
-        checkLength(length);
-        return -1;
-    }
-
-    @Override
     public int bytesBefore(int index, int length, byte value) {
-        checkIndex(index, length);
-        return -1;
-    }
-
-    @Override
-    @Deprecated
-    public int bytesBefore(int index, int length, ByteBufIndexFinder indexFinder) {
         checkIndex(index, length);
         return -1;
     }

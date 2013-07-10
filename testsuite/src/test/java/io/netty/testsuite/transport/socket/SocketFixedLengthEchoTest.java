@@ -71,7 +71,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         Channel cc = cb.connect().sync().channel();
         for (int i = 0; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 3), data.length - i);
-            cc.write(Unpooled.wrappedBuffer(data, i, length));
+            cc.writeAndFlush(Unpooled.wrappedBuffer(data, i, length));
             i += length;
         }
 
@@ -134,7 +134,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
             assertEquals(1024, msg.readableBytes());
 
             byte[] actual = new byte[msg.readableBytes()];
@@ -150,6 +150,11 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
             }
 
             counter += actual.length;
+        }
+
+        @Override
+        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+            ctx.flush();
         }
 
         @Override
