@@ -98,6 +98,10 @@ final class ChannelOutboundBuffer {
 
     void addFlush() {
         int tail = this.tail;
+        if (messages[tail] == null) {
+            return;
+        }
+
         if ((this.tail = tail + 1 & messages.length - 1) == head) {
             doubleCapacity();
         }
