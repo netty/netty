@@ -45,7 +45,7 @@ public class HttpHelloWorldServerHandler extends ChannelInboundHandlerAdapter {
             HttpRequest req = (HttpRequest) msg;
 
             if (is100ContinueExpected(req)) {
-                ctx.writeAndFlush(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE));
+                ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE));
             }
             boolean keepAlive = isKeepAlive(req);
             FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, CONTENT.duplicate());
@@ -55,8 +55,8 @@ public class HttpHelloWorldServerHandler extends ChannelInboundHandlerAdapter {
             if (!keepAlive) {
                 ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
             } else {
-                ctx.writeAndFlush(response);
                 response.headers().set(CONNECTION, Values.KEEP_ALIVE);
+                ctx.writeAndFlush(response);
             }
         }
     }
