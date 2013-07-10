@@ -28,11 +28,11 @@ public class HttpResponseEncoder extends HttpMessageEncoder {
     @Override
     protected void encodeInitialLine(ChannelBuffer buf, HttpMessage message) throws Exception {
         HttpResponse response = (HttpResponse) message;
-        buf.writeBytes(response.getProtocolVersion().toString().getBytes("ASCII"));
+        encodeAscii(response.getProtocolVersion().toString(), buf);
         buf.writeByte(SP);
-        buf.writeBytes(String.valueOf(response.getStatus().getCode()).getBytes("ASCII"));
+        encodeAscii(String.valueOf(response.getStatus().getCode()), buf);
         buf.writeByte(SP);
-        buf.writeBytes(String.valueOf(response.getStatus().getReasonPhrase()).getBytes("ASCII"));
+        encodeAscii(String.valueOf(response.getStatus().getReasonPhrase()), buf);
         buf.writeByte(CR);
         buf.writeByte(LF);
     }

@@ -169,7 +169,7 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
         buf.writeByte(LF);
     }
 
-    private static void encodeAscii(String s, ChannelBuffer buf) {
+    protected static void encodeAscii(String s, ChannelBuffer buf) {
         for (int i = 0; i < s.length(); i++) {
             buf.writeByte(s.charAt(i));
         }
