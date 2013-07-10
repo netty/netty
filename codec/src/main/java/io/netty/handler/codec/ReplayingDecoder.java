@@ -20,6 +20,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.Signal;
+import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.StringUtil;
 
 /**
@@ -319,7 +320,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        CodecOutput out = CodecOutput.newInstance();
+        RecyclableArrayList out = RecyclableArrayList.newInstance();
         try {
             replayable.terminate();
             callDecode(ctx, internalBuffer(), out);
@@ -345,7 +346,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
     }
 
     @Override
-    protected void callDecode(ChannelHandlerContext ctx, ByteBuf in, CodecOutput out) {
+    protected void callDecode(ChannelHandlerContext ctx, ByteBuf in, RecyclableArrayList out) {
         replayable.setCumulation(in);
         try {
             while (in.isReadable()) {

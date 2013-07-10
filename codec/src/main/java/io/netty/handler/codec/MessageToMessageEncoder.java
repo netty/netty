@@ -19,6 +19,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.TypeParameterMatcher;
 
 import java.util.List;
@@ -62,7 +63,7 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerA
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg) throws Exception {
-        CodecOutput out = CodecOutput.newInstance();
+        RecyclableArrayList out = RecyclableArrayList.newInstance();
         try {
             if (acceptOutboundMessage(msg)) {
                 @SuppressWarnings("unchecked")
@@ -88,12 +89,12 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerA
     }
 
     /**
-     * Encode from one message to an other. This method will be called till either the {@link CodecOutput} has nothing
-     * left or till this method returns {@code null}.
+     * Encode from one message to an other. This method will be called for each written message that can be handled
+     * by this encoder.
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link MessageToMessageEncoder} belongs to
      * @param msg           the message to encode to an other one
-     * @param out           the {@link CodecOutput} into which the encoded msg should be added
+     * @param out           the {@link List} into which the encoded msg should be added
      *                      needs to do some kind of aggragation
      * @throws Exception    is thrown if an error accour
      */

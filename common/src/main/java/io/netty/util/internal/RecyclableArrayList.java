@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package io.netty.handler.codec;
+package io.netty.util.internal;
 
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
@@ -24,42 +24,42 @@ import java.util.ArrayList;
 /**
  * A simple list that holds the output of a codec.
  */
-final class CodecOutput extends ArrayList<Object> {
+public final class RecyclableArrayList extends ArrayList<Object> {
 
     private static final long serialVersionUID = -8605125654176467947L;
 
     private static final int DEFAULT_INITIAL_CAPACITY = 8;
 
-    private static final Recycler<CodecOutput> RECYCLER = new Recycler<CodecOutput>() {
+    private static final Recycler<RecyclableArrayList> RECYCLER = new Recycler<RecyclableArrayList>() {
         @Override
-        protected CodecOutput newObject(Handle handle) {
-            return new CodecOutput(handle);
+        protected RecyclableArrayList newObject(Handle handle) {
+            return new RecyclableArrayList(handle);
         }
     };
 
     /**
-     * Create a new empty {@link CodecOutput} instance
+     * Create a new empty {@link RecyclableArrayList} instance
      */
-    public static CodecOutput newInstance() {
+    public static RecyclableArrayList newInstance() {
         return newInstance(DEFAULT_INITIAL_CAPACITY);
     }
 
     /**
-     * Create a new empty {@link CodecOutput} instance with the given capacity.
+     * Create a new empty {@link RecyclableArrayList} instance with the given capacity.
      */
-    public static CodecOutput newInstance(int minCapacity) {
-        CodecOutput ret = (CodecOutput) RECYCLER.get();
+    public static RecyclableArrayList newInstance(int minCapacity) {
+        RecyclableArrayList ret = RECYCLER.get();
         ret.ensureCapacity(minCapacity);
         return ret;
     }
 
     private final Handle handle;
 
-    CodecOutput(Handle handle) {
+    private RecyclableArrayList(Handle handle) {
         this(handle, DEFAULT_INITIAL_CAPACITY);
     }
 
-    CodecOutput(Handle handle, int initialCapacity) {
+    private RecyclableArrayList(Handle handle, int initialCapacity) {
         super(initialCapacity);
         this.handle = handle;
     }
@@ -67,7 +67,7 @@ final class CodecOutput extends ArrayList<Object> {
     /**
      * Clear and recycle this instance.
      */
-    boolean recycle() {
+    public boolean recycle() {
         clear();
         return RECYCLER.recycle(this, handle);
     }
