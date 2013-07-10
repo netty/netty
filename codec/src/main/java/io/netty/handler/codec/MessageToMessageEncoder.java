@@ -21,6 +21,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.RecyclableArrayList;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.TypeParameterMatcher;
 
 import java.util.List;
@@ -64,9 +65,10 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerA
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        RecyclableArrayList out = RecyclableArrayList.newInstance();
+        RecyclableArrayList out = null;
         try {
             if (acceptOutboundMessage(msg)) {
+                out = RecyclableArrayList.newInstance();
                 @SuppressWarnings("unchecked")
                 I cast = (I) msg;
                 try {
@@ -74,24 +76,30 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerA
                 } finally {
                     ReferenceCountUtil.release(cast);
                 }
+
+                if (out.isEmpty()) {
+                    out.recycle();
+                    out = null;
+
+                    throw new EncoderException(
+                            StringUtil.simpleClassName(this) + " must produce at least one message.");
+                }
             } else {
-                out.add(msg);
+                ctx.write(msg, promise);
             }
         } catch (EncoderException e) {
             throw e;
         } catch (Throwable t) {
             throw new EncoderException(t);
         } finally {
-            if (out.isEmpty()) {
-                promise.setSuccess();
-            } else {
+            if (out != null) {
                 final int sizeMinusOne = out.size() - 1;
                 for (int i = 0; i < sizeMinusOne; i ++) {
                     ctx.write(out.get(i));
                 }
                 ctx.write(out.get(sizeMinusOne), promise);
+                out.recycle();
             }
-            out.recycle();
         }
     }
 
