@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.StringUtil;
 
 import java.util.List;
@@ -120,7 +121,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        CodecOutput out = CodecOutput.newInstance();
+        RecyclableArrayList out = RecyclableArrayList.newInstance();
         try {
             if (msg instanceof ByteBuf) {
                 ByteBuf data = (ByteBuf) msg;
@@ -189,7 +190,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        CodecOutput out = CodecOutput.newInstance();
+        RecyclableArrayList out = RecyclableArrayList.newInstance();
         try {
             if (cumulation != null) {
                 callDecode(ctx, cumulation, out);
@@ -214,7 +215,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
         }
     }
 
-    protected void callDecode(ChannelHandlerContext ctx, ByteBuf in, CodecOutput out) {
+    protected void callDecode(ChannelHandlerContext ctx, ByteBuf in, RecyclableArrayList out) {
         try {
             while (in.isReadable()) {
                 int outSize = out.size();
@@ -252,7 +253,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link ByteToMessageDecoder} belongs to
      * @param in            the {@link ByteBuf} from which to read data
-     * @param out           the {@link CodecOutput} to which decoded messages should be added
+     * @param out           the {@link List} to which decoded messages should be added
 
      * @throws Exception    is thrown if an error accour
      */

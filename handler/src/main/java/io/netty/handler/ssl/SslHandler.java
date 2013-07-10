@@ -36,6 +36,7 @@ import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -50,7 +51,6 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -536,11 +536,14 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     private void unwrapLater(ChannelHandlerContext ctx) throws SSLException {
-        // TODO: Optimize this for less Garbage
-        List<Object> messageList = new ArrayList<Object>();
-        decode(ctx, internalBuffer(),  messageList);
-        for (int i = 0; i < messageList.size(); i++) {
-            ctx.fireChannelRead(messageList.get(i));
+        RecyclableArrayList out = RecyclableArrayList.newInstance();
+        try {
+            decode(ctx, internalBuffer(),  out);
+            for (int i = 0; i < out.size(); i++) {
+                ctx.fireChannelRead(out.get(i));
+            }
+        } finally {
+            out.recycle();
         }
     }
 

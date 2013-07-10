@@ -105,8 +105,8 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
     }
 
     /**
-     * Encode a message into a {@link ByteBuf}. This method will be called till the {@link CodecOutput} has
-     * nothing left.
+     * Encode a message into a {@link ByteBuf}. This method will be called for each written message that can be handled
+     * by this encoder.
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link MessageToByteEncoder} belongs to
      * @param msg           the message to encode
