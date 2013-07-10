@@ -124,7 +124,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             //       No need to notify the upstream handlers - just log.
             //       If decoding a response, just throw an exception.
             if (is100ContinueExpected(m)) {
-                ctx.write(CONTINUE.duplicate());
+                ctx.writeAndFlush(CONTINUE.duplicate());
             }
 
             if (!m.getDecoderResult().isSuccess()) {
@@ -151,8 +151,6 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
             // A streamed message - initialize the cumulative buffer, and wait for incoming chunks.
             removeTransferEncodingChunked(currentMessage);
         } else if (msg instanceof HttpContent) {
-            assert currentMessage != null;
-
             if (tooLongFrameFound) {
                 if (msg instanceof LastHttpContent) {
                     this.currentMessage = null;
@@ -160,6 +158,7 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
                 // already detect the too long frame so just discard the content
                 return;
             }
+            assert currentMessage != null;
 
             // Merge the received chunk into the content of the current message.
             HttpContent chunk = (HttpContent) msg;
@@ -167,6 +166,10 @@ public class HttpObjectAggregator extends MessageToMessageDecoder<HttpObject> {
 
             if (content.readableBytes() > maxContentLength - chunk.content().readableBytes()) {
                 tooLongFrameFound = true;
+
+                // release current message to prevent leaks
+                currentMessage.release();
+                this.currentMessage = null;
 
                 throw new TooLongFrameException(
                         "HTTP content length exceeded " + maxContentLength +
