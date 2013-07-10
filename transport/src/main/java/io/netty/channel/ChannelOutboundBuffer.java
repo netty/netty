@@ -88,15 +88,19 @@ final class ChannelOutboundBuffer {
         if (msgs == null) {
             messages[tail] = msgs = MessageList.newInstance();
         }
-        msgs.add(msg, promise);
 
-        if ((this.tail = tail + 1 & messages.length - 1) == head) {
-            doubleCapacity();
-        }
+        msgs.add(msg, promise);
 
         int size = channel.calculateMessageSize(msg);
         messageListSizes[tail] += size;
         incrementPendingOutboundBytes(size);
+    }
+
+    void addFlush() {
+        int tail = this.tail;
+        if ((this.tail = tail + 1 & messages.length - 1) == head) {
+            doubleCapacity();
+        }
     }
 
     private void incrementPendingOutboundBytes(int size) {
