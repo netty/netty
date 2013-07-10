@@ -31,12 +31,10 @@ final class ChannelOutboundBuffer {
 
     private static final int MIN_INITIAL_CAPACITY = 8;
 
-    ChannelPromise currentPromise;
     MessageList currentMessages;
     int currentMessageIndex;
     private long currentMessageListSize;
 
-    private ChannelPromise[] promises;
     private MessageList[] messages;
     private long[] messageListSizes;
 
@@ -79,29 +77,28 @@ final class ChannelOutboundBuffer {
             initialCapacity = MIN_INITIAL_CAPACITY;
         }
 
-        promises = new ChannelPromise[initialCapacity];
         messages = new MessageList[initialCapacity];
         messageListSizes = new long[initialCapacity];
         this.channel = channel;
     }
 
-    void addMessage(Object msg) {
+    void addMessage(Object msg, ChannelPromise promise) {
         int tail = this.tail;
         MessageList msgs = messages[tail];
         if (msgs == null) {
             messages[tail] = msgs = MessageList.newInstance();
         }
-        msgs.add(msg);
+
+        msgs.add(msg, promise);
 
         int size = channel.calculateMessageSize(msg);
         messageListSizes[tail] += size;
         incrementPendingOutboundBytes(size);
     }
 
-    void addPromise(ChannelPromise promise) {
+    void addFlush() {
         int tail = this.tail;
-        promises[tail] = promise;
-        if ((this.tail = tail + 1 & promises.length - 1) == head) {
+        if ((this.tail = tail + 1 & messages.length - 1) == head) {
             doubleCapacity();
         }
     }
@@ -141,28 +138,23 @@ final class ChannelOutboundBuffer {
         assert head == tail;
 
         int p = head;
-        int n = promises.length;
+        int n = messages.length;
         int r = n - p; // number of elements to the right of p
         int newCapacity = n << 1;
         if (newCapacity < 0) {
             throw new IllegalStateException("Sorry, deque too big");
         }
 
-        ChannelPromise[] a1 = new ChannelPromise[newCapacity];
-        System.arraycopy(promises, p, a1, 0, r);
-        System.arraycopy(promises, 0, a1, r, p);
-        promises = a1;
-
         @SuppressWarnings("unchecked")
-        MessageList[] a2 = new MessageList[newCapacity];
-        System.arraycopy(messages, p, a2, 0, r);
-        System.arraycopy(messages, 0, a2, r, p);
-        messages = a2;
+        MessageList[] a1 = new MessageList[newCapacity];
+        System.arraycopy(messages, p, a1, 0, r);
+        System.arraycopy(messages, 0, a1, r, p);
+        messages = a1;
 
-        long[] a3 = new long[newCapacity];
-        System.arraycopy(messageListSizes, p, a3, 0, r);
-        System.arraycopy(messageListSizes, 0, a3, r, p);
-        messageListSizes = a3;
+        long[] a2 = new long[newCapacity];
+        System.arraycopy(messageListSizes, p, a2, 0, r);
+        System.arraycopy(messageListSizes, 0, a2, r, p);
+        messageListSizes = a2;
 
         head = 0;
         tail = n;
@@ -175,24 +167,21 @@ final class ChannelOutboundBuffer {
 
         int h = head;
 
-        ChannelPromise e = promises[h]; // Element is null if deque empty
+        MessageList e = messages[h]; // Element is null if deque empty
         if (e == null) {
             currentMessageListSize = 0;
-            currentPromise = null;
             currentMessages = null;
             return false;
         }
 
-        currentPromise = e;
         currentMessages = messages[h];
         currentMessageIndex = 0;
         currentMessageListSize = messageListSizes[h];
 
-        promises[h] = null;
         messages[h] = null;
         messageListSizes[h] = 0;
 
-        head = h + 1 & promises.length - 1;
+        head = h + 1 & messages.length - 1;
         return true;
     }
 
@@ -201,7 +190,7 @@ final class ChannelOutboundBuffer {
     }
 
     int size() {
-        return tail - head & promises.length - 1;
+        return tail - head & messages.length - 1;
     }
 
     boolean isEmpty() {
@@ -213,10 +202,9 @@ final class ChannelOutboundBuffer {
         int tail = this.tail;
         if (head != tail) {
             this.head = this.tail = 0;
-            final int mask = promises.length - 1;
+            final int mask = messages.length - 1;
             int i = head;
             do {
-                promises[i] = null;
                 messages[i] = null;
                 messageListSizes[i] = 0;
                 i = i + 1 & mask;
@@ -236,25 +224,25 @@ final class ChannelOutboundBuffer {
 
         try {
             inFail = true;
-            if (currentPromise == null) {
+            if (currentMessages == null) {
                 if (!next()) {
                     return;
                 }
             }
 
             do {
-                if (!(currentPromise instanceof VoidChannelPromise) && !currentPromise.tryFailure(cause)) {
-                    logger.warn("Promise done already: {} - new exception is:", currentPromise, cause);
-                }
-
                 if (currentMessages != null) {
                     // Release all failed messages.
-                    Object[] array = currentMessages.array();
+                    Object[] messages = currentMessages.messages();
+                    ChannelPromise[] promises = currentMessages.promises();
                     final int size = currentMessages.size();
                     try {
                         for (int i = currentMessageIndex; i < size; i++) {
-                            Object msg = array[i];
-                            ReferenceCountUtil.release(msg);
+                            ReferenceCountUtil.release(messages[i]);
+                            ChannelPromise p = promises[i];
+                            if (!(p instanceof VoidChannelPromise) && !p.tryFailure(cause)) {
+                                logger.warn("Promise done already: {} - new exception is:", p, cause);
+                            }
                         }
                     } finally {
                         currentMessages.recycle();

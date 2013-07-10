@@ -385,7 +385,7 @@ public class JZlibEncoder extends ZlibEncoder {
             }
         }
 
-        return ctx.write(footer).flush(promise);
+        return ctx.writeAndFlush(footer, promise);
     }
 
     @Override

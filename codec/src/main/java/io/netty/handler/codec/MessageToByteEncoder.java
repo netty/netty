@@ -16,8 +16,10 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.TypeParameterMatcher;
 
@@ -67,7 +69,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         ByteBuf buf = null;
         try {
             if (acceptOutboundMessage(msg)) {
@@ -85,13 +87,16 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
                 } finally {
                     ReferenceCountUtil.release(cast);
                 }
-            } else {
-                ctx.write(msg);
-            }
 
-            if (buf != null && buf.isReadable()) {
-                ctx.write(buf);
+                if (buf.isReadable()) {
+                    ctx.write(buf, promise);
+                } else {
+                    buf.release();
+                    ctx.write(Unpooled.EMPTY_BUFFER, promise);
+                }
                 buf = null;
+            } else {
+                ctx.write(msg, promise);
             }
         } catch (EncoderException e) {
             throw e;

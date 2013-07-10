@@ -86,7 +86,7 @@ public class SctpEchoTest extends AbstractSctpTest {
 
         for (int i = 0; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
-            cc.write(Unpooled.wrappedBuffer(data, i, length)).flush();
+            cc.writeAndFlush(Unpooled.wrappedBuffer(data, i, length));
             i += length;
         }
 
@@ -159,7 +159,7 @@ public class SctpEchoTest extends AbstractSctpTest {
             }
 
             if (channel.parent() != null) {
-                channel.write(Unpooled.wrappedBuffer(actual)).flush();
+                channel.writeAndFlush(Unpooled.wrappedBuffer(actual));
             }
 
             counter += actual.length;

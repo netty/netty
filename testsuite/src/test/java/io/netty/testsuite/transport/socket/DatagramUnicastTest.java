@@ -56,7 +56,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.bind().sync().channel();
 
-        cc.write(new DatagramPacket(Unpooled.copyInt(1), addr)).flush().sync();
+        cc.writeAndFlush(new DatagramPacket(Unpooled.copyInt(1), addr)).sync();
         assertTrue(latch.await(10, TimeUnit.SECONDS));
 
         sc.close().sync();

@@ -58,7 +58,7 @@ public class EchoByteHandler extends ChannelInboundHandlerAdapter {
 
         log.info("ECHO active {}", NioUdtProvider.socketUDT(ctx.channel()).toStringOptions());
 
-        ctx.write(message).flush();
+        ctx.writeAndFlush(message);
     }
 
     @Override
@@ -67,7 +67,7 @@ public class EchoByteHandler extends ChannelInboundHandlerAdapter {
         if (meter != null) {
             meter.mark(buf.readableBytes());
         }
-        ctx.write(msg).flush();
+        ctx.writeAndFlush(msg);
     }
 
     @Override

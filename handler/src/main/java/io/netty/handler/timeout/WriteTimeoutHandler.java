@@ -101,9 +101,9 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         scheduleTimeout(ctx, promise);
-        ctx.flush(promise);
+        ctx.write(msg, promise);
     }
 
     private void scheduleTimeout(final ChannelHandlerContext ctx, final ChannelPromise future) {

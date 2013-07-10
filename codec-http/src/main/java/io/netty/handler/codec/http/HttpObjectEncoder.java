@@ -15,10 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.handler.codec.http.HttpConstants.COLON;
-import static io.netty.handler.codec.http.HttpConstants.CR;
-import static io.netty.handler.codec.http.HttpConstants.LF;
-import static io.netty.handler.codec.http.HttpConstants.SP;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
@@ -26,6 +22,8 @@ import io.netty.util.CharsetUtil;
 
 import java.util.List;
 import java.util.Map;
+
+import static io.netty.handler.codec.http.HttpConstants.*;
 
 /**
  * Encodes an {@link HttpMessage} or an {@link HttpContent} into

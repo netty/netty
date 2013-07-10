@@ -28,6 +28,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -167,20 +168,31 @@ public class EmbeddedChannel extends AbstractChannel {
             return !lastOutboundBuffer.isEmpty();
         }
 
-        for (Object m: msgs) {
-            if (m == null) {
-                break;
+        RecyclableArrayList futures = RecyclableArrayList.newInstance(msgs.length);
+        try {
+            for (Object m: msgs) {
+                if (m == null) {
+                    break;
+                }
+                futures.add(write(m));
             }
-            write(m);
+
+            flush();
+
+            for (int i = 0; i < futures.size(); i++) {
+                ChannelFuture future = (ChannelFuture) futures.get(i);
+                assert future.isDone();
+                if (future.cause() != null) {
+                    recordException(future.cause());
+                }
+            }
+
+            runPendingTasks();
+            checkException();
+            return !lastOutboundBuffer.isEmpty();
+        } finally {
+            futures.recycle();
         }
-        ChannelFuture future = flush();
-        assert future.isDone();
-        if (future.cause() != null) {
-            recordException(future.cause());
-        }
-        runPendingTasks();
-        checkException();
-        return !lastOutboundBuffer.isEmpty();
     }
 
     /**

@@ -82,7 +82,7 @@ public class SocketObjectEchoTest extends AbstractSocketTest {
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.connect().sync().channel();
         for (String element : data) {
-            cc.write(element).flush();
+            cc.writeAndFlush(element);
         }
 
         while (ch.counter < data.length) {

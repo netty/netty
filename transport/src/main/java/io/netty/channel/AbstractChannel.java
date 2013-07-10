@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.util.DefaultAttributeMap;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.logging.InternalLogger;
@@ -178,8 +177,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelFuture flush() {
-        return pipeline.flush();
+    public Channel flush() {
+        pipeline.flush();
+        return this;
     }
 
     @Override
@@ -219,14 +219,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public Channel write(Object msg) {
-        pipeline.write(msg);
-        return this;
+    public ChannelFuture write(Object msg) {
+        return pipeline.write(msg);
     }
 
     @Override
-    public ChannelFuture flush(ChannelPromise promise) {
-        return pipeline.flush(promise);
+    public ChannelFuture write(Object msg, ChannelPromise promise) {
+        return pipeline.write(msg, promise);
     }
 
     @Override
@@ -589,13 +588,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public void write(Object msg) {
-            outboundBuffer.addMessage(msg);
+        public void write(Object msg, ChannelPromise promise) {
+            outboundBuffer.addMessage(msg, promise);
         }
 
         @Override
-        public void flush(final ChannelPromise promise) {
-            outboundBuffer.addPromise(promise);
+        public void flush() {
+            outboundBuffer.addFlush();
 
             if (!inFlushNow) { // Avoid re-entrance
                 try {
@@ -615,7 +614,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     eventLoop().execute(new Runnable() {
                         @Override
                         public void run() {
-                            flush(promise);
+                            flush();
                         }
                     });
                 }
@@ -645,50 +644,32 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             try {
                 for (;;) {
-                    ChannelPromise promise = outboundBuffer.currentPromise;
-                    if (promise == null) {
-                        if (!outboundBuffer.next()) {
-                            break;
-                        }
-                        promise = outboundBuffer.currentPromise;
-                    }
-
                     MessageList messages = outboundBuffer.currentMessages;
-
-                    // Make sure the message list is not empty.
                     if (messages == null) {
-                        promise.trySuccess();
                         if (!outboundBuffer.next()) {
                             break;
-                        } else {
-                            continue;
                         }
+                        messages = outboundBuffer.currentMessages;
                     }
 
                     int messageIndex = outboundBuffer.currentMessageIndex;
                     int messageCount = messages.size();
-                    Object[] messageArray = messages.array();
-
-                    // Make sure the promise has not been cancelled.
-                    if (promise.isCancelled()) {
-                        // If cancelled, release all unwritten messages and recycle.
-                        for (int i = messageIndex; i < messageCount; i ++) {
-                            ReferenceCountUtil.release(messageArray[i]);
-                        }
-                        messages.recycle();
-                        if (!outboundBuffer.next()) {
-                            break;
-                        } else {
-                            continue;
-                        }
-                    }
+                    Object[] messageArray = messages.messages();
+                    ChannelPromise[] promiseArray = messages.promises();
 
                     // Write the messages.
-                    int writtenMessages = doWrite(messageArray, messageCount, messageIndex);
-                    outboundBuffer.currentMessageIndex = messageIndex += writtenMessages;
+                    final int writtenMessages = doWrite(messageArray, messageCount, messageIndex);
+
+                    // Notify the promises.
+                    final int newMessageIndex = messageIndex + writtenMessages;
+                    for (int i = messageIndex; i < newMessageIndex; i ++) {
+                        promiseArray[i].trySuccess();
+                    }
+
+                    // Update the index variable and decide what to do next.
+                    outboundBuffer.currentMessageIndex = messageIndex = newMessageIndex;
                     if (messageIndex >= messageCount) {
                         messages.recycle();
-                        promise.trySuccess();
                         if (!outboundBuffer.next()) {
                             break;
                         }

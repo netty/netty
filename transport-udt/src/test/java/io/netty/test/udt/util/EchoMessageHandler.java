@@ -57,7 +57,7 @@ public class EchoMessageHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
         log.info("ECHO active {}", NioUdtProvider.socketUDT(ctx.channel()).toStringOptions());
-        ctx.write(message).flush();
+        ctx.writeAndFlush(message);
     }
 
     @Override
@@ -72,6 +72,6 @@ public class EchoMessageHandler extends ChannelInboundHandlerAdapter {
         if (meter != null) {
             meter.mark(udtMsg.content().readableBytes());
         }
-        ctx.write(msg).flush();
+        ctx.writeAndFlush(msg);
     }
 }

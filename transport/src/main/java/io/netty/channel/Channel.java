@@ -148,7 +148,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
     boolean isWritable();
 
     @Override
-    Channel write(Object msg);
+    Channel flush();
 
     @Override
     Channel read();
@@ -237,12 +237,12 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
         /**
          * Schedules a write operation.
          */
-        void write(Object msg);
+        void write(Object msg, ChannelPromise promise);
 
         /**
          * Flush out all scheduled writes.
          */
-        void flush(ChannelPromise promise);
+        void flush();
 
         /**
          * Flush out all schedules writes immediately.

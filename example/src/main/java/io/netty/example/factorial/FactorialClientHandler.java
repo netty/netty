@@ -94,21 +94,18 @@ public class FactorialClientHandler extends SimpleChannelInboundHandler<BigInteg
 
     private void sendNumbers() {
         // Do not send more than 4096 numbers.
-        boolean finished = false;
         for (int i = 0; i < 4096; i++) {
             if (i <= count) {
-                ctx.write(Integer.valueOf(i));
+                ChannelFuture future = ctx.write(Integer.valueOf(i));
+                if (count == i) {
+                    future.addListener(numberSender);
+                }
                 i ++;
             } else {
-                finished = true;
                 break;
             }
         }
-
-        ChannelFuture f = ctx.flush();
-        if (!finished) {
-            f.addListener(numberSender);
-        }
+        ctx.flush();
     }
 
     private final ChannelFutureListener numberSender = new ChannelFutureListener() {

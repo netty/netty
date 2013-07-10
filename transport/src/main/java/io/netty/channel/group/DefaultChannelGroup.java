@@ -192,27 +192,27 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     }
 
     @Override
-    public ChannelGroup write(Object message) {
+    public ChannelGroupFuture write(Object message) {
         if (message == null) {
             throw new NullPointerException("message");
         }
 
+        Map<Channel, ChannelFuture> futures = new LinkedHashMap<Channel, ChannelFuture>(size());
+
         for (Channel c: nonServerChannels) {
-            c.write(safeDuplicate(message));
+            futures.put(c, c.write(safeDuplicate(message)));
         }
 
         ReferenceCountUtil.release(message);
-        return this;
+        return new DefaultChannelGroupFuture(this, futures, executor);
     }
 
     @Override
-    public ChannelGroupFuture flush() {
-        Map<Channel, ChannelFuture> futures = new LinkedHashMap<Channel, ChannelFuture>(size());
+    public ChannelGroup flush() {
         for (Channel c: nonServerChannels) {
-            futures.put(c, c.flush());
+            c.flush();
         }
-
-        return new DefaultChannelGroupFuture(this, futures, executor);
+        return this;
     }
 
     @Override
