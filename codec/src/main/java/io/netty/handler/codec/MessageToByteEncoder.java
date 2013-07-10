@@ -16,6 +16,7 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
@@ -94,7 +95,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
                 if (buf.isReadable()) {
                     ctx.write(buf, promise);
                 } else {
-                    promise.setSuccess();
+                    ctx.write(Unpooled.EMPTY_BUFFER, promise);
                 }
                 buf = null;
             }
