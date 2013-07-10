@@ -87,17 +87,16 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
                 } finally {
                     ReferenceCountUtil.release(cast);
                 }
-            } else {
-                ctx.write(msg, promise);
-            }
 
-            if (buf != null) {
                 if (buf.isReadable()) {
                     ctx.write(buf, promise);
                 } else {
+                    buf.release();
                     ctx.write(Unpooled.EMPTY_BUFFER, promise);
                 }
                 buf = null;
+            } else {
+                ctx.write(msg, promise);
             }
         } catch (EncoderException e) {
             throw e;
