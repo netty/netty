@@ -145,8 +145,8 @@ import java.util.NoSuchElementException;
  *     <ul>
  *     <li>{@link ChannelHandlerContext#bind(SocketAddress, ChannelPromise)}</li>
  *     <li>{@link ChannelHandlerContext#connect(SocketAddress, SocketAddress, ChannelPromise)}</li>
- *     <li>{@link ChannelHandlerContext#write(Object)}</li>
- *     <li>{@link ChannelHandlerContext#flush(ChannelPromise)}</li>
+ *     <li>{@link ChannelHandlerContext#write(Object, ChannelPromise)}</li>
+ *     <li>{@link ChannelHandlerContext#flush()}</li>
  *     <li>{@link ChannelHandlerContext#read()}</li>
  *     <li>{@link ChannelHandlerContext#disconnect(ChannelPromise)}</li>
  *     <li>{@link ChannelHandlerContext#close(ChannelPromise)}</li>
@@ -622,7 +622,7 @@ public interface ChannelPipeline
     ChannelPipeline fireChannelWritabilityChanged();
 
     @Override
-    ChannelPipeline write(Object msg);
+    ChannelPipeline flush();
 
     @Override
     ChannelPipeline read();

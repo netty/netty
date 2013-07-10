@@ -27,7 +27,6 @@ import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
@@ -322,7 +321,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 engine.closeOutbound();
                 future.addListener(closeNotifyWriteListener);
                 try {
-                    flush(ctx, future);
+                    write(ctx, Unpooled.EMPTY_BUFFER, future);
+                    flush(ctx);
                 } catch (Exception e) {
                     if (!future.tryFailure(e)) {
                         logger.warn("flush() raised a masked exception.", e);
@@ -395,7 +395,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void flush(ChannelHandlerContext ctx) throws Exception {
         // Do not encrypt the first write request if this handler is
         // created with startTLS flag turned on.
         if (startTls && !sentFirstMessage) {
@@ -405,29 +405,21 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 if (pendingWrite == null) {
                     break;
                 }
-                ctx.write(pendingWrite.buf);
-                assert pendingWrite.promise == null;
+                ctx.write(pendingWrite.buf, pendingWrite.promise);
             }
-            ctx.flush(promise);
+            ctx.flush();
             return;
         }
         if (pendingUnencryptedWrites.isEmpty()) {
-            pendingUnencryptedWrites.add(new PendingWrite(Unpooled.EMPTY_BUFFER, promise));
-        } else {
-            PendingWrite write = pendingUnencryptedWrites.peekLast();
-            if (write.promise == null) {
-                write.promise = promise;
-            } else {
-                write.promise.addListener(new ChannelPromiseNotifier(promise));
-            }
+            pendingUnencryptedWrites.add(new PendingWrite(Unpooled.EMPTY_BUFFER, null));
         }
         flush0(ctx);
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, Object msg)
+    public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
             throws Exception {
-        pendingUnencryptedWrites.add(new PendingWrite((ByteBuf) msg));
+        pendingUnencryptedWrites.add(new PendingWrite((ByteBuf) msg, promise));
     }
 
     private void flush0(ChannelHandlerContext ctx) throws SSLException {
@@ -472,13 +464,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 } else {
                     switch (result.getHandshakeStatus()) {
                         case NEED_WRAP:
-                            ctx.write(out);
-
                             if (promise != null) {
-                                ctx.flush(promise);
+                                ctx.writeAndFlush(out, promise);
                                 promise = null;
                             } else {
-                                ctx.flush();
+                                ctx.writeAndFlush(out);
                             }
                             out = ctx.alloc().buffer();
                             continue;
@@ -518,12 +508,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             throw e;
         } finally {
             if (out != null && out.isReadable()) {
-                ctx.write(out);
-
                 if (promise != null) {
-                    ctx.flush(promise);
+                    ctx.writeAndFlush(out, promise);
                 } else {
-                    ctx.flush();
+                    ctx.writeAndFlush(out);
                 }
                 out = null;
             } else if (promise != null) {
@@ -1003,7 +991,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         engine.closeOutbound();
 
         ChannelPromise closeNotifyFuture = ctx.newPromise().addListener(closeNotifyWriteListener);
-        flush(ctx, closeNotifyFuture);
+        write(ctx, Unpooled.EMPTY_BUFFER, closeNotifyFuture);
+        flush(ctx);
         safeClose(ctx, closeNotifyFuture, promise);
     }
 
@@ -1140,7 +1129,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     private static final class PendingWrite {
         final ByteBuf buf;
-        ChannelPromise promise;
+        final ChannelPromise promise;
 
         PendingWrite(ByteBuf buf, ChannelPromise promise) {
             this.buf = buf;

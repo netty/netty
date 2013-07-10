@@ -107,7 +107,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
         if (cause instanceof WebSocketHandshakeException) {
             FullHttpResponse response = new DefaultFullHttpResponse(
                     HTTP_1_1, HttpResponseStatus.BAD_REQUEST, Unpooled.wrappedBuffer(cause.getMessage().getBytes()));
-            ctx.channel().write(response).flush().addListener(ChannelFutureListener.CLOSE);
+            ctx.channel().writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
         } else {
             ctx.close();
         }
@@ -128,7 +128,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
                 if (msg instanceof FullHttpRequest) {
                     FullHttpResponse response =
                             new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.FORBIDDEN);
-                    ctx.channel().write(response).flush();
+                    ctx.channel().writeAndFlush(response);
                 } else {
                     ctx.fireChannelRead(msg);
                 }

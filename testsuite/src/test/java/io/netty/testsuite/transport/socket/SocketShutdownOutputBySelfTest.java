@@ -48,7 +48,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
             assertFalse(ch.isOutputShutdown());
 
             s = ss.accept();
-            ch.write(Unpooled.wrappedBuffer(new byte[] { 1 })).flush().sync();
+            ch.writeAndFlush(Unpooled.wrappedBuffer(new byte[] { 1 })).sync();
             assertEquals(1, s.getInputStream().read());
 
             assertTrue(h.ch.isOpen());

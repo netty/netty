@@ -275,6 +275,9 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
             if (buf == null) {
                 break;
             }
+            if (!buf.isReadable()) {
+                continue;
+            }
             out.add(new DefaultHttpContent(buf));
         }
     }

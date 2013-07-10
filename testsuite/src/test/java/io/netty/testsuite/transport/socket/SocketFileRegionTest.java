@@ -90,9 +90,9 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         Channel cc = cb.connect().sync().channel();
         FileRegion region = new DefaultFileRegion(new FileInputStream(file).getChannel(), 0L, file.length());
         if (voidPromise) {
-            assertEquals(cc.voidPromise(), cc.write(region).flush(cc.voidPromise()));
+            assertEquals(cc.voidPromise(), cc.writeAndFlush(region, cc.voidPromise()));
         } else {
-            assertNotEquals(cc.voidPromise(), cc.write(region).flush());
+            assertNotEquals(cc.voidPromise(), cc.writeAndFlush(region));
         }
         while (sh.counter < data.length) {
             if (sh.exception.get() != null) {

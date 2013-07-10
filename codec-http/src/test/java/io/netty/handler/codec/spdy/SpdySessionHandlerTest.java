@@ -288,18 +288,18 @@ public class SpdySessionHandlerTest {
             SpdySynStreamFrame spdySynStreamFrame =
                     new DefaultSpdySynStreamFrame(streamId, 0, (byte) 0);
             spdySynStreamFrame.setLast(true);
-            ctx.write(spdySynStreamFrame).flush();
+            ctx.writeAndFlush(spdySynStreamFrame);
             spdySynStreamFrame.setStreamId(spdySynStreamFrame.getStreamId() + 2);
-            ctx.write(spdySynStreamFrame).flush();
+            ctx.writeAndFlush(spdySynStreamFrame);
             spdySynStreamFrame.setStreamId(spdySynStreamFrame.getStreamId() + 2);
-            ctx.write(spdySynStreamFrame).flush();
+            ctx.writeAndFlush(spdySynStreamFrame);
             spdySynStreamFrame.setStreamId(spdySynStreamFrame.getStreamId() + 2);
-            ctx.write(spdySynStreamFrame).flush();
+            ctx.writeAndFlush(spdySynStreamFrame);
 
             // Limit the number of concurrent streams to 3
             SpdySettingsFrame spdySettingsFrame = new DefaultSpdySettingsFrame();
             spdySettingsFrame.setValue(SpdySettingsFrame.SETTINGS_MAX_CONCURRENT_STREAMS, 3);
-            ctx.write(spdySettingsFrame).flush();
+            ctx.writeAndFlush(spdySettingsFrame);
         }
 
         @Override
@@ -315,7 +315,7 @@ public class SpdySessionHandlerTest {
                         spdySynReplyFrame.headers().add(entry.getKey(), entry.getValue());
                     }
 
-                    ctx.write(spdySynReplyFrame).flush();
+                    ctx.writeAndFlush(spdySynReplyFrame);
                 }
                 return;
             }
@@ -328,7 +328,7 @@ public class SpdySessionHandlerTest {
                     msg instanceof SpdyPingFrame ||
                     msg instanceof SpdyHeadersFrame) {
 
-                ctx.write(msg).flush();
+                ctx.writeAndFlush(msg);
                 return;
             }
 

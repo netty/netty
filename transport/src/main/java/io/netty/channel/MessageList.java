@@ -45,7 +45,8 @@ final class MessageList {
     }
 
     private final Handle handle;
-    private Object[] elements;
+    private Object[] messages;
+    private ChannelPromise[] promises;
     private int size;
 
     MessageList(Handle handle) {
@@ -55,7 +56,8 @@ final class MessageList {
     MessageList(Handle handle, int initialCapacity) {
         this.handle = handle;
         initialCapacity = normalizeCapacity(initialCapacity);
-        elements = new Object[initialCapacity];
+        messages = new Object[initialCapacity];
+        promises = new ChannelPromise[initialCapacity];
     }
 
     /**
@@ -75,14 +77,12 @@ final class MessageList {
     /**
      * Add the message to this {@link MessageList} and return itself.
      */
-    MessageList add(Object value) {
-        if (value == null) {
-            throw new NullPointerException("value");
-        }
+    MessageList add(Object message, ChannelPromise promise) {
         int oldSize = size;
         int newSize = oldSize + 1;
         ensureCapacity(newSize);
-        elements[oldSize] = value;
+        messages[oldSize] = message;
+        promises[oldSize] = promise;
         size = newSize;
         return this;
     }
@@ -90,27 +90,39 @@ final class MessageList {
     /**
      * Returns the backing array of this list.
      */
-    Object[] array() {
-        return elements;
+    Object[] messages() {
+        return messages;
+    }
+
+    ChannelPromise[] promises() {
+        return promises;
     }
 
     /**
      * Clear and recycle this instance.
      */
     boolean recycle() {
-        Arrays.fill(elements, 0, size, null);
+        Arrays.fill(messages, 0, size, null);
+        Arrays.fill(promises, 0, size, null);
         size = 0;
         return RECYCLER.recycle(this, handle);
     }
 
     private void ensureCapacity(int capacity) {
-        if (elements.length >= capacity) {
+        if (messages.length >= capacity) {
             return;
         }
 
-        Object[] newElements = new Object[normalizeCapacity(capacity)];
-        System.arraycopy(elements, 0, newElements, 0, size);
-        elements = newElements;
+        final int size = this.size;
+        capacity = normalizeCapacity(capacity);
+
+        Object[] newMessages = new Object[capacity];
+        System.arraycopy(messages, 0, newMessages, 0, size);
+        messages = newMessages;
+
+        ChannelPromise[] newPromises = new ChannelPromise[capacity];
+        System.arraycopy(promises, 0, newPromises, 0, size);
+        promises = newPromises;
     }
 
     private static int normalizeCapacity(int initialCapacity) {

@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
@@ -309,10 +310,11 @@ public class LocalTransportThreadModelTest3 {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
             if (!inbound) {
                 events.add(EventType.WRITE);
             }
+            promise.setSuccess();
         }
 
         @Override

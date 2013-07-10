@@ -827,8 +827,9 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelFuture flush() {
-        return tail.flush();
+    public ChannelPipeline flush() {
+        tail.flush();
+        return this;
     }
 
     @Override
@@ -868,14 +869,13 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelPipeline write(Object msg) {
-        tail.write(msg);
-        return this;
+    public ChannelFuture write(Object msg) {
+        return tail.write(msg);
     }
 
     @Override
-    public ChannelFuture flush(ChannelPromise promise) {
-        return tail.flush(promise);
+    public ChannelFuture write(Object msg, ChannelPromise promise) {
+        return tail.write(msg, promise);
     }
 
     @Override
@@ -1024,13 +1024,13 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg) throws Exception {
-            unsafe.write(msg);
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+            unsafe.write(msg, promise);
         }
 
         @Override
-        public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-            unsafe.flush(promise);
+        public void flush(ChannelHandlerContext ctx) throws Exception {
+            unsafe.flush();
         }
 
         @Override

@@ -181,9 +181,8 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         // Write the content.
         ctx.write(new ChunkedFile(raf, 0, fileLength, 8192));
         // Write the end marker
-        ctx.write(LastHttpContent.EMPTY_LAST_CONTENT);
+        ChannelFuture writeFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 
-        ChannelFuture writeFuture = ctx.flush();
         // Decide whether to close the connection or not.
         if (!isKeepAlive(request)) {
             // Close the connection when the whole content is written out.
@@ -277,7 +276,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         response.content().writeBytes(Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8));
 
         // Close the connection as soon as the error message is sent.
-        ctx.write(response).flush().addListener(ChannelFutureListener.CLOSE);
+        ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
     }
 
     private static void sendRedirect(ChannelHandlerContext ctx, String newUri) {
@@ -285,7 +284,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         response.headers().set(LOCATION, newUri);
 
         // Close the connection as soon as the error message is sent.
-        ctx.write(response).flush().addListener(ChannelFutureListener.CLOSE);
+        ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
     }
 
     private static void sendError(ChannelHandlerContext ctx, HttpResponseStatus status) {
@@ -294,7 +293,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
 
         // Close the connection as soon as the error message is sent.
-        ctx.write(response).flush().addListener(ChannelFutureListener.CLOSE);
+        ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
     }
 
     /**
@@ -308,7 +307,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         setDateHeader(response);
 
         // Close the connection as soon as the error message is sent.
-        ctx.write(response).flush().addListener(ChannelFutureListener.CLOSE);
+        ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
     }
 
     /**

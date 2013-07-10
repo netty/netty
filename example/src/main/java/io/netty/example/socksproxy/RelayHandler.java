@@ -43,7 +43,7 @@ public final class RelayHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (relayChannel.isActive()) {
-            relayChannel.write(msg).flush();
+            relayChannel.writeAndFlush(msg);
         } else {
             ReferenceCountUtil.release(msg);
         }

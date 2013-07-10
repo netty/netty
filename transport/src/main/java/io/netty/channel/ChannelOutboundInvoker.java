@@ -99,8 +99,6 @@ interface ChannelOutboundInvoker {
      */
     ChannelFuture deregister();
 
-    ChannelFuture flush();
-
     /**
      * Request to bind to the given {@link SocketAddress} and notify the {@link ChannelFuture} once the operation
      * completes, either because the operation was successful or because of an error.
@@ -204,19 +202,25 @@ interface ChannelOutboundInvoker {
 
     /**
      * Request to write a message via this ChannelOutboundInvoker through the {@link ChannelPipeline}.
-     * This method will not request to actual flush, so be sure to call {@link #flush()} or
-     * {@link #flush(ChannelPromise)} once you want to request to flush all pending data to the actual transport.
+     * This method will not request to actual flush, so be sure to call {@link #flush()}
+     * once you want to request to flush all pending data to the actual transport.
      */
-    ChannelOutboundInvoker write(Object msg);
+    ChannelFuture write(Object msg);
 
     /**
-     * Request to flush all pending messages via this ChannelOutboundInvoker and notify the {@link ChannelFuture}
-     * once the operation completes, either because the operation was successful or because of an error.
+     * Request to write a message via this ChannelOutboundInvoker through the {@link ChannelPipeline}.
+     * This method will not request to actual flush, so be sure to call {@link #flush()}
+     * once you want to request to flush all pending data to the actual transport.
      */
-    ChannelFuture flush(ChannelPromise promise);
+    ChannelFuture write(Object msg, ChannelPromise promise);
 
     /**
-     * Shortcut for call {@link #write(Object)} and {@link #flush(ChannelPromise)}.
+     * Request to flush all pending messages via this ChannelOutboundInvoker.
+     */
+    ChannelOutboundInvoker flush();
+
+    /**
+     * Shortcut for call {@link #write(Object, ChannelPromise)} and {@link #flush()}.
      */
     ChannelFuture writeAndFlush(Object msg, ChannelPromise promise);
 

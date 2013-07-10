@@ -189,13 +189,13 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg) throws Exception {
-        outboundHandler.write(ctx, msg);
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        outboundHandler.write(ctx, msg, promise);
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        outboundHandler.flush(ctx, promise);
+    public void flush(ChannelHandlerContext ctx) throws Exception {
+        outboundHandler.flush(ctx);
     }
 
     @Override

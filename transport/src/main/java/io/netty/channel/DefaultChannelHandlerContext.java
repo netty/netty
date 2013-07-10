@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
-import io.netty.util.internal.StringUtil;
 
 import java.net.SocketAddress;
 
@@ -34,7 +33,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private final DefaultChannelPipeline pipeline;
     private final String name;
     private final ChannelHandler handler;
-    private Throwable lastWriteException;
     private boolean removed;
 
     // Will be set to null if no child executor should be used, otherwise it will be set to the
@@ -465,11 +463,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public ChannelFuture flush() {
-        return flush(newPromise());
-    }
-
-    @Override
     public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
         if (localAddress == null) {
             throw new NullPointerException("localAddress");
@@ -670,91 +663,81 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public ChannelHandlerContext write(Object msg) {
-        if (msg == null) {
-            throw new NullPointerException("msg");
-        }
-
-        findContextOutbound().invokeWrite(msg);
-        return this;
-    }
-
-    private void invokeWrite(final Object msg) {
-        EventExecutor executor = executor();
-        if (executor.inEventLoop()) {
-            invokeWrite0(msg);
-        } else {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    invokeWrite0(msg);
-                }
-            });
-        }
-    }
-
-    private void invokeWrite0(Object msg) {
-        ChannelOutboundHandler handler = (ChannelOutboundHandler) handler();
-        try {
-            handler.write(this, msg);
-        } catch (Throwable t) {
-            if (lastWriteException == null) {
-                lastWriteException = t;
-            } else if (logger.isWarnEnabled()) {
-                logger.warn(
-                        "More than one exception was raised by " + StringUtil.simpleClassName(handler) + ".write()." +
-                        "Will fail the subsequent flush() with the first one and log others.", t);
-            }
-        }
+    public ChannelFuture write(Object msg) {
+        return write(msg, newPromise());
     }
 
     @Override
-    public ChannelFuture flush(ChannelPromise promise) {
+    public ChannelFuture write(Object msg, ChannelPromise promise) {
+        if (msg == null) {
+            throw new NullPointerException("msg");
+        }
         validatePromise(promise, true);
-        return findContextOutbound().invokeFlush(promise);
+        findContextOutbound().invokeWrite(msg, promise);
+        return promise;
     }
 
-    private ChannelFuture invokeFlush(final ChannelPromise promise) {
+    private void invokeWrite(final Object msg, final ChannelPromise promise) {
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            invokeFlush0(promise);
+            invokeWrite0(msg, promise);
         } else {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    invokeFlush0(promise);
+                    invokeWrite0(msg, promise);
                 }
             });
         }
-
-        return promise;
     }
 
-    private void invokeFlush0(ChannelPromise promise) {
-        Throwable lastWriteException = this.lastWriteException;
-        if (lastWriteException != null) {
-            this.lastWriteException = null;
-            promise.setFailure(lastWriteException);
-            return;
-        }
-
+    private void invokeWrite0(Object msg, ChannelPromise promise) {
+        ChannelOutboundHandler handler = (ChannelOutboundHandler) handler();
         try {
-            ((ChannelOutboundHandler) handler()).flush(this, promise);
+            handler.write(this, msg, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
         }
     }
 
     @Override
+    public ChannelHandlerContext flush() {
+        findContextOutbound().invokeFlush();
+        return this;
+    }
+
+    private void invokeFlush() {
+        EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            invokeFlush0();
+        } else {
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    invokeFlush0();
+                }
+            });
+        }
+    }
+
+    private void invokeFlush0() {
+        try {
+            ((ChannelOutboundHandler) handler()).flush(this);
+        } catch (Throwable t) {
+            notifyHandlerException(t);
+        }
+    }
+
+    @Override
     public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
-        write(msg);
-        return flush(promise);
+        ChannelFuture future = write(msg, promise);
+        flush();
+        return future;
     }
 
     @Override
     public ChannelFuture writeAndFlush(Object msg) {
-        write(msg);
-        return flush();
+        return writeAndFlush(msg, newPromise());
     }
 
     private static void notifyOutboundHandlerException(Throwable cause, ChannelPromise promise) {

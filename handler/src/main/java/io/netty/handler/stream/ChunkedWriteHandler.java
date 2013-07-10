@@ -69,12 +69,11 @@ public class ChunkedWriteHandler
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(ChunkedWriteHandler.class);
 
-    private final Queue<Object> queue = new ArrayDeque<Object>();
+    private final Queue<PendingWrite> queue = new ArrayDeque<PendingWrite>();
     private final int maxPendingWrites;
     private volatile ChannelHandlerContext ctx;
     private final AtomicInteger pendingWrites = new AtomicInteger();
-    private Object currentEvent;
-
+    private PendingWrite currentWrite;
     public ChunkedWriteHandler() {
         this(4);
     }
@@ -136,13 +135,12 @@ public class ChunkedWriteHandler
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg) throws Exception {
-        queue.add(msg);
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        queue.add(new PendingWrite(msg, promise));
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        queue.add(promise);
+    public void flush(ChannelHandlerContext ctx) throws Exception {
         if (isWritable() || !ctx.channel().isActive()) {
             doFlush(ctx);
         }
@@ -155,48 +153,45 @@ public class ChunkedWriteHandler
     }
 
     private void discard(final ChannelHandlerContext ctx, Throwable cause) {
-
-        boolean fireExceptionCaught = false;
-        boolean success = true;
         for (;;) {
-            Object currentEvent = this.currentEvent;
+            PendingWrite currentWrite = this.currentWrite;
 
-            if (this.currentEvent == null) {
-                currentEvent = queue.poll();
+            if (this.currentWrite == null) {
+                currentWrite = queue.poll();
             } else {
-                this.currentEvent = null;
+                this.currentWrite = null;
             }
 
-            if (currentEvent == null) {
+            if (currentWrite == null) {
                 break;
             }
-
-            if (currentEvent instanceof ChunkedInput) {
-                ChunkedInput<?> in = (ChunkedInput<?>) currentEvent;
+            Object message = currentWrite.msg;
+            if (message instanceof ChunkedInput) {
+                ChunkedInput<?> in = (ChunkedInput<?>) message;
                 try {
                     if (!in.isEndOfInput()) {
-                        success = false;
+                        if (cause == null) {
+                            cause = new ClosedChannelException();
+                        }
+                        currentWrite.fail(cause);
+                    } else {
+                        currentWrite.promise.setSuccess();
                     }
+                    closeInput(in);
                 } catch (Exception e) {
-                    success = false;
+                    currentWrite.fail(e);
                     logger.warn(ChunkedInput.class.getSimpleName() + ".isEndOfInput() failed", e);
+                    closeInput(in);
                 }
-                closeInput(in);
-            } else if (currentEvent instanceof ChannelPromise) {
-                ChannelPromise f = (ChannelPromise) currentEvent;
-                if (!success) {
-                    fireExceptionCaught = true;
-                    if (cause == null) {
-                        cause = new ClosedChannelException();
-                    }
-                    f.setFailure(cause);
-                } else {
-                    f.setSuccess();
+            } else {
+                if (cause == null) {
+                    cause = new ClosedChannelException();
                 }
+                currentWrite.fail(cause);
             }
         }
 
-        if (fireExceptionCaught) {
+        if (cause != null) {
             ctx.fireExceptionCaught(cause);
         }
     }
@@ -207,21 +202,21 @@ public class ChunkedWriteHandler
             discard(ctx, null);
             return;
         }
+        boolean needsFlush;
         while (isWritable()) {
-            if (currentEvent == null) {
-                currentEvent = queue.poll();
+            if (currentWrite == null) {
+                currentWrite = queue.poll();
             }
 
-            if (currentEvent == null) {
+            if (currentWrite == null) {
                 break;
             }
+            needsFlush = true;
+            final PendingWrite currentWrite = this.currentWrite;
+            final Object pendingMessage = currentWrite.msg;
 
-            final Object currentEvent = this.currentEvent;
-            if (currentEvent instanceof ChannelPromise) {
-                this.currentEvent = null;
-                ctx.flush((ChannelPromise) currentEvent);
-            } else if (currentEvent instanceof ChunkedInput) {
-                final ChunkedInput<?> chunks = (ChunkedInput<?>) currentEvent;
+            if (pendingMessage instanceof ChunkedInput) {
+                final ChunkedInput<?> chunks = (ChunkedInput<?>) pendingMessage;
                 boolean endOfInput;
                 boolean suspend;
                 Object message = null;
@@ -236,12 +231,13 @@ public class ChunkedWriteHandler
                         suspend = false;
                     }
                 } catch (final Throwable t) {
-                    this.currentEvent = null;
+                    this.currentWrite = null;
 
                     if (message != null) {
                         ReferenceCountUtil.release(message);
                     }
 
+                    currentWrite.fail(t);
                     if (ctx.executor().inEventLoop()) {
                         ctx.fireExceptionCaught(t);
                     } else {
@@ -265,9 +261,9 @@ public class ChunkedWriteHandler
                 }
 
                 pendingWrites.incrementAndGet();
-                ChannelFuture f = ctx.write(message).flush();
+                ChannelFuture f = ctx.write(message);
                 if (endOfInput) {
-                    this.currentEvent = null;
+                    this.currentWrite = null;
 
                     // Register a listener which will close the input once the write is complete.
                     // This is needed because the Chunk may have some resource bound that can not
@@ -278,6 +274,7 @@ public class ChunkedWriteHandler
                         @Override
                         public void operationComplete(ChannelFuture future) throws Exception {
                             pendingWrites.decrementAndGet();
+                            currentWrite.promise.setSuccess();
                             closeInput(chunks);
                         }
                     });
@@ -287,7 +284,8 @@ public class ChunkedWriteHandler
                         public void operationComplete(ChannelFuture future) throws Exception {
                             pendingWrites.decrementAndGet();
                             if (!future.isSuccess()) {
-                                closeInput((ChunkedInput<?>) currentEvent);
+                                closeInput((ChunkedInput<?>) pendingMessage);
+                                currentWrite.fail(future.cause());
                             }
                         }
                     });
@@ -297,7 +295,8 @@ public class ChunkedWriteHandler
                         public void operationComplete(ChannelFuture future) throws Exception {
                             pendingWrites.decrementAndGet();
                             if (!future.isSuccess()) {
-                                closeInput((ChunkedInput<?>) currentEvent);
+                                closeInput((ChunkedInput<?>) pendingMessage);
+                                currentWrite.fail(future.cause());
                             } else if (isWritable()) {
                                 resumeTransfer();
                             }
@@ -305,10 +304,13 @@ public class ChunkedWriteHandler
                     });
                 }
             } else {
-                ctx.write(currentEvent);
-                this.currentEvent = null;
+                ctx.write(pendingMessage, currentWrite.promise);
+                this.currentWrite = null;
             }
 
+            if (needsFlush) {
+                ctx.flush();
+            }
             if (!channel.isActive()) {
                 discard(ctx, new ClosedChannelException());
                 return;
@@ -322,6 +324,23 @@ public class ChunkedWriteHandler
         } catch (Throwable t) {
             if (logger.isWarnEnabled()) {
                 logger.warn("Failed to close a chunked input.", t);
+            }
+        }
+    }
+
+    private static final class PendingWrite {
+        final Object msg;
+        final ChannelPromise promise;
+
+        PendingWrite(Object msg, ChannelPromise promise) {
+            this.msg = msg;
+            this.promise = promise;
+        }
+
+        void fail(Throwable cause) {
+            ReferenceCountUtil.release(msg);
+            if (promise != null) {
+                promise.setFailure(cause);
             }
         }
     }

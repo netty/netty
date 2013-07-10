@@ -17,11 +17,13 @@ package io.netty.channel.local;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
@@ -108,7 +110,7 @@ public class LocalTransportThreadModelTest {
         ch.pipeline().write("5");
         ch.pipeline().context(h3).write("6");
         ch.pipeline().context(h2).write("7");
-        ch.pipeline().context(h1).write("8").flush().sync();
+        ch.pipeline().context(h1).writeAndFlush("8").sync();
 
         ch.close().sync();
 
@@ -371,9 +373,9 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
             outboundThreadNames.add(Thread.currentThread().getName());
-            ctx.write(msg);
+            ctx.write(msg, promise);
         }
 
         @Override
@@ -414,7 +416,7 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
             Assert.assertSame(t, Thread.currentThread());
 
             // Don't let the write request go to the server-side channel - just swallow.
@@ -430,6 +432,7 @@ public class LocalTransportThreadModelTest {
                     ctx.write(actual);
                 }
             }
+            ctx.writeAndFlush(Unpooled.EMPTY_BUFFER, promise);
             m.release();
         }
 
@@ -473,7 +476,7 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
             Assert.assertSame(t, Thread.currentThread());
 
             ByteBuf out = ctx.alloc().buffer(4);
@@ -482,7 +485,7 @@ public class LocalTransportThreadModelTest {
             Assert.assertEquals(expected, m);
             out.writeInt(m);
 
-            ctx.write(out);
+            ctx.write(out, promise);
         }
 
         @Override
@@ -521,14 +524,14 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
             Assert.assertSame(t, Thread.currentThread());
 
             int actual = (Integer) msg;
             int expected = outCnt ++;
             Assert.assertEquals(expected, actual);
 
-            ctx.write(msg);
+            ctx.write(msg, promise);
         }
 
         @Override
@@ -566,13 +569,13 @@ public class LocalTransportThreadModelTest {
 
         @Override
         public void write(
-                ChannelHandlerContext ctx, Object msg) throws Exception {
+                ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
             Assert.assertSame(t, Thread.currentThread());
 
             int actual = (Integer) msg;
             int expected = outCnt ++;
             Assert.assertEquals(expected, actual);
-            ctx.write(msg);
+            ctx.write(msg, promise);
         }
 
         @Override

@@ -103,7 +103,7 @@ public class SpdyFrameDecoderTest {
     }
 
     private static void sendAndWaitForFrame(Channel cc, SpdyFrame frame, CaptureHandler handler) {
-        cc.write(frame).flush();
+        cc.writeAndFlush(frame);
         long theFuture = System.currentTimeMillis() + 3000;
         while (handler.message == null && System.currentTimeMillis() < theFuture) {
             try {

@@ -73,7 +73,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
 
         cc.joinGroup(groupAddress, NetUtil.LOOPBACK_IF).sync();
 
-        sc.write(new DatagramPacket(Unpooled.copyInt(1), groupAddress)).flush().sync();
+        sc.writeAndFlush(new DatagramPacket(Unpooled.copyInt(1), groupAddress)).sync();
         assertTrue(mhandler.await());
 
         // leave the group
@@ -83,7 +83,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         Thread.sleep(1000);
 
         // we should not receive a message anymore as we left the group before
-        sc.write(new DatagramPacket(Unpooled.copyInt(1), groupAddress)).flush().sync();
+        sc.writeAndFlush(new DatagramPacket(Unpooled.copyInt(1), groupAddress)).sync();
         mhandler.await();
 
         sc.close().awaitUninterruptibly();

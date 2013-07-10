@@ -76,12 +76,7 @@ public interface ChannelOutboundHandler extends ChannelHandler {
      */
     void read(ChannelHandlerContext ctx) throws Exception;
 
-    /**
-     * Called once a flush operation is made and so the outbound data should be written.
-     *
-     * @param ctx               the {@link ChannelHandlerContext} for which the flush operation is made
-     */
-    void write(ChannelHandlerContext ctx, Object msg) throws Exception;
+    void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception;
 
-    void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
+    void flush(ChannelHandlerContext ctx) throws Exception;
 }
