@@ -53,10 +53,10 @@ public class HttpHelloWorldServerHandler extends ChannelInboundHandlerAdapter {
             response.headers().set(CONTENT_LENGTH, response.content().readableBytes());
 
             if (!keepAlive) {
-                ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
+                ctx.write(response).addListener(ChannelFutureListener.CLOSE);
             } else {
                 response.headers().set(CONNECTION, Values.KEEP_ALIVE);
-                ctx.writeAndFlush(response);
+                ctx.write(response);
             }
         }
     }
