@@ -86,6 +86,12 @@ public class ChannelInboundHandlerAdapter extends ChannelHandlerAdapter implemen
         ctx.fireChannelRead(msg);
     }
 
+    /**
+     * Calls {@link ChannelHandlerContext#fireChannelReadComplete()} to forward
+     * to the next {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
+     *
+     * Sub-classes may override this method to change behavior.
+     */
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         ctx.fireChannelReadComplete();

@@ -76,7 +76,24 @@ public interface ChannelOutboundHandler extends ChannelHandler {
      */
     void read(ChannelHandlerContext ctx) throws Exception;
 
+    /**
+    * Called once a write operation is made. The write operation will write the messages through the
+     * {@link ChannelPipeline}. Those are then ready to be flushed to the actual {@link Channel} once
+     * {@link Channel#flush()} is called
+     *
+     * @param ctx               the {@link ChannelHandlerContext} for which the write operation is made
+     * @param msg               the message to write
+     * @param promise           the {@link ChannelPromise} to notify once the operation completes
+     * @throws Exception        thrown if an error accour
+     */
     void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception;
 
+    /**
+     * Called once a flush operation is made. The flush operation will try to flush out all previous written messages
+     * that are pending.
+     *
+     * @param ctx               the {@link ChannelHandlerContext} for which the flush operation is made
+     * @throws Exception        thrown if an error accour
+     */
     void flush(ChannelHandlerContext ctx) throws Exception;
 }
