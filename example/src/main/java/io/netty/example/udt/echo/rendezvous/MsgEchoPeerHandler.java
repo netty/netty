@@ -55,7 +55,7 @@ public class MsgEchoPeerHandler extends
     @Override
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
         log.info("ECHO active " + NioUdtProvider.socketUDT(ctx.channel()).toStringOptions());
-        ctx.write(message);
+        ctx.writeAndFlush(message);
     }
 
     @Override

@@ -51,7 +51,7 @@ public class SctpEchoClientHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
-        ctx.write(new SctpMessage(0, 0, firstMessage));
+        ctx.writeAndFlush(new SctpMessage(0, 0, firstMessage));
     }
 
     @Override

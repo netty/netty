@@ -40,6 +40,7 @@ public class TelnetServerHandler extends SimpleChannelInboundHandler<String> {
         ctx.write(
                 "Welcome to " + InetAddress.getLocalHost().getHostName() + "!\r\n");
         ctx.write("It is " + new Date() + " now.\r\n");
+        ctx.flush();
     }
 
     @Override
@@ -59,13 +60,18 @@ public class TelnetServerHandler extends SimpleChannelInboundHandler<String> {
 
         // We do not need to write a ChannelBuffer here.
         // We know the encoder inserted at TelnetPipelineFactory will do the conversion.
-        ChannelFuture future = ctx.writeAndFlush(response);
+        ChannelFuture future = ctx.write(response);
 
         // Close the connection after sending 'Have a good day!'
         // if the client has sent 'bye'.
         if (close) {
             future.addListener(ChannelFutureListener.CLOSE);
         }
+    }
+
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
     }
 
     @Override
