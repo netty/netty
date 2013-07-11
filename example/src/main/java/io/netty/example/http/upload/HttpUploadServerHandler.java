@@ -216,8 +216,12 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
             while (decoder.hasNext()) {
                 InterfaceHttpData data = decoder.next();
                 if (data != null) {
-                    // new value
-                    writeHttpData(data);
+                    try {
+                        // new value
+                        writeHttpData(data);
+                    } finally {
+                        data.release();
+                    }
                 }
             }
         } catch (EndOfDataDecoderException e1) {
@@ -275,7 +279,6 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
                 }
             }
         }
-        //BufUtil.release(data);
     }
 
     private void writeResponse(Channel channel) {
