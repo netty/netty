@@ -802,9 +802,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws SSLException {
         int packetLength = this.packetLength;
+        final int readableBytes = in.readableBytes();
+
         if (packetLength == 0) {
             // the previous packet was consumed so try to read the length of the next packet
-            final int readableBytes = in.readableBytes();
             if (readableBytes < 5) {
                 // not enough bytes readable to read the packet length
                 return;
@@ -825,7 +826,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             this.packetLength = packetLength;
         }
 
-        if (in.readableBytes() < packetLength) {
+        if (readableBytes < packetLength) {
             // wait until the whole packet can be read
             return;
         }
