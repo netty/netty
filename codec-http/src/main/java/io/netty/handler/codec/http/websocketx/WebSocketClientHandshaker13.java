@@ -29,6 +29,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.URI;
+import java.util.Locale;
 
 /**
  * <p>
@@ -116,28 +117,26 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
 
         // Format request
         int wsPort = wsURL.getPort();
+        String host = wsURL.getHost();
+        if (wsPort != -1 && wsPort != 80 && wsPort != 443) {
+            // if the port is not standard (80/443) its needed to add the port to the header.
+            // See http://tools.ietf.org/html/rfc6454#section-6.2
+            host = host + ':' + wsPort;
+        }
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, path);
         HttpHeaders headers = request.headers();
 
-        headers.add(Names.UPGRADE, Values.WEBSOCKET.toLowerCase())
+        headers.add(Names.UPGRADE, Values.WEBSOCKET.toLowerCase(Locale.ENGLISH))
                .add(Names.CONNECTION, Values.UPGRADE)
                .add(Names.SEC_WEBSOCKET_KEY, key)
-               .add(Names.HOST, wsURL.getHost() + ':' + wsPort);
-
-        String originValue = "http://" + wsURL.getHost();
-        if (wsPort != 80 && wsPort != 443) {
-            // if the port is not standard (80/443) its needed to add the port to the header.
-            // See http://tools.ietf.org/html/rfc6454#section-6.2
-            originValue = originValue + ':' + wsPort;
-        }
-        headers.add(Names.SEC_WEBSOCKET_ORIGIN, originValue);
+               .add(Names.HOST, host)
+               .add(Names.SEC_WEBSOCKET_ORIGIN, "http://" + host)
+               .add(Names.SEC_WEBSOCKET_VERSION, "13");
 
         String expectedSubprotocol = expectedSubprotocol();
         if (expectedSubprotocol != null && !expectedSubprotocol.isEmpty()) {
             headers.add(Names.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
         }
-
-        headers.add(Names.SEC_WEBSOCKET_VERSION, "13");
 
         if (customHeaders != null) {
             headers.add(customHeaders);
