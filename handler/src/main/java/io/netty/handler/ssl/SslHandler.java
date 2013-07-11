@@ -830,14 +830,21 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             return;
         }
 
-        try {
-            // slice out the whole packet so unwrap will only be called with complete packets
-            int readerIndex = in.readerIndex();
-            in.skipBytes(packetLength);
-            unwrap(ctx, in.nioBuffer(readerIndex, packetLength), out);
-        } finally {
-            this.packetLength = 0;
-        }
+        // Slice out the whole packet so unwrap will only be called with complete packets.
+        // Also directly reset the packetLength. This is needed as unwrap(..) may trigger
+        // decode(...) again via:
+        // 1) unwrap(..) is called
+        // 2) wrap(...) is called from within unwrap(...)
+        // 3) wrap(...) calls unwrapLater(...)
+        // 4) unwrapLater(...) calls decode(...)
+        //
+        // See https://github.com/netty/netty/issues/1534
+        int readerIndex = in.readerIndex();
+        in.skipBytes(packetLength);
+        ByteBuffer buffer = in.nioBuffer(readerIndex, packetLength);
+        this.packetLength = 0;
+
+        unwrap(ctx, buffer, out);
     }
 
     private void unwrap(ChannelHandlerContext ctx, ByteBuffer packet, List<Object> out) throws SSLException {
