@@ -417,7 +417,8 @@ public class SpdySessionHandler
 
             // Frames must not be sent on half-closed streams
             if (spdySession.isLocalSideClosed(streamId)) {
-                throw PROTOCOL_EXCEPTION;
+                promise.setFailure(PROTOCOL_EXCEPTION);
+                return;
             }
 
             /*
@@ -506,14 +507,16 @@ public class SpdySessionHandler
             int streamId = spdySynStreamFrame.getStreamId();
 
             if (isRemoteInitiatedID(streamId)) {
-                throw PROTOCOL_EXCEPTION;
+                promise.setFailure(PROTOCOL_EXCEPTION);
+                return;
             }
 
             byte priority = spdySynStreamFrame.getPriority();
             boolean remoteSideClosed = spdySynStreamFrame.isUnidirectional();
             boolean localSideClosed = spdySynStreamFrame.isLast();
             if (!acceptStream(streamId, priority, remoteSideClosed, localSideClosed)) {
-                throw PROTOCOL_EXCEPTION;
+                promise.setFailure(PROTOCOL_EXCEPTION);
+                return;
             }
 
         } else if (msg instanceof SpdySynReplyFrame) {
@@ -523,7 +526,8 @@ public class SpdySessionHandler
 
             // Frames must not be sent on half-closed streams
             if (!isRemoteInitiatedID(streamId) || spdySession.isLocalSideClosed(streamId)) {
-                throw PROTOCOL_EXCEPTION;
+                promise.setFailure(PROTOCOL_EXCEPTION);
+                return;
             }
 
             // Close the local side of the stream if this is the last frame
@@ -576,7 +580,8 @@ public class SpdySessionHandler
 
             // Why is this being sent? Intercept it and fail the write.
             // Should have sent a CLOSE ChannelStateEvent
-            throw PROTOCOL_EXCEPTION;
+            promise.setFailure(PROTOCOL_EXCEPTION);
+            return;
 
         } else if (msg instanceof SpdyHeadersFrame) {
 
@@ -585,7 +590,8 @@ public class SpdySessionHandler
 
             // Frames must not be sent on half-closed streams
             if (spdySession.isLocalSideClosed(streamId)) {
-                throw PROTOCOL_EXCEPTION;
+                promise.setFailure(PROTOCOL_EXCEPTION);
+                return;
             }
 
             // Close the local side of the stream if this is the last frame
@@ -596,7 +602,8 @@ public class SpdySessionHandler
         } else if (msg instanceof SpdyWindowUpdateFrame) {
 
             // Why is this being sent? Intercept it and fail the write.
-            throw PROTOCOL_EXCEPTION;
+            promise.setFailure(PROTOCOL_EXCEPTION);
+            return;
         }
 
         ctx.write(msg, promise);
