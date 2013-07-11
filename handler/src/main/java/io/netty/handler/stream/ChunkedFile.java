@@ -16,7 +16,6 @@
 package io.netty.handler.stream;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.FileRegion;
 
@@ -148,9 +147,18 @@ public class ChunkedFile implements ChunkedInput<ByteBuf> {
         int chunkSize = (int) Math.min(this.chunkSize, endOffset - offset);
         // Check if the buffer is backed by an byte array. If so we can optimize it a bit an safe a copy
 
-        byte[] array = new byte[chunkSize];
-        file.readFully(array);
-        this.offset = offset + chunkSize;
-        return Unpooled.wrappedBuffer(array);
+        ByteBuf buf = ctx.alloc().heapBuffer(chunkSize);
+        boolean release = true;
+        try {
+            file.readFully(buf.array(), buf.arrayOffset(), chunkSize);
+            buf.writerIndex(chunkSize);
+            this.offset = offset + chunkSize;
+            release = false;
+            return buf;
+        } finally {
+            if (release) {
+                buf.release();
+            }
+        }
     }
 }
