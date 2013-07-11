@@ -1204,6 +1204,7 @@ public class HttpPostRequestDecoder {
      */
     public void destroy() {
         checkDestroyed();
+        destroyed = true;
 
         cleanFiles();
         if (undecodedChunk != null && undecodedChunk.refCnt() > 0) {
