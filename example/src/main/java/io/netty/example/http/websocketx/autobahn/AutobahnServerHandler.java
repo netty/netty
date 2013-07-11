@@ -70,12 +70,14 @@ public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
         // Handle a bad request.
         if (!req.getDecoderResult().isSuccess()) {
             sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST));
+            req.release();
             return;
         }
 
         // Allow only GET methods.
         if (req.getMethod() != GET) {
             sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN));
+            req.release();
             return;
         }
 
@@ -88,6 +90,7 @@ public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
         } else {
             handshaker.handshake(ctx.channel(), req);
         }
+        req.release();
     }
 
     private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame) {
