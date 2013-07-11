@@ -21,11 +21,11 @@ import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERR
 import static io.netty.util.CharsetUtil.UTF_8;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.MessageList;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -96,22 +96,18 @@ public class HtmlFileTransport extends ChannelOutboundHandlerAdapter implements 
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-        final int size = msgs.size();
-        for (int i = 0; i < size; i ++) {
-            final Object obj = msgs.get(i);
-            if (obj instanceof HttpRequest) {
-                String c = getCallbackFromRequest((HttpRequest) obj);
-                if (c.length() == 0) {
-                    respondCallbackRequired(ctx);
-                    ctx.fireUserEventTriggered(Events.CLOSE_SESSION);
-                    return;
-                } else {
-                    callback = c;
-                }
+    public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
+        if (msg instanceof HttpRequest) {
+            final String c = getCallbackFromRequest((HttpRequest) msg);
+            if (c.length() == 0) {
+                respondCallbackRequired(ctx);
+                ctx.fireUserEventTriggered(Events.CLOSE_SESSION);
+                return;
+            } else {
+                callback = c;
             }
         }
-        ctx.fireMessageReceived(msgs);
+        ctx.fireChannelRead(msg);
     }
 
     public String getCallbackFromRequest(final HttpRequest request) {
@@ -121,48 +117,43 @@ public class HtmlFileTransport extends ChannelOutboundHandlerAdapter implements 
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, final MessageList<Object> msgs, final ChannelPromise promise)
+    public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise)
             throws Exception {
-        final int size = msgs.size();
-        for (int i = 0; i < size; i++) {
-            final Object obj = msgs.get(i);
-            if (obj instanceof Frame) {
-                final Frame frame = (Frame) obj;
-                if (headerSent.compareAndSet(false, true)) {
-                    final HttpResponse response = createResponse(Transports.CONTENT_TYPE_HTML);
-                    final ByteBuf header = Unpooled.buffer();
-                    header.writeBytes(HEADER_PART1.duplicate());
-                    header.writeBytes(Unpooled.copiedBuffer(callback, UTF_8));
-                    header.writeBytes(HEADER_PART2.duplicate());
-                    final int spaces = 1024 * header.readableBytes();
-                    final ByteBuf paddedBuffer = Unpooled.buffer(1024 + 50);
-                    paddedBuffer.writeBytes(header);
-                    for (int s = 0; s < spaces + 20; s++) {
-                        paddedBuffer.writeByte(' ');
-                    }
-                    paddedBuffer.writeBytes(END_HEADER.duplicate());
-                    ctx.write(response, promise);
-                    ctx.write(new DefaultHttpContent(paddedBuffer));
+        if (msg instanceof Frame) {
+            final Frame frame = (Frame) msg;
+            if (headerSent.compareAndSet(false, true)) {
+                final HttpResponse response = createResponse(Transports.CONTENT_TYPE_HTML);
+                final ByteBuf header = Unpooled.buffer();
+                header.writeBytes(HEADER_PART1.duplicate());
+                header.writeBytes(Unpooled.copiedBuffer(callback, UTF_8));
+                header.writeBytes(HEADER_PART2.duplicate());
+                final int spaces = 1024 * header.readableBytes();
+                final ByteBuf paddedBuffer = Unpooled.buffer(1024 + 50);
+                paddedBuffer.writeBytes(header);
+                for (int s = 0; s < spaces + 20; s++) {
+                    paddedBuffer.writeByte(' ');
                 }
+                paddedBuffer.writeBytes(END_HEADER.duplicate());
+                ctx.writeAndFlush(response, promise);
+                ctx.writeAndFlush(new DefaultHttpContent(paddedBuffer));
+            }
 
-                final ByteBuf data = Unpooled.buffer();
-                data.writeBytes(PREFIX.duplicate());
-                data.writeBytes(Transports.escapeJson(frame.content(), data));
-                data.writeBytes(POSTFIX.duplicate());
-                final int dataSize = data.readableBytes();
-                ctx.write(new DefaultHttpContent(data));
+            final ByteBuf data = Unpooled.buffer();
+            data.writeBytes(PREFIX.duplicate());
+            data.writeBytes(Transports.escapeJson(frame.content(), data));
+            data.writeBytes(POSTFIX.duplicate());
+            final int dataSize = data.readableBytes();
+            ctx.writeAndFlush(new DefaultHttpContent(data));
 
-                if (maxBytesLimit(dataSize)) {
-                    logger.debug("max bytesSize limit reached [" + config.maxStreamingBytesSize() + "]. Closing");
-                    ctx.write(LastHttpContent.EMPTY_LAST_CONTENT);
-                    ctx.close();
-                }
+            if (maxBytesLimit(dataSize)) {
+                logger.debug("max bytesSize limit reached [" + config.maxStreamingBytesSize() + "]. Closing");
+                ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT).addListener(ChannelFutureListener.CLOSE);
             }
         }
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(final ChannelHandlerContext ctx) throws Exception {
         logger.debug("Added [" + ctx + "]");
     }
 
@@ -181,9 +172,9 @@ public class HtmlFileTransport extends ChannelOutboundHandlerAdapter implements 
         return bytesSent.get() >= config.maxStreamingBytesSize();
     }
 
-    protected HttpResponse createResponse(String contentType) {
+    protected HttpResponse createResponse(final String contentType) {
         final HttpVersion version = request.getProtocolVersion();
-        HttpResponse response = new DefaultHttpResponse(version, HttpResponseStatus.OK);
+        final HttpResponse response = new DefaultHttpResponse(version, HttpResponseStatus.OK);
         if (request.getProtocolVersion().equals(HttpVersion.HTTP_1_1)) {
             response.headers().set(TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
         }
@@ -193,38 +184,38 @@ public class HtmlFileTransport extends ChannelOutboundHandlerAdapter implements 
     }
 
     @Override
-    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+    public void channelRegistered(final ChannelHandlerContext ctx) throws Exception {
         ctx.fireChannelRegistered();
     }
 
     @Override
-    public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+    public void channelUnregistered(final ChannelHandlerContext ctx) throws Exception {
         ctx.fireChannelUnregistered();
     }
 
     @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+    public void channelActive(final ChannelHandlerContext ctx) throws Exception {
         ctx.fireChannelActive();
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
         ctx.fireChannelInactive();
     }
 
     @Override
-    public void channelReadSuspended(ChannelHandlerContext ctx) throws Exception {
-        ctx.fireChannelReadSuspended();
-    }
-
-    @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+    public void userEventTriggered(final ChannelHandlerContext ctx, final Object evt) throws Exception {
         ctx.fireUserEventTriggered(evt);
     }
 
     @Override
-    public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+    public void channelWritabilityChanged(final ChannelHandlerContext ctx) throws Exception {
         ctx.fireChannelWritabilityChanged();
+    }
+
+    @Override
+    public void channelReadComplete(final ChannelHandlerContext ctx) throws Exception {
+        ctx.fireChannelReadComplete();
     }
 
 }

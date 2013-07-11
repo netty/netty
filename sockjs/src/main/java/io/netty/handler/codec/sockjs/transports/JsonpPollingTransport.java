@@ -26,7 +26,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.MessageList;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -57,51 +56,42 @@ public class JsonpPollingTransport extends ChannelOutboundHandlerAdapter impleme
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-        final int size = msgs.size();
-        for (int i = 0; i < size; i ++) {
-            final Object obj = msgs.get(i);
-            if (obj instanceof HttpRequest) {
-                final QueryStringDecoder qsd = new QueryStringDecoder(request.getUri());
-                final List<String> c = qsd.parameters().get("c");
-                if (c == null) {
-                    respond(ctx, request.getProtocolVersion(), INTERNAL_SERVER_ERROR,
-                            "\"callback\" parameter required");
-                    ctx.fireUserEventTriggered(Events.CLOSE_SESSION);
-                    return;
-                } else {
-                    callback = c.get(0);
-                }
+    public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
+        if (msg instanceof HttpRequest) {
+            final QueryStringDecoder qsd = new QueryStringDecoder(request.getUri());
+            final List<String> c = qsd.parameters().get("c");
+            if (c == null) {
+                respond(ctx, request.getProtocolVersion(), INTERNAL_SERVER_ERROR, "\"callback\" parameter required");
+                ctx.fireUserEventTriggered(Events.CLOSE_SESSION);
+                return;
+            } else {
+                callback = c.get(0);
             }
         }
-        ctx.fireMessageReceived(msgs);
+        ctx.fireChannelRead(msg);
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, final MessageList<Object> msgs, final ChannelPromise promise)
+    public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise)
             throws Exception {
-        final int size = msgs.size();
-        for (int i = 0; i < size; i ++) {
-            final Object obj = msgs.get(i);
-            if (obj instanceof Frame) {
-                final Frame frame = (Frame) obj;
-                logger.debug("flush : " + frame);
-                final FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), OK);
-                final ByteBuf content = frame.content();
+        if (msg instanceof Frame) {
+            final Frame frame = (Frame) msg;
+            logger.debug("flush : " + frame);
+            final FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), OK);
+            final ByteBuf content = frame.content();
 
-                final ByteBuf buffer = Unpooled.buffer();
-                Transports.escapeJson(content, buffer);
-                final String function = callback + "(\"" + buffer.toString(CharsetUtil.UTF_8) + "\");\r\n";
+            final ByteBuf buffer = Unpooled.buffer();
+            Transports.escapeJson(content, buffer);
+            final String function = callback + "(\"" + buffer.toString(CharsetUtil.UTF_8) + "\");\r\n";
 
-                final ByteBuf responseContent = Unpooled.copiedBuffer(function, CharsetUtil.UTF_8);
-                response.headers().set(CONTENT_TYPE, Transports.CONTENT_TYPE_JAVASCRIPT);
-                response.headers().set(CONTENT_LENGTH, responseContent.readableBytes());
-                response.content().writeBytes(responseContent);
-                response.headers().set(CONNECTION, HttpHeaders.Values.CLOSE);
-                Transports.setNoCacheHeaders(response);
-                Transports.setSessionIdCookie(response, config, request);
-                ctx.write(response, promise);
-            }
+            final ByteBuf responseContent = Unpooled.copiedBuffer(function, CharsetUtil.UTF_8);
+            response.headers().set(CONTENT_TYPE, Transports.CONTENT_TYPE_JAVASCRIPT);
+            response.headers().set(CONTENT_LENGTH, responseContent.readableBytes());
+            response.content().writeBytes(responseContent);
+            response.headers().set(CONNECTION, HttpHeaders.Values.CLOSE);
+            Transports.setNoCacheHeaders(response);
+            Transports.setSessionIdCookie(response, config, request);
+            ctx.writeAndFlush(response, promise);
         }
     }
 
@@ -111,49 +101,47 @@ public class JsonpPollingTransport extends ChannelOutboundHandlerAdapter impleme
             final String message) throws Exception {
         final FullHttpResponse response = new DefaultFullHttpResponse(httpVersion, status);
         Transports.writeContent(response, message, Transports.CONTENT_TYPE_JAVASCRIPT);
-        if (ctx.channel().isActive() && ctx.channel().isRegistered()) {
-            ctx.write(response);
-        }
+        Transports.writeResponse(ctx, response);
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(final ChannelHandlerContext ctx) throws Exception {
         logger.debug("Added [" + ctx + "]");
     }
 
     @Override
-    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-        ctx.fireChannelReadSuspended();
+    public void channelRegistered(final ChannelHandlerContext ctx) throws Exception {
+        ctx.fireChannelRegistered();
     }
 
     @Override
-    public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+    public void channelUnregistered(final ChannelHandlerContext ctx) throws Exception {
         ctx.fireChannelUnregistered();
     }
 
     @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+    public void channelActive(final ChannelHandlerContext ctx) throws Exception {
         ctx.fireChannelActive();
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
         ctx.fireChannelInactive();
     }
 
     @Override
-    public void channelReadSuspended(ChannelHandlerContext ctx) throws Exception {
-        ctx.fireChannelReadSuspended();
-    }
-
-    @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+    public void userEventTriggered(final ChannelHandlerContext ctx, Object evt) throws Exception {
         ctx.fireUserEventTriggered(evt);
     }
 
     @Override
-    public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+    public void channelWritabilityChanged(final ChannelHandlerContext ctx) throws Exception {
         ctx.fireChannelWritabilityChanged();
+    }
+
+    @Override
+    public void channelReadComplete(final ChannelHandlerContext ctx) throws Exception {
+        ctx.fireChannelReadComplete();
     }
 
 }

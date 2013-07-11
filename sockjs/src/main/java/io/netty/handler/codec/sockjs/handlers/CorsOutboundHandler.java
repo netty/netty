@@ -18,7 +18,6 @@ package io.netty.handler.codec.sockjs.handlers;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.MessageList;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.util.internal.logging.InternalLogger;
@@ -28,24 +27,21 @@ public class CorsOutboundHandler extends ChannelOutboundHandlerAdapter {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(CorsOutboundHandler.class);
 
     @Override
-    public void write(final ChannelHandlerContext ctx, final MessageList<Object> msgs, final ChannelPromise promise)
+    public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise)
             throws Exception {
-        for (int i = 0; i < msgs.size(); i++) {
-            final Object obj = msgs.get(i);
-            if (obj instanceof HttpResponse) {
-                final HttpResponse response = (HttpResponse) obj;
-                final CorsMetadata cmd = ctx.channel().attr(CorsInboundHandler.CORS).get();
-                if (cmd != null) {
-                    response.headers().set(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_ORIGIN, cmd.origin());
-                    if (cmd.hasHeaders()) {
-                        response.headers().set(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_HEADERS, cmd.headers());
-                    }
-                    response.headers().set(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
+        if (msg instanceof HttpResponse) {
+            final HttpResponse response = (HttpResponse) msg;
+            final CorsMetadata cmd = ctx.channel().attr(CorsInboundHandler.CORS).get();
+            if (cmd != null) {
+                response.headers().set(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_ORIGIN, cmd.origin());
+                if (cmd.hasHeaders()) {
+                    response.headers().set(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_HEADERS, cmd.headers());
                 }
-                logger.debug("Responding ..." + response.getStatus());
+                response.headers().set(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
             }
-            ctx.write(obj, promise);
+            logger.debug("Responding ..." + response.getStatus());
         }
+        ctx.writeAndFlush(msg, promise);
     }
 
     @Override

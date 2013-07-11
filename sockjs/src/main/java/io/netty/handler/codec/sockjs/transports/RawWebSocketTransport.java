@@ -61,25 +61,26 @@ public class RawWebSocketTransport extends SimpleChannelInboundHandler<Object> {
     }
 
     @Override
-    protected void messageReceived(final ChannelHandlerContext ctx, final Object msg) throws Exception {
+    protected void channelRead0(final ChannelHandlerContext ctx, final Object msg) throws Exception {
         if (msg instanceof FullHttpRequest) {
             handleHttpRequest(ctx, (FullHttpRequest) msg);
         } else if (msg instanceof WebSocketFrame) {
             handleWebSocketFrame(ctx, (WebSocketFrame) msg);
         } else {
-            ctx.fireMessageReceived(msg);
+            ctx.fireChannelRead(msg);
         }
     }
 
     private boolean checkRequestHeaders(final ChannelHandlerContext ctx, final HttpRequest req) {
         if (req.getMethod() != GET) {
-            ctx.write(methodNotAllowedResponse(req.getProtocolVersion())).addListener(ChannelFutureListener.CLOSE);
+            ctx.writeAndFlush(methodNotAllowedResponse(req.getProtocolVersion()))
+            .addListener(ChannelFutureListener.CLOSE);
             return false;
         }
 
         final String upgradeHeader = req.headers().get(HttpHeaders.Names.UPGRADE);
         if (upgradeHeader == null || !upgradeHeader.toLowerCase().equals("websocket")) {
-            ctx.write(badRequestResponse(req.getProtocolVersion(), "Can \"Upgrade\" only to \"WebSocket\"."))
+            ctx.writeAndFlush(badRequestResponse(req.getProtocolVersion(), "Can \"Upgrade\" only to \"WebSocket\"."))
             .addListener(ChannelFutureListener.CLOSE);
             return false;
         }
@@ -90,7 +91,7 @@ public class RawWebSocketTransport extends SimpleChannelInboundHandler<Object> {
             connectHeader = HttpHeaders.Values.UPGRADE.toString();
         }
         if (connectHeader == null || !connectHeader.toLowerCase().equals("upgrade")) {
-            ctx.write(badRequestResponse(req.getProtocolVersion(), "\"Connection\" must be \"Upgrade\"."))
+            ctx.writeAndFlush(badRequestResponse(req.getProtocolVersion(), "\"Connection\" must be \"Upgrade\"."))
             .addListener(ChannelFutureListener.CLOSE);
             return false;
         }
@@ -121,7 +122,7 @@ public class RawWebSocketTransport extends SimpleChannelInboundHandler<Object> {
                         service.onOpen(new SessionContext() {
                             @Override
                             public void send(String message) {
-                                ctx.write(new TextWebSocketFrame(message));
+                                ctx.writeAndFlush(new TextWebSocketFrame(message));
                             }
                             @Override
                             public void close() {
@@ -154,7 +155,7 @@ public class RawWebSocketTransport extends SimpleChannelInboundHandler<Object> {
         }
         if (wsFrame instanceof PingWebSocketFrame) {
             wsFrame.content().retain();
-            ctx.channel().write(new PongWebSocketFrame(wsFrame.content()));
+            ctx.channel().writeAndFlush(new PongWebSocketFrame(wsFrame.content()));
             return;
         }
         if (!(wsFrame instanceof TextWebSocketFrame)) {
@@ -170,7 +171,7 @@ public class RawWebSocketTransport extends SimpleChannelInboundHandler<Object> {
         if (cause instanceof WebSocketHandshakeException) {
             final HttpRequest request = ctx.attr(REQUEST_KEY).get();
             logger.error("Failed with ws handshake for request: " + request, cause);
-            ctx.write(internalServerErrorResponse(request.getProtocolVersion(), cause.getMessage()))
+            ctx.writeAndFlush(internalServerErrorResponse(request.getProtocolVersion(), cause.getMessage()))
             .addListener(ChannelFutureListener.CLOSE);
         } else {
             ctx.fireExceptionCaught(cause);

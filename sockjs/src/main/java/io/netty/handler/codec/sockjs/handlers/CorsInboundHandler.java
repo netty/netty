@@ -47,14 +47,19 @@ public class CorsInboundHandler extends SimpleChannelInboundHandler<HttpRequest>
     static final AttributeKey<CorsMetadata> CORS = new AttributeKey<CorsMetadata>("cors.metadata");
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx, final HttpRequest request) throws Exception {
+    public void channelRead0(final ChannelHandlerContext ctx, final HttpRequest request) throws Exception {
         final CorsMetadata metadata = extractCorsMetadata(request);
         if (isPreflightRequest(request)) {
             handlePreflight(ctx, metadata, request);
         } else {
             ctx.channel().attr(CORS).set(metadata);
-            ctx.fireMessageReceived(ReferenceCountUtil.retain(request));
+            ctx.fireChannelRead(ReferenceCountUtil.retain(request));
         }
+    }
+
+    @Override
+    public void channelReadComplete(final ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
     }
 
     private void handlePreflight(final ChannelHandlerContext ctx, final CorsMetadata md, final HttpRequest request) {

@@ -19,13 +19,10 @@ import static io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION;
 import static io.netty.handler.codec.http.HttpHeaders.Values.CLOSE;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.sockjs.transports.Transports.CONTENT_TYPE_JAVASCRIPT;
-import static io.netty.handler.codec.sockjs.transports.Transports.setDefaultHeaders;
 import static io.netty.handler.codec.sockjs.transports.Transports.wrapWithLN;
-import static io.netty.handler.codec.sockjs.transports.Transports.writeContent;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.MessageList;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -55,21 +52,16 @@ public class XhrPollingTransport extends ChannelOutboundHandlerAdapter {
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, final MessageList<Object> msgs, final ChannelPromise promise)
+    public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise)
             throws Exception {
-        final int size = msgs.size();
-        for (int i = 0; i < size; i ++) {
-            final Object obj = msgs.get(i);
-            if (obj instanceof Frame) {
-                final Frame frame = (Frame) obj;
-                final FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), OK);
-                response.headers().set(CONNECTION, CLOSE);
-                setDefaultHeaders(response, config, request);
-                writeContent(response, wrapWithLN(frame.content()), CONTENT_TYPE_JAVASCRIPT);
-                ctx.write(response, promise);
-            }
+        if (msg instanceof Frame) {
+            final Frame frame = (Frame) msg;
+            final FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), OK);
+            response.headers().set(CONNECTION, CLOSE);
+            Transports.setDefaultHeaders(response, config, request);
+            Transports.writeContent(response, wrapWithLN(frame.content()), CONTENT_TYPE_JAVASCRIPT);
+            Transports.writeResponse(ctx, promise, response);
         }
-        msgs.releaseAllAndRecycle();
     }
 
     @Override

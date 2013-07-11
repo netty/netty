@@ -74,7 +74,7 @@ public class SockJSHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     }
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx, final FullHttpRequest request) throws Exception {
+    public void channelRead0(final ChannelHandlerContext ctx, final FullHttpRequest request) throws Exception {
         final String path = new QueryStringDecoder(request.getUri()).path();
         for (SockJSServiceFactory factory : factories.values()) {
             if (path.startsWith(factory.config().prefix())) {
@@ -99,7 +99,7 @@ public class SockJSHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
             writeResponse(ctx.channel(), request, Iframe.response(factory.config(), request));
         } else if (Transports.Types.WEBSOCKET.path().equals(path)) {
             addTransportHandler(new RawWebSocketTransport(factory.config(), factory.create()), ctx);
-            ctx.fireMessageReceived(request.retain());
+            ctx.fireChannelRead(request.retain());
         } else {
             final PathParams sessionPath = matches(path);
             if (sessionPath.matches()) {
@@ -151,7 +151,7 @@ public class SockJSHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
                     sessions), ctx);
             break;
         }
-        ctx.fireMessageReceived(request.retain());
+        ctx.fireChannelRead(request.retain());
     }
 
     private void addTransportHandler(final ChannelHandler transportHandler, final ChannelHandlerContext ctx) {
@@ -199,7 +199,7 @@ public class SockJSHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         if (!request.getProtocolVersion().isKeepAliveDefault() && hasKeepAliveHeader) {
             response.headers().set(CONNECTION, KEEP_ALIVE);
         }
-        final ChannelFuture wf = channel.write(response);
+        final ChannelFuture wf = channel.writeAndFlush(response);
         if (!HttpHeaders.isKeepAlive(request)) {
             wf.addListener(ChannelFutureListener.CLOSE);
         }

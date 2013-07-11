@@ -19,8 +19,6 @@ import static io.netty.handler.codec.http.HttpMethod.GET;
 import static io.netty.handler.codec.sockjs.transports.Transports.badRequestResponse;
 import static io.netty.handler.codec.sockjs.transports.Transports.internalServerErrorResponse;
 import static io.netty.handler.codec.sockjs.transports.Transports.methodNotAllowedResponse;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -48,7 +46,6 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import org.codehaus.jackson.JsonParseException;
-import org.codehaus.jackson.map.ObjectMapper;
 
 /**
  * WebSocketTransport is responsible for the WebSocket handshake and
@@ -66,7 +63,7 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
     }
 
     @Override
-    protected void messageReceived(final ChannelHandlerContext ctx, final Object msg) throws Exception {
+    protected void channelRead0(final ChannelHandlerContext ctx, final Object msg) throws Exception {
         if (msg instanceof FullHttpRequest) {
             handleHttpRequest(ctx, (FullHttpRequest) msg);
         } else if (msg instanceof WebSocketFrame) {
@@ -74,7 +71,7 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
         }
 
         if (passMessage) {
-            ctx.fireMessageReceived(msg);
+            ctx.fireChannelRead(msg);
         }
     }
 
@@ -82,14 +79,15 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
         logger.info("Check Request: " + req);
         if (req.getMethod() != GET) {
             logger.info("Request was not of type GET, was " + req.getMethod());
-            ctx.write(methodNotAllowedResponse(req.getProtocolVersion())).addListener(ChannelFutureListener.CLOSE);
+            ctx.writeAndFlush(methodNotAllowedResponse(req.getProtocolVersion()))
+            .addListener(ChannelFutureListener.CLOSE);
             return false;
         }
 
         final String upgradeHeader = req.headers().get(HttpHeaders.Names.UPGRADE);
         if (upgradeHeader == null || !upgradeHeader.toLowerCase().equals("websocket")) {
             logger.info("Upgrade header was not 'websocket' was: " + upgradeHeader);
-            ctx.write(badRequestResponse(req.getProtocolVersion(), "Can \"Upgrade\" only to \"WebSocket\"."))
+            ctx.writeAndFlush(badRequestResponse(req.getProtocolVersion(), "Can \"Upgrade\" only to \"WebSocket\"."))
             .addListener(ChannelFutureListener.CLOSE);
             return false;
         }
@@ -102,7 +100,7 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
         }
         if (connectHeader == null || !connectHeader.toLowerCase().equals("upgrade")) {
             logger.info("Connection header was not 'upgrade' was: " + connectHeader);
-            ctx.write(badRequestResponse(req.getProtocolVersion(), "\"Connection\" must be \"Upgrade\"."))
+            ctx.writeAndFlush(badRequestResponse(req.getProtocolVersion(), "\"Connection\" must be \"Upgrade\"."))
             .addListener(ChannelFutureListener.CLOSE);
             return false;
         }
@@ -181,7 +179,7 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
         }
         if (wsFrame instanceof PingWebSocketFrame) {
             wsFrame.content().retain();
-            ctx.channel().write(new PongWebSocketFrame(wsFrame.content()));
+            ctx.channel().writeAndFlush(new PongWebSocketFrame(wsFrame.content()));
             return;
         }
         if (!(wsFrame instanceof TextWebSocketFrame)) {
@@ -191,7 +189,7 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
         final String[] messages = JsonUtil.decode((TextWebSocketFrame) wsFrame);
         for (String message : messages) {
             logger.debug("fire recieved message : " + message);
-            ctx.fireMessageReceived(message);
+            ctx.fireChannelRead(message);
         }
     }
 
@@ -206,7 +204,7 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
         } else if (cause instanceof WebSocketHandshakeException) {
             final HttpRequest request = ctx.attr(REQUEST_KEY).get();
             logger.error("Failed with ws handshake for request: " + request, cause);
-            ctx.write(internalServerErrorResponse(request.getProtocolVersion(), cause.getMessage()))
+            ctx.writeAndFlush(internalServerErrorResponse(request.getProtocolVersion(), cause.getMessage()))
             .addListener(ChannelFutureListener.CLOSE);
         } else {
             ctx.fireExceptionCaught(cause);

@@ -20,7 +20,6 @@ import java.util.List;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.MessageList;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.sockjs.protocol.Frame;
 import io.netty.handler.codec.sockjs.protocol.MessageFrame;
@@ -31,32 +30,21 @@ class RawWebSocketSendHandler extends ChannelOutboundHandlerAdapter {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(RawWebSocketSendHandler.class);
 
     @Override
-    public void write(final ChannelHandlerContext ctx, final MessageList<Object> msgs, final ChannelPromise promise)
+    public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise)
             throws Exception {
-        final int size = msgs.size();
-        final MessageList<TextWebSocketFrame> frames = MessageList.newInstance();
-        for (int i = 0; i < size; i ++) {
-            final Object obj = msgs.get(i);
-            if (obj instanceof Frame) {
-                final Frame sockJSFrame = (Frame) obj;
-                if (sockJSFrame instanceof MessageFrame) {
-                    final MessageFrame mf = (MessageFrame) sockJSFrame;
-                    final List<String> messages = mf.messages();
-                    for (String message : messages) {
-                        logger.debug("writing message : " + message);
-                        frames.add(new TextWebSocketFrame(message));
-                    }
+        if (msg instanceof Frame) {
+            final Frame sockJSFrame = (Frame) msg;
+            if (sockJSFrame instanceof MessageFrame) {
+                final MessageFrame messageFrame = (MessageFrame) sockJSFrame;
+                final List<String> messages = messageFrame.messages();
+                for (String message : messages) {
+                    logger.debug("writing message : " + message);
+                    ctx.write(new TextWebSocketFrame(message));
                 }
             }
         }
-        msgs.recycle();
-        ctx.write(frames);
+        ctx.flush();
         promise.setSuccess();
-    }
-
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        cause.printStackTrace();
     }
 
 }

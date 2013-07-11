@@ -19,10 +19,10 @@ import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
 import static io.netty.handler.codec.http.HttpHeaders.Names.TRANSFER_ENCODING;
 import static io.netty.handler.codec.sockjs.transports.Transports.wrapWithLN;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.MessageList;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -55,37 +55,31 @@ public class XhrStreamingTransport extends ChannelOutboundHandlerAdapter {
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, final MessageList<Object> msgs, final ChannelPromise promise)
+    public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise)
             throws Exception {
-        final int size = msgs.size();
-        for (int i = 0; i < size; i++) {
-            final Object obj = msgs.get(i);
-            if (obj instanceof Frame) {
-                final Frame frame = (Frame) obj;
-                logger.debug("Flush XhrStream headerSent: " + headerSent.get());
-                if (headerSent.compareAndSet(false, true)) {
-                    logger.debug("Flush XhrStream send response");
-                    final HttpResponse response = createResponse(Transports.CONTENT_TYPE_JAVASCRIPT);
-                    ctx.write(response);
+        if (msg instanceof Frame) {
+            final Frame frame = (Frame) msg;
+            logger.debug("Flush XhrStream headerSent: " + headerSent.get());
+            if (headerSent.compareAndSet(false, true)) {
+                logger.debug("Flush XhrStream send response");
+                final HttpResponse response = createResponse(Transports.CONTENT_TYPE_JAVASCRIPT);
+                ctx.writeAndFlush(response);
 
-                    logger.debug("Flush XhrStream send prelude");
-                    final ByteBuf content = Transports.wrapWithLN(new PreludeFrame().content());
-                    final DefaultHttpContent preludeChunk = new DefaultHttpContent(content);
-                    ctx.write(preludeChunk);
-                }
+                logger.debug("Flush XhrStream send prelude");
+                final ByteBuf content = Transports.wrapWithLN(new PreludeFrame().content());
+                final DefaultHttpContent preludeChunk = new DefaultHttpContent(content);
+                ctx.writeAndFlush(preludeChunk);
+            }
 
-                logger.debug("Flush XhrStream frame :" + frame.content().toString(CharsetUtil.UTF_8));
-                ctx.write(new DefaultHttpContent(wrapWithLN(frame.content())), promise);
-                if (frame instanceof CloseFrame) {
-                    ctx.write(LastHttpContent.EMPTY_LAST_CONTENT);
-                    ctx.close();
-                }
+            logger.debug("Flush XhrStream frame :" + frame.content().toString(CharsetUtil.UTF_8));
+            ctx.writeAndFlush(new DefaultHttpContent(wrapWithLN(frame.content())), promise);
+            if (frame instanceof CloseFrame) {
+                ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT).addListener(ChannelFutureListener.CLOSE);
+            }
 
-                if (maxBytesLimit(frame.content().readableBytes())) {
-                    logger.debug("max bytesSize limit reached [" + config.maxStreamingBytesSize() + "]. Closing");
-                    ctx.write(LastHttpContent.EMPTY_LAST_CONTENT);
-                    ctx.close();
-                }
+            if (maxBytesLimit(frame.content().readableBytes())) {
+                logger.debug("max bytesSize limit reached [" + config.maxStreamingBytesSize() + "]. Closing");
+                ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT).addListener(ChannelFutureListener.CLOSE);
             }
         }
     }

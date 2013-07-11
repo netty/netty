@@ -137,7 +137,7 @@ public class WebSocketHAProxyHandshaker extends WebSocketServerHandshaker00 {
     @Override
     public ChannelFuture handshake(Channel channel, FullHttpRequest req) {
         final FullHttpResponse response = newHandshakeResponse(req, null);
-        return channel.write(response).addListener(new ChannelFutureListener() {
+        return channel.writeAndFlush(response).addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.isSuccess()) {

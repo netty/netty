@@ -20,10 +20,10 @@ import static io.netty.handler.codec.http.HttpHeaders.Names.TRANSFER_ENCODING;
 import static io.netty.util.CharsetUtil.UTF_8;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.MessageList;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpConstants;
@@ -60,30 +60,25 @@ public class EventSourceTransport extends ChannelOutboundHandlerAdapter {
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, final MessageList<Object> msgs, final ChannelPromise promise)
+    public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise)
             throws Exception {
-        final int size = msgs.size();
-        for (int i = 0; i < size; i++) {
-            final Object obj = msgs.get(i);
-            if (obj instanceof Frame) {
-                final Frame frame = (Frame) obj;
-                if (headerSent.compareAndSet(false, true)) {
-                    ctx.write(createResponse(CONTENT_TYPE_EVENT_STREAM), promise);
-                    ctx.write(new DefaultHttpContent(CRLF.duplicate()));
-                }
+        if (msg instanceof Frame) {
+            final Frame frame = (Frame) msg;
+            if (headerSent.compareAndSet(false, true)) {
+                ctx.writeAndFlush(createResponse(CONTENT_TYPE_EVENT_STREAM), promise);
+                ctx.writeAndFlush(new DefaultHttpContent(CRLF.duplicate()));
+            }
 
-                final ByteBuf data = Unpooled.buffer();
-                data.writeBytes(FRAME_START.duplicate());
-                data.writeBytes(frame.content());
-                data.writeBytes(FRAME_END.duplicate());
-                final int dataSize = data.readableBytes();
-                ctx.write(new DefaultHttpContent(data));
+            final ByteBuf data = Unpooled.buffer();
+            data.writeBytes(FRAME_START.duplicate());
+            data.writeBytes(frame.content());
+            data.writeBytes(FRAME_END.duplicate());
+            final int dataSize = data.readableBytes();
+            ctx.writeAndFlush(new DefaultHttpContent(data));
 
-                if (maxBytesLimit(dataSize)) {
-                    logger.debug("max bytesSize limit reached [" + config.maxStreamingBytesSize() + "]. Closing");
-                    ctx.write(LastHttpContent.EMPTY_LAST_CONTENT);
-                    ctx.close();
-                }
+            if (maxBytesLimit(dataSize)) {
+                logger.debug("max bytesSize limit reached [" + config.maxStreamingBytesSize() + "]. Closing");
+                ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT).addListener(ChannelFutureListener.CLOSE);
             }
         }
     }

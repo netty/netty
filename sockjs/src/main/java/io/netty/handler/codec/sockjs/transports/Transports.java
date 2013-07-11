@@ -215,9 +215,7 @@ public final class Transports {
             final String content,
             final ChannelPromise promise) throws Exception {
         final FullHttpResponse response = responseWithContent(version, status, contentType, content);
-        if (ctx.channel().isActive() && ctx.channel().isRegistered()) {
-            ctx.write(response, promise);
-        }
+        writeResponse(ctx, response);
     }
 
     public static void respond(final ChannelHandlerContext ctx,
@@ -226,9 +224,7 @@ public final class Transports {
             final String contentType,
             final String content) throws Exception {
         final FullHttpResponse response = responseWithContent(version, status, contentType, content);
-        if (ctx.channel().isActive() && ctx.channel().isRegistered()) {
-            ctx.write(response);
-        }
+        writeResponse(ctx, response);
     }
 
     public static FullHttpResponse responseWithoutContent(final HttpVersion version, final HttpResponseStatus status) {
@@ -246,14 +242,14 @@ public final class Transports {
 
     public static void writeResponse(final ChannelHandlerContext ctx, final HttpResponse response) {
         if (ctx.channel().isActive() && ctx.channel().isRegistered()) {
-            ctx.write(response);
+            ctx.writeAndFlush(response);
         }
     }
 
     public static void writeResponse(final ChannelHandlerContext ctx, final ChannelPromise promise,
             final HttpResponse response) {
         if (ctx.channel().isActive() && ctx.channel().isRegistered()) {
-            ctx.write(response, promise);
+            ctx.writeAndFlush(response, promise);
         }
     }
 }

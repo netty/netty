@@ -47,7 +47,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.MessageList;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.ClientCookieEncoder;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -2145,9 +2144,8 @@ public class SockJSProtocolTest {
     private class ContentRetainer extends ChannelOutboundHandlerAdapter {
 
         @Override
-        public void write(final ChannelHandlerContext ctx, final MessageList<Object> msgs,
+        public void write(final ChannelHandlerContext ctx, final Object msg,
                 final ChannelPromise channelPromise) throws Exception {
-            final int size = msgs.size();
             // Remove WebSocket encoder so that we can assert the plain WebSocketFrame
             if (ctx.pipeline().get("wsencoder") != null) {
                 ctx.pipeline().remove("wsencoder");
@@ -2157,14 +2155,11 @@ public class SockJSProtocolTest {
                 ctx.pipeline().remove(WebSocket00FrameEncoder.class);
             }
 
-            for (int i = 0; i < size; i++) {
-                final Object obj = msgs.get(i);
-                if (obj instanceof FullHttpResponse) {
-                    final FullHttpResponse response = (FullHttpResponse) obj;
-                    response.retain(2);
-                }
-                ctx.write(obj, channelPromise);
+            if (msg instanceof FullHttpResponse) {
+                final FullHttpResponse response = (FullHttpResponse) msg;
+                response.retain(2);
             }
+            ctx.write(msg, channelPromise);
         }
     }
 

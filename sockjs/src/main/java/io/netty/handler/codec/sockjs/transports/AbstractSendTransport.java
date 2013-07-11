@@ -50,21 +50,21 @@ public abstract class AbstractSendTransport extends SimpleChannelInboundHandler<
     }
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx, final FullHttpRequest request) throws Exception {
+    public void channelRead0(final ChannelHandlerContext ctx, final FullHttpRequest request) throws Exception {
         logger.debug("uri=" + request.getUri() + "");
         final String content = getContent(request);
         if (noContent(content)) {
-            ctx.write(internalServerErrorResponse(request.getProtocolVersion(), "Payload expected."))
+            ctx.writeAndFlush(internalServerErrorResponse(request.getProtocolVersion(), "Payload expected."))
             .addListener(ChannelFutureListener.CLOSE);
         } else {
             try {
                 final String[] messages = JsonUtil.decode(content);
                 for (String message : messages) {
-                    ctx.fireMessageReceived(message);
+                    ctx.fireChannelRead(message);
                 }
                 respond(ctx, request);
             } catch (final JsonParseException e) {
-                ctx.write(internalServerErrorResponse(request.getProtocolVersion(), "Broken JSON encoding."));
+                ctx.writeAndFlush(internalServerErrorResponse(request.getProtocolVersion(), "Broken JSON encoding."));
             }
         }
     }
@@ -107,9 +107,9 @@ public abstract class AbstractSendTransport extends SimpleChannelInboundHandler<
             final String message)
             throws Exception {
         final FullHttpResponse response = responseWithContent(httpVersion, status, CONTENT_TYPE_PLAIN, message);
-        setDefaultHeaders(response, config);
+        Transports.setDefaultHeaders(response, config);
         if (ctx.channel().isActive() && ctx.channel().isRegistered()) {
-            ctx.write(response).addListener(ChannelFutureListener.CLOSE);
+            ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
         }
     }
 

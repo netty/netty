@@ -55,7 +55,7 @@ public class WebSocketHAProxyTransport extends SimpleChannelInboundHandler<Objec
     }
 
     @Override
-    protected void messageReceived(final ChannelHandlerContext ctx, final Object msg) throws Exception {
+    protected void channelRead0(final ChannelHandlerContext ctx, final Object msg) throws Exception {
         logger.info("messageReceived : " + msg);
         if (msg instanceof ByteBuf) {
             handleContent(ctx, (ByteBuf) msg);
@@ -82,7 +82,7 @@ public class WebSocketHAProxyTransport extends SimpleChannelInboundHandler<Objec
         }
         if (wsFrame instanceof PingWebSocketFrame) {
             wsFrame.content().retain();
-            ctx.channel().write(new PongWebSocketFrame(wsFrame.content()));
+            ctx.channel().writeAndFlush(new PongWebSocketFrame(wsFrame.content()));
             return;
         }
         if (!(wsFrame instanceof TextWebSocketFrame)) {
@@ -92,7 +92,7 @@ public class WebSocketHAProxyTransport extends SimpleChannelInboundHandler<Objec
         final String[] messages = toString((TextWebSocketFrame) wsFrame);
         for (String message : messages) {
             logger.debug("fire recieved message : " + message);
-            ctx.fireMessageReceived(message);
+            ctx.fireChannelRead(message);
         }
     }
 
@@ -123,7 +123,7 @@ public class WebSocketHAProxyTransport extends SimpleChannelInboundHandler<Objec
         } else if (cause instanceof WebSocketHandshakeException) {
             final HttpRequest request = ctx.attr(REQUEST_KEY).get();
             logger.error("Failed with ws handshake for request: " + request, cause);
-            ctx.write(internalServerErrorResponse(request.getProtocolVersion(), cause.getMessage()))
+            ctx.writeAndFlush(internalServerErrorResponse(request.getProtocolVersion(), cause.getMessage()))
             .addListener(ChannelFutureListener.CLOSE);
         } else {
             ctx.fireExceptionCaught(cause);

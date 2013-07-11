@@ -20,7 +20,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.MessageList;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.sockjs.protocol.Frame;
 import io.netty.util.internal.logging.InternalLogger;
@@ -30,27 +29,20 @@ class WebSocketSendHandler extends ChannelOutboundHandlerAdapter {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketSendHandler.class);
 
     @Override
-    public void write(final ChannelHandlerContext ctx, final MessageList<Object> msgs, final ChannelPromise promise)
+    public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise)
             throws Exception {
-        final int size = msgs.size();
-        final MessageList<TextWebSocketFrame> frames = MessageList.newInstance();
-        for (int i = 0; i < size; i ++) {
-            final Object obj = msgs.get(i);
-            if (obj instanceof Frame) {
-                final Frame sockJSFrame = (Frame) obj;
-                frames.add(new TextWebSocketFrame(sockJSFrame.content()));
-                logger.debug("TextWebSocketFrame : " + sockJSFrame);
-            }
-        }
-        msgs.recycle();
-        ctx.write(frames).addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                if (future.isSuccess()) {
-                    promise.setSuccess();
+        if (msg instanceof Frame) {
+            final Frame sockJSFrame = (Frame) msg;
+            ctx.write(new TextWebSocketFrame(sockJSFrame.content())).addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(final ChannelFuture future) throws Exception {
+                    if (future.isSuccess()) {
+                        promise.setSuccess();
+                    }
                 }
-            }
-        });
+            });
+            logger.debug("TextWebSocketFrame : " + sockJSFrame);
+        }
     }
 
     @Override
