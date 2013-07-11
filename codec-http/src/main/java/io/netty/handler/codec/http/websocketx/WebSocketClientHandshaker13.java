@@ -119,7 +119,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         // check if the URI contained a port if not set the correct one depending on the schema.
         // See https://github.com/netty/netty/pull/1558
         if (wsPort == -1) {
-            if ("https".equals(wsURL.getScheme())) {
+            if ("wss".equals(wsURL.getScheme())) {
                 wsPort = 443;
             } else {
                 wsPort = 80;
