@@ -277,6 +277,8 @@ public class HttpUploadClient {
             // could do either request.isChunked()
             // either do it through ChunkedWriteHandler
             channel.writeAndFlush(bodyRequestEncoder).awaitUninterruptibly();
+        }  else {
+            channel.flush();
         }
 
         // Do not clear here since we will reuse the InterfaceHttpData on the
@@ -352,6 +354,8 @@ public class HttpUploadClient {
         // test if request was chunked and if so, finish the write
         if (bodyRequestEncoder.isChunked()) {
             channel.writeAndFlush(bodyRequestEncoder).awaitUninterruptibly();
+        } else {
+            channel.flush();
         }
 
         // Now no more use of file representation (and list of HttpData)

@@ -53,6 +53,11 @@ public class QuoteOfTheMomentServerHandler extends SimpleChannelInboundHandler<D
     }
 
     @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
+    }
+
+    @Override
     public void exceptionCaught(
             ChannelHandlerContext ctx, Throwable cause)
             throws Exception {

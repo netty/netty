@@ -22,7 +22,7 @@ public class RxtxClientHandler extends SimpleChannelInboundHandler<String> {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
-        ctx.write("AT\n");
+        ctx.writeAndFlush("AT\n");
     }
 
     @Override

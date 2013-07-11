@@ -97,16 +97,15 @@ public class FileServer {
             File file = new File(msg);
             if (file.exists()) {
                 if (!file.isFile()) {
-                    ctx.write("Not a file: " + file + '\n');
+                    ctx.writeAndFlush("Not a file: " + file + '\n');
                     return;
                 }
                 ctx.write(file + " " + file.length() + '\n');
                 FileRegion region = new DefaultFileRegion(new FileInputStream(file).getChannel(), 0, file.length());
                 ctx.write(region);
-                ctx.write("\n");
-                ctx.flush();
+                ctx.writeAndFlush("\n");
             } else {
-                ctx.write("File not found: " + file + '\n');
+                ctx.writeAndFlush("File not found: " + file + '\n');
             }
         }
 

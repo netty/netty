@@ -59,7 +59,7 @@ public class WorldClockClientHandler extends SimpleChannelInboundHandler<LocalTi
                 setCity(components[1]).build());
         }
 
-        channel.write(builder.build());
+        channel.writeAndFlush(builder.build());
 
         LocalTimes localTimes;
         boolean interrupted = false;

@@ -401,7 +401,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
         response.headers().set(CONTENT_LENGTH, buf.readableBytes());
 
         // Write the response.
-        ctx.channel().write(response);
+        ctx.channel().writeAndFlush(response);
     }
 
     @Override
