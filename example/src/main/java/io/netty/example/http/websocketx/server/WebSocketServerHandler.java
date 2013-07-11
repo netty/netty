@@ -53,7 +53,7 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
     private WebSocketServerHandshaker handshaker;
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof FullHttpRequest) {
             handleHttpRequest(ctx, (FullHttpRequest) msg);
         } else if (msg instanceof WebSocketFrame) {
@@ -121,7 +121,7 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
         // Send the uppercase string back.
         String request = ((TextWebSocketFrame) frame).text();
         if (logger.isLoggable(Level.FINE)) {
-            logger.fine(String.format("Channel %s received %s", ctx.channel().id(), request));
+            logger.fine(String.format("%s received %s", ctx.channel(), request));
         }
         ctx.channel().write(new TextWebSocketFrame(request.toUpperCase()));
     }
@@ -135,7 +135,7 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
         }
 
         // Send the response and close the connection if necessary.
-        ChannelFuture f = ctx.channel().write(res);
+        ChannelFuture f = ctx.channel().writeAndFlush(res);
         if (!isKeepAlive(req) || res.getStatus().code() != 200) {
             f.addListener(ChannelFutureListener.CLOSE);
         }

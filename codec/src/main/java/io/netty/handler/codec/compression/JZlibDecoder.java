@@ -15,11 +15,13 @@
  */
 package io.netty.handler.codec.compression;
 
-import com.jcraft.jzlib.Inflater;
-import com.jcraft.jzlib.JZlib;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.MessageList;
+
+import java.util.List;
+
+import com.jcraft.jzlib.Inflater;
+import com.jcraft.jzlib.JZlib;
 
 public class JZlibDecoder extends ZlibDecoder {
 
@@ -82,7 +84,7 @@ public class JZlibDecoder extends ZlibDecoder {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, MessageList<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
 
         if (!in.isReadable()) {
             return;

@@ -37,7 +37,7 @@ public final class SocksServerHandler extends SimpleChannelInboundHandler<SocksR
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, SocksRequest socksRequest) throws Exception {
+    public void channelRead0(ChannelHandlerContext ctx, SocksRequest socksRequest) throws Exception {
         switch (socksRequest.requestType()) {
             case INIT: {
 //                auth support example
@@ -56,7 +56,7 @@ public final class SocksServerHandler extends SimpleChannelInboundHandler<SocksR
                 if (req.cmdType() == SocksCmdType.CONNECT) {
                     ctx.pipeline().addLast(SocksServerConnectHandler.getName(), new SocksServerConnectHandler());
                     ctx.pipeline().remove(this);
-                    ctx.fireMessageReceived(socksRequest);
+                    ctx.fireChannelRead(socksRequest);
                 } else {
                     ctx.close();
                 }

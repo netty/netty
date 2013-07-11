@@ -100,13 +100,6 @@ interface ChannelOutboundInvoker {
     ChannelFuture deregister();
 
     /**
-     * Request to write a message via this ChannelOutboundInvoker and notify the {@link ChannelFuture}
-     * once the operation completes, either because the operation was successful or because of an error.
-     */
-    ChannelFuture write(Object msg);
-    ChannelFuture write(MessageList<?> msgs);
-
-    /**
      * Request to bind to the given {@link SocketAddress} and notify the {@link ChannelFuture} once the operation
      * completes, either because the operation was successful or because of an error.
      *
@@ -195,9 +188,9 @@ interface ChannelOutboundInvoker {
 
     /**
      * Request to Read data from the {@link Channel} into the first inbound buffer, triggers an
-     * {@link ChannelInboundHandler#messageReceived(ChannelHandlerContext, MessageList)} event if data was
-     * read, and triggers an
-     * {@link ChannelInboundHandler#channelReadSuspended(ChannelHandlerContext) channelReadSuspended} event so the
+     * {@link ChannelInboundHandler#channelRead(ChannelHandlerContext, Object)} event if data was
+     * read, and triggers a
+     * {@link ChannelInboundHandler#channelReadComplete(ChannelHandlerContext) channelReadComplete} event so the
      * handler can decide to continue reading.  If there's a pending read operation already, this method does nothing.
      * <p>
      * This will result in having the
@@ -205,12 +198,34 @@ interface ChannelOutboundInvoker {
      * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    void read();
+    ChannelOutboundInvoker read();
 
     /**
-     * Request to write a message via this ChannelOutboundInvoker and notify the {@link ChannelFuture}
-     * once the operation completes, either because the operation was successful or because of an error.
+     * Request to write a message via this ChannelOutboundInvoker through the {@link ChannelPipeline}.
+     * This method will not request to actual flush, so be sure to call {@link #flush()}
+     * once you want to request to flush all pending data to the actual transport.
+     */
+    ChannelFuture write(Object msg);
+
+    /**
+     * Request to write a message via this ChannelOutboundInvoker through the {@link ChannelPipeline}.
+     * This method will not request to actual flush, so be sure to call {@link #flush()}
+     * once you want to request to flush all pending data to the actual transport.
      */
     ChannelFuture write(Object msg, ChannelPromise promise);
-    ChannelFuture write(MessageList<?> msgs, ChannelPromise promise);
+
+    /**
+     * Request to flush all pending messages via this ChannelOutboundInvoker.
+     */
+    ChannelOutboundInvoker flush();
+
+    /**
+     * Shortcut for call {@link #write(Object, ChannelPromise)} and {@link #flush()}.
+     */
+    ChannelFuture writeAndFlush(Object msg, ChannelPromise promise);
+
+    /**
+     * Shortcut for call {@link #write(Object)} and {@link #flush()}.
+     */
+    ChannelFuture writeAndFlush(Object msg);
 }

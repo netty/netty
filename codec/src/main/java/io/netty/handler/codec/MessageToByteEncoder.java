@@ -16,10 +16,10 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.MessageList;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.TypeParameterMatcher;
 
@@ -69,74 +69,49 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, MessageList<Object> msgs, ChannelPromise promise) throws Exception {
-        MessageList<Object> out = MessageList.newInstance();
-        boolean success = false;
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         ByteBuf buf = null;
         try {
-            int size = msgs.size();
-            for (int i = 0; i < size; i ++) {
-                // handler was removed in the loop so now copy over all remaining messages
-                if (ctx.isRemoved()) {
-                    if (buf != null && buf.isReadable())  {
-                        out.add(buf);
-                        buf = null;
+            if (acceptOutboundMessage(msg)) {
+                @SuppressWarnings("unchecked")
+                I cast = (I) msg;
+                if (buf == null) {
+                    if (preferDirect) {
+                        buf = ctx.alloc().ioBuffer();
+                    } else {
+                        buf = ctx.alloc().heapBuffer();
                     }
-                    out.add(msgs, i, size - i);
-                    break;
                 }
-                Object m = msgs.get(i);
-                if (acceptOutboundMessage(m)) {
-                    @SuppressWarnings("unchecked")
-                    I cast = (I) m;
-                    if (buf == null) {
-                        if (preferDirect) {
-                            buf = ctx.alloc().ioBuffer();
-                        } else {
-                            buf = ctx.alloc().heapBuffer();
-                        }
-                    }
-                    try {
-                        encode(ctx, cast, buf);
-                    } finally {
-                        ReferenceCountUtil.release(cast);
-                    }
+                try {
+                    encode(ctx, cast, buf);
+                } finally {
+                    ReferenceCountUtil.release(cast);
+                }
+
+                if (buf.isReadable()) {
+                    ctx.write(buf, promise);
                 } else {
-                    if (buf != null && buf.isReadable()) {
-                        out.add(buf);
-                        buf = null;
-                    }
-
-                    out.add(m);
+                    buf.release();
+                    ctx.write(Unpooled.EMPTY_BUFFER, promise);
                 }
-            }
-
-            if (buf != null && buf.isReadable()) {
-                out.add(buf);
                 buf = null;
+            } else {
+                ctx.write(msg, promise);
             }
-
-            success = true;
         } catch (EncoderException e) {
             throw e;
         } catch (Throwable e) {
             throw new EncoderException(e);
         } finally {
-            msgs.recycle();
             if (buf != null) {
                 buf.release();
-            }
-            if (success) {
-                ctx.write(out, promise);
-            } else {
-                out.releaseAllAndRecycle();
             }
         }
     }
 
     /**
-     * Encode a message into a {@link ByteBuf}. This method will be called till the {@link MessageList} has
-     * nothing left.
+     * Encode a message into a {@link ByteBuf}. This method will be called for each written message that can be handled
+     * by this encoder.
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link MessageToByteEncoder} belongs to
      * @param msg           the message to encode

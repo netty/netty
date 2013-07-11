@@ -22,11 +22,12 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MessageList;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.MessageToMessageDecoder;
+
+import java.util.List;
 
 /**
  * Decodes a received {@link ByteBuf} into a
@@ -51,7 +52,7 @@ import io.netty.handler.codec.MessageToMessageDecoder;
  * and then you can use a {@code MyMessage} instead of a {@link ByteBuf}
  * as a message:
  * <pre>
- * void messageReceived({@link ChannelHandlerContext} ctx, MyMessage req) {
+ * void channelRead({@link ChannelHandlerContext} ctx, MyMessage req) {
  *     MyMessage res = MyMessage.newBuilder().setText(
  *                               "Did you say '" + req.getText() + "'?").build();
  *     ch.write(res);
@@ -95,7 +96,7 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf msg, MessageList<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out) throws Exception {
         final byte[] array;
         final int offset;
         final int length = msg.readableBytes();

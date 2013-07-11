@@ -18,10 +18,10 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MessageList;
 import io.netty.handler.codec.http.HttpHeaders;
 
 import java.net.URI;
+import java.util.List;
 
 /**
  * This handler does all the heavy lifting for you to run a websocket client.
@@ -129,7 +129,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, WebSocketFrame frame, MessageList<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, WebSocketFrame frame, List<Object> out) throws Exception {
         if (handleCloseFrames && frame instanceof CloseWebSocketFrame) {
             ctx.close();
             return;

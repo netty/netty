@@ -155,15 +155,15 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         @Override
         public void channelActive(ChannelHandlerContext ctx)
                 throws Exception {
-            ctx.write("StartTlsRequest\n");
+            ctx.writeAndFlush("StartTlsRequest\n");
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
             if ("StartTlsResponse".equals(msg)) {
                 ctx.pipeline().addAfter("logger", "ssl", sslHandler);
                 handshakeFuture = sslHandler.handshakeFuture();
-                ctx.write("EncryptedRequest\n");
+                ctx.writeAndFlush("EncryptedRequest\n");
                 return;
             }
 
@@ -201,15 +201,15 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
             if ("StartTlsRequest".equals(msg)) {
                 ctx.pipeline().addAfter("logger", "ssl", sslHandler);
-                ctx.write("StartTlsResponse\n");
+                ctx.writeAndFlush("StartTlsResponse\n");
                 return;
             }
 
             assertEquals("EncryptedRequest", msg);
-            ctx.write("EncryptedResponse\n");
+            ctx.writeAndFlush("EncryptedResponse\n");
         }
 
         @Override

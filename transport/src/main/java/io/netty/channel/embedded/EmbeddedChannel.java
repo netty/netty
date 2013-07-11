@@ -27,8 +27,8 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
-import io.netty.channel.MessageList;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -61,7 +61,7 @@ public class EmbeddedChannel extends AbstractChannel {
      * @param handlers the @link ChannelHandler}s which will be add in the {@link ChannelPipeline}
      */
     public EmbeddedChannel(ChannelHandler... handlers) {
-        super(null, null);
+        super(null);
 
         if (handlers == null) {
             throw new NullPointerException("handlers");
@@ -145,9 +145,12 @@ public class EmbeddedChannel extends AbstractChannel {
         if (msgs.length == 0) {
             return !lastInboundBuffer.isEmpty();
         }
-        MessageList<Object> list = MessageList.newInstance(msgs.length);
-        list.add(msgs);
-        pipeline().fireMessageReceived(list);
+
+        ChannelPipeline p = pipeline();
+        for (Object m: msgs) {
+            p.fireChannelRead(m);
+        }
+        p.fireChannelReadComplete();
         runPendingTasks();
         checkException();
         return !lastInboundBuffer.isEmpty();
@@ -164,16 +167,32 @@ public class EmbeddedChannel extends AbstractChannel {
         if (msgs.length == 0) {
             return !lastOutboundBuffer.isEmpty();
         }
-        MessageList<Object> list = MessageList.newInstance(msgs.length);
-        list.add(msgs);
-        ChannelFuture future = write(list);
-        assert future.isDone();
-        if (future.cause() != null) {
-            recordException(future.cause());
+
+        RecyclableArrayList futures = RecyclableArrayList.newInstance(msgs.length);
+        try {
+            for (Object m: msgs) {
+                if (m == null) {
+                    break;
+                }
+                futures.add(write(m));
+            }
+
+            flush();
+
+            for (int i = 0; i < futures.size(); i++) {
+                ChannelFuture future = (ChannelFuture) futures.get(i);
+                assert future.isDone();
+                if (future.cause() != null) {
+                    recordException(future.cause());
+                }
+            }
+
+            runPendingTasks();
+            checkException();
+            return !lastOutboundBuffer.isEmpty();
+        } finally {
+            futures.recycle();
         }
-        runPendingTasks();
-        checkException();
-        return !lastOutboundBuffer.isEmpty();
     }
 
     /**
@@ -288,12 +307,11 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
-        int size = msgs.size();
-        for (int i = index; i < size; i ++) {
-            lastOutboundBuffer.add(msgs.get(i));
+    protected int doWrite(Object[] msgs, int msgsLength, int startIndex) throws Exception {
+        for (int i = startIndex; i < msgsLength; i ++) {
+            lastOutboundBuffer.add(msgs[i]);
         }
-        return size - index;
+        return msgsLength - startIndex;
     }
 
     private class DefaultUnsafe extends AbstractUnsafe {
@@ -305,12 +323,8 @@ public class EmbeddedChannel extends AbstractChannel {
 
     private final class LastInboundHandler extends ChannelInboundHandlerAdapter {
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-            int size = msgs.size();
-            for (int i = 0; i < size; i ++) {
-                lastInboundBuffer.add(msgs.get(i));
-            }
-            msgs.recycle();
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            lastInboundBuffer.add(msg);
         }
 
         @Override

@@ -17,27 +17,29 @@ package io.netty.channel.oio;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MessageList;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Abstract base class for OIO which reads and writes objects from/to a Socket
  */
 public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
 
-    protected AbstractOioMessageChannel(Channel parent, Integer id) {
-        super(parent, id);
+    private final List<Object> readBuf = new ArrayList<Object>();
+
+    protected AbstractOioMessageChannel(Channel parent) {
+        super(parent);
     }
 
     @Override
     protected void doRead() {
         final ChannelPipeline pipeline = pipeline();
         boolean closed = false;
-        MessageList<Object> msgs = MessageList.newInstance();
         Throwable exception = null;
         try {
-            int localReadAmount = doReadMessages(msgs);
+            int localReadAmount = doReadMessages(readBuf);
             if (localReadAmount < 0) {
                 closed = true;
             }
@@ -45,7 +47,11 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
             exception = t;
         }
 
-        pipeline.fireMessageReceived(msgs);
+        for (int i = 0; i < readBuf.size(); i ++) {
+            pipeline.fireChannelRead(readBuf.get(i));
+        }
+        readBuf.clear();
+        pipeline.fireChannelReadComplete();
 
         if (exception != null) {
             if (exception instanceof IOException) {
@@ -59,13 +65,11 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
             if (isOpen()) {
                 unsafe().close(unsafe().voidPromise());
             }
-        } else {
-            pipeline.fireChannelReadSuspended();
         }
     }
 
     /**
      * Read messages into the given array and return the amount which was read.
      */
-    protected abstract int doReadMessages(MessageList<Object> msgs) throws Exception;
+    protected abstract int doReadMessages(List<Object> msgs) throws Exception;
 }

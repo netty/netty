@@ -16,8 +16,7 @@
 package io.netty.example.factorial;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.MessageList;
+import io.netty.channel.SimpleChannelInboundHandler;
 
 import java.math.BigInteger;
 import java.util.Formatter;
@@ -31,7 +30,7 @@ import java.util.logging.Logger;
  * to create a new handler instance whenever you create a new channel and insert
  * this handler  to avoid a race condition.
  */
-public class FactorialServerHandler extends ChannelInboundHandlerAdapter {
+public class FactorialServerHandler extends SimpleChannelInboundHandler<BigInteger> {
 
     private static final Logger logger = Logger.getLogger(
             FactorialServerHandler.class.getName());
@@ -40,29 +39,21 @@ public class FactorialServerHandler extends ChannelInboundHandlerAdapter {
     private BigInteger factorial = new BigInteger("1");
 
     @Override
-    public void messageReceived(
-            ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-        MessageList<BigInteger> ints = msgs.cast();
-        for (int i = 0; i < ints.size(); i++) {
-            BigInteger msg = ints.get(i);
-            // Calculate the cumulative factorial and send it to the client.
-            lastMultiplier = msg;
-            factorial = factorial.multiply(msg);
-            ctx.write(factorial);
-        }
-        msgs.recycle();
+    public void channelRead0(ChannelHandlerContext ctx, BigInteger msg) throws Exception {
+        // Calculate the cumulative factorial and send it to the client.
+        lastMultiplier = msg;
+        factorial = factorial.multiply(msg);
+        ctx.writeAndFlush(factorial);
     }
 
     @Override
-    public void channelInactive(
-            ChannelHandlerContext ctx) throws Exception {
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         logger.info(new Formatter().format(
                 "Factorial of %,d is: %,d", lastMultiplier, factorial).toString());
     }
 
     @Override
-    public void exceptionCaught(
-            ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         logger.log(
                 Level.WARNING,
                 "Unexpected exception from downstream.", cause);

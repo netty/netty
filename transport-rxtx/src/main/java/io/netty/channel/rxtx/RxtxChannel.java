@@ -40,7 +40,7 @@ public class RxtxChannel extends OioByteStreamChannel {
     private SerialPort serialPort;
 
     public RxtxChannel() {
-        super(null, null);
+        super(null);
 
         config = new DefaultRxtxChannelConfig(this);
     }

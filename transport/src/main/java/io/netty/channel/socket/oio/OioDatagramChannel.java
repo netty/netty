@@ -17,20 +17,19 @@ package io.netty.channel.socket.oio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.MessageList;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.DefaultDatagramChannelConfig;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
@@ -45,6 +44,7 @@ import java.net.NetworkInterface;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -88,17 +88,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
      * @param socket    the {@link MulticastSocket} which is used by this instance
      */
     public OioDatagramChannel(MulticastSocket socket) {
-        this(null, socket);
-    }
-
-    /**
-     * Create a new instance from the given {@link MulticastSocket}.
-     *
-     * @param id        the id which should be used for this instance or {@code null} if a new one should be generated
-     * @param socket    the {@link MulticastSocket} which is used by this instance
-     */
-    public OioDatagramChannel(Integer id, MulticastSocket socket) {
-        super(null, id);
+        super(null);
 
         boolean success = false;
         try {
@@ -201,7 +191,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected int doReadMessages(MessageList<Object> buf) throws Exception {
+    protected int doReadMessages(List<Object> buf) throws Exception {
         DatagramChannelConfig config = config();
         RecvByteBufAllocator.Handle allocHandle = this.allocHandle;
         if (allocHandle == null) {
@@ -243,8 +233,8 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
-        final Object o = msgs.get(index);
+    protected int doWrite(Object[] msgs, int msgsLength, int startIndex) throws Exception {
+        final Object o = msgs[startIndex];
         final Object m;
         final ByteBuf data;
         final SocketAddress remoteAddress;
@@ -263,27 +253,23 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
         } else if (m instanceof ByteBuf) {
             data = (ByteBuf) m;
         } else {
-            ByteBufUtil.release(o);
-            throw new ChannelException("unsupported message type: " + StringUtil.simpleClassName(o));
+            throw new UnsupportedOperationException("unsupported message type: " + StringUtil.simpleClassName(o));
         }
 
-        try {
-            int length = data.readableBytes();
-            if (remoteAddress != null) {
-                tmpPacket.setSocketAddress(remoteAddress);
-            }
-            if (data.hasArray()) {
-                tmpPacket.setData(data.array(), data.arrayOffset() + data.readerIndex(), length);
-            } else {
-                byte[] tmp = new byte[length];
-                data.getBytes(data.readerIndex(), tmp);
-                tmpPacket.setData(tmp);
-            }
-            socket.send(tmpPacket);
-            return 1;
-        } finally {
-            ByteBufUtil.release(o);
+        int length = data.readableBytes();
+        if (remoteAddress != null) {
+            tmpPacket.setSocketAddress(remoteAddress);
         }
+        if (data.hasArray()) {
+            tmpPacket.setData(data.array(), data.arrayOffset() + data.readerIndex(), length);
+        } else {
+            byte[] tmp = new byte[length];
+            data.getBytes(data.readerIndex(), tmp);
+            tmpPacket.setData(tmp);
+        }
+        socket.send(tmpPacket);
+        ReferenceCountUtil.release(o);
+        return 1;
     }
 
     @Override

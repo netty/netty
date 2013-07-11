@@ -22,7 +22,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoop;
-import io.netty.channel.MessageList;
 import io.netty.channel.ServerChannel;
 import io.netty.util.CharsetUtil;
 
@@ -97,13 +96,6 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
     String name();
 
     /**
-     * Returns the {@link Channel} whose ID matches the specified integer.
-     *
-     * @return the matching {@link Channel} if found. {@code null} otherwise.
-     */
-    Channel find(Integer id);
-
-    /**
      * Writes the specified {@code message} to all {@link Channel}s in this
      * group. If the specified {@code message} is an instance of
      * {@link ByteBuf}, it is automatically
@@ -111,23 +103,24 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
      * condition. Please note that this operation is asynchronous as
      * {@link Channel#write(Object)} is.
      *
-     * @return the {@link ChannelGroupFuture} instance that notifies when
-     *         the operation is done for all channels
+     * @return itself
      */
     ChannelGroupFuture write(Object message);
 
     /**
-     * Writes the specified {@code messages} to all {@link Channel}s in this
-     * group. If the specified {@code messages} are an instance of
-     * {@link ByteBuf}, it is automatically
-     * {@linkplain ByteBuf#duplicate() duplicated} to avoid a race
-     * condition. Please note that this operation is asynchronous as
-     * {@link Channel#write(Object)} is.
+     * Flush all {@link Channel}s in this
+     * group.  Please note that this operation is asynchronous as
+     * {@link Channel#flush()} is.
      *
      * @return the {@link ChannelGroupFuture} instance that notifies when
      *         the operation is done for all channels
      */
-    ChannelGroupFuture write(MessageList<Object> messages);
+    ChannelGroup flush();
+
+    /**
+     * Shortcut for calling {@link #write(Object)} and {@link #flush()}.
+     */
+    ChannelGroupFuture flushAndWrite(Object message);
 
     /**
      * Disconnects all {@link Channel}s in this group from their remote peers.

@@ -21,6 +21,7 @@
  */
 
 package io.netty.util.internal.chmv8;
+
 import java.util.Random;
 
 /**
@@ -119,7 +120,7 @@ abstract class Striped64 extends Number {
                 UNSAFE = getUnsafe();
                 Class<?> ak = Cell.class;
                 valueOffset = UNSAFE.objectFieldOffset
-                    (ak.getDeclaredField("value"));
+                        (ak.getDeclaredField("value"));
             } catch (Exception e) {
                 throw new Error(e);
             }
@@ -230,8 +231,8 @@ abstract class Striped64 extends Number {
                             try {               // Recheck under lock
                                 Cell[] rs; int m, j;
                                 if ((rs = cells) != null &&
-                                    (m = rs.length) > 0 &&
-                                    rs[j = (m - 1) & h] == null) {
+                                        (m = rs.length) > 0 &&
+                                        rs[j = (m - 1) & h] == null) {
                                     rs[j] = r;
                                     created = true;
                                 }
@@ -318,9 +319,9 @@ abstract class Striped64 extends Number {
             UNSAFE = getUnsafe();
             Class<?> sk = Striped64.class;
             baseOffset = UNSAFE.objectFieldOffset
-                (sk.getDeclaredField("base"));
+                    (sk.getDeclaredField("base"));
             busyOffset = UNSAFE.objectFieldOffset
-                (sk.getDeclaredField("busy"));
+                    (sk.getDeclaredField("busy"));
         } catch (Exception e) {
             throw new Error(e);
         }
@@ -339,20 +340,20 @@ abstract class Striped64 extends Number {
         } catch (SecurityException tryReflectionInstead) {}
         try {
             return java.security.AccessController.doPrivileged
-            (new java.security.PrivilegedExceptionAction<sun.misc.Unsafe>() {
-                public sun.misc.Unsafe run() throws Exception {
-                    Class<sun.misc.Unsafe> k = sun.misc.Unsafe.class;
-                    for (java.lang.reflect.Field f : k.getDeclaredFields()) {
-                        f.setAccessible(true);
-                        Object x = f.get(null);
-                        if (k.isInstance(x))
-                            return k.cast(x);
-                    }
-                    throw new NoSuchFieldError("the Unsafe");
-                }});
+                    (new java.security.PrivilegedExceptionAction<sun.misc.Unsafe>() {
+                        public sun.misc.Unsafe run() throws Exception {
+                            Class<sun.misc.Unsafe> k = sun.misc.Unsafe.class;
+                            for (java.lang.reflect.Field f : k.getDeclaredFields()) {
+                                f.setAccessible(true);
+                                Object x = f.get(null);
+                                if (k.isInstance(x))
+                                    return k.cast(x);
+                            }
+                            throw new NoSuchFieldError("the Unsafe");
+                        }});
         } catch (java.security.PrivilegedActionException e) {
             throw new RuntimeException("Could not initialize intrinsics",
-                                       e.getCause());
+                    e.getCause());
         }
     }
 }

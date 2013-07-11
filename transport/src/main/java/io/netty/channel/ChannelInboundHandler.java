@@ -43,18 +43,17 @@ public interface ChannelInboundHandler extends ChannelHandler {
     void channelInactive(ChannelHandlerContext ctx) throws Exception;
 
     /**
-     * Invoked when a {@link ChannelHandlerContext#read()} is finished and the inbound buffer of this handler will not
-     * be updated until another {@link ChannelHandlerContext#read()} request is issued.
+     * Invoked when the current {@link Channel} has read a message from the peer.
      */
-    void channelReadSuspended(ChannelHandlerContext ctx) throws Exception;
+    void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception;
 
     /**
-     * The inbound buffer of the {@link ChannelHandlerContext} was updated with new data.
-     * This means something may be ready to get processed by the actual {@link ChannelInboundHandler}
-     * implementation. It's up to the implementation to consume it or keep it in the buffer
-     * to wait for more data and consume it later.
+     * Invoked when the last message read by the current read operation has been consumed by
+     * {@link #channelRead(ChannelHandlerContext, Object)}.  If {@link ChannelOption#AUTO_READ} is off, no further
+     * attempt to read an inbound data from the current {@link Channel} will be made until
+     * {@link ChannelHandlerContext#read()} is called.
      */
-    void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception;
+    void channelReadComplete(ChannelHandlerContext ctx) throws Exception;
 
     /**
      * Gets called if an user event was triggered.

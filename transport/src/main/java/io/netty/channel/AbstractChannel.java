@@ -19,8 +19,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.util.DefaultAttributeMap;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -30,8 +30,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
-import java.util.Random;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * A skeletal {@link Channel} implementation.
@@ -40,43 +38,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractChannel.class);
 
-    static final ConcurrentMap<Integer, Channel> allChannels = PlatformDependent.newConcurrentHashMap();
-
-    private static final Random random = new Random();
-
-    /**
-     * Generates a negative unique integer ID.  This method generates only
-     * negative integers to avoid conflicts with user-specified IDs where only
-     * non-negative integers are allowed.
-     */
-    private static Integer allocateId(Channel channel) {
-        int idVal = random.nextInt();
-        if (idVal > 0) {
-            idVal = -idVal;
-        } else if (idVal == 0) {
-            idVal = -1;
-        }
-
-        Integer id;
-        for (;;) {
-            id = Integer.valueOf(idVal);
-            // Loop until a unique ID is acquired.
-            // It should be found in one loop practically.
-            if (allChannels.putIfAbsent(id, channel) == null) {
-                // Successfully acquired.
-                return id;
-            } else {
-                // Taken by other channel at almost the same moment.
-                idVal --;
-                if (idVal >= 0) {
-                    idVal = -1;
-                }
-            }
-        }
-    }
-
     private final Channel parent;
-    private final Integer id;
+    private final long hashCode = ThreadLocalRandom.current().nextLong();
     private final Unsafe unsafe;
     private final DefaultChannelPipeline pipeline;
     private final ChannelOutboundBuffer outboundBuffer = new ChannelOutboundBuffer(this);
@@ -101,46 +64,18 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     /**
      * Creates a new instance.
      *
-     * @param id
-     *        the unique non-negative integer ID of this channel.
-     *        Specify {@code null} to auto-generate a unique negative integer
-     *        ID.
      * @param parent
      *        the parent of this channel. {@code null} if there's no parent.
      */
-    protected AbstractChannel(Channel parent, Integer id) {
-        if (id == null) {
-            id = allocateId(this);
-        } else {
-            if (id.intValue() < 0) {
-                throw new IllegalArgumentException("id: " + id + " (expected: >= 0)");
-            }
-            if (allChannels.putIfAbsent(id, this) != null) {
-                throw new IllegalArgumentException("duplicate ID: " + id);
-            }
-        }
-
+    protected AbstractChannel(Channel parent) {
         this.parent = parent;
-        this.id = id;
         unsafe = newUnsafe();
         pipeline = new DefaultChannelPipeline(this);
-
-        closeFuture().addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                allChannels.remove(id());
-            }
-        });
     }
 
     @Override
     public boolean isWritable() {
         return outboundBuffer.getWritable();
-    }
-
-    @Override
-    public final Integer id() {
-        return id;
     }
 
     @Override
@@ -242,13 +177,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelFuture write(Object msg) {
-        return pipeline.write(msg);
-    }
-
-    @Override
-    public ChannelFuture write(MessageList<?> msgs) {
-        return pipeline.write(msgs);
+    public Channel flush() {
+        pipeline.flush();
+        return this;
     }
 
     @Override
@@ -282,8 +213,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public void read() {
+    public Channel read() {
         pipeline.read();
+        return this;
+    }
+
+    @Override
+    public ChannelFuture write(Object msg) {
+        return pipeline.write(msg);
     }
 
     @Override
@@ -292,8 +229,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelFuture write(MessageList<?> msgs, ChannelPromise promise) {
-        return pipeline.write(msgs, promise);
+    public ChannelFuture writeAndFlush(Object msg) {
+        return pipeline.writeAndFlush(msg);
+    }
+
+    @Override
+    public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
+        return pipeline.writeAndFlush(msg, promise);
     }
 
     @Override
@@ -336,7 +278,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     @Override
     public final int hashCode() {
-        return id;
+        return (int) hashCode;
     }
 
     /**
@@ -348,17 +290,32 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return this == o;
     }
 
-    /**
-     * Compares the {@linkplain #id() ID} of the two channels.
-     */
     @Override
     public final int compareTo(Channel o) {
-        return id().compareTo(o.id());
+        if (this == o) {
+            return 0;
+        }
+
+        long ret = hashCode - o.hashCode();
+        if (ret > 0) {
+            return 1;
+        }
+        if (ret < 0) {
+            return -1;
+        }
+
+        ret = System.identityHashCode(this) - System.identityHashCode(o);
+        if (ret != 0) {
+            return (int) ret;
+        }
+
+        // Jackpot! - different objects with same hashes
+        throw new Error();
     }
 
     /**
      * Returns the {@link String} representation of this channel.  The returned
-     * string contains the {@linkplain #id() ID}, {@linkplain #localAddress() local address},
+     * string contains the {@linkplain #hashCode()} ID}, {@linkplain #localAddress() local address},
      * and {@linkplain #remoteAddress() remote address} of this channel for
      * easier identification.
      */
@@ -381,11 +338,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 srcAddr = remoteAddr;
                 dstAddr = localAddr;
             }
-            strVal = String.format("[id: 0x%08x, %s %s %s]", id, srcAddr, active? "=>" : ":>", dstAddr);
+            strVal = String.format("[id: 0x%08x, %s %s %s]", (int) hashCode, srcAddr, active? "=>" : ":>", dstAddr);
         } else if (localAddr != null) {
-            strVal = String.format("[id: 0x%08x, %s]", id, localAddr);
+            strVal = String.format("[id: 0x%08x, %s]", (int) hashCode, localAddr);
         } else {
-            strVal = String.format("[id: 0x%08x]", id);
+            strVal = String.format("[id: 0x%08x]", (int) hashCode);
         }
 
         strValActive = active;
@@ -401,14 +358,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * {@link Unsafe} implementation which sub-classes must extend and use.
      */
     protected abstract class AbstractUnsafe implements Unsafe {
-
-        private final Runnable flushLaterTask = new Runnable() {
-            @Override
-            public void run() {
-                flushNowPending = false;
-                flush();
-            }
-        };
 
         @Override
         public final SocketAddress localAddress() {
@@ -639,12 +588,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public void write(MessageList<?> msgs, ChannelPromise promise) {
-            outboundBuffer.add(msgs, promise);
-            flush();
+        public void write(Object msg, ChannelPromise promise) {
+            outboundBuffer.addMessage(msg, promise);
         }
 
-        private void flush() {
+        @Override
+        public void flush() {
+            outboundBuffer.addFlush();
+
             if (!inFlushNow) { // Avoid re-entrance
                 try {
                     // Flush immediately only when there's no pending flush.
@@ -660,7 +611,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             } else {
                 if (!flushNowPending) {
                     flushNowPending = true;
-                    eventLoop().execute(flushLaterTask);
+                    eventLoop().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            flush();
+                        }
+                    });
                 }
             }
         }
@@ -688,49 +644,32 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             try {
                 for (;;) {
-                    ChannelPromise promise = outboundBuffer.currentPromise;
-                    if (promise == null) {
+                    MessageList messages = outboundBuffer.currentMessages;
+                    if (messages == null) {
                         if (!outboundBuffer.next()) {
                             break;
                         }
-                        promise = outboundBuffer.currentPromise;
+                        messages = outboundBuffer.currentMessages;
                     }
 
-                    MessageList<Object> messages = outboundBuffer.currentMessages;
                     int messageIndex = outboundBuffer.currentMessageIndex;
                     int messageCount = messages.size();
-
-                    // Make sure the message list is not empty.
-                    if (messageCount == 0) {
-                        messages.recycle();
-                        promise.trySuccess();
-                        if (!outboundBuffer.next()) {
-                            break;
-                        } else {
-                            continue;
-                        }
-                    }
-
-                    // Make sure the promise has not been cancelled.
-                    if (promise.isCancelled()) {
-                        // If cancelled, release all unwritten messages and recycle.
-                        for (int i = messageIndex; i < messageCount; i ++) {
-                            ReferenceCountUtil.release(messages.get(i));
-                        }
-                        messages.recycle();
-                        if (!outboundBuffer.next()) {
-                            break;
-                        } else {
-                            continue;
-                        }
-                    }
+                    Object[] messageArray = messages.messages();
+                    ChannelPromise[] promiseArray = messages.promises();
 
                     // Write the messages.
-                    int writtenMessages = doWrite(messages, messageIndex);
-                    outboundBuffer.currentMessageIndex = messageIndex += writtenMessages;
+                    final int writtenMessages = doWrite(messageArray, messageCount, messageIndex);
+
+                    // Notify the promises.
+                    final int newMessageIndex = messageIndex + writtenMessages;
+                    for (int i = messageIndex; i < newMessageIndex; i ++) {
+                        promiseArray[i].trySuccess();
+                    }
+
+                    // Update the index variable and decide what to do next.
+                    outboundBuffer.currentMessageIndex = messageIndex = newMessageIndex;
                     if (messageIndex >= messageCount) {
                         messages.recycle();
-                        promise.trySuccess();
                         if (!outboundBuffer.next()) {
                             break;
                         }
@@ -857,7 +796,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      *
      * @return the number of written messages
      */
-    protected abstract int doWrite(MessageList<Object> msgs, int index) throws Exception;
+    protected abstract int doWrite(Object[] msgs, int msgsLength, int startIndex) throws Exception;
 
     protected static void checkEOF(FileRegion region) throws IOException {
         if (region.transfered() < region.count()) {

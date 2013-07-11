@@ -15,12 +15,34 @@
  */
 package io.netty.handler.codec.spdy;
 
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_DATA_FLAG_FIN;
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_DATA_FRAME;
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_FLAG_FIN;
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_FLAG_UNIDIRECTIONAL;
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_GOAWAY_FRAME;
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_HEADERS_FRAME;
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_HEADER_FLAGS_OFFSET;
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_HEADER_LENGTH_OFFSET;
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_HEADER_SIZE;
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_HEADER_TYPE_OFFSET;
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_PING_FRAME;
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_RST_STREAM_FRAME;
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_SETTINGS_CLEAR;
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_SETTINGS_FRAME;
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_SETTINGS_PERSISTED;
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_SETTINGS_PERSIST_VALUE;
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_SYN_REPLY_FRAME;
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_SYN_STREAM_FRAME;
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_WINDOW_UPDATE_FRAME;
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.getSignedInt;
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.getUnsignedInt;
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.getUnsignedMedium;
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.getUnsignedShort;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.MessageList;
 import io.netty.handler.codec.ByteToMessageDecoder;
 
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
+import java.util.List;
 
 /**
  * Decodes {@link ByteBuf}s into SPDY Frames.
@@ -89,7 +111,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
     }
 
     @Override
-    public void decodeLast(ChannelHandlerContext ctx, ByteBuf in, MessageList<Object> out) throws Exception {
+    public void decodeLast(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         try {
             decode(ctx, in, out);
         } finally {
@@ -98,7 +120,7 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, MessageList<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
         switch(state) {
         case READ_COMMON_HEADER:
             state = readCommonHeader(buffer);

@@ -97,7 +97,7 @@ public class LocalEcho {
                 }
 
                 // Sends the received line to the server.
-                lastWriteFuture = ch.write(line);
+                lastWriteFuture = ch.writeAndFlush(line);
             }
 
             // Wait until all messages are flushed before closing the channel.

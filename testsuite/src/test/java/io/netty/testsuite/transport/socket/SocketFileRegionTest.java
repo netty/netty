@@ -21,10 +21,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.FileRegion;
-import io.netty.channel.MessageList;
 import io.netty.channel.SimpleChannelInboundHandler;
 import org.junit.Test;
 
@@ -72,10 +70,9 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         out.write(data);
         out.close();
 
-        ChannelInboundHandler ch = new ChannelInboundHandlerAdapter() {
+        ChannelInboundHandler ch = new SimpleChannelInboundHandler<Object>() {
             @Override
-            public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-                msgs.releaseAllAndRecycle();
+            public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
             }
 
             @Override
@@ -93,9 +90,9 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         Channel cc = cb.connect().sync().channel();
         FileRegion region = new DefaultFileRegion(new FileInputStream(file).getChannel(), 0L, file.length());
         if (voidPromise) {
-            assertEquals(cc.voidPromise(), cc.write(region, cc.voidPromise()));
+            assertEquals(cc.voidPromise(), cc.writeAndFlush(region, cc.voidPromise()));
         } else {
-            assertNotEquals(cc.voidPromise(), cc.write(region));
+            assertNotEquals(cc.voidPromise(), cc.writeAndFlush(region));
         }
         while (sh.counter < data.length) {
             if (sh.exception.get() != null) {
@@ -134,7 +131,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
 

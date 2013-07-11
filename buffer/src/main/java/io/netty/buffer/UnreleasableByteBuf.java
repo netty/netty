@@ -30,7 +30,7 @@ import java.nio.charset.Charset;
  * A {@link ByteBuf} implementation that wraps another buffer to prevent a user from increasing or decreasing the
  * wrapped buffer's reference count.
  */
-final class UnreleasableByteBuf implements ByteBuf {
+final class UnreleasableByteBuf extends ByteBuf {
 
     private final ByteBuf buf;
     private SwappedByteBuf swappedBuf;
@@ -668,20 +668,8 @@ final class UnreleasableByteBuf implements ByteBuf {
     }
 
     @Override
-    @Deprecated
-    public int indexOf(int fromIndex, int toIndex, ByteBufIndexFinder indexFinder) {
-        return buf.indexOf(fromIndex, toIndex, indexFinder);
-    }
-
-    @Override
     public int bytesBefore(byte value) {
         return buf.bytesBefore(value);
-    }
-
-    @Override
-    @Deprecated
-    public int bytesBefore(ByteBufIndexFinder indexFinder) {
-        return buf.bytesBefore(indexFinder);
     }
 
     @Override
@@ -690,20 +678,8 @@ final class UnreleasableByteBuf implements ByteBuf {
     }
 
     @Override
-    @Deprecated
-    public int bytesBefore(int length, ByteBufIndexFinder indexFinder) {
-        return buf.bytesBefore(length, indexFinder);
-    }
-
-    @Override
     public int bytesBefore(int index, int length, byte value) {
         return buf.bytesBefore(index, length, value);
-    }
-
-    @Override
-    @Deprecated
-    public int bytesBefore(int index, int length, ByteBufIndexFinder indexFinder) {
-        return buf.bytesBefore(index, length, indexFinder);
     }
 
     @Override

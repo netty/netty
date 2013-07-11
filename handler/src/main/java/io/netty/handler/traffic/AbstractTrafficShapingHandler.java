@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.MessageList;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
@@ -210,19 +209,16 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
     }
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx, final MessageList<Object> msgs) throws Exception {
-        MessageList<ByteBuf> buffers = msgs.cast();
-        long size = 0;
-        for (int i = 0; i < buffers.size(); i++) {
-           size += buffers.get(i).readableBytes();
-        }
+    public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
+        ByteBuf buf = (ByteBuf) msg;
+        long size = buf.readableBytes();
         long curtime = System.currentTimeMillis();
 
         if (trafficCounter != null) {
             trafficCounter.bytesRecvFlowControl(size);
             if (readLimit == 0) {
                 // no action
-                ctx.fireMessageReceived(msgs);
+                ctx.fireChannelRead(msg);
 
                 return;
             }
@@ -234,7 +230,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
             if (wait >= MINIMAL_WAIT) { // At least 10ms seems a minimal
                 // time in order to
                 // try to limit the traffic
-                if (!ctx.attr(READ_SUSPENDED).get()) {
+                if (!isSuspended(ctx)) {
                     ctx.attr(READ_SUSPENDED).set(true);
 
                     // Create a Runnable to reactive the read if needed. If one was create before it will just be
@@ -253,7 +249,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                     Runnable bufferUpdateTask = new Runnable() {
                         @Override
                         public void run() {
-                            ctx.fireMessageReceived(msgs);
+                            ctx.fireChannelRead(msg);
                         }
                     };
                     ctx.executor().schedule(bufferUpdateTask, wait, TimeUnit.MILLISECONDS);
@@ -261,30 +257,34 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                 }
             }
         }
-        ctx.fireMessageReceived(msgs);
+        ctx.fireChannelRead(msg);
     }
 
     @Override
     public void read(ChannelHandlerContext ctx) {
-        Boolean suspended = ctx.attr(READ_SUSPENDED).get();
-        if (suspended == null || Boolean.FALSE.equals(suspended)) {
+        if (!isSuspended(ctx)) {
             ctx.read();
         }
     }
 
+    private static boolean isSuspended(ChannelHandlerContext ctx) {
+        Boolean suspended = ctx.attr(READ_SUSPENDED).get();
+        if (suspended == null || Boolean.FALSE.equals(suspended)) {
+            return false;
+        }
+        return true;
+    }
+
     @Override
-    public void write(final ChannelHandlerContext ctx, final MessageList<Object> msgs, final ChannelPromise promise)
+    public void write(final ChannelHandlerContext ctx, final Object msg, ChannelPromise promise)
             throws Exception {
         long curtime = System.currentTimeMillis();
-        long size = 0;
-        for (int i = 0; i < msgs.size(); i++) {
-            size += ((ByteBuf) msgs.get(i)).readableBytes();
-        }
+        long size = ((ByteBuf) msg).readableBytes();
 
         if (trafficCounter != null) {
             trafficCounter.bytesWriteFlowControl(size);
             if (writeLimit == 0) {
-                ctx.write(msgs, promise);
+                ctx.write(msg);
                 return;
             }
             // compute the number of ms to wait before continue with the
@@ -296,13 +296,13 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                 ctx.executor().schedule(new Runnable() {
                     @Override
                     public void run() {
-                        ctx.write(msgs, promise);
+                        ctx.write(msg);
                     }
                 }, wait, TimeUnit.MILLISECONDS);
                 return;
             }
         }
-        ctx.write(msgs, promise);
+        ctx.write(msg, promise);
     }
 
     /**

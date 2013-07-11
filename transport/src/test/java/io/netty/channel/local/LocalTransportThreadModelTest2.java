@@ -22,7 +22,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.MessageList;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -109,12 +109,13 @@ public class LocalTransportThreadModelTest2 {
             for (int i = 0; i < messageCountPerRun; i ++) {
                 lastWriteFuture = ctx.channel().write(name + ' ' + i);
             }
+            ctx.channel().flush();
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
-            count.addAndGet(msgs.size());
-            msgs.releaseAllAndRecycle();
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            count.incrementAndGet();
+            ReferenceCountUtil.release(msg);
         }
     }
 }

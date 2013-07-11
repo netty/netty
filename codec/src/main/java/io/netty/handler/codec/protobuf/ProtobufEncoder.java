@@ -22,10 +22,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MessageList;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.MessageToMessageEncoder;
+
+import java.util.List;
 
 import static io.netty.buffer.Unpooled.*;
 
@@ -49,7 +50,7 @@ import static io.netty.buffer.Unpooled.*;
  * and then you can use a {@code MyMessage} instead of a {@link ByteBuf}
  * as a message:
  * <pre>
- * void messageReceived({@link ChannelHandlerContext} ctx, MyMessage req) {
+ * void channelRead({@link ChannelHandlerContext} ctx, MyMessage req) {
  *     MyMessage res = MyMessage.newBuilder().setText(
  *                               "Did you say '" + req.getText() + "'?").build();
  *     ch.write(res);
@@ -60,7 +61,7 @@ import static io.netty.buffer.Unpooled.*;
 public class ProtobufEncoder extends MessageToMessageEncoder<MessageLiteOrBuilder> {
     @Override
     protected void encode(
-            ChannelHandlerContext ctx, MessageLiteOrBuilder msg, MessageList<Object> out) throws Exception {
+            ChannelHandlerContext ctx, MessageLiteOrBuilder msg, List<Object> out) throws Exception {
         if (msg instanceof MessageLite) {
             out.add(wrappedBuffer(((MessageLite) msg).toByteArray()));
             return;

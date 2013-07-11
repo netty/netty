@@ -1662,11 +1662,11 @@ public abstract class AbstractByteBufTest {
             int i = CAPACITY / 4;
 
             @Override
-            public int process(byte value) throws Exception {
+            public boolean process(byte value) throws Exception {
                 assertThat(value, is((byte) (i + 1)));
                 lastIndex.set(i);
                 i ++;
-                return 1;
+                return true;
             }
         }), is(-1));
 
@@ -1685,14 +1685,14 @@ public abstract class AbstractByteBufTest {
             int i = CAPACITY / 3;
 
             @Override
-            public int process(byte value) throws Exception {
+            public boolean process(byte value) throws Exception {
                 assertThat(value, is((byte) (i + 1)));
                 if (i == stop) {
-                    throw ABORT;
+                    return false;
                 }
 
                 i ++;
-                return 1;
+                return true;
             }
         }), is(stop));
     }
@@ -1709,11 +1709,11 @@ public abstract class AbstractByteBufTest {
             int i = CAPACITY * 3 / 4 - 1;
 
             @Override
-            public int process(byte value) throws Exception {
+            public boolean process(byte value) throws Exception {
                 assertThat(value, is((byte) (i + 1)));
                 lastIndex.set(i);
                 i --;
-                return 1;
+                return true;
             }
         }), is(-1));
 

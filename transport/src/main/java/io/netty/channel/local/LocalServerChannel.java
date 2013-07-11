@@ -20,7 +20,6 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
-import io.netty.channel.MessageList;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
@@ -46,22 +45,6 @@ public class LocalServerChannel extends AbstractServerChannel {
     private volatile int state; // 0 - open, 1 - active, 2 - closed
     private volatile LocalAddress localAddress;
     private volatile boolean acceptInProgress;
-
-    /**
-     * Creates a new instance
-     */
-    public LocalServerChannel() {
-        this(null);
-    }
-
-    /**
-     * Create a new instance
-     *
-     * @param id    the id to use or {@code null} if a new id should be generated
-     */
-    public LocalServerChannel(Integer id) {
-        super(id);
-    }
 
     @Override
     public ChannelConfig config() {
@@ -147,10 +130,14 @@ public class LocalServerChannel extends AbstractServerChannel {
             return;
         }
 
-        Object[] messages = inboundBuffer.toArray();
-        inboundBuffer.clear();
-        pipeline.fireMessageReceived(messages);
-        pipeline.fireChannelReadSuspended();
+        for (;;) {
+            Object m = inboundBuffer.poll();
+            if (m == null) {
+                break;
+            }
+            pipeline.fireChannelRead(m);
+        }
+        pipeline.fireChannelReadComplete();
     }
 
     LocalChannel serve(final LocalChannel peer) {
@@ -165,17 +152,14 @@ public class LocalServerChannel extends AbstractServerChannel {
             inboundBuffer.add(child);
             if (acceptInProgress) {
                 acceptInProgress = false;
-                MessageList<Object> messages = MessageList.newInstance();
                 for (;;) {
                     Object m = inboundBuffer.poll();
                     if (m == null) {
                         break;
                     }
-                    messages.add(m);
+                    pipeline.fireChannelRead(m);
                 }
-                inboundBuffer.clear();
-                pipeline.fireMessageReceived(messages);
-                pipeline.fireChannelReadSuspended();
+                pipeline.fireChannelReadComplete();
             }
         } else {
             eventLoop().execute(new Runnable() {

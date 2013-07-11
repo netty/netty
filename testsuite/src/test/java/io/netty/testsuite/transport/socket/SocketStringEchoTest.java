@@ -85,7 +85,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         Channel cc = cb.connect().sync().channel();
         for (String element : data) {
             String delimiter = random.nextBoolean() ? "\r\n" : "\n";
-            cc.write(element + delimiter);
+            cc.writeAndFlush(element + delimiter);
         }
 
         while (ch.counter < data.length) {
@@ -146,7 +146,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
             assertEquals(data[counter], msg);
 
             if (channel.parent() != null) {
@@ -155,6 +155,11 @@ public class SocketStringEchoTest extends AbstractSocketTest {
             }
 
             counter ++;
+        }
+
+        @Override
+        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+            ctx.flush();
         }
 
         @Override

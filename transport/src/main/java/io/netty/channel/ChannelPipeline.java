@@ -44,8 +44,8 @@ import java.util.NoSuchElementException;
  * The following diagram describes how I/O events are processed by {@link ChannelHandler}s in a {@link ChannelPipeline}
  * typically. An I/O event is handled by either a {@link ChannelInboundHandler} or a {@link ChannelOutboundHandler}
  * and be forwarded to its closest handler by calling the event propagation methods defined in
- * {@link ChannelHandlerContext}, such as {@link ChannelHandlerContext#fireMessageReceived(MessageList)} and
- * {@link ChannelHandlerContext#write(MessageList)}.
+ * {@link ChannelHandlerContext}, such as {@link ChannelHandlerContext#fireChannelRead(Object)} and
+ * {@link ChannelHandlerContext#write(Object)}.
  *
  * <pre>
  *                                                 I/O Request
@@ -132,10 +132,10 @@ import java.util.NoSuchElementException;
  *     <ul>
  *     <li>{@link ChannelHandlerContext#fireChannelRegistered()}</li>
  *     <li>{@link ChannelHandlerContext#fireChannelActive()}</li>
- *     <li>{@link ChannelHandlerContext#fireMessageReceived(MessageList)}</li>
+ *     <li>{@link ChannelHandlerContext#fireChannelRead(Object)}</li>
+ *     <li>{@link ChannelHandlerContext#fireChannelReadComplete()}</li>
  *     <li>{@link ChannelHandlerContext#fireExceptionCaught(Throwable)}</li>
  *     <li>{@link ChannelHandlerContext#fireUserEventTriggered(Object)}</li>
- *     <li>{@link ChannelHandlerContext#fireChannelReadSuspended()}</li>
  *     <li>{@link ChannelHandlerContext#fireChannelWritabilityChanged()}</li>
  *     <li>{@link ChannelHandlerContext#fireChannelInactive()}</li>
  *     <li>{@link ChannelHandlerContext#fireChannelUnregistered()}</li>
@@ -145,7 +145,8 @@ import java.util.NoSuchElementException;
  *     <ul>
  *     <li>{@link ChannelHandlerContext#bind(SocketAddress, ChannelPromise)}</li>
  *     <li>{@link ChannelHandlerContext#connect(SocketAddress, SocketAddress, ChannelPromise)}</li>
- *     <li>{@link ChannelHandlerContext#write(MessageList)}</li>
+ *     <li>{@link ChannelHandlerContext#write(Object, ChannelPromise)}</li>
+ *     <li>{@link ChannelHandlerContext#flush()}</li>
  *     <li>{@link ChannelHandlerContext#read()}</li>
  *     <li>{@link ChannelHandlerContext#disconnect(ChannelPromise)}</li>
  *     <li>{@link ChannelHandlerContext#close(ChannelPromise)}</li>
@@ -612,14 +613,17 @@ public interface ChannelPipeline
     ChannelPipeline fireUserEventTriggered(Object event);
 
     @Override
-    ChannelPipeline fireMessageReceived(Object msg);
+    ChannelPipeline fireChannelRead(Object msg);
 
     @Override
-    ChannelPipeline fireMessageReceived(MessageList<?> msgs);
-
-    @Override
-    ChannelPipeline fireChannelReadSuspended();
+    ChannelPipeline fireChannelReadComplete();
 
     @Override
     ChannelPipeline fireChannelWritabilityChanged();
+
+    @Override
+    ChannelPipeline flush();
+
+    @Override
+    ChannelPipeline read();
 }

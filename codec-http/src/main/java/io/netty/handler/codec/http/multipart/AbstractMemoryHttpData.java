@@ -53,6 +53,9 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
             throw new IOException("Out of size: " + localsize + " > " +
                     definedSize);
         }
+        if (byteBuf != null) {
+            byteBuf.release();
+        }
         byteBuf = buffer;
         size = localsize;
         completed = true;
@@ -76,6 +79,9 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         if (definedSize > 0 && definedSize < size) {
             throw new IOException("Out of size: " + size + " > " + definedSize);
         }
+        if (byteBuf != null) {
+            byteBuf.release();
+        }
         byteBuf = buffer;
         completed = true;
     }
@@ -97,7 +103,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
                 cbb.addComponent(buffer);
                 cbb.writerIndex(cbb.writerIndex() + buffer.readableBytes());
             } else {
-                CompositeByteBuf cbb = compositeBuffer();
+                CompositeByteBuf cbb = compositeBuffer(Integer.MAX_VALUE);
                 cbb.addComponents(byteBuf, buffer);
                 cbb.writerIndex(byteBuf.readableBytes() + buffer.readableBytes());
                 byteBuf = cbb;
@@ -133,7 +139,10 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         fileChannel.close();
         inputStream.close();
         byteBuffer.flip();
-        byteBuf = wrappedBuffer(byteBuffer);
+        if (byteBuf != null) {
+            byteBuf.release();
+        }
+        byteBuf = wrappedBuffer(Integer.MAX_VALUE, byteBuffer);
         size = newsize;
         completed = true;
     }

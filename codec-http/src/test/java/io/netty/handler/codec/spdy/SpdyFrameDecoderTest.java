@@ -19,9 +19,9 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -103,7 +103,7 @@ public class SpdyFrameDecoderTest {
     }
 
     private static void sendAndWaitForFrame(Channel cc, SpdyFrame frame, CaptureHandler handler) {
-        cc.write(frame);
+        cc.writeAndFlush(frame);
         long theFuture = System.currentTimeMillis() + 3000;
         while (handler.message == null && System.currentTimeMillis() < theFuture) {
             try {
@@ -127,11 +127,11 @@ public class SpdyFrameDecoderTest {
         frame.headers().add(headerName.toString(), headerValue.toString());
     }
 
-    private static class CaptureHandler extends SimpleChannelInboundHandler<Object> {
+    private static class CaptureHandler extends ChannelInboundHandlerAdapter {
         public volatile Object message;
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, Object m) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object m) throws Exception {
             message = m;
         }
 

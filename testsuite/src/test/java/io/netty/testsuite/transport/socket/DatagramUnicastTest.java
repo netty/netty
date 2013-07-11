@@ -19,8 +19,6 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.MessageList;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
 import org.junit.Test;
@@ -42,24 +40,23 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
 
         sb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
             @Override
-            public void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+            public void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
                 assertEquals(1, msg.content().readInt());
                 latch.countDown();
             }
         });
 
-        cb.handler(new ChannelInboundHandlerAdapter() {
+        cb.handler(new SimpleChannelInboundHandler<Object>() {
             @Override
-            public void messageReceived(ChannelHandlerContext ctx, MessageList<Object> msgs) throws Exception {
+            public void channelRead0(ChannelHandlerContext ctx, Object msgs) throws Exception {
                 // Nothing will be sent.
-                msgs.releaseAllAndRecycle();
             }
         });
 
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.bind().sync().channel();
 
-        cc.write(new DatagramPacket(Unpooled.copyInt(1), addr)).sync();
+        cc.writeAndFlush(new DatagramPacket(Unpooled.copyInt(1), addr)).sync();
         assertTrue(latch.await(10, TimeUnit.SECONDS));
 
         sc.close().sync();

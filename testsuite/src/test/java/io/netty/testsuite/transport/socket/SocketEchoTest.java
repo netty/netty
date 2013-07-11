@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
@@ -115,6 +116,12 @@ public class SocketEchoTest extends AbstractSocketTest {
             });
         } else {
             sb.childHandler(sh);
+            sb.handler(new ChannelInboundHandlerAdapter() {
+                @Override
+                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                    cause.printStackTrace();
+                }
+            });
             cb.handler(ch);
         }
 
@@ -125,9 +132,9 @@ public class SocketEchoTest extends AbstractSocketTest {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
             ByteBuf buf = Unpooled.wrappedBuffer(data, i, length);
             if (voidPromise) {
-                assertEquals(cc.voidPromise(), cc.write(buf, cc.voidPromise()));
+                assertEquals(cc.voidPromise(), cc.writeAndFlush(buf, cc.voidPromise()));
             } else {
-                assertNotEquals(cc.voidPromise(), cc.write(buf));
+                assertNotEquals(cc.voidPromise(), cc.writeAndFlush(buf));
             }
             i += length;
         }
@@ -192,7 +199,7 @@ public class SocketEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
 
@@ -209,9 +216,15 @@ public class SocketEchoTest extends AbstractSocketTest {
         }
 
         @Override
+        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+            ctx.flush();
+        }
+
+        @Override
         public void exceptionCaught(ChannelHandlerContext ctx,
                 Throwable cause) throws Exception {
             if (exception.compareAndSet(null, cause)) {
+                cause.printStackTrace();
                 ctx.close();
             }
         }

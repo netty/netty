@@ -60,7 +60,7 @@ public class SecureChatClient {
                 }
 
                 // Sends the received line to the server.
-                lastWriteFuture = ch.write(line + "\r\n");
+                lastWriteFuture = ch.writeAndFlush(line + "\r\n");
 
                 // If user typed the 'bye' command, wait until the server closes
                 // the connection.

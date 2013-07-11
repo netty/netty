@@ -22,7 +22,6 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.FileRegion;
-import io.netty.channel.MessageList;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.util.internal.StringUtil;
@@ -40,12 +39,10 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
      * Create a new instance
      *
      * @param parent            the parent {@link Channel} by which this instance was created. May be {@code null}
-     * @param id                the id of this instance or {@code null} if one should be generated
      * @param ch                the underlying {@link SelectableChannel} on which it operates
      */
-    protected AbstractNioByteChannel(
-            Channel parent, Integer id, SelectableChannel ch) {
-        super(parent, id, ch, SelectionKey.OP_READ);
+    protected AbstractNioByteChannel(Channel parent, SelectableChannel ch) {
+        super(parent, ch, SelectionKey.OP_READ);
     }
 
     @Override
@@ -78,11 +75,11 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
             final ByteBufAllocator allocator = config.getAllocator();
             final int maxMessagesPerRead = config.getMaxMessagesPerRead();
-            final MessageList<ByteBuf> messages = MessageList.newInstance();
 
             boolean closed = false;
             Throwable exception = null;
             ByteBuf byteBuf = null;
+            int messages = 0;
             try {
                 for (;;) {
                     byteBuf = allocHandle.allocate(allocator);
@@ -99,10 +96,10 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                         break;
                     }
 
-                    messages.add(byteBuf);
+                    pipeline.fireChannelRead(byteBuf);
                     allocHandle.record(localReadAmount);
                     byteBuf = null;
-                    if (messages.size() == maxMessagesPerRead) {
+                    if (++ messages == maxMessagesPerRead) {
                         break;
                     }
                 }
@@ -111,13 +108,13 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             } finally {
                 if (byteBuf != null) {
                     if (byteBuf.isReadable()) {
-                        messages.add(byteBuf);
+                        pipeline.fireChannelRead(byteBuf);
                     } else {
                         byteBuf.release();
                     }
                 }
 
-                pipeline.fireMessageReceived(messages);
+                pipeline.fireChannelReadComplete();
 
                 if (exception != null) {
                     if (exception instanceof IOException) {
@@ -137,22 +134,19 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                             close(voidPromise());
                         }
                     }
-                } else {
-                    pipeline.fireChannelReadSuspended();
                 }
             }
         }
     }
 
     @Override
-    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
-        int size = msgs.size();
-        int writeIndex = index;
+    protected int doWrite(Object[] msgs, int msgsLength, int startIndex) throws Exception {
+        int writeIndex = startIndex;
         for (;;) {
-            if (writeIndex >= size) {
+            if (writeIndex >= msgsLength) {
                 break;
             }
-            Object msg = msgs.get(writeIndex);
+            Object msg = msgs[writeIndex];
             if (msg instanceof ByteBuf) {
                 ByteBuf buf = (ByteBuf) msg;
                 if (!buf.isReadable()) {
@@ -203,7 +197,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 throw new UnsupportedOperationException("unsupported message type: " + StringUtil.simpleClassName(msg));
             }
         }
-        return writeIndex - index;
+        return writeIndex - startIndex;
     }
 
     /**

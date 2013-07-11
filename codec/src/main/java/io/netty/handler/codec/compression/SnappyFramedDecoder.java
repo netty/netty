@@ -15,15 +15,14 @@
  */
 package io.netty.handler.codec.compression;
 
+import static io.netty.handler.codec.compression.Snappy.validateChecksum;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.MessageList;
 import io.netty.handler.codec.ByteToMessageDecoder;
 
 import java.util.Arrays;
-
-import static io.netty.handler.codec.compression.Snappy.*;
+import java.util.List;
 
 /**
  * Uncompresses a {@link ByteBuf} encoded with the Snappy framing format.
@@ -76,7 +75,7 @@ public class SnappyFramedDecoder extends ByteToMessageDecoder {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, MessageList<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         if (corrupted) {
             in.skipBytes(in.readableBytes());
             return;

@@ -57,18 +57,20 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.MessageList;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.List;
+
 /**
  * Decodes a web socket frame from wire protocol version 8 format. This code was forked from <a
  * href="https://github.com/joewalnes/webbit">webbit</a> and modified.
  */
-public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDecoder.State> {
+public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDecoder.State>
+        implements WebSocketFrameDecoder {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocket08FrameDecoder.class);
 
@@ -120,7 +122,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, MessageList<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
 
         // Discard all data received if closing handshake was received before.
         if (receivedClosingHandshake) {
@@ -402,7 +404,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
     private void protocolViolation(ChannelHandlerContext ctx, String reason) {
         checkpoint(State.CORRUPT);
         if (ctx.channel().isActive()) {
-            ctx.write(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+            ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
         }
         throw new CorruptedFrameException(reason);
     }

@@ -25,7 +25,6 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.MessageList;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.sctp.DefaultSctpChannelConfig;
@@ -47,6 +46,7 @@ import java.nio.channels.Selector;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -96,7 +96,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
      * @param ch    the {@link SctpChannel} which is used by this instance
      */
     public OioSctpChannel(SctpChannel ch) {
-        this(null, null, ch);
+        this(null, ch);
     }
 
     /**
@@ -104,11 +104,10 @@ public class OioSctpChannel extends AbstractOioMessageChannel
      *
      * @param parent    the parent {@link Channel} which was used to create this instance. This can be null if the
      *                  {@link} has no parent as it was created by your self.
-     * @param id        the id which should be used for this instance or {@code null} if a new one should be generated
      * @param ch        the {@link SctpChannel} which is used by this instance
      */
-    public OioSctpChannel(Channel parent, Integer id, SctpChannel ch) {
-        super(parent, id);
+    public OioSctpChannel(Channel parent, SctpChannel ch) {
+        super(parent);
         this.ch = ch;
         boolean success = false;
         try {
@@ -168,7 +167,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected int doReadMessages(MessageList<Object> buf) throws Exception {
+    protected int doReadMessages(List<Object> msgs) throws Exception {
         if (!readSelector.isOpen()) {
             return 0;
         }
@@ -200,7 +199,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                     }
 
                     data.flip();
-                    buf.add(new SctpMessage(messageInfo, buffer.writerIndex(buffer.writerIndex() + data.remaining())));
+                    msgs.add(new SctpMessage(messageInfo, buffer.writerIndex(buffer.writerIndex() + data.remaining())));
                     free = false;
                     readMessages ++;
                 } catch (Throwable cause) {
@@ -216,12 +215,11 @@ public class OioSctpChannel extends AbstractOioMessageChannel
         } finally {
             reableKeys.clear();
         }
-
         return readMessages;
     }
 
     @Override
-    protected int doWrite(MessageList<Object> msgs, int index) throws Exception {
+    protected int doWrite(Object[] msgs, int length, int startIndex) throws Exception {
         if (!writeSelector.isOpen()) {
             return 0;
         }
@@ -233,8 +231,6 @@ public class OioSctpChannel extends AbstractOioMessageChannel
             }
             Iterator<SelectionKey> writableKeysIt = writableKeys.iterator();
             int written = 0;
-            int length = msgs.size() - index;
-
             for (;;) {
                 if (written == length) {
                     // all written
@@ -243,7 +239,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                 writableKeysIt.next();
                 writableKeysIt.remove();
 
-                SctpMessage packet = (SctpMessage) msgs.get(index ++);
+                SctpMessage packet = (SctpMessage) msgs[startIndex ++];
                 if (packet == null) {
                     return written;
                 }

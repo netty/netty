@@ -18,7 +18,6 @@ package io.netty.example.factorial;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.MessageList;
 import io.netty.channel.SimpleChannelInboundHandler;
 
 import java.math.BigInteger;
@@ -40,7 +39,6 @@ public class FactorialClientHandler extends SimpleChannelInboundHandler<BigInteg
             FactorialClientHandler.class.getName());
 
     private ChannelHandlerContext ctx;
-    private int i = 1;
     private int receivedMessages;
     private final int count;
     final BlockingQueue<BigInteger> answer = new LinkedBlockingQueue<BigInteger>();
@@ -71,7 +69,7 @@ public class FactorialClientHandler extends SimpleChannelInboundHandler<BigInteg
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, final BigInteger msg) {
+    public void channelRead0(ChannelHandlerContext ctx, final BigInteger msg) {
         receivedMessages ++;
         if (receivedMessages == count) {
             // Offer the answer after closing the connection.
@@ -96,22 +94,18 @@ public class FactorialClientHandler extends SimpleChannelInboundHandler<BigInteg
 
     private void sendNumbers() {
         // Do not send more than 4096 numbers.
-        boolean finished = false;
-        MessageList<Object> out = MessageList.newInstance(4096);
-        while (out.size() < 4096) {
+        for (int i = 0; i < 4096; i++) {
             if (i <= count) {
-                out.add(Integer.valueOf(i));
+                ChannelFuture future = ctx.write(Integer.valueOf(i));
+                if (count == i) {
+                    future.addListener(numberSender);
+                }
                 i ++;
             } else {
-                finished = true;
                 break;
             }
         }
-
-        ChannelFuture f = ctx.write(out);
-        if (!finished) {
-            f.addListener(numberSender);
-        }
+        ctx.flush();
     }
 
     private final ChannelFutureListener numberSender = new ChannelFutureListener() {

@@ -18,7 +18,6 @@ package io.netty.example.portunification;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MessageList;
 import io.netty.example.factorial.BigIntegerDecoder;
 import io.netty.example.factorial.FactorialServerHandler;
 import io.netty.example.factorial.NumberEncoder;
@@ -33,6 +32,7 @@ import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.ssl.SslHandler;
 
 import javax.net.ssl.SSLEngine;
+import java.util.List;
 
 /**
  * Manipulates the current pipeline dynamically to switch protocols or enable
@@ -53,7 +53,7 @@ public class PortUnificationServerHandler extends ByteToMessageDecoder {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, MessageList<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         // Will use the first five bytes to detect a protocol.
         if (in.readableBytes() < 5) {
             return;

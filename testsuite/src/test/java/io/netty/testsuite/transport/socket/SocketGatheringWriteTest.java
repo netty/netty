@@ -22,7 +22,6 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.MessageList;
 import io.netty.channel.SimpleChannelInboundHandler;
 import org.junit.Test;
 
@@ -69,8 +68,6 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.connect().sync().channel();
 
-        MessageList<Object> messages = MessageList.newInstance();
-
         for (int i = 0; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
             ByteBuf buf = Unpooled.wrappedBuffer(data, i, length);
@@ -82,13 +79,13 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
                 ByteBuf buf2 = Unpooled.buffer(size).writeBytes(buf, split, oldIndex - split);
                 CompositeByteBuf comp = Unpooled.compositeBuffer();
                 comp.addComponent(buf).addComponent(buf2).writerIndex(length);
-                messages.add(comp);
+                cc.write(comp);
             } else {
-                messages.add(buf);
+                cc.write(buf);
             }
             i += length;
         }
-        assertNotEquals(cc.voidPromise(), cc.write(messages).sync());
+        assertNotEquals(cc.voidPromise(), cc.writeAndFlush(Unpooled.EMPTY_BUFFER).sync());
 
         while (sh.counter < data.length) {
             if (sh.exception.get() != null) {
@@ -135,7 +132,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             counter += in.readableBytes();
             received.writeBytes(in);
         }

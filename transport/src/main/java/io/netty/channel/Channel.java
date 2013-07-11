@@ -69,11 +69,6 @@ import java.net.SocketAddress;
 public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPropertyAccess, Comparable<Channel> {
 
     /**
-     * Returns the unique integer ID of this channel. The returned value MUST be non {@code null}.
-     */
-    Integer id();
-
-    /**
      * Return the {@link EventLoop} this {@link Channel} was registered too.
      */
     EventLoop eventLoop();
@@ -151,6 +146,12 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
      * ready to process the queued write requests.
      */
     boolean isWritable();
+
+    @Override
+    Channel flush();
+
+    @Override
+    Channel read();
 
     /**
      * Returns an <em>internal-use-only</em> object that provides unsafe operations.
@@ -236,10 +237,15 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
         /**
          * Schedules a write operation.
          */
-        void write(MessageList<?> msgs, ChannelPromise promise);
+        void write(Object msg, ChannelPromise promise);
 
         /**
-         * Flush out all data now.
+         * Flush out all scheduled writes.
+         */
+        void flush();
+
+        /**
+         * Flush out all schedules writes immediately.
          */
         void flushNow();
 
