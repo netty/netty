@@ -394,6 +394,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     @Override
+    public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
+            throws Exception {
+        pendingUnencryptedWrites.add(new PendingWrite((ByteBuf) msg, promise));
+    }
+
+    @Override
     public void flush(ChannelHandlerContext ctx) throws Exception {
         // Do not encrypt the first write request if this handler is
         // created with startTLS flag turned on.
@@ -415,14 +421,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         flush0(ctx);
     }
 
-    @Override
-    public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
-            throws Exception {
-        pendingUnencryptedWrites.add(new PendingWrite((ByteBuf) msg, promise));
-    }
-
     private void flush0(ChannelHandlerContext ctx) throws SSLException {
-        boolean unwrapLater = false;
         ByteBuf out = null;
         ChannelPromise promise = null;
         try {
@@ -462,6 +461,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     return;
                 } else {
                     switch (result.getHandshakeStatus()) {
+                        case NEED_TASK:
+                            runDelegatedTasks();
+                            break;
+                        case FINISHED:
+                            setHandshakeSuccess();
+                            // deliberate fall-through
+                        case NOT_HANDSHAKING:
                         case NEED_WRAP:
                             if (promise != null) {
                                 ctx.writeAndFlush(out, promise);
@@ -470,27 +476,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                                 ctx.writeAndFlush(out);
                             }
                             out = ctx.alloc().buffer();
-                            continue;
+                            break;
                         case NEED_UNWRAP:
-                            unwrapLater = true;
-                            break;
-                        case NEED_TASK:
-                            runDelegatedTasks();
-                            continue;
-                        case FINISHED:
-                            setHandshakeSuccess();
-                            continue;
-                        case NOT_HANDSHAKING:
-                            // Workaround for TLS False Start problem reported at:
-                            // https://github.com/netty/netty/issues/1108#issuecomment-14266970
-                            unwrapLater = true;
-                            break;
+                            return;
                         default:
                             throw new IllegalStateException("Unknown handshake status: " + result.getHandshakeStatus());
-                    }
-
-                    if (result.bytesConsumed() == 0 && result.bytesProduced() == 0) {
-                        break;
                     }
                 }
             }
@@ -511,10 +501,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             if (out != null) {
                 out.release();
             }
-        }
-
-        if (unwrapLater) {
-            unwrap(ctx);
         }
     }
 
