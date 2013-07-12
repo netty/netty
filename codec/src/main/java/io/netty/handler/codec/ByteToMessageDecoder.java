@@ -46,7 +46,7 @@ import java.util.List;
  */
 public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter {
 
-    protected ByteBuf cumulation;
+    ByteBuf cumulation;
     private boolean singleDecode;
     private boolean decodeWasNull;
 
