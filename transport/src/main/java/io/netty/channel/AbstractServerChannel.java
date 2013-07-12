@@ -84,7 +84,7 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
         }
 
         @Override
-        public void flush() {
+        public void flush(boolean force) {
             // ignore
         }
 
