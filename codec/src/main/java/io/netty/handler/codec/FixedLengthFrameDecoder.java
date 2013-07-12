@@ -54,13 +54,21 @@ public class FixedLengthFrameDecoder extends ByteToMessageDecoder {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected final void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         Object decoded = decode(ctx, in);
         if (decoded != null) {
             out.add(decoded);
         }
     }
 
+    /**
+     * Create a frame out of the {@link ByteBuf} and return it.
+     *
+     * @param   ctx             the {@link ChannelHandlerContext} which this {@link ByteToMessageDecoder} belongs to
+     * @param   in              the {@link ByteBuf} from which to read data
+     * @return  frame           the {@link ByteBuf} which represent the frame or {@code null} if no frame could
+     *                          be created.
+     */
     protected Object decode(
             @SuppressWarnings("UnusedParameters") ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         if (in.readableBytes() < frameLength) {
