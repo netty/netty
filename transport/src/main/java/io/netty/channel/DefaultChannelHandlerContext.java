@@ -43,6 +43,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     // Lazily instantiated tasks used to trigger events to a handler with different executor.
     private Runnable invokeChannelReadCompleteTask;
     private Runnable invokeRead0Task;
+    private Runnable invokeFlush0Task;
     private Runnable invokeChannelWritableStateChangedTask;
 
     @SuppressWarnings("unchecked")
@@ -711,12 +712,16 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (executor.inEventLoop()) {
             invokeFlush0();
         } else {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    invokeFlush0();
-                }
-            });
+            Runnable task = invokeFlush0Task;
+            if (task == null) {
+                invokeFlush0Task = task = new Runnable() {
+                    @Override
+                    public void run() {
+                        invokeFlush0();
+                    }
+                };
+            }
+            executor.execute(task);
         }
     }
 
