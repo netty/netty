@@ -285,8 +285,9 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
                 spdyHeadersFrame = null;
                 headerBlockDecoder.reset();
                 state = State.READ_COMMON_HEADER;
-                out.add(frame);
-                return;
+                if (frame != null) {
+                    out.add(frame);
+                }
             }
             return;
 
