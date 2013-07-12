@@ -54,7 +54,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private volatile boolean registered;
 
     private ClosedChannelException closedChannelException;
-    private boolean inFlushNow;
+    private boolean inFlush0;
 
     /** Cache for the string representation of this channel */
     private boolean strValActive;
@@ -598,12 +598,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         protected void flush0() {
-            if (inFlushNow) {
+            if (inFlush0) {
                 // Avoid re-entrance
                 return;
             }
 
-            inFlushNow = true;
+            inFlush0 = true;
 
             final ChannelOutboundBuffer outboundBuffer = AbstractChannel.this.outboundBuffer;
 
@@ -614,7 +614,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 } else {
                     outboundBuffer.fail(new ClosedChannelException());
                 }
-                inFlushNow = false;
+                inFlush0 = false;
                 return;
             }
 
@@ -660,7 +660,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     close(voidPromise());
                 }
             } finally {
-                inFlushNow = false;
+                inFlush0 = false;
             }
         }
 
