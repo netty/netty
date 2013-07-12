@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.RandomAccess;
 
 /**
- * A simple list that holds the output of a codec.
+ * A simple list which is reyclable. This implementation does not allow {@code null} elements to be added.
  */
 public final class RecyclableArrayList extends ArrayList<Object> {
 
@@ -79,7 +79,7 @@ public final class RecyclableArrayList extends ArrayList<Object> {
         return super.addAll(index, c);
     }
 
-    private void checkNullElements(Collection<?> c) {
+    private static void checkNullElements(Collection<?> c) {
         if (c instanceof RandomAccess && c instanceof List) {
             // produce less garbage
             List<?> list = (List<?>) c;
@@ -112,6 +112,14 @@ public final class RecyclableArrayList extends ArrayList<Object> {
             throw new NullPointerException("element");
         }
         super.add(index, element);
+    }
+
+    @Override
+    public Object set(int index, Object element) {
+        if (element == null) {
+            throw new NullPointerException("element");
+        }
+        return super.set(index, element);
     }
 
     /**
