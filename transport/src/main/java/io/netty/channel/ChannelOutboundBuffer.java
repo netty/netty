@@ -236,6 +236,13 @@ final class ChannelOutboundBuffer {
 
             do {
                 if (currentMessages != null) {
+                    // Store a local reference of current messages
+                    // This is needed as a promise may have a listener attached that will close the channel
+                    // The close will call next() which will set currentMessages to null and so
+                    // trigger a NPE in the finally block if no local reference is used.
+                    //
+                    // See https://github.com/netty/netty/issues/1573
+                    MessageList current = currentMessages;
                     // Release all failed messages.
                     Object[] messages = currentMessages.messages();
                     ChannelPromise[] promises = currentMessages.promises();
@@ -249,7 +256,7 @@ final class ChannelOutboundBuffer {
                             }
                         }
                     } finally {
-                        currentMessages.recycle();
+                        current.recycle();
                     }
                 }
             } while(next());
