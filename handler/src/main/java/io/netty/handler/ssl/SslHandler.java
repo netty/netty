@@ -446,17 +446,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 if (result.getStatus() == Status.CLOSED) {
                     // SSLEngine has been closed already.
                     // Any further write attempts should be denied.
-                    boolean failed = false;
                     for (;;) {
                         PendingWrite w = pendingUnencryptedWrites.poll();
                         if (w == null) {
                             break;
                         }
-                        failed = true;
                         w.fail(SSLENGINE_CLOSED);
-                    }
-                    if (failed) {
-                        ctx.fireExceptionCaught(SSLENGINE_CLOSED);
                     }
                     return;
                 } else {
