@@ -592,12 +592,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public void flush() {
+        public void flush(boolean force) {
             outboundBuffer.addFlush();
-            flush0();
+            flush0(force);
         }
 
-        private void flush0() {
+        private void flush0(boolean force) {
             if (inFlushNow) {
                 // Avoid re-entrance
                 return;
@@ -606,7 +606,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             // Flush immediately only when there's no pending flush.
             // If there's a pending flush operation, event loop will call flushNow() later,
             // and thus there's no need to call it now.
-            if (isFlushPending()) {
+            if (!force || isFlushPending()) {
                 return;
             }
 

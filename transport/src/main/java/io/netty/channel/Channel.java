@@ -242,7 +242,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
         /**
          * Flush out all write operations scheduled via {@link #write(Object, ChannelPromise)}.
          */
-        void flush();
+        void flush(boolean force);
 
         /**
          * Return a special ChannelPromise which can be reused and passed to the operations in {@link Unsafe}.
