@@ -324,6 +324,9 @@ public class LoggingHandler extends ChannelDuplexHandler {
         }
     }
 
+    /**
+     * Returns a String which contains all details to log the {@link ByteBuf}
+     */
     protected String formatByteBuf(String eventName, ByteBuf buf) {
         int length = buf.readableBytes();
         int rows = length / 16 + (length % 15 == 0? 0 : 1) + 4;
@@ -375,6 +378,9 @@ public class LoggingHandler extends ChannelDuplexHandler {
         return dump.toString();
     }
 
+    /**
+     * Returns a String which contains all details to log the {@link Object}
+     */
     protected String formatNonByteBuf(String eventName, Object msg) {
         return eventName + ": " + msg;
     }
