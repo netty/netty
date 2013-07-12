@@ -359,6 +359,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     protected abstract class AbstractUnsafe implements Unsafe {
 
+        private final Runnable flushTask = new Runnable() {
+            @Override
+            public void run() {
+                flush0();
+            }
+        };
+
         @Override
         public final SocketAddress localAddress() {
             return localAddress0();
@@ -609,12 +616,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             } else {
                 if (!flushNowPending) {
                     flushNowPending = true;
-                    eventLoop().execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            flush0();
-                        }
-                    });
+                    eventLoop().execute(flushTask);
                 }
             }
         }
