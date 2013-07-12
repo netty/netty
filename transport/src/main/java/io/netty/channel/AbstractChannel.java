@@ -597,16 +597,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             outboundBuffer.addFlush();
 
             if (!inFlushNow) { // Avoid re-entrance
-                try {
-                    // Flush immediately only when there's no pending flush.
-                    // If there's a pending flush operation, event loop will call flushNow() later,
-                    // and thus there's no need to call it now.
-                    if (!isFlushPending()) {
-                        flushNow();
-                    }
-                } catch (Throwable t) {
-                    outboundBuffer.fail(t);
-                    close(voidPromise());
+                // Flush immediately only when there's no pending flush.
+                // If there's a pending flush operation, event loop will call flushNow() later,
+                // and thus there's no need to call it now.
+                if (!isFlushPending()) {
+                    flushNow();
                 }
             } else {
                 if (!flushNowPending) {
