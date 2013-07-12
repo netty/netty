@@ -54,7 +54,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private volatile boolean registered;
 
     private ClosedChannelException closedChannelException;
-    private boolean inFlushNow;
+    private boolean inFlush0;
 
     /** Cache for the string representation of this channel */
     private boolean strValActive;
@@ -592,25 +592,18 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public void flush(boolean force) {
+        public void flush() {
             outboundBuffer.addFlush();
-            flush0(force);
+            flush0();
         }
 
-        private void flush0(boolean force) {
-            if (inFlushNow) {
+        protected void flush0() {
+            if (inFlush0) {
                 // Avoid re-entrance
                 return;
             }
 
-            // Flush immediately only when there's no pending flush.
-            // If there's a pending flush operation, event loop will call flushNow() later,
-            // and thus there's no need to call it now.
-            if (!force && isFlushPending()) {
-                return;
-            }
-
-            inFlushNow = true;
+            inFlush0 = true;
 
             final ChannelOutboundBuffer outboundBuffer = AbstractChannel.this.outboundBuffer;
 
@@ -621,7 +614,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 } else {
                     outboundBuffer.fail(new ClosedChannelException());
                 }
-                inFlushNow = false;
+                inFlush0 = false;
                 return;
             }
 
@@ -667,7 +660,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     close(voidPromise());
                 }
             } finally {
-                inFlushNow = false;
+                inFlush0 = false;
             }
         }
 
@@ -802,11 +795,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
         return 0;
     }
-
-    /**
-     * Return {@code true} if a flush to the {@link Channel} is currently pending.
-     */
-    protected abstract boolean isFlushPending();
 
     final class CloseFuture extends DefaultChannelPromise {
 

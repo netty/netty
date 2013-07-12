@@ -145,6 +145,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
          * Read from underlying {@link SelectableChannel}
          */
         void read();
+
+        void forceFlush();
     }
 
     protected abstract class AbstractNioUnsafe extends AbstractUnsafe implements NioUnsafe {
@@ -245,6 +247,23 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                 connectPromise = null;
             }
         }
+
+        @Override
+        protected void flush0() {
+            // Flush immediately only when there's no pending flush.
+            // If there's a pending flush operation, event loop will call forceFlush() later,
+            // and thus there's no need to call it now.
+            if (isFlushPending()) {
+                return;
+            }
+            super.flush0();
+        }
+
+        @Override
+        public void forceFlush() {
+            // directly call super.flush0() to force a flush now
+            super.flush0();
+        }
     }
 
     @Override
@@ -252,8 +271,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         return loop instanceof NioEventLoop;
     }
 
-    @Override
-    protected boolean isFlushPending() {
+    private boolean isFlushPending() {
         SelectionKey selectionKey = this.selectionKey;
         return selectionKey.isValid() && (selectionKey.interestOps() & SelectionKey.OP_WRITE) != 0;
     }
