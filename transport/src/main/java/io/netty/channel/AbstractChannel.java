@@ -55,7 +55,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     private ClosedChannelException closedChannelException;
     private boolean inFlushNow;
-    private boolean flushNowPending;
 
     /** Cache for the string representation of this channel */
     private boolean strValActive;
@@ -359,13 +358,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     protected abstract class AbstractUnsafe implements Unsafe {
 
-        private final Runnable flushTask = new Runnable() {
-            @Override
-            public void run() {
-                flush0();
-            }
-        };
-
         @Override
         public final SocketAddress localAddress() {
             return localAddress0();
@@ -606,24 +598,15 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         private void flush0() {
-            if (!inFlushNow) { // Avoid re-entrance
-                // Flush immediately only when there's no pending flush.
-                // If there's a pending flush operation, event loop will call flushNow() later,
-                // and thus there's no need to call it now.
-                if (!isFlushPending()) {
-                    flushNow();
-                }
-            } else {
-                if (!flushNowPending) {
-                    flushNowPending = true;
-                    eventLoop().execute(flushTask);
-                }
-            }
-        }
-
-        @Override
-        public final void flushNow() {
             if (inFlushNow) {
+                // Avoid re-entrance
+                return;
+            }
+
+            // Flush immediately only when there's no pending flush.
+            // If there's a pending flush operation, event loop will call flushNow() later,
+            // and thus there's no need to call it now.
+            if (isFlushPending()) {
                 return;
             }
 
