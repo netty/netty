@@ -21,6 +21,8 @@ import io.netty.util.Recycler.Handle;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
+import java.util.RandomAccess;
 
 /**
  * A simple list that holds the output of a codec.
@@ -67,22 +69,33 @@ public final class RecyclableArrayList extends ArrayList<Object> {
 
     @Override
     public boolean addAll(Collection<?> c) {
-        for (Object element: c) {
-            if (element == null) {
-                throw new IllegalArgumentException("c contains null values");
-            }
-        }
+        checkNullElements(c);
         return super.addAll(c);
     }
 
     @Override
     public boolean addAll(int index, Collection<?> c) {
-        for (Object element: c) {
-            if (element == null) {
-                throw new IllegalArgumentException("c contains null values");
+        checkNullElements(c);
+        return super.addAll(index, c);
+    }
+
+    private void checkNullElements(Collection<?> c) {
+        if (c instanceof RandomAccess && c instanceof List) {
+            // produce less garbage
+            List<?> list = (List<?>) c;
+            int size = list.size();
+            for (int i = 0; i  < size; i++) {
+                if (list.get(i) == null) {
+                    throw new IllegalArgumentException("c contains null values");
+                }
+            }
+        } else {
+            for (Object element: c) {
+                if (element == null) {
+                    throw new IllegalArgumentException("c contains null values");
+                }
             }
         }
-        return super.addAll(index, c);
     }
 
     @Override
