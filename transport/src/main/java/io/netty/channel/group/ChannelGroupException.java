@@ -38,7 +38,7 @@ public class ChannelGroupException extends ChannelException implements Iterable<
         if (causes.isEmpty()) {
             throw new IllegalArgumentException("causes must be non empty");
         }
-        this.failed = Collections.unmodifiableCollection(causes);
+        failed = Collections.unmodifiableCollection(causes);
     }
 
     /**
