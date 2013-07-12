@@ -20,6 +20,7 @@ import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
 
 import java.util.ArrayList;
+import java.util.Collection;
 
 /**
  * A simple list that holds the output of a codec.
@@ -62,6 +63,42 @@ public final class RecyclableArrayList extends ArrayList<Object> {
     private RecyclableArrayList(Handle handle, int initialCapacity) {
         super(initialCapacity);
         this.handle = handle;
+    }
+
+    @Override
+    public boolean addAll(Collection<?> c) {
+        for (Object element: c) {
+            if (element == null) {
+                throw new IllegalArgumentException("c contains null values");
+            }
+        }
+        return super.addAll(c);
+    }
+
+    @Override
+    public boolean addAll(int index, Collection<?> c) {
+        for (Object element: c) {
+            if (element == null) {
+                throw new IllegalArgumentException("c contains null values");
+            }
+        }
+        return super.addAll(index, c);
+    }
+
+    @Override
+    public boolean add(Object element) {
+        if (element == null) {
+            throw new NullPointerException("element");
+        }
+        return super.add(element);
+    }
+
+    @Override
+    public void add(int index, Object element) {
+        if (element == null) {
+            throw new NullPointerException("element");
+        }
+        super.add(index, element);
     }
 
     /**
