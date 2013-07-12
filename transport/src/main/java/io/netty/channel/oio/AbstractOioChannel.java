@@ -91,11 +91,6 @@ public abstract class AbstractOioChannel extends AbstractChannel {
         return loop instanceof ThreadPerChannelEventLoop;
     }
 
-    @Override
-    protected boolean isFlushPending() {
-        return false;
-    }
-
     /**
      * Connect to the remote peer using the given localAddress if one is specified or {@code null} otherwise.
      */

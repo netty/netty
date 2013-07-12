@@ -315,11 +315,6 @@ public class LocalChannel extends AbstractChannel {
         }
     }
 
-    @Override
-    protected boolean isFlushPending() {
-        return false;
-    }
-
     private class LocalUnsafe extends AbstractUnsafe {
 
         @Override
