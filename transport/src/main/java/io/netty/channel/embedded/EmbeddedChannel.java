@@ -302,11 +302,6 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    protected boolean isFlushPending() {
-        return false;
-    }
-
-    @Override
     protected int doWrite(Object[] msgs, int msgsLength, int startIndex) throws Exception {
         for (int i = startIndex; i < msgsLength; i ++) {
             lastOutboundBuffer.add(msgs[i]);

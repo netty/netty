@@ -1030,7 +1030,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void flush(ChannelHandlerContext ctx) throws Exception {
-            unsafe.flush(false);
+            unsafe.flush();
         }
 
         @Override

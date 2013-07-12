@@ -62,11 +62,6 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    protected boolean isFlushPending() {
-        return false;
-    }
-
-    @Override
     protected AbstractUnsafe newUnsafe() {
         return new DefaultServerUnsafe();
     }
@@ -84,7 +79,7 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
         }
 
         @Override
-        public void flush(boolean force) {
+        public void flush() {
             // ignore
         }
 
