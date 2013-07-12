@@ -595,7 +595,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         @Override
         public void flush() {
             outboundBuffer.addFlush();
+            flush0();
+        }
 
+        private void flush0() {
             if (!inFlushNow) { // Avoid re-entrance
                 // Flush immediately only when there's no pending flush.
                 // If there's a pending flush operation, event loop will call flushNow() later,
@@ -609,7 +612,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     eventLoop().execute(new Runnable() {
                         @Override
                         public void run() {
-                            flush();
+                            flush0();
                         }
                     });
                 }
