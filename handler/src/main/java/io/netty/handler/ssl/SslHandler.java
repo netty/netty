@@ -311,7 +311,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     /**
      * See {@link #close()}
-
      */
     public ChannelFuture close(final ChannelPromise future) {
         final ChannelHandlerContext ctx = this.ctx;
@@ -473,9 +472,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                             out = ctx.alloc().buffer();
                             continue;
                         case NEED_UNWRAP:
-                            if (internalBuffer().isReadable()) {
-                                unwrapLater = true;
-                            }
+                            unwrapLater = true;
                             break;
                         case NEED_TASK:
                             runDelegatedTasks();
@@ -486,9 +483,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         case NOT_HANDSHAKING:
                             // Workaround for TLS False Start problem reported at:
                             // https://github.com/netty/netty/issues/1108#issuecomment-14266970
-                            if (internalBuffer().isReadable()) {
-                                unwrapLater = true;
-                            }
+                            unwrapLater = true;
                             break;
                         default:
                             throw new IllegalStateException("Unknown handshake status: " + result.getHandshakeStatus());
@@ -498,10 +493,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         break;
                     }
                 }
-            }
-
-            if (unwrapLater) {
-                unwrapLater(ctx);
             }
         } catch (SSLException e) {
             setHandshakeFailure(e);
@@ -521,22 +512,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 out.release();
             }
         }
-    }
 
-    private void unwrapLater(ChannelHandlerContext ctx) throws SSLException {
-        RecyclableArrayList out = RecyclableArrayList.newInstance();
-        try {
-            decode(ctx, internalBuffer(),  out);
-            for (int i = 0; i < out.size(); i++) {
-                ctx.fireChannelRead(out.get(i));
-            }
-        } finally {
-            out.recycle();
+        if (unwrapLater) {
+            unwrap(ctx);
         }
     }
 
-    private void flushNonAppData0(ChannelHandlerContext ctx) throws SSLException {
-        boolean unwrapLater = false;
+    private void flushNonAppData0(ChannelHandlerContext ctx, boolean inUnwrap) throws SSLException {
         ByteBuf out = null;
         try {
             for (;;) {
@@ -551,29 +533,25 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 }
 
                 switch (result.getHandshakeStatus()) {
-                    case NEED_WRAP:
-                        continue;
-                    case NEED_UNWRAP:
-                        if (internalBuffer().isReadable()) {
-                            unwrapLater = true;
-                        }
+                    case FINISHED:
+                        setHandshakeSuccess();
                         break;
                     case NEED_TASK:
                         runDelegatedTasks();
-                        continue;
-                    case FINISHED:
-                        setHandshakeSuccess();
-                        // try to flush now just in case as there may be pending write tasks
-                        flush0(ctx);
-                        return;
+                        break;
+                    case NEED_UNWRAP:
+                        if (!inUnwrap) {
+                            unwrap(ctx);
+                        }
+                        break;
+                    case NEED_WRAP:
+                        break;
                     case NOT_HANDSHAKING:
                         // Workaround for TLS False Start problem reported at:
                         // https://github.com/netty/netty/issues/1108#issuecomment-14266970
-                        if (internalBuffer().isReadable()) {
-                            unwrapLater = true;
+                        if (!inUnwrap) {
+                            unwrap(ctx);
                         }
-                        // try to flush now just in case as there may be pending write tasks
-                        flush0(ctx);
                         break;
                     default:
                         throw new IllegalStateException("Unknown handshake status: " + result.getHandshakeStatus());
@@ -582,10 +560,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 if (result.bytesProduced() == 0) {
                     break;
                 }
-            }
-
-            if (unwrapLater) {
-                unwrapLater(ctx);
             }
         } catch (SSLException e) {
             setHandshakeFailure(e);
@@ -848,6 +822,18 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         unwrap(ctx, buffer, out);
     }
 
+    private void unwrap(ChannelHandlerContext ctx) throws SSLException {
+        RecyclableArrayList out = RecyclableArrayList.newInstance();
+        try {
+            unwrap(ctx, Unpooled.EMPTY_BUFFER.nioBuffer(), out);
+            for (int i = 0; i < out.size(); i++) {
+                ctx.fireChannelRead(out.get(i));
+            }
+        } finally {
+            out.recycle();
+        }
+    }
+
     private void unwrap(ChannelHandlerContext ctx, ByteBuffer packet, List<Object> out) throws SSLException {
         boolean wrapLater = false;
         int bytesProduced = 0;
@@ -872,7 +858,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     case NEED_UNWRAP:
                         break;
                     case NEED_WRAP:
-                        wrapLater = true;
+                        flushNonAppData0(ctx, true);
                         break;
                     case NEED_TASK:
                         runDelegatedTasks();
@@ -894,7 +880,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
 
             if (wrapLater) {
-                flushNonAppData0(ctx);
+                flush0(ctx);
             }
         } catch (SSLException e) {
             setHandshakeFailure(e);
@@ -1044,7 +1030,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         });
         try {
             engine.beginHandshake();
-            flushNonAppData0(ctx);
+            flushNonAppData0(ctx, false);
         } catch (Exception e) {
             notifyHandshakeFailure(e);
         }
