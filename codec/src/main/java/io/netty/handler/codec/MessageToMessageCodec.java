@@ -33,17 +33,17 @@ import java.util.List;
  *
  * <pre>
  *     public class NumberCodec extends
- *             {@link MessageToMessageCodec}&lt;{@link Integer}, {@link Long}, {@link Long}, {@link Integer}&gt; {
+ *             {@link MessageToMessageCodec}&lt;{@link Integer}, {@link Long}&gt; {
  *         {@code @Override}
- *         public {@link Long} decode({@link ChannelHandlerContext} ctx, {@link Integer} msg)
+ *         public {@link Long} decode({@link ChannelHandlerContext} ctx, {@link Integer} msg, List&lt;Object&gt; out)
  *                 throws {@link Exception} {
- *             return msg.longValue();
+ *             out.add(msg.longValue());
  *         }
  *
  *         {@code @Overrride}
- *         public {@link Integer} encode({@link ChannelHandlerContext} ctx, {@link Long} msg)
+ *         public {@link Integer} encode({@link ChannelHandlerContext} ctx, {@link Long} msg, List&lt;Object&gt; out)
  *                 throws {@link Exception} {
- *             return msg.intValue();
+ *             out.add(msg.intValue());
  *         }
  *     }
  * </pre>
@@ -85,11 +85,21 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN> extends Cha
     private final TypeParameterMatcher inboundMsgMatcher;
     private final TypeParameterMatcher outboundMsgMatcher;
 
+    /**
+     * Create a new instance which will try to detect the types to decode and encode out of the type parameter
+     * of the class.
+     */
     protected MessageToMessageCodec() {
         inboundMsgMatcher = TypeParameterMatcher.find(this, MessageToMessageCodec.class, "INBOUND_IN");
         outboundMsgMatcher = TypeParameterMatcher.find(this, MessageToMessageCodec.class, "OUTBOUND_IN");
     }
 
+    /**
+     * Create a new instance.
+     *
+     * @param inboundMessageType    The type of messages to decode
+     * @param outboundMessageType   The type of messages to encode
+     */
     protected MessageToMessageCodec(
             Class<? extends INBOUND_IN> inboundMessageType, Class<? extends OUTBOUND_IN> outboundMessageType) {
         inboundMsgMatcher = TypeParameterMatcher.get(inboundMessageType);

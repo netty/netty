@@ -36,14 +36,14 @@ import java.util.List;
  * availability of the required bytes.  For example, the following
  * {@link ByteToMessageDecoder} implementation:
  * <pre>
- * public class IntegerHeaderFrameDecoder extends {@link ByteToMessageDecoder}&lt;{@link ByteBuf}&gt; {
+ * public class IntegerHeaderFrameDecoder extends {@link ByteToMessageDecoder} {
  *
  *   {@code @Override}
- *   protected ByteBuf decode({@link ChannelHandlerContext} ctx,
- *                           {@link ByteBuf} in) throws Exception {
+ *   protected void decode({@link ChannelHandlerContext} ctx,
+ *                           {@link ByteBuf} in, List&lt;Object&gt; out) throws Exception {
  *
  *     if (in.readableBytes() &lt; 4) {
- *        return <strong>null</strong>;
+ *        return;
  *     }
  *
  *     in.markReaderIndex();
@@ -51,22 +51,22 @@ import java.util.List;
  *
  *     if (in.readableBytes() &lt; length) {
  *        in.resetReaderIndex();
- *        return <strong>null</strong>;
+ *        return;
  *     }
  *
- *     return in.readBytes(length);
+ *     out.add(in.readBytes(length));
  *   }
  * }
  * </pre>
  * is simplified like the following with {@link ReplayingDecoder}:
  * <pre>
  * public class IntegerHeaderFrameDecoder
- *      extends {@link ReplayingDecoder}&lt;{@link ByteBuf},{@link Void}&gt; {
+ *      extends {@link ReplayingDecoder}&lt;{@link Void}&gt; {
  *
- *   protected Object decode({@link ChannelHandlerContext} ctx,
+ *   protected void decode({@link ChannelHandlerContext} ctx,
  *                           {@link ByteBuf} buf) throws Exception {
  *
- *     return buf.readBytes(buf.readInt());
+ *     out.add(buf.readBytes(buf.readInt()));
  *   }
  * }
  * </pre>

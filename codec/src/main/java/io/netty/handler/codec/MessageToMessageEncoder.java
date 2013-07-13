@@ -16,7 +16,9 @@
 package io.netty.handler.codec;
 
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
@@ -51,14 +53,26 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerA
 
     private final TypeParameterMatcher matcher;
 
+    /**
+     * Create a new instance which will try to detect the types to match out of the type parameter of the class.
+     */
     protected MessageToMessageEncoder() {
         matcher = TypeParameterMatcher.find(this, MessageToMessageEncoder.class, "I");
     }
 
+    /**
+     * Create a new instance
+     *
+     * @param outboundMessageType   The type of messages to match and so encode
+     */
     protected MessageToMessageEncoder(Class<? extends I> outboundMessageType) {
         matcher = TypeParameterMatcher.get(outboundMessageType);
     }
 
+    /**
+     * Returns {@code true} if the given message should be handled. If {@code false} it will be passed to the next
+     * {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
+     */
     public boolean acceptOutboundMessage(Object msg) throws Exception {
         return matcher.match(msg);
     }
