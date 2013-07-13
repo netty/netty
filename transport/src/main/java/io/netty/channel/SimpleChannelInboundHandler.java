@@ -35,30 +35,55 @@ import io.netty.util.internal.TypeParameterMatcher;
  *     }
  * </pre>
  *
+ * Be aware that depending of the constructor parameters it will release all handled messages.
+ *
  */
 public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandlerAdapter {
 
     private final TypeParameterMatcher matcher;
     private final boolean autoRelease;
 
+    /**
+     * @see {@link #SimpleChannelInboundHandler(boolean)} with {@code true} as boolean parameter.
+     */
     protected SimpleChannelInboundHandler() {
         this(true);
     }
 
+    /**
+     * Create a new instance which will try to detect the types to match out of the type parameter of the class.
+     *
+     * @param autoRelease   {@code true} if handled messages should be released automatically by pass them to
+     *                      {@link ReferenceCountUtil#release(Object)}.
+     */
     protected SimpleChannelInboundHandler(boolean autoRelease) {
         matcher = TypeParameterMatcher.find(this, SimpleChannelInboundHandler.class, "I");
         this.autoRelease = autoRelease;
     }
 
+    /**
+     * @see {@link #SimpleChannelInboundHandler(Class, boolean)} with {@code true} as boolean value.
+     */
     protected SimpleChannelInboundHandler(Class<? extends I> inboundMessageType) {
         this(inboundMessageType, true);
     }
 
+    /**
+     * Create a new instance
+     *
+     * @param inboundMessageType    The type of messages to match
+     * @param autoRelease           {@code true} if handled messages should be released automatically by pass them to
+     *                              {@link ReferenceCountUtil#release(Object)}.
+     */
     protected SimpleChannelInboundHandler(Class<? extends I> inboundMessageType, boolean autoRelease) {
         matcher = TypeParameterMatcher.get(inboundMessageType);
         this.autoRelease = autoRelease;
     }
 
+    /**
+     * Returns {@code true} if the given message should be handled. If {@code false} it will be passed to the next
+     * {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
+     */
     public boolean acceptInboundMessage(Object msg) throws Exception {
         return matcher.match(msg);
     }

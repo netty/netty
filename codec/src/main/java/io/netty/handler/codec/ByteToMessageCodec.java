@@ -58,11 +58,20 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
         }
     };
 
+    /**
+     * Create a new instance which will try to detect the types to encode out of the type parameter
+     * of the class.
+     */
     protected ByteToMessageCodec() {
         checkForSharableAnnotation();
         outboundMsgMatcher = TypeParameterMatcher.find(this, ByteToMessageCodec.class, "I");
     }
 
+    /**
+     * Create a new instance.
+     *
+     * @param outboundMessageType   The type of messages to encode
+     */
     protected ByteToMessageCodec(Class<? extends I> outboundMessageType) {
         checkForSharableAnnotation();
         outboundMsgMatcher = TypeParameterMatcher.get(outboundMessageType);
@@ -74,6 +83,11 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
         }
     }
 
+    /**
+     * Returns {@code true} if and only if the specified message can be encoded by this codec.
+     *
+     * @param msg the message
+     */
     public boolean acceptOutboundMessage(Object msg) throws Exception {
         return outboundMsgMatcher.match(msg);
     }
