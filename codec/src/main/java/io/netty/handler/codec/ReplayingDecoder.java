@@ -23,6 +23,8 @@ import io.netty.util.Signal;
 import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.StringUtil;
 
+import java.util.List;
+
 /**
  * A specialized variation of {@link ByteToMessageDecoder} which enables implementation
  * of a non-blocking decoder in the blocking I/O paradigm.
@@ -346,7 +348,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
     }
 
     @Override
-    protected void callDecode(ChannelHandlerContext ctx, ByteBuf in, RecyclableArrayList out) {
+    protected void callDecode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         replayable.setCumulation(in);
         try {
             while (in.isReadable()) {
