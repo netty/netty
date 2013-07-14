@@ -22,6 +22,11 @@ public final class ChannelPromiseNotifier implements ChannelFutureListener {
 
     private final ChannelPromise[] promises;
 
+    /**
+     * Create a new instance
+     *
+     * @param promises  the {@link ChannelPromise}s to notify once this {@link ChannelFutureListener} is notified.
+     */
     public ChannelPromiseNotifier(ChannelPromise... promises) {
         if (promises == null) {
             throw new NullPointerException("promises");
