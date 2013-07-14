@@ -76,6 +76,10 @@ public class StringEncoder extends MessageToByteEncoder<CharSequence> {
         }
 
         ByteBuf encoded = Unpooled.copiedBuffer(msg, charset);
-        out.writeBytes(encoded);
+        try {
+            out.writeBytes(encoded);
+        } finally {
+            encoded.release();
+        }
     }
 }

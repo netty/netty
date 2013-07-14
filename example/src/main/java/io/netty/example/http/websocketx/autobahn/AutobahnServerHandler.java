@@ -15,6 +15,7 @@
  */
 package io.netty.example.http.websocketx.autobahn;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -122,7 +123,9 @@ public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
             ChannelHandlerContext ctx, FullHttpRequest req, FullHttpResponse res) {
         // Generate an error page if response getStatus code is not OK (200).
         if (res.getStatus().code() != 200) {
-            res.content().writeBytes(Unpooled.copiedBuffer(res.getStatus().toString(), CharsetUtil.UTF_8));
+            ByteBuf buf = Unpooled.copiedBuffer(res.getStatus().toString(), CharsetUtil.UTF_8);
+            res.content().writeBytes(buf);
+            buf.release();
             setContentLength(res, res.content().readableBytes());
         }
 
