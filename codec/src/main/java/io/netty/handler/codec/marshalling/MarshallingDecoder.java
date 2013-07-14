@@ -81,7 +81,7 @@ public class MarshallingDecoder extends LengthFieldBasedFrameDecoder {
     }
 
     @Override
-    protected ByteBuf extractFrame(ByteBuf buffer, int index, int length) {
+    protected ByteBuf extractFrame(ChannelHandlerContext ctx, ByteBuf buffer, int index, int length) {
         return buffer.slice(index, length);
     }
 }

@@ -233,7 +233,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
             return promise;
         }
 
-        ByteBuf footer = Unpooled.buffer();
+        ByteBuf footer = ctx.alloc().buffer();
         synchronized (deflater) {
             deflater.finish();
             while (!deflater.finished()) {
