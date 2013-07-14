@@ -20,6 +20,7 @@ import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 import com.jcraft.jzlib.Deflater;
 import com.jcraft.jzlib.JZlib;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.compression.CompressionException;
 
@@ -97,7 +98,7 @@ class SpdyHeaderBlockJZlibEncoder extends SpdyHeaderBlockRawEncoder {
     }
 
     @Override
-    public synchronized ByteBuf encode(SpdyHeadersFrame frame) throws Exception {
+    public synchronized ByteBuf encode(SpdyHeadersFrame frame, ByteBufAllocator allocator) throws Exception {
         if (frame == null) {
             throw new IllegalArgumentException("frame");
         }
@@ -106,12 +107,12 @@ class SpdyHeaderBlockJZlibEncoder extends SpdyHeaderBlockRawEncoder {
             return Unpooled.EMPTY_BUFFER;
         }
 
-        ByteBuf decompressed = super.encode(frame);
+        ByteBuf decompressed = super.encode(frame, allocator);
         if (decompressed.readableBytes() == 0) {
             return Unpooled.EMPTY_BUFFER;
         }
 
-        ByteBuf compressed = Unpooled.buffer();
+        ByteBuf compressed = allocator.buffer();
         setInput(decompressed);
         encode(compressed);
         return compressed;
