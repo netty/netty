@@ -30,7 +30,6 @@ public final class ChannelPromiseAggregator implements ChannelFutureListener {
     private final ChannelPromise aggregatePromise;
     private Set<ChannelPromise> pendingPromises;
 
-
     /**
      * Instance an new {@link ChannelPromiseAggregator}
      *
