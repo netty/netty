@@ -2029,20 +2029,19 @@ public class HttpPostRequestDecoder {
      * @return the array of 2 Strings
      */
     private static String[] splitHeaderContentType(String sb) {
-        int size = sb.length();
         int aStart;
         int aEnd;
         int bStart;
         int bEnd;
         aStart = HttpPostBodyUtil.findNonWhitespace(sb, 0);
-        aEnd = HttpPostBodyUtil.findWhitespace(sb, aStart);
-        if (aEnd >= size) {
+        aEnd =  sb.indexOf(';');
+        if (aEnd == -1) {
             return new String[] { sb, "" };
         }
-        if (sb.charAt(aEnd) == ';') {
+        if (sb.charAt(aEnd - 1) == ' ') {
             aEnd--;
         }
-        bStart = HttpPostBodyUtil.findNonWhitespace(sb, aEnd);
+        bStart = HttpPostBodyUtil.findNonWhitespace(sb, aEnd + 1);
         bEnd = HttpPostBodyUtil.findEndOfString(sb);
         return new String[] { sb.substring(aStart, aEnd), sb.substring(bStart, bEnd) };
     }
