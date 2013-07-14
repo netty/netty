@@ -708,8 +708,10 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
             HttpContent chunk = nextChunk();
             if (request instanceof FullHttpRequest) {
                 FullHttpRequest fullRequest = (FullHttpRequest) request;
-                if (!fullRequest.content().equals(chunk.content())) {
-                    fullRequest.content().clear().writeBytes(chunk.content());
+                ByteBuf chunkContent = chunk.content();
+                if (fullRequest.content() != chunkContent) {
+                    fullRequest.content().clear().writeBytes(chunkContent);
+                    chunkContent.release();
                 }
                 return fullRequest;
             } else {

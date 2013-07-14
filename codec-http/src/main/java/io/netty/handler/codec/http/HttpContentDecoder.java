@@ -211,7 +211,9 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
     private void cleanup() {
         if (decoder != null) {
             // Clean-up the previous decoder if not cleaned up correctly.
-            finishDecode(Unpooled.buffer());
+            ByteBuf buf = Unpooled.buffer();
+            finishDecode(buf);
+            buf.release();
         }
     }
 
@@ -236,6 +238,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                 break;
             }
             out.writeBytes(buf);
+            buf.release();
         }
     }
 }
