@@ -23,10 +23,19 @@ import java.util.concurrent.ThreadFactory;
  */
 public class DefaultEventExecutorGroup extends MultithreadEventExecutorGroup {
 
+    /**
+     * @see {@link #DefaultEventExecutorGroup(int, ThreadFactory)}
+     */
     public DefaultEventExecutorGroup(int nThreads) {
         this(nThreads, null);
     }
 
+    /**
+     * Create a new instance.
+     *
+     * @param nThreads          the number of threads that will be used by this instance.
+     * @param threadFactory     the ThreadFactory to use, or {@code null} if the default should be used.
+     */
     public DefaultEventExecutorGroup(int nThreads, ThreadFactory threadFactory) {
         super(nThreads, threadFactory);
     }
