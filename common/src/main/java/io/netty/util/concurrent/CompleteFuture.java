@@ -34,6 +34,9 @@ public abstract class CompleteFuture<V> extends AbstractFuture<V> {
         this.executor = executor;
     }
 
+    /**
+     * Return the {@link EventExecutor} which is used by this {@link CompleteFuture}.
+     */
     protected EventExecutor executor() {
         return executor;
     }
