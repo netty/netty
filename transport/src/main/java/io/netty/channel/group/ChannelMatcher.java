@@ -21,9 +21,9 @@ import io.netty.channel.Channel;
 /**
  * Allows to only match some {@link Channel}'s for operations in {@link ChannelGroup}.
  *
- * {@link ChannelGroupMatchers} provide you with helper methods for usual needed implementations.
+ * {@link ChannelMatchers} provide you with helper methods for usual needed implementations.
  */
-public interface ChannelGroupMatcher {
+public interface ChannelMatcher {
 
     /**
      * Returns {@code true} if the operation should be also executed on the given {@link Channel}.

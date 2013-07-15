@@ -19,88 +19,88 @@ import io.netty.channel.Channel;
 import io.netty.channel.ServerChannel;
 
 /**
- * Helper class which provides often used {@link ChannelGroupMatcher} implementations.
+ * Helper class which provides often used {@link ChannelMatcher} implementations.
  */
-public final class ChannelGroupMatchers {
+public final class ChannelMatchers {
 
-    private static final ChannelGroupMatcher ALL_MATCHER = new ChannelGroupMatcher() {
+    private static final ChannelMatcher ALL_MATCHER = new ChannelMatcher() {
         @Override
         public boolean matches(Channel channel) {
             return true;
         }
     };
 
-    private static final ChannelGroupMatcher SERVER_CHANNEL_MATCHER = isInstanceOf(ServerChannel.class);
-    private static final ChannelGroupMatcher NON_SERVER_CHANNEL_MATCHER = isNotInstanceOf(ServerChannel.class);
+    private static final ChannelMatcher SERVER_CHANNEL_MATCHER = isInstanceOf(ServerChannel.class);
+    private static final ChannelMatcher NON_SERVER_CHANNEL_MATCHER = isNotInstanceOf(ServerChannel.class);
 
-    private ChannelGroupMatchers() {
+    private ChannelMatchers() {
         // static methods only
     }
 
     /**
-     * Returns a {@link ChannelGroupMatcher} that matches all {@link Channel}s.
+     * Returns a {@link ChannelMatcher} that matches all {@link Channel}s.
      */
-    public static ChannelGroupMatcher all() {
+    public static ChannelMatcher all() {
         return ALL_MATCHER;
     }
 
     /**
-     * Returns a {@link ChannelGroupMatcher} that matches all {@link Channel}s except the given.
+     * Returns a {@link ChannelMatcher} that matches all {@link Channel}s except the given.
      */
-    public static ChannelGroupMatcher isNot(Channel channel) {
+    public static ChannelMatcher isNot(Channel channel) {
         return invert(is(channel));
     }
 
     /**
-     * Returns a {@link ChannelGroupMatcher} that matches the given {@link Channel}.
+     * Returns a {@link ChannelMatcher} that matches the given {@link Channel}.
      */
-    public static ChannelGroupMatcher is(Channel channel) {
+    public static ChannelMatcher is(Channel channel) {
         return new InstanceMatcher(channel);
     }
 
     /**
-     * Returns a {@link ChannelGroupMatcher} that matches all {@link Channel}s that are an instance of sub-type of
+     * Returns a {@link ChannelMatcher} that matches all {@link Channel}s that are an instance of sub-type of
      * the given class.
      */
-    public static ChannelGroupMatcher isInstanceOf(Class<? extends Channel> clazz) {
+    public static ChannelMatcher isInstanceOf(Class<? extends Channel> clazz) {
         return new ClassMatcher(clazz);
     }
 
     /**
-     * Returns a {@link ChannelGroupMatcher} that matches all {@link Channel}s that are <strong>not</strong> an
+     * Returns a {@link ChannelMatcher} that matches all {@link Channel}s that are <strong>not</strong> an
      * instance of sub-type of the given class.
      */
-    public static ChannelGroupMatcher isNotInstanceOf(Class<? extends Channel> clazz) {
+    public static ChannelMatcher isNotInstanceOf(Class<? extends Channel> clazz) {
         return invert(isInstanceOf(clazz));
     }
 
     /**
-     * Returns a {@link ChannelGroupMatcher} that matches all {@link Channel}s that are of type {@link ServerChannel}.
+     * Returns a {@link ChannelMatcher} that matches all {@link Channel}s that are of type {@link ServerChannel}.
      */
-    public static ChannelGroupMatcher isServerChannel() {
+    public static ChannelMatcher isServerChannel() {
          return SERVER_CHANNEL_MATCHER;
     }
 
     /**
-     * Returns a {@link ChannelGroupMatcher} that matches all {@link Channel}s that are <strong>not</strong> of type
+     * Returns a {@link ChannelMatcher} that matches all {@link Channel}s that are <strong>not</strong> of type
      * {@link ServerChannel}.
      */
-    public static ChannelGroupMatcher isNonServerChannel() {
+    public static ChannelMatcher isNonServerChannel() {
         return NON_SERVER_CHANNEL_MATCHER;
     }
 
     /**
-     * Invert the given {@link ChannelGroupMatcher}.
+     * Invert the given {@link ChannelMatcher}.
      */
-    public static ChannelGroupMatcher invert(ChannelGroupMatcher matcher) {
+    public static ChannelMatcher invert(ChannelMatcher matcher) {
         return new InvertMatcher(matcher);
     }
 
     /**
-     * Return a composite of the given {@link ChannelGroupMatcher}s. This means all {@link ChannelGroupMatcher} must
+     * Return a composite of the given {@link ChannelMatcher}s. This means all {@link ChannelMatcher} must
      * return {@code true} to match.
      */
-    public static ChannelGroupMatcher compose(ChannelGroupMatcher... matchers) {
+    public static ChannelMatcher compose(ChannelMatcher... matchers) {
         if (matchers.length < 1) {
             throw new IllegalArgumentException("matchers must at least contain one element");
         }
@@ -110,10 +110,10 @@ public final class ChannelGroupMatchers {
         return new CompositeMatcher(matchers);
     }
 
-    private static final class CompositeMatcher implements  ChannelGroupMatcher {
-        private final ChannelGroupMatcher[] matchers;
+    private static final class CompositeMatcher implements ChannelMatcher {
+        private final ChannelMatcher[] matchers;
 
-        CompositeMatcher(ChannelGroupMatcher... matchers) {
+        CompositeMatcher(ChannelMatcher... matchers) {
             this.matchers = matchers;
         }
 
@@ -128,10 +128,10 @@ public final class ChannelGroupMatchers {
         }
     }
 
-    private static final class InvertMatcher implements ChannelGroupMatcher {
-        private final ChannelGroupMatcher matcher;
+    private static final class InvertMatcher implements ChannelMatcher {
+        private final ChannelMatcher matcher;
 
-        InvertMatcher(ChannelGroupMatcher matcher) {
+        InvertMatcher(ChannelMatcher matcher) {
             this.matcher = matcher;
         }
 
@@ -141,7 +141,7 @@ public final class ChannelGroupMatchers {
         }
     }
 
-    private static final class InstanceMatcher implements ChannelGroupMatcher {
+    private static final class InstanceMatcher implements ChannelMatcher {
         private final Channel channel;
 
         InstanceMatcher(Channel channel) {
@@ -154,7 +154,7 @@ public final class ChannelGroupMatchers {
         }
     }
 
-    private static final class ClassMatcher implements ChannelGroupMatcher {
+    private static final class ClassMatcher implements ChannelMatcher {
         private final Class<? extends Channel> clazz;
 
         ClassMatcher(Class<? extends Channel> clazz) {
