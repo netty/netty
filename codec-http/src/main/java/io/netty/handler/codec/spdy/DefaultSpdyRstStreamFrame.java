@@ -58,10 +58,12 @@ public class DefaultSpdyRstStreamFrame extends DefaultSpdyStreamFrame
         return this;
     }
 
+    @Override
     public SpdyStreamStatus getStatus() {
         return status;
     }
 
+    @Override
     public SpdyRstStreamFrame setStatus(SpdyStreamStatus status) {
         this.status = status;
         return this;

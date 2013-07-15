@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.spdy;
 
-import java.nio.ByteOrder;
 import java.util.Set;
 
 import io.netty.buffer.ByteBuf;
