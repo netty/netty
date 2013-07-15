@@ -40,6 +40,7 @@ public class FactorialClientHandler extends SimpleChannelInboundHandler<BigInteg
 
     private ChannelHandlerContext ctx;
     private int receivedMessages;
+    private int next = 1;
     private final int count;
     final BlockingQueue<BigInteger> answer = new LinkedBlockingQueue<BigInteger>();
 
@@ -94,16 +95,14 @@ public class FactorialClientHandler extends SimpleChannelInboundHandler<BigInteg
 
     private void sendNumbers() {
         // Do not send more than 4096 numbers.
-        for (int i = 0; i < 4096; i++) {
-            if (i <= count) {
-                ChannelFuture future = ctx.write(Integer.valueOf(i));
-                if (count == i) {
-                    future.addListener(numberSender);
-                }
-                i ++;
-            } else {
-                break;
-            }
+        ChannelFuture future = null;
+        for (int i = 0; i < 4096 && next <= count; i++) {
+            future = ctx.write(Integer.valueOf(next));
+            next++;
+        }
+        if (next <= count) {
+            assert future != null;
+            future.addListener(numberSender);
         }
         ctx.flush();
     }
