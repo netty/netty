@@ -61,10 +61,12 @@ public class DefaultSpdyHeadersFrame extends DefaultSpdyStreamFrame
         return this;
     }
 
+    @Override
     public boolean isTruncated() {
         return truncated;
     }
 
+    @Override
     public SpdyHeadersFrame setTruncated() {
         truncated = true;
         return this;
