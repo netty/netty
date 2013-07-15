@@ -110,7 +110,7 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
 
     /**
      * Writes the specified {@code message} to all {@link Channel}s in this
-     * group that match the given {@link ChannelGroupMatcher}. If the specified {@code message} is an instance of
+     * group that match the given {@link ChannelMatcher}. If the specified {@code message} is an instance of
      * {@link ByteBuf}, it is automatically
      * {@linkplain ByteBuf#duplicate() duplicated} to avoid a race
      * condition. The same is true for {@link ByteBufHolder}. Please note that this operation is asynchronous as
@@ -119,7 +119,7 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
      * @return the {@link ChannelGroupFuture} instance that notifies when
      *         the operation is done for all channels
      */
-    ChannelGroupFuture write(Object message, ChannelGroupMatcher matcher);
+    ChannelGroupFuture write(Object message, ChannelMatcher matcher);
 
     /**
      * Flush all {@link Channel}s in this
@@ -135,7 +135,7 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
     ChannelGroup flush();
 
     /**
-     * Flush all {@link Channel}s in this group that match the given {@link ChannelGroupMatcher}.
+     * Flush all {@link Channel}s in this group that match the given {@link ChannelMatcher}.
      * If the specified {@code messages} are an instance of
      * {@link ByteBuf}, it is automatically
      * {@linkplain ByteBuf#duplicate() duplicated} to avoid a race
@@ -145,7 +145,7 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
      * @return the {@link ChannelGroupFuture} instance that notifies when
      *         the operation is done for all channels
      */
-    ChannelGroup flush(ChannelGroupMatcher matcher);
+    ChannelGroup flush(ChannelMatcher matcher);
 
     /**
      * Shortcut for calling {@link #write(Object)} and {@link #flush()}.
@@ -154,9 +154,9 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
 
     /**
      * Shortcut for calling {@link #write(Object)} and {@link #flush()} and only act on
-     * {@link Channel}s that match the {@link ChannelGroupMatcher}.
+     * {@link Channel}s that match the {@link ChannelMatcher}.
      */
-    ChannelGroupFuture flushAndWrite(Object message, ChannelGroupMatcher matcher);
+    ChannelGroupFuture flushAndWrite(Object message, ChannelMatcher matcher);
 
     /**
      * Disconnects all {@link Channel}s in this group from their remote peers.
@@ -168,12 +168,12 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
 
     /**
      * Disconnects all {@link Channel}s in this group from their remote peers,
-     * that match the given {@link ChannelGroupMatcher}.
+     * that match the given {@link ChannelMatcher}.
      *
      * @return the {@link ChannelGroupFuture} instance that notifies when
      *         the operation is done for all channels
      */
-    ChannelGroupFuture disconnect(ChannelGroupMatcher matcher);
+    ChannelGroupFuture disconnect(ChannelMatcher matcher);
 
     /**
      * Closes all {@link Channel}s in this group.  If the {@link Channel} is
@@ -186,14 +186,14 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
     ChannelGroupFuture close();
 
     /**
-     * Closes all {@link Channel}s in this group that match the given {@link ChannelGroupMatcher}.
+     * Closes all {@link Channel}s in this group that match the given {@link ChannelMatcher}.
      * If the {@link Channel} is  connected to a remote peer or bound to a local address, it is
      * automatically disconnected and unbound.
      *
      * @return the {@link ChannelGroupFuture} instance that notifies when
      *         the operation is done for all channels
      */
-    ChannelGroupFuture close(ChannelGroupMatcher matcher);
+    ChannelGroupFuture close(ChannelMatcher matcher);
 
     /**
      * Deregister all {@link Channel}s in this group from their {@link EventLoop}.
@@ -206,10 +206,10 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
 
     /**
      * Deregister all {@link Channel}s in this group from their {@link EventLoop} that match the given
-     * {@link ChannelGroupMatcher}. Please note that this operation is asynchronous as {@link Channel#deregister()} is.
+     * {@link ChannelMatcher}. Please note that this operation is asynchronous as {@link Channel#deregister()} is.
      *
      * @return the {@link ChannelGroupFuture} instance that notifies when
      *         the operation is done for all channels
      */
-    ChannelGroupFuture deregister(ChannelGroupMatcher matcher);
+    ChannelGroupFuture deregister(ChannelMatcher matcher);
 }

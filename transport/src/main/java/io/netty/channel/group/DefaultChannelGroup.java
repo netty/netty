@@ -163,21 +163,21 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     @Override
     public ChannelGroupFuture close() {
-        return close(ChannelGroupMatchers.all());
+        return close(ChannelMatchers.all());
     }
 
     @Override
     public ChannelGroupFuture disconnect() {
-        return disconnect(ChannelGroupMatchers.all());
+        return disconnect(ChannelMatchers.all());
     }
     @Override
     public ChannelGroupFuture deregister() {
-        return deregister(ChannelGroupMatchers.all());
+        return deregister(ChannelMatchers.all());
     }
 
     @Override
     public ChannelGroupFuture write(Object message) {
-        return write(message, ChannelGroupMatchers.all());
+        return write(message, ChannelMatchers.all());
     }
 
     // Create a safe duplicate of the message to write it to a channel but not affect other writes.
@@ -193,7 +193,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     }
 
     @Override
-    public ChannelGroupFuture write(Object message, ChannelGroupMatcher matcher) {
+    public ChannelGroupFuture write(Object message, ChannelMatcher matcher) {
         if (message == null) {
             throw new NullPointerException("message");
         }
@@ -214,16 +214,16 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     @Override
     public ChannelGroup flush() {
-        return flush(ChannelGroupMatchers.all());
+        return flush(ChannelMatchers.all());
     }
 
     @Override
     public ChannelGroupFuture flushAndWrite(Object message) {
-        return flushAndWrite(message, ChannelGroupMatchers.all());
+        return flushAndWrite(message, ChannelMatchers.all());
     }
 
     @Override
-    public ChannelGroupFuture disconnect(ChannelGroupMatcher matcher) {
+    public ChannelGroupFuture disconnect(ChannelMatcher matcher) {
         if (matcher == null) {
             throw new NullPointerException("matcher");
         }
@@ -246,7 +246,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     }
 
     @Override
-    public ChannelGroupFuture close(ChannelGroupMatcher matcher) {
+    public ChannelGroupFuture close(ChannelMatcher matcher) {
         if (matcher == null) {
             throw new NullPointerException("matcher");
         }
@@ -269,7 +269,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     }
 
     @Override
-    public ChannelGroupFuture deregister(ChannelGroupMatcher matcher) {
+    public ChannelGroupFuture deregister(ChannelMatcher matcher) {
         if (matcher == null) {
             throw new NullPointerException("matcher");
         }
@@ -292,7 +292,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     }
 
     @Override
-    public ChannelGroup flush(ChannelGroupMatcher matcher) {
+    public ChannelGroup flush(ChannelMatcher matcher) {
         for (Channel c: nonServerChannels) {
             if (matcher.matches(c)) {
                 c.flush();
@@ -302,7 +302,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     }
 
     @Override
-    public ChannelGroupFuture flushAndWrite(Object message, ChannelGroupMatcher matcher) {
+    public ChannelGroupFuture flushAndWrite(Object message, ChannelMatcher matcher) {
         if (message == null) {
             throw new NullPointerException("message");
         }
