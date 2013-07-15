@@ -111,6 +111,7 @@ public class SpdySessionHandler
             // Check if we received a data frame for a Stream-ID which is not open
 
             if (!spdySession.isActiveStream(streamId)) {
+                spdyDataFrame.release();
                 if (streamId <= lastGoodStreamId) {
                     issueStreamError(ctx, streamId, SpdyStreamStatus.PROTOCOL_ERROR);
                 } else if (!sentGoAwayFrame) {
@@ -122,12 +123,14 @@ public class SpdySessionHandler
             // Check if we received a data frame for a stream which is half-closed
 
             if (spdySession.isRemoteSideClosed(streamId)) {
+                spdyDataFrame.release();
                 issueStreamError(ctx, streamId, SpdyStreamStatus.STREAM_ALREADY_CLOSED);
                 return;
             }
 
             // Check if we received a data frame before receiving a SYN_REPLY
             if (!isRemoteInitiatedID(streamId) && !spdySession.hasReceivedReply(streamId)) {
+                spdyDataFrame.release();
                 issueStreamError(ctx, streamId, SpdyStreamStatus.PROTOCOL_ERROR);
                 return;
             }
@@ -149,6 +152,7 @@ public class SpdySessionHandler
                 // This difference is stored for the session when writing the SETTINGS frame
                 // and is cleared once we send a WINDOW_UPDATE frame.
                 if (newWindowSize < spdySession.getReceiveWindowSizeLowerBound(streamId)) {
+                    spdyDataFrame.release();
                     issueStreamError(ctx, streamId, SpdyStreamStatus.FLOW_CONTROL_ERROR);
                     return;
                 }
@@ -265,7 +269,7 @@ public class SpdySessionHandler
              */
 
             SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
-            removeStream(ctx, spdyRstStreamFrame.getStreamId());
+            removeStream(spdyRstStreamFrame.getStreamId());
 
         } else if (msg instanceof SpdySettingsFrame) {
 
@@ -378,12 +382,20 @@ public class SpdySessionHandler
     }
 
     @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        for (Integer streamId: spdySession.getActiveStreams()) {
+            removeStream(streamId);
+        }
+        ctx.fireChannelInactive();
+    }
+
+    @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (cause instanceof SpdyProtocolException) {
             issueSessionError(ctx, SpdySessionStatus.PROTOCOL_ERROR);
         }
 
-        super.exceptionCaught(ctx, cause);
+        ctx.fireExceptionCaught(cause);
     }
 
     @Override
@@ -417,6 +429,7 @@ public class SpdySessionHandler
 
             // Frames must not be sent on half-closed streams
             if (spdySession.isLocalSideClosed(streamId)) {
+                spdyDataFrame.release();
                 promise.setFailure(PROTOCOL_EXCEPTION);
                 return;
             }
@@ -441,7 +454,7 @@ public class SpdySessionHandler
 
                     if (sendWindowSize <= 0) {
                         // Stream is stalled -- enqueue Data frame and return
-                        spdySession.putPendingWrite(streamId, spdyDataFrame);
+                        spdySession.putPendingWrite(streamId, new SpdySession.PendingWrite(spdyDataFrame, promise));
                         return;
                     } else if (sendWindowSize < dataLength) {
                         // Stream is not stalled but we cannot send the entire frame
@@ -452,46 +465,35 @@ public class SpdySessionHandler
                                 spdyDataFrame.content().readSlice(sendWindowSize).retain());
 
                         // Enqueue the remaining data (will be the first frame queued)
-                        spdySession.putPendingWrite(streamId, spdyDataFrame);
+                        spdySession.putPendingWrite(streamId, new SpdySession.PendingWrite(spdyDataFrame, promise));
 
                         // The transfer window size is pre-decremented when sending a data frame downstream.
-                        // Close the stream on write failures that leaves the transfer window in a corrupt state.
-                        //
-                        // This is never sent because on write failure the connection will be closed
-                        // immediately.  Commenting out just in case I misunderstood it - T
-                        //
-                        //final SocketAddress remoteAddress = e.getRemoteAddress();
-                        //final ChannelHandlerContext context = ctx;
-                        //e.getFuture().addListener(new ChannelFutureListener() {
-                        //    @Override
-                        //    public void operationComplete(ChannelFuture future) throws Exception {
-                        //        if (!future.isSuccess()) {
-                        //            issueStreamError(context, streamId, SpdyStreamStatus.INTERNAL_ERROR);
-                        //        }
-                        //    }
-                        //});
-
-                        ctx.write(partialDataFrame, promise);
+                        // Close the stream on write failures that leave the transfer window in a corrupt state.
+                        final ChannelHandlerContext context = ctx;
+                        ctx.write(partialDataFrame).addListener(new ChannelFutureListener() {
+                            @Override
+                            public void operationComplete(ChannelFuture future) throws Exception {
+                                if (!future.isSuccess()) {
+                                    issueStreamError(context, streamId, SpdyStreamStatus.INTERNAL_ERROR);
+                                }
+                            }
+                        });
                         return;
                     } else {
                         // Window size is large enough to send entire data frame
                         spdySession.updateSendWindowSize(streamId, -1 * dataLength);
 
                         // The transfer window size is pre-decremented when sending a data frame downstream.
-                        // Close the stream on write failures that leaves the transfer window in a corrupt state.
-                        //
-                        // This is never sent because on write failure the connection will be closed
-                        // immediately.  Commenting out just in case I misunderstood it - T
-                        //
-                        //final ChannelHandlerContext context = ctx;
-                        //e.getFuture().addListener(new ChannelFutureListener() {
-                        //    @Override
-                        //    public void operationComplete(ChannelFuture future) throws Exception {
-                        //        if (!future.isSuccess()) {
-                        //            issueStreamError(context, streamId, SpdyStreamStatus.INTERNAL_ERROR);
-                        //        }
-                        //    }
-                        //});
+                        // Close the stream on write failures that leave the transfer window in a corrupt state.
+                        final ChannelHandlerContext context = ctx;
+                        promise.addListener(new ChannelFutureListener() {
+                            @Override
+                            public void operationComplete(ChannelFuture future) throws Exception {
+                                if (!future.isSuccess()) {
+                                    issueStreamError(context, streamId, SpdyStreamStatus.INTERNAL_ERROR);
+                                }
+                            }
+                        });
                     }
                 }
             }
@@ -538,7 +540,7 @@ public class SpdySessionHandler
         } else if (msg instanceof SpdyRstStreamFrame) {
 
             SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
-            removeStream(ctx, spdyRstStreamFrame.getStreamId());
+            removeStream(spdyRstStreamFrame.getStreamId());
 
         } else if (msg instanceof SpdySettingsFrame) {
 
@@ -621,7 +623,7 @@ public class SpdySessionHandler
     private void issueSessionError(
             ChannelHandlerContext ctx, SpdySessionStatus status) {
 
-        sendGoAwayFrame(ctx, status).addListener(ChannelFutureListener.CLOSE);
+        sendGoAwayFrame(ctx, status).addListener(new ClosingChannelFutureListener(ctx, ctx.newPromise()));
     }
 
     /*
@@ -637,7 +639,7 @@ public class SpdySessionHandler
      */
     private void issueStreamError(ChannelHandlerContext ctx, int streamId, SpdyStreamStatus status) {
         boolean fireChannelRead = !spdySession.isRemoteSideClosed(streamId);
-        removeStream(ctx, streamId);
+        removeStream(streamId);
 
         SpdyRstStreamFrame spdyRstStreamFrame = new DefaultSpdyRstStreamFrame(streamId, status);
         ctx.writeAndFlush(spdyRstStreamFrame);
@@ -684,9 +686,7 @@ public class SpdySessionHandler
     private synchronized void updateInitialSendWindowSize(int newInitialWindowSize) {
         int deltaWindowSize = newInitialWindowSize - initialSendWindowSize;
         initialSendWindowSize = newInitialWindowSize;
-        for (Integer streamId: spdySession.getActiveStreams()) {
-            spdySession.updateSendWindowSize(streamId.intValue(), deltaWindowSize);
-        }
+        spdySession.updateAllSendWindowSizes(deltaWindowSize);
     }
 
     // need to synchronize to prevent new streams from being created while updating active streams
@@ -729,27 +729,26 @@ public class SpdySessionHandler
         }
     }
 
-    private void removeStream(ChannelHandlerContext ctx, int streamId) {
-        if (spdySession.removeStream(streamId)) {
-            ctx.fireExceptionCaught(STREAM_CLOSED);
-        }
+    private void removeStream(int streamId) {
+        spdySession.removeStream(streamId, STREAM_CLOSED);
 
         if (closeSessionFuture != null && spdySession.noActiveStreams()) {
             closeSessionFuture.trySuccess();
         }
     }
 
-    private void updateSendWindowSize(ChannelHandlerContext ctx, final int streamId, int deltaWindowSize) {
+    private void updateSendWindowSize(final ChannelHandlerContext ctx, final int streamId, int deltaWindowSize) {
         synchronized (flowControlLock) {
             int newWindowSize = spdySession.updateSendWindowSize(streamId, deltaWindowSize);
 
             while (newWindowSize > 0) {
                 // Check if we have unblocked a stalled stream
-                SpdyDataFrame spdyDataFrame = (SpdyDataFrame) spdySession.getPendingWrite(streamId);
-                if (spdyDataFrame == null) {
+                SpdySession.PendingWrite pendingWrite = spdySession.getPendingWrite(streamId);
+                if (pendingWrite == null) {
                     break;
                 }
 
+                SpdyDataFrame spdyDataFrame = pendingWrite.spdyDataFrame;
                 int dataFrameSize = spdyDataFrame.content().readableBytes();
 
                 if (newWindowSize >= dataFrameSize) {
@@ -757,28 +756,21 @@ public class SpdySessionHandler
                     spdySession.removePendingWrite(streamId);
                     newWindowSize = spdySession.updateSendWindowSize(streamId, -1 * dataFrameSize);
 
-                    // The transfer window size is pre-decremented when sending a data frame downstream.
-                    // Close the stream on write failures that leaves the transfer window in a corrupt state.
-                    //
-                    // This is never sent because on write failure the connection will be closed
-                    // immediately.  Commenting out just in case I misunderstood it - T
-                    //
-                    //final ChannelHandlerContext context = ctx;
-                    //e.getFuture().addListener(new ChannelFutureListener() {
-                    //    @Override
-                    //    public void operationComplete(ChannelFuture future) throws Exception {
-                    //        if (!future.isSuccess()) {
-                    //            issueStreamError(context, streamId, SpdyStreamStatus.INTERNAL_ERROR);
-                    //        }
-                    //    }
-                    //});
-
                     // Close the local side of the stream if this is the last frame
                     if (spdyDataFrame.isLast()) {
                         halfCloseStream(streamId, false);
                     }
 
-                    ctx.fireChannelRead(spdyDataFrame);
+                    // The transfer window size is pre-decremented when sending a data frame downstream.
+                    // Close the stream on write failures that leave the transfer window in a corrupt state.
+                    ctx.writeAndFlush(spdyDataFrame, pendingWrite.promise).addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                            if (!future.isSuccess()) {
+                                issueStreamError(ctx, streamId, SpdyStreamStatus.INTERNAL_ERROR);
+                            }
+                        }
+                    });
                 } else {
                     // We can send a partial frame
                     spdySession.updateSendWindowSize(streamId, -1 * newWindowSize);
@@ -788,23 +780,15 @@ public class SpdySessionHandler
                             spdyDataFrame.content().readSlice(newWindowSize).retain());
 
                     // The transfer window size is pre-decremented when sending a data frame downstream.
-                    // Close the stream on write failures that leaves the transfer window in a corrupt state.
-                    //
-                    // This is never sent because on write failure the connection will be closed
-                    // immediately.  Commenting out just in case I misunderstood it - T
-                    //
-                    //final SocketAddress remoteAddress = e.getRemoteAddress();
-                    //final ChannelHandlerContext context = ctx;
-                    //e.getFuture().addListener(new ChannelFutureListener() {
-                    //    @Override
-                    //    public void operationComplete(ChannelFuture future) throws Exception {
-                    //        if (!future.isSuccess()) {
-                    //            issueStreamError(context, streamId, SpdyStreamStatus.INTERNAL_ERROR);
-                    //        }
-                    //    }
-                    //});
-
-                    ctx.fireChannelRead(partialDataFrame);
+                    // Close the stream on write failures that leave the transfer window in a corrupt state.
+                    ctx.writeAndFlush(partialDataFrame).addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                            if (!future.isSuccess()) {
+                                issueStreamError(ctx, streamId, SpdyStreamStatus.INTERNAL_ERROR);
+                            }
+                        }
+                    });
 
                     newWindowSize = 0;
                 }
