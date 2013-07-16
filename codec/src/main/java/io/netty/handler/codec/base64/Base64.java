@@ -20,6 +20,7 @@
 package io.netty.handler.codec.base64;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
 /**
  * Utility class for {@link ByteBuf} that encodes and decodes to and from
@@ -112,7 +113,7 @@ public final class Base64 {
         }
 
         int len43 = len * 4 / 3;
-        ByteBuf dest = src.alloc().buffer(
+        ByteBuf dest = Unpooled.buffer(
                 len43 +
                         (len % 3 > 0 ? 4 : 0) + // Account for padding
                         (breakLines ? len43 / MAX_LINE_LENGTH : 0)).order(src.order()); // New lines
