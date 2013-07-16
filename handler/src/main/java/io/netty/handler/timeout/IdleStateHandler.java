@@ -65,7 +65,7 @@ import java.util.concurrent.TimeUnit;
  * public class MyChannelInitializer extends {@link ChannelInitializer}&lt{@link Channel}&gt {
  *     {@code @Override}
  *     public void initChannel({@link Channel} channel) {
- *         channel.pipeline().addLast("idleStateHandler", new {@link IdleStateHandler}(60, 30, 0);
+ *         channel.pipeline().addLast("idleStateHandler", new {@link IdleStateHandler}(60, 30, 0));
  *         channel.pipeline().addLast("myHandler", new MyHandler());
  *     }
  * }
