@@ -214,7 +214,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
 
     private void decode(ByteBuf in, List<Object> out) {
         // call retain here as it will call release after its written to the channel
-        decoder.writeOutbound(in.retain());
+        decoder.writeInbound(in.retain());
         fetchDecoderOutput(out);
     }
 
@@ -228,7 +228,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
 
     private void fetchDecoderOutput(List<Object> out) {
         for (;;) {
-            ByteBuf buf = (ByteBuf) decoder.readOutbound();
+            ByteBuf buf = (ByteBuf) decoder.readInbound();
             if (buf == null) {
                 break;
             }
