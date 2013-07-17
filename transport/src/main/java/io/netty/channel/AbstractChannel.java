@@ -511,7 +511,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     outboundBuffer.fail(CLOSED_CHANNEL_EXCEPTION);
                 }
 
-                outboundBuffer.clearUnflushed();
+                outboundBuffer.clearUnflushed(CLOSED_CHANNEL_EXCEPTION);
 
                 if (wasActive && !isActive()) {
                     invokeLater(new Runnable() {

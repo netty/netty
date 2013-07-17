@@ -211,7 +211,7 @@ final class ChannelOutboundBuffer {
         return head == tail;
     }
 
-    void clearUnflushed() {
+    void clearUnflushed(Throwable cause) {
         MessageList unflushed = unflushedMessageList;
         if (unflushed == null) {
             return;
@@ -221,17 +221,13 @@ final class ChannelOutboundBuffer {
         Object[] messages = unflushed.messages();
         ChannelPromise[] promises = unflushed.promises();
         final int size = unflushed.size();
-        Throwable flushAborted = null;
         try {
             for (int i = 0; i < size; i++) {
                 ReferenceCountUtil.release(messages[i]);
                 ChannelPromise p = promises[i];
                 if (!(p instanceof VoidChannelPromise)) {
-                    if (flushAborted == null) {
-                        flushAborted = new ChannelException("write() aborted without flush()");
-                    }
-                    if (!p.tryFailure(flushAborted)) {
-                        logger.warn("Promise done already: {} - new exception is:", p, flushAborted);
+                    if (!p.tryFailure(cause)) {
+                        logger.warn("Promise done already: {} - new exception is:", p, cause);
                     }
                 }
             }
