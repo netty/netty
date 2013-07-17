@@ -498,14 +498,15 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     promise.setFailure(t);
                 }
 
-                if (closedChannelException == null) {
-                    closedChannelException = new ClosedChannelException();
-                }
-
-                // fail all queued messages
-                if (outboundBuffer.next()) {
+                if (!outboundBuffer.isEmpty()) {
+                    // fail all queued messages
+                    if (closedChannelException == null) {
+                        closedChannelException = new ClosedChannelException();
+                    }
                     outboundBuffer.fail(closedChannelException);
                 }
+
+                outboundBuffer.clearUnflushed();
 
                 if (wasActive && !isActive()) {
                     invokeLater(new Runnable() {
@@ -620,12 +621,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             try {
                 for (;;) {
-                    MessageList messages = outboundBuffer.currentMessages;
+                    MessageList messages = outboundBuffer.currentMessageList;
                     if (messages == null) {
                         if (!outboundBuffer.next()) {
                             break;
                         }
-                        messages = outboundBuffer.currentMessages;
+                        messages = outboundBuffer.currentMessageList;
                     }
 
                     int messageIndex = outboundBuffer.currentMessageIndex;
