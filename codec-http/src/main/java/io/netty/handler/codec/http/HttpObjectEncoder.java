@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.CharsetUtil;
@@ -81,6 +82,10 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             if (state == ST_CONTENT_NON_CHUNK) {
                 if (contentLength > 0) {
                     out.add(content.retain());
+                } else {
+                    // Need to produce some output otherwise an
+                    // IllegalstateException will be thrown
+                    out.add(Unpooled.EMPTY_BUFFER);
                 }
 
                 if (chunk instanceof LastHttpContent) {
@@ -110,6 +115,12 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                     }
 
                     state = ST_INIT;
+                } else {
+                  if (contentLength == 0) {
+                      // Need to produce some output otherwise an
+                      // IllegalstateException will be thrown
+                      out.add(Unpooled.EMPTY_BUFFER);
+                  }
                 }
             } else {
                 throw new Error();
