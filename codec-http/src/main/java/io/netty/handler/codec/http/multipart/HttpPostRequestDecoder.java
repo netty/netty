@@ -46,6 +46,8 @@ import static io.netty.buffer.Unpooled.*;
  *
  */
 public class HttpPostRequestDecoder {
+    private static final int DEFAULT_DISCARD_THRESHOLD = 10 * 1024 * 1024;
+
     /**
      * Factory used to create InterfaceHttpData
      */
@@ -129,6 +131,8 @@ public class HttpPostRequestDecoder {
     private Attribute currentAttribute;
 
     private boolean destroyed;
+
+    private int discardThreshold = DEFAULT_DISCARD_THRESHOLD;
 
     /**
      *
@@ -294,6 +298,25 @@ public class HttpPostRequestDecoder {
     }
 
     /**
+     * Set the amount of bytes after which read bytes in the buffer should be discarded.
+     * Setting this lower gives lower memory usage but with the overhead of more memory copies.
+     * Use {@code 0} to disable it.
+     */
+    public void setDiscardThreshold(int discardThreshold) {
+        if (discardThreshold < 0) {
+          throw new IllegalArgumentException("discardThreshold must be >= 0");
+        }
+        this.discardThreshold = discardThreshold;
+    }
+
+    /**
+     * Return the threshold in bytes after which read data in the buffer should be discarded.
+     */
+    public int getDiscardThreshold() {
+        return discardThreshold;
+    }
+
+    /**
      * This getMethod returns a List of all HttpDatas from body.<br>
      *
      * If chunked, all chunks must have been offered using offer() getMethod. If
@@ -372,19 +395,19 @@ public class HttpPostRequestDecoder {
         // Maybe we should better not copy here for performance reasons but this will need
         // more care by teh caller to release the content in a correct manner later
         // So maybe something to optimize on a later stage
-        ByteBuf chunked = content.content().copy();
+        ByteBuf buf = content.content();
         if (undecodedChunk == null) {
-            undecodedChunk = chunked;
+            undecodedChunk = buf.copy();
         } else {
-            // undecodedChunk = ByteBufs.wrappedBuffer(undecodedChunk,
-            // chunk.getContent());
-            // less memory usage
-            undecodedChunk = wrappedBuffer(undecodedChunk, chunked);
+            undecodedChunk.writeBytes(buf);
         }
         if (content instanceof LastHttpContent) {
             isLastChunk = true;
         }
         parseBody();
+        if (undecodedChunk != null && undecodedChunk.writerIndex() > discardThreshold) {
+            undecodedChunk.discardReadBytes();
+        }
         return this;
     }
 
