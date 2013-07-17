@@ -139,7 +139,10 @@ public final class ResourceLeakDetector<T> {
             }
 
             if (reportedLeaks.putIfAbsent(ref.exception, Boolean.TRUE) == null) {
-                logger.warn("LEAK: " + resourceType + " was GC'd before being released correctly.", ref.exception);
+                logger.warn(
+                        "LEAK: " + resourceType + " was GC'd before being released correctly.  " +
+                        "The following stack trace shows where the leaked object was created, " +
+                        "rather than who failed to release it where.", ref.exception);
             }
         }
     }
