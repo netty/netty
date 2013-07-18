@@ -204,8 +204,8 @@ public final class GlobalEventExecutor extends AbstractEventExecutor {
         if (inEventLoop) {
             addTask(task);
         } else {
-            startThread();
             addTask(task);
+            startThread();
         }
     }
 
