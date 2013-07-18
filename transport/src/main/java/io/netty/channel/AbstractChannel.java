@@ -61,9 +61,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private volatile EventLoop eventLoop;
     private volatile boolean registered;
 
-    private ChannelOutboundBuffer outboundBuffer = ChannelOutboundBuffer.newInstance(this);
-    private boolean inFlush0;
-
     /** Cache for the string representation of this channel */
     private boolean strValActive;
     private String strVal;
@@ -82,7 +79,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public boolean isWritable() {
-        return outboundBuffer.getWritable();
+        ChannelOutboundBuffer buf = unsafe.outboundBuffer();
+        return buf != null && buf.getWritable();
     }
 
     @Override
@@ -366,6 +364,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     protected abstract class AbstractUnsafe implements Unsafe {
 
+        private ChannelOutboundBuffer outboundBuffer = ChannelOutboundBuffer.newInstance(AbstractChannel.this);
+        private boolean inFlush0;
+
+        @Override
+        public final ChannelOutboundBuffer outboundBuffer() {
+            return outboundBuffer;
+        }
+
         @Override
         public final SocketAddress localAddress() {
             return localAddress0();
@@ -517,11 +523,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 }
 
                 // fail all queued messages
-                ChannelOutboundBuffer outboundBuffer = AbstractChannel.this.outboundBuffer;
+                ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
                 outboundBuffer.failFlushed(CLOSED_CHANNEL_EXCEPTION);
                 outboundBuffer.failUnflushed(CLOSED_CHANNEL_EXCEPTION);
                 outboundBuffer.recycle();
-                AbstractChannel.this.outboundBuffer = null;
+                this.outboundBuffer = null;
 
                 if (wasActive && !isActive()) {
                     invokeLater(new Runnable() {
@@ -618,7 +624,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public void flush() {
-            ChannelOutboundBuffer outboundBuffer = AbstractChannel.this.outboundBuffer;
+            ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
             if (outboundBuffer == null) {
                 return;
             }
@@ -633,7 +639,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
-            final ChannelOutboundBuffer outboundBuffer = AbstractChannel.this.outboundBuffer;
+            final ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
             if (outboundBuffer == null || outboundBuffer.isEmpty()) {
                 return;
             }
