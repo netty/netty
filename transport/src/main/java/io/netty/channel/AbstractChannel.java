@@ -651,12 +651,15 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             // Mark all pending write requests as failure if the channel is inactive.
             if (!isActive()) {
-                if (isOpen()) {
-                    outboundBuffer.failFlushed(NOT_YET_CONNECTED_EXCEPTION);
-                } else {
-                    outboundBuffer.failFlushed(CLOSED_CHANNEL_EXCEPTION);
+                try {
+                    if (isOpen()) {
+                        outboundBuffer.failFlushed(NOT_YET_CONNECTED_EXCEPTION);
+                    } else {
+                        outboundBuffer.failFlushed(CLOSED_CHANNEL_EXCEPTION);
+                    }
+                } finally {
+                    inFlush0 = false;
                 }
-                inFlush0 = false;
                 return;
             }
 
