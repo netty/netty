@@ -40,21 +40,27 @@ public class LengthFieldPrependerTest {
     public void testPrependLength() throws Exception {
         final EmbeddedChannel ch = new EmbeddedChannel(new LengthFieldPrepender(4));
         ch.writeOutbound(msg);
-        assertThat((ByteBuf) ch.readOutbound(), is(wrappedBuffer(new byte[]{0, 0, 0, 1, 'A'})));
+        final ByteBuf buf = (ByteBuf) ch.readOutbound();
+        assertThat(buf, is(wrappedBuffer(new byte[]{0, 0, 0, 1, 'A'})));
+        buf.release();
     }
 
     @Test
     public void testPrependLengthIncludesLengthFieldLength() throws Exception {
         final EmbeddedChannel ch = new EmbeddedChannel(new LengthFieldPrepender(4, true));
         ch.writeOutbound(msg);
-        assertThat((ByteBuf) ch.readOutbound(), is(wrappedBuffer(new byte[]{0, 0, 0, 5, 'A'})));
+        final ByteBuf buf = (ByteBuf) ch.readOutbound();
+        assertThat(buf, is(wrappedBuffer(new byte[]{0, 0, 0, 5, 'A'})));
+        buf.release();
     }
 
     @Test
     public void testPrependAdjustedLength() throws Exception {
         final EmbeddedChannel ch = new EmbeddedChannel(new LengthFieldPrepender(4, -1));
         ch.writeOutbound(msg);
-        assertThat((ByteBuf) ch.readOutbound(), is(wrappedBuffer(new byte[]{0, 0, 0, 0, 'A'})));
+        final ByteBuf buf = (ByteBuf) ch.readOutbound();
+        assertThat(buf, is(wrappedBuffer(new byte[]{0, 0, 0, 0, 'A'})));
+        buf.release();
     }
 
     @Test
