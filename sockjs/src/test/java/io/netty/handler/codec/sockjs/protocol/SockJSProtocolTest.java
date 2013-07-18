@@ -81,7 +81,9 @@ import io.netty.handler.codec.sockjs.transports.EventSourceTransport;
 import io.netty.handler.codec.sockjs.transports.Transports;
 import io.netty.handler.codec.sockjs.transports.WebSocketTransport;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 
+import java.nio.Buffer;
 import java.util.UUID;
 
 import org.codehaus.jackson.JsonNode;
@@ -2146,6 +2148,7 @@ public class SockJSProtocolTest {
         if (obj instanceof ByteBuf) {
             final ByteBuf buf = (ByteBuf) obj;
             if (buf.capacity() == 0) {
+                ReferenceCountUtil.release(buf);
                 return ch.readOutbound();
             }
         }
