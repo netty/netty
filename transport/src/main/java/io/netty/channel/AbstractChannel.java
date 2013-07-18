@@ -523,22 +523,25 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 }
 
                 // fail all queued messages
-                ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
-                outboundBuffer.failFlushed(CLOSED_CHANNEL_EXCEPTION);
-                outboundBuffer.failUnflushed(CLOSED_CHANNEL_EXCEPTION);
-                outboundBuffer.recycle();
-                this.outboundBuffer = null;
+                try {
+                    ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+                    outboundBuffer.failFlushed(CLOSED_CHANNEL_EXCEPTION);
+                    outboundBuffer.failUnflushed(CLOSED_CHANNEL_EXCEPTION);
+                    outboundBuffer.recycle();
+                } finally {
+                    outboundBuffer = null;
 
-                if (wasActive && !isActive()) {
-                    invokeLater(new Runnable() {
-                        @Override
-                        public void run() {
-                            pipeline.fireChannelInactive();
-                        }
-                    });
+                    if (wasActive && !isActive()) {
+                        invokeLater(new Runnable() {
+                            @Override
+                            public void run() {
+                                pipeline.fireChannelInactive();
+                            }
+                        });
+                    }
+
+                    deregister(voidPromise());
                 }
-
-                deregister(voidPromise());
             } else {
                 // Closed already.
                 promise.setSuccess();
