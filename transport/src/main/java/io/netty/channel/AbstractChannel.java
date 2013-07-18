@@ -618,6 +618,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public void flush() {
+            ChannelOutboundBuffer outboundBuffer = AbstractChannel.this.outboundBuffer;
+            if (outboundBuffer == null) {
+                return;
+            }
+
             outboundBuffer.addFlush();
             flush0();
         }
@@ -629,7 +634,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             final ChannelOutboundBuffer outboundBuffer = AbstractChannel.this.outboundBuffer;
-            if (outboundBuffer.isEmpty()) {
+            if (outboundBuffer == null || outboundBuffer.isEmpty()) {
                 return;
             }
 
