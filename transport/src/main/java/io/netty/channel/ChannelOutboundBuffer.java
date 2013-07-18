@@ -229,14 +229,7 @@ final class ChannelOutboundBuffer {
         final int size = unflushed.size();
         try {
             for (int i = 0; i < size; i++) {
-                safeRelease(messages[i]);
-
-                ChannelPromise p = promises[i];
-                if (!(p instanceof VoidChannelPromise)) {
-                    if (!p.tryFailure(cause)) {
-                        logger.warn("Promise done already: {} - new exception is:", p, cause);
-                    }
-                }
+                safeRelease(messages[i], promises[i], cause);
             }
         } finally {
             unflushed.recycle();
@@ -279,12 +272,7 @@ final class ChannelOutboundBuffer {
                     final int size = current.size();
                     try {
                         for (int i = currentMessageIndex; i < size; i++) {
-                            safeRelease(messages[i]);
-
-                            ChannelPromise p = promises[i];
-                            if (!(p instanceof VoidChannelPromise) && !p.tryFailure(cause)) {
-                                logger.warn("Promise done already: {} - new exception is:", p, cause);
-                            }
+                            safeRelease(messages[i], promises[i], cause);
                         }
                     } finally {
                         current.recycle();
@@ -296,11 +284,16 @@ final class ChannelOutboundBuffer {
         }
     }
 
-    private static void safeRelease(Object message) {
+    private static void safeRelease(Object message, ChannelPromise promise, Throwable cause) {
         try {
             ReferenceCountUtil.release(message);
         } catch (Throwable t) {
             logger.warn("Failed to release a message.", t);
+        }
+
+        ChannelPromise p = promise;
+        if (!(p instanceof VoidChannelPromise) && !p.tryFailure(cause)) {
+            logger.warn("Promise done already: {} - new exception is:", p, cause);
         }
     }
 }
