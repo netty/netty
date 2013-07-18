@@ -177,6 +177,9 @@ public class ReadTimeoutHandler extends ChannelInboundHandlerAdapter {
         }
     }
 
+    /**
+     * Is called when a read timeout was detected.
+     */
     protected void readTimedOut(ChannelHandlerContext ctx) throws Exception {
         if (!closed) {
             ctx.fireExceptionCaught(ReadTimeoutException.INSTANCE);

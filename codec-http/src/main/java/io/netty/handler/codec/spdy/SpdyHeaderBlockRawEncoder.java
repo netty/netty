@@ -15,11 +15,11 @@
  */
 package io.netty.handler.codec.spdy;
 
-import java.nio.ByteOrder;
-import java.util.Set;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerContext;
+
+import java.util.Set;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
@@ -52,7 +52,7 @@ public class SpdyHeaderBlockRawEncoder extends SpdyHeaderBlockEncoder {
     }
 
     @Override
-    public ByteBuf encode(SpdyHeadersFrame frame) throws Exception {
+    public ByteBuf encode(ChannelHandlerContext ctx, SpdyHeadersFrame frame) throws Exception {
         Set<String> names = frame.headers().names();
         int numHeaders = names.size();
         if (numHeaders == 0) {

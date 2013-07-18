@@ -56,7 +56,7 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
 
             @Override
             public void onFailure(ChannelHandlerContext outboundCtx, Throwable cause) {
-                ctx.channel().write(new SocksCmdResponse(SocksCmdStatus.FAILURE, request.addressType()));
+                ctx.channel().writeAndFlush(new SocksCmdResponse(SocksCmdStatus.FAILURE, request.addressType()));
                 SocksServerUtils.closeOnFlush(ctx.channel());
             }
         };

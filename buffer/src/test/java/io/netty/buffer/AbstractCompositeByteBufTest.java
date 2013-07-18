@@ -24,7 +24,6 @@ import java.util.Collections;
 import java.util.List;
 
 import static io.netty.buffer.Unpooled.*;
-import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.util.internal.EmptyArrays.*;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;

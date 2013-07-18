@@ -862,8 +862,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     @Override
-    public int writeBytes(ScatteringByteChannel in, int length)
-            throws IOException {
+    public int writeBytes(ScatteringByteChannel in, int length) throws IOException {
         ensureWritable(length);
         int writtenBytes = setBytes(writerIndex, in, length);
         if (writtenBytes > 0) {
@@ -878,6 +877,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
             return this;
         }
 
+        ensureWritable(length);
         checkIndex(writerIndex, length);
 
         int nLong = length >>> 3;

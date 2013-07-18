@@ -65,7 +65,7 @@ import java.util.concurrent.TimeUnit;
  * public class MyChannelInitializer extends {@link ChannelInitializer}&lt{@link Channel}&gt {
  *     {@code @Override}
  *     public void initChannel({@link Channel} channel) {
- *         channel.pipeline().addLast("idleStateHandler", new {@link IdleStateHandler}(60, 30, 0);
+ *         channel.pipeline().addLast("idleStateHandler", new {@link IdleStateHandler}(60, 30, 0));
  *         channel.pipeline().addLast("myHandler", new MyHandler());
  *     }
  * }
@@ -77,9 +77,9 @@ import java.util.concurrent.TimeUnit;
  *         if (evt instanceof {@link IdleState}} {
  *             {@link IdleState} e = ({@link IdleState}) evt;
  *             if (e.getState() == {@link IdleState}.READER_IDLE) {
- *                 ctx.channel().close();
+ *                 ctx.close();
  *             } else if (e.getState() == {@link IdleState}.WRITER_IDLE) {
- *                 ctx.channel().write(new PingMessage());
+ *                 ctx.writeAndFlush(new PingMessage());
  *             }
  *         }
  *     }
@@ -313,6 +313,10 @@ public class IdleStateHandler extends ChannelDuplexHandler {
         }
     }
 
+    /**
+     * Is called when an {@link IdleStateEvent} should be fired. This implementation calls
+     * {@link ChannelHandlerContext#fireUserEventTriggered(Object)}.
+     */
     protected void channelIdle(ChannelHandlerContext ctx, IdleStateEvent evt) throws Exception {
         ctx.fireUserEventTriggered(evt);
     }

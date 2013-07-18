@@ -52,7 +52,7 @@ public class ObjectEchoClientHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         // Send the first message if this handler is a client-side handler.
-        ctx.write(firstMessage);
+        ctx.writeAndFlush(firstMessage);
     }
 
     @Override

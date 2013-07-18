@@ -528,8 +528,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             processSelectedKey(ch.selectionKey(), task);
         }
 
-        // Call flushNow which will also take care of clear the OP_WRITE once there is nothing left to write
-        ch.unsafe().flushNow();
+        // Call forceFlush which will also take care of clear the OP_WRITE once there is nothing left to write
+        ch.unsafe().forceFlush();
     }
 
     private static void unregisterWritableTasks(AbstractNioChannel ch) {

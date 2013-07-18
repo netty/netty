@@ -116,6 +116,16 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
 
         // Format request
         int wsPort = wsURL.getPort();
+        // check if the URI contained a port if not set the correct one depending on the schema.
+        // See https://github.com/netty/netty/pull/1558
+        if (wsPort == -1) {
+            if ("wss".equals(wsURL.getScheme())) {
+                wsPort = 443;
+            } else {
+                wsPort = 80;
+            }
+        }
+
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, path);
         HttpHeaders headers = request.headers();
 

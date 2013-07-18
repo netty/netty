@@ -46,7 +46,7 @@ import java.util.List;
  */
 public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter {
 
-    protected ByteBuf cumulation;
+    ByteBuf cumulation;
     private boolean singleDecode;
     private boolean decodeWasNull;
 
@@ -215,7 +215,15 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
         }
     }
 
-    protected void callDecode(ChannelHandlerContext ctx, ByteBuf in, RecyclableArrayList out) {
+    /**
+     * Called once data should be decoded from the given {@link ByteBuf}. This method will call
+     * {@link #decode(ChannelHandlerContext, ByteBuf, List)} as long as decoding should take place.
+     *
+     * @param ctx           the {@link ChannelHandlerContext} which this {@link ByteToMessageDecoder} belongs to
+     * @param in            the {@link ByteBuf} from which to read data
+     * @param out           the {@link List} to which decoded messages should be added
+     */
+    protected void callDecode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         try {
             while (in.isReadable()) {
                 int outSize = out.size();

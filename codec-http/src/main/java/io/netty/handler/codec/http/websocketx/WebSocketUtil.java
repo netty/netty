@@ -71,7 +71,10 @@ final class WebSocketUtil {
      */
     static String base64(byte[] data) {
         ByteBuf encodedData = Unpooled.wrappedBuffer(data);
-        return Base64.encode(encodedData).toString(CharsetUtil.UTF_8);
+        ByteBuf encoded = Base64.encode(encodedData);
+        String encodedString = encoded.toString(CharsetUtil.UTF_8);
+        encoded.release();
+        return encodedString;
     }
 
     /**

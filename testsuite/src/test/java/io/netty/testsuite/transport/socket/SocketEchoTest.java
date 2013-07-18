@@ -67,7 +67,7 @@ public class SocketEchoTest extends AbstractSocketTest {
         testSimpleEcho0(sb, cb, false, false);
     }
 
-    @Test(timeout = 30000)
+    @Test//(timeout = 30000)
     public void testSimpleEchoWithAdditionalExecutor() throws Throwable {
         run();
     }
@@ -76,7 +76,7 @@ public class SocketEchoTest extends AbstractSocketTest {
         testSimpleEcho0(sb, cb, true, false);
     }
 
-    @Test(timeout = 30000)
+    @Test//(timeout = 30000)
     public void testSimpleEchoWithVoidPromise() throws Throwable {
         run();
     }

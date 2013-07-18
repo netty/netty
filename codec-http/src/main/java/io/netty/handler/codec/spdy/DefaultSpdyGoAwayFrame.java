@@ -55,10 +55,12 @@ public class DefaultSpdyGoAwayFrame implements SpdyGoAwayFrame {
         setStatus(status);
     }
 
+    @Override
     public int getLastGoodStreamId() {
         return lastGoodStreamId;
     }
 
+    @Override
     public SpdyGoAwayFrame setLastGoodStreamId(int lastGoodStreamId) {
         if (lastGoodStreamId < 0) {
             throw new IllegalArgumentException("Last-good-stream-ID"
@@ -68,10 +70,12 @@ public class DefaultSpdyGoAwayFrame implements SpdyGoAwayFrame {
         return this;
     }
 
+    @Override
     public SpdySessionStatus getStatus() {
         return status;
     }
 
+    @Override
     public SpdyGoAwayFrame setStatus(SpdySessionStatus status) {
         this.status = status;
         return this;

@@ -163,69 +163,21 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     @Override
     public ChannelGroupFuture close() {
-        Map<Channel, ChannelFuture> futures =
-            new LinkedHashMap<Channel, ChannelFuture>(size());
-
-        for (Channel c: serverChannels) {
-            futures.put(c, c.close());
-        }
-        for (Channel c: nonServerChannels) {
-            futures.put(c, c.close());
-        }
-
-        return new DefaultChannelGroupFuture(this, futures, executor);
+        return close(ChannelMatchers.all());
     }
 
     @Override
     public ChannelGroupFuture disconnect() {
-        Map<Channel, ChannelFuture> futures =
-            new LinkedHashMap<Channel, ChannelFuture>(size());
-
-        for (Channel c: serverChannels) {
-            futures.put(c, c.disconnect());
-        }
-        for (Channel c: nonServerChannels) {
-            futures.put(c, c.disconnect());
-        }
-
-        return new DefaultChannelGroupFuture(this, futures, executor);
+        return disconnect(ChannelMatchers.all());
+    }
+    @Override
+    public ChannelGroupFuture deregister() {
+        return deregister(ChannelMatchers.all());
     }
 
     @Override
     public ChannelGroupFuture write(Object message) {
-        if (message == null) {
-            throw new NullPointerException("message");
-        }
-
-        Map<Channel, ChannelFuture> futures = new LinkedHashMap<Channel, ChannelFuture>(size());
-
-        for (Channel c: nonServerChannels) {
-            futures.put(c, c.write(safeDuplicate(message)));
-        }
-
-        ReferenceCountUtil.release(message);
-        return new DefaultChannelGroupFuture(this, futures, executor);
-    }
-
-    @Override
-    public ChannelGroup flush() {
-        for (Channel c: nonServerChannels) {
-            c.flush();
-        }
-        return this;
-    }
-
-    @Override
-    public ChannelGroupFuture flushAndWrite(Object message) {
-        Map<Channel, ChannelFuture> futures = new LinkedHashMap<Channel, ChannelFuture>(size());
-
-        for (Channel c: nonServerChannels) {
-            futures.put(c, c.writeAndFlush(safeDuplicate(message)));
-        }
-
-        ReferenceCountUtil.release(message);
-
-        return new DefaultChannelGroupFuture(this, futures, executor);
+        return write(message, ChannelMatchers.all());
     }
 
     // Create a safe duplicate of the message to write it to a channel but not affect other writes.
@@ -241,16 +193,129 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     }
 
     @Override
-    public ChannelGroupFuture deregister() {
+    public ChannelGroupFuture write(Object message, ChannelMatcher matcher) {
+        if (message == null) {
+            throw new NullPointerException("message");
+        }
+        if (matcher == null) {
+            throw new NullPointerException("matcher");
+        }
+
+        Map<Channel, ChannelFuture> futures = new LinkedHashMap<Channel, ChannelFuture>(size());
+        for (Channel c: nonServerChannels) {
+            if (matcher.matches(c)) {
+                futures.put(c, c.write(safeDuplicate(message)));
+            }
+        }
+
+        ReferenceCountUtil.release(message);
+        return new DefaultChannelGroupFuture(this, futures, executor);
+    }
+
+    @Override
+    public ChannelGroup flush() {
+        return flush(ChannelMatchers.all());
+    }
+
+    @Override
+    public ChannelGroupFuture flushAndWrite(Object message) {
+        return flushAndWrite(message, ChannelMatchers.all());
+    }
+
+    @Override
+    public ChannelGroupFuture disconnect(ChannelMatcher matcher) {
+        if (matcher == null) {
+            throw new NullPointerException("matcher");
+        }
+
         Map<Channel, ChannelFuture> futures =
                 new LinkedHashMap<Channel, ChannelFuture>(size());
 
         for (Channel c: serverChannels) {
-            futures.put(c, c.deregister());
+            if (matcher.matches(c)) {
+                futures.put(c, c.disconnect());
+            }
         }
         for (Channel c: nonServerChannels) {
-            futures.put(c, c.deregister());
+            if (matcher.matches(c)) {
+                futures.put(c, c.disconnect());
+            }
         }
+
+        return new DefaultChannelGroupFuture(this, futures, executor);
+    }
+
+    @Override
+    public ChannelGroupFuture close(ChannelMatcher matcher) {
+        if (matcher == null) {
+            throw new NullPointerException("matcher");
+        }
+
+        Map<Channel, ChannelFuture> futures =
+                new LinkedHashMap<Channel, ChannelFuture>(size());
+
+        for (Channel c: serverChannels) {
+            if (matcher.matches(c)) {
+                futures.put(c, c.close());
+            }
+        }
+        for (Channel c: nonServerChannels) {
+            if (matcher.matches(c)) {
+                futures.put(c, c.close());
+            }
+        }
+
+        return new DefaultChannelGroupFuture(this, futures, executor);
+    }
+
+    @Override
+    public ChannelGroupFuture deregister(ChannelMatcher matcher) {
+        if (matcher == null) {
+            throw new NullPointerException("matcher");
+        }
+
+        Map<Channel, ChannelFuture> futures =
+                new LinkedHashMap<Channel, ChannelFuture>(size());
+
+        for (Channel c: serverChannels) {
+            if (matcher.matches(c)) {
+                futures.put(c, c.deregister());
+            }
+        }
+        for (Channel c: nonServerChannels) {
+            if (matcher.matches(c)) {
+                futures.put(c, c.deregister());
+            }
+        }
+
+        return new DefaultChannelGroupFuture(this, futures, executor);
+    }
+
+    @Override
+    public ChannelGroup flush(ChannelMatcher matcher) {
+        for (Channel c: nonServerChannels) {
+            if (matcher.matches(c)) {
+                c.flush();
+            }
+        }
+        return this;
+    }
+
+    @Override
+    public ChannelGroupFuture flushAndWrite(Object message, ChannelMatcher matcher) {
+        if (message == null) {
+            throw new NullPointerException("message");
+        }
+
+        Map<Channel, ChannelFuture> futures = new LinkedHashMap<Channel, ChannelFuture>(size());
+
+        for (Channel c: nonServerChannels) {
+            if (matcher.matches(c)) {
+                futures.put(c, c.writeAndFlush(safeDuplicate(message)));
+            }
+        }
+
+        ReferenceCountUtil.release(message);
 
         return new DefaultChannelGroupFuture(this, futures, executor);
     }

@@ -18,6 +18,7 @@ package io.netty.channel.nio;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ServerChannel;
 
 import java.io.IOException;
 import java.nio.channels.SelectableChannel;
@@ -91,7 +92,9 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
 
             if (exception != null) {
                 if (exception instanceof IOException) {
-                    closed = true;
+                    // ServerChannel should not be closed even on IOException because it can often continue
+                    // accepting incoming connections. (e.g. too many open files)
+                    closed = !(AbstractNioMessageChannel.this instanceof ServerChannel);
                 }
 
                 pipeline.fireExceptionCaught(exception);

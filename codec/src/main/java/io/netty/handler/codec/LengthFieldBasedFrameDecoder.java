@@ -16,7 +16,6 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 
@@ -348,13 +347,21 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected final void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         Object decoded = decode(ctx, in);
         if (decoded != null) {
             out.add(decoded);
         }
     }
 
+    /**
+     * Create a frame out of the {@link ByteBuf} and return it.
+     *
+     * @param   ctx             the {@link ChannelHandlerContext} which this {@link ByteToMessageDecoder} belongs to
+     * @param   in              the {@link ByteBuf} from which to read data
+     * @return  frame           the {@link ByteBuf} which represent the frame or {@code null} if no frame could
+     *                          be created.
+     */
     protected Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         if (discardingTooLongFrame) {
             long bytesToDiscard = this.bytesToDiscard;
@@ -415,7 +422,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
         // extract frame
         int readerIndex = in.readerIndex();
         int actualFrameLength = frameLengthInt - initialBytesToStrip;
-        ByteBuf frame = extractFrame(in, readerIndex, actualFrameLength);
+        ByteBuf frame = extractFrame(ctx, in, readerIndex, actualFrameLength);
         in.readerIndex(readerIndex + actualFrameLength);
         return frame;
     }
@@ -475,8 +482,8 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
      * Refer to the source code of {@link ObjectDecoder} to see how this method
      * is overridden to avoid memory copy.
      */
-    protected ByteBuf extractFrame(ByteBuf buffer, int index, int length) {
-        ByteBuf frame = Unpooled.buffer(length);
+    protected ByteBuf extractFrame(ChannelHandlerContext ctx, ByteBuf buffer, int index, int length) {
+        ByteBuf frame = ctx.alloc().buffer(length);
         frame.writeBytes(buffer, index, length);
         return frame;
     }

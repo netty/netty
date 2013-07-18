@@ -152,7 +152,7 @@ public class ChunkedWriteHandler
         super.channelInactive(ctx);
     }
 
-    private void discard(final ChannelHandlerContext ctx, Throwable cause) {
+    private void discard(Throwable cause) {
         for (;;) {
             PendingWrite currentWrite = this.currentWrite;
 
@@ -190,16 +190,12 @@ public class ChunkedWriteHandler
                 currentWrite.fail(cause);
             }
         }
-
-        if (cause != null) {
-            ctx.fireExceptionCaught(cause);
-        }
     }
 
     private void doFlush(final ChannelHandlerContext ctx) throws Exception {
         Channel channel = ctx.channel();
         if (!channel.isActive()) {
-            discard(ctx, null);
+            discard(null);
             return;
         }
         boolean needsFlush;
@@ -312,7 +308,7 @@ public class ChunkedWriteHandler
                 ctx.flush();
             }
             if (!channel.isActive()) {
-                discard(ctx, new ClosedChannelException());
+                discard(new ClosedChannelException());
                 return;
             }
         }

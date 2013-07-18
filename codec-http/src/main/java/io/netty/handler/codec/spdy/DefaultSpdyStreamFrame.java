@@ -32,10 +32,12 @@ public abstract class DefaultSpdyStreamFrame implements SpdyStreamFrame {
         setStreamId(streamId);
     }
 
+    @Override
     public int getStreamId() {
         return streamId;
     }
 
+    @Override
     public SpdyStreamFrame setStreamId(int streamId) {
         if (streamId <= 0) {
             throw new IllegalArgumentException(
@@ -45,10 +47,12 @@ public abstract class DefaultSpdyStreamFrame implements SpdyStreamFrame {
         return this;
     }
 
+    @Override
     public boolean isLast() {
         return last;
     }
 
+    @Override
     public SpdyStreamFrame setLast(boolean last) {
         this.last = last;
         return this;

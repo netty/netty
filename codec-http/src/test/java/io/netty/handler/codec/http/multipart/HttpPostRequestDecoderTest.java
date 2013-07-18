@@ -32,15 +32,31 @@ import static org.junit.Assert.*;
 
 /** {@link HttpPostRequestDecoder} test case. */
 public class HttpPostRequestDecoderTest {
-    @Test
-    public void testBinaryStreamUpload() throws Exception {
-        final String boundary = "dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
 
+    @Test
+    public void testBinaryStreamUploadWithSpace() throws Exception {
+        testBinaryStreamUpload(true);
+    }
+
+    // https://github.com/netty/netty/issues/1575
+    @Test
+    public void testBinaryStreamUploadWithoutSpace() throws Exception {
+        testBinaryStreamUpload(false);
+    }
+
+    private static void testBinaryStreamUpload(boolean withSpace) throws Exception {
+        final String boundary = "dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
+        final String contentTypeValue;
+        if (withSpace) {
+            contentTypeValue = "multipart/form-data; boundary=" + boundary;
+        } else {
+            contentTypeValue = "multipart/form-data;boundary=" + boundary;
+        }
         final DefaultHttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
                 "http://localhost");
 
         req.setDecoderResult(DecoderResult.SUCCESS);
-        req.headers().add(HttpHeaders.Names.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+        req.headers().add(HttpHeaders.Names.CONTENT_TYPE, contentTypeValue);
         req.headers().add(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
 
         // Force to use memory-based data.

@@ -20,9 +20,12 @@ import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.RandomAccess;
 
 /**
- * A simple list that holds the output of a codec.
+ * A simple list which is reyclable. This implementation does not allow {@code null} elements to be added.
  */
 public final class RecyclableArrayList extends ArrayList<Object> {
 
@@ -62,6 +65,61 @@ public final class RecyclableArrayList extends ArrayList<Object> {
     private RecyclableArrayList(Handle handle, int initialCapacity) {
         super(initialCapacity);
         this.handle = handle;
+    }
+
+    @Override
+    public boolean addAll(Collection<?> c) {
+        checkNullElements(c);
+        return super.addAll(c);
+    }
+
+    @Override
+    public boolean addAll(int index, Collection<?> c) {
+        checkNullElements(c);
+        return super.addAll(index, c);
+    }
+
+    private static void checkNullElements(Collection<?> c) {
+        if (c instanceof RandomAccess && c instanceof List) {
+            // produce less garbage
+            List<?> list = (List<?>) c;
+            int size = list.size();
+            for (int i = 0; i  < size; i++) {
+                if (list.get(i) == null) {
+                    throw new IllegalArgumentException("c contains null values");
+                }
+            }
+        } else {
+            for (Object element: c) {
+                if (element == null) {
+                    throw new IllegalArgumentException("c contains null values");
+                }
+            }
+        }
+    }
+
+    @Override
+    public boolean add(Object element) {
+        if (element == null) {
+            throw new NullPointerException("element");
+        }
+        return super.add(element);
+    }
+
+    @Override
+    public void add(int index, Object element) {
+        if (element == null) {
+            throw new NullPointerException("element");
+        }
+        super.add(index, element);
+    }
+
+    @Override
+    public Object set(int index, Object element) {
+        if (element == null) {
+            throw new NullPointerException("element");
+        }
+        return super.set(index, element);
     }
 
     /**

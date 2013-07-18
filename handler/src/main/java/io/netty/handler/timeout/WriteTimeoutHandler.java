@@ -133,6 +133,9 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
         }
     }
 
+    /**
+     * Is called when a write timeout was detected
+     */
     protected void writeTimedOut(ChannelHandlerContext ctx) throws Exception {
         if (!closed) {
             ctx.fireExceptionCaught(WriteTimeoutException.INSTANCE);

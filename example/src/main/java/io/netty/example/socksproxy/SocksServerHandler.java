@@ -68,6 +68,11 @@ public final class SocksServerHandler extends SimpleChannelInboundHandler<SocksR
     }
 
     @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
+    }
+
+    @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable throwable) throws Exception {
         throwable.printStackTrace();
         SocksServerUtils.closeOnFlush(ctx.channel());

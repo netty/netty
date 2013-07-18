@@ -243,6 +243,9 @@ public class EmbeddedChannel extends AbstractChannel {
         PlatformDependent.throwException(t);
     }
 
+    /**
+     * Ensure the {@link Channel} is open and of not throw an exception.
+     */
     protected final void ensureOpen() {
         if (!isOpen()) {
             recordException(new ClosedChannelException());
@@ -299,11 +302,6 @@ public class EmbeddedChannel extends AbstractChannel {
     @Override
     protected AbstractUnsafe newUnsafe() {
         return new DefaultUnsafe();
-    }
-
-    @Override
-    protected boolean isFlushPending() {
-        return false;
     }
 
     @Override

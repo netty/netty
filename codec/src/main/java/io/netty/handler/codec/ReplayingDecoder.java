@@ -23,6 +23,8 @@ import io.netty.util.Signal;
 import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.StringUtil;
 
+import java.util.List;
+
 /**
  * A specialized variation of {@link ByteToMessageDecoder} which enables implementation
  * of a non-blocking decoder in the blocking I/O paradigm.
@@ -34,14 +36,14 @@ import io.netty.util.internal.StringUtil;
  * availability of the required bytes.  For example, the following
  * {@link ByteToMessageDecoder} implementation:
  * <pre>
- * public class IntegerHeaderFrameDecoder extends {@link ByteToMessageDecoder}&lt;{@link ByteBuf}&gt; {
+ * public class IntegerHeaderFrameDecoder extends {@link ByteToMessageDecoder} {
  *
  *   {@code @Override}
- *   protected ByteBuf decode({@link ChannelHandlerContext} ctx,
- *                           {@link ByteBuf} in) throws Exception {
+ *   protected void decode({@link ChannelHandlerContext} ctx,
+ *                           {@link ByteBuf} in, List&lt;Object&gt; out) throws Exception {
  *
  *     if (in.readableBytes() &lt; 4) {
- *        return <strong>null</strong>;
+ *        return;
  *     }
  *
  *     in.markReaderIndex();
@@ -49,22 +51,22 @@ import io.netty.util.internal.StringUtil;
  *
  *     if (in.readableBytes() &lt; length) {
  *        in.resetReaderIndex();
- *        return <strong>null</strong>;
+ *        return;
  *     }
  *
- *     return in.readBytes(length);
+ *     out.add(in.readBytes(length));
  *   }
  * }
  * </pre>
  * is simplified like the following with {@link ReplayingDecoder}:
  * <pre>
  * public class IntegerHeaderFrameDecoder
- *      extends {@link ReplayingDecoder}&lt;{@link ByteBuf},{@link Void}&gt; {
+ *      extends {@link ReplayingDecoder}&lt;{@link Void}&gt; {
  *
- *   protected Object decode({@link ChannelHandlerContext} ctx,
+ *   protected void decode({@link ChannelHandlerContext} ctx,
  *                           {@link ByteBuf} buf) throws Exception {
  *
- *     return buf.readBytes(buf.readInt());
+ *     out.add(buf.readBytes(buf.readInt()));
  *   }
  * }
  * </pre>
@@ -346,7 +348,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
     }
 
     @Override
-    protected void callDecode(ChannelHandlerContext ctx, ByteBuf in, RecyclableArrayList out) {
+    protected void callDecode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         replayable.setCumulation(in);
         try {
             while (in.isReadable()) {

@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.util.DefaultAttributeMap;
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.logging.InternalLogger;
@@ -38,6 +39,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractChannel.class);
 
+    static final ClosedChannelException CLOSED_CHANNEL_EXCEPTION = new ClosedChannelException();
+    static final NotYetConnectedException NOT_YET_CONNECTED_EXCEPTION = new NotYetConnectedException();
+
+    static {
+        CLOSED_CHANNEL_EXCEPTION.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+        NOT_YET_CONNECTED_EXCEPTION.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+    }
+
     private final Channel parent;
     private final long hashCode = ThreadLocalRandom.current().nextLong();
     private final Unsafe unsafe;
@@ -53,9 +62,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private volatile EventLoop eventLoop;
     private volatile boolean registered;
 
-    private ClosedChannelException closedChannelException;
-    private boolean inFlushNow;
-    private boolean flushNowPending;
+    private boolean inFlush0;
 
     /** Cache for the string representation of this channel */
     private boolean strValActive;
@@ -490,6 +497,16 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final void close(final ChannelPromise promise) {
+            if (inFlush0) {
+                invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        close(promise);
+                    }
+                });
+                return;
+            }
+
             boolean wasActive = isActive();
             if (closeFuture.setClosed()) {
                 try {
@@ -499,14 +516,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     promise.setFailure(t);
                 }
 
-                if (closedChannelException == null) {
-                    closedChannelException = new ClosedChannelException();
+                if (!outboundBuffer.isEmpty()) {
+                    // fail all queued messages
+                    outboundBuffer.fail(CLOSED_CHANNEL_EXCEPTION);
                 }
 
-                // fail all queued messages
-                if (outboundBuffer.next()) {
-                    outboundBuffer.fail(closedChannelException);
-                }
+                outboundBuffer.clearUnflushed(CLOSED_CHANNEL_EXCEPTION);
 
                 if (wasActive && !isActive()) {
                     invokeLater(new Runnable() {
@@ -589,67 +604,53 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public void write(Object msg, ChannelPromise promise) {
-            outboundBuffer.addMessage(msg, promise);
+            if (!isActive()) {
+                // Mark the write request as failure if the channl is inactive.
+                if (isOpen()) {
+                    promise.tryFailure(NOT_YET_CONNECTED_EXCEPTION);
+                } else {
+                    promise.tryFailure(CLOSED_CHANNEL_EXCEPTION);
+                }
+            } else {
+                outboundBuffer.addMessage(msg, promise);
+            }
         }
 
         @Override
         public void flush() {
             outboundBuffer.addFlush();
-
-            if (!inFlushNow) { // Avoid re-entrance
-                try {
-                    // Flush immediately only when there's no pending flush.
-                    // If there's a pending flush operation, event loop will call flushNow() later,
-                    // and thus there's no need to call it now.
-                    if (!isFlushPending()) {
-                        flushNow();
-                    }
-                } catch (Throwable t) {
-                    outboundBuffer.fail(t);
-                    close(voidPromise());
-                }
-            } else {
-                if (!flushNowPending) {
-                    flushNowPending = true;
-                    eventLoop().execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            flush();
-                        }
-                    });
-                }
-            }
+            flush0();
         }
 
-        @Override
-        public final void flushNow() {
-            if (inFlushNow) {
+        protected void flush0() {
+            if (inFlush0) {
+                // Avoid re-entrance
                 return;
             }
 
-            inFlushNow = true;
+            inFlush0 = true;
 
             final ChannelOutboundBuffer outboundBuffer = AbstractChannel.this.outboundBuffer;
 
             // Mark all pending write requests as failure if the channel is inactive.
             if (!isActive()) {
                 if (isOpen()) {
-                    outboundBuffer.fail(new NotYetConnectedException());
+                    outboundBuffer.fail(NOT_YET_CONNECTED_EXCEPTION);
                 } else {
-                    outboundBuffer.fail(new ClosedChannelException());
+                    outboundBuffer.fail(CLOSED_CHANNEL_EXCEPTION);
                 }
-                inFlushNow = false;
+                inFlush0 = false;
                 return;
             }
 
             try {
                 for (;;) {
-                    MessageList messages = outboundBuffer.currentMessages;
+                    MessageList messages = outboundBuffer.currentMessageList;
                     if (messages == null) {
                         if (!outboundBuffer.next()) {
                             break;
                         }
-                        messages = outboundBuffer.currentMessages;
+                        messages = outboundBuffer.currentMessageList;
                     }
 
                     int messageIndex = outboundBuffer.currentMessageIndex;
@@ -684,7 +685,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     close(voidPromise());
                 }
             } finally {
-                inFlushNow = false;
+                inFlush0 = false;
             }
         }
 
@@ -698,8 +699,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return true;
             }
 
-            Exception e = new ClosedChannelException();
-            promise.setFailure(e);
+            promise.setFailure(CLOSED_CHANNEL_EXCEPTION);
             return false;
         }
 
@@ -819,11 +819,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
         return 0;
     }
-
-    /**
-     * Return {@code true} if a flush to the {@link Channel} is currently pending.
-     */
-    protected abstract boolean isFlushPending();
 
     final class CloseFuture extends DefaultChannelPromise {
 
