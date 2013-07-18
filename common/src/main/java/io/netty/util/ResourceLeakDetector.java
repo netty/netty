@@ -142,7 +142,7 @@ public final class ResourceLeakDetector<T> {
                 logger.warn(
                         "LEAK: " + resourceType + " was GC'd before being released correctly.  " +
                         "The following stack trace shows where the leaked object was created, " +
-                        "rather than who failed to release it where.", ref.exception);
+                        "rather than where you failed to release it.", ref.exception);
             }
         }
     }
