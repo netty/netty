@@ -17,6 +17,7 @@ package io.netty.channel.socket.oio;
 
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.util.internal.logging.InternalLogger;
@@ -173,7 +174,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected int doWrite(Object[] msgs, int msgsLength, int startIndex) throws Exception {
+    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         throw new UnsupportedOperationException();
     }
 

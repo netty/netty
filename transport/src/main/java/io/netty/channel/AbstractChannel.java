@@ -516,12 +516,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     promise.setFailure(t);
                 }
 
-                if (!outboundBuffer.isEmpty()) {
-                    // fail all queued messages
-                    outboundBuffer.fail(CLOSED_CHANNEL_EXCEPTION);
-                }
-
-                outboundBuffer.clearUnflushed(CLOSED_CHANNEL_EXCEPTION);
+                // fail all queued messages
+                outboundBuffer.failFlushed(CLOSED_CHANNEL_EXCEPTION);
+                outboundBuffer.failUnflushed(CLOSED_CHANNEL_EXCEPTION);
 
                 if (wasActive && !isActive()) {
                     invokeLater(new Runnable() {
@@ -628,59 +625,28 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
-            inFlush0 = true;
-
             final ChannelOutboundBuffer outboundBuffer = AbstractChannel.this.outboundBuffer;
+            if (outboundBuffer.isEmpty()) {
+                return;
+            }
+
+            inFlush0 = true;
 
             // Mark all pending write requests as failure if the channel is inactive.
             if (!isActive()) {
                 if (isOpen()) {
-                    outboundBuffer.fail(NOT_YET_CONNECTED_EXCEPTION);
+                    outboundBuffer.failFlushed(NOT_YET_CONNECTED_EXCEPTION);
                 } else {
-                    outboundBuffer.fail(CLOSED_CHANNEL_EXCEPTION);
+                    outboundBuffer.failFlushed(CLOSED_CHANNEL_EXCEPTION);
                 }
                 inFlush0 = false;
                 return;
             }
 
             try {
-                for (;;) {
-                    MessageList messages = outboundBuffer.currentMessageList;
-                    if (messages == null) {
-                        if (!outboundBuffer.next()) {
-                            break;
-                        }
-                        messages = outboundBuffer.currentMessageList;
-                    }
-
-                    int messageIndex = outboundBuffer.currentMessageIndex;
-                    int messageCount = messages.size();
-                    Object[] messageArray = messages.messages();
-                    ChannelPromise[] promiseArray = messages.promises();
-
-                    // Write the messages.
-                    final int writtenMessages = doWrite(messageArray, messageCount, messageIndex);
-
-                    // Notify the promises.
-                    final int newMessageIndex = messageIndex + writtenMessages;
-                    for (int i = messageIndex; i < newMessageIndex; i ++) {
-                        promiseArray[i].trySuccess();
-                    }
-
-                    // Update the index variable and decide what to do next.
-                    outboundBuffer.currentMessageIndex = messageIndex = newMessageIndex;
-                    if (messageIndex >= messageCount) {
-                        messages.recycle();
-                        if (!outboundBuffer.next()) {
-                            break;
-                        }
-                    } else {
-                        // Could not flush the current write request completely. Try again later.
-                        break;
-                    }
-                }
+                doWrite(outboundBuffer);
             } catch (Throwable t) {
-                outboundBuffer.fail(t);
+                outboundBuffer.failFlushed(t);
                 if (t instanceof IOException) {
                     close(voidPromise());
                 }
@@ -790,13 +756,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected abstract void doBeginRead() throws Exception;
 
     /**
-     * Flush the content of the given {@link ByteBuf} to the remote peer.
+     * Flush the content of the given buffer to the remote peer.
      *
      * Sub-classes may override this as this implementation will just thrown an {@link UnsupportedOperationException}
-     *
-     * @return the number of written messages
      */
-    protected abstract int doWrite(Object[] msgs, int msgsLength, int startIndex) throws Exception;
+    protected abstract void doWrite(ChannelOutboundBuffer in) throws Exception;
 
     protected static void checkEOF(FileRegion region) throws IOException {
         if (region.transfered() < region.count()) {

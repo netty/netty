@@ -23,10 +23,12 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
@@ -305,11 +307,17 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    protected int doWrite(Object[] msgs, int msgsLength, int startIndex) throws Exception {
-        for (int i = startIndex; i < msgsLength; i ++) {
-            lastOutboundBuffer.add(msgs[i]);
+    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+        for (;;) {
+            Object msg = in.current();
+            if (msg == null) {
+                break;
+            }
+
+            ReferenceCountUtil.retain(msg);
+            lastOutboundBuffer.add(msg);
+            in.remove();
         }
-        return msgsLength - startIndex;
     }
 
     private class DefaultUnsafe extends AbstractUnsafe {

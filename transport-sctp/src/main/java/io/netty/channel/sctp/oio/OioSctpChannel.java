@@ -24,6 +24,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.oio.AbstractOioMessageChannel;
@@ -219,59 +220,57 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    protected int doWrite(Object[] msgs, int length, int startIndex) throws Exception {
+    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         if (!writeSelector.isOpen()) {
-            return 0;
+            return;
         }
+        final int size = in.size();
         final int selectedKeys = writeSelector.select(SO_TIMEOUT);
         if (selectedKeys > 0) {
             final Set<SelectionKey> writableKeys = writeSelector.selectedKeys();
             if (writableKeys.isEmpty()) {
-                return 0;
+                return;
             }
             Iterator<SelectionKey> writableKeysIt = writableKeys.iterator();
             int written = 0;
             for (;;) {
-                if (written == length) {
+                if (written == size) {
                     // all written
-                    return written;
+                    return;
                 }
                 writableKeysIt.next();
                 writableKeysIt.remove();
 
-                SctpMessage packet = (SctpMessage) msgs[startIndex ++];
+                SctpMessage packet = (SctpMessage) in.current();
                 if (packet == null) {
-                    return written;
+                    return;
                 }
-                try {
-                    ByteBuf data = packet.content();
-                    int dataLen = data.readableBytes();
-                    ByteBuffer nioData;
 
-                    if (data.nioBufferCount() != -1) {
-                        nioData = data.nioBuffer();
-                    } else {
-                        nioData = ByteBuffer.allocate(dataLen);
-                        data.getBytes(data.readerIndex(), nioData);
-                        nioData.flip();
-                    }
+                ByteBuf data = packet.content();
+                int dataLen = data.readableBytes();
+                ByteBuffer nioData;
 
-                    final MessageInfo mi = MessageInfo.createOutgoing(association(), null, packet.streamIdentifier());
-                    mi.payloadProtocolID(packet.protocolIdentifier());
-                    mi.streamNumber(packet.streamIdentifier());
-
-                    ch.send(nioData, mi);
-                    written ++;
-                } finally {
-                    packet.release();
+                if (data.nioBufferCount() != -1) {
+                    nioData = data.nioBuffer();
+                } else {
+                    nioData = ByteBuffer.allocate(dataLen);
+                    data.getBytes(data.readerIndex(), nioData);
+                    nioData.flip();
                 }
+
+                final MessageInfo mi = MessageInfo.createOutgoing(association(), null, packet.streamIdentifier());
+                mi.payloadProtocolID(packet.protocolIdentifier());
+                mi.streamNumber(packet.streamIdentifier());
+
+                ch.send(nioData, mi);
+                written ++;
+                in.remove();
+
                 if (!writableKeysIt.hasNext()) {
-                    return written;
+                    return;
                 }
             }
         }
-
-        return 0;
     }
 
     @Override

@@ -31,7 +31,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.channels.SelectionKey;
 import java.util.List;
 
 import static java.nio.channels.SelectionKey.*;
@@ -167,9 +166,9 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel imp
     }
 
     @Override
-    protected int doWriteMessages(Object[] msgs, int msgLength, int startIndex, boolean lastSpin) throws Exception {
+    protected boolean doWriteMessage(Object msg) throws Exception {
         // expects a message
-        final UdtMessage message = (UdtMessage) msgs[startIndex];
+        final UdtMessage message = (UdtMessage) msg;
 
         final ByteBuf byteBuf = message.content();
 
@@ -182,17 +181,9 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel imp
             writtenBytes = javaChannel().write(byteBuf.nioBuffers());
         }
 
-        final SelectionKey key = selectionKey();
-        final int interestOps = key.interestOps();
-
         // did not write the message
         if (writtenBytes <= 0 && messageSize > 0) {
-            if (lastSpin) {
-                if ((interestOps & OP_WRITE) == 0) {
-                    key.interestOps(interestOps | OP_WRITE);
-                }
-            }
-            return 0;
+            return false;
         }
 
         // wrote message completely
@@ -201,16 +192,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel imp
                     "Provider error: failed to write message. Provider library should be upgraded.");
         }
 
-        // wrote the message queue completely - clear OP_WRITE.
-        if (msgLength == 1) {
-            if ((interestOps & OP_WRITE) != 0) {
-                key.interestOps(interestOps & ~OP_WRITE);
-            }
-        }
-
-        message.release();
-
-        return 1;
+        return true;
     }
 
     @Override
