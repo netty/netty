@@ -19,6 +19,10 @@ import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
 import static io.netty.handler.codec.http.HttpHeaders.Names.TRANSFER_ENCODING;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.util.CharsetUtil.UTF_8;
+import static io.netty.buffer.Unpooled.unreleasableBuffer;
+import static io.netty.buffer.Unpooled.copiedBuffer;
+import static io.netty.handler.codec.http.HttpConstants.CR;
+import static io.netty.handler.codec.http.HttpConstants.LF;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
@@ -29,7 +33,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
@@ -61,14 +64,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  * callback.
  */
 public class HtmlFileTransport extends ChannelOutboundHandlerAdapter implements ChannelInboundHandler {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(HtmlFileTransport.class);
-    private final Config config;
-    private final HttpRequest request;
-    private final AtomicBoolean headerSent = new AtomicBoolean(false);
-    private final AtomicInteger bytesSent = new AtomicInteger(0);
-    private String callback;
 
-    private static final ByteBuf HEADER_PART1 = Unpooled.unreleasableBuffer(Unpooled.copiedBuffer(
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(HtmlFileTransport.class);
+    private static final ByteBuf HEADER_PART1 = unreleasableBuffer(copiedBuffer(
             "<!doctype html>\n" +
             "<html><head>\n" +
             "  <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\" />\n" +
@@ -77,18 +75,21 @@ public class HtmlFileTransport extends ChannelOutboundHandlerAdapter implements 
             "  <script>\n" +
             "    document.domain = document.domain;\n" +
             "    var c = parent.", CharsetUtil.UTF_8));
-    private static final ByteBuf HEADER_PART2 = Unpooled.unreleasableBuffer(Unpooled.copiedBuffer(
+    private static final ByteBuf HEADER_PART2 = unreleasableBuffer(copiedBuffer(
             ";\n" +
             "    c.start();\n" +
             "    function p(d) {c.message(d);};\n" +
             "    window.onload = function() {c.stop();};\n" +
             "  </script>", CharsetUtil.UTF_8));
-    private static final ByteBuf PREFIX = Unpooled.unreleasableBuffer(Unpooled.copiedBuffer(
-            "<script>\np(\"", CharsetUtil.UTF_8));
-    private static final ByteBuf POSTFIX = Unpooled.unreleasableBuffer(Unpooled.copiedBuffer(
-            "\");\n</script>\r\n", CharsetUtil.UTF_8));
-    private static final ByteBuf END_HEADER = Unpooled.unreleasableBuffer(Unpooled.copiedBuffer(
-            new byte[] {HttpConstants.CR, HttpConstants.LF, HttpConstants.CR, HttpConstants.LF}));
+    private static final ByteBuf PREFIX = unreleasableBuffer(copiedBuffer("<script>\np(\"", CharsetUtil.UTF_8));
+    private static final ByteBuf POSTFIX = unreleasableBuffer(copiedBuffer("\");\n</script>\r\n", CharsetUtil.UTF_8));
+    private static final ByteBuf END_HEADER = unreleasableBuffer(copiedBuffer(new byte[] {CR, LF, CR, LF}));
+
+    private final Config config;
+    private final HttpRequest request;
+    private final AtomicBoolean headerSent = new AtomicBoolean(false);
+    private final AtomicInteger bytesSent = new AtomicInteger(0);
+    private String callback;
 
     public HtmlFileTransport(final Config config, final HttpRequest request) {
         this.config = config;
@@ -125,7 +126,7 @@ public class HtmlFileTransport extends ChannelOutboundHandlerAdapter implements 
                 final HttpResponse response = createResponse(Transports.CONTENT_TYPE_HTML);
                 final ByteBuf header = Unpooled.buffer();
                 header.writeBytes(HEADER_PART1.duplicate());
-                header.writeBytes(Unpooled.copiedBuffer(callback, UTF_8));
+                header.writeBytes(copiedBuffer(callback, UTF_8));
                 header.writeBytes(HEADER_PART2.duplicate());
                 final int spaces = 1024 * header.readableBytes();
                 final ByteBuf paddedBuffer = Unpooled.buffer(1024 + 50);
@@ -150,11 +151,6 @@ public class HtmlFileTransport extends ChannelOutboundHandlerAdapter implements 
                 ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT).addListener(ChannelFutureListener.CLOSE);
             }
         }
-    }
-
-    @Override
-    public void handlerAdded(final ChannelHandlerContext ctx) throws Exception {
-        logger.debug("Added [" + ctx + "]");
     }
 
     private void respondCallbackRequired(final ChannelHandlerContext ctx)

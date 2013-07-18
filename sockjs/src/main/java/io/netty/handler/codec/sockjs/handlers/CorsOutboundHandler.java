@@ -39,7 +39,6 @@ public class CorsOutboundHandler extends ChannelOutboundHandlerAdapter {
                 }
                 response.headers().set(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
             }
-            logger.debug("Responding ..." + response.getStatus());
         }
         ctx.writeAndFlush(msg, promise);
     }

@@ -101,7 +101,6 @@ class WebSocketSessionState implements SessionState {
                 return;
             }
             final MessageFrame messageFrame = new MessageFrame(allMessages);
-            logger.debug("flushing [" + messageFrame + "]");
             channel.writeAndFlush(messageFrame).addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(final ChannelFuture future) throws Exception {

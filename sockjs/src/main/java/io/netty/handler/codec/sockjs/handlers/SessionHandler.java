@@ -61,7 +61,7 @@ public class SessionHandler extends ChannelInboundHandlerAdapter implements Sess
 
     private void handleSession(final ChannelHandlerContext ctx) throws Exception {
         currentContext = ctx;
-        logger.info("handleSession " + sessionState);
+        logger.debug("handleSession " + sessionState);
         switch (sessionState.getState()) {
         case CONNECTING:
             logger.debug("State.Connecting sending open frame");
@@ -128,11 +128,6 @@ public class SessionHandler extends ChannelInboundHandlerAdapter implements Sess
         } else if (event == Events.HANDLE_SESSION) {
             handleSession(ctx);
         }
-    }
-
-    @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        logger.debug("Added " + ctx.channel());
     }
 
     @Override

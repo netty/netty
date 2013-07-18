@@ -72,7 +72,7 @@ public class CorsInboundHandlerTest {
         assertThat(headers.get(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_HEADERS), is("Content-Type"));
         assertThat(headers.get(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_CREDENTIALS), is("true"));
         assertThat(headers.get(HttpHeaders.Names.EXPIRES), is("dummy"));
-        assertThat(headers.get(HttpHeaders.Names.SET_COOKIE), is("JSESSIONID=dummy; path=/"));
+        assertThat(headers.get(HttpHeaders.Names.SET_COOKIE), is("JSESSIONID=dummy;path=/"));
         channel.finish();
     }
 

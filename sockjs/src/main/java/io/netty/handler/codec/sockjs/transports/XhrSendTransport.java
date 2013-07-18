@@ -19,15 +19,11 @@ import static io.netty.handler.codec.http.HttpResponseStatus.NO_CONTENT;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.sockjs.Config;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 
 /**
  * Handles the send part the xhr-polling transport.
  */
 public class XhrSendTransport extends AbstractSendTransport {
-
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(XhrSendTransport.class);
 
     public XhrSendTransport(final Config config) {
         super(config);
@@ -36,11 +32,6 @@ public class XhrSendTransport extends AbstractSendTransport {
     @Override
     public void respond(final ChannelHandlerContext ctx, final FullHttpRequest request) throws Exception {
         respond(ctx, request.getProtocolVersion(), NO_CONTENT, "");
-    }
-
-    @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        logger.debug("Added [" + ctx + "]");
     }
 
     @Override

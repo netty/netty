@@ -41,7 +41,6 @@ public class EventSourceTransportTest {
         ch.writeOutbound(new OpenFrame());
 
         final HttpResponse response = (HttpResponse) ch.readOutbound();
-        System.out.println(response);
         assertThat(response.getStatus(), equalTo(HttpResponseStatus.OK));
         assertThat(response.headers().get(CONTENT_TYPE), equalTo(EventSourceTransport.CONTENT_TYPE_EVENT_STREAM));
         verifyNoCacheHeaders(response);

@@ -137,12 +137,10 @@ class StreamingSessionState implements SessionState {
                         }
                         if (session.timestamp() + session.config().sessionTimeout() < now) {
                             final SockJSSession removed = sessions.remove(session.sessionId());
-                            logger.debug("Removed " + removed.sessionId() + " from sessions map");
                             session.context().close();
-                            boolean cancel = sessionTimer.cancel(true);
-                            logger.info("was sessionTimer cancelled: " + cancel);
+                            sessionTimer.cancel(true);
                             heartbeatFuture.cancel(true);
-                            logger.debug("Remaining [" + sessions.size() + "]");
+                            logger.debug("Removed " + removed.sessionId() + " from map[" + sessions.size() + "]");
                         }
                     }
                 }, session.config().sessionTimeout(), session.config().sessionTimeout(), TimeUnit.MILLISECONDS);

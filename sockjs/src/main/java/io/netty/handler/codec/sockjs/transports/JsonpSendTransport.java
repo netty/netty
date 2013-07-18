@@ -19,12 +19,8 @@ import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.sockjs.Config;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 
 public class JsonpSendTransport extends AbstractSendTransport {
-
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(JsonpSendTransport.class);
 
     public JsonpSendTransport(final Config config) {
         super(config);
@@ -32,13 +28,7 @@ public class JsonpSendTransport extends AbstractSendTransport {
 
     @Override
     public void respond(final ChannelHandlerContext ctx, final FullHttpRequest request) throws Exception {
-        logger.debug("Responding with OK");
         respond(ctx, request.getProtocolVersion(), OK, "ok");
-    }
-
-    @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        logger.debug("Added [" + ctx + "]");
     }
 
     @Override

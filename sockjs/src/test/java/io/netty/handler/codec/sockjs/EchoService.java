@@ -22,7 +22,6 @@ public class EchoService implements SockJSService {
     private SessionContext session;
 
     public EchoService(final Config config) {
-        System.out.println("EchoService created: [" + hashCode() + "]");
         this.config = config;
     }
 
@@ -33,19 +32,16 @@ public class EchoService implements SockJSService {
 
     @Override
     public void onMessage(final String message) throws Exception {
-        //System.out.println("EchoService :" + message);
         session.send(message);
     }
 
     @Override
     public void onOpen(final SessionContext session) {
-        System.out.println("EchoService onOpen:" + session);
         this.session = session;
     }
 
     @Override
     public void onClose() {
-        System.out.println("EchoService onClose()");
     }
 
 }

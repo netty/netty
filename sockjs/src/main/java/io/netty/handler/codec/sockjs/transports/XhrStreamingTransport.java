@@ -59,19 +59,15 @@ public class XhrStreamingTransport extends ChannelOutboundHandlerAdapter {
             throws Exception {
         if (msg instanceof Frame) {
             final Frame frame = (Frame) msg;
-            logger.debug("Flush XhrStream headerSent: " + headerSent.get());
             if (headerSent.compareAndSet(false, true)) {
-                logger.debug("Flush XhrStream send response");
                 final HttpResponse response = createResponse(Transports.CONTENT_TYPE_JAVASCRIPT);
                 ctx.writeAndFlush(response);
 
-                logger.debug("Flush XhrStream send prelude");
                 final ByteBuf content = Transports.wrapWithLN(new PreludeFrame().content());
                 final DefaultHttpContent preludeChunk = new DefaultHttpContent(content);
                 ctx.writeAndFlush(preludeChunk);
             }
 
-            logger.debug("Flush XhrStream frame :" + frame.content().toString(CharsetUtil.UTF_8));
             ctx.writeAndFlush(new DefaultHttpContent(wrapWithLN(frame.content())), promise);
             if (frame instanceof CloseFrame) {
                 ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT).addListener(ChannelFutureListener.CLOSE);
@@ -82,11 +78,6 @@ public class XhrStreamingTransport extends ChannelOutboundHandlerAdapter {
                 ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT).addListener(ChannelFutureListener.CLOSE);
             }
         }
-    }
-
-    @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        logger.debug("Added [" + ctx + "]");
     }
 
     private boolean maxBytesLimit(final int bytesWritten) {

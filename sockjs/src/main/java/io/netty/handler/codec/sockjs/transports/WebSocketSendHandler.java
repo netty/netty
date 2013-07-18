@@ -41,7 +41,6 @@ class WebSocketSendHandler extends ChannelOutboundHandlerAdapter {
                     }
                 }
             });
-            logger.debug("TextWebSocketFrame : " + sockJSFrame);
         }
     }
 

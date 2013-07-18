@@ -19,7 +19,6 @@ import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
 import static io.netty.handler.codec.sockjs.transports.Transports.CONTENT_TYPE_PLAIN;
 import static io.netty.handler.codec.sockjs.transports.Transports.internalServerErrorResponse;
 import static io.netty.handler.codec.sockjs.transports.Transports.responseWithContent;
-import static io.netty.handler.codec.sockjs.transports.Transports.setDefaultHeaders;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -32,8 +31,6 @@ import io.netty.handler.codec.sockjs.Config;
 import io.netty.handler.codec.sockjs.util.ArgumentUtil;
 import io.netty.handler.codec.sockjs.util.JsonUtil;
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.List;
 
@@ -41,7 +38,6 @@ import org.codehaus.jackson.JsonParseException;
 
 public abstract class AbstractSendTransport extends SimpleChannelInboundHandler<FullHttpRequest> {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractSendTransport.class);
     protected Config config;
 
     public AbstractSendTransport(final Config config) {
@@ -51,7 +47,6 @@ public abstract class AbstractSendTransport extends SimpleChannelInboundHandler<
 
     @Override
     public void channelRead0(final ChannelHandlerContext ctx, final FullHttpRequest request) throws Exception {
-        logger.debug("uri=" + request.getUri() + "");
         final String content = getContent(request);
         if (noContent(content)) {
             ctx.writeAndFlush(internalServerErrorResponse(request.getProtocolVersion(), "Payload expected."))

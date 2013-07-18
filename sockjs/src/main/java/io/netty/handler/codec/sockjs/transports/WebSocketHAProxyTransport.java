@@ -31,8 +31,8 @@ import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty.handler.codec.sockjs.handlers.SessionHandler;
+import io.netty.handler.codec.sockjs.util.JsonUtil;
 import io.netty.util.AttributeKey;
-import io.netty.util.CharsetUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -56,7 +56,6 @@ public class WebSocketHAProxyTransport extends SimpleChannelInboundHandler<Objec
 
     @Override
     protected void channelRead0(final ChannelHandlerContext ctx, final Object msg) throws Exception {
-        logger.info("messageReceived : " + msg);
         if (msg instanceof ByteBuf) {
             handleContent(ctx, (ByteBuf) msg);
         } else if (msg instanceof WebSocketFrame) {
@@ -66,7 +65,6 @@ public class WebSocketHAProxyTransport extends SimpleChannelInboundHandler<Objec
     }
 
     private void handleContent(final ChannelHandlerContext ctx, final ByteBuf nounce) throws Exception {
-        logger.info("Nounce: " + nounce.toString(CharsetUtil.UTF_8));
         final ByteBuf key = haHandshaker.calculateLastKey(nounce);
         final ChannelFuture channelFuture = ctx.write(key);
         haHandshaker.addWsCodec(channelFuture);
@@ -75,7 +73,6 @@ public class WebSocketHAProxyTransport extends SimpleChannelInboundHandler<Objec
     private void handleWebSocketFrame(final ChannelHandlerContext ctx, final WebSocketFrame wsFrame) throws Exception {
         if (wsFrame instanceof CloseWebSocketFrame) {
             wsFrame.retain();
-            logger.debug("Closing WebSocket...send close frame to SockJS service");
             handshaker.close(ctx.channel(), (CloseWebSocketFrame) wsFrame);
             ctx.close();
             return;
@@ -89,36 +86,15 @@ public class WebSocketHAProxyTransport extends SimpleChannelInboundHandler<Objec
             throw new UnsupportedOperationException(String.format("%s frame types not supported",
                     wsFrame.getClass().getName()));
         }
-        final String[] messages = toString((TextWebSocketFrame) wsFrame);
+        final String[] messages = JsonUtil.decode((TextWebSocketFrame) wsFrame);
         for (String message : messages) {
-            logger.debug("fire recieved message : " + message);
             ctx.fireChannelRead(message);
         }
     }
 
-    @SuppressWarnings("resource")
-    private String[] toString(final TextWebSocketFrame textFrame) throws Exception {
-        final ByteBuf content = textFrame.content();
-        if (content.readableBytes() == 0) {
-            return new String[]{};
-        }
-        final ByteBufInputStream byteBufInputStream = new ByteBufInputStream(content);
-        final byte firstByte = content.getByte(0);
-        if (firstByte == '[') {
-            return OBJECT_MAPPER.readValue(byteBufInputStream, String[].class);
-        } else {
-            return new String[]{OBJECT_MAPPER.readValue(byteBufInputStream, String.class)};
-        }
-    }
-
-    @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        logger.info("Added [" + ctx + "]");
-    }
-
     public void exceptionCaught(final ChannelHandlerContext ctx, final Throwable cause) throws Exception {
         if (cause instanceof JsonParseException) {
-            logger.debug("Could not parse json", cause);
+            logger.error("Could not parse json", cause);
             ctx.close();
         } else if (cause instanceof WebSocketHandshakeException) {
             final HttpRequest request = ctx.attr(REQUEST_KEY).get();

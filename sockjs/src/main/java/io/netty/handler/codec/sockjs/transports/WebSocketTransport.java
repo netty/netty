@@ -41,7 +41,6 @@ import io.netty.handler.codec.sockjs.handlers.CorsOutboundHandler;
 import io.netty.handler.codec.sockjs.handlers.SockJSHandler;
 import io.netty.handler.codec.sockjs.util.JsonUtil;
 import io.netty.util.AttributeKey;
-import io.netty.util.CharsetUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -52,6 +51,7 @@ import org.codehaus.jackson.JsonParseException;
  * also for receiving WebSocket frames.
  */
 public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
+
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketTransport.class);
     private static final AttributeKey<HttpRequest> REQUEST_KEY = new AttributeKey<HttpRequest>("request.key");
     private final Config config;
@@ -76,9 +76,8 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
     }
 
     private boolean checkRequestHeaders(final ChannelHandlerContext ctx, final HttpRequest req) {
-        logger.info("Check Request: " + req);
         if (req.getMethod() != GET) {
-            logger.info("Request was not of type GET, was " + req.getMethod());
+            logger.debug("Request was not of type GET, was " + req.getMethod());
             ctx.writeAndFlush(methodNotAllowedResponse(req.getProtocolVersion()))
             .addListener(ChannelFutureListener.CLOSE);
             return false;
@@ -86,7 +85,7 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
 
         final String upgradeHeader = req.headers().get(HttpHeaders.Names.UPGRADE);
         if (upgradeHeader == null || !upgradeHeader.toLowerCase().equals("websocket")) {
-            logger.info("Upgrade header was not 'websocket' was: " + upgradeHeader);
+            logger.debug("Upgrade header was not 'websocket' was: " + upgradeHeader);
             ctx.writeAndFlush(badRequestResponse(req.getProtocolVersion(), "Can \"Upgrade\" only to \"WebSocket\"."))
             .addListener(ChannelFutureListener.CLOSE);
             return false;
@@ -94,12 +93,12 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
 
         String connectHeader = req.headers().get(HttpHeaders.Names.CONNECTION);
         if (connectHeader != null && connectHeader.toLowerCase().equals("keep-alive, upgrade")) {
-            logger.info("Connection header was not 'keep-alive, upgrade' was: " + connectHeader);
+            logger.debug("Connection header was not 'keep-alive, upgrade' was: " + connectHeader);
             req.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.UPGRADE);
             connectHeader = HttpHeaders.Values.UPGRADE.toString();
         }
         if (connectHeader == null || !connectHeader.toLowerCase().equals("upgrade")) {
-            logger.info("Connection header was not 'upgrade' was: " + connectHeader);
+            logger.debug("Connection header was not 'upgrade' was: " + connectHeader);
             ctx.writeAndFlush(badRequestResponse(req.getProtocolVersion(), "\"Connection\" must be \"Upgrade\"."))
             .addListener(ChannelFutureListener.CLOSE);
             return false;
@@ -108,7 +107,6 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
     }
 
     private void handleHttpRequest(final ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
-        logger.info("Request: " + req.content().toString(CharsetUtil.UTF_8));
         if (!checkRequestHeaders(ctx, req)) {
             return;
         }
@@ -136,7 +134,6 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
             return;
         } else {
             final String wsUrl = getWebSocketLocation(config.tls(), req, Transports.Types.WEBSOCKET.path());
-            logger.info("WebSocket URL: " + wsUrl);
             final WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(wsUrl, null, false);
             handshaker = wsFactory.newHandshaker(req);
         }
@@ -172,7 +169,6 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
     private void handleWebSocketFrame(final ChannelHandlerContext ctx, final WebSocketFrame wsFrame) throws Exception {
         if (wsFrame instanceof CloseWebSocketFrame) {
             wsFrame.retain();
-            logger.debug("Closing WebSocket...send close frame to SockJS service");
             handshaker.close(ctx.channel(), (CloseWebSocketFrame) wsFrame);
             ctx.close();
             return;
@@ -188,14 +184,8 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
         }
         final String[] messages = JsonUtil.decode((TextWebSocketFrame) wsFrame);
         for (String message : messages) {
-            logger.debug("fire recieved message : " + message);
             ctx.fireChannelRead(message);
         }
-    }
-
-    @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        logger.info("Added [" + ctx + "]");
     }
 
     public void exceptionCaught(final ChannelHandlerContext ctx, final Throwable cause) throws Exception {

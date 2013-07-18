@@ -112,7 +112,6 @@ class PollingSessionState implements SessionState {
             return;
         }
         final MessageFrame messageFrame = new MessageFrame(allMessages);
-        logger.debug("flushing [" + messageFrame + "]");
         ctx.channel().writeAndFlush(messageFrame).addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(final ChannelFuture future) throws Exception {
@@ -142,12 +141,10 @@ class PollingSessionState implements SessionState {
                         }
                         if (session.timestamp() + session.config().sessionTimeout() < now) {
                             final SockJSSession removed = sessions.remove(session.sessionId());
-                            logger.debug("Removed " + removed.sessionId() + " from sessions map");
                             session.context().close();
-                            boolean cancel = sessionTimer.cancel(true);
-                            logger.info("was sessionTimer cancelled: " + cancel);
+                            sessionTimer.cancel(true);
                             heartbeatFuture.cancel(true);
-                            logger.debug("Remaining [" + sessions.size() + "]");
+                            logger.debug("Removed " + removed.sessionId() + " from map[" + sessions.size() + "]");
                         }
                     }
                 }, session.config().sessionTimeout(), session.config().sessionTimeout(), TimeUnit.MILLISECONDS);

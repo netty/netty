@@ -18,6 +18,10 @@ package io.netty.handler.codec.sockjs.transports;
 import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
 import static io.netty.handler.codec.http.HttpHeaders.Names.TRANSFER_ENCODING;
 import static io.netty.util.CharsetUtil.UTF_8;
+import static io.netty.handler.codec.http.HttpConstants.CR;
+import static io.netty.handler.codec.http.HttpConstants.LF;
+import static io.netty.buffer.Unpooled.unreleasableBuffer;
+import static io.netty.buffer.Unpooled.copiedBuffer;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
@@ -26,7 +30,6 @@ import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpResponse;
-import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
@@ -42,13 +45,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class EventSourceTransport extends ChannelOutboundHandlerAdapter {
+
     public static final String CONTENT_TYPE_EVENT_STREAM = "text/event-stream; charset=UTF-8";
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EventSourceTransport.class);
-    private static final ByteBuf FRAME_START = Unpooled.unreleasableBuffer(Unpooled.copiedBuffer("data: ", UTF_8));
-    private static final ByteBuf CRLF = Unpooled.unreleasableBuffer(Unpooled.copiedBuffer(
-            new byte[] {HttpConstants.CR, HttpConstants.LF}));
-    private static final ByteBuf FRAME_END = Unpooled.unreleasableBuffer(Unpooled.copiedBuffer(
-            new byte[] {HttpConstants.CR, HttpConstants.LF, HttpConstants.CR, HttpConstants.LF}));
+
+    private static final ByteBuf FRAME_START = unreleasableBuffer(copiedBuffer("data: ", UTF_8));
+    private static final ByteBuf CRLF = unreleasableBuffer(copiedBuffer(new byte[] {CR, LF}));
+    private static final ByteBuf FRAME_END = unreleasableBuffer(copiedBuffer(new byte[] {CR, LF, CR, LF}));
+
     private final Config config;
     private final HttpRequest request;
     private final AtomicBoolean headerSent = new AtomicBoolean(false);
@@ -81,11 +85,6 @@ public class EventSourceTransport extends ChannelOutboundHandlerAdapter {
                 ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT).addListener(ChannelFutureListener.CLOSE);
             }
         }
-    }
-
-    @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        logger.debug("Added [" + ctx + "]");
     }
 
     private boolean maxBytesLimit(final int bytesWritten) {

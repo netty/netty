@@ -60,7 +60,7 @@ public class CorsInboundHandler extends SimpleChannelInboundHandler<HttpRequest>
     private void handlePreflight(final ChannelHandlerContext ctx, final CorsMetadata md, final HttpRequest request) {
         final HttpResponse response = new DefaultHttpResponse(request.getProtocolVersion(), NO_CONTENT);
         final HttpHeaders headers = response.headers();
-        headers.set(CONTENT_TYPE, "text/plain; charset=UTF-8");
+        headers.set(CONTENT_TYPE, Transports.CONTENT_TYPE_PLAIN);
         headers.set(CACHE_CONTROL, "max-age=31536000, public");
         headers.set(ACCESS_CONTROL_ALLOW_ORIGIN, md.origin());
         headers.set(ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
@@ -73,7 +73,7 @@ public class CorsInboundHandler extends SimpleChannelInboundHandler<HttpRequest>
         headers.set(ACCESS_CONTROL_ALLOW_HEADERS, "Content-Type");
         headers.set(ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
         headers.set(EXPIRES, "dummy");
-        headers.set(SET_COOKIE, "JSESSIONID=dummy; path=/");
+        headers.set(SET_COOKIE, Transports.DEFAULT_COOKIE);
         ctx.writeAndFlush(response);
     }
 

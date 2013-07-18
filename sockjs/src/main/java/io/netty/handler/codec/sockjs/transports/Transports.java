@@ -47,6 +47,13 @@ import java.util.Set;
 
 public final class Transports {
 
+    public static final String CONTENT_TYPE_PLAIN = "text/plain; charset=UTF-8";
+    public static final String CONTENT_TYPE_JAVASCRIPT = "application/javascript; charset=UTF-8";
+    public static final String CONTENT_TYPE_FORM = "application/x-www-form-urlencoded";
+    public static final String CONTENT_TYPE_HTML = "text/html; charset=UTF-8";
+    public static final String DEFAULT_COOKIE = "JSESSIONID=dummy;path=/";
+    public static final String JSESSIONID = "JSESSIONID";
+
     public enum Types {
         WEBSOCKET,
         XHR,
@@ -61,13 +68,6 @@ public final class Transports {
             return "/" + name().toLowerCase();
         }
     }
-
-    public static final String CONTENT_TYPE_PLAIN = "text/plain; charset=UTF-8";
-    public static final String CONTENT_TYPE_JAVASCRIPT = "application/javascript; charset=UTF-8";
-    public static final String CONTENT_TYPE_FORM = "application/x-www-form-urlencoded";
-    public static final String CONTENT_TYPE_HTML = "text/html; charset=UTF-8";
-    public static final String DEFAULT_COOKIE = "JSESSIONID=dummy;path=/";
-    public static final String JSESSIONID = "JSESSIONID";
 
     private Transports() {
     }
@@ -137,14 +137,14 @@ public final class Transports {
     public static String escapeCharacters(final char[] value) {
         final StringBuilder buffer = new StringBuilder();
         for (int i = 0; i < value.length; i++) {
-            char ch = value[i];
+            final char ch = value[i];
             if ((ch >= '\u0000' && ch <= '\u001F') ||
                     (ch >= '\uD800' && ch <= '\uDFFF') ||
                     (ch >= '\u200C' && ch <= '\u200F') ||
                     (ch >= '\u2028' && ch <= '\u202F') ||
                     (ch >= '\u2060' && ch <= '\u206F') ||
                     (ch >= '\uFFF0' && ch <= '\uFFFF')) {
-                String ss = Integer.toHexString(ch);
+                final String ss = Integer.toHexString(ch);
                 buffer.append('\\');
                 buffer.append('u');
                 for (int k = 0; k < 4 - ss.length(); k++) {
@@ -158,9 +158,9 @@ public final class Transports {
         return buffer.toString();
     }
 
-    public static ByteBuf escapeJson(ByteBuf input, ByteBuf buffer) {
+    public static ByteBuf escapeJson(final ByteBuf input, final ByteBuf buffer) {
         for (int i = 0; i < input.readableBytes(); i++) {
-            byte ch = input.getByte(i);
+            final byte ch = input.getByte(i);
             switch(ch) {
                 case '"': buffer.writeByte('\\'); buffer.writeByte('\"'); break;
                 case '/': buffer.writeByte('\\'); buffer.writeByte('/'); break;
@@ -179,7 +179,7 @@ public final class Transports {
                             (ch >= '\u2028' && ch <= '\u202F') ||
                             (ch >= '\u2060' && ch <= '\u206F') ||
                             (ch >= '\uFFF0' && ch <= '\uFFFF')) {
-                        String ss = Integer.toHexString(ch);
+                        final String ss = Integer.toHexString(ch);
                         buffer.writeByte('\\');
                         buffer.writeByte('u');
                         for (int k = 0; k < 4 - ss.length(); k++) {

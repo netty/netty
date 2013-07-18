@@ -76,7 +76,6 @@ public class JsonpPollingTransport extends ChannelOutboundHandlerAdapter impleme
             throws Exception {
         if (msg instanceof Frame) {
             final Frame frame = (Frame) msg;
-            logger.debug("flush : " + frame);
             final FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), OK);
             final ByteBuf content = frame.content();
 

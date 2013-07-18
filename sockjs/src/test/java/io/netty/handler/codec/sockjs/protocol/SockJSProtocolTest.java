@@ -1245,7 +1245,6 @@ public class SockJSProtocolTest {
         assertThat(response.content().toString(UTF_8), equalTo("o\n"));
 
         final String content = Transports.escapeCharacters(clientKillerStringEsc().toCharArray());
-        System.out.println(content);
         final FullHttpResponse xhrSendResponse = xhrSendRequest(sessionUrl, "[\"" + content + "\"]", echoFactory);
         assertThat(xhrSendResponse.getStatus(), is(HttpResponseStatus.NO_CONTENT));
         final FullHttpResponse pollResponse = xhrRequest(sessionUrl, echoFactory);
@@ -1492,7 +1491,6 @@ public class SockJSProtocolTest {
         final FullHttpResponse response = (FullHttpResponse) ch.readOutbound();
         assertThat(response.getStatus(), is(HttpResponseStatus.OK));
         assertThat(response.getProtocolVersion(), is(HttpVersion.HTTP_1_1));
-        System.out.println(response);
         String connectionHeader = response.headers().get(CONNECTION);
         if (connectionHeader != null) {
             assertThat(connectionHeader, equalTo("keep-alive"));
@@ -1542,14 +1540,6 @@ public class SockJSProtocolTest {
         assertThat(goAway.content().toString(UTF_8), equalTo("c[3000,\"Go away!\"]\n"));
         final HttpContent lastChunk = (HttpContent) ch.readOutbound();
         assertThat(lastChunk.content().toString(UTF_8), equalTo(""));
-    }
-
-    @Test
-    public void unicode() {
-        String s = "\u00ea";
-        char org = s.charAt(0);
-        String hexString = Integer.toHexString(org);
-        System.out.println(hexString);
     }
 
     @Test
@@ -1803,7 +1793,6 @@ public class SockJSProtocolTest {
         final EmbeddedChannel ch = wsChannelForService(service);
 
         final FullHttpRequest request = websocketUpgradeRequest(sessionUrl + "/websocket", version);
-        System.out.println(request);
         ch.writeInbound(request);
         // Discard the HTTP Response (this will be a ByteBuf and not an object
         // as we have a HttpEncoder is in the pipeline to start with.
@@ -2024,7 +2013,7 @@ public class SockJSProtocolTest {
         assertThat(headers.get(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_HEADERS), is("Content-Type"));
         assertThat(headers.get(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_CREDENTIALS), is("true"));
         assertThat(headers.get(HttpHeaders.Names.EXPIRES), is(notNullValue()));
-        assertThat(headers.get(HttpHeaders.Names.SET_COOKIE), is("JSESSIONID=dummy; path=/"));
+        assertThat(headers.get(HttpHeaders.Names.SET_COOKIE), is("JSESSIONID=dummy;path=/"));
     }
 
     private void verifyIframe(final String service, final String path) {

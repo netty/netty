@@ -33,6 +33,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 public class XhrPollingTransport extends ChannelOutboundHandlerAdapter {
+
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(XhrPollingTransport.class);
 
     private final Config config;
@@ -47,11 +48,6 @@ public class XhrPollingTransport extends ChannelOutboundHandlerAdapter {
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        logger.debug("Added [" + ctx + "]");
-    }
-
-    @Override
     public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise)
             throws Exception {
         if (msg instanceof Frame) {
@@ -62,11 +58,6 @@ public class XhrPollingTransport extends ChannelOutboundHandlerAdapter {
             Transports.writeContent(response, wrapWithLN(frame.content()), CONTENT_TYPE_JAVASCRIPT);
             Transports.writeResponse(ctx, promise, response);
         }
-    }
-
-    @Override
-    public String toString() {
-        return "XhrPollingTransport[config=" + config + "]";
     }
 
     @Override

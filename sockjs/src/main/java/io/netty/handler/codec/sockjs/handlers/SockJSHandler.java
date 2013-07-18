@@ -176,9 +176,9 @@ public class SockJSHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
             if (session == null) {
                 session = newSession;
             }
-            logger.debug("Created new session " + sessionId);
+            logger.debug("Created new session [" + sessionId + "]");
         } else {
-            logger.debug("Using existing session " + sessionId);
+            logger.debug("Using existing session {" + sessionId + "]");
         }
         return session;
     }

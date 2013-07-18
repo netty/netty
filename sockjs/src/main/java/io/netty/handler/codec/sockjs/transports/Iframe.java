@@ -99,7 +99,7 @@ public final class Iframe {
     }
 
     private static String generateMd5(final String value) throws Exception {
-        final byte[] bytesToBeEncrypted = value.getBytes("UTF-8");
+        final byte[] bytesToBeEncrypted = value.getBytes(CharsetUtil.UTF_8);
         final MessageDigest md = MessageDigest.getInstance("MD5");
         final byte[] digest = md.digest(bytesToBeEncrypted);
         Formatter formatter = null;

@@ -15,19 +15,16 @@
  */
 package io.netty.handler.codec.sockjs.transports;
 
-import java.util.List;
-
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.sockjs.protocol.Frame;
 import io.netty.handler.codec.sockjs.protocol.MessageFrame;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import java.util.List;
 
 class RawWebSocketSendHandler extends ChannelOutboundHandlerAdapter {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(RawWebSocketSendHandler.class);
 
     @Override
     public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise)
@@ -38,7 +35,6 @@ class RawWebSocketSendHandler extends ChannelOutboundHandlerAdapter {
                 final MessageFrame messageFrame = (MessageFrame) sockJSFrame;
                 final List<String> messages = messageFrame.messages();
                 for (String message : messages) {
-                    logger.debug("writing message : " + message);
                     ctx.write(new TextWebSocketFrame(message));
                 }
             }

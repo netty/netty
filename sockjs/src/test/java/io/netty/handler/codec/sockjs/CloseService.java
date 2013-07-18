@@ -31,18 +31,15 @@ public class CloseService implements SockJSService {
 
     @Override
     public void onMessage(final String message) throws Exception {
-        System.out.println("CloseService :" + message);
     }
 
     @Override
     public void onOpen(final SessionContext session) {
-        System.out.println("CloseService onOpen:" + session);
         session.close();
     }
 
     @Override
     public void onClose() {
-        System.out.println("CloseService onClose()");
     }
 
 }

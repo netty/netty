@@ -147,7 +147,6 @@ public class RawWebSocketTransport extends SimpleChannelInboundHandler<Object> {
     private void handleWebSocketFrame(final ChannelHandlerContext ctx, final WebSocketFrame wsFrame) throws Exception {
         if (wsFrame instanceof CloseWebSocketFrame) {
             wsFrame.retain();
-            logger.debug("Closing WebSocket...send close frame to SockJS service");
             service.onClose();
             handshaker.close(ctx.channel(), (CloseWebSocketFrame) wsFrame);
             ctx.close();
@@ -163,7 +162,6 @@ public class RawWebSocketTransport extends SimpleChannelInboundHandler<Object> {
                     wsFrame.getClass().getName()));
         }
         final String message = ((TextWebSocketFrame) wsFrame).text();
-        logger.debug("fire recieved message : " + message);
         service.onMessage(message);
     }
 

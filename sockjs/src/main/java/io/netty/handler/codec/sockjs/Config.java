@@ -208,8 +208,7 @@ public final class Config {
         }
 
         /**
-         * Determines whether WebSocket support should be enabled/disabled.
-         * @param ws true if WebSocket support should be enabled.
+         * Will disable WebSocket suppport.
          */
         public Builder disableWebsocket() {
             this.websocketEnabled = false;
