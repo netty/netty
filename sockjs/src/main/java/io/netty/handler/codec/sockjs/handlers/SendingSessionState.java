@@ -56,7 +56,7 @@ class SendingSessionState implements SessionState {
         if (isInuse()) {
             logger.debug("Another connection still in open for [" + session.sessionId() + "]");
             final CloseFrame closeFrame = new CloseFrame(2010, "Another connection still open");
-            ctx.write(closeFrame);
+            ctx.writeAndFlush(closeFrame);
             session.setState(States.INTERRUPTED);
         } else {
             session.setInuse();

@@ -57,11 +57,6 @@ public class CorsInboundHandler extends SimpleChannelInboundHandler<HttpRequest>
         }
     }
 
-    @Override
-    public void channelReadComplete(final ChannelHandlerContext ctx) throws Exception {
-        ctx.flush();
-    }
-
     private void handlePreflight(final ChannelHandlerContext ctx, final CorsMetadata md, final HttpRequest request) {
         final HttpResponse response = new DefaultHttpResponse(request.getProtocolVersion(), NO_CONTENT);
         final HttpHeaders headers = response.headers();
@@ -79,7 +74,7 @@ public class CorsInboundHandler extends SimpleChannelInboundHandler<HttpRequest>
         headers.set(ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
         headers.set(EXPIRES, "dummy");
         headers.set(SET_COOKIE, "JSESSIONID=dummy; path=/");
-        ctx.write(response);
+        ctx.writeAndFlush(response);
     }
 
     private boolean isPollingTransport(final String uri) {

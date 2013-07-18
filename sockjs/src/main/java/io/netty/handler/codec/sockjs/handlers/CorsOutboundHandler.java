@@ -45,7 +45,7 @@ public class CorsOutboundHandler extends ChannelOutboundHandlerAdapter {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(final ChannelHandlerContext ctx, final Throwable cause) throws Exception {
         logger.error("caught error in CorsOutboundHandler", cause);
         ctx.fireExceptionCaught(cause);
     }

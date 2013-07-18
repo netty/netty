@@ -75,7 +75,7 @@ class PollingSessionState implements SessionState {
         if (isInuse()) {
             logger.debug("Another connection still in open for [" + session.sessionId() + "]");
             final CloseFrame closeFrame = new CloseFrame(2010, "Another connection still open");
-            ctx.write(closeFrame);
+            ctx.writeAndFlush(closeFrame);
             session.setState(States.INTERRUPTED);
         } else {
             session.setInuse();
@@ -113,7 +113,7 @@ class PollingSessionState implements SessionState {
         }
         final MessageFrame messageFrame = new MessageFrame(allMessages);
         logger.debug("flushing [" + messageFrame + "]");
-        ctx.channel().write(messageFrame).addListener(new ChannelFutureListener() {
+        ctx.channel().writeAndFlush(messageFrame).addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(final ChannelFuture future) throws Exception {
                 if (!future.isSuccess()) {
@@ -167,7 +167,7 @@ class PollingSessionState implements SessionState {
                 public void run() {
                     if (ctx.channel().isActive() && ctx.channel().isRegistered()) {
                         logger.debug("Sending heartbeat for " + session);
-                        ctx.channel().write(new HeartbeatFrame());
+                        ctx.channel().writeAndFlush(new HeartbeatFrame());
                     }
                 }
             },
