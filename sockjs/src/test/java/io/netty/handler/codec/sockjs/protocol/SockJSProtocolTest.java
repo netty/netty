@@ -525,7 +525,7 @@ public class SockJSProtocolTest {
         // as we have a HttpEncoder in the pipeline to start with.
         newCh.readOutbound();
 
-        assertThat(((TextWebSocketFrame) newCh.readOutbound()).content().toString(UTF_8), equalTo("o"));
+        assertThat(((TextWebSocketFrame) readOutboundDiscardEmpty(newCh)).content().toString(UTF_8), equalTo("o"));
         newCh.writeInbound(new TextWebSocketFrame("\"a\""));
         assertThat(((TextWebSocketFrame) newCh.readOutbound()).content().toString(UTF_8), equalTo("a[\"a\"]"));
         newCh.close();
@@ -560,10 +560,10 @@ public class SockJSProtocolTest {
 
         ch.writeInbound(Unpooled.copiedBuffer("^n:ds[4U", CharsetUtil.US_ASCII));
 
-        final ByteBuf key = (ByteBuf) ch.readOutbound();
+        final ByteBuf key = (ByteBuf) readOutboundDiscardEmpty(ch);
         assertThat(key.toString(CharsetUtil.US_ASCII), equalTo("8jKS'y:G*Co,Wxa-"));
 
-        final TextWebSocketFrame openFrame = (TextWebSocketFrame) ch.readOutbound();
+        final TextWebSocketFrame openFrame = (TextWebSocketFrame) readOutboundDiscardEmpty(ch);
         assertThat(openFrame.content().toString(UTF_8), equalTo("o"));
 
         final TextWebSocketFrame textWebSocketFrame = new TextWebSocketFrame("\"a\"");
@@ -1195,7 +1195,7 @@ public class SockJSProtocolTest {
         // Discard Switching Protocols response
         ch.readOutbound();
         ch.writeInbound(new TextWebSocketFrame("Hello world!\uffff"));
-        final TextWebSocketFrame textFrame = (TextWebSocketFrame) ch.readOutbound();
+        final TextWebSocketFrame textFrame = (TextWebSocketFrame) readOutboundDiscardEmpty(ch);
         assertThat(textFrame.text(), equalTo("Hello world!\uffff"));
         ch.finish();
     }
@@ -1807,7 +1807,7 @@ public class SockJSProtocolTest {
         // as we have a HttpEncoder is in the pipeline to start with.
         ch.readOutbound();
 
-        final TextWebSocketFrame openFrame = (TextWebSocketFrame) ch.readOutbound();
+        final TextWebSocketFrame openFrame = (TextWebSocketFrame) readOutboundDiscardEmpty(ch);
         assertThat(openFrame.content().toString(UTF_8), equalTo("o"));
         ch.readOutbound();
 
@@ -1832,7 +1832,7 @@ public class SockJSProtocolTest {
         // as we have a HttpEncoder in the pipeline to start with.
         ch.readOutbound();
 
-        final TextWebSocketFrame openFrame = (TextWebSocketFrame) ch.readOutbound();
+        final TextWebSocketFrame openFrame = (TextWebSocketFrame) readOutboundDiscardEmpty(ch);
         assertThat(openFrame.content().toString(UTF_8), equalTo("o"));
 
         final TextWebSocketFrame closeFrame = (TextWebSocketFrame) ch.readOutbound();
@@ -1853,7 +1853,7 @@ public class SockJSProtocolTest {
         // as we have a HttpEncoder in the pipeline to start with.
         ch.readOutbound();
 
-        assertThat(((TextWebSocketFrame) ch.readOutbound()).content().toString(UTF_8), equalTo("o"));
+        assertThat(((TextWebSocketFrame) readOutboundDiscardEmpty(ch)).content().toString(UTF_8), equalTo("o"));
 
         final TextWebSocketFrame webSocketFrame = new TextWebSocketFrame("[\"a\"");
         ch.writeInbound(webSocketFrame);
@@ -2141,6 +2141,17 @@ public class SockJSProtocolTest {
                 new ContentRetainer());
     }
 
+    private Object readOutboundDiscardEmpty(final EmbeddedChannel ch) {
+        final Object obj = ch.readOutbound();
+        if (obj instanceof ByteBuf) {
+            final ByteBuf buf = (ByteBuf) obj;
+            if (buf.capacity() == 0) {
+                return ch.readOutbound();
+            }
+        }
+        return obj;
+    }
+
     private class ContentRetainer extends ChannelOutboundHandlerAdapter {
 
         @Override
@@ -2154,12 +2165,7 @@ public class SockJSProtocolTest {
             if (ctx.pipeline().get(WebSocket00FrameEncoder.class) != null) {
                 ctx.pipeline().remove(WebSocket00FrameEncoder.class);
             }
-
-            if (msg instanceof FullHttpResponse) {
-                final FullHttpResponse response = (FullHttpResponse) msg;
-                response.retain(2);
-            }
-            ctx.write(msg, channelPromise);
+            ctx.writeAndFlush(msg, channelPromise);
         }
     }
 

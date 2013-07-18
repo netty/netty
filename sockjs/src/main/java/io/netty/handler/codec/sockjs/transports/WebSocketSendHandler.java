@@ -33,7 +33,7 @@ class WebSocketSendHandler extends ChannelOutboundHandlerAdapter {
             throws Exception {
         if (msg instanceof Frame) {
             final Frame sockJSFrame = (Frame) msg;
-            ctx.write(new TextWebSocketFrame(sockJSFrame.content())).addListener(new ChannelFutureListener() {
+            ctx.writeAndFlush(new TextWebSocketFrame(sockJSFrame.content())).addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(final ChannelFuture future) throws Exception {
                     if (future.isSuccess()) {
