@@ -19,10 +19,12 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
@@ -41,6 +43,10 @@ public final class ChannelOutboundBuffer {
     private long[] flushedTotals;
     private int head;
     private int tail;
+
+    private ByteBuffer[] nioBuffers;
+    private int nioBufferCount;
+    private long nioBufferSize;
 
     // Unflushed messages are stored in an array list.
     private Object[] unflushed;
@@ -89,6 +95,8 @@ public final class ChannelOutboundBuffer {
         flushedPromises = new ChannelPromise[initialCapacity];
         flushedProgresses = new long[initialCapacity];
         flushedTotals = new long[initialCapacity];
+
+        nioBuffers = new ByteBuffer[initialCapacity];
 
         unflushed = new Object[initialCapacity];
         unflushedPromises = new ChannelPromise[initialCapacity];
@@ -291,6 +299,90 @@ public final class ChannelOutboundBuffer {
 
         this.head = head + 1 & flushed.length - 1;
         return true;
+    }
+
+    public ByteBuffer[] nioBuffers() {
+        ByteBuffer[] nioBuffers = this.nioBuffers;
+        long nioBufferSize = 0;
+        int nioBufferCount = 0;
+
+        final int mask = flushed.length - 1;
+
+        Object m;
+        int i = head;
+        while ((m = flushed[i]) != null) {
+            if (!(m instanceof ByteBuf)) {
+                this.nioBufferCount = 0;
+                this.nioBufferSize = 0;
+                return null;
+            }
+
+            ByteBuf buf = (ByteBuf) m;
+
+            final int readerIndex = buf.readerIndex();
+            final int readableBytes = buf.writerIndex() - readerIndex;
+
+            if (readableBytes > 0) {
+                nioBufferSize += readableBytes;
+
+                if (buf.isDirect()) {
+                    int count = buf.nioBufferCount();
+                    if (count == 1) {
+                        if (nioBufferCount == nioBuffers.length) {
+                            this.nioBuffers = nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCount);
+                        }
+                        nioBuffers[nioBufferCount ++] = buf.internalNioBuffer(readerIndex, readableBytes);
+                    } else {
+                        ByteBuffer[] nioBufs = buf.nioBuffers();
+                        if (nioBufferCount + nioBufs.length == nioBuffers.length + 1) {
+                            this.nioBuffers = nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCount);
+                        }
+                        for (ByteBuffer nioBuf: nioBufs) {
+                            if (nioBuf == null) {
+                                break;
+                            }
+                            nioBuffers[nioBufferCount ++] = nioBuf;
+                        }
+                    }
+                } else {
+                    ByteBuf directBuf = channel.alloc().directBuffer(readableBytes);
+                    directBuf.writeBytes(buf, readerIndex, readableBytes);
+                    buf.release();
+                    flushed[i] = directBuf;
+                    if (nioBufferCount == nioBuffers.length) {
+                        nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCount);
+                    }
+                    nioBuffers[nioBufferCount ++] = directBuf.internalNioBuffer(0, readableBytes);
+                }
+            }
+
+            i = i + 1 & mask;
+        }
+
+        this.nioBufferCount = nioBufferCount;
+        this.nioBufferSize = nioBufferSize;
+
+        return nioBuffers;
+    }
+
+    private static ByteBuffer[] doubleNioBufferArray(ByteBuffer[] array, int size) {
+        int newCapacity = array.length << 1;
+        if (newCapacity < 0) {
+            throw new IllegalStateException();
+        }
+
+        ByteBuffer[] newArray = new ByteBuffer[newCapacity];
+        System.arraycopy(array, 0, newArray, 0, size);
+
+        return newArray;
+    }
+
+    public int nioBufferCount() {
+        return nioBufferCount;
+    }
+
+    public long nioBufferSize() {
+        return nioBufferSize;
     }
 
     boolean getWritable() {
