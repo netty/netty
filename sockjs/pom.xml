@@ -63,4 +63,22 @@
       </exclusions> 
     </dependency>
   </dependencies>
+  
+  <build>
+    <plugins>
+        <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>1.2</version>
+            <configuration>
+                <mainClass>io.netty.handler.codec.sockjs.NettySockJSServer</mainClass>
+                <classpathScope>test</classpathScope>
+                <arguments>
+                    <!-- Port -->
+                    <argument>8081</argument>
+                </arguments>
+            </configuration>
+        </plugin>
+    </plugins>
+  </build>
 </project>
