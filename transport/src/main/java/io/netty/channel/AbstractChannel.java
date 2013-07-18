@@ -497,6 +497,16 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final void close(final ChannelPromise promise) {
+            if (inFlush0) {
+                invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        close(promise);
+                    }
+                });
+                return;
+            }
+
             boolean wasActive = isActive();
             if (closeFuture.setClosed()) {
                 try {
