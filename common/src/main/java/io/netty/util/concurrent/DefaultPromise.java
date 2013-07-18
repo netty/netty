@@ -535,38 +535,47 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
+            final Integer stackDepth = LISTENER_STACK_DEPTH.get();
+            if (stackDepth < MAX_LISTENER_STACK_DEPTH) {
+                LISTENER_STACK_DEPTH.set(stackDepth + 1);
+                try {
+                    if (listeners instanceof DefaultFutureListeners) {
+                        notifyListeners0(this, (DefaultFutureListeners) listeners);
+                    } else {
+                        @SuppressWarnings("unchecked")
+                        final GenericFutureListener<? extends Future<V>> l =
+                                (GenericFutureListener<? extends Future<V>>) listeners;
+                        notifyListener0(this, l);
+                    }
+                } finally {
+                    LISTENER_STACK_DEPTH.set(stackDepth);
+                }
+                return;
+            }
+        }
+
+        try {
             if (listeners instanceof DefaultFutureListeners) {
-                notifyListeners0(this, (DefaultFutureListeners) listeners);
+                final DefaultFutureListeners dfl = (DefaultFutureListeners) listeners;
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        notifyListeners0(DefaultPromise.this, dfl);
+                    }
+                });
             } else {
                 @SuppressWarnings("unchecked")
                 final GenericFutureListener<? extends Future<V>> l =
                         (GenericFutureListener<? extends Future<V>>) listeners;
-                notifyListener0(this, l);
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        notifyListener0(DefaultPromise.this, l);
+                    }
+                });
             }
-        } else {
-            try {
-                if (listeners instanceof DefaultFutureListeners) {
-                    final DefaultFutureListeners dfl = (DefaultFutureListeners) listeners;
-                    executor.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            notifyListeners0(DefaultPromise.this, dfl);
-                        }
-                    });
-                } else {
-                    @SuppressWarnings("unchecked")
-                    final GenericFutureListener<? extends Future<V>> l =
-                            (GenericFutureListener<? extends Future<V>>) listeners;
-                    executor.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            notifyListener0(DefaultPromise.this, l);
-                        }
-                    });
-                }
-            } catch (Throwable t) {
-                logger.error("Failed to notify listener(s). Event loop shut down?", t);
-            }
+        } catch (Throwable t) {
+            logger.error("Failed to notify listener(s). Event loop shut down?", t);
         }
     }
 
@@ -598,7 +607,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             eventExecutor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    notifyListener(eventExecutor, future, l);
+                    notifyListener0(future, l);
                 }
             });
         } catch (Throwable t) {
@@ -607,7 +616,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    private static void notifyListener0(Future future, GenericFutureListener l) {
+    static void notifyListener0(Future future, GenericFutureListener l) {
         try {
             l.operationComplete(future);
         } catch (Throwable t) {
