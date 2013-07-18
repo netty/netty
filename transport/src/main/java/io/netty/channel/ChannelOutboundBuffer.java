@@ -20,6 +20,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
 import io.netty.util.ReferenceCountUtil;
@@ -30,6 +31,10 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
+/**
+ * (Transport implementors only) an internal data structure used by {@link AbstractChannel} to store its pending
+ * outbound write requests.
+ */
 public final class ChannelOutboundBuffer {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelOutboundBuffer.class);
@@ -332,6 +337,17 @@ public final class ChannelOutboundBuffer {
         return true;
     }
 
+    /**
+     * Returns an array of direct NIO buffers if the currently pending messages are made of {@link ByteBuf} only.
+     * {@code null} is returned otherwise.  If this method returns a non-null array, {@link #nioBufferCount()} and
+     * {@link #nioBufferSize()} will return the number of NIO buffers in the returned array and the total number
+     * of readable bytes of the NIO buffers respectively.
+     * <p>
+     * Note that the returned array is reused and thus should not escape
+     * {@link AbstractChannel#doWrite(ChannelOutboundBuffer)}.
+     * Refer to {@link NioSocketChannel#doWrite(ChannelOutboundBuffer)} for an example.
+     * </p>
+     */
     public ByteBuffer[] nioBuffers() {
         ByteBuffer[] nioBuffers = this.nioBuffers;
         long nioBufferSize = 0;
