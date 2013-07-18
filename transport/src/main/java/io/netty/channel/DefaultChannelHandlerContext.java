@@ -346,11 +346,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             throw new NullPointerException("msg");
         }
 
-        // FIXME: Remove once refactoring is done.
-        if (msg instanceof MessageList) {
-            throw new IllegalStateException();
-        }
-
         final DefaultChannelHandlerContext next = findContextInbound();
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {

@@ -20,6 +20,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
@@ -27,7 +28,6 @@ import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
-import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -247,27 +247,29 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    protected int doWriteBytes(ByteBuf buf, boolean lastSpin) throws Exception {
+    protected int doWriteBytes(ByteBuf buf) throws Exception {
         final int expectedWrittenBytes = buf.readableBytes();
         final int writtenBytes = buf.readBytes(javaChannel(), expectedWrittenBytes);
-        updateOpWrite(expectedWrittenBytes, writtenBytes, lastSpin);
         return writtenBytes;
     }
 
     @Override
-    protected long doWriteFileRegion(FileRegion region, boolean lastSpin) throws Exception {
+    protected long doWriteFileRegion(FileRegion region) throws Exception {
         final long position = region.transfered();
-        final long expectedWrittenBytes = region.count() - position;
         final long writtenBytes = region.transferTo(javaChannel(), position);
-        updateOpWrite(expectedWrittenBytes, writtenBytes, lastSpin);
         return writtenBytes;
     }
 
     @Override
-    protected int doWrite(Object[] msgs, int msgsLength, final int startIndex) throws Exception {
+    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+        // FIXME: Re-enable gathering write.
+        super.doWrite(in);
+
+        /*
         // Do non-gathering write for a single buffer case.
-        if (msgsLength <= 1) {
-            return super.doWrite(msgs, msgsLength, startIndex);
+        if (in.size() <= 1) {
+            super.doWrite(in);
+            return;
         }
 
         ByteBuffer[] nioBuffers = getNioBufferArray();
@@ -363,5 +365,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             }
             return writtenBufs;
         }
+        */
+
     }
 }
