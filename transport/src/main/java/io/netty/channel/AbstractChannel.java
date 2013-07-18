@@ -51,7 +51,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final long hashCode = ThreadLocalRandom.current().nextLong();
     private final Unsafe unsafe;
     private final DefaultChannelPipeline pipeline;
-    private final ChannelOutboundBuffer outboundBuffer = new ChannelOutboundBuffer(this);
     private final ChannelFuture succeededFuture = new SucceededChannelFuture(this, null);
     private final VoidChannelPromise voidPromise = new VoidChannelPromise(this, true);
     private final VoidChannelPromise unsafeVoidPromise = new VoidChannelPromise(this, false);
@@ -62,6 +61,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private volatile EventLoop eventLoop;
     private volatile boolean registered;
 
+    private ChannelOutboundBuffer outboundBuffer = ChannelOutboundBuffer.newInstance(this);
     private boolean inFlush0;
 
     /** Cache for the string representation of this channel */
@@ -517,8 +517,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 }
 
                 // fail all queued messages
+                ChannelOutboundBuffer outboundBuffer = AbstractChannel.this.outboundBuffer;
                 outboundBuffer.failFlushed(CLOSED_CHANNEL_EXCEPTION);
                 outboundBuffer.failUnflushed(CLOSED_CHANNEL_EXCEPTION);
+                outboundBuffer.recycle();
+                AbstractChannel.this.outboundBuffer = null;
 
                 if (wasActive && !isActive()) {
                     invokeLater(new Runnable() {

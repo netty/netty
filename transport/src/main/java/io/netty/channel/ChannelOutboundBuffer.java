@@ -20,6 +20,8 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.Recycler;
+import io.netty.util.Recycler.Handle;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -34,7 +36,21 @@ public final class ChannelOutboundBuffer {
 
     private static final int MIN_INITIAL_CAPACITY = 8;
 
-    private final AbstractChannel channel;
+    private static final Recycler<ChannelOutboundBuffer> RECYCLER = new Recycler<ChannelOutboundBuffer>() {
+        @Override
+        protected ChannelOutboundBuffer newObject(Handle handle) {
+            return new ChannelOutboundBuffer(handle);
+        }
+    };
+
+    static ChannelOutboundBuffer newInstance(AbstractChannel channel) {
+        ChannelOutboundBuffer buffer = RECYCLER.get();
+        buffer.channel = channel;
+        return buffer;
+    }
+
+    private final Handle handle;
+    private AbstractChannel channel;
 
     // Flushed messages are stored in a circulas queue.
     private Object[] flushed;
@@ -63,12 +79,11 @@ public final class ChannelOutboundBuffer {
     @SuppressWarnings({ "unused", "FieldMayBeFinal" })
     private volatile int writable = 1;
 
-    ChannelOutboundBuffer(AbstractChannel channel) {
-        this(channel, MIN_INITIAL_CAPACITY << 1);
+    private ChannelOutboundBuffer(Handle handle) {
+        this(handle, MIN_INITIAL_CAPACITY << 1);
     }
 
-    @SuppressWarnings("unchecked")
-    ChannelOutboundBuffer(AbstractChannel channel, int initialCapacity) {
+    private ChannelOutboundBuffer(Handle handle, int initialCapacity) {
         if (initialCapacity < 0) {
             throw new IllegalArgumentException("initialCapacity: " + initialCapacity + " (expected: >= 0)");
         }
@@ -89,7 +104,7 @@ public final class ChannelOutboundBuffer {
             initialCapacity = MIN_INITIAL_CAPACITY;
         }
 
-        this.channel = channel;
+        this.handle = handle;
 
         flushed = new Object[initialCapacity];
         flushedPromises = new ChannelPromise[initialCapacity];
@@ -101,6 +116,20 @@ public final class ChannelOutboundBuffer {
         unflushed = new Object[initialCapacity];
         unflushedPromises = new ChannelPromise[initialCapacity];
         unflushedTotals = new long[initialCapacity];
+    }
+
+    void recycle() {
+        if (head != tail) {
+            throw new IllegalStateException();
+        }
+        if (unflushedCount != 0) {
+            throw new IllegalStateException();
+        }
+        if (pendingOutboundBytes != 0) {
+            throw new IllegalStateException();
+        }
+
+        RECYCLER.recycle(this, handle);
     }
 
     void addMessage(Object msg, ChannelPromise promise) {
@@ -276,6 +305,7 @@ public final class ChannelOutboundBuffer {
         flushedPromises[head] = null;
 
         decrementPendingOutboundBytes(flushedTotals[head]);
+        flushedTotals[head] = 0;
 
         this.head = head + 1 & flushed.length - 1;
         return true;
@@ -296,6 +326,7 @@ public final class ChannelOutboundBuffer {
         flushedPromises[head] = null;
 
         decrementPendingOutboundBytes(flushedTotals[head]);
+        flushedTotals[head] = 0;
 
         this.head = head + 1 & flushed.length - 1;
         return true;
@@ -412,10 +443,14 @@ public final class ChannelOutboundBuffer {
         try {
             for (int i = 0; i < unflushedCount; i++) {
                 safeRelease(unflushed[i]);
+                unflushed[i] = null;
                 safeFail(unflushedPromises[i], cause);
+                unflushedPromises[i] = null;
                 decrementPendingOutboundBytes(unflushedTotals[i]);
+                unflushedTotals[i] = 0;
             }
         } finally {
+            this.unflushedCount = 0;
             inFail = false;
         }
     }
