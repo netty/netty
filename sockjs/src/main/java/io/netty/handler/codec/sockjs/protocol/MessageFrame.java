@@ -16,8 +16,8 @@
 package io.netty.handler.codec.sockjs.protocol;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.sockjs.util.ArgumentUtil;
 import io.netty.util.CharsetUtil;
 
 import java.util.ArrayList;
@@ -30,19 +30,17 @@ import org.codehaus.jackson.io.JsonStringEncoder;
 /**
  * A MessageFrame carries application data, and consists of any array of JSON encoded messages.
  */
-public class MessageFrame implements Frame {
+public class MessageFrame extends DefaultByteBufHolder implements Frame {
 
     private final List<String> messages;
-    private final ByteBuf content;
 
     public MessageFrame(final String message) {
         this(new String[] {message});
     }
 
     public MessageFrame(final String... messages) {
-        ArgumentUtil.checkNotNull(messages, "messages");
+        super(generateContent(messages));
         this.messages = new ArrayList<String>(Arrays.asList(messages));
-        this.content = generateContent(this.messages);
     }
 
     public List<String> messages() {
@@ -50,23 +48,18 @@ public class MessageFrame implements Frame {
     }
 
     @Override
-    public ByteBuf content() {
-        return content;
-    }
-
-    @Override
     public String toString() {
         return "MessageFrame[messages=" + messages + "]";
     }
 
-    private ByteBuf generateContent(final List<String> messages) {
-        final int size = messages.size();
+    private static ByteBuf generateContent(final String[] messages) {
+        final int size = messages.length;
         final JsonStringEncoder jsonEndocder = new JsonStringEncoder();
         final ByteBuf content = Unpooled.buffer();
         content.writeByte('a').writeByte('[');
         for (int i = 0; i < size; i++) {
             content.writeByte('"');
-            final String escaped = escapeCharacters(jsonEndocder.quoteAsString(messages.get(i)));
+            final String escaped = escapeCharacters(jsonEndocder.quoteAsString(messages[i]));
             content.writeBytes(Unpooled.copiedBuffer(escaped, CharsetUtil.UTF_8)).writeByte('"');
             if (i < size - 1) {
                 content.writeByte(',');

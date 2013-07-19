@@ -15,15 +15,14 @@
  */
 package io.netty.handler.codec.sockjs.protocol;
 
-import io.netty.buffer.ByteBuf;
+import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.sockjs.util.ArgumentUtil;
 import io.netty.util.CharsetUtil;
 
 /**
  * This frame is sent from the server if the client requests data from a closed connection.
  */
-public class CloseFrame implements Frame {
+public class CloseFrame extends DefaultByteBufHolder implements Frame {
 
     private final int statusCode;
     private final String statusMsg;
@@ -35,7 +34,7 @@ public class CloseFrame implements Frame {
      * @param statusMsg the status message for this close frame.
      */
     public CloseFrame(final int statusCode, final String statusMsg) {
-        ArgumentUtil.checkNotNull(statusMsg, "statusMsg");
+        super(Unpooled.copiedBuffer("c[" + statusCode + ",\"" + statusMsg + "\"]", CharsetUtil.UTF_8));
         this.statusCode = statusCode;
         this.statusMsg = statusMsg;
     }
@@ -56,11 +55,6 @@ public class CloseFrame implements Frame {
      */
     public String statusMsg() {
         return statusMsg;
-    }
-
-    @Override
-    public ByteBuf content() {
-        return Unpooled.copiedBuffer("c[" + statusCode + ",\"" + statusMsg + "\"]", CharsetUtil.UTF_8);
     }
 
     @Override

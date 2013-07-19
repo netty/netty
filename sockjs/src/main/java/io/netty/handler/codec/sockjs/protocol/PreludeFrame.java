@@ -15,19 +15,25 @@
  */
 package io.netty.handler.codec.sockjs.protocol;
 
+import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
 
 /**
  * A PreludeFrame the first message sent by the
  * <a href="http://sockjs.github.io/sockjs-protocol/sockjs-protocol-0.3.3.html#section-85">xhr-streaming</a> protocol.
  */
-public class PreludeFrame implements Frame {
+public class PreludeFrame extends DefaultByteBufHolder implements Frame {
 
     public static final int CONTENT_SIZE = 2048;
+    private static final ByteBuf PRELUDE_FRAME = unreleasableBuffer(generateContent());
 
-    @Override
-    public ByteBuf content() {
+    public PreludeFrame() {
+        super(PRELUDE_FRAME.duplicate());
+    }
+
+    public static ByteBuf generateContent() {
         final ByteBuf buf = Unpooled.buffer(CONTENT_SIZE);
         for (int i = 0; i < CONTENT_SIZE; i++) {
             buf.writeByte('h');
