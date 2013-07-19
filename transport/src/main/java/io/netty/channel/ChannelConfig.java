@@ -119,18 +119,15 @@ public interface ChannelConfig {
     ChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
 
     /**
-     * Returns the maximum number of messages in a {@link MessageList} of
+     * Returns the maximum number of messages to read per read loop.
      * a {@link ChannelInboundHandler#channelRead(ChannelHandlerContext, Object) channelRead()} event.
-     * If this value is greater than 1, an event loop might attempt to read multiple times to fill multiple messages
-     * into the {@link MessageList}.
+     * If this value is greater than 1, an event loop might attempt to read multiple times to procude multiple messages.
      */
     int getMaxMessagesPerRead();
 
     /**
-     * Sets the maximum number of messages in a {@link MessageList} of
-     * a {@link ChannelInboundHandler#channelRead(ChannelHandlerContext, Object) channelRead()} event.
-     * If this value is greater than 1, an event loop might attempt to read multiple times to fill multiple messages
-     * into the {@link MessageList}.
+     * Sets the maximum number of messages to read per read loop.
+     * If this value is greater than 1, an event loop might attempt to read multiple times toprocude multiple messages.
      */
     ChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead);
 
