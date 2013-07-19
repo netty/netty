@@ -181,7 +181,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     private final LazyChannelPromise handshakePromise = new LazyChannelPromise();
     private final LazyChannelPromise sslCloseFuture = new LazyChannelPromise();
-    private final CloseNotifyListener closeNotifyWriteListener = new CloseNotifyListener();
     private final Deque<PendingWrite> pendingUnencryptedWrites = new ArrayDeque<PendingWrite>();
 
     private int packetLength;
@@ -318,7 +317,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             @Override
             public void run() {
                 engine.closeOutbound();
-                future.addListener(closeNotifyWriteListener);
                 try {
                     write(ctx, Unpooled.EMPTY_BUFFER, future);
                     flush(ctx);
@@ -394,8 +392,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
-            throws Exception {
+    public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         pendingUnencryptedWrites.add(new PendingWrite((ByteBuf) msg, promise));
     }
 
@@ -807,7 +804,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         RecyclableArrayList out = RecyclableArrayList.newInstance();
         try {
             unwrap(ctx, Unpooled.EMPTY_BUFFER.nioBuffer(), out);
-            for (int i = 0; i < out.size(); i++) {
+            final int size = out.size();
+            for (int i = 0; i < size; i++) {
                 ctx.fireChannelRead(out.get(i));
             }
         } finally {
@@ -918,7 +916,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         // is managing.
         engine.closeOutbound();
 
-        final boolean disconnected = cause instanceof ClosedChannelException;
         try {
             engine.closeInbound();
         } catch (SSLException e) {
@@ -926,13 +923,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             // this all the time.
             //
             // See https://github.com/netty/netty/issues/1340
-            if (!disconnected) {
-                logger.debug("SSLEngine.closeInbound() raised an exception after a handshake failure.", e);
-            } else if (!closeNotifyWriteListener.done) {
-                logger.debug("SSLEngine.closeInbound() raised an exception due to closed connection.", e);
-            } else {
-                // cause == null && sentCloseNotify
-                // closeInbound() will raise an exception with bogus truncation attack warning.
+            String msg = e.getMessage();
+            if (msg == null || !msg.contains("possible truncation attack")) {
+                logger.debug("SSLEngine.closeInbound() raised an exception.", e);
             }
         }
         notifyHandshakeFailure(cause);
@@ -965,7 +958,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
         engine.closeOutbound();
 
-        ChannelPromise closeNotifyFuture = ctx.newPromise().addListener(closeNotifyWriteListener);
+        ChannelPromise closeNotifyFuture = ctx.newPromise();
         write(ctx, Unpooled.EMPTY_BUFFER, closeNotifyFuture);
         flush(ctx);
         safeClose(ctx, closeNotifyFuture, promise);
@@ -1075,20 +1068,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 }
             }
         });
-    }
-
-    private static final class CloseNotifyListener implements ChannelFutureListener {
-        boolean done;
-
-        @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
-            if (future.isSuccess()) {
-                if (done) {
-                    throw new IllegalStateException("notified twice");
-                }
-                done = true;
-            }
-        }
     }
 
     private final class LazyChannelPromise extends DefaultPromise<Channel> {
