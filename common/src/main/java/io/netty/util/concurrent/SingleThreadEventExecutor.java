@@ -213,18 +213,19 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
                 return task;
             } else {
                 long delayNanos = delayedTask.delayNanos();
-                Runnable task;
+                Runnable task = null;
                 if (delayNanos > 0) {
                     try {
                         task = taskQueue.poll(delayNanos, TimeUnit.NANOSECONDS);
                     } catch (InterruptedException e) {
                         return null;
                     }
-                } else {
-                    task = taskQueue.poll();
                 }
-
                 if (task == null) {
+                    // We need to fetch the delayed tasks now as otherwise there may be a chance that
+                    // delayed tasks are never executed if there is always one task in the taskQueue.
+                    // This is for example true for the read task of OIO Transport
+                    // See https://github.com/netty/netty/issues/1614
                     fetchFromDelayedQueue();
                     task = taskQueue.poll();
                 }
