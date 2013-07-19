@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
+import io.netty.util.internal.StringUtil;
 
 import java.net.SocketAddress;
 
@@ -820,13 +821,15 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     "promise.channel does not match: %s (expected: %s)", promise.channel(), channel()));
         }
         if (promise.isDone()) {
-            throw new IllegalArgumentException("future already done");
+            throw new IllegalArgumentException("promise already done");
         }
         if (!allowUnsafe && promise instanceof VoidChannelPromise) {
-            throw new IllegalArgumentException("VoidChannelPromise not allowed for this operation");
+            throw new IllegalArgumentException(
+                    StringUtil.simpleClassName(VoidChannelPromise.class) + " not allowed for this operation");
         }
         if (promise instanceof AbstractChannel.CloseFuture) {
-            throw new IllegalArgumentException("AbstractChannel.CloseFuture may not send through the pipeline");
+            throw new IllegalArgumentException(
+                    StringUtil.simpleClassName(AbstractChannel.CloseFuture.class) + " not allowed in a pipeline");
         }
     }
 
