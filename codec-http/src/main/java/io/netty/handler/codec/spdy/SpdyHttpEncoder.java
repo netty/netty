@@ -18,14 +18,7 @@ package io.netty.handler.codec.spdy;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
-import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpMessage;
-import io.netty.handler.codec.http.HttpObject;
-import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.codec.http.*;
 
 import java.util.List;
 import java.util.Map;
@@ -141,6 +134,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
     protected void encode(ChannelHandlerContext ctx, HttpObject msg, List<Object> out) throws Exception {
 
         boolean valid = false;
+        boolean last = false;
 
         if (msg instanceof HttpRequest) {
 
@@ -148,6 +142,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
             SpdySynStreamFrame spdySynStreamFrame = createSynStreamFrame(httpRequest);
             out.add(spdySynStreamFrame);
 
+            last = spdySynStreamFrame.isLast();
             valid = true;
         }
         if (msg instanceof HttpResponse) {
@@ -155,15 +150,17 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
             HttpResponse httpResponse = (HttpResponse) msg;
             if (httpResponse.headers().contains(SpdyHttpHeaders.Names.ASSOCIATED_TO_STREAM_ID)) {
                 SpdySynStreamFrame spdySynStreamFrame = createSynStreamFrame(httpResponse);
+                last = spdySynStreamFrame.isLast();
                 out.add(spdySynStreamFrame);
             } else {
                 SpdySynReplyFrame spdySynReplyFrame = createSynReplyFrame(httpResponse);
+                last = spdySynReplyFrame.isLast();
                 out.add(spdySynReplyFrame);
             }
 
             valid = true;
         }
-        if (msg instanceof HttpContent) {
+        if (msg instanceof HttpContent && !last) {
 
             HttpContent chunk = (HttpContent) msg;
 
@@ -255,6 +252,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
             spdySynStreamFrame.headers().add(entry.getKey(), entry.getValue());
         }
         currentStreamId = spdySynStreamFrame.getStreamId();
+        spdySynStreamFrame.setLast(isLast(httpMessage));
 
         return spdySynStreamFrame;
     }
@@ -284,8 +282,25 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
         }
 
         currentStreamId = streamID;
-        spdySynReplyFrame.setLast(false);
+        spdySynReplyFrame.setLast(isLast(httpResponse));
 
         return spdySynReplyFrame;
+    }
+
+    /**
+     * Checks if the given HTTP message should be considered as a last SPDY frame.
+     *
+     * @param httpMessage check this HTTP message
+     * @return whether the given HTTP message should generate a <em>last</em> SPDY frame.
+     */
+    private static boolean isLast(HttpMessage httpMessage) {
+        if (httpMessage instanceof FullHttpMessage) {
+            FullHttpMessage fullMessage = (FullHttpMessage) httpMessage;
+            if (fullMessage.trailingHeaders().isEmpty() && !fullMessage.content().isReadable()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
