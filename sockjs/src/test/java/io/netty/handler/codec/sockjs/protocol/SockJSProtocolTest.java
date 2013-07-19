@@ -80,6 +80,7 @@ import io.netty.handler.codec.sockjs.handlers.SockJSHandler;
 import io.netty.handler.codec.sockjs.transports.EventSourceTransport;
 import io.netty.handler.codec.sockjs.transports.Transports;
 import io.netty.handler.codec.sockjs.transports.WebSocketTransport;
+import io.netty.handler.codec.sockjs.util.JsonUtil;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 
@@ -1235,7 +1236,7 @@ public class SockJSProtocolTest {
     /*
      * Equivalent to JSONEncoding.test_xhr_server_decodes in sockjs-protocol-0.3.3.py.
      */
-    @Test @Ignore
+    @Test
     public void jsonEncodingTestXhrServerDecodes() throws Exception {
         final SockJSServiceFactory echoFactory = echoService();
         final String sessionUrl = echoFactory.config().prefix() + "/abc/" + UUID.randomUUID().toString();
@@ -1244,14 +1245,18 @@ public class SockJSProtocolTest {
         assertThat(response.getStatus(), is(HttpResponseStatus.OK));
         assertThat(response.content().toString(UTF_8), equalTo("o\n"));
 
-        final String content = Transports.escapeCharacters(clientKillerStringEsc().toCharArray());
-        final FullHttpResponse xhrSendResponse = xhrSendRequest(sessionUrl, "[\"" + content + "\"]", echoFactory);
+        final String content = "[\"" + clientKillerStringEsc() + "\"]";
+        final FullHttpResponse xhrSendResponse = xhrSendRequest(sessionUrl, content, echoFactory);
         assertThat(xhrSendResponse.getStatus(), is(HttpResponseStatus.NO_CONTENT));
+
         final FullHttpResponse pollResponse = xhrRequest(sessionUrl, echoFactory);
         assertThat(pollResponse.getStatus(), is(HttpResponseStatus.OK));
-        String writeValueAsString = Transports.escapeCharacters(pollResponse.content().toString(UTF_8).toCharArray());
-        //assertThat(pollResponse.content().toString(UTF_8), equalTo("a[\"" + content + "\"]\n"));
-        assertThat(writeValueAsString, equalTo("a[\"" + content + "\"]\n"));
+
+        // Let the content go through the MessageFrame to match what the response will go through.
+        final MessageFrame messageFrame = new MessageFrame(JsonUtil.decode(content)[0]);
+        String expectedContent = JsonUtil.encode(messageFrame.content().toString(UTF_8) + "\n");
+        String responseContent = JsonUtil.encode(pollResponse.content().toString(UTF_8));
+        assertThat(responseContent, equalTo(expectedContent));
     }
 
     /*
