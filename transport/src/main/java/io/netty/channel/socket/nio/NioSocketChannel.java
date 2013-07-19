@@ -296,6 +296,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                     writtenBytes -= readableBytes;
                 } else if (readableBytes > writtenBytes) {
                     buf.readerIndex(readerIndex + (int) writtenBytes);
+                    in.progress(writtenBytes);
                     break;
                 } else { // readable == writtenBytes
                     in.remove();
