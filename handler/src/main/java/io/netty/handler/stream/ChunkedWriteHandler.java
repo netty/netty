@@ -350,7 +350,7 @@ public class ChunkedWriteHandler
         void progress() {
             progress ++;
             if (promise instanceof ChannelProgressivePromise) {
-                ((ChannelProgressivePromise) promise).setProgress(progress, -1);
+                ((ChannelProgressivePromise) promise).tryProgress(progress, -1);
             }
         }
     }
