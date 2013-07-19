@@ -20,6 +20,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelProgressiveFuture;
+import io.netty.channel.ChannelProgressiveFutureListener;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
@@ -180,7 +182,17 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         // Write the initial line and the header.
         ctx.write(response);
         // Write the content.
-        ctx.write(new ChunkedFile(raf, 0, fileLength, 8192));
+        ctx.write(new ChunkedFile(raf, 0, fileLength, 8192), ctx.newProgressivePromise()).addListener(new ChannelProgressiveFutureListener() {
+            @Override
+            public void operationProgressed(ChannelProgressiveFuture future, long progress, long total) throws Exception {
+                System.err.println("Transfer progress: " + progress);
+            }
+
+            @Override
+            public void operationComplete(ChannelProgressiveFuture future) throws Exception {
+                System.err.println("Transfer complete.");
+            }
+        });
         // Write the end marker
         ChannelFuture writeFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 

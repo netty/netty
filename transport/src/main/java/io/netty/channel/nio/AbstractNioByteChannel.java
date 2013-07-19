@@ -162,12 +162,14 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 }
 
                 boolean done = false;
+                long flushedAmount = 0;
                 for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
                     int localFlushedAmount = doWriteBytes(buf);
                     if (localFlushedAmount == 0) {
                         break;
                     }
 
+                    flushedAmount += localFlushedAmount;
                     if (!buf.isReadable()) {
                         done = true;
                         break;
@@ -178,6 +180,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     in.remove();
                 } else {
                     // Did not write completely.
+                    in.progress(flushedAmount);
                     if ((interestOps & SelectionKey.OP_WRITE) == 0) {
                         key.interestOps(interestOps | SelectionKey.OP_WRITE);
                     }
@@ -186,11 +189,14 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             } else if (msg instanceof FileRegion) {
                 FileRegion region = (FileRegion) msg;
                 boolean done = false;
+                long flushedAmount = 0;
                 for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
                     long localFlushedAmount = doWriteFileRegion(region);
                     if (localFlushedAmount == 0) {
                         break;
                     }
+
+                    flushedAmount += localFlushedAmount;
                     if (region.transfered() >= region.count()) {
                         done = true;
                         break;
@@ -201,6 +207,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     in.remove();
                 } else {
                     // Did not write completely.
+                    in.progress(flushedAmount);
                     if ((interestOps & SelectionKey.OP_WRITE) == 0) {
                         key.interestOps(interestOps | SelectionKey.OP_WRITE);
                     }
