@@ -39,6 +39,6 @@ public class HttpStaticFileServerInitializer extends ChannelInitializer<SocketCh
         pipeline.addLast("encoder", new HttpResponseEncoder());
         pipeline.addLast("chunkedWriter", new ChunkedWriteHandler());
 
-        pipeline.addLast("handler", new HttpStaticFileServerHandler());
+        pipeline.addLast("handler", new HttpStaticFileServerHandler(true)); // Specify false if SSL.
     }
 }

@@ -794,12 +794,15 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * Calculate the number of bytes a message takes up in memory. Sub-classes may override this if they use different
      * messages then {@link ByteBuf} or {@link ByteBufHolder}. If the size can not be calculated 0 should be returned.
      */
-    protected int calculateMessageSize(Object message) {
+    protected long calculateMessageSize(Object message) {
         if (message instanceof ByteBuf) {
             return ((ByteBuf) message).readableBytes();
         }
         if (message instanceof ByteBufHolder) {
             return ((ByteBufHolder) message).content().readableBytes();
+        }
+        if (message instanceof FileRegion) {
+            return ((FileRegion) message).count();
         }
         return 0;
     }

@@ -55,7 +55,12 @@ public class DefaultProgressivePromise<V> extends DefaultPromise<V> implements P
 
     @Override
     public boolean tryProgress(long progress, long total) {
-        if (progress < 0 || progress > total || isDone()) {
+        if (total < 0) {
+            total = -1;
+            if (progress < 0 || isDone()) {
+                return false;
+            }
+        } else if (progress < 0 || progress > total || isDone()) {
             return false;
         }
 

@@ -296,11 +296,11 @@ public class ChunkedWriteHandler
                             if (!future.isSuccess()) {
                                 closeInput((ChunkedInput<?>) pendingMessage);
                                 currentWrite.fail(future.cause());
-                            } else if (isWritable()) {
-                                currentWrite.progress();
-                                resumeTransfer();
                             } else {
                                 currentWrite.progress();
+                                if (isWritable()) {
+                                    resumeTransfer();
+                                }
                             }
                         }
                     });
