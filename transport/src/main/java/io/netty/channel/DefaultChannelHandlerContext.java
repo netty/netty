@@ -821,7 +821,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     "promise.channel does not match: %s (expected: %s)", promise.channel(), channel()));
         }
         if (promise.isDone()) {
-            throw new IllegalArgumentException("promise already done");
+            throw new IllegalArgumentException("promise already done: " + promise);
         }
         if (!allowUnsafe && promise instanceof VoidChannelPromise) {
             throw new IllegalArgumentException(
