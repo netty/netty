@@ -34,17 +34,7 @@ import java.util.List;
 public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
 
     private final TypeParameterMatcher outboundMsgMatcher;
-    private final MessageToByteEncoder<I> encoder  = new MessageToByteEncoder<I>() {
-        @Override
-        public boolean acceptOutboundMessage(Object msg) throws Exception {
-            return ByteToMessageCodec.this.acceptOutboundMessage(msg);
-        }
-
-        @Override
-        protected void encode(ChannelHandlerContext ctx, I msg, ByteBuf out) throws Exception {
-            ByteToMessageCodec.this.encode(ctx, msg, out);
-        }
-    };
+    private final MessageToByteEncoder<I> encoder;
 
     private final ByteToMessageDecoder decoder = new ByteToMessageDecoder() {
         @Override
@@ -59,22 +49,43 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
     };
 
     /**
-     * Create a new instance which will try to detect the types to encode out of the type parameter
-     * of the class.
+     * @see {@link #ByteToMessageCodec(boolean)} with {@code true} as boolean parameter.
      */
     protected ByteToMessageCodec() {
-        checkForSharableAnnotation();
-        outboundMsgMatcher = TypeParameterMatcher.find(this, ByteToMessageCodec.class, "I");
+        this(true);
     }
 
     /**
-     * Create a new instance.
-     *
-     * @param outboundMessageType   The type of messages to encode
+     * @see {@link #ByteToMessageCodec(Class, boolean)} with {@code true} as boolean value.
      */
     protected ByteToMessageCodec(Class<? extends I> outboundMessageType) {
+        this(outboundMessageType, true);
+    }
+
+    /**
+     * Create a new instance which will try to detect the types to match out of the type parameter of the class.
+     *
+     * @param preferDirect          {@code true} if a direct {@link ByteBuf} should be tried to be used as target for
+     *                              the encoded messages. If {@code false} is used it will allocate a heap
+     *                              {@link ByteBuf}, which is backed by an byte array.
+     */
+    protected ByteToMessageCodec(boolean preferDirect) {
+        outboundMsgMatcher = TypeParameterMatcher.find(this, ByteToMessageCodec.class, "I");
+        encoder = new Encoder(preferDirect);
+    }
+
+    /**
+     * Create a new instance
+     *
+     * @param outboundMessageType   The type of messages to match
+     * @param preferDirect          {@code true} if a direct {@link ByteBuf} should be tried to be used as target for
+     *                              the encoded messages. If {@code false} is used it will allocate a heap
+     *                              {@link ByteBuf}, which is backed by an byte array.
+     */
+    protected ByteToMessageCodec(Class<? extends I> outboundMessageType, boolean preferDirect) {
         checkForSharableAnnotation();
         outboundMsgMatcher = TypeParameterMatcher.get(outboundMessageType);
+        encoder = new Encoder(preferDirect);
     }
 
     private void checkForSharableAnnotation() {
@@ -117,5 +128,21 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
      */
     protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         decode(ctx, in, out);
+    }
+
+    private final class Encoder extends MessageToByteEncoder<I> {
+        Encoder(boolean preferDirect) {
+            super(preferDirect);
+        }
+
+        @Override
+        public boolean acceptOutboundMessage(Object msg) throws Exception {
+            return ByteToMessageCodec.this.acceptOutboundMessage(msg);
+        }
+
+        @Override
+        protected void encode(ChannelHandlerContext ctx, I msg, ByteBuf out) throws Exception {
+            ByteToMessageCodec.this.encode(ctx, msg, out);
+        }
     }
 }
