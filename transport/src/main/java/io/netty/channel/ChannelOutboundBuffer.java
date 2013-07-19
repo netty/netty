@@ -145,7 +145,7 @@ public final class ChannelOutboundBuffer {
             unflushed = this.unflushed;
         }
 
-        final int size = channel.calculateMessageSize(msg);
+        final long size = channel.calculateMessageSize(msg);
         incrementPendingOutboundBytes(size);
 
         unflushed[unflushedCount] = msg;
@@ -249,7 +249,7 @@ public final class ChannelOutboundBuffer {
         tail = n;
     }
 
-    private void incrementPendingOutboundBytes(int size) {
+    private void incrementPendingOutboundBytes(long size) {
         if (size == 0) {
             return;
         }
