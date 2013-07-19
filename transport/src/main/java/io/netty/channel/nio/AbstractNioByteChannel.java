@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.FileRegion;
 import io.netty.channel.RecvByteBufAllocator;
@@ -140,27 +141,35 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     }
 
     @Override
-    protected int doWrite(Object[] msgs, int msgsLength, int startIndex) throws Exception {
-        int writeIndex = startIndex;
+    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+        final SelectionKey key = selectionKey();
+        final int interestOps = key.interestOps();
         for (;;) {
-            if (writeIndex >= msgsLength) {
+            Object msg = in.current();
+            if (msg == null) {
+                // Wrote all messages.
+                if ((interestOps & SelectionKey.OP_WRITE) != 0) {
+                    key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
+                }
                 break;
             }
-            Object msg = msgs[writeIndex];
+
             if (msg instanceof ByteBuf) {
                 ByteBuf buf = (ByteBuf) msg;
                 if (!buf.isReadable()) {
-                    buf.release();
-                    writeIndex++;
+                    in.remove();
                     continue;
                 }
+
                 boolean done = false;
+                long flushedAmount = 0;
                 for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
-                    int localFlushedAmount = doWriteBytes(buf, i == 0);
+                    int localFlushedAmount = doWriteBytes(buf);
                     if (localFlushedAmount == 0) {
                         break;
                     }
 
+                    flushedAmount += localFlushedAmount;
                     if (!buf.isReadable()) {
                         done = true;
                         break;
@@ -168,19 +177,26 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 }
 
                 if (done) {
-                    buf.release();
-                    writeIndex++;
+                    in.remove();
                 } else {
+                    // Did not write completely.
+                    in.progress(flushedAmount);
+                    if ((interestOps & SelectionKey.OP_WRITE) == 0) {
+                        key.interestOps(interestOps | SelectionKey.OP_WRITE);
+                    }
                     break;
                 }
             } else if (msg instanceof FileRegion) {
                 FileRegion region = (FileRegion) msg;
                 boolean done = false;
+                long flushedAmount = 0;
                 for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
-                    long localFlushedAmount = doWriteFileRegion(region, i == 0);
+                    long localFlushedAmount = doWriteFileRegion(region);
                     if (localFlushedAmount == 0) {
                         break;
                     }
+
+                    flushedAmount += localFlushedAmount;
                     if (region.transfered() >= region.count()) {
                         done = true;
                         break;
@@ -188,27 +204,28 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 }
 
                 if (done) {
-                    region.release();
-                    writeIndex++;
+                    in.remove();
                 } else {
+                    // Did not write completely.
+                    in.progress(flushedAmount);
+                    if ((interestOps & SelectionKey.OP_WRITE) == 0) {
+                        key.interestOps(interestOps | SelectionKey.OP_WRITE);
+                    }
                     break;
                 }
             } else {
                 throw new UnsupportedOperationException("unsupported message type: " + StringUtil.simpleClassName(msg));
             }
         }
-        return writeIndex - startIndex;
     }
 
     /**
      * Write a {@link FileRegion}
      *
      * @param region        the {@link FileRegion} from which the bytes should be written
-     * @param lastSpin      {@code true} if this is the last write try
      * @return amount       the amount of written bytes
-     * @throws Exception    thrown if an error accour
      */
-    protected abstract long doWriteFileRegion(FileRegion region, boolean lastSpin) throws Exception;
+    protected abstract long doWriteFileRegion(FileRegion region) throws Exception;
 
     /**
      * Read bytes into the given {@link ByteBuf} and return the amount.
@@ -218,11 +235,9 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     /**
      * Write bytes form the given {@link ByteBuf} to the underlying {@link java.nio.channels.Channel}.
      * @param buf           the {@link ByteBuf} from which the bytes should be written
-     * @param lastSpin      {@code true} if this is the last write try
      * @return amount       the amount of written bytes
-     * @throws Exception    thrown if an error accour
      */
-    protected abstract int doWriteBytes(ByteBuf buf, boolean lastSpin) throws Exception;
+    protected abstract int doWriteBytes(ByteBuf buf) throws Exception;
 
     protected final void updateOpWrite(long expectedWrittenBytes, long writtenBytes, boolean lastSpin) {
         if (writtenBytes >= expectedWrittenBytes) {

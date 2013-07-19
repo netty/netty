@@ -140,15 +140,14 @@ public class NioUdtByteConnectorChannel extends AbstractNioByteChannel implement
     }
 
     @Override
-    protected int doWriteBytes(final ByteBuf byteBuf, final boolean lastSpin) throws Exception {
+    protected int doWriteBytes(final ByteBuf byteBuf) throws Exception {
         final int expectedWrittenBytes = byteBuf.readableBytes();
         final int writtenBytes = byteBuf.readBytes(javaChannel(), expectedWrittenBytes);
-        updateOpWrite(expectedWrittenBytes, writtenBytes, lastSpin);
         return writtenBytes;
     }
 
     @Override
-    protected long doWriteFileRegion(FileRegion region, boolean lastSpin) throws Exception {
+    protected long doWriteFileRegion(FileRegion region) throws Exception {
         throw new UnsupportedOperationException();
     }
 

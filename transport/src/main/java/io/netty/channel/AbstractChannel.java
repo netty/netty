@@ -51,7 +51,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final long hashCode = ThreadLocalRandom.current().nextLong();
     private final Unsafe unsafe;
     private final DefaultChannelPipeline pipeline;
-    private final ChannelOutboundBuffer outboundBuffer = new ChannelOutboundBuffer(this);
     private final ChannelFuture succeededFuture = new SucceededChannelFuture(this, null);
     private final VoidChannelPromise voidPromise = new VoidChannelPromise(this, true);
     private final VoidChannelPromise unsafeVoidPromise = new VoidChannelPromise(this, false);
@@ -61,8 +60,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private volatile SocketAddress remoteAddress;
     private volatile EventLoop eventLoop;
     private volatile boolean registered;
-
-    private boolean inFlush0;
 
     /** Cache for the string representation of this channel */
     private boolean strValActive;
@@ -82,7 +79,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public boolean isWritable() {
-        return outboundBuffer.getWritable();
+        ChannelOutboundBuffer buf = unsafe.outboundBuffer();
+        return buf != null && buf.getWritable();
     }
 
     @Override
@@ -366,6 +364,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     protected abstract class AbstractUnsafe implements Unsafe {
 
+        private ChannelOutboundBuffer outboundBuffer = ChannelOutboundBuffer.newInstance(AbstractChannel.this);
+        private boolean inFlush0;
+
+        @Override
+        public final ChannelOutboundBuffer outboundBuffer() {
+            return outboundBuffer;
+        }
+
         @Override
         public final SocketAddress localAddress() {
             return localAddress0();
@@ -516,23 +522,26 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     promise.setFailure(t);
                 }
 
-                if (!outboundBuffer.isEmpty()) {
-                    // fail all queued messages
-                    outboundBuffer.fail(CLOSED_CHANNEL_EXCEPTION);
+                // fail all queued messages
+                try {
+                    ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+                    outboundBuffer.failFlushed(CLOSED_CHANNEL_EXCEPTION);
+                    outboundBuffer.failUnflushed(CLOSED_CHANNEL_EXCEPTION);
+                    outboundBuffer.recycle();
+                } finally {
+                    outboundBuffer = null;
+
+                    if (wasActive && !isActive()) {
+                        invokeLater(new Runnable() {
+                            @Override
+                            public void run() {
+                                pipeline.fireChannelInactive();
+                            }
+                        });
+                    }
+
+                    deregister(voidPromise());
                 }
-
-                outboundBuffer.clearUnflushed(CLOSED_CHANNEL_EXCEPTION);
-
-                if (wasActive && !isActive()) {
-                    invokeLater(new Runnable() {
-                        @Override
-                        public void run() {
-                            pipeline.fireChannelInactive();
-                        }
-                    });
-                }
-
-                deregister(voidPromise());
             } else {
                 // Closed already.
                 promise.setSuccess();
@@ -618,6 +627,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public void flush() {
+            ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+            if (outboundBuffer == null) {
+                return;
+            }
+
             outboundBuffer.addFlush();
             flush0();
         }
@@ -628,59 +642,31 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
-            inFlush0 = true;
+            final ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+            if (outboundBuffer == null || outboundBuffer.isEmpty()) {
+                return;
+            }
 
-            final ChannelOutboundBuffer outboundBuffer = AbstractChannel.this.outboundBuffer;
+            inFlush0 = true;
 
             // Mark all pending write requests as failure if the channel is inactive.
             if (!isActive()) {
-                if (isOpen()) {
-                    outboundBuffer.fail(NOT_YET_CONNECTED_EXCEPTION);
-                } else {
-                    outboundBuffer.fail(CLOSED_CHANNEL_EXCEPTION);
+                try {
+                    if (isOpen()) {
+                        outboundBuffer.failFlushed(NOT_YET_CONNECTED_EXCEPTION);
+                    } else {
+                        outboundBuffer.failFlushed(CLOSED_CHANNEL_EXCEPTION);
+                    }
+                } finally {
+                    inFlush0 = false;
                 }
-                inFlush0 = false;
                 return;
             }
 
             try {
-                for (;;) {
-                    MessageList messages = outboundBuffer.currentMessageList;
-                    if (messages == null) {
-                        if (!outboundBuffer.next()) {
-                            break;
-                        }
-                        messages = outboundBuffer.currentMessageList;
-                    }
-
-                    int messageIndex = outboundBuffer.currentMessageIndex;
-                    int messageCount = messages.size();
-                    Object[] messageArray = messages.messages();
-                    ChannelPromise[] promiseArray = messages.promises();
-
-                    // Write the messages.
-                    final int writtenMessages = doWrite(messageArray, messageCount, messageIndex);
-
-                    // Notify the promises.
-                    final int newMessageIndex = messageIndex + writtenMessages;
-                    for (int i = messageIndex; i < newMessageIndex; i ++) {
-                        promiseArray[i].trySuccess();
-                    }
-
-                    // Update the index variable and decide what to do next.
-                    outboundBuffer.currentMessageIndex = messageIndex = newMessageIndex;
-                    if (messageIndex >= messageCount) {
-                        messages.recycle();
-                        if (!outboundBuffer.next()) {
-                            break;
-                        }
-                    } else {
-                        // Could not flush the current write request completely. Try again later.
-                        break;
-                    }
-                }
+                doWrite(outboundBuffer);
             } catch (Throwable t) {
-                outboundBuffer.fail(t);
+                outboundBuffer.failFlushed(t);
                 if (t instanceof IOException) {
                     close(voidPromise());
                 }
@@ -790,13 +776,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected abstract void doBeginRead() throws Exception;
 
     /**
-     * Flush the content of the given {@link ByteBuf} to the remote peer.
+     * Flush the content of the given buffer to the remote peer.
      *
      * Sub-classes may override this as this implementation will just thrown an {@link UnsupportedOperationException}
-     *
-     * @return the number of written messages
      */
-    protected abstract int doWrite(Object[] msgs, int msgsLength, int startIndex) throws Exception;
+    protected abstract void doWrite(ChannelOutboundBuffer in) throws Exception;
 
     protected static void checkEOF(FileRegion region) throws IOException {
         if (region.transfered() < region.count()) {

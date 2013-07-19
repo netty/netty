@@ -20,11 +20,13 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.SingleThreadEventLoop;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 
 import java.net.SocketAddress;
@@ -265,7 +267,7 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected int doWrite(Object[] msgs, int msgsLength, int startIndex) throws Exception {
+    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         if (state < 2) {
             throw new NotYetConnectedException();
         }
@@ -278,14 +280,23 @@ public class LocalChannel extends AbstractChannel {
         final EventLoop peerLoop = peer.eventLoop();
 
         if (peerLoop == eventLoop()) {
-            for (int i = startIndex; i < msgsLength; i ++) {
-                peer.inboundBuffer.add(msgs[i]);
+            for (;;) {
+                Object msg = in.current();
+                if (msg == null) {
+                    break;
+                }
+                peer.inboundBuffer.add(msg);
+                ReferenceCountUtil.retain(msg);
+                in.remove();
             }
             finishPeerRead(peer, peerPipeline);
         } else {
             // Use a copy because the original msgs will be recycled by AbstractChannel.
-            final Object[] msgsCopy = new Object[msgsLength - startIndex];
-            System.arraycopy(msgs, startIndex, msgsCopy, 0, msgsCopy.length);
+            final Object[] msgsCopy = new Object[in.size()];
+            for (int i = 0; i < msgsCopy.length; i ++) {
+                msgsCopy[i] = ReferenceCountUtil.retain(in.current());
+                in.remove();
+            }
 
             peerLoop.execute(new Runnable() {
                 @Override
@@ -297,8 +308,6 @@ public class LocalChannel extends AbstractChannel {
                 }
             });
         }
-
-        return msgsLength - startIndex;
     }
 
     private static void finishPeerRead(LocalChannel peer, ChannelPipeline peerPipeline) {

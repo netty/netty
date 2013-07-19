@@ -34,7 +34,13 @@ public class DefaultProgressivePromise<V> extends DefaultPromise<V> implements P
 
     @Override
     public ProgressivePromise<V> setProgress(long progress, long total) {
-        if (progress < 0 || progress > total) {
+        if (total < 0) {
+            // total unknown
+            total = -1; // normalize
+            if (progress < 0) {
+                throw new IllegalArgumentException("progress: " + progress + " (expected: >= 0)");
+            }
+        } else if (progress < 0 || progress > total) {
             throw new IllegalArgumentException(
                     "progress: " + progress + " (expected: 0 <= progress <= total (" + total + "))");
         }
@@ -49,7 +55,12 @@ public class DefaultProgressivePromise<V> extends DefaultPromise<V> implements P
 
     @Override
     public boolean tryProgress(long progress, long total) {
-        if (progress < 0 || progress > total || isDone()) {
+        if (total < 0) {
+            total = -1;
+            if (progress < 0 || isDone()) {
+                return false;
+            }
+        } else if (progress < 0 || progress > total || isDone()) {
             return false;
         }
 

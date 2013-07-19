@@ -93,7 +93,7 @@ public abstract class NioUdtAcceptorChannel extends AbstractNioMessageChannel im
     }
 
     @Override
-    protected int doWriteMessages(Object[] msgs, int msgLength, int startIndex, boolean lastSpin) throws Exception {
+    protected boolean doWriteMessage(Object msg) throws Exception {
         throw new UnsupportedOperationException();
     }
 

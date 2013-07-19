@@ -151,7 +151,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected int doWriteMessages(Object[] msgs, int msgsLength, int startIndex, boolean lastSpin) throws Exception {
+    protected boolean doWriteMessage(Object msg) throws Exception {
         throw new UnsupportedOperationException();
     }
 }

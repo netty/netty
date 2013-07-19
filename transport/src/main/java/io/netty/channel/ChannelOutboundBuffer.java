@@ -19,47 +19,79 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.util.Recycler;
+import io.netty.util.Recycler.Handle;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-final class ChannelOutboundBuffer {
+/**
+ * (Transport implementors only) an internal data structure used by {@link AbstractChannel} to store its pending
+ * outbound write requests.
+ */
+public final class ChannelOutboundBuffer {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelOutboundBuffer.class);
 
     private static final int MIN_INITIAL_CAPACITY = 8;
 
-    MessageList currentMessageList;
-    int currentMessageIndex;
-    private long currentMessageListSize;
+    private static final Recycler<ChannelOutboundBuffer> RECYCLER = new Recycler<ChannelOutboundBuffer>() {
+        @Override
+        protected ChannelOutboundBuffer newObject(Handle handle) {
+            return new ChannelOutboundBuffer(handle);
+        }
+    };
 
-    private MessageList[] messageLists;
-    private long[] messageListSizes;
+    static ChannelOutboundBuffer newInstance(AbstractChannel channel) {
+        ChannelOutboundBuffer buffer = RECYCLER.get();
+        buffer.channel = channel;
+        return buffer;
+    }
 
-    private MessageList unflushedMessageList;
-    private long unflushedMessageListSize;
+    private final Handle handle;
+    private AbstractChannel channel;
 
+    // Flushed messages are stored in a circulas queue.
+    private Object[] flushed;
+    private ChannelPromise[] flushedPromises;
+    private int[] flushedPendingSizes;
+    private long[] flushedProgresses;
+    private long[] flushedTotals;
     private int head;
     private int tail;
-    private boolean inFail;
-    private final AbstractChannel channel;
 
-    private long pendingOutboundBytes;
+    private ByteBuffer[] nioBuffers;
+    private int nioBufferCount;
+    private long nioBufferSize;
+
+    // Unflushed messages are stored in an array list.
+    private Object[] unflushed;
+    private ChannelPromise[] unflushedPromises;
+    private int[] unflushedPendingSizes;
+    private long[] unflushedTotals;
+    private int unflushedCount;
+
+    private boolean inFail;
+    private long totalPendingSize;
 
     private static final AtomicIntegerFieldUpdater<ChannelOutboundBuffer> WRITABLE_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(ChannelOutboundBuffer.class, "writable");
 
-    @SuppressWarnings("unused")
+    @SuppressWarnings({ "unused", "FieldMayBeFinal" })
     private volatile int writable = 1;
 
-    ChannelOutboundBuffer(AbstractChannel channel) {
-        this(channel, MIN_INITIAL_CAPACITY << 1);
+    private ChannelOutboundBuffer(Handle handle) {
+        this(handle, MIN_INITIAL_CAPACITY << 1);
     }
 
-    @SuppressWarnings("unchecked")
-    ChannelOutboundBuffer(AbstractChannel channel, int initialCapacity) {
+    private ChannelOutboundBuffer(Handle handle, int initialCapacity) {
         if (initialCapacity < 0) {
             throw new IllegalArgumentException("initialCapacity: " + initialCapacity + " (expected: >= 0)");
         }
@@ -80,41 +112,173 @@ final class ChannelOutboundBuffer {
             initialCapacity = MIN_INITIAL_CAPACITY;
         }
 
-        this.channel = channel;
+        this.handle = handle;
 
-        messageLists = new MessageList[initialCapacity];
-        messageListSizes = new long[initialCapacity];
+        flushed = new Object[initialCapacity];
+        flushedPromises = new ChannelPromise[initialCapacity];
+        flushedPendingSizes = new int[initialCapacity];
+        flushedProgresses = new long[initialCapacity];
+        flushedTotals = new long[initialCapacity];
+
+        nioBuffers = new ByteBuffer[initialCapacity];
+
+        unflushed = new Object[initialCapacity];
+        unflushedPromises = new ChannelPromise[initialCapacity];
+        unflushedPendingSizes = new int[initialCapacity];
+        unflushedTotals = new long[initialCapacity];
+    }
+
+    void recycle() {
+        if (head != tail) {
+            throw new IllegalStateException();
+        }
+        if (unflushedCount != 0) {
+            throw new IllegalStateException();
+        }
+        if (totalPendingSize != 0) {
+            throw new IllegalStateException();
+        }
+
+        RECYCLER.recycle(this, handle);
     }
 
     void addMessage(Object msg, ChannelPromise promise) {
-        MessageList unflushedMessageList = this.unflushedMessageList;
-        if (unflushedMessageList == null) {
-            this.unflushedMessageList = unflushedMessageList = MessageList.newInstance();
+        Object[] unflushed = this.unflushed;
+        int unflushedCount = this.unflushedCount;
+        if (unflushedCount == unflushed.length - 1) {
+            doubleUnflushedCapacity();
+            unflushed = this.unflushed;
         }
 
-        unflushedMessageList.add(msg, promise);
-
-        int size = channel.calculateMessageSize(msg);
-        unflushedMessageListSize += size;
+        final int size = channel.calculateMessageSize(msg);
         incrementPendingOutboundBytes(size);
+
+        unflushed[unflushedCount] = msg;
+        unflushedPendingSizes[unflushedCount] = size;
+        unflushedPromises[unflushedCount] = promise;
+        unflushedTotals[unflushedCount] = total(msg);
+        this.unflushedCount = unflushedCount + 1;
+    }
+
+    private static long total(Object msg) {
+        if (msg instanceof ByteBuf) {
+            return ((ByteBuf) msg).readableBytes();
+        }
+        if (msg instanceof FileRegion) {
+            return ((FileRegion) msg).count();
+        }
+        if (msg instanceof ByteBufHolder) {
+            return ((ByteBufHolder) msg).content().readableBytes();
+        }
+        return -1;
+    }
+
+    private void doubleUnflushedCapacity() {
+        int newCapacity = unflushed.length << 1;
+        if (newCapacity < 0) {
+            throw new IllegalStateException();
+        }
+
+        int unflushedCount = this.unflushedCount;
+
+        Object[] a1 = new Object[newCapacity];
+        System.arraycopy(unflushed, 0, a1, 0, unflushedCount);
+        unflushed = a1;
+
+        ChannelPromise[] a2 = new ChannelPromise[newCapacity];
+        System.arraycopy(unflushedPromises, 0, a2, 0, unflushedCount);
+        unflushedPromises = a2;
+
+        int[] a3 = new int[newCapacity];
+        System.arraycopy(unflushedPendingSizes, 0, a3, 0, unflushedCount);
+        unflushedPendingSizes = a3;
+
+        long[] a4 = new long[newCapacity];
+        System.arraycopy(unflushedTotals, 0, a4, 0, unflushedCount);
+        unflushedTotals = a4;
     }
 
     void addFlush() {
-        MessageList unflushedMessageList = this.unflushedMessageList;
-        if (unflushedMessageList == null) {
+        final int unflushedCount = this.unflushedCount;
+        if (unflushedCount == 0) {
             return;
         }
 
+        Object[] unflushed = this.unflushed;
+        ChannelPromise[] unflushedPromises = this.unflushedPromises;
+        int[] unflushedPendingSizes = this.unflushedPendingSizes;
+        long[] unflushedTotals = this.unflushedTotals;
+
+        Object[] flushed = this.flushed;
+        ChannelPromise[] flushedPromises = this.flushedPromises;
+        int[] flushedPendingSizes = this.flushedPendingSizes;
+        long[] flushedProgresses = this.flushedProgresses;
+        long[] flushedTotals = this.flushedTotals;
+        int head = this.head;
         int tail = this.tail;
 
-        messageLists[tail] = unflushedMessageList;
-        messageListSizes[tail] = unflushedMessageListSize;
-        this.unflushedMessageList = null;
-        unflushedMessageListSize = 0;
-
-        if ((this.tail = (tail + 1) & (messageLists.length - 1)) == head) {
-            doubleCapacity();
+        for (int i = 0; i < unflushedCount; i ++) {
+            flushed[tail] = unflushed[i];
+            flushedPromises[tail] = unflushedPromises[i];
+            flushedPendingSizes[tail] = unflushedPendingSizes[i];
+            flushedProgresses[tail] = 0;
+            flushedTotals[tail] = unflushedTotals[i];
+            if ((tail = (tail + 1) & (flushed.length - 1)) == head) {
+                this.tail = tail;
+                doubleFlushedCapacity();
+                head = this.head;
+                tail = this.tail;
+                flushed = this.flushed;
+                flushedPromises = this.flushedPromises;
+                flushedPendingSizes = this.flushedPendingSizes;
+                flushedProgresses = this.flushedProgresses;
+                flushedTotals = this.flushedTotals;
+            }
         }
+
+        Arrays.fill(unflushed, 0, unflushedCount, null);
+        Arrays.fill(unflushedPromises, 0, unflushedCount, null);
+        this.unflushedCount = 0;
+
+        this.tail = tail;
+    }
+
+    private void doubleFlushedCapacity() {
+        int p = head;
+        int n = flushed.length;
+        int r = n - p; // number of elements to the right of p
+        int newCapacity = n << 1;
+        if (newCapacity < 0) {
+            throw new IllegalStateException();
+        }
+
+        Object[] a1 = new Object[newCapacity];
+        System.arraycopy(flushed, p, a1, 0, r);
+        System.arraycopy(flushed, 0, a1, r, p);
+        flushed = a1;
+
+        ChannelPromise[] a2 = new ChannelPromise[newCapacity];
+        System.arraycopy(flushedPromises, p, a2, 0, r);
+        System.arraycopy(flushedPromises, 0, a2, r, p);
+        flushedPromises = a2;
+
+        int[] a3 = new int[newCapacity];
+        System.arraycopy(flushedPendingSizes, p, a3, 0, r);
+        System.arraycopy(flushedPendingSizes, 0, a3, r, p);
+        flushedPendingSizes = a3;
+
+        long[] a4 = new long[newCapacity];
+        System.arraycopy(flushedProgresses, p, a4, 0, r);
+        System.arraycopy(flushedProgresses, 0, a4, r, p);
+        flushedProgresses = a4;
+
+        long[] a5 = new long[newCapacity];
+        System.arraycopy(flushedTotals, p, a5, 0, r);
+        System.arraycopy(flushedTotals, 0, a5, r, p);
+        flushedTotals = a5;
+
+        head = 0;
+        tail = n;
     }
 
     private void incrementPendingOutboundBytes(int size) {
@@ -122,7 +286,7 @@ final class ChannelOutboundBuffer {
             return;
         }
 
-        long newWriteBufferSize = pendingOutboundBytes += size;
+        long newWriteBufferSize = totalPendingSize += size;
         int highWaterMark = channel.config().getWriteBufferHighWaterMark();
 
         if (newWriteBufferSize > highWaterMark) {
@@ -132,114 +296,213 @@ final class ChannelOutboundBuffer {
         }
     }
 
-    private void decrementPendingOutboundBytes(long size) {
+    private void decrementPendingOutboundBytes(int size) {
         if (size == 0) {
             return;
         }
 
-        long newWriteBufferSize = pendingOutboundBytes -= size;
+        long newWriteBufferSize = totalPendingSize -= size;
         int lowWaterMark = channel.config().getWriteBufferLowWaterMark();
 
         if (newWriteBufferSize == 0 || newWriteBufferSize < lowWaterMark) {
-
             if (WRITABLE_UPDATER.compareAndSet(this, 0, 1)) {
                 channel.pipeline().fireChannelWritabilityChanged();
             }
         }
     }
 
-    private void doubleCapacity() {
-        assert head == tail;
-
-        int p = head;
-        int n = messageLists.length;
-        int r = n - p; // number of elements to the right of p
-        int newCapacity = n << 1;
-        if (newCapacity < 0) {
-            throw new IllegalStateException("Sorry, deque too big");
-        }
-
-        @SuppressWarnings("unchecked")
-        MessageList[] a1 = new MessageList[newCapacity];
-        System.arraycopy(messageLists, p, a1, 0, r);
-        System.arraycopy(messageLists, 0, a1, r, p);
-        messageLists = a1;
-
-        long[] a2 = new long[newCapacity];
-        System.arraycopy(messageListSizes, p, a2, 0, r);
-        System.arraycopy(messageListSizes, 0, a2, r, p);
-        messageListSizes = a2;
-
-        head = 0;
-        tail = n;
+    public Object current() {
+        return flushed[head];
     }
 
-    boolean next() {
-        // FIXME: pendingOutboundBytes should be decreased when the messages are flushed.
+    public void progress(long amount) {
+        int head = this.head;
+        ChannelPromise p = flushedPromises[head];
+        if (p instanceof ChannelProgressivePromise) {
+            long progress = flushedProgresses[head] + amount;
+            flushedProgresses[head] = progress;
+            ((ChannelProgressivePromise) p).tryProgress(progress, flushedTotals[head]);
+        }
+    }
 
-        decrementPendingOutboundBytes(currentMessageListSize);
+    public boolean remove() {
+        int head = this.head;
 
-        int h = head;
-
-        MessageList e = messageLists[h]; // Element is null if deque empty
-        if (e == null) {
-            currentMessageListSize = 0;
-            currentMessageList = null;
+        Object msg = flushed[head];
+        if (msg == null) {
             return false;
         }
 
-        currentMessageList = messageLists[h];
-        currentMessageIndex = 0;
-        currentMessageListSize = messageListSizes[h];
+        safeRelease(msg);
+        flushed[head] = null;
 
-        messageLists[h] = null;
-        messageListSizes[h] = 0;
+        ChannelPromise promise = flushedPromises[head];
+        promise.trySuccess();
+        flushedPromises[head] = null;
 
-        head = h + 1 & messageLists.length - 1;
+        decrementPendingOutboundBytes(flushedPendingSizes[head]);
+        flushedPendingSizes[head] = 0;
+
+        this.head = head + 1 & flushed.length - 1;
         return true;
     }
 
+    public boolean remove(Throwable cause) {
+        int head = this.head;
+
+        Object msg = flushed[head];
+        if (msg == null) {
+            return false;
+        }
+
+        safeRelease(msg);
+        flushed[head] = null;
+
+        safeFail(flushedPromises[head], cause);
+        flushedPromises[head] = null;
+
+        decrementPendingOutboundBytes(flushedPendingSizes[head]);
+        flushedPendingSizes[head] = 0;
+
+        this.head = head + 1 & flushed.length - 1;
+        return true;
+    }
+
+    /**
+     * Returns an array of direct NIO buffers if the currently pending messages are made of {@link ByteBuf} only.
+     * {@code null} is returned otherwise.  If this method returns a non-null array, {@link #nioBufferCount()} and
+     * {@link #nioBufferSize()} will return the number of NIO buffers in the returned array and the total number
+     * of readable bytes of the NIO buffers respectively.
+     * <p>
+     * Note that the returned array is reused and thus should not escape
+     * {@link AbstractChannel#doWrite(ChannelOutboundBuffer)}.
+     * Refer to {@link NioSocketChannel#doWrite(ChannelOutboundBuffer)} for an example.
+     * </p>
+     */
+    public ByteBuffer[] nioBuffers() {
+        ByteBuffer[] nioBuffers = this.nioBuffers;
+        long nioBufferSize = 0;
+        int nioBufferCount = 0;
+
+        final int mask = flushed.length - 1;
+
+        Object m;
+        int i = head;
+        while ((m = flushed[i]) != null) {
+            if (!(m instanceof ByteBuf)) {
+                this.nioBufferCount = 0;
+                this.nioBufferSize = 0;
+                return null;
+            }
+
+            ByteBuf buf = (ByteBuf) m;
+
+            final int readerIndex = buf.readerIndex();
+            final int readableBytes = buf.writerIndex() - readerIndex;
+
+            if (readableBytes > 0) {
+                nioBufferSize += readableBytes;
+
+                if (buf.isDirect()) {
+                    int count = buf.nioBufferCount();
+                    if (count == 1) {
+                        if (nioBufferCount == nioBuffers.length) {
+                            this.nioBuffers = nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCount);
+                        }
+                        nioBuffers[nioBufferCount ++] = buf.internalNioBuffer(readerIndex, readableBytes);
+                    } else {
+                        ByteBuffer[] nioBufs = buf.nioBuffers();
+                        if (nioBufferCount + nioBufs.length == nioBuffers.length + 1) {
+                            this.nioBuffers = nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCount);
+                        }
+                        for (ByteBuffer nioBuf: nioBufs) {
+                            if (nioBuf == null) {
+                                break;
+                            }
+                            nioBuffers[nioBufferCount ++] = nioBuf;
+                        }
+                    }
+                } else {
+                    ByteBuf directBuf = channel.alloc().directBuffer(readableBytes);
+                    directBuf.writeBytes(buf, readerIndex, readableBytes);
+                    buf.release();
+                    flushed[i] = directBuf;
+                    if (nioBufferCount == nioBuffers.length) {
+                        nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCount);
+                    }
+                    nioBuffers[nioBufferCount ++] = directBuf.internalNioBuffer(0, readableBytes);
+                }
+            }
+
+            i = i + 1 & mask;
+        }
+
+        this.nioBufferCount = nioBufferCount;
+        this.nioBufferSize = nioBufferSize;
+
+        return nioBuffers;
+    }
+
+    private static ByteBuffer[] doubleNioBufferArray(ByteBuffer[] array, int size) {
+        int newCapacity = array.length << 1;
+        if (newCapacity < 0) {
+            throw new IllegalStateException();
+        }
+
+        ByteBuffer[] newArray = new ByteBuffer[newCapacity];
+        System.arraycopy(array, 0, newArray, 0, size);
+
+        return newArray;
+    }
+
+    public int nioBufferCount() {
+        return nioBufferCount;
+    }
+
+    public long nioBufferSize() {
+        return nioBufferSize;
+    }
+
     boolean getWritable() {
-        return WRITABLE_UPDATER.get(this) == 1;
+        return WRITABLE_UPDATER.get(this) != 0;
     }
 
-    int size() {
-        return tail - head & messageLists.length - 1;
+    public int size() {
+        return tail - head & flushed.length - 1;
     }
 
-    boolean isEmpty() {
+    public boolean isEmpty() {
         return head == tail;
     }
 
-    void clearUnflushed(Throwable cause) {
+    void failUnflushed(Throwable cause) {
         if (inFail) {
-            return;
-        }
-
-        MessageList unflushed = unflushedMessageList;
-        if (unflushed == null) {
             return;
         }
 
         inFail = true;
 
         // Release all unflushed messages.
-        Object[] messages = unflushed.messages();
-        ChannelPromise[] promises = unflushed.promises();
-        final int size = unflushed.size();
+        Object[] unflushed = this.unflushed;
+        ChannelPromise[] unflushedPromises = this.unflushedPromises;
+        int[] unflushedPendingSizes = this.unflushedPendingSizes;
+        final int unflushedCount = this.unflushedCount;
         try {
-            for (int i = 0; i < size; i++) {
-                safeRelease(messages[i], promises[i], cause);
+            for (int i = 0; i < unflushedCount; i++) {
+                safeRelease(unflushed[i]);
+                unflushed[i] = null;
+                safeFail(unflushedPromises[i], cause);
+                unflushedPromises[i] = null;
+                decrementPendingOutboundBytes(unflushedPendingSizes[i]);
+                unflushedPendingSizes[i] = 0;
             }
         } finally {
-            unflushed.recycle();
-            decrementPendingOutboundBytes(unflushedMessageListSize);
-            unflushedMessageListSize = 0;
+            this.unflushedCount = 0;
             inFail = false;
         }
     }
 
-    void fail(Throwable cause) {
+    void failFlushed(Throwable cause) {
         // Make sure that this method does not reenter.  A listener added to the current promise can be notified by the
         // current thread in the tryFailure() call of the loop below, and the listener can trigger another fail() call
         // indirectly (usually by closing the channel.)
@@ -251,49 +514,27 @@ final class ChannelOutboundBuffer {
 
         try {
             inFail = true;
-            if (currentMessageList == null) {
-                if (!next()) {
-                    return;
+            for (;;) {
+                if (!remove(cause)) {
+                    break;
                 }
             }
-
-            do {
-                if (currentMessageList != null) {
-                    // Store a local reference of current messages
-                    // This is needed as a promise may have a listener attached that will close the channel
-                    // The close will call next() which will set currentMessages to null and so
-                    // trigger a NPE in the finally block if no local reference is used.
-                    //
-                    // See https://github.com/netty/netty/issues/1573
-                    MessageList current = currentMessageList;
-                    // Release all failed messages.
-                    Object[] messages = current.messages();
-                    ChannelPromise[] promises = current.promises();
-                    final int size = current.size();
-                    try {
-                        for (int i = currentMessageIndex; i < size; i++) {
-                            safeRelease(messages[i], promises[i], cause);
-                        }
-                    } finally {
-                        current.recycle();
-                    }
-                }
-            } while(next());
         } finally {
             inFail = false;
         }
     }
 
-    private static void safeRelease(Object message, ChannelPromise promise, Throwable cause) {
+    private static void safeRelease(Object message) {
         try {
             ReferenceCountUtil.release(message);
         } catch (Throwable t) {
             logger.warn("Failed to release a message.", t);
         }
+    }
 
-        ChannelPromise p = promise;
-        if (!(p instanceof VoidChannelPromise) && !p.tryFailure(cause)) {
-            logger.warn("Promise done already: {} - new exception is:", p, cause);
+    private static void safeFail(ChannelPromise promise, Throwable cause) {
+        if (!(promise instanceof VoidChannelPromise) && !promise.tryFailure(cause)) {
+            logger.warn("Promise done already: {} - new exception is:", promise, cause);
         }
     }
 }

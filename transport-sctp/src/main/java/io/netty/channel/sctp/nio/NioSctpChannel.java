@@ -292,10 +292,14 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     }
 
     @Override
-    protected int doWriteMessages(Object[] msgs, int msgLength, int startIndex, boolean lastSpin) throws Exception {
-        SctpMessage packet = (SctpMessage) msgs[startIndex];
+    protected boolean doWriteMessage(Object msg) throws Exception {
+        SctpMessage packet = (SctpMessage) msg;
         ByteBuf data = packet.content();
         int dataLen = data.readableBytes();
+        if (dataLen == 0) {
+            return true;
+        }
+
         ByteBuffer nioData;
         if (data.nioBufferCount() == 1) {
             nioData = data.nioBuffer();
@@ -311,32 +315,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
 
         final int writtenBytes = javaChannel().send(nioData, mi);
 
-        final SelectionKey key = selectionKey();
-        final int interestOps = key.interestOps();
-        if (writtenBytes <= 0 && dataLen > 0) {
-            // Did not write a packet.
-            // 1) If 'lastSpin' is false, the caller will call this method again real soon.
-            //    - Do not update OP_WRITE.
-            // 2) If 'lastSpin' is true, the caller will not retry.
-            //    - Set OP_WRITE so that the event loop calls flushForcibly() later.
-            if (lastSpin) {
-                if ((interestOps & SelectionKey.OP_WRITE) == 0) {
-                    key.interestOps(interestOps | SelectionKey.OP_WRITE);
-                }
-            }
-            return 0;
-        }
-
-        // packet was written free up buffer
-        packet.release();
-
-        if (msgLength == 1) {
-            // Wrote the outbound buffer completely - clear OP_WRITE.
-            if ((interestOps & SelectionKey.OP_WRITE) != 0) {
-                key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
-            }
-        }
-        return 1;
+        return writtenBytes > 0;
     }
 
     @Override

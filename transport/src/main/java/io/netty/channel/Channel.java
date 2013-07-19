@@ -250,5 +250,10 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
          * that take a {@link ChannelPromise} as argument but for which you not want to get notified.
          */
         ChannelPromise voidPromise();
+
+        /**
+         * Returns the {@link ChannelOutboundBuffer} of the {@link Channel} where the pending write requests are stored.
+         */
+        ChannelOutboundBuffer outboundBuffer();
     }
 }

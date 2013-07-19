@@ -28,7 +28,6 @@ import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
@@ -224,18 +223,17 @@ public final class NioDatagramChannel
     }
 
     @Override
-    protected int doWriteMessages(Object[] msgs, int msgsLength, int startIndex, boolean lastSpin) throws Exception {
-        final Object o = msgs[startIndex];
+    protected boolean doWriteMessage(Object msg) throws Exception {
         final Object m;
         final ByteBuf data;
         final SocketAddress remoteAddress;
-        if (o instanceof AddressedEnvelope) {
+        if (msg instanceof AddressedEnvelope) {
             @SuppressWarnings("unchecked")
-            AddressedEnvelope<Object, SocketAddress> envelope = (AddressedEnvelope<Object, SocketAddress>) o;
+            AddressedEnvelope<Object, SocketAddress> envelope = (AddressedEnvelope<Object, SocketAddress>) msg;
             remoteAddress = envelope.recipient();
             m = envelope.content();
         } else {
-            m = o;
+            m = msg;
             remoteAddress = null;
         }
 
@@ -244,10 +242,14 @@ public final class NioDatagramChannel
         } else if (m instanceof ByteBuf) {
             data = (ByteBuf) m;
         } else {
-            throw new UnsupportedOperationException("unsupported message type: " + StringUtil.simpleClassName(0));
+            throw new UnsupportedOperationException("unsupported message type: " + StringUtil.simpleClassName(msg));
         }
 
         int dataLen = data.readableBytes();
+        if (dataLen == 0) {
+            return true;
+        }
+
         ByteBuffer nioData;
         if (data.nioBufferCount() == 1) {
             nioData = data.nioBuffer();
@@ -264,32 +266,7 @@ public final class NioDatagramChannel
             writtenBytes = javaChannel().write(nioData);
         }
 
-        final SelectionKey key = selectionKey();
-        final int interestOps = key.interestOps();
-        if (writtenBytes <= 0 && dataLen > 0) {
-            // Did not write a packet.
-            // 1) If 'lastSpin' is false, the caller will call this method again real soon.
-            //    - Do not update OP_WRITE.
-            // 2) If 'lastSpin' is true, the caller will not retry.
-            //    - Set OP_WRITE so that the event loop calls flushForcibly() later.
-            if (lastSpin) {
-                if ((interestOps & SelectionKey.OP_WRITE) == 0) {
-                    key.interestOps(interestOps | SelectionKey.OP_WRITE);
-                }
-            }
-            return 0;
-        }
-
-        // Wrote a packet - free the message.
-        ReferenceCountUtil.release(o);
-
-        if (startIndex + 1 == msgsLength) {
-            // Wrote the outbound buffer completely - clear OP_WRITE.
-            if ((interestOps & SelectionKey.OP_WRITE) != 0) {
-                key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
-            }
-        }
-        return 1;
+        return writtenBytes > 0;
     }
 
     @Override

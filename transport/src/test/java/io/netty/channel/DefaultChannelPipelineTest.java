@@ -23,6 +23,7 @@ import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalServerChannel;
+import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import org.junit.After;
@@ -100,37 +101,10 @@ public class DefaultChannelPipelineTest {
     public void testFreeCalled() throws Exception {
         final CountDownLatch free = new CountDownLatch(1);
 
-        final ReferenceCounted holder = new ReferenceCounted() {
+        final ReferenceCounted holder = new AbstractReferenceCounted() {
             @Override
-            public int refCnt() {
-                return (int) free.getCount();
-            }
-
-            @Override
-            public ReferenceCounted retain() {
-                fail();
-                return this;
-            }
-
-            @Override
-            public ReferenceCounted retain(int increment) {
-                fail();
-                return this;
-            }
-
-            @Override
-            public boolean release() {
-                assertEquals(1, refCnt());
+            protected void deallocate() {
                 free.countDown();
-                return true;
-            }
-
-            @Override
-            public boolean release(int decrement) {
-                for (int i = 0; i < decrement; i ++) {
-                    release();
-                }
-                return true;
             }
         };
 

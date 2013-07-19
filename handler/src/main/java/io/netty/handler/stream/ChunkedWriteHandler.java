@@ -22,6 +22,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -282,6 +283,8 @@ public class ChunkedWriteHandler
                             if (!future.isSuccess()) {
                                 closeInput((ChunkedInput<?>) pendingMessage);
                                 currentWrite.fail(future.cause());
+                            } else {
+                                currentWrite.progress();
                             }
                         }
                     });
@@ -293,8 +296,11 @@ public class ChunkedWriteHandler
                             if (!future.isSuccess()) {
                                 closeInput((ChunkedInput<?>) pendingMessage);
                                 currentWrite.fail(future.cause());
-                            } else if (isWritable()) {
-                                resumeTransfer();
+                            } else {
+                                currentWrite.progress();
+                                if (isWritable()) {
+                                    resumeTransfer();
+                                }
                             }
                         }
                     });
@@ -327,6 +333,7 @@ public class ChunkedWriteHandler
     private static final class PendingWrite {
         final Object msg;
         final ChannelPromise promise;
+        private long progress;
 
         PendingWrite(Object msg, ChannelPromise promise) {
             this.msg = msg;
@@ -337,6 +344,13 @@ public class ChunkedWriteHandler
             ReferenceCountUtil.release(msg);
             if (promise != null) {
                 promise.setFailure(cause);
+            }
+        }
+
+        void progress() {
+            progress ++;
+            if (promise instanceof ChannelProgressivePromise) {
+                ((ChannelProgressivePromise) promise).tryProgress(progress, -1);
             }
         }
     }
