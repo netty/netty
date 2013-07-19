@@ -23,7 +23,6 @@ import static io.netty.handler.codec.http.HttpConstants.LF;
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty.buffer.Unpooled.copiedBuffer;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
@@ -44,6 +43,16 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * EventSource transport is an streaming transport in that is maintains a persistent
+ * connection from the server to the client over which the server can send messages.
+ * This is often refered to a Server Side Events (SSE) and the client side.
+ *
+ * The response for opening such a unidirection channel is done with a simple
+ * plain response with a 'Content-Type' of 'text/event-stream'. Subsequent
+ * http chunks will contain data that the server whishes to send to the client.
+ *
+ */
 public class EventSourceTransport extends ChannelOutboundHandlerAdapter {
 
     public static final String CONTENT_TYPE_EVENT_STREAM = "text/event-stream; charset=UTF-8";
@@ -69,11 +78,11 @@ public class EventSourceTransport extends ChannelOutboundHandlerAdapter {
         if (msg instanceof Frame) {
             final Frame frame = (Frame) msg;
             if (headerSent.compareAndSet(false, true)) {
-                ctx.writeAndFlush(createResponse(CONTENT_TYPE_EVENT_STREAM), promise);
+                ctx.write(createResponse(CONTENT_TYPE_EVENT_STREAM), promise);
                 ctx.writeAndFlush(new DefaultHttpContent(CRLF.duplicate()));
             }
 
-            final ByteBuf data = Unpooled.buffer();
+            final ByteBuf data = ctx.alloc().buffer();
             data.writeBytes(FRAME_START.duplicate());
             data.writeBytes(frame.content());
             data.writeBytes(FRAME_END.duplicate());

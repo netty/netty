@@ -76,7 +76,7 @@ public class MessageFrame implements Frame {
     }
 
     private static String escapeCharacters(final char[] value) {
-        final StringBuilder sb = new StringBuilder();
+        final StringBuilder sb = new StringBuilder(value.length);
         for (int i = 0; i < value.length; i++) {
             final char ch = value[i];
             if ((ch >= '\u0000' && ch <= '\u001F') ||

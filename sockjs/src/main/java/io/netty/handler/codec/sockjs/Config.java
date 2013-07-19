@@ -64,7 +64,7 @@ public final class Config {
      *
      * @return {@code true} if WebSocket support is enabled.
      */
-    public boolean websocketEnabled() {
+    public boolean isWebsocketEnabled() {
         return websocketEnabled;
     }
 
@@ -107,7 +107,7 @@ public final class Config {
      *
      * @return {@code true} if a {@code JSESSIONID} cookie should be set.
      */
-    public boolean cookiesNeeded() {
+    public boolean areCookiesNeeded() {
         return cookiesNeeded;
     }
 
@@ -158,7 +158,7 @@ public final class Config {
      *
      * @return {@code true} if transport layer security should be used.
      */
-    public boolean tls() {
+    public boolean isTls() {
         return tls;
     }
 
@@ -294,6 +294,11 @@ public final class Config {
             return this;
         }
 
+        /**
+         * Builds Config with the previously set values.
+         *
+         * @return {@link Config} the configuration for the SockJS service.
+         */
         public Config build() {
             return new Config(this);
         }

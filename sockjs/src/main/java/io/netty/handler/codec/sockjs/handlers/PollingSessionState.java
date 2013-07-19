@@ -72,7 +72,7 @@ class PollingSessionState implements SessionState {
 
     @Override
     public void onOpen(final ChannelHandlerContext ctx) {
-        if (isInuse()) {
+        if (isInUse()) {
             logger.debug("Another connection still in open for [" + session.sessionId() + "]");
             final CloseFrame closeFrame = new CloseFrame(2010, "Another connection still open");
             ctx.writeAndFlush(closeFrame);
@@ -123,7 +123,7 @@ class PollingSessionState implements SessionState {
     }
 
     @Override
-    public boolean isInuse() {
+    public boolean isInUse() {
         synchronized (session) {
             return session.context().channel().isActive() || session.inuse();
         }
@@ -136,7 +136,7 @@ class PollingSessionState implements SessionState {
                     @Override
                     public void run() {
                         final long now = System.currentTimeMillis();
-                        if (isInuse()) {
+                        if (isInUse()) {
                             return;
                         }
                         if (session.timestamp() + session.config().sessionTimeout() < now) {

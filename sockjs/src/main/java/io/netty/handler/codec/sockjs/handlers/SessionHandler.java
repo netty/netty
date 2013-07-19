@@ -25,6 +25,7 @@ import io.netty.handler.codec.sockjs.protocol.CloseFrame;
 import io.netty.handler.codec.sockjs.protocol.MessageFrame;
 import io.netty.handler.codec.sockjs.protocol.OpenFrame;
 import io.netty.handler.codec.sockjs.util.ArgumentUtil;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -56,6 +57,8 @@ public class SessionHandler extends ChannelInboundHandlerAdapter implements Sess
             handleSession(ctx);
         } else if (msg instanceof String) {
             handleMessage((String) msg);
+        } else {
+            ctx.fireChannelRead(ReferenceCountUtil.retain(msg));
         }
     }
 
@@ -106,7 +109,7 @@ public class SessionHandler extends ChannelInboundHandlerAdapter implements Sess
         ctx.fireChannelInactive();
     }
 
-    private boolean isWritable(final Channel channel) {
+    private static boolean isWritable(final Channel channel) {
         return channel.isActive() && channel.isRegistered();
     }
 

@@ -102,6 +102,6 @@ interface SessionState {
      *
      * @return {@code true} if the session is in use.
      */
-    boolean isInuse();
+    boolean isInUse();
 
 }

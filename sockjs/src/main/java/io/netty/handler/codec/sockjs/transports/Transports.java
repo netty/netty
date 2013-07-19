@@ -100,7 +100,7 @@ public final class Transports {
     }
 
     public static void setDefaultHeaders(final HttpResponse response, final Config config) {
-        if (config.cookiesNeeded()) {
+        if (config.areCookiesNeeded()) {
             response.headers().set(SET_COOKIE, Transports.DEFAULT_COOKIE);
         }
         setNoCacheHeaders(response);
@@ -108,7 +108,7 @@ public final class Transports {
     }
 
     public static void setDefaultHeaders(final FullHttpResponse response, final Config config, HttpRequest request) {
-        if (config.cookiesNeeded()) {
+        if (config.areCookiesNeeded()) {
             response.headers().set(SET_COOKIE, encodeSessionIdCookie(request));
         }
         setNoCacheHeaders(response);
@@ -116,7 +116,7 @@ public final class Transports {
     }
 
     public static void setSessionIdCookie(final FullHttpResponse response, final Config config, HttpRequest request) {
-        if (config.cookiesNeeded()) {
+        if (config.areCookiesNeeded()) {
             response.headers().set(SET_COOKIE, encodeSessionIdCookie(request));
         }
     }

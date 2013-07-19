@@ -18,6 +18,7 @@ package io.netty.handler.codec.sockjs.handlers;
 import static io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION;
 import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaders.Values.KEEP_ALIVE;
+import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static java.util.UUID.randomUUID;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -31,7 +32,6 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.sockjs.SockJSServiceFactory;
 import io.netty.handler.codec.sockjs.protocol.Greeting;
@@ -59,6 +59,13 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * This handler is the main entry point for SockJS HTTP Request.
+ *
+ * It is responsible for inspecting the request uri and adding ChannelHandlers for
+ * different transport protocols that SockJS support. Once this has been done this
+ * handler will be removed from the channel pipeline.
+ */
 public class SockJSHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SockJSHandler.class);
@@ -67,6 +74,12 @@ public class SockJSHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     private static final PathParams NON_SUPPORTED_PATH = new NonSupportedPath();
     private static final Pattern SERVER_SESSION_PATTERN = Pattern.compile("^/([^/.]+)/([^/.]+)/([^/.]+)");
 
+    /**
+     * Sole constructor which takes one or more {@code SockJSServiceFactory}. These factories will
+     * later be used by the server to create the SockJS services that will be exposed by this server
+     *
+     * @param factories one or more {@link SockJSServiceFactory}s.
+     */
     public SockJSHandler(final SockJSServiceFactory... factories) {
         for (SockJSServiceFactory factory : factories) {
             this.factories.put(factory.config().prefix(), factory);
@@ -184,13 +197,9 @@ public class SockJSHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     }
 
     private void writeNotFoundResponse(final HttpRequest request, final ChannelHandlerContext ctx) {
-        final FullHttpResponse response = httpResponse(request, HttpResponseStatus.NOT_FOUND);
-        response.content().writeBytes(Unpooled.copiedBuffer("Not found", CharsetUtil.UTF_8));
+        final FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), NOT_FOUND,
+                Unpooled.copiedBuffer("Not found", CharsetUtil.UTF_8));
         writeResponse(ctx.channel(), request, response);
-    }
-
-    private FullHttpResponse httpResponse(final HttpRequest request, final HttpResponseStatus status) {
-        return new DefaultFullHttpResponse(request.getProtocolVersion(), status);
     }
 
     private void writeResponse(final Channel channel, final HttpRequest request, final FullHttpResponse response) {
@@ -248,7 +257,7 @@ public class SockJSHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         }
     }
 
-    public interface PathParams {
+    interface PathParams {
         boolean matches();
         String serverId();
         String sessionId();

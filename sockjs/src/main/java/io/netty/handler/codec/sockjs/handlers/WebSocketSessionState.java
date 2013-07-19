@@ -58,7 +58,7 @@ class WebSocketSessionState implements SessionState {
 
     @Override
     public void onOpen(final ChannelHandlerContext ctx) {
-        if (isInuse()) {
+        if (isInUse()) {
             logger.debug("Another connection still in open for [" + session.sessionId() + "]");
             final CloseFrame closeFrame = new CloseFrame(2010, "Another connection still open");
             ctx.writeAndFlush(closeFrame);
@@ -113,7 +113,7 @@ class WebSocketSessionState implements SessionState {
     }
 
     @Override
-    public boolean isInuse() {
+    public boolean isInUse() {
         return session.context().channel().isActive();
     }
 

@@ -36,6 +36,9 @@ import java.util.List;
 
 import org.codehaus.jackson.JsonParseException;
 
+/**
+ * A common base class for SockJS transports that send messages to a SockJS service.
+ */
 public abstract class AbstractSendTransport extends SimpleChannelInboundHandler<FullHttpRequest> {
 
     protected Config config;
@@ -64,13 +67,23 @@ public abstract class AbstractSendTransport extends SimpleChannelInboundHandler<
         }
     }
 
+    /**
+     * Allows concrete subclasses to very how they will respond after a message has been sent
+     * to the target SockJS service.
+     * Different transport protocols require different responses, for example jsonp_send requires an
+     * OK response while xhr_send NO_CONTENT.
+     *
+     * @param ctx the current {@link ChannelHandlerContext}.
+     * @param request the http request.
+     * @throws Exception if a failure occurs while trying to respond.
+     */
     public abstract void respond(final ChannelHandlerContext ctx, final FullHttpRequest request) throws Exception;
 
     private boolean noContent(final String content) {
         return content.length() == 0;
     }
 
-    private String getContent(final FullHttpRequest request) {
+    private static String getContent(final FullHttpRequest request) {
         final String contentType = getContentType(request);
         if (Transports.CONTENT_TYPE_FORM.equals(contentType)) {
             final List<String> data = getDataFormParameter(request);
@@ -83,7 +96,7 @@ public abstract class AbstractSendTransport extends SimpleChannelInboundHandler<
         return request.content().toString(CharsetUtil.UTF_8);
     }
 
-    private String getContentType(final FullHttpRequest request) {
+    private static String getContentType(final FullHttpRequest request) {
         final String contentType = request.headers().get(CONTENT_TYPE);
         if (contentType == null) {
             return Transports.CONTENT_TYPE_PLAIN;
@@ -91,7 +104,7 @@ public abstract class AbstractSendTransport extends SimpleChannelInboundHandler<
         return contentType;
     }
 
-    private List<String> getDataFormParameter(final FullHttpRequest request) {
+    private static List<String> getDataFormParameter(final FullHttpRequest request) {
         final QueryStringDecoder decoder = new QueryStringDecoder("?" + request.content().toString(CharsetUtil.UTF_8));
         return decoder.parameters().get("d");
     }

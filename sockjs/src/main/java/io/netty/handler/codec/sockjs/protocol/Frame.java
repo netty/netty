@@ -17,8 +17,16 @@ package io.netty.handler.codec.sockjs.protocol;
 
 import io.netty.buffer.ByteBuf;
 
+/**
+ * Represents a SockJS frame.
+ */
 public interface Frame {
 
+    /**
+     * Returns the content for this SockJS frame
+     *
+     * @return {@code ByteBuf} the contents of this SockJS frame.
+     */
     ByteBuf content();
 
 }

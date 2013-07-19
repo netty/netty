@@ -77,15 +77,15 @@ public class CorsInboundHandler extends SimpleChannelInboundHandler<HttpRequest>
         ctx.writeAndFlush(response);
     }
 
-    private boolean isPollingTransport(final String uri) {
+    private static boolean isPollingTransport(final String uri) {
         return uri.contains(Transports.Types.XHR.path());
     }
 
-    private boolean isPreflightRequest(final HttpRequest request) {
+    private static boolean isPreflightRequest(final HttpRequest request) {
         return request.getMethod().equals(HttpMethod.OPTIONS);
     }
 
-    private CorsMetadata extractCorsMetadata(final HttpRequest request) {
+    private static CorsMetadata extractCorsMetadata(final HttpRequest request) {
         final String origin = request.headers().get(ORIGIN);
         final String headers = request.headers().get(ACCESS_CONTROL_REQUEST_HEADERS);
         return new CorsMetadata(origin, headers);

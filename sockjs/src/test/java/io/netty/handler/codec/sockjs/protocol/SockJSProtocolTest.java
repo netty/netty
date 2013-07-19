@@ -1548,21 +1548,6 @@ public class SockJSProtocolTest {
     }
 
     @Test
-    public void nonMatch() {
-        final SockJSHandler.PathParams sessionPath = SockJSHandler.matches("/xhr_send");
-        assertThat(sessionPath.matches(), is(false));
-    }
-
-    @Test
-    public void matches() {
-        final SockJSHandler.PathParams sessionPath = SockJSHandler.matches("/000/123/xhr_send");
-        assertThat(sessionPath.matches(), is(true));
-        assertThat(sessionPath.serverId(), equalTo("000"));
-        assertThat(sessionPath.sessionId(), equalTo("123"));
-        assertThat(sessionPath.transport(), equalTo(Transports.Types.XHR_SEND));
-    }
-
-    @Test
     public void prefixNotFound() throws Exception {
         final Config config = Config.prefix("/simplepush").cookiesNeeded().build();
         final EmbeddedChannel ch = channelForMockService(config);

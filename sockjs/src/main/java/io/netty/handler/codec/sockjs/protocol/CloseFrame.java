@@ -28,16 +28,32 @@ public class CloseFrame implements Frame {
     private final int statusCode;
     private final String statusMsg;
 
+    /**
+     * Creates a new frame with the specified status code and message.
+     *
+     * @param statusCode the status code for this close frame.
+     * @param statusMsg the status message for this close frame.
+     */
     public CloseFrame(final int statusCode, final String statusMsg) {
         ArgumentUtil.checkNotNull(statusMsg, "statusMsg");
         this.statusCode = statusCode;
         this.statusMsg = statusMsg;
     }
 
+    /**
+     * Returns the status code for this close frame.
+     *
+     * @return {@code int} the status code.
+     */
     public int statusCode() {
         return statusCode;
     }
 
+    /**
+     * Returns the status message for this close frame.
+     *
+     * @return {@code String} the status message for this close frame.
+     */
     public String statusMsg() {
         return statusMsg;
     }

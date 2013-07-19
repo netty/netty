@@ -46,9 +46,9 @@ public final class Info {
     }
 
     private static String infoContent(final Config config) {
-        final StringBuilder sb = new StringBuilder("{\"websocket\": ").append(config.websocketEnabled());
+        final StringBuilder sb = new StringBuilder("{\"websocket\": ").append(config.isWebsocketEnabled());
         sb.append(", \"origins\": [\"*:*\"]");
-        sb.append(", \"cookie_needed\": ").append(config.cookiesNeeded());
+        sb.append(", \"cookie_needed\": ").append(config.areCookiesNeeded());
         sb.append(", \"entropy\": ").append(RANDOM.nextInt(Integer.MAX_VALUE) + 1);
         sb.append("}");
         return sb.toString();

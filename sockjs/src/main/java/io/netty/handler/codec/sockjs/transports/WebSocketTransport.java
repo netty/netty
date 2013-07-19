@@ -113,7 +113,7 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
         ctx.attr(REQUEST_KEY).set(req);
 
         if (WebSocketHAProxyHandshaker.isHAProxyReqeust(req)) {
-            final String wsUrl = getWebSocketLocation(config.tls(), req);
+            final String wsUrl = getWebSocketLocation(config.isTls(), req);
             final WebSocketHAProxyHandshaker haHandshaker = new WebSocketHAProxyHandshaker(wsUrl, null, 65365);
             final ChannelFuture handshakeFuture = haHandshaker.handshake(ctx.channel(), req);
             handshakeFuture.addListener(new ChannelFutureListener() {
@@ -133,7 +133,7 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
             passMessage = false;
             return;
         } else {
-            final String wsUrl = getWebSocketLocation(config.tls(), req, Transports.Types.WEBSOCKET.path());
+            final String wsUrl = getWebSocketLocation(config.isTls(), req, Transports.Types.WEBSOCKET.path());
             final WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(wsUrl, null, false);
             handshaker = wsFactory.newHandshaker(req);
         }
