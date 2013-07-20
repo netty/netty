@@ -151,13 +151,15 @@ public final class ChannelOutboundBuffer {
         }
 
         final int size = channel.calculateMessageSize(msg);
-        incrementPendingOutboundBytes(size);
-
         unflushed[unflushedCount] = msg;
         unflushedPendingSizes[unflushedCount] = size;
         unflushedPromises[unflushedCount] = promise;
         unflushedTotals[unflushedCount] = total(msg);
         this.unflushedCount = unflushedCount + 1;
+
+        // increment pending bytes after adding message to the unflushed arrays.
+        // See https://github.com/netty/netty/issues/1619
+        incrementPendingOutboundBytes(size);
     }
 
     private static long total(Object msg) {
