@@ -19,6 +19,7 @@ import io.netty.util.concurrent.EventExecutor;
 
 import java.net.ConnectException;
 import java.net.SocketAddress;
+
 /**
  * Interface which is shared by others which need to execute outbound logic.
  */

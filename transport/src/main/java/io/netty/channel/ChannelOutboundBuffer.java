@@ -58,7 +58,7 @@ public final class ChannelOutboundBuffer {
     private final Handle handle;
     private AbstractChannel channel;
 
-    // Flushed messages are stored in a circulas queue.
+    // Flushed messages are stored in a circular buffer.
     private Object[] flushed;
     private ChannelPromise[] flushedPromises;
     private int[] flushedPendingSizes;
