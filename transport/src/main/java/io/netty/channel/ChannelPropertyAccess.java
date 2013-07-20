@@ -67,8 +67,8 @@ interface ChannelPropertyAccess {
      * </p>
      * <p>
      * Be aware that the returned {@link ChannelPromise} will not support most operations and should only be used
-     * if you want to save an object allocation for every write operation. You will not be able to detect if the operation
-     * was complete, only if it failed as the implementation will call
+     * if you want to save an object allocation for every write operation. You will not be able to detect if the
+     * operation  was complete, only if it failed as the implementation will call
      * {@link ChannelPipeline#fireExceptionCaught(Throwable)} in this case.
      * </p>
      * <strong>Be aware this is an expert feature and should be used with care!</strong>
