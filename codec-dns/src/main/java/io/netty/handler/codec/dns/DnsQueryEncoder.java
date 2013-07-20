@@ -18,7 +18,9 @@ package io.netty.handler.codec.dns;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
+import io.netty.util.CharsetUtil;
 
+import java.nio.charset.Charset;
 import java.util.List;
 
 /**
@@ -56,14 +58,16 @@ public class DnsQueryEncoder extends MessageToByteEncoder<DnsQuery> {
      *
      * @param question
      *            the question being encoded
+     * @param charset
+     *            charset names are encoded in
      * @param buf
      *            the buffer the encoded data should be written to
      */
-    public static void encodeQuestion(Question question, ByteBuf buf) {
+    public static void encodeQuestion(Question question, Charset charset, ByteBuf buf) {
         String[] parts = question.name().split("\\.");
         for (int i = 0; i < parts.length; i++) {
             buf.writeByte(parts[i].length());
-            buf.writeBytes(parts[i].getBytes());
+            buf.writeBytes(charset.encode(parts[i]));
         }
         buf.writeByte(0); // marks end of name field
         buf.writeShort(question.type());
@@ -82,7 +86,7 @@ public class DnsQueryEncoder extends MessageToByteEncoder<DnsQuery> {
         encodeHeader(query.getHeader(), buf);
         List<Question> questions = query.getQuestions();
         for (Question question : questions) {
-            encodeQuestion(question, buf);
+            encodeQuestion(question, CharsetUtil.UTF_8, buf);
         }
     }
 

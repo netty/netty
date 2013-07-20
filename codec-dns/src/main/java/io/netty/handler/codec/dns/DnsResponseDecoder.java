@@ -16,7 +16,7 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.MessageToMessageDecoder;
@@ -113,13 +113,13 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
      *            the byte buffer containing the DNS packet
      * @return a {@link Resource} record containing response data
      */
-    public static Resource decodeResource(ByteBuf buf) {
+    public static Resource decodeResource(ByteBuf buf, ByteBufAllocator allocator) {
         String name = readName(buf);
         int type = buf.readUnsignedShort();
         int aClass = buf.readUnsignedShort();
         long ttl = buf.readUnsignedInt();
         int len = buf.readUnsignedShort();
-        ByteBuf resourceData = Unpooled.buffer(len);
+        ByteBuf resourceData = allocator.buffer(len);
         int contentIndex = buf.readerIndex();
         resourceData.writeBytes(buf, len);
         return new Resource(name, type, aClass, ttl, contentIndex, resourceData);
@@ -161,7 +161,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
      *            the raw DNS response packet
      * @return the decoded {@link DnsResponse}
      */
-    public static DnsResponse decodeResponse(ByteBuf buf) {
+    public static DnsResponse decodeResponse(ByteBuf buf, ByteBufAllocator allocator) {
         DnsResponse response = new DnsResponse(buf);
         DnsResponseHeader header = decodeHeader(response, buf);
         response.setHeader(header);
@@ -174,13 +174,13 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
                     + ResponseCode.obtainError(header.getResponseCode()));
         }
         for (int i = 0; i < header.getReadAnswers(); i++) {
-            response.addAnswer(decodeResource(buf));
+            response.addAnswer(decodeResource(buf, allocator));
         }
         for (int i = 0; i < header.getReadAuthorityResources(); i++) {
-            response.addAuthorityResource(decodeResource(buf));
+            response.addAuthorityResource(decodeResource(buf, allocator));
         }
         for (int i = 0; i < header.getReadAdditionalResources(); i++) {
-            response.addAdditionalResource(decodeResource(buf));
+            response.addAdditionalResource(decodeResource(buf, allocator));
         }
         return response;
     }
@@ -189,8 +189,8 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
      * Decodes a response from a {@link DatagramPacket} containing a
      * {@link ByteBuf} with a DNS packet. Responses are sent from a DNS server
      * to a client in response to a query. This method writes the decoded
-     * response to the specified {@link List} to be handled by a
-     * specialized message handler.
+     * response to the specified {@link List} to be handled by a specialized
+     * message handler.
      *
      * @param ctx
      *            the {@link ChannelHandlerContext} this
@@ -199,13 +199,12 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
      *            the message being decoded, a {@link DatagramPacket} containing
      *            a DNS packet
      * @param out
-     *            the {@link List} to which decoded messages should be
-     *            added
+     *            the {@link List} to which decoded messages should be added
      * @throws Exception
      */
     @Override
     protected void decode(ChannelHandlerContext ctx, DatagramPacket packet, List<Object> out) throws Exception {
-        out.add(decodeResponse(packet.content()).retain());
+        out.add(decodeResponse(packet.content(), ctx.alloc()).retain());
     }
 
 }
