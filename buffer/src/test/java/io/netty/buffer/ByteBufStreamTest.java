@@ -134,6 +134,7 @@ public class ByteBufStreamTest {
 
         assertEquals("Hello, World!", in.readUTF());
         assertEquals("The first line", in.readLine());
+        assertEquals("", in.readLine());
 
         assertEquals(4, in.read(tmp));
         assertEquals(1, tmp[0]);

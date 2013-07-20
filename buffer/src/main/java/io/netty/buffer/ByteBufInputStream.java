@@ -204,7 +204,7 @@ public class ByteBufInputStream extends InputStream implements DataInput {
                     break loop;
 
                 default:
-                    lineBuf.append((char)c);
+                    lineBuf.append((char) c);
             }
         }
 
