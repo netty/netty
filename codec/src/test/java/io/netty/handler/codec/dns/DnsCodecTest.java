@@ -18,10 +18,10 @@ package io.netty.handler.codec.dns;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 
@@ -45,7 +45,7 @@ public class DnsCodecTest {
                     .handler(new Initializer());
             Channel ch = b.connect(address).sync().channel();
             DnsQuery query = new DnsQuery(15305);
-            query.addQuestion(new Question("1.0.0.127.in-addr.arpa", DnsEntry.TYPE_PTR));
+            query.addQuestion(new Question("206.226.125.74.in-addr.arpa", DnsEntry.TYPE_PTR)); // Google IP
             Assert.assertEquals("Invalid question count, expected 1.", 1, query.getHeader().questionCount());
             Assert.assertEquals("Invalid answer count, expected 0.", 0, query.getHeader().answerCount());
             Assert.assertEquals("Invalid authority resource record count, expected 0.", 0, query.getHeader()
@@ -54,7 +54,7 @@ public class DnsCodecTest {
                     .additionalResourceCount());
             Assert.assertEquals("Invalid type, should be TYPE_QUERY (0)", DnsHeader.TYPE_QUERY, query.getHeader()
                     .getType());
-            ch.write(query).sync();
+            ch.writeAndFlush(query).sync();
             if (!ch.closeFuture().await(5000)) {
                 System.err.println("DNS request timed out.");
             }
@@ -72,29 +72,26 @@ public class DnsCodecTest {
         }
     }
 
-    class Handler extends ChannelInboundHandlerAdapter {
+    class Handler extends SimpleChannelInboundHandler<DnsResponse> {
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, DnsResponse response) throws Exception {
             try {
-                if (msg instanceof DnsResponse) {
-                    DnsResponse response = (DnsResponse) msg;
-                    DnsResponseHeader header = response.getHeader();
-                    Assert.assertEquals("Invalid response code, expected TYPE_RESPONSE (1).", DnsHeader.TYPE_RESPONSE,
-                            header.getType());
-                    Assert.assertFalse("Server response was truncated.", header.isTruncated());
-                    Assert.assertTrue("Inconsistency between recursion" + "desirability and availability.",
-                            header.isRecursionDesired() == header.isRecursionAvailable());
-                    Assert.assertEquals("Invalid ID returned from server.", 15305, response.getHeader().getId());
-                    Assert.assertEquals("Question count in response not 1.", 1, response.getHeader().questionCount());
-                    Assert.assertTrue("Server didn't send any resources.", response.getHeader().answerCount()
-                            + response.getHeader().authorityResourceCount()
-                            + response.getHeader().additionalResourceCount() > 0);
-                    List<Resource> answers = response.getAnswers();
-                    for (Resource answer : answers) {
-                        if (answer.type() == DnsEntry.TYPE_PTR) {
-                            System.out.println(DnsResponseDecoder.readName(answer.content()));
-                        }
+                DnsResponseHeader header = response.getHeader();
+                Assert.assertEquals("Invalid response code, expected TYPE_RESPONSE (1).", DnsHeader.TYPE_RESPONSE,
+                        header.getType());
+                Assert.assertFalse("Server response was truncated.", header.isTruncated());
+                Assert.assertTrue("Inconsistency between recursion" + "desirability and availability.",
+                        header.isRecursionDesired() == header.isRecursionAvailable());
+                Assert.assertEquals("Invalid ID returned from server.", 15305, response.getHeader().getId());
+                Assert.assertEquals("Question count in response not 1.", 1, response.getHeader().questionCount());
+                Assert.assertTrue("Server didn't send any resources.", response.getHeader().answerCount()
+                        + response.getHeader().authorityResourceCount()
+                        + response.getHeader().additionalResourceCount() > 0);
+                List<Resource> answers = response.getAnswers();
+                for (Resource answer : answers) {
+                    if (answer.type() == DnsEntry.TYPE_PTR) {
+                        System.out.println(DnsResponseDecoder.readName(answer.content()));
                     }
                 }
             } finally {
