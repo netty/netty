@@ -60,8 +60,8 @@ public class Resource extends DnsEntry implements ByteBufHolder {
     }
 
     /**
-     * Returns the {@code writerIndex} at which the content appears in the
-     * original packet.
+     * Returns the index at which the content of this resource record
+     * appears in the original packet.
      */
     public int contentIndex() {
         return contentIndex;

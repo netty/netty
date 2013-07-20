@@ -20,8 +20,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.MessageToMessageDecoder;
+import io.netty.util.CharsetUtil;
 
-import java.nio.charset.Charset;
 import java.util.List;
 
 /**
@@ -51,7 +51,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
                 }
                 buf.readerIndex((len & 0x3f) << 8 | buf.readUnsignedByte());
             } else {
-                name.append(buf.toString(buf.readerIndex(), len, Charset.forName("UTF-8"))).append(".");
+                name.append(buf.toString(buf.readerIndex(), len, CharsetUtil.UTF_8)).append(".");
                 buf.skipBytes(len);
             }
         }
@@ -82,7 +82,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
             if (pointer) {
                 offset = (len & 0x3f) << 8 | buf.getUnsignedByte(offset++);
             } else {
-                name.append(buf.toString(offset, len, Charset.forName("UTF-8"))).append(".");
+                name.append(buf.toString(offset, len, CharsetUtil.UTF_8)).append(".");
                 offset += len;
             }
         }

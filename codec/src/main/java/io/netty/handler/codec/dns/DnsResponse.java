@@ -33,12 +33,11 @@ public class DnsResponse extends DnsMessage<DnsResponseHeader> implements ByteBu
     }
 
     /**
-     * Returns the non-decoded DNS response packet, at its
-     * <strong>original</strong> {@code readerIndex}.
+     * Returns the non-decoded DNS response packet.
      */
     @Override
     public ByteBuf content() {
-        return rawPacket.readerIndex(originalIndex);
+        return rawPacket;
     }
 
     @Override
@@ -82,6 +81,14 @@ public class DnsResponse extends DnsMessage<DnsResponseHeader> implements ByteBu
     @Override
     public boolean release(int decrement) {
         return rawPacket.release(decrement);
+    }
+
+    /**
+     * Returns the original index at which the DNS response packet starts for the {@link ByteBuf}
+     * stored in this {@link ByteBufHolder}.
+     */
+    public int originalIndex() {
+        return originalIndex;
     }
 
 }

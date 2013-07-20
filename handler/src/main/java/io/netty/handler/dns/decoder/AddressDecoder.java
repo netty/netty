@@ -52,7 +52,7 @@ public class AddressDecoder implements RecordDecoder<ByteBuf> {
      */
     @Override
     public ByteBuf decode(DnsResponse response, Resource resource) {
-        ByteBuf data = resource.content().copy();
+        ByteBuf data = resource.content().copy().readerIndex(response.originalIndex());
         int size = data.writerIndex() - data.readerIndex();
         if (data.readerIndex() != 0 || size != octets) {
             throw new DecoderException("Invalid content length, or reader index when decoding address [index: "
