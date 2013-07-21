@@ -20,11 +20,11 @@ import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static io.netty.util.CharsetUtil.UTF_8;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -37,13 +37,12 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.sockjs.Config;
 import io.netty.handler.codec.sockjs.handlers.SessionHandler.Events;
 import io.netty.handler.codec.sockjs.protocol.Frame;
-import io.netty.util.CharsetUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.List;
 
-public class JsonpPollingTransport extends ChannelOutboundHandlerAdapter implements ChannelInboundHandler {
+public class JsonpPollingTransport extends ChannelDuplexHandler {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(JsonpPollingTransport.class);
     private final FullHttpRequest request;
     private final Config config;
@@ -76,22 +75,22 @@ public class JsonpPollingTransport extends ChannelOutboundHandlerAdapter impleme
             throws Exception {
         if (msg instanceof Frame) {
             final Frame frame = (Frame) msg;
-            final FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), OK);
-            final ByteBuf content = frame.content();
-
-            final ByteBuf buffer = Unpooled.buffer();
-            Transports.escapeJson(content, buffer);
-            final String function = callback + "(\"" + buffer.toString(CharsetUtil.UTF_8) + "\");\r\n";
-
-            final ByteBuf responseContent = Unpooled.copiedBuffer(function, CharsetUtil.UTF_8);
+            final ByteBuf content = wrapWithFunction(frame.content(), ctx);
+            final FullHttpResponse response = new DefaultFullHttpResponse(request.getProtocolVersion(), OK, content);
             response.headers().set(CONTENT_TYPE, Transports.CONTENT_TYPE_JAVASCRIPT);
-            response.headers().set(CONTENT_LENGTH, responseContent.readableBytes());
-            response.content().writeBytes(responseContent);
+            response.headers().set(CONTENT_LENGTH, content.readableBytes());
             response.headers().set(CONNECTION, HttpHeaders.Values.CLOSE);
             Transports.setNoCacheHeaders(response);
             Transports.setSessionIdCookie(response, config, request);
             ctx.writeAndFlush(response, promise);
         }
+    }
+
+    private ByteBuf wrapWithFunction(final ByteBuf data, final ChannelHandlerContext ctx) {
+        final ByteBuf content = ctx.alloc().buffer();
+        Transports.escapeJson(data, content);
+        final String function = callback + "(\"" + content.toString(UTF_8) + "\");\r\n";
+        return Unpooled.copiedBuffer(function, UTF_8);
     }
 
     private void respond(final ChannelHandlerContext ctx,
@@ -106,41 +105,6 @@ public class JsonpPollingTransport extends ChannelOutboundHandlerAdapter impleme
     @Override
     public void handlerAdded(final ChannelHandlerContext ctx) throws Exception {
         logger.debug("Added [" + ctx + "]");
-    }
-
-    @Override
-    public void channelRegistered(final ChannelHandlerContext ctx) throws Exception {
-        ctx.fireChannelRegistered();
-    }
-
-    @Override
-    public void channelUnregistered(final ChannelHandlerContext ctx) throws Exception {
-        ctx.fireChannelUnregistered();
-    }
-
-    @Override
-    public void channelActive(final ChannelHandlerContext ctx) throws Exception {
-        ctx.fireChannelActive();
-    }
-
-    @Override
-    public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
-        ctx.fireChannelInactive();
-    }
-
-    @Override
-    public void userEventTriggered(final ChannelHandlerContext ctx, Object evt) throws Exception {
-        ctx.fireUserEventTriggered(evt);
-    }
-
-    @Override
-    public void channelWritabilityChanged(final ChannelHandlerContext ctx) throws Exception {
-        ctx.fireChannelWritabilityChanged();
-    }
-
-    @Override
-    public void channelReadComplete(final ChannelHandlerContext ctx) throws Exception {
-        ctx.fireChannelReadComplete();
     }
 
 }
