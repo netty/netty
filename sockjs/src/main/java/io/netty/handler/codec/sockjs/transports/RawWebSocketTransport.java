@@ -149,7 +149,6 @@ public class RawWebSocketTransport extends SimpleChannelInboundHandler<Object> {
             wsFrame.retain();
             service.onClose();
             handshaker.close(ctx.channel(), (CloseWebSocketFrame) wsFrame);
-            ctx.close();
             return;
         }
         if (wsFrame instanceof PingWebSocketFrame) {
