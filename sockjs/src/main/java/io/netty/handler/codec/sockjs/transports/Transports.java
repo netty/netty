@@ -29,12 +29,14 @@ import static io.netty.handler.codec.http.HttpMethod.GET;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipelineException;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.Cookie;
 import io.netty.handler.codec.http.CookieDecoder;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -45,6 +47,10 @@ import io.netty.util.CharsetUtil;
 
 import java.util.Set;
 
+/**
+ * Transports contains constants, enums, and utility methods that are
+ * common across transport implementations.
+ */
 public final class Transports {
 
     public static final String CONTENT_TYPE_PLAIN = "text/plain; charset=UTF-8";
@@ -53,6 +59,7 @@ public final class Transports {
     public static final String CONTENT_TYPE_HTML = "text/html; charset=UTF-8";
     public static final String DEFAULT_COOKIE = "JSESSIONID=dummy;path=/";
     public static final String JSESSIONID = "JSESSIONID";
+    private static final String NO_CACHE_HEADER =  "no-store, no-cache, must-revalidate, max-age=0";
 
     public enum Types {
         WEBSOCKET,
@@ -72,6 +79,12 @@ public final class Transports {
     private Transports() {
     }
 
+    /**
+     * Encodes the passes in requests JSESSIONID, if one exists, setting it to path of '/'.
+     *
+     * @param request the {@link HttpRequest} to parse for a JSESSIONID cookie.
+     * @return {@code String} the encoded cookie or {@value Transports#DEFAULT_COOKIE} if no JSESSIONID cookie exits.
+     */
     public static String encodeSessionIdCookie(final HttpRequest request) {
         final String cookieHeader = request.headers().get(HttpHeaders.Names.COOKIE);
         if (cookieHeader != null) {
@@ -86,6 +99,13 @@ public final class Transports {
         return DEFAULT_COOKIE;
     }
 
+    /**
+     * Writes the passed in String content to the response and also sets te content-type and content-lenght headaers.
+     *
+     * @param response the {@link FullHttpResponse} to write the content to.
+     * @param content the content to be written.
+     * @param contentType the content-type that will be set as the Content-Type Http response header.
+     */
     public static void writeContent(final FullHttpResponse response, final String content, final String contentType) {
         final ByteBuf buf = Unpooled.copiedBuffer(content, CharsetUtil.UTF_8);
         response.headers().set(CONTENT_LENGTH, buf.readableBytes());
@@ -93,12 +113,28 @@ public final class Transports {
         response.headers().set(CONTENT_TYPE, contentType);
     }
 
+    /**
+     * Writes the passed in ByteBuf content to the response and also sets te content-type and content-lenght headaers.
+     *
+     * @param response the {@link FullHttpResponse} to write the content to.
+     * @param content the content to be written.
+     * @param contentType the content-type that will be set as the Content-Type Http response header.
+     */
     public static void writeContent(final FullHttpResponse response, final ByteBuf content, final String contentType) {
         response.headers().set(CONTENT_LENGTH, content.readableBytes());
         response.content().writeBytes(content);
         response.headers().set(CONTENT_TYPE, contentType);
     }
 
+    /**
+     * Sets the following Http response headers
+     * - SET_COOKIE  if {@link Config#areCookiesNeeded()} is true
+     * - CACHE_CONTROL to {@link Transports#setNoCacheHeaders(HttpResponse)}
+     * - CORS Headers to {@link Transports#setCORSHeaders(HttpResponse)}
+     *
+     * @param response the Http Response.
+     * @param config the SockJS configuration.
+     */
     public static void setDefaultHeaders(final HttpResponse response, final Config config) {
         if (config.areCookiesNeeded()) {
             response.headers().set(SET_COOKIE, Transports.DEFAULT_COOKIE);
@@ -107,6 +143,15 @@ public final class Transports {
         setCORSHeaders(response);
     }
 
+    /**
+     * Sets the following Http response headers
+     * - SET_COOKIE  if {@link Config#areCookiesNeeded()} is true, and uses the requests cookie.
+     * - CACHE_CONTROL to {@link Transports#setNoCacheHeaders(HttpResponse)}
+     * - CORS Headers to {@link Transports#setCORSHeaders(HttpResponse)}
+     *
+     * @param response the Http Response.
+     * @param config the SockJS configuration.
+     */
     public static void setDefaultHeaders(final FullHttpResponse response, final Config config, HttpRequest request) {
         if (config.areCookiesNeeded()) {
             response.headers().set(SET_COOKIE, encodeSessionIdCookie(request));
@@ -115,25 +160,56 @@ public final class Transports {
         setCORSHeaders(response);
     }
 
+    /**
+     * Sets the Http response header SET_COOKIE if {@link Config#areCookiesNeeded()} is true.
+     *
+     * @param response the Http Response.
+     * @param config the SockJS configuration.
+     * @param request the Http request which will be inspected for the existence of a JSESSIONID cookie.
+     */
     public static void setSessionIdCookie(final FullHttpResponse response, final Config config, HttpRequest request) {
         if (config.areCookiesNeeded()) {
             response.headers().set(SET_COOKIE, encodeSessionIdCookie(request));
         }
     }
 
+    /**
+     * Sets the Http response header CACHE_CONTROL to {@link Transports#NO_CACHE_HEADER}.
+     *
+     * @param response the Http response for which the CACHE_CONTROL header will be set.
+     */
     public static void setNoCacheHeaders(final HttpResponse response) {
-        response.headers().set(CACHE_CONTROL, "no-store, no-cache, must-revalidate, max-age=0");
+        response.headers().set(CACHE_CONTROL, NO_CACHE_HEADER);
     }
 
+    /**
+     * Sets the CORS Http response headers ACCESS_CONTROLL_ALLOW_ORIGIN to '*', and ACCESS_CONTROL_ALLOW_CREDENTIALS to
+     * 'true".
+     *
+     * @param response the Http response for which the CORS headers will be set.
+     */
     public static void setCORSHeaders(final HttpResponse response) {
         response.headers().set(ACCESS_CONTROL_ALLOW_ORIGIN, "*");
         response.headers().set(ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
     }
 
+    /**
+     * Will add an new line character to the passed in ByteBuf.
+     *
+     * @param buf the {@link ByteBuf} for which an '\n', new line, will be added.
+     * @return {@code ByteBuf} a copied byte buffer with a '\n' appended.
+     */
     public static ByteBuf wrapWithLN(final ByteBuf buf) {
         return Unpooled.copiedBuffer(buf, Unpooled.copiedBuffer("\n", CharsetUtil.UTF_8));
     }
 
+    /**
+     * Escapes unicode characters in the passed in char array to a Java string with
+     * Java style escaped charaters.
+     *
+     * @param value the char[] for which unicode characters should be escaped
+     * @return {@code String} Java style escaped unicode characters.
+     */
     public static String escapeCharacters(final char[] value) {
         final StringBuilder buffer = new StringBuilder();
         for (int i = 0; i < value.length; i++) {
@@ -145,8 +221,7 @@ public final class Transports {
                     (ch >= '\u2060' && ch <= '\u206F') ||
                     (ch >= '\uFFF0' && ch <= '\uFFFF')) {
                 final String ss = Integer.toHexString(ch);
-                buffer.append('\\');
-                buffer.append('u');
+                buffer.append('\\').append('u');
                 for (int k = 0; k < 4 - ss.length(); k++) {
                     buffer.append('0');
                 }
@@ -158,18 +233,28 @@ public final class Transports {
         return buffer.toString();
     }
 
+    /**
+     * Processes the input ByteBuf and escapes the any control characters, quotes, slashes,
+     * and unicode characters.
+     *
+     * @param input the bytes of characters to process.
+     * @param buffer the {@link ByteBuf} into which the result of processing will be added.
+     * @return {@code ByteBuf} which is the same ByteBuf as passed in as the buffer param. This is done to
+     *                         simplify method invocation where possible which might require a return value.
+     */
     public static ByteBuf escapeJson(final ByteBuf input, final ByteBuf buffer) {
-        for (int i = 0; i < input.readableBytes(); i++) {
+        final int count = input.readableBytes();
+        for (int i = 0; i < count; i++) {
             final byte ch = input.getByte(i);
             switch(ch) {
-                case '"': buffer.writeByte('\\'); buffer.writeByte('\"'); break;
-                case '/': buffer.writeByte('\\'); buffer.writeByte('/'); break;
-                case '\\': buffer.writeByte('\\'); buffer.writeByte('\\'); break;
-                case '\b': buffer.writeByte('\\'); buffer.writeByte('b'); break;
-                case '\f': buffer.writeByte('\\'); buffer.writeByte('f'); break;
-                case '\n': buffer.writeByte('\\'); buffer.writeByte('n'); break;
-                case '\r': buffer.writeByte('\\'); buffer.writeByte('r'); break;
-                case '\t': buffer.writeByte('\\'); buffer.writeByte('t'); break;
+                case '"': buffer.writeByte('\\').writeByte('\"'); break;
+                case '/': buffer.writeByte('\\').writeByte('/'); break;
+                case '\\': buffer.writeByte('\\').writeByte('\\'); break;
+                case '\b': buffer.writeByte('\\').writeByte('b'); break;
+                case '\f': buffer.writeByte('\\').writeByte('f'); break;
+                case '\n': buffer.writeByte('\\').writeByte('n'); break;
+                case '\r': buffer.writeByte('\\').writeByte('r'); break;
+                case '\t': buffer.writeByte('\\').writeByte('t'); break;
 
                 default:
                     // Reference: http://www.unicode.org/versions/Unicode5.1.0/
@@ -180,8 +265,7 @@ public final class Transports {
                             (ch >= '\u2060' && ch <= '\u206F') ||
                             (ch >= '\uFFF0' && ch <= '\uFFFF')) {
                         final String ss = Integer.toHexString(ch);
-                        buffer.writeByte('\\');
-                        buffer.writeByte('u');
+                        buffer.writeByte('\\').writeByte('u');
                         for (int k = 0; k < 4 - ss.length(); k++) {
                             buffer.writeByte('0');
                         }
@@ -194,20 +278,51 @@ public final class Transports {
         return buffer;
     }
 
+    /**
+     * Creates a {@code FullHttpResponse} with the {@code METHOD_NOT_ALLOWED} status.
+     *
+     * @param version the HttpVersion to be used.
+     * @return {@link FullHttpResponse} with the {@link HttpResponseStatus#METHOD_NOT_ALLOWED}.
+     */
     public static FullHttpResponse methodNotAllowedResponse(final HttpVersion version) {
         final FullHttpResponse response = responseWithoutContent(version, METHOD_NOT_ALLOWED);
         response.headers().add(ALLOW, GET);
         return response;
     }
 
+    /**
+     * Creates a {@code FullHttpResponse} with the {@code BAD_REQUEST} status and a body.
+     *
+     * @param version the HttpVersion to be used.
+     * @param content the content that will become the response body.
+     * @return {@link FullHttpResponse} with the {@link HttpResponseStatus#BAD_REQUEST}.
+     */
     public static FullHttpResponse badRequestResponse(final HttpVersion version, final String content) {
         return responseWithContent(version, BAD_REQUEST, CONTENT_TYPE_PLAIN, content);
     }
 
+    /**
+     * Creates a {@code FullHttpResponse} with the {@code INTERNAL_SERVER_ERROR} status and a body.
+     *
+     * @param version the HttpVersion to be used.
+     * @param content the content that will become the response body.
+     * @return {@link FullHttpResponse} with the {@link HttpResponseStatus#INTERNAL_SERVER_ERROR}.
+     */
     public static FullHttpResponse internalServerErrorResponse(final HttpVersion version, final String content) {
         return responseWithContent(version, INTERNAL_SERVER_ERROR, CONTENT_TYPE_PLAIN, content);
     }
 
+    /**
+     * Sends a HttpResponse using the ChannelHandlerContext passed in.
+     *
+     * @param ctx the {@link ChannelHandlerContext} to use.
+     * @param version the {@link HttpVersion} that the response should have.
+     * @param status the status of the HTTP response
+     * @param contentType the value for the 'Content-Type' HTTP response header.
+     * @param content the content that will become the body of the HTTP response.
+     * @param promise the {@link ChannelPromise}
+     * @throws Exception if an error occurs while trying to send the response.
+     */
     public static void respond(final ChannelHandlerContext ctx,
             final HttpVersion version,
             final HttpResponseStatus status,
@@ -218,6 +333,16 @@ public final class Transports {
         writeResponse(ctx, response);
     }
 
+    /**
+     * Sends a HttpResponse using the ChannelHandlerContext passed in.
+     *
+     * @param ctx the {@link ChannelHandlerContext} to use.
+     * @param version the {@link HttpVersion} that the response should have.
+     * @param status the status of the HTTP response
+     * @param contentType the value for the 'Content-Type' HTTP response header.
+     * @param content the content that will become the body of the HTTP response.
+     * @throws Exception if an error occurs while trying to send the response.
+     */
     public static void respond(final ChannelHandlerContext ctx,
             final HttpVersion version,
             final HttpResponseStatus status,
@@ -227,12 +352,28 @@ public final class Transports {
         writeResponse(ctx, response);
     }
 
+    /**
+     * Creates FullHttpResponse without a response body.
+     *
+     * @param version the {@link HttpVersion} that the response should have.
+     * @param status the status of the HTTP response
+     * @throws Exception if an error occurs while trying to send the response.
+     */
     public static FullHttpResponse responseWithoutContent(final HttpVersion version, final HttpResponseStatus status) {
         final FullHttpResponse response = new DefaultFullHttpResponse(version, status);
         response.headers().set(CONTENT_LENGTH, 0);
         return response;
     }
 
+    /**
+     * Creates FullHttpResponse with a response body.
+     *
+     * @param version the {@link HttpVersion} that the response should have.
+     * @param status the status of the HTTP response
+     * @param contentType the value for the 'Content-Type' HTTP response header.
+     * @param content the content that will become the body of the HTTP response.
+     * @throws Exception if an error occurs while trying to send the response.
+     */
     public static FullHttpResponse responseWithContent(final HttpVersion version, final HttpResponseStatus status,
             final String contentType, final String content) {
         final FullHttpResponse response = new DefaultFullHttpResponse(version, status);
@@ -240,12 +381,25 @@ public final class Transports {
         return response;
     }
 
+    /**
+     * Writes the passed in respone to the {@link ChannelHandlerContext} if it is active.
+     *
+     * @param ctx the {@link ChannelHandlerContext} to write the response to.
+     * @param response the {@link HttpResponseStatus} to be written.
+     */
     public static void writeResponse(final ChannelHandlerContext ctx, final HttpResponse response) {
         if (ctx.channel().isActive() && ctx.channel().isRegistered()) {
             ctx.writeAndFlush(response);
         }
     }
 
+    /**
+     * Writes the passed in respone to the {@link ChannelHandlerContext} if it is active.
+     *
+     * @param ctx the {@link ChannelHandlerContext} to write the response to.
+     * @param promise the {@link ChannelPromise}
+     * @param response the {@link HttpResponseStatus} to be written.
+     */
     public static void writeResponse(final ChannelHandlerContext ctx, final ChannelPromise promise,
             final HttpResponse response) {
         if (ctx.channel().isActive() && ctx.channel().isRegistered()) {
