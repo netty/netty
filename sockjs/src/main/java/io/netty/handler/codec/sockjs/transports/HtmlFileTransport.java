@@ -15,20 +15,18 @@
  */
 package io.netty.handler.codec.sockjs.transports;
 
+import static io.netty.buffer.Unpooled.copiedBuffer;
+import static io.netty.buffer.Unpooled.unreleasableBuffer;
+import static io.netty.handler.codec.http.HttpConstants.CR;
+import static io.netty.handler.codec.http.HttpConstants.LF;
 import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
 import static io.netty.handler.codec.http.HttpHeaders.Names.TRANSFER_ENCODING;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.util.CharsetUtil.UTF_8;
-import static io.netty.buffer.Unpooled.unreleasableBuffer;
-import static io.netty.buffer.Unpooled.copiedBuffer;
-import static io.netty.handler.codec.http.HttpConstants.CR;
-import static io.netty.handler.codec.http.HttpConstants.LF;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpResponse;
@@ -63,7 +61,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * write method will write a script to the connection that will invoke the
  * callback.
  */
-public class HtmlFileTransport extends ChannelOutboundHandlerAdapter implements ChannelInboundHandler {
+public class HtmlFileTransport extends ChannelDuplexHandler {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(HtmlFileTransport.class);
     private static final ByteBuf HEADER_PART1 = unreleasableBuffer(copiedBuffer(
@@ -111,7 +109,7 @@ public class HtmlFileTransport extends ChannelOutboundHandlerAdapter implements 
         ctx.fireChannelRead(msg);
     }
 
-    public String getCallbackFromRequest(final HttpRequest request) {
+    private static String getCallbackFromRequest(final HttpRequest request) {
         final QueryStringDecoder qsd = new QueryStringDecoder(request.getUri());
         final List<String> c = qsd.parameters().get("c");
         return c == null || c.isEmpty() ? "" : c.get(0);
@@ -124,22 +122,22 @@ public class HtmlFileTransport extends ChannelOutboundHandlerAdapter implements 
             final Frame frame = (Frame) msg;
             if (headerSent.compareAndSet(false, true)) {
                 final HttpResponse response = createResponse(Transports.CONTENT_TYPE_HTML);
-                final ByteBuf header = Unpooled.buffer();
+                final ByteBuf header = ctx.alloc().buffer();
                 header.writeBytes(HEADER_PART1.duplicate());
                 header.writeBytes(copiedBuffer(callback, UTF_8));
                 header.writeBytes(HEADER_PART2.duplicate());
                 final int spaces = 1024 * header.readableBytes();
-                final ByteBuf paddedBuffer = Unpooled.buffer(1024 + 50);
+                final ByteBuf paddedBuffer = ctx.alloc().buffer(1024 + 50);
                 paddedBuffer.writeBytes(header);
                 for (int s = 0; s < spaces + 20; s++) {
                     paddedBuffer.writeByte(' ');
                 }
                 paddedBuffer.writeBytes(END_HEADER.duplicate());
-                ctx.writeAndFlush(response, promise);
+                ctx.write(response, promise);
                 ctx.writeAndFlush(new DefaultHttpContent(paddedBuffer));
             }
 
-            final ByteBuf data = Unpooled.buffer();
+            final ByteBuf data = ctx.alloc().buffer();
             data.writeBytes(PREFIX.duplicate());
             data.writeBytes(Transports.escapeJson(frame.content(), data));
             data.writeBytes(POSTFIX.duplicate());
@@ -177,41 +175,6 @@ public class HtmlFileTransport extends ChannelOutboundHandlerAdapter implements 
         response.headers().set(CONTENT_TYPE, contentType);
         Transports.setDefaultHeaders(response, config);
         return response;
-    }
-
-    @Override
-    public void channelRegistered(final ChannelHandlerContext ctx) throws Exception {
-        ctx.fireChannelRegistered();
-    }
-
-    @Override
-    public void channelUnregistered(final ChannelHandlerContext ctx) throws Exception {
-        ctx.fireChannelUnregistered();
-    }
-
-    @Override
-    public void channelActive(final ChannelHandlerContext ctx) throws Exception {
-        ctx.fireChannelActive();
-    }
-
-    @Override
-    public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
-        ctx.fireChannelInactive();
-    }
-
-    @Override
-    public void userEventTriggered(final ChannelHandlerContext ctx, final Object evt) throws Exception {
-        ctx.fireUserEventTriggered(evt);
-    }
-
-    @Override
-    public void channelWritabilityChanged(final ChannelHandlerContext ctx) throws Exception {
-        ctx.fireChannelWritabilityChanged();
-    }
-
-    @Override
-    public void channelReadComplete(final ChannelHandlerContext ctx) throws Exception {
-        ctx.fireChannelReadComplete();
     }
 
 }
