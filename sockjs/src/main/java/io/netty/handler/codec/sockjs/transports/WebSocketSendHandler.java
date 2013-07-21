@@ -22,6 +22,7 @@ import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.sockjs.protocol.Frame;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -41,6 +42,8 @@ class WebSocketSendHandler extends ChannelOutboundHandlerAdapter {
                     }
                 }
             });
+        } else {
+            ctx.write(ReferenceCountUtil.retain(msg), promise);
         }
     }
 
