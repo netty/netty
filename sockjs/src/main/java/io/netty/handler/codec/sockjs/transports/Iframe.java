@@ -15,6 +15,12 @@
  */
 package io.netty.handler.codec.sockjs.transports;
 
+import static io.netty.buffer.Unpooled.copiedBuffer;
+import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
+import static io.netty.handler.codec.http.HttpResponseStatus.NOT_MODIFIED;
+import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static io.netty.util.CharsetUtil.UTF_8;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -23,9 +29,9 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.sockjs.Config;
-import io.netty.util.CharsetUtil;
 
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Formatter;
@@ -34,6 +40,23 @@ import java.util.regex.Pattern;
 public final class Iframe {
 
     private static final Pattern PATH_PATTERN = Pattern.compile(".*/iframe[0-9-.a-z_]*.html");
+    private static final long ONE_YEAR = 365 * 24 * 60 * 60 * 1000;
+    private static final ThreadLocal<SimpleDateFormat> DATE_FORMAT = new ThreadLocal<SimpleDateFormat>() {
+        @Override
+        protected SimpleDateFormat initialValue() {
+            return new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
+        }
+    };
+    private static final ThreadLocal<MessageDigest> MESSAGE_DIGEST = new ThreadLocal<MessageDigest>() {
+        @Override
+        protected MessageDigest initialValue() {
+            try {
+                return MessageDigest.getInstance("MD5");
+            } catch (final NoSuchAlgorithmException e) {
+                throw new IllegalStateException("Could not create a new MD5 instance", e);
+            }
+        }
+    };
 
     private Iframe() {
     }
@@ -47,36 +70,36 @@ public final class Iframe {
         final String path = qsd.path();
 
         if (!PATH_PATTERN.matcher(path).matches()) {
-            final FullHttpResponse response = createResponse(request, HttpResponseStatus.NOT_FOUND);
-            response.content().writeBytes(Unpooled.copiedBuffer("Not found", CharsetUtil.UTF_8));
-            return response;
+            return createResponse(request, NOT_FOUND, copiedBuffer("Not found", UTF_8));
         }
 
         if (request.headers().contains(HttpHeaders.Names.IF_NONE_MATCH)) {
-            final FullHttpResponse response = createResponse(request, HttpResponseStatus.NOT_MODIFIED);
+            final FullHttpResponse response = createResponse(request, NOT_MODIFIED);
             response.headers().set(HttpHeaders.Names.SET_COOKIE, "JSESSIONID=dummy; path=/");
             return response;
         } else {
-            final FullHttpResponse response = createResponse(request, HttpResponseStatus.OK);
+            final String content = createContent(config.sockjsUrl());
+            final FullHttpResponse response = createResponse(request, OK, copiedBuffer(content, UTF_8));
             response.headers().set(HttpHeaders.Names.CONTENT_TYPE, "text/html; charset=UTF-8");
             response.headers().set(HttpHeaders.Names.CACHE_CONTROL, "max-age=31536000, public");
             response.headers().set(HttpHeaders.Names.EXPIRES, generateExpires());
-            final String content = createContent(config.sockjsUrl());
-            final String etag = "\"" + generateMd5(content) + "\"";
-            response.headers().set(HttpHeaders.Names.ETAG, etag);
-            response.content().writeBytes(Unpooled.copiedBuffer(content, CharsetUtil.UTF_8));
+            final StringBuilder etag = new StringBuilder("\"").append(generateMd5(content)).append("\"");
+            response.headers().set(HttpHeaders.Names.ETAG, etag.toString());
             return response;
         }
     }
 
     private static String generateExpires() {
-        final long oneYear = 365 * 24 * 60 * 60 * 1000;
-        final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
-        return simpleDateFormat.format(new Date(System.currentTimeMillis() + oneYear));
+        return DATE_FORMAT.get().format(new Date(System.currentTimeMillis() + ONE_YEAR));
     }
 
     private static FullHttpResponse createResponse(final HttpRequest request, final HttpResponseStatus status) {
         return new DefaultFullHttpResponse(request.getProtocolVersion(), status);
+    }
+
+    private static FullHttpResponse createResponse(final HttpRequest request, final HttpResponseStatus status,
+            final ByteBuf content) {
+        return new DefaultFullHttpResponse(request.getProtocolVersion(), status, content);
     }
 
     private static String createContent(final String url) {
@@ -99,9 +122,7 @@ public final class Iframe {
     }
 
     private static String generateMd5(final String value) throws Exception {
-        final byte[] bytesToBeEncrypted = value.getBytes(CharsetUtil.UTF_8);
-        final MessageDigest md = MessageDigest.getInstance("MD5");
-        final byte[] digest = md.digest(bytesToBeEncrypted);
+        final byte[] digest = MESSAGE_DIGEST.get().digest(value.getBytes(UTF_8));
         Formatter formatter = null;
         try {
             formatter = new Formatter();
