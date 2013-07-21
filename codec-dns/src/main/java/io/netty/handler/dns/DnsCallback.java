@@ -193,11 +193,13 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
                         channel.write(queries[i]).sync();
                     }
                 } catch (Exception e) {
-                    StringBuilder string = new StringBuilder();
-                    for (int i = 0; i < dnsServerAddress.length; i++) {
-                        string.append(dnsServerAddress[i]).append(".");
+                    if (logger.isErrorEnabled()) {
+                        StringBuilder string = new StringBuilder();
+                        for (int i = 0; i < dnsServerAddress.length; i++) {
+                            string.append(dnsServerAddress[i]).append(".");
+                        }
+                        logger.error("Failed to write to next DNS server in queue with address " + string.substring(0, string.length() - 1), e);
                     }
-                    logger.error("Failed to write to next DNS server in queue with address " + string.substring(0, string.length() - 1), e);
                     result = null;
                 }
             }
