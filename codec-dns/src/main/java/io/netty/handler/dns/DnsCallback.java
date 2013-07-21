@@ -22,6 +22,8 @@ import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.Question;
 import io.netty.handler.codec.dns.Resource;
 import io.netty.handler.dns.decoder.RecordDecoderFactory;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -52,6 +54,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class DnsCallback<T extends List<?>> implements Callable<T> {
 
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsCallback.class);
     private static final List<Object> DEFAULT = new ArrayList<Object>();
     private static final Map<Integer, DnsCallback<?>> callbacks = new HashMap<Integer, DnsCallback<?>>();
 
@@ -190,7 +193,11 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
                         channel.write(queries[i]).sync();
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    StringBuilder string = new StringBuilder();
+                    for (int i = 0; i < dnsServerAddress.length; i++) {
+                        string.append(dnsServerAddress[i]).append(".");
+                    }
+                    logger.error("Failed to write to next DNS server in queue with address " + string.substring(0, string.length() - 1), e);
                     result = null;
                 }
             }

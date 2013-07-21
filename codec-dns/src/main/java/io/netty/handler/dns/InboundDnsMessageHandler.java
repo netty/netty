@@ -38,7 +38,7 @@ public class InboundDnsMessageHandler extends SimpleChannelInboundHandler<DnsRes
             DnsExchangeFactory.removeChannel(ctx.channel());
             return;
         }
-        cause.printStackTrace();
+        ctx.fireExceptionCaught(cause);
     }
 
     /**

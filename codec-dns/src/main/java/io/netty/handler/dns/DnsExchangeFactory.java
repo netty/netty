@@ -122,6 +122,11 @@ public final class DnsExchangeFactory {
             return callback.call() != null;
         } catch (Exception e) {
             removeChannel(dnsServerChannels.get(address));
+            StringBuilder string = new StringBuilder();
+            for (int i = 0; i < address.length; i++) {
+                string.append(address[i]).append(".");
+            }
+            logger.warn("Failed to add DNS server " + string.substring(0, string.length() - 1), e);
             return false;
         }
     }
@@ -476,6 +481,12 @@ public final class DnsExchangeFactory {
                         try {
                             channel.close().sync();
                         } catch (Exception e) {
+                            byte[] address = entry.getKey();
+                            StringBuilder string = new StringBuilder();
+                            for (int i = 0; i < address.length; i++) {
+                                string.append(address[i]).append(".");
+                            }
+                            logger.error("Could not close channel for address " + string.substring(0, string.length() - 1), e);
                             e.printStackTrace();
                         } finally {
                             channel.eventLoop().shutdownGracefully();

@@ -15,6 +15,7 @@
  */
 package io.netty.handler.dns.decoder;
 
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.dns.DnsEntry;
 import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.Resource;
@@ -86,7 +87,7 @@ public final class RecordDecoderFactory {
      */
     public RecordDecoderFactory(boolean useDefaultDecoders, Map<Integer, RecordDecoder<?>> customDecoders) {
         if (!useDefaultDecoders && (customDecoders == null || customDecoders.isEmpty())) {
-            throw new IllegalStateException("No decoders have been included to be used with this factory.");
+            throw new DecoderException("No decoders have been included to be used with this factory.");
         }
         if (useDefaultDecoders) {
             decoders.put(DnsEntry.TYPE_A, new AddressDecoder(4));
