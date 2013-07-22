@@ -93,7 +93,7 @@ public final class ChannelFlushPromiseNotifier {
      * their pendingDatasize is smaller after the the current writeCounter returned by {@link #writeCounter()}.
      *
      * After a {@link ChannelFuture} was notified it will be removed from this {@link ChannelFlushPromiseNotifier} and
-     * so not receive anymore notificiation.
+     * so not receive anymore notification.
      */
     public ChannelFlushPromiseNotifier notifyFlushFutures() {
         notifyFlushFutures0(null);
@@ -105,7 +105,7 @@ public final class ChannelFlushPromiseNotifier {
      * their pendingDatasize isis smaller then the current writeCounter returned by {@link #writeCounter()}.
      *
      * After a {@link ChannelFuture} was notified it will be removed from this {@link ChannelFlushPromiseNotifier} and
-     * so not receive anymore notificiation.
+     * so not receive anymore notification.
      *
      * The rest of the remaining {@link ChannelFuture}s will be failed with the given {@link Throwable}.
      *
@@ -133,7 +133,7 @@ public final class ChannelFlushPromiseNotifier {
      * the given cause1.
      *
      * After a {@link ChannelFuture} was notified it will be removed from this {@link ChannelFlushPromiseNotifier} and
-     * so not receive anymore notificiation.
+     * so not receive anymore notification.
      *
      * The rest of the remaining {@link ChannelFuture}s will be failed with the given {@link Throwable}.
      *

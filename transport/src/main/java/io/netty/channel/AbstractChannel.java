@@ -615,7 +615,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         @Override
         public void write(Object msg, ChannelPromise promise) {
             if (!isActive()) {
-                // Mark the write request as failure if the channl is inactive.
+                // Mark the write request as failure if the channel is inactive.
                 if (isOpen()) {
                     promise.tryFailure(NOT_YET_CONNECTED_EXCEPTION);
                 } else {

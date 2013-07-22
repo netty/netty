@@ -133,8 +133,8 @@ public interface ChannelHandlerContext
 
     /**
      * The {@link EventExecutor} that is used to dispatch the events. This can also be used to directly
-     * submit tasks that get executed in the event loop. For more informations please refer to the
-     * {@link EventExecutor} javadocs.
+     * submit tasks that get executed in the event loop. For more information please refer to the
+     * {@link EventExecutor} javadoc.
      */
     EventExecutor executor();
 

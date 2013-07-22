@@ -187,7 +187,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
      * @param buf           the {@link ByteBuf} into which the read bytes will be written
      * @return amount       the number of bytes read. This may return a negative amount if the underlying
      *                      Socket was closed
-     * @throws Exception    is thrown if an error accoured
+     * @throws Exception    is thrown if an error occurred
      */
     protected abstract int doReadBytes(ByteBuf buf) throws Exception;
 
@@ -195,7 +195,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
      * Write the data which is hold by the {@link ByteBuf} to the underlying Socket.
      *
      * @param buf           the {@link ByteBuf} which holds the data to transfer
-     * @throws Exception    is thrown if an error accoured
+     * @throws Exception    is thrown if an error occurred
      */
     protected abstract void doWriteBytes(ByteBuf buf) throws Exception;
 
@@ -203,7 +203,7 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
      * Write the data which is hold by the {@link FileRegion} to the underlying Socket.
      *
      * @param region        the {@link FileRegion} which holds the data to transfer
-     * @throws Exception    is thrown if an error accoured
+     * @throws Exception    is thrown if an error occurred
      */
     protected abstract void doWriteFileRegion(FileRegion region) throws Exception;
 }
