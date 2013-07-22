@@ -19,7 +19,7 @@ package io.netty.buffer;
 import io.netty.util.internal.PlatformDependent;
 
 /**
- * Skeltal {@link ByteBufAllocator} implementation to extend.
+ * Skeletal {@link ByteBufAllocator} implementation to extend.
  */
 public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
     private static final int DEFAULT_INITIAL_CAPACITY = 256;

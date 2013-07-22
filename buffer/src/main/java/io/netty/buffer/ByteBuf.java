@@ -1687,7 +1687,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * or {@link #nioBuffers(int, int)} might return a less number of {@link ByteBuffer}s.
      *
      * @return {@code -1} if this buffer has no underlying {@link ByteBuffer}.
-     *         the number of the underlying {@link ByteBuffer}s if this buffer has at least one undelying
+     *         the number of the underlying {@link ByteBuffer}s if this buffer has at least one underlying
      *         {@link ByteBuffer}.  Note that this method does not return {@code 0} to avoid confusion.
      *
      * @see #nioBuffer()

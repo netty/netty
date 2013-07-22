@@ -29,7 +29,7 @@ import java.util.NoSuchElementException;
 
 
 /**
- * A list of {@link ChannelHandler}s which handles or intercepts inbound events and outbount operations of a
+ * A list of {@link ChannelHandler}s which handles or intercepts inbound events and outbound operations of a
  * {@link Channel}.  {@link ChannelPipeline} implements an advanced form of the
  * <a href="http://www.oracle.com/technetwork/java/interceptingfilter-142169.html">Intercepting Filter</a> pattern
  * to give a user full control over how an event is handled and how the {@link ChannelHandler}s in a pipeline
