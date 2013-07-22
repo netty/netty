@@ -379,7 +379,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
     }
 
     /**
-     * Returns the ammount of time left until the scheduled task with the closest dead line is executed.
+     * Returns the amount of time left until the scheduled task with the closest dead line is executed.
      */
     protected long delayNanos(long currentTimeNanos) {
         ScheduledFutureTask<?> delayedTask = delayedTaskQueue.peek();

@@ -102,7 +102,7 @@ public final class Unpooled {
     }
 
     /**
-     * Creates a new big-endian direct buffer with resaonably small initial capacity, which
+     * Creates a new big-endian direct buffer with reasonably small initial capacity, which
      * expands its capacity boundlessly on demand.
      */
     public static ByteBuf directBuffer() {
