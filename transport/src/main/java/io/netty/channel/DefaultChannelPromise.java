@@ -29,6 +29,7 @@ public class DefaultChannelPromise extends DefaultPromise<Void> implements Chann
 
     private final Channel channel;
     private long checkpoint;
+    private boolean validated;
 
     /**
      * Creates a new instance.
@@ -156,5 +157,13 @@ public class DefaultChannelPromise extends DefaultPromise<Void> implements Chann
         if (channel().isRegistered()) {
             super.checkDeadLock();
         }
+    }
+
+    final boolean isValidated() {
+        return validated;
+    }
+
+    final void validated() {
+        validated = true;
     }
 }
