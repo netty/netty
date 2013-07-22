@@ -21,7 +21,14 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.sockjs.Config;
 
 /**
- * Handles the send part the xhr-polling transport.
+ * XMLHttpRequest (XHR) streaming transport is a transport where a persistent
+ * connection is maintained between the server and the client, over which the
+ * server can send HTTP chunks.
+ *
+ * This handler is responsible the send part the xhr-polling transport, which is
+ * sending data to the target SockJS service.
+ *
+ * @see XhrPollingTransport
  */
 public class XhrSendTransport extends AbstractSendTransport {
 

@@ -37,13 +37,24 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.sockjs.Config;
 import io.netty.handler.codec.sockjs.handlers.SessionHandler.Events;
 import io.netty.handler.codec.sockjs.protocol.Frame;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
+import io.netty.util.ReferenceCountUtil;
 
 import java.util.List;
 
+/**
+ * JSON Padding (JSONP) Polling is a transport where there is no open connection between
+ * the client and the server. Instead the client will issue a new request for polling from
+ * and sending data to the SockJS service.
+ *
+ * This handler is responsible for sending data back to the client. Since JSONP is in use
+ * it need to inspect the HTTP request to find the callback method which is identified as
+ * a query parameter 'c'. The name of the callback method will be used to wrap the data
+ * into a javascript function call which is what will returned to the client.
+ *
+ * @see JsonpSendTransport
+ */
 public class JsonpPollingTransport extends ChannelDuplexHandler {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(JsonpPollingTransport.class);
+
     private final FullHttpRequest request;
     private final Config config;
     private String callback;
@@ -83,6 +94,8 @@ public class JsonpPollingTransport extends ChannelDuplexHandler {
             Transports.setNoCacheHeaders(response);
             Transports.setSessionIdCookie(response, config, request);
             ctx.writeAndFlush(response, promise);
+        } else {
+            ctx.write(ReferenceCountUtil.retain(msg), promise);
         }
     }
 
@@ -100,11 +113,6 @@ public class JsonpPollingTransport extends ChannelDuplexHandler {
         final FullHttpResponse response = new DefaultFullHttpResponse(httpVersion, status);
         Transports.writeContent(response, message, Transports.CONTENT_TYPE_JAVASCRIPT);
         Transports.writeResponse(ctx, response);
-    }
-
-    @Override
-    public void handlerAdded(final ChannelHandlerContext ctx) throws Exception {
-        logger.debug("Added [" + ctx + "]");
     }
 
 }

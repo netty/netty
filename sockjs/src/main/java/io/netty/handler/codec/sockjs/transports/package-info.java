@@ -15,6 +15,6 @@
  */
 
 /**
- * An <a href="https://github.com/sockjs/sockjs-protocol">SockJS</a> impelementation.
+ * Transport implementations for <a href="https://github.com/sockjs/sockjs-protocol">SockJS</a>
  */
 package io.netty.handler.codec.sockjs.transports;

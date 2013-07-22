@@ -41,6 +41,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpHeaders.Values;
 import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.HttpObjectDecoder;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -54,6 +55,22 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.regex.Pattern;
 
+/**
+ * An extension of {@link WebSocketServerHandshaker00} which handles Hixie76
+ * upgrade requests that plays nicely with HAProxy.
+ *
+ * When HAProxy sends an WebSocket Hixie 76 upgrade reqeust will first send the request headers,
+ * after receiveing the response, it will then send the nouce.
+ *
+ * This class will extract the 'SEC_WEBSOCKET_KEY1' and 'SEC_WEBSOCKET_KEY2' from the first request
+ * and later use it for the actual handshake.
+ *
+ * Note that currently this does not work as desired with unless the HTTP request header 'Content-Lenght'
+ * has been set. Netty's {@link HttpObjectDecoder} uses
+ * {@link HttpHeaders#getContentLength(io.netty.handler.codec.http.HttpMessage, long)} which will set the lenght
+ * of Hixie 76 request to '8'. But there will be no body in the first request and therefor the message will be
+ * dropped.
+ */
 public class WebSocketHAProxyHandshaker extends WebSocketServerHandshaker00 {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketHAProxyHandshaker.class);

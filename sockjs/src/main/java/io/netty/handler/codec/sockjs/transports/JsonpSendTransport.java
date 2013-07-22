@@ -20,6 +20,15 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.sockjs.Config;
 
+/**
+ * JSON Padding (JSONP) Polling is a transport where there is no open connection between
+ * the client and the server. Instead the client will issue a new request for polling from
+ * and sending data to the SockJS service.
+ *
+ * This handler is responsible for handling data destined for the target SockJS service.
+ *
+ * @see JsonpPollingTransport
+ */
 public class JsonpSendTransport extends AbstractSendTransport {
 
     public JsonpSendTransport(final Config config) {

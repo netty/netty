@@ -188,6 +188,7 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
         }
     }
 
+    @Override
     public void exceptionCaught(final ChannelHandlerContext ctx, final Throwable cause) throws Exception {
         if (cause instanceof JsonParseException) {
             ctx.close();

@@ -15,8 +15,12 @@
  */
 package io.netty.handler.codec.sockjs;
 
-
-public class CloseService implements SockJSService {
+/**
+ * Test service required by
+ * <a href="http://sockjs.github.io/sockjs-protocol/sockjs-protocol-0.3.3.html">sockjs-protocol</a>
+ * which will close the session as soon as a message is received.
+ */
+public final class CloseService implements SockJSService {
 
     private final Config config;
 

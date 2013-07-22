@@ -29,6 +29,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.sockjs.Config;
+import io.netty.handler.codec.sockjs.protocol.Iframe;
 
 import java.nio.charset.Charset;
 

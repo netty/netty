@@ -42,6 +42,7 @@ import io.netty.handler.codec.sockjs.Config;
 import io.netty.handler.codec.sockjs.handlers.SessionHandler.Events;
 import io.netty.handler.codec.sockjs.protocol.Frame;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -148,6 +149,8 @@ public class HtmlFileTransport extends ChannelDuplexHandler {
                 logger.debug("max bytesSize limit reached [" + config.maxStreamingBytesSize() + "]. Closing");
                 ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT).addListener(ChannelFutureListener.CLOSE);
             }
+        } else {
+            ctx.write(ReferenceCountUtil.retain(msg), promise);
         }
     }
 

@@ -17,7 +17,6 @@ package io.netty.handler.codec.sockjs.transports;
 
 import static io.netty.handler.codec.sockjs.transports.Transports.internalServerErrorResponse;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -37,7 +36,6 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import org.codehaus.jackson.JsonParseException;
-import org.codehaus.jackson.map.ObjectMapper;
 
 /**
  * WebSocketTransport is responsible for the WebSocket handshake and
@@ -46,7 +44,6 @@ import org.codehaus.jackson.map.ObjectMapper;
 public class WebSocketHAProxyTransport extends SimpleChannelInboundHandler<Object> {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketHAProxyTransport.class);
     private static final AttributeKey<HttpRequest> REQUEST_KEY = new AttributeKey<HttpRequest>("ha-request.key");
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private WebSocketServerHandshaker handshaker;
     private final WebSocketHAProxyHandshaker haHandshaker;
 

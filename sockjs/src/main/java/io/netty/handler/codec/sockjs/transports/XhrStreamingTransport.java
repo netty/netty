@@ -35,20 +35,36 @@ import io.netty.handler.codec.sockjs.Config;
 import io.netty.handler.codec.sockjs.protocol.CloseFrame;
 import io.netty.handler.codec.sockjs.protocol.Frame;
 import io.netty.handler.codec.sockjs.protocol.PreludeFrame;
-import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * XMLHttpRequest (XHR) streaming transport is a transport where a persistent
+ * connection is maintained between the server and the client, over which the
+ * server can send HTTP chunks.
+ *
+ * This handler is responsible for handling {@link Frame}s and sending the
+ * contents of those frames to the client.
+ *
+ * @see XhrSendTransport
+ */
 public class XhrStreamingTransport extends ChannelOutboundHandlerAdapter {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(XhrStreamingTransport.class);
-    private AtomicBoolean headerSent = new AtomicBoolean(false);
-    private AtomicInteger bytesSent = new AtomicInteger(0);
+    private final AtomicBoolean headerSent = new AtomicBoolean(false);
+    private final AtomicInteger bytesSent = new AtomicInteger(0);
     private final Config config;
     private final HttpRequest request;
 
+    /**
+     * Sole constructor.
+     *
+     * @param config the SockJS {@link Config} instance.
+     * @param request the {@link FullHttpRequest} which can be used get information like the HTTP version.
+     */
     public XhrStreamingTransport(final Config config, final HttpRequest request) {
         this.config = config;
         this.request = request;
@@ -77,6 +93,8 @@ public class XhrStreamingTransport extends ChannelOutboundHandlerAdapter {
                 logger.debug("max bytesSize limit reached [" + config.maxStreamingBytesSize() + "]. Closing");
                 ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT).addListener(ChannelFutureListener.CLOSE);
             }
+        } else {
+            ctx.write(ReferenceCountUtil.retain(msg), promise);
         }
     }
 
