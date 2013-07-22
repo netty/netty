@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.util.DefaultAttributeMap;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ThreadLocalRandom;
@@ -620,6 +621,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 } else {
                     promise.tryFailure(CLOSED_CHANNEL_EXCEPTION);
                 }
+                // release message now to prevent resource-leak
+                ReferenceCountUtil.release(msg);
             } else {
                 outboundBuffer.addMessage(msg, promise);
             }
