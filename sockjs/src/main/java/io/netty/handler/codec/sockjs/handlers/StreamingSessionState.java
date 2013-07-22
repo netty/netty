@@ -126,53 +126,39 @@ class StreamingSessionState implements SessionState {
     }
 
     private void startSessionTimer(final ChannelHandlerContext ctx) {
-        try {
-            if (sessionTimer == null) {
-                sessionTimer = ctx.executor().scheduleAtFixedRate(new Runnable() {
-                    @Override
-                    public void run() {
-                        final long now = System.currentTimeMillis();
-                        if (isInUse()) {
-                            return;
-                        }
-                        if (session.timestamp() + session.config().sessionTimeout() < now) {
-                            final SockJSSession removed = sessions.remove(session.sessionId());
-                            session.context().close();
-                            sessionTimer.cancel(true);
-                            heartbeatFuture.cancel(true);
-                            logger.debug("Removed " + removed.sessionId() + " from map[" + sessions.size() + "]");
-                        }
+        if (sessionTimer == null) {
+            sessionTimer = ctx.executor().scheduleAtFixedRate(new Runnable() {
+                @Override
+                public void run() {
+                    final long now = System.currentTimeMillis();
+                    if (isInUse()) {
+                        return;
                     }
-                }, session.config().sessionTimeout(), session.config().sessionTimeout(), TimeUnit.MILLISECONDS);
-            }
-        } catch (final UnsupportedOperationException e) {
-            logger.debug("Caught: " + e);
-            // ignoring this exception which needs to be fixed.
-            // The issue is when testing embedded and AbstractEventExecutor throws
-            // an UnsupportedOperationException when calling scheduleAtFixedRate.
+                    if (session.timestamp() + session.config().sessionTimeout() < now) {
+                        final SockJSSession removed = sessions.remove(session.sessionId());
+                        session.context().close();
+                        sessionTimer.cancel(true);
+                        heartbeatFuture.cancel(true);
+                        logger.debug("Removed " + removed.sessionId() + " from map[" + sessions.size() + "]");
+                    }
+                }
+            }, session.config().sessionTimeout(), session.config().sessionTimeout(), TimeUnit.MILLISECONDS);
         }
     }
 
     private void startHeartbeatTimer(final ChannelHandlerContext ctx) {
-        try {
-            heartbeatFuture = ctx.executor().scheduleAtFixedRate(new Runnable() {
-                @Override
-                public void run() {
-                    if (ctx.channel().isActive() && ctx.channel().isRegistered()) {
-                        logger.debug("Sending heartbeat for " + session);
-                        ctx.channel().writeAndFlush(new HeartbeatFrame());
-                    }
+        heartbeatFuture = ctx.executor().scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                if (ctx.channel().isActive() && ctx.channel().isRegistered()) {
+                    logger.debug("Sending heartbeat for " + session);
+                    ctx.channel().writeAndFlush(new HeartbeatFrame());
                 }
-            },
-            session.config().heartbeatInterval(),
-            session.config().heartbeatInterval(),
-            TimeUnit.MILLISECONDS);
-        } catch (final UnsupportedOperationException e) {
-            logger.debug("Caught: " + e);
-            // ignoring this exception which needs to be fixed.
-            // The issue is when testing embedded and AbstractEventExecutor throws
-            // an UnsupportedOperationException when calling scheduleAtFixedRate.
-        }
+            }
+        },
+        session.config().heartbeatInterval(),
+        session.config().heartbeatInterval(),
+        TimeUnit.MILLISECONDS);
     }
 
     @Override

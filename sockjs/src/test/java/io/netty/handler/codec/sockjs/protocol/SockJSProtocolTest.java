@@ -44,9 +44,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.ClientCookieEncoder;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -2082,7 +2084,7 @@ public class SockJSProtocolTest {
     }
 
     private EmbeddedChannel channelForService(final SockJSServiceFactory service) {
-        return new EmbeddedChannel(
+        return new TestEmbeddedChannel(
                 new CorsInboundHandler(),
                 new SockJSHandler(service),
                 new CorsOutboundHandler(),
@@ -2090,7 +2092,7 @@ public class SockJSProtocolTest {
     }
 
     private EmbeddedChannel wsChannelForService(final SockJSServiceFactory service) {
-        final EmbeddedChannel ch = new EmbeddedChannel(
+        final EmbeddedChannel ch = new TestEmbeddedChannel(
                         new HttpRequestDecoder(),
                         new HttpResponseEncoder(),
                         new CorsInboundHandler(),
@@ -2102,10 +2104,22 @@ public class SockJSProtocolTest {
     }
 
     private EmbeddedChannel createWebsocketChannel(final Config config) throws Exception {
-        return new EmbeddedChannel(
+        return new TestEmbeddedChannel(
                 new WebSocket13FrameEncoder(true),
                 new WebSocket13FrameDecoder(true, false, 2048),
                 new WebSocketTransport(config));
+    }
+
+    private class TestEmbeddedChannel extends EmbeddedChannel {
+
+        public TestEmbeddedChannel(final ChannelHandler... handlers) {
+            super(handlers);
+        }
+
+        @Override
+        public EventLoop eventLoop() {
+            return new StubEmbeddedEventLoop(super.eventLoop());
+        }
     }
 
     private FullHttpResponse infoForMockService(final SockJSServiceFactory factory) {
@@ -2117,7 +2131,7 @@ public class SockJSProtocolTest {
     }
 
     private EmbeddedChannel jsonpChannelForService(final SockJSServiceFactory service) {
-        return new EmbeddedChannel(new CorsInboundHandler(),
+        return new TestEmbeddedChannel(new CorsInboundHandler(),
                 new SockJSHandler(service),
                 new ContentRetainer());
     }
