@@ -30,6 +30,8 @@ public final class ResourceLeakDetector<T> {
 
     private static final boolean DISABLED = SystemPropertyUtil.getBoolean("io.netty.noResourceLeakDetection", false);
 
+    private static volatile boolean disabled = DISABLED;
+
     public static final boolean ENABLED = !DISABLED;
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ResourceLeakDetector.class);
@@ -46,6 +48,20 @@ public final class ResourceLeakDetector<T> {
             return false;
         }
     };
+
+    /**
+     * Allow to disable resource leak detection
+     */
+    public static void setDisabled(boolean disabled) {
+        ResourceLeakDetector.disabled = disabled;
+    }
+
+    /**
+     * Returns {@code true} if resource leak detection is turned off.
+     */
+    public static boolean isDisabled() {
+        return disabled;
+    }
 
     /** the linked list of active resources */
     private final DefaultResourceLeak head = new DefaultResourceLeak(null);
@@ -94,7 +110,7 @@ public final class ResourceLeakDetector<T> {
     }
 
     public ResourceLeak open(T obj) {
-        if (DISABLED || leakCheckCnt ++ % samplingInterval != 0) {
+        if (disabled || leakCheckCnt ++ % samplingInterval != 0) {
             return NOOP;
         }
 
