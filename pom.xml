@@ -159,13 +159,13 @@
     <module>codec-http</module>
     <module>codec-memcache</module>
     <module>codec-socks</module>
+    <module>codec-sockjs</module>
     <module>transport</module>
     <module>transport-rxtx</module>
     <module>transport-sctp</module>
     <module>transport-udt</module>
     <module>handler</module>
     <module>example</module>
-    <module>sockjs</module>
     <module>testsuite</module>
     <module>microbench</module>
     <module>all</module>

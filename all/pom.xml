@@ -202,7 +202,7 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-sockjs</artifactId>
+      <artifactId>netty-codec-sockjs</artifactId>
       <version>${project.version}</version>
       <scope>compile</scope>
       <optional>true</optional>

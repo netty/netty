@@ -24,10 +24,10 @@
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>netty-sockjs</artifactId>
+  <artifactId>netty-codec-sockjs</artifactId>
   <packaging>bundle</packaging>
 
-  <name>Netty/Sockjs</name>
+  <name>Netty/Codec/SockJS</name>
 
   <dependencies>
     <dependency>
