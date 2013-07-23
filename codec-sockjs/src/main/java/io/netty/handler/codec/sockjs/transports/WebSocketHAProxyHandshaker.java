@@ -74,6 +74,16 @@ import java.util.regex.Pattern;
 public class WebSocketHAProxyHandshaker extends WebSocketServerHandshaker00 {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketHAProxyHandshaker.class);
+    private static final ThreadLocal<MessageDigest> MESSAGE_DIGEST = new ThreadLocal<MessageDigest>() {
+        @Override
+        protected MessageDigest initialValue() {
+            try {
+                return MessageDigest.getInstance("MD5");
+            } catch (final NoSuchAlgorithmException e) {
+                throw new IllegalStateException("Could not create a new MD5 instance", e);
+            }
+        }
+    };
 
     private static final Pattern BEGINNING_DIGIT = Pattern.compile("[^0-9]");
     private static final Pattern BEGINNING_SPACE = Pattern.compile("[^ ]");
@@ -198,15 +208,8 @@ public class WebSocketHAProxyHandshaker extends WebSocketServerHandshaker00 {
     }
 
     private static byte[] md5(final byte[] data) {
-        try {
-            // Try to get a MessageDigest that uses MD5
-            final MessageDigest md = MessageDigest.getInstance("MD5");
-            // Hash the data
-            return md.digest(data);
-        } catch (final NoSuchAlgorithmException e) {
-            // This shouldn't happen! How old is the computer?
-            throw new InternalError("MD5 not supported on this platform - Outdated?");
-        }
+        final MessageDigest md = MESSAGE_DIGEST.get();
+        return md.digest(data);
     }
 
     /**
