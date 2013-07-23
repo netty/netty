@@ -812,7 +812,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         return new FailedChannelFuture(channel(), executor(), cause);
     }
 
-    private void validatePromise(ChannelPromise promise, boolean allowUnsafe) {
+    private void validatePromise(ChannelPromise promise, boolean allowVoidPromise) {
         if (promise == null) {
             throw new NullPointerException("promise");
         }
@@ -821,31 +821,23 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             throw new IllegalArgumentException("promise already done: " + promise);
         }
 
-        // check if the promise is of type DefaultChannelPromise and if so check if its validated already.
-        DefaultChannelPromise p = null;
-        if (promise instanceof DefaultChannelPromise) {
-            p = (DefaultChannelPromise) promise;
-            if (p.isValidated()) {
-                return;
-            }
-        }
-
         if (promise.channel() != channel()) {
             throw new IllegalArgumentException(String.format(
                     "promise.channel does not match: %s (expected: %s)", promise.channel(), channel()));
         }
-        if (!allowUnsafe && promise instanceof VoidChannelPromise) {
+
+        if (promise.getClass() == DefaultChannelPromise.class) {
+            return;
+        }
+
+        if (!allowVoidPromise && promise instanceof VoidChannelPromise) {
             throw new IllegalArgumentException(
                     StringUtil.simpleClassName(VoidChannelPromise.class) + " not allowed for this operation");
         }
+
         if (promise instanceof AbstractChannel.CloseFuture) {
             throw new IllegalArgumentException(
                     StringUtil.simpleClassName(AbstractChannel.CloseFuture.class) + " not allowed in a pipeline");
-        }
-
-        if (p != null) {
-            // mark as validated
-            p.validated();
         }
     }
 
