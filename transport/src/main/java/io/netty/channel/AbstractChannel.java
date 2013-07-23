@@ -516,6 +516,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             boolean wasActive = isActive();
             if (closeFuture.setClosed()) {
+                ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+                this.outboundBuffer = null; // Disallow adding any messages and flushes to outboundBuffer.
+
                 try {
                     doClose();
                     promise.setSuccess();
@@ -523,14 +526,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     promise.setFailure(t);
                 }
 
-                // fail all queued messages
+                // Fail all the queued messages
                 try {
-                    ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
                     outboundBuffer.failFlushed(CLOSED_CHANNEL_EXCEPTION);
-                    outboundBuffer.failUnflushed(CLOSED_CHANNEL_EXCEPTION);
-                    outboundBuffer.recycle();
+                    outboundBuffer.close(CLOSED_CHANNEL_EXCEPTION);
                 } finally {
-                    outboundBuffer = null;
 
                     if (wasActive && !isActive()) {
                         invokeLater(new Runnable() {

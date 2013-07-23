@@ -29,6 +29,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
@@ -126,20 +127,6 @@ public final class ChannelOutboundBuffer {
         unflushedPromises = new ChannelPromise[initialCapacity];
         unflushedPendingSizes = new int[initialCapacity];
         unflushedTotals = new long[initialCapacity];
-    }
-
-    void recycle() {
-        if (head != tail) {
-            throw new IllegalStateException();
-        }
-        if (unflushedCount != 0) {
-            throw new IllegalStateException();
-        }
-        if (totalPendingSize != 0) {
-            throw new IllegalStateException();
-        }
-
-        RECYCLER.recycle(this, handle);
     }
 
     void addMessage(Object msg, ChannelPromise promise) {
@@ -482,33 +469,6 @@ public final class ChannelOutboundBuffer {
         return head == tail;
     }
 
-    void failUnflushed(Throwable cause) {
-        if (inFail) {
-            return;
-        }
-
-        inFail = true;
-
-        // Release all unflushed messages.
-        Object[] unflushed = this.unflushed;
-        ChannelPromise[] unflushedPromises = this.unflushedPromises;
-        int[] unflushedPendingSizes = this.unflushedPendingSizes;
-        final int unflushedCount = this.unflushedCount;
-        try {
-            for (int i = 0; i < unflushedCount; i++) {
-                safeRelease(unflushed[i]);
-                unflushed[i] = null;
-                safeFail(unflushedPromises[i], cause);
-                unflushedPromises[i] = null;
-                decrementPendingOutboundBytes(unflushedPendingSizes[i]);
-                unflushedPendingSizes[i] = 0;
-            }
-        } finally {
-            this.unflushedCount = 0;
-            inFail = false;
-        }
-    }
-
     void failFlushed(Throwable cause) {
         // Make sure that this method does not reenter.  A listener added to the current promise can be notified by the
         // current thread in the tryFailure() call of the loop below, and the listener can trigger another fail() call
@@ -529,6 +489,50 @@ public final class ChannelOutboundBuffer {
         } finally {
             inFail = false;
         }
+    }
+
+    void close(final ClosedChannelException cause) {
+        if (inFail) {
+            channel.eventLoop().execute(new Runnable() {
+                @Override
+                public void run() {
+                    close(cause);
+                }
+            });
+            return;
+        }
+
+        inFail = true;
+
+        if (channel.isOpen()) {
+            throw new IllegalStateException("close() must be invoked after the channel is closed.");
+        }
+
+        if (head != tail) {
+            throw new IllegalStateException("close() must be invoked after all flushed writes are handled.");
+        }
+
+        // Release all unflushed messages.
+        Object[] unflushed = this.unflushed;
+        ChannelPromise[] unflushedPromises = this.unflushedPromises;
+        int[] unflushedPendingSizes = this.unflushedPendingSizes;
+        final int unflushedCount = this.unflushedCount;
+        try {
+            for (int i = 0; i < unflushedCount; i++) {
+                safeRelease(unflushed[i]);
+                unflushed[i] = null;
+                safeFail(unflushedPromises[i], cause);
+                unflushedPromises[i] = null;
+                // Just decrease; do not trigger any events via decrementPendingOutboundBytes()
+                totalPendingSize -= unflushedPendingSizes[i];
+                unflushedPendingSizes[i] = 0;
+            }
+        } finally {
+            this.unflushedCount = 0;
+            inFail = false;
+        }
+
+        RECYCLER.recycle(this, handle);
     }
 
     private static void safeRelease(Object message) {
