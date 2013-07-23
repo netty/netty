@@ -55,7 +55,7 @@ public abstract class AbstractTimersSessionState implements SessionState {
             sessionTimer = ctx.executor().scheduleAtFixedRate(new Runnable() {
                 @Override
                 public void run() {
-                    final long now = System.currentTimeMillis();
+                    final long now = System.nanoTime();
                     if (isInUse(session)) {
                         return;
                     }
