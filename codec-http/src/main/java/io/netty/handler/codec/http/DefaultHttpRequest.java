@@ -56,12 +56,18 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
 
     @Override
     public HttpRequest setMethod(HttpMethod method) {
+        if (method == null) {
+            throw new NullPointerException("method");
+        }
         this.method = method;
         return this;
     }
 
     @Override
     public HttpRequest setUri(String uri) {
+        if (uri == null) {
+            throw new NullPointerException("method");
+        }
         this.uri = uri;
         return this;
     }

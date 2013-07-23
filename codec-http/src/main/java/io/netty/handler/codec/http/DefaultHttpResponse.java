@@ -45,6 +45,9 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
 
     @Override
     public HttpResponse setStatus(HttpResponseStatus status) {
+        if (status == null) {
+            throw new NullPointerException("status");
+        }
         this.status = status;
         return this;
     }
