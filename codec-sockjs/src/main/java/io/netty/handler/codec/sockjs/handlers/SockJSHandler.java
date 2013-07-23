@@ -130,38 +130,38 @@ public class SockJSHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         switch (pathParams.transport()) {
         case XHR:
             addTransportHandler(new XhrPollingTransport(factory.config(), request), ctx);
-            addSessionHandler(new PollingSessionState(getSession(factory, pathParams.sessionId()), sessions), ctx);
+            addSessionHandler(new PollingSessionState(sessions), getSession(factory, pathParams.sessionId()), ctx);
             break;
         case JSONP:
             addTransportHandler(new JsonpPollingTransport(factory.config(), request), ctx);
-            addSessionHandler(new PollingSessionState(getSession(factory, pathParams.sessionId()), sessions), ctx);
+            addSessionHandler(new PollingSessionState(sessions), getSession(factory, pathParams.sessionId()), ctx);
             break;
         case XHR_SEND:
             checkSessionExists(pathParams.sessionId(), request);
             addTransportHandler(new XhrSendTransport(factory.config()), ctx);
-            addSessionHandler(new SendingSessionState(sessions.get(pathParams.sessionId()), sessions), ctx);
+            addSessionHandler(new SendingSessionState(sessions), sessions.get(pathParams.sessionId()), ctx);
             break;
         case XHR_STREAMING:
             addTransportHandler(new XhrStreamingTransport(factory.config(), request), ctx);
-            addSessionHandler(new StreamingSessionState(getSession(factory, pathParams.sessionId()), sessions), ctx);
+            addSessionHandler(new StreamingSessionState(sessions), getSession(factory, pathParams.sessionId()), ctx);
             break;
         case EVENTSOURCE:
             addTransportHandler(new EventSourceTransport(factory.config(), request), ctx);
-            addSessionHandler(new StreamingSessionState(getSession(factory, pathParams.sessionId()), sessions), ctx);
+            addSessionHandler(new StreamingSessionState(sessions), getSession(factory, pathParams.sessionId()), ctx);
             break;
         case HTMLFILE:
             addTransportHandler(new HtmlFileTransport(factory.config(), request), ctx);
-            addSessionHandler(new StreamingSessionState(getSession(factory, pathParams.sessionId()), sessions), ctx);
+            addSessionHandler(new StreamingSessionState(sessions), getSession(factory, pathParams.sessionId()), ctx);
             break;
         case JSONP_SEND:
             checkSessionExists(pathParams.sessionId(), request);
             addTransportHandler(new JsonpSendTransport(factory.config()), ctx);
-            addSessionHandler(new SendingSessionState(sessions.get(pathParams.sessionId()), sessions), ctx);
+            addSessionHandler(new SendingSessionState(sessions), sessions.get(pathParams.sessionId()), ctx);
             break;
         case WEBSOCKET:
             addTransportHandler(new WebSocketTransport(factory.config()), ctx);
-            addSessionHandler(new WebSocketSessionState(new SockJSSession(randomUUID().toString(), factory.create()),
-                    sessions), ctx);
+            addSessionHandler(new WebSocketSessionState(), new SockJSSession(randomUUID().toString(), factory.create()),
+                    ctx);
             break;
         }
         ctx.fireChannelRead(request.retain());
@@ -171,8 +171,9 @@ public class SockJSHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         ctx.pipeline().addLast(transportHandler);
     }
 
-    private void addSessionHandler(final SessionState sessionState, final ChannelHandlerContext ctx) {
-        ctx.pipeline().addLast(new SessionHandler(sessionState));
+    private void addSessionHandler(final SessionState sessionState, final SockJSSession session,
+            final ChannelHandlerContext ctx) {
+        ctx.pipeline().addLast(new SessionHandler(sessionState, session));
     }
 
     private void checkSessionExists(final String sessionId, final HttpRequest request) throws SessionNotFoundException {

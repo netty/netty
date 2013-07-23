@@ -19,87 +19,35 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.sockjs.SessionContext;
-import io.netty.handler.codec.sockjs.protocol.CloseFrame;
-import io.netty.handler.codec.sockjs.protocol.HeartbeatFrame;
 import io.netty.handler.codec.sockjs.protocol.MessageFrame;
-import io.netty.handler.codec.sockjs.util.ArgumentUtil;
-import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
 
 /**
- * A streaming session state holds a session which in turn has a persistent
- * connection to the client. This connection/channel is created when the first
- * request from the client is made. This request opens a new session and that
- * requests channel will be used to when flushing queued data from the sessson.
+ * A streaming session state handles session interactions which has a persistent
+ * connection to the client.
+ *
+ * This connection/channel is created when the first request from the client is made. Upon
+ * opening the session any messages will be flushed. This could happen if the client connection
+ * is dropped but the session still active and the SockJS service has generated messages but
+ * has no where to send them. In this case the messages will be queue up and it is these
+ * message that get flushed.
  */
-class StreamingSessionState implements SessionState {
+class StreamingSessionState extends AbstractTimersSessionState {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(StreamingSessionState.class);
-    private final SockJSSession session;
-    private final ConcurrentMap<String, SockJSSession> sessions;
 
-    private ScheduledFuture<?> heartbeatFuture;
-    private ScheduledFuture<?> sessionTimer;
-
-    public StreamingSessionState(final SockJSSession session, final ConcurrentMap<String, SockJSSession> sessions) {
-        ArgumentUtil.checkNotNull(session, "session");
-        ArgumentUtil.checkNotNull(sessions, "sessions");
-        this.session = session;
-        this.sessions = sessions;
+    public StreamingSessionState(final ConcurrentMap<String, SockJSSession> sessions) {
+        super(sessions);
     }
 
     @Override
-    public void onConnect(final SessionContext s, final ChannelHandlerContext ctx) {
-        synchronized (session) {
-            session.setContext(ctx);
-            session.setState(States.OPEN);
-            session.onOpen(s);
-            startSessionTimer(ctx);
-            startHeartbeatTimer(ctx);
-        }
+    public void onOpen(final SockJSSession session, final ChannelHandlerContext ctx) {
+        flushMessages(ctx, session);
     }
 
-    @Override
-    public void onOpen(final ChannelHandlerContext ctx) {
-        if (isInUse()) {
-            logger.debug("Another connection still in open for [" + session.sessionId() + "]");
-            final CloseFrame closeFrame = new CloseFrame(2010, "Another connection still open");
-            ctx.writeAndFlush(closeFrame);
-            session.setState(States.INTERRUPTED);
-        } else {
-            session.setInuse();
-            flushMessages(ctx);
-        }
-    }
-
-    @Override
-    public void onMessage(final String message) throws Exception {
-        session.onMessage(message);
-    }
-
-    @Override
-    public void addMessage(final String message) {
-        session.addMessage(message);
-    }
-
-    @Override
-    public void onClose() {
-        session.resetInuse();
-    }
-
-    @Override
-    public void onSessionContextClose() {
-        synchronized (session) {
-            session.setState(States.CLOSED);
-            session.onClose();
-        }
-    }
-
-    private void flushMessages(final ChannelHandlerContext ignored) {
+    private void flushMessages(final ChannelHandlerContext ignored, final SockJSSession session) {
         final Channel channel = session.context().channel();
         if (channel.isActive() && channel.isRegistered()) {
             final String[] allMessages = session.getAllMessages();
@@ -121,74 +69,22 @@ class StreamingSessionState implements SessionState {
     }
 
     @Override
-    public boolean isInUse() {
-        return session.context().channel().isActive();
-    }
-
-    private void startSessionTimer(final ChannelHandlerContext ctx) {
-        if (sessionTimer == null) {
-            sessionTimer = ctx.executor().scheduleAtFixedRate(new Runnable() {
-                @Override
-                public void run() {
-                    final long now = System.currentTimeMillis();
-                    if (isInUse()) {
-                        return;
-                    }
-                    if (session.timestamp() + session.config().sessionTimeout() < now) {
-                        final SockJSSession removed = sessions.remove(session.sessionId());
-                        session.context().close();
-                        sessionTimer.cancel(true);
-                        heartbeatFuture.cancel(true);
-                        logger.debug("Removed " + removed.sessionId() + " from map[" + sessions.size() + "]");
-                    }
-                }
-            }, session.config().sessionTimeout(), session.config().sessionTimeout(), TimeUnit.MILLISECONDS);
+    public void onSockJSServerInitiatedClose(final SockJSSession session) {
+        final ChannelHandlerContext context = session.context();
+        if (context != null) { //could be null if the request is aborted, for example due to missing callback.
+            logger.debug("Will close session context " + session.context());
+            context.close();
         }
     }
 
-    private void startHeartbeatTimer(final ChannelHandlerContext ctx) {
-        heartbeatFuture = ctx.executor().scheduleAtFixedRate(new Runnable() {
-            @Override
-            public void run() {
-                if (ctx.channel().isActive() && ctx.channel().isRegistered()) {
-                    logger.debug("Sending heartbeat for " + session);
-                    ctx.channel().writeAndFlush(new HeartbeatFrame());
-                }
-            }
-        },
-        session.config().heartbeatInterval(),
-        session.config().heartbeatInterval(),
-        TimeUnit.MILLISECONDS);
-    }
-
     @Override
-    public States getState() {
-        return session.getState();
+    public boolean isInUse(final SockJSSession session) {
+        return session.context().channel().isActive();
     }
 
     @Override
     public String toString() {
-        return "StreamingSessionState[session=" + session + "]";
+        return "StreamingSessionState";
     }
 
-    @Override
-    public void onRequestCompleted(final ChannelHandlerContext ctx) {
-        session.resetInuse();
-    }
-
-    @Override
-    public ChannelHandlerContext getSessionChannelHandlerContext() {
-        return session.context();
-    }
-
-    @Override
-    public void onSockJSServerInitiatedClose() {
-        synchronized (session) {
-            final ChannelHandlerContext context = session.context();
-            if (context != null) { //could be null if the request is aborted, for example due to missing callback.
-                logger.debug("Will close session context " + session.context());
-                context.close();
-            }
-        }
-    }
 }

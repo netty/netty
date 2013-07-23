@@ -18,17 +18,11 @@ package io.netty.handler.codec.sockjs.handlers;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.sockjs.SessionContext;
-import io.netty.handler.codec.sockjs.protocol.CloseFrame;
-import io.netty.handler.codec.sockjs.protocol.HeartbeatFrame;
 import io.netty.handler.codec.sockjs.protocol.MessageFrame;
-import io.netty.handler.codec.sockjs.util.ArgumentUtil;
-import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
 
 /**
  * A polling state does not have a persistent connection to the client, instead a client
@@ -45,68 +39,21 @@ import java.util.concurrent.TimeUnit;
  * in the response.
  *
  */
-class PollingSessionState implements SessionState {
+class PollingSessionState extends AbstractTimersSessionState {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PollingSessionState.class);
-    private final SockJSSession session;
     private final ConcurrentMap<String, SockJSSession> sessions;
-    private ScheduledFuture<?> sessionTimer;
-    private ScheduledFuture<?> heartbeatFuture;
 
-    public PollingSessionState(final SockJSSession session, final ConcurrentMap<String, SockJSSession> sessions) {
-        ArgumentUtil.checkNotNull(session, "session");
-        ArgumentUtil.checkNotNull(sessions, "sessions");
-        this.session = session;
+    public PollingSessionState(final ConcurrentMap<String, SockJSSession> sessions) {
+        super(sessions);
         this.sessions = sessions;
     }
 
     @Override
-    public void onConnect(final SessionContext s, final ChannelHandlerContext ctx) {
-        synchronized (session) {
-            session.setContext(ctx);
-            session.setState(States.OPEN);
-            session.onOpen(s);
-            startSessionTimer(ctx);
-            startHeartbeatTimer(ctx);
-        }
+    public void onOpen(final SockJSSession session, final ChannelHandlerContext ctx) {
+        flushMessages(ctx, session);
     }
 
-    @Override
-    public void onOpen(final ChannelHandlerContext ctx) {
-        if (isInUse()) {
-            logger.debug("Another connection still in open for [" + session.sessionId() + "]");
-            final CloseFrame closeFrame = new CloseFrame(2010, "Another connection still open");
-            ctx.writeAndFlush(closeFrame);
-            session.setState(States.INTERRUPTED);
-        } else {
-            session.setInuse();
-            flushMessages(ctx);
-        }
-    }
-
-    @Override
-    public void onMessage(final String message) throws Exception {
-        session.onMessage(message);
-    }
-
-    @Override
-    public void addMessage(final String message) {
-        session.addMessage(message);
-    }
-
-    @Override
-    public void onClose() {
-        session.resetInuse();
-    }
-
-    @Override
-    public void onSessionContextClose() {
-        synchronized (session) {
-            session.setState(States.CLOSED);
-            session.onClose();
-        }
-    }
-
-    private void flushMessages(final ChannelHandlerContext ctx) {
+    private void flushMessages(final ChannelHandlerContext ctx, final SockJSSession session) {
         final String[] allMessages = session.getAllMessages();
         if (allMessages.length == 0) {
             return;
@@ -123,78 +70,23 @@ class PollingSessionState implements SessionState {
     }
 
     @Override
-    public boolean isInUse() {
-        synchronized (session) {
-            return session.context().channel().isActive() || session.inuse();
-        }
-    }
-
-    private void startSessionTimer(final ChannelHandlerContext ctx) {
-        if (sessionTimer == null) {
-            sessionTimer = ctx.executor().scheduleAtFixedRate(new Runnable() {
-                @Override
-                public void run() {
-                    final long now = System.currentTimeMillis();
-                    if (isInUse()) {
-                        return;
-                    }
-                    if (session.timestamp() + session.config().sessionTimeout() < now) {
-                        final SockJSSession removed = sessions.remove(session.sessionId());
-                        session.context().close();
-                        sessionTimer.cancel(true);
-                        heartbeatFuture.cancel(true);
-                        logger.debug("Removed " + removed.sessionId() + " from map[" + sessions.size() + "]");
-                    }
-                }
-            }, session.config().sessionTimeout(), session.config().sessionTimeout(), TimeUnit.MILLISECONDS);
-        }
-    }
-
-    private void startHeartbeatTimer(final ChannelHandlerContext ctx) {
-        heartbeatFuture = ctx.executor().scheduleAtFixedRate(new Runnable() {
-            @Override
-            public void run() {
-                if (ctx.channel().isActive() && ctx.channel().isRegistered()) {
-                    logger.debug("Sending heartbeat for " + session);
-                    ctx.channel().writeAndFlush(new HeartbeatFrame());
-                }
-            }
-        },
-        session.config().heartbeatInterval(),
-        session.config().heartbeatInterval(),
-        TimeUnit.MILLISECONDS);
+    public boolean isInUse(final SockJSSession session) {
+        return session.context().channel().isActive() || session.inuse();
     }
 
     @Override
-    public States getState() {
-        return session.getState();
+    public void onSockJSServerInitiatedClose(final SockJSSession session) {
+        final ChannelHandlerContext context = session.context();
+        if (context != null) { //could be null if the request is aborted, for example due to missing callback.
+            logger.debug("Will close session context " + session.context());
+            context.close();
+        }
+        sessions.remove(session.sessionId());
     }
 
     @Override
     public String toString() {
-        return "PollingSessionState[session=" + session + "]";
-    }
-
-    @Override
-    public void onRequestCompleted(final ChannelHandlerContext ctx) {
-        session.resetInuse();
-    }
-
-    @Override
-    public ChannelHandlerContext getSessionChannelHandlerContext() {
-        return session.context();
-    }
-
-    @Override
-    public void onSockJSServerInitiatedClose() {
-        synchronized (session) {
-            final ChannelHandlerContext context = session.context();
-            if (context != null) { //could be null if the request is aborted, for example due to missing callback.
-                logger.debug("Will close session context " + session.context());
-                context.close();
-            }
-        }
-        sessions.remove(session.sessionId());
+        return "PollingSessionState";
     }
 
 }

@@ -27,7 +27,9 @@ import java.util.concurrent.atomic.AtomicLong;
 
 class SockJSSession {
 
-    private SessionState.States state = SessionState.States.CONNECTING;
+    enum States { CONNECTING, OPEN, CLOSED, INTERRUPTED }
+
+    private States state = States.CONNECTING;
     private final String sessionId;
     private final SockJSService service;
     private final LinkedList<String> messages = new LinkedList<String>();
@@ -50,11 +52,11 @@ class SockJSSession {
         }
     }
 
-    public synchronized void setState(SessionState.States state) {
+    public synchronized void setState(States state) {
         this.state = state;
     }
 
-    public synchronized SessionState.States getState() {
+    public synchronized States getState() {
         return state;
     }
 
@@ -88,6 +90,7 @@ class SockJSSession {
     }
 
     public synchronized void onOpen(final SessionContext session) {
+        setState(States.OPEN);
         service.onOpen(session);
         updateTimestamp();
     }

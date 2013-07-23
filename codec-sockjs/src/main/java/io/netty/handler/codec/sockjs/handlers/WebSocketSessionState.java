@@ -15,18 +15,9 @@
  */
 package io.netty.handler.codec.sockjs.handlers;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.sockjs.SessionContext;
-import io.netty.handler.codec.sockjs.protocol.CloseFrame;
-import io.netty.handler.codec.sockjs.protocol.MessageFrame;
-import io.netty.handler.codec.sockjs.util.ArgumentUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * A session state for WebSockets.
@@ -37,113 +28,27 @@ import java.util.concurrent.ConcurrentMap;
 class WebSocketSessionState implements SessionState {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketSessionState.class);
 
-    private final SockJSSession session;
-    private final ConcurrentMap<String, SockJSSession> sessions;
-
-    public WebSocketSessionState(final SockJSSession session, final ConcurrentMap<String, SockJSSession> sessions) {
-        ArgumentUtil.checkNotNull(session, "session");
-        ArgumentUtil.checkNotNull(sessions, "sessions");
-        this.session = session;
-        this.sessions = sessions;
+    @Override
+    public void onConnect(final SockJSSession session, final ChannelHandlerContext ctx) {
     }
 
     @Override
-    public void onConnect(final SessionContext s, final ChannelHandlerContext ctx) {
-        synchronized (session) {
-            session.setContext(ctx);
-            session.setState(States.OPEN);
-            session.onOpen(s);
-        }
+    public void onOpen(final SockJSSession session, final ChannelHandlerContext ctx) {
     }
 
     @Override
-    public void onOpen(final ChannelHandlerContext ctx) {
-        if (isInUse()) {
-            logger.debug("Another connection still in open for [" + session.sessionId() + "]");
-            final CloseFrame closeFrame = new CloseFrame(2010, "Another connection still open");
-            ctx.writeAndFlush(closeFrame);
-            session.setState(States.INTERRUPTED);
-        } else {
-            session.setInuse();
-            flushMessages(ctx);
-        }
-    }
-
-    @Override
-    public void onMessage(final String message) throws Exception {
-        session.onMessage(message);
-    }
-
-    @Override
-    public void addMessage(final String message) {
-        session.addMessage(message);
-    }
-
-    @Override
-    public void onClose() {
-        session.resetInuse();
-    }
-
-    @Override
-    public void onSessionContextClose() {
-        synchronized (session) {
-            session.setState(States.CLOSED);
-            session.onClose();
-        }
-    }
-
-    private void flushMessages(final ChannelHandlerContext ignored) {
-        final Channel channel = session.context().channel();
-        if (channel.isActive() && channel.isRegistered()) {
-            final String[] allMessages = session.getAllMessages();
-
-            if (allMessages.length == 0) {
-                return;
-            }
-            final MessageFrame messageFrame = new MessageFrame(allMessages);
-            channel.writeAndFlush(messageFrame).addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(final ChannelFuture future) throws Exception {
-                    if (!future.isSuccess()) {
-                        session.addMessages(allMessages);
-                    }
-                }
-            });
-        }
-    }
-
-    @Override
-    public boolean isInUse() {
+    public boolean isInUse(final SockJSSession session) {
         return session.context().channel().isActive();
     }
 
     @Override
-    public States getState() {
-        return session.getState();
+    public void onSockJSServerInitiatedClose(final SockJSSession session) {
+        logger.debug("Will close session context " + session.context());
+        session.context().close();
     }
 
     @Override
     public String toString() {
-        return "WebSocketSessionState[session=" + session + "]";
+        return "WebSocketSessionState";
     }
-
-    @Override
-    public void onRequestCompleted(final ChannelHandlerContext ctx) {
-        session.resetInuse();
-    }
-
-    @Override
-    public ChannelHandlerContext getSessionChannelHandlerContext() {
-        return session.context();
-    }
-
-    @Override
-    public void onSockJSServerInitiatedClose() {
-        logger.debug("Will close session context " + session.context());
-        synchronized (session) {
-            session.context().close();
-            sessions.remove(session.sessionId());
-        }
-    }
-
 }

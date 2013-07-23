@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.sockjs.SessionContext;
+import io.netty.handler.codec.sockjs.handlers.SockJSSession.States;
 import io.netty.handler.codec.sockjs.protocol.CloseFrame;
 import io.netty.handler.codec.sockjs.protocol.MessageFrame;
 import io.netty.handler.codec.sockjs.protocol.OpenFrame;
@@ -44,11 +45,13 @@ public class SessionHandler extends ChannelInboundHandlerAdapter implements Sess
     public enum Events { CLOSE_SESSION, HANDLE_SESSION };
 
     private final SessionState sessionState;
+    private final SockJSSession session;
     private ChannelHandlerContext currentContext;
 
-    public SessionHandler(final SessionState sessionState) {
+    public SessionHandler(final SessionState sessionState, final SockJSSession session) {
         ArgumentUtil.checkNotNull(sessionState, "sessionState");
         this.sessionState = sessionState;
+        this.session = session;
     }
 
     @Override
@@ -65,27 +68,36 @@ public class SessionHandler extends ChannelInboundHandlerAdapter implements Sess
     private void handleSession(final ChannelHandlerContext ctx) throws Exception {
         currentContext = ctx;
         logger.debug("handleSession " + sessionState);
-        switch (sessionState.getState()) {
+        switch (session.getState()) {
         case CONNECTING:
-            logger.debug("State.Connecting sending open frame");
+            logger.debug("State.CONNECTING sending open frame");
             ctx.channel().writeAndFlush(new OpenFrame());
-            sessionState.onConnect(this, ctx);
+            session.setContext(ctx);
+            session.onOpen(this);
+            sessionState.onConnect(session, ctx);
             break;
         case OPEN:
-            sessionState.onOpen(ctx);
+            if (sessionState.isInUse(session)) {
+                logger.debug("Another connection still in open for [" + session.sessionId() + "]");
+                ctx.writeAndFlush(new CloseFrame(2010, "Another connection still open"));
+                session.setState(States.INTERRUPTED);
+            } else {
+                session.setInuse();
+                sessionState.onOpen(session, ctx);
+            }
             break;
         case INTERRUPTED:
             ctx.writeAndFlush(new CloseFrame(1002, "Connection interrupted"));
             break;
         case CLOSED:
             ctx.writeAndFlush(new CloseFrame(3000, "Go away!"));
-            sessionState.onClose();
+            session.resetInuse();
             break;
         }
     }
 
     private void handleMessage(final String message) throws Exception {
-        sessionState.onMessage(message);
+        session.onMessage(message);
     }
 
     @Override
@@ -94,18 +106,18 @@ public class SessionHandler extends ChannelInboundHandlerAdapter implements Sess
         if (isWritable(channel)) {
             channel.writeAndFlush(new MessageFrame(message));
         } else {
-            sessionState.addMessage(message);
+            session.addMessage(message);
         }
     }
 
     private Channel getActiveChannel() {
-        final Channel sessionChannel = sessionState.getSessionChannelHandlerContext().channel();
+        final Channel sessionChannel = session.context().channel();
         return sessionChannel.isActive() && sessionChannel.isRegistered() ? sessionChannel : currentContext.channel();
     }
 
     @Override
     public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
-        sessionState.onRequestCompleted(ctx);
+        session.resetInuse();
         ctx.fireChannelInactive();
     }
 
@@ -115,7 +127,8 @@ public class SessionHandler extends ChannelInboundHandlerAdapter implements Sess
 
     @Override
     public void close() {
-        sessionState.onSessionContextClose();
+        session.setState(States.CLOSED);
+        session.onClose();
         final Channel channel = getActiveChannel();
         if (isWritable(channel)) {
             final CloseFrame closeFrame = new CloseFrame(3000, "Go away!");
@@ -127,7 +140,7 @@ public class SessionHandler extends ChannelInboundHandlerAdapter implements Sess
     @Override
     public void userEventTriggered(final ChannelHandlerContext ctx, final Object event) throws Exception {
         if (event == Events.CLOSE_SESSION) {
-            sessionState.onSockJSServerInitiatedClose();
+            sessionState.onSockJSServerInitiatedClose(session);
         } else if (event == Events.HANDLE_SESSION) {
             handleSession(ctx);
         }

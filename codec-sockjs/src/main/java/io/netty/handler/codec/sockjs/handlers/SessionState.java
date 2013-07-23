@@ -16,11 +16,9 @@
 package io.netty.handler.codec.sockjs.handlers;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.sockjs.SessionContext;
 
 /**
- * A SessionState represents differences in the types of sessions possible
- * with SockJS.
+ * A SessionState represents differences in the types of sessions possible with SockJS.
  *
  * @see PollingSessionState
  * @see StreamingSessionState
@@ -29,79 +27,34 @@ import io.netty.handler.codec.sockjs.SessionContext;
  */
 interface SessionState {
 
-    enum States { CONNECTING, OPEN, CLOSED, INTERRUPTED }
-
-    /**
-     * Get the state that this session is currently in.
-     * @return
-     */
-    States getState();
-
     /**
      * Called when a new session is connecting.
      *
-     * @param sessionContext the session context for the SockJS service.
+     * @param session the {@link SockJSSession}.
      * @param ctx the {@link ChannelHandlerContext} for the current connection/channel
      */
-    void onConnect(final SessionContext sessionContext, final ChannelHandlerContext ctx);
+    void onConnect(final SockJSSession session, final ChannelHandlerContext ctx);
 
     /**
      * Called when a request for a connected session is received.
      *
+     * @param session the {@link SockJSSession}.
      * @param ctx the {@link ChannelHandlerContext} for the current connection/channel. Note
      *            that this ChannelHandlerContext is different from the one that opened the
      *            the sesssion and was passed to the onConnect method.
      */
-    void onOpen(final ChannelHandlerContext ctx);
-
-    /**
-     * Called when the current request has completed and the current ChannelHandlerContext
-     * has become inactive.
-     *
-     * This can happen at different times for different types of SessionStates. For example,
-     * a streaming connection would be held open for a longer period of time compared
-     * to a polling connection which would have many short lived connections.
-     *
-     */
-    void onRequestCompleted(final ChannelHandlerContext ctx);
-
-    /**
-     * Called when the a request is received and the session is in the CLOSED state.
-     */
-    void onClose();
-
-    /**
-     * Called when the SockJSService called close on the {@link SessionContext}
-     */
-    void onSessionContextClose();
+    void onOpen(final SockJSSession session, final ChannelHandlerContext ctx);
 
     /**
      * Called when the SockJS server has initiated a close of the session.
      */
-    void onSockJSServerInitiatedClose();
-
-    /**
-     * Returns the ChannelHandlerContext that opened the session.
-     *
-     * @return {@link ChannelHandlerContext} that was inuse when opening the session.
-     */
-    ChannelHandlerContext getSessionChannelHandlerContext();
-
-    /**
-     * Called when a message is to be processed by the underlying SockJS service
-     */
-    void onMessage(final String message) throws Exception;
-
-    /**
-     * Called when a message is sent to the session.
-     */
-    void addMessage(final String message);
+    void onSockJSServerInitiatedClose(final SockJSSession session);
 
     /**
      * Indicates if this session is in use.
      *
      * @return {@code true} if the session is in use.
      */
-    boolean isInUse();
+    boolean isInUse(SockJSSession session);
 
 }
