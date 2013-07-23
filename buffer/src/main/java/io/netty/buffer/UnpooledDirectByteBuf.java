@@ -518,7 +518,10 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
         if (!doNotFree) {
             PlatformDependent.freeDirectBuffer(buffer);
         }
-        leak.close();
+
+        if (leak != null) {
+            leak.close();
+        }
     }
 
     @Override

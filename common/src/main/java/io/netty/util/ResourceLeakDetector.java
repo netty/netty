@@ -40,13 +40,6 @@ public final class ResourceLeakDetector<T> {
 
     private static final int DEFAULT_SAMPLING_INTERVAL = 113;
 
-    private static final ResourceLeak NOOP = new ResourceLeak() {
-        @Override
-        public boolean close() {
-            return false;
-        }
-    };
-
     /**
      * Enables or disabled the resource leak detection.
      */
@@ -107,9 +100,15 @@ public final class ResourceLeakDetector<T> {
         tail.prev = head;
     }
 
+    /**
+     * Creates a new {@link ResourceLeak} which is expected to be closed via {@link ResourceLeak#close()} when the
+     * related resource is deallocated.
+     *
+     * @return the {@link ResourceLeak} or {@code null}
+     */
     public ResourceLeak open(T obj) {
         if (disabled || leakCheckCnt ++ % samplingInterval != 0) {
-            return NOOP;
+            return null;
         }
 
         reportLeak();

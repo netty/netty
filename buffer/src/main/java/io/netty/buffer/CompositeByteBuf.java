@@ -1568,7 +1568,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
             c.freeIfNecessary();
         }
 
-        leak.close();
+        if (leak != null) {
+            leak.close();
+        }
     }
 
     @Override
