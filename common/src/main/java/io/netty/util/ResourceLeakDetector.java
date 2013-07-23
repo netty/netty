@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class ResourceLeakDetector<T> {
 
-    private static volatile boolean disabled;
+    private static boolean disabled;
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ResourceLeakDetector.class);
 
