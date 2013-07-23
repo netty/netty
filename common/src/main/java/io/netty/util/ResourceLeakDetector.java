@@ -57,7 +57,6 @@ public final class ResourceLeakDetector<T> {
     /**
      * Returns {@code true} if resource leak detection is enabled.
      */
-
     public static boolean isEnabled() {
         return !disabled;
     }
