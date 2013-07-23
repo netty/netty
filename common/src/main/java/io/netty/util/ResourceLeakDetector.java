@@ -28,16 +28,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class ResourceLeakDetector<T> {
 
-    private static final boolean DISABLED = SystemPropertyUtil.getBoolean("io.netty.noResourceLeakDetection", false);
-
-    private static volatile boolean disabled = DISABLED;
-
-    public static final boolean ENABLED = !DISABLED;
+    private static volatile boolean disabled;
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ResourceLeakDetector.class);
 
     static {
+        final boolean DISABLED = SystemPropertyUtil.getBoolean("io.netty.noResourceLeakDetection", false);
         logger.debug("-Dio.netty.noResourceLeakDetection: {}", DISABLED);
+        disabled = DISABLED;
     }
 
     private static final int DEFAULT_SAMPLING_INTERVAL = 113;
@@ -50,17 +48,18 @@ public final class ResourceLeakDetector<T> {
     };
 
     /**
-     * Allow to disable resource leak detection
+     * Enables or disabled the resource leak detection.
      */
-    public static void setDisabled(boolean disabled) {
-        ResourceLeakDetector.disabled = disabled;
+    public static void setEnabled(boolean enabled) {
+        disabled = !enabled;
     }
 
     /**
-     * Returns {@code true} if resource leak detection is turned off.
+     * Returns {@code true} if resource leak detection is enabled.
      */
-    public static boolean isDisabled() {
-        return disabled;
+
+    public static boolean isEnabled() {
+        return !disabled;
     }
 
     /** the linked list of active resources */
