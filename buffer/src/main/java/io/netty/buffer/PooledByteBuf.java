@@ -145,7 +145,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
             this.handle = -1;
             memory = null;
             chunk.arena.free(chunk, handle);
-            if (ResourceLeakDetector.ENABLED) {
+            if (ResourceLeakDetector.isEnabled()) {
                 leak.close();
             } else {
                 recycle();
