@@ -51,7 +51,9 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected void deallocate() {
-        leak.close();
+        if (leak != null) {
+            leak.close();
+        }
     }
 
     @Override
