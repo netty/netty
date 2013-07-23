@@ -96,6 +96,7 @@ class SockJSSession {
     }
 
     public synchronized void onClose() {
+        setState(States.CLOSED);
         service.onClose();
     }
 
