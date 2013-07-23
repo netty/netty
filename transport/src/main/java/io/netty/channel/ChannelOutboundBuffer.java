@@ -30,7 +30,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
-import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
@@ -208,7 +207,9 @@ public final class ChannelOutboundBuffer {
 
         for (int i = 0; i < unflushedCount; i ++) {
             flushed[tail] = unflushed[i];
+            unflushed[i] = null;
             flushedPromises[tail] = unflushedPromises[i];
+            unflushedPromises[i] = null;
             flushedPendingSizes[tail] = unflushedPendingSizes[i];
             flushedProgresses[tail] = 0;
             flushedTotals[tail] = unflushedTotals[i];
@@ -225,8 +226,6 @@ public final class ChannelOutboundBuffer {
             }
         }
 
-        Arrays.fill(unflushed, 0, unflushedCount, null);
-        Arrays.fill(unflushedPromises, 0, unflushedCount, null);
         this.unflushedCount = 0;
 
         this.tail = tail;
