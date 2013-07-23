@@ -31,7 +31,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  * This class provides a session timeout timer and a heartbeat timer
  * which are started when the onConnect method is called..
  */
-public abstract class AbstractTimersSessionState implements SessionState {
+abstract class AbstractTimersSessionState implements SessionState {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractTimersSessionState.class);
 
@@ -55,7 +55,7 @@ public abstract class AbstractTimersSessionState implements SessionState {
             sessionTimer = ctx.executor().scheduleAtFixedRate(new Runnable() {
                 @Override
                 public void run() {
-                    final long now = System.nanoTime();
+                    final long now = TimeUnit.NANOSECONDS.toMillis(System.nanoTime());
                     if (isInUse(session)) {
                         return;
                     }
