@@ -325,7 +325,6 @@ public final class ChannelOutboundBuffer {
         flushed[head] = null;
 
         ChannelPromise promise = flushedPromises[head];
-        promise.trySuccess();
         flushedPromises[head] = null;
 
         int size = flushedPendingSizes[head];
@@ -333,6 +332,7 @@ public final class ChannelOutboundBuffer {
 
         this.head = head + 1 & flushed.length - 1;
 
+        promise.trySuccess();
         decrementPendingOutboundBytes(size);
 
         return true;
@@ -349,7 +349,7 @@ public final class ChannelOutboundBuffer {
         safeRelease(msg);
         flushed[head] = null;
 
-        safeFail(flushedPromises[head], cause);
+        ChannelPromise promise = flushedPromises[head];
         flushedPromises[head] = null;
 
         int size = flushedPendingSizes[head];
@@ -357,7 +357,9 @@ public final class ChannelOutboundBuffer {
 
         this.head = head + 1 & flushed.length - 1;
 
+        safeFail(promise, cause);
         decrementPendingOutboundBytes(size);
+
         return true;
     }
 
