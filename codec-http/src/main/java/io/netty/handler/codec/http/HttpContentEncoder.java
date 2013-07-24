@@ -160,8 +160,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
             }
             case AWAIT_CONTENT: {
                 ensureContent(msg);
-                encodeContent((HttpContent) msg, out);
-                if (msg  instanceof LastHttpContent) {
+                if (encodeContent((HttpContent) msg, out)) {
                     state = State.AWAIT_HEADERS;
                 }
                 break;
@@ -194,18 +193,26 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         }
     }
 
-    private void encodeContent(HttpContent c, List<Object> out) {
+    private boolean encodeContent(HttpContent c, List<Object> out) {
         ByteBuf content = c.content();
 
         encode(content, out);
 
         if (c instanceof LastHttpContent) {
             finishEncode(out);
+            LastHttpContent last = (LastHttpContent) c;
 
             // Generate an additional chunk if the decoder produced
             // the last product on closure,
-            out.add(LastHttpContent.EMPTY_LAST_CONTENT);
+            HttpHeaders headers = last.trailingHeaders();
+            if (headers.isEmpty()) {
+                out.add(LastHttpContent.EMPTY_LAST_CONTENT);
+            } else {
+                out.add(new ComposedLastHttpContent(headers));
+            }
+            return true;
         }
+        return false;
     }
 
     /**
