@@ -56,7 +56,7 @@ public class SpdySessionHandler
     private boolean sentGoAwayFrame;
     private boolean receivedGoAwayFrame;
 
-    private ChannelPromise closeSessionFuture;
+    private ChannelFutureListener closeSessionFutureListener;
 
     private final boolean server;
     private final boolean flowControl;
@@ -179,7 +179,7 @@ public class SpdySessionHandler
 
             // Close the remote side of the stream if this is the last frame
             if (spdyDataFrame.isLast()) {
-                halfCloseStream(streamId, true);
+                halfCloseStream(streamId, true, ctx.newSucceededFuture());
             }
 
         } else if (msg instanceof SpdySynStreamFrame) {
@@ -254,7 +254,7 @@ public class SpdySessionHandler
 
             // Close the remote side of the stream if this is the last frame
             if (spdySynReplyFrame.isLast()) {
-                halfCloseStream(streamId, true);
+                halfCloseStream(streamId, true, ctx.newSucceededFuture());
             }
 
         } else if (msg instanceof SpdyRstStreamFrame) {
@@ -269,7 +269,7 @@ public class SpdySessionHandler
              */
 
             SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
-            removeStream(spdyRstStreamFrame.getStreamId());
+            removeStream(spdyRstStreamFrame.getStreamId(), ctx.newSucceededFuture());
 
         } else if (msg instanceof SpdySettingsFrame) {
 
@@ -343,7 +343,7 @@ public class SpdySessionHandler
 
             // Close the remote side of the stream if this is the last frame
             if (spdyHeadersFrame.isLast()) {
-                halfCloseStream(streamId, true);
+                halfCloseStream(streamId, true, ctx.newSucceededFuture());
             }
 
         } else if (msg instanceof SpdyWindowUpdateFrame) {
@@ -384,7 +384,7 @@ public class SpdySessionHandler
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         for (Integer streamId: spdySession.getActiveStreams()) {
-            removeStream(streamId);
+            removeStream(streamId, ctx.newSucceededFuture());
         }
         ctx.fireChannelInactive();
     }
@@ -500,7 +500,7 @@ public class SpdySessionHandler
 
             // Close the local side of the stream if this is the last frame
             if (spdyDataFrame.isLast()) {
-                halfCloseStream(streamId, false);
+                halfCloseStream(streamId, false, promise);
             }
 
         } else if (msg instanceof SpdySynStreamFrame) {
@@ -534,13 +534,13 @@ public class SpdySessionHandler
 
             // Close the local side of the stream if this is the last frame
             if (spdySynReplyFrame.isLast()) {
-                halfCloseStream(streamId, false);
+                halfCloseStream(streamId, false, promise);
             }
 
         } else if (msg instanceof SpdyRstStreamFrame) {
 
             SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
-            removeStream(spdyRstStreamFrame.getStreamId());
+            removeStream(spdyRstStreamFrame.getStreamId(), promise);
 
         } else if (msg instanceof SpdySettingsFrame) {
 
@@ -598,7 +598,7 @@ public class SpdySessionHandler
 
             // Close the local side of the stream if this is the last frame
             if (spdyHeadersFrame.isLast()) {
-                halfCloseStream(streamId, false);
+                halfCloseStream(streamId, false, promise);
             }
 
         } else if (msg instanceof SpdyWindowUpdateFrame) {
@@ -639,10 +639,11 @@ public class SpdySessionHandler
      */
     private void issueStreamError(ChannelHandlerContext ctx, int streamId, SpdyStreamStatus status) {
         boolean fireChannelRead = !spdySession.isRemoteSideClosed(streamId);
-        removeStream(streamId);
+        ChannelPromise promise = ctx.newPromise();
+        removeStream(streamId, promise);
 
         SpdyRstStreamFrame spdyRstStreamFrame = new DefaultSpdyRstStreamFrame(streamId, status);
-        ctx.writeAndFlush(spdyRstStreamFrame);
+        ctx.writeAndFlush(spdyRstStreamFrame, promise);
         if (fireChannelRead) {
             ctx.fireChannelRead(spdyRstStreamFrame);
         }
@@ -718,22 +719,22 @@ public class SpdySessionHandler
         return true;
     }
 
-    private void halfCloseStream(int streamId, boolean remote) {
+    private void halfCloseStream(int streamId, boolean remote, ChannelFuture future) {
         if (remote) {
             spdySession.closeRemoteSide(streamId);
         } else {
             spdySession.closeLocalSide(streamId);
         }
-        if (closeSessionFuture != null && spdySession.noActiveStreams()) {
-            closeSessionFuture.trySuccess();
+        if (closeSessionFutureListener != null && spdySession.noActiveStreams()) {
+            future.addListener(closeSessionFutureListener);
         }
     }
 
-    private void removeStream(int streamId) {
+    private void removeStream(int streamId, ChannelFuture future) {
         spdySession.removeStream(streamId, STREAM_CLOSED);
 
-        if (closeSessionFuture != null && spdySession.noActiveStreams()) {
-            closeSessionFuture.trySuccess();
+        if (closeSessionFutureListener != null && spdySession.noActiveStreams()) {
+            future.addListener(closeSessionFutureListener);
         }
     }
 
@@ -758,7 +759,7 @@ public class SpdySessionHandler
 
                     // Close the local side of the stream if this is the last frame
                     if (spdyDataFrame.isLast()) {
-                        halfCloseStream(streamId, false);
+                        halfCloseStream(streamId, false, pendingWrite.promise);
                     }
 
                     // The transfer window size is pre-decremented when sending a data frame downstream.
@@ -807,8 +808,7 @@ public class SpdySessionHandler
         if (spdySession.noActiveStreams()) {
             f.addListener(new ClosingChannelFutureListener(ctx, future));
         } else {
-            closeSessionFuture = ctx.newPromise();
-            closeSessionFuture.addListener(new ClosingChannelFutureListener(ctx, future));
+            closeSessionFutureListener = new ClosingChannelFutureListener(ctx, future);
         }
         // FIXME: Close the connection forcibly after timeout.
     }
