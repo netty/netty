@@ -153,8 +153,8 @@ public class SpdyFrameDecoder extends ByteToMessageDecoder {
                 Object frame = readControlFrame(buffer);
                 if (frame != null) {
                     state = State.READ_COMMON_HEADER;
+                    out.add(frame);
                 }
-                out.add(frame);
                 return;
             } catch (IllegalArgumentException e) {
                 state = State.FRAME_ERROR;
