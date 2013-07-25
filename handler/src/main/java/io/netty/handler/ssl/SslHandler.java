@@ -28,13 +28,13 @@ import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.util.Recycler;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.PendingWrite;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
@@ -408,8 +408,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 if (pendingWrite == null) {
                     break;
                 }
-                ctx.write(pendingWrite.buf, pendingWrite.promise);
-                pendingWrite.recycle();
+                ctx.write(pendingWrite.msg(), (ChannelPromise) pendingWrite.recycleAndGet());
             }
             ctx.flush();
             return;
@@ -432,12 +431,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 if (out == null) {
                     out = ctx.alloc().buffer();
                 }
-                SSLEngineResult result = wrap(engine, pending.buf, out);
+                ByteBuf buf = (ByteBuf) pending.msg();
+                SSLEngineResult result = wrap(engine, buf, out);
 
-                if (!pending.buf.isReadable()) {
-                    pending.buf.release();
-                    promise = pending.promise;
-                    pending.recycle();
+                if (!buf.isReadable()) {
+                    buf.release();
+                    promise = (ChannelPromise) pending.recycleAndGet();
                     pendingUnencryptedWrites.remove();
                 } else {
                     promise = null;
@@ -1081,50 +1080,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 throw new IllegalStateException();
             }
             return ctx.executor();
-        }
-    }
-
-    private static final class PendingWrite {
-        private static final Recycler<PendingWrite> RECYCLER = new Recycler<PendingWrite>() {
-            @Override
-            protected PendingWrite newObject(Handle handle) {
-                return new PendingWrite(handle);
-            }
-        };
-
-        /**
-         * Create a new empty {@link RecyclableArrayList} instance
-         */
-        public static PendingWrite newInstance(ByteBuf buf, ChannelPromise promise) {
-            PendingWrite pending = RECYCLER.get();
-            pending.buf = buf;
-            pending.promise = promise;
-            return pending;
-        }
-
-        private final Recycler.Handle handle;
-        private ByteBuf buf;
-        private ChannelPromise promise;
-
-        private PendingWrite(Recycler.Handle handle) {
-            this.handle = handle;
-        }
-
-        /**
-         * Clear and recycle this instance.
-         */
-        boolean recycle() {
-            buf = null;
-            promise = null;
-            return RECYCLER.recycle(this, handle);
-        }
-
-        boolean failAndRecycle(Throwable cause) {
-            buf.release();
-            if (promise != null) {
-                promise.setFailure(cause);
-            }
-            return recycle();
         }
     }
 }
