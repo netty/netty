@@ -144,6 +144,8 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         final SelectionKey key = selectionKey();
         final int interestOps = key.interestOps();
+        int writeSpinCount = -1;
+
         for (;;) {
             Object msg = in.current();
             if (msg == null) {
@@ -163,7 +165,10 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
                 boolean done = false;
                 long flushedAmount = 0;
-                for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
+                if (writeSpinCount == -1) {
+                    writeSpinCount = config().getWriteSpinCount();
+                }
+                for (int i = writeSpinCount - 1; i >= 0; i --) {
                     int localFlushedAmount = doWriteBytes(buf);
                     if (localFlushedAmount == 0) {
                         break;
@@ -190,7 +195,10 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 FileRegion region = (FileRegion) msg;
                 boolean done = false;
                 long flushedAmount = 0;
-                for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
+                if (writeSpinCount == -1) {
+                    writeSpinCount = config().getWriteSpinCount();
+                }
+                for (int i = writeSpinCount - 1; i >= 0; i --) {
                     long localFlushedAmount = doWriteFileRegion(region);
                     if (localFlushedAmount == 0) {
                         break;
