@@ -205,7 +205,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
             // Time is too short, so just lets continue
             return 0;
         }
-        return (bytes * 1000 / limit - interval / 10) * 10;
+        return (bytes * 1000 / limit - interval) / 10 * 10;
     }
 
     @Override
