@@ -29,7 +29,7 @@ import java.util.NoSuchElementException;
 
 
 /**
- * A list of {@link ChannelHandler}s which handles or intercepts inbound events and outbount operations of a
+ * A list of {@link ChannelHandler}s which handles or intercepts inbound events and outbound operations of a
  * {@link Channel}.  {@link ChannelPipeline} implements an advanced form of the
  * <a href="http://www.oracle.com/technetwork/java/interceptingfilter-142169.html">Intercepting Filter</a> pattern
  * to give a user full control over how an event is handled and how the {@link ChannelHandler}s in a pipeline
@@ -117,7 +117,7 @@ import java.util.NoSuchElementException;
  * <ul>
  * <li>3 and 4 don't implement {@link ChannelInboundHandler}, and therefore the actual evaluation order of an inbound
  *     event will be: 1, 2, and 5.</li>
- * <li>1 and 2 implement {@link ChannelOutboundHandler}, and therefore the actual evaluation order of a
+ * <li>1 and 2 don't implement {@link ChannelOutboundHandler}, and therefore the actual evaluation order of a
  *     outbound event will be: 5, 4, and 3.</li>
  * <li>If 5 implements both {@link ChannelInboundHandler} and {@link ChannelOutboundHandler}, the evaluation order of
  *     an inbound and a outbound event could be 125 and 543 respectively.</li>

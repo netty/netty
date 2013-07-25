@@ -812,21 +812,29 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         return new FailedChannelFuture(channel(), executor(), cause);
     }
 
-    private void validatePromise(ChannelFuture promise, boolean allowUnsafe) {
+    private void validatePromise(ChannelPromise promise, boolean allowVoidPromise) {
         if (promise == null) {
             throw new NullPointerException("promise");
         }
+
+        if (promise.isDone()) {
+            throw new IllegalArgumentException("promise already done: " + promise);
+        }
+
         if (promise.channel() != channel()) {
             throw new IllegalArgumentException(String.format(
                     "promise.channel does not match: %s (expected: %s)", promise.channel(), channel()));
         }
-        if (promise.isDone()) {
-            throw new IllegalArgumentException("promise already done: " + promise);
+
+        if (promise.getClass() == DefaultChannelPromise.class) {
+            return;
         }
-        if (!allowUnsafe && promise instanceof VoidChannelPromise) {
+
+        if (!allowVoidPromise && promise instanceof VoidChannelPromise) {
             throw new IllegalArgumentException(
                     StringUtil.simpleClassName(VoidChannelPromise.class) + " not allowed for this operation");
         }
+
         if (promise instanceof AbstractChannel.CloseFuture) {
             throw new IllegalArgumentException(
                     StringUtil.simpleClassName(AbstractChannel.CloseFuture.class) + " not allowed in a pipeline");

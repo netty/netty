@@ -31,7 +31,7 @@ interface ChannelPropertyAccess {
     ChannelPipeline pipeline();
 
     /**
-     * Return the assigned {@link ByteBufAllocator} which will be used for allocate {@link ByteBuf}s.
+     * Return the assigned {@link ByteBufAllocator} which will be used to allocate {@link ByteBuf}s.
      */
     ByteBufAllocator alloc();
 
@@ -46,14 +46,14 @@ interface ChannelPropertyAccess {
     ChannelProgressivePromise newProgressivePromise();
 
     /**
-     * Create a new {@link ChannelFuture} which is marked as successes already. So {@link ChannelFuture#isSuccess()}
+     * Create a new {@link ChannelFuture} which is marked as succeeded already. So {@link ChannelFuture#isSuccess()}
      * will return {@code true}. All {@link FutureListener} added to it will be notified directly. Also
      * every call of blocking methods will just return without blocking.
      */
     ChannelFuture newSucceededFuture();
 
     /**
-     * Create a new {@link ChannelFuture} which is marked as fakued already. So {@link Future#isSuccess()}
+     * Create a new {@link ChannelFuture} which is marked as failed already. So {@link ChannelFuture#isSuccess()}
      * will return {@code false}. All {@link FutureListener} added to it will be notified directly. Also
      * every call of blocking methods will just return without blocking.
      */
@@ -67,8 +67,8 @@ interface ChannelPropertyAccess {
      * </p>
      * <p>
      * Be aware that the returned {@link ChannelPromise} will not support most operations and should only be used
-     * if you want to safe object allocation for every operation. You will not be able to detect if the operation
-     * was complete, only if it failed as the implementation will call
+     * if you want to save an object allocation for every write operation. You will not be able to detect if the
+     * operation  was complete, only if it failed as the implementation will call
      * {@link ChannelPipeline#fireExceptionCaught(Throwable)} in this case.
      * </p>
      * <strong>Be aware this is an expert feature and should be used with care!</strong>

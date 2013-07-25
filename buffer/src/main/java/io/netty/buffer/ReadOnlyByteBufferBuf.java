@@ -51,7 +51,9 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected void deallocate() {
-        leak.close();
+        if (leak != null) {
+            leak.close();
+        }
     }
 
     @Override
@@ -214,12 +216,33 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
-        throw new ReadOnlyBufferException();
+        ensureAccessible();
+        if (length == 0) {
+            return this;
+        }
+
+        if (buffer.hasArray()) {
+            out.write(buffer.array(), index + buffer.arrayOffset(), length);
+        } else {
+            byte[] tmp = new byte[length];
+            ByteBuffer tmpBuf = internalNioBuffer();
+            tmpBuf.clear().position(index);
+            tmpBuf.get(tmp);
+            out.write(tmp);
+        }
+        return this;
     }
 
     @Override
     public int getBytes(int index, GatheringByteChannel out, int length) throws IOException {
-        throw new ReadOnlyBufferException();
+        ensureAccessible();
+        if (length == 0) {
+            return 0;
+        }
+
+        ByteBuffer tmpBuf = internalNioBuffer();
+        tmpBuf.clear().position(index).limit(index + length);
+        return out.write(tmpBuf);
     }
 
     @Override

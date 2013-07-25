@@ -28,6 +28,7 @@ import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.util.Recycler;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
@@ -354,7 +355,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             if (write == null) {
                 break;
             }
-            write.fail(new ChannelException("Pending write on removal of SslHandler"));
+            write.failAndRecycle(new ChannelException("Pending write on removal of SslHandler"));
         }
     }
 
@@ -393,7 +394,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     @Override
     public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        pendingUnencryptedWrites.add(new PendingWrite((ByteBuf) msg, promise));
+        pendingUnencryptedWrites.add(PendingWrite.newInstance((ByteBuf) msg, promise));
     }
 
     @Override
@@ -408,12 +409,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     break;
                 }
                 ctx.write(pendingWrite.buf, pendingWrite.promise);
+                pendingWrite.recycle();
             }
             ctx.flush();
             return;
         }
         if (pendingUnencryptedWrites.isEmpty()) {
-            pendingUnencryptedWrites.add(new PendingWrite(Unpooled.EMPTY_BUFFER, null));
+            pendingUnencryptedWrites.add(PendingWrite.newInstance(Unpooled.EMPTY_BUFFER, null));
         }
         flush0(ctx);
     }
@@ -435,6 +437,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 if (!pending.buf.isReadable()) {
                     pending.buf.release();
                     promise = pending.promise;
+                    pending.recycle();
                     pendingUnencryptedWrites.remove();
                 } else {
                     promise = null;
@@ -448,7 +451,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         if (w == null) {
                             break;
                         }
-                        w.fail(SSLENGINE_CLOSED);
+                        w.failAndRecycle(SSLENGINE_CLOSED);
                     }
                     return;
                 } else {
@@ -934,7 +937,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             if (write == null) {
                 break;
             }
-            write.fail(cause);
+            write.failAndRecycle(cause);
         }
     }
 
@@ -1082,23 +1085,46 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     private static final class PendingWrite {
-        final ByteBuf buf;
-        final ChannelPromise promise;
+        private static final Recycler<PendingWrite> RECYCLER = new Recycler<PendingWrite>() {
+            @Override
+            protected PendingWrite newObject(Handle handle) {
+                return new PendingWrite(handle);
+            }
+        };
 
-        PendingWrite(ByteBuf buf, ChannelPromise promise) {
-            this.buf = buf;
-            this.promise = promise;
+        /**
+         * Create a new empty {@link RecyclableArrayList} instance
+         */
+        public static PendingWrite newInstance(ByteBuf buf, ChannelPromise promise) {
+            PendingWrite pending = RECYCLER.get();
+            pending.buf = buf;
+            pending.promise = promise;
+            return pending;
         }
 
-        PendingWrite(ByteBuf buf) {
-            this(buf, null);
+        private final Recycler.Handle handle;
+        private ByteBuf buf;
+        private ChannelPromise promise;
+
+        private PendingWrite(Recycler.Handle handle) {
+            this.handle = handle;
         }
 
-        void fail(Throwable cause) {
+        /**
+         * Clear and recycle this instance.
+         */
+        boolean recycle() {
+            buf = null;
+            promise = null;
+            return RECYCLER.recycle(this, handle);
+        }
+
+        boolean failAndRecycle(Throwable cause) {
             buf.release();
             if (promise != null) {
                 promise.setFailure(cause);
             }
+            return recycle();
         }
     }
 }

@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.util.DefaultAttributeMap;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ThreadLocalRandom;
@@ -515,6 +516,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             boolean wasActive = isActive();
             if (closeFuture.setClosed()) {
+                ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+                this.outboundBuffer = null; // Disallow adding any messages and flushes to outboundBuffer.
+
                 try {
                     doClose();
                     promise.setSuccess();
@@ -522,14 +526,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     promise.setFailure(t);
                 }
 
-                // fail all queued messages
+                // Fail all the queued messages
                 try {
-                    ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
                     outboundBuffer.failFlushed(CLOSED_CHANNEL_EXCEPTION);
-                    outboundBuffer.failUnflushed(CLOSED_CHANNEL_EXCEPTION);
-                    outboundBuffer.recycle();
+                    outboundBuffer.close(CLOSED_CHANNEL_EXCEPTION);
                 } finally {
-                    outboundBuffer = null;
 
                     if (wasActive && !isActive()) {
                         invokeLater(new Runnable() {
@@ -614,12 +615,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         @Override
         public void write(Object msg, ChannelPromise promise) {
             if (!isActive()) {
-                // Mark the write request as failure if the channl is inactive.
+                // Mark the write request as failure if the channel is inactive.
                 if (isOpen()) {
                     promise.tryFailure(NOT_YET_CONNECTED_EXCEPTION);
                 } else {
                     promise.tryFailure(CLOSED_CHANNEL_EXCEPTION);
                 }
+                // release message now to prevent resource-leak
+                ReferenceCountUtil.release(msg);
             } else {
                 outboundBuffer.addMessage(msg, promise);
             }

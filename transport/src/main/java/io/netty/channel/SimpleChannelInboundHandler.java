@@ -113,7 +113,7 @@ public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandl
      * @param ctx           the {@link ChannelHandlerContext} which this {@link SimpleChannelInboundHandler}
      *                      belongs to
      * @param msg           the message to handle
-     * @throws Exception    is thrown if an error accour
+     * @throws Exception    is thrown if an error occurred
      */
     protected abstract void channelRead0(ChannelHandlerContext ctx, I msg) throws Exception;
 }

@@ -18,7 +18,6 @@ package io.netty.buffer;
 
 import io.netty.util.Recycler;
 import io.netty.util.ResourceLeak;
-import io.netty.util.ResourceLeakDetector;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -145,7 +144,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
             this.handle = -1;
             memory = null;
             chunk.arena.free(chunk, handle);
-            if (ResourceLeakDetector.ENABLED) {
+            if (leak != null) {
                 leak.close();
             } else {
                 recycle();
@@ -157,7 +156,6 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     private void recycle() {
         Recycler.Handle recyclerHandle = this.recyclerHandle;
         if (recyclerHandle != null) {
-            setRefCnt(1);
             ((Recycler<Object>) recycler()).recycle(this, recyclerHandle);
         }
     }
