@@ -43,7 +43,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     private final EventExecutor executor;
     private final ConcurrentSet<Channel> serverChannels = new ConcurrentSet<Channel>();
     private final ConcurrentSet<Channel> nonServerChannels = new ConcurrentSet<Channel>();
-    private final ChannelFutureListener remover = new ChannelFutureListener() {
+    protected final ChannelFutureListener remover = new ChannelFutureListener() {
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {
             remove(future.channel());
@@ -202,7 +202,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
         }
 
         Map<Channel, ChannelFuture> futures = new LinkedHashMap<Channel, ChannelFuture>(size());
-        for (Channel c: nonServerChannels) {
+        for (Channel c: nonServerChannels()) {
             if (matcher.matches(c)) {
                 futures.put(c, c.write(safeDuplicate(message)));
             }
@@ -231,12 +231,12 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
         Map<Channel, ChannelFuture> futures =
                 new LinkedHashMap<Channel, ChannelFuture>(size());
 
-        for (Channel c: serverChannels) {
+        for (Channel c: serverChannels()) {
             if (matcher.matches(c)) {
                 futures.put(c, c.disconnect());
             }
         }
-        for (Channel c: nonServerChannels) {
+        for (Channel c: nonServerChannels()) {
             if (matcher.matches(c)) {
                 futures.put(c, c.disconnect());
             }
@@ -254,12 +254,12 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
         Map<Channel, ChannelFuture> futures =
                 new LinkedHashMap<Channel, ChannelFuture>(size());
 
-        for (Channel c: serverChannels) {
+        for (Channel c: serverChannels()) {
             if (matcher.matches(c)) {
                 futures.put(c, c.close());
             }
         }
-        for (Channel c: nonServerChannels) {
+        for (Channel c: nonServerChannels()) {
             if (matcher.matches(c)) {
                 futures.put(c, c.close());
             }
@@ -277,12 +277,12 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
         Map<Channel, ChannelFuture> futures =
                 new LinkedHashMap<Channel, ChannelFuture>(size());
 
-        for (Channel c: serverChannels) {
+        for (Channel c: serverChannels()) {
             if (matcher.matches(c)) {
                 futures.put(c, c.deregister());
             }
         }
-        for (Channel c: nonServerChannels) {
+        for (Channel c: nonServerChannels()) {
             if (matcher.matches(c)) {
                 futures.put(c, c.deregister());
             }
@@ -293,7 +293,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     @Override
     public ChannelGroup flush(ChannelMatcher matcher) {
-        for (Channel c: nonServerChannels) {
+        for (Channel c: nonServerChannels()) {
             if (matcher.matches(c)) {
                 c.flush();
             }
@@ -309,7 +309,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
         Map<Channel, ChannelFuture> futures = new LinkedHashMap<Channel, ChannelFuture>(size());
 
-        for (Channel c: nonServerChannels) {
+        for (Channel c: nonServerChannels()) {
             if (matcher.matches(c)) {
                 futures.put(c, c.writeAndFlush(safeDuplicate(message)));
             }
@@ -344,5 +344,13 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     public String toString() {
         return getClass().getSimpleName() +
                "(name: " + name() + ", size: " + size() + ')';
+    }
+    
+    protected Collection<Channel> serverChannels() {
+    	return this.serverChannels;
+    }
+    
+    protected Collection<Channel> nonServerChannels() {
+    	return this.nonServerChannels;
     }
 }
