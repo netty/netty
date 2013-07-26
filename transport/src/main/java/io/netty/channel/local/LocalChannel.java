@@ -199,12 +199,13 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doClose() throws Exception {
+    protected void doPreClose() throws Exception {
         if (state > 2) {
             // Closed already
             return;
         }
 
+        // Update all internal state before the closeFuture is notified.
         if (localAddress != null) {
             if (parent() == null) {
                 LocalChannelRegistry.unregister(localAddress);
@@ -212,7 +213,10 @@ public class LocalChannel extends AbstractChannel {
             localAddress = null;
         }
         state = 3;
+    }
 
+    @Override
+    protected void doClose() throws Exception {
         LocalChannel peer = this.peer;
         if (peer != null && peer.isActive()) {
             peer.unsafe().close(unsafe().voidPromise());
