@@ -569,9 +569,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
-            Runnable postTask = null;
             try {
-                postTask = doDeregister();
+                doDeregister();
             } catch (Throwable t) {
                 logger.warn("Unexpected exception occurred while deregistering a channel.", t);
             } finally {
@@ -589,10 +588,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     // an open channel.  Their doDeregister() calls close().  Consequently,
                     // close() calls deregister() again - no need to fire channelUnregistered.
                     promise.setSuccess();
-                }
-
-                if (postTask != null) {
-                    postTask.run();
                 }
             }
         }
@@ -761,12 +756,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     /**
      * Deregister the {@link Channel} from its {@link EventLoop}.
-     * You can return a {@link Runnable} which will be run as post-task of the registration process.
      *
      * Sub-classes may override this method
      */
-    protected Runnable doDeregister() throws Exception {
-        return null;
+    protected void doDeregister() throws Exception {
+        // NOOP
     }
 
     /**
@@ -776,8 +770,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     /**
      * Flush the content of the given buffer to the remote peer.
-     *
-     * Sub-classes may override this as this implementation will just thrown an {@link UnsupportedOperationException}
      */
     protected abstract void doWrite(ChannelOutboundBuffer in) throws Exception;
 
