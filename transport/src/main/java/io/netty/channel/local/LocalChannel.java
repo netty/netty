@@ -219,12 +219,11 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected Runnable doDeregister() throws Exception {
+    protected void doDeregister() throws Exception {
         if (isOpen()) {
             unsafe().close(unsafe().voidPromise());
         }
         ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
-        return null;
     }
 
     @Override

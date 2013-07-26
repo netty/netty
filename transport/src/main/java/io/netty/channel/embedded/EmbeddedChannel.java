@@ -292,11 +292,6 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    protected Runnable doDeregister() throws Exception {
-        return null;
-    }
-
-    @Override
     protected void doBeginRead() throws Exception {
         // NOOP
     }
