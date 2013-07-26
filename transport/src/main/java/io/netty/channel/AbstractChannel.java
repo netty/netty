@@ -415,6 +415,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                             "Force-closing a channel whose registration task was unaccepted by an event loop: {}",
                             AbstractChannel.this, t);
                     closeForcibly();
+                    closeFuture.setClosed();
                     promise.setFailure(t);
                 }
             }
@@ -440,12 +441,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             } catch (Throwable t) {
                 // Close the channel directly to avoid FD leak.
                 closeForcibly();
+                closeFuture.setClosed();
                 if (!promise.tryFailure(t)) {
                     logger.warn(
                             "Tried to fail the registration promise, but it is complete already. " +
                                     "Swallowing the cause of the registration failure:", t);
                 }
-                closeFuture.setClosed();
             }
         }
 
@@ -751,14 +752,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected abstract void doDisconnect() throws Exception;
 
     /**
-     * Will be called before the actual close operation will be performed. Sub-classes may override this as the default
-     * is to do nothing.
-     */
-    protected void doPreClose() throws Exception {
-        // NOOP by default
-    }
-
-    /**
      * Close the {@link Channel}
      */
     protected abstract void doClose() throws Exception;
@@ -834,11 +827,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         boolean setClosed() {
-            try {
-                doPreClose();
-            } catch (Exception e) {
-                logger.warn("doPreClose() raised an exception.", e);
-            }
             return super.trySuccess();
         }
     }
