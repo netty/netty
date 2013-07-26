@@ -299,9 +299,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     @Override
-    protected Runnable doDeregister() throws Exception {
+    protected void doDeregister() throws Exception {
         eventLoop().cancel(selectionKey());
-        return null;
     }
 
     @Override
