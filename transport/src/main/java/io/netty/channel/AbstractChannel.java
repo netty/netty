@@ -415,7 +415,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                             "Force-closing a channel whose registration task was unaccepted by an event loop: {}",
                             AbstractChannel.this, t);
                     closeForcibly();
-                    closeFuture.setClosed();
                     promise.setFailure(t);
                 }
             }
@@ -441,12 +440,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             } catch (Throwable t) {
                 // Close the channel directly to avoid FD leak.
                 closeForcibly();
-                closeFuture.setClosed();
                 if (!promise.tryFailure(t)) {
                     logger.warn(
                             "Tried to fail the registration promise, but it is complete already. " +
                                     "Swallowing the cause of the registration failure:", t);
                 }
+                closeFuture.setClosed();
             }
         }
 
@@ -515,39 +514,38 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
-            if (closeFuture.isSuccess()) {
-                // Closed already.
-                promise.setSuccess();
-            }
-
             boolean wasActive = isActive();
-            ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
-            this.outboundBuffer = null; // Disallow adding any messages and flushes to outboundBuffer.
+            if (closeFuture.setClosed()) {
+                ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+                this.outboundBuffer = null; // Disallow adding any messages and flushes to outboundBuffer.
 
-            try {
-                doClose();
-                closeFuture.setClosed();
-                promise.setSuccess();
-            } catch (Throwable t) {
-                promise.setFailure(t);
-            }
-
-            // Fail all the queued messages
-            try {
-                outboundBuffer.failFlushed(CLOSED_CHANNEL_EXCEPTION);
-                outboundBuffer.close(CLOSED_CHANNEL_EXCEPTION);
-            } finally {
-
-                if (wasActive && !isActive()) {
-                    invokeLater(new Runnable() {
-                        @Override
-                        public void run() {
-                            pipeline.fireChannelInactive();
-                        }
-                    });
+                try {
+                    doClose();
+                    promise.setSuccess();
+                } catch (Throwable t) {
+                    promise.setFailure(t);
                 }
 
-                deregister(voidPromise());
+                // Fail all the queued messages
+                try {
+                    outboundBuffer.failFlushed(CLOSED_CHANNEL_EXCEPTION);
+                    outboundBuffer.close(CLOSED_CHANNEL_EXCEPTION);
+                } finally {
+
+                    if (wasActive && !isActive()) {
+                        invokeLater(new Runnable() {
+                            @Override
+                            public void run() {
+                                pipeline.fireChannelInactive();
+                            }
+                        });
+                    }
+
+                    deregister(voidPromise());
+                }
+            } else {
+                // Closed already.
+                promise.setSuccess();
             }
         }
 
@@ -753,6 +751,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected abstract void doDisconnect() throws Exception;
 
     /**
+     * Will be called before the actual close operation will be performed. Sub-classes may override this as the default
+     * is to do nothing.
+     */
+    protected void doPreClose() throws Exception {
+        // NOOP by default
+    }
+
+    /**
      * Close the {@link Channel}
      */
     protected abstract void doClose() throws Exception;
@@ -828,6 +834,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         boolean setClosed() {
+            try {
+                doPreClose();
+            } catch (Exception e) {
+                logger.warn("doPreClose() raised an exception.", e);
+            }
             return super.trySuccess();
         }
     }
