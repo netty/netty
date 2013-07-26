@@ -515,38 +515,41 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
-            boolean wasActive = isActive();
-            if (closeFuture.setClosed()) {
-                ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
-                this.outboundBuffer = null; // Disallow adding any messages and flushes to outboundBuffer.
-
-                try {
-                    doClose();
-                    promise.setSuccess();
-                } catch (Throwable t) {
-                    promise.setFailure(t);
-                }
-
-                // Fail all the queued messages
-                try {
-                    outboundBuffer.failFlushed(CLOSED_CHANNEL_EXCEPTION);
-                    outboundBuffer.close(CLOSED_CHANNEL_EXCEPTION);
-                } finally {
-
-                    if (wasActive && !isActive()) {
-                        invokeLater(new Runnable() {
-                            @Override
-                            public void run() {
-                                pipeline.fireChannelInactive();
-                            }
-                        });
-                    }
-
-                    deregister(voidPromise());
-                }
-            } else {
+            if (closeFuture.isDone()) {
                 // Closed already.
                 promise.setSuccess();
+                return;
+            }
+
+            boolean wasActive = isActive();
+            ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+            this.outboundBuffer = null; // Disallow adding any messages and flushes to outboundBuffer.
+
+            try {
+                doClose();
+                closeFuture.setClosed();
+                promise.setSuccess();
+            } catch (Throwable t) {
+                closeFuture.setClosed();
+                promise.setFailure(t);
+            }
+
+            // Fail all the queued messages
+            try {
+                outboundBuffer.failFlushed(CLOSED_CHANNEL_EXCEPTION);
+                outboundBuffer.close(CLOSED_CHANNEL_EXCEPTION);
+            } finally {
+
+                if (wasActive && !isActive()) {
+                    invokeLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            pipeline.fireChannelInactive();
+                        }
+                    });
+                }
+
+                deregister(voidPromise());
             }
         }
 
