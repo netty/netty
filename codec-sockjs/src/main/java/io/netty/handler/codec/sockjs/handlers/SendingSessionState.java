@@ -62,4 +62,8 @@ class SendingSessionState implements SessionState {
         return "SendingSessionState";
     }
 
+    @Override
+    public void onClose() {
+    }
+
 }

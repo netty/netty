@@ -46,6 +46,12 @@ interface SessionState {
     void onOpen(final SockJSSession session, final ChannelHandlerContext ctx);
 
     /**
+     * Called after the {@link SockJSSession#onClose()} method has been called enabling
+     * this SessionState to perform any clean up actions requried.
+     */
+    void onClose();
+
+    /**
      * Called when the SockJS server has initiated a close of the session.
      */
     void onSockJSServerInitiatedClose(final SockJSSession session);

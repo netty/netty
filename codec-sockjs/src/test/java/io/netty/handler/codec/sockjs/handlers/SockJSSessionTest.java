@@ -19,9 +19,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-
-import java.util.Arrays;
-
 import io.netty.handler.codec.sockjs.SessionContext;
 import io.netty.handler.codec.sockjs.SockJSService;
 import io.netty.handler.codec.sockjs.handlers.SockJSSession.States;

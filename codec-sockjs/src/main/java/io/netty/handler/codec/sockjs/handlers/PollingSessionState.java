@@ -89,4 +89,8 @@ class PollingSessionState extends AbstractTimersSessionState {
         return "PollingSessionState";
     }
 
+    @Override
+    public void onClose() {
+    }
+
 }

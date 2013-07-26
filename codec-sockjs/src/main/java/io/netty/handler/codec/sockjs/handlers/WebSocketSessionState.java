@@ -15,7 +15,11 @@
  */
 package io.netty.handler.codec.sockjs.handlers;
 
+import java.util.concurrent.TimeUnit;
+
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.sockjs.protocol.HeartbeatFrame;
+import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -28,8 +32,27 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 class WebSocketSessionState implements SessionState {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketSessionState.class);
 
+    private ScheduledFuture<?> heartbeatFuture;
+
     @Override
     public void onConnect(final SockJSSession session, final ChannelHandlerContext ctx) {
+        startHeartbeatTimer(ctx, session);
+    }
+
+    private void startHeartbeatTimer(final ChannelHandlerContext ctx, final SockJSSession session) {
+        final long interval = session.config().websocketHeartbeatInterval();
+        if (interval > 0) {
+            logger.info("Starting heartbeat with interval : " + interval);
+            heartbeatFuture = ctx.executor().scheduleAtFixedRate(new Runnable() {
+                @Override
+                public void run() {
+                    if (ctx.channel().isActive() && ctx.channel().isRegistered()) {
+                        logger.debug("Sending heartbeat for " + session);
+                        ctx.channel().writeAndFlush(new HeartbeatFrame());
+                    }
+                }
+            }, interval, interval, TimeUnit.MILLISECONDS);
+        }
     }
 
     @Override
@@ -43,12 +66,23 @@ class WebSocketSessionState implements SessionState {
 
     @Override
     public void onSockJSServerInitiatedClose(final SockJSSession session) {
-        logger.debug("Will close session context " + session.context());
-        session.context().close();
+        shutdownHearbeat();
     }
 
     @Override
     public String toString() {
         return "WebSocketSessionState";
+    }
+
+    @Override
+    public void onClose() {
+        shutdownHearbeat();
+    }
+
+    private void shutdownHearbeat() {
+        if (heartbeatFuture != null) {
+            logger.info("Stopping heartbeat job");
+            heartbeatFuture.cancel(true);
+        }
     }
 }

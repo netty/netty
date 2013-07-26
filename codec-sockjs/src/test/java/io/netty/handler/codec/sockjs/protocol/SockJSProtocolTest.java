@@ -86,12 +86,10 @@ import io.netty.handler.codec.sockjs.util.JsonUtil;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 
-import java.nio.Buffer;
 import java.util.UUID;
 
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class SockJSProtocolTest {

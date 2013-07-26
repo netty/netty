@@ -87,4 +87,8 @@ class StreamingSessionState extends AbstractTimersSessionState {
         return "StreamingSessionState";
     }
 
+    @Override
+    public void onClose() {
+    }
+
 }

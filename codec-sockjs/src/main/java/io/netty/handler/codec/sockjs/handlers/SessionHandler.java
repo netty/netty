@@ -128,6 +128,7 @@ public class SessionHandler extends ChannelInboundHandlerAdapter implements Sess
     @Override
     public void close() {
         session.onClose();
+        sessionState.onClose();
         final Channel channel = getActiveChannel();
         if (isWritable(channel)) {
             final CloseFrame closeFrame = new CloseFrame(3000, "Go away!");

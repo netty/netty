@@ -38,6 +38,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
 import io.netty.handler.codec.sockjs.Config;
 import io.netty.handler.codec.sockjs.handlers.CorsInboundHandler;
 import io.netty.handler.codec.sockjs.handlers.CorsOutboundHandler;
+import io.netty.handler.codec.sockjs.handlers.SessionHandler.Events;
 import io.netty.handler.codec.sockjs.handlers.SockJSHandler;
 import io.netty.handler.codec.sockjs.util.JsonUtil;
 import io.netty.util.AttributeKey;
@@ -169,11 +170,13 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
     private void handleWebSocketFrame(final ChannelHandlerContext ctx, final WebSocketFrame wsFrame) throws Exception {
         if (wsFrame instanceof CloseWebSocketFrame) {
             wsFrame.retain();
+            logger.debug("CloseWebSocketFrame received");
             handshaker.close(ctx.channel(), (CloseWebSocketFrame) wsFrame);
-            ctx.close();
+            ctx.fireUserEventTriggered(Events.CLOSE_SESSION);
             return;
         }
         if (wsFrame instanceof PingWebSocketFrame) {
+            logger.debug("PingWebSocketFrame received");
             wsFrame.content().retain();
             ctx.channel().writeAndFlush(new PongWebSocketFrame(wsFrame.content()));
             return;
@@ -191,6 +194,7 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
     @Override
     public void exceptionCaught(final ChannelHandlerContext ctx, final Throwable cause) throws Exception {
         if (cause instanceof JsonParseException) {
+            logger.trace("Failed to part JSON", cause);
             ctx.close();
         } else if (cause instanceof WebSocketHandshakeException) {
             final HttpRequest request = ctx.attr(REQUEST_KEY).get();

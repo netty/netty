@@ -29,6 +29,7 @@ public final class Config {
 
     private final String prefix;
     private final boolean websocketEnabled;
+    private final long websocketHeartbeatInterval;
     private final Set<String> websocketProtocols;
     private final boolean cookiesNeeded;
     private final String sockjsUrl;
@@ -41,6 +42,7 @@ public final class Config {
         prefix = builder.prefix;
         websocketEnabled = builder.websocketEnabled;
         websocketProtocols = builder.websocketProtocols;
+        websocketHeartbeatInterval = builder.websocketHeartbeatInterval;
         cookiesNeeded = builder.cookiesNeeded;
         sockjsUrl = builder.sockjsUrl;
         sessionTimeout = builder.sessionTimeout;
@@ -66,6 +68,20 @@ public final class Config {
      */
     public boolean isWebsocketEnabled() {
         return websocketEnabled;
+    }
+
+    /**
+     * The WebSocket heartbeat interval.
+     *
+     * This might be required in certain environments where idle connections
+     * are closed by a proxy. It is a separate value from the hearbeat that
+     * the streaming protocols use as it is often desirable to have a much
+     * larger value for it.
+     *
+     * @return {@code long} how often, in ms, that a WebSocket heartbeat should be sent
+     */
+    public long websocketHeartbeatInterval() {
+        return websocketHeartbeatInterval;
     }
 
     /**
@@ -189,6 +205,7 @@ public final class Config {
     public static class Builder {
         private final String prefix;
         private boolean websocketEnabled = true;
+        private long websocketHeartbeatInterval = -1;
         private Set<String> websocketProtocols = new HashSet<String>();
         private boolean cookiesNeeded;
         private String sockjsUrl = "http://cdn.sockjs.org/sockjs-0.3.4.min.js" ;
@@ -212,6 +229,20 @@ public final class Config {
          */
         public Builder disableWebsocket() {
             this.websocketEnabled = false;
+            return this;
+        }
+
+        /**
+         * Specifies a heartbeat interval for SockJS WebSocket transport.
+         * This might be required in certain environments where idle connections
+         * are closed by a proxy. It is a separate value from the hearbeat that
+         * the streaming protocols use as it is often desirable to have a mush
+         * larger value for it.
+         *
+         * @param ms how often that a WebSocket heartbeat should be sent
+         */
+        public Builder websocketHeartbeatInterval(final long ms) {
+            this.websocketHeartbeatInterval = ms;
             return this;
         }
 
