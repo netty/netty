@@ -277,12 +277,12 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     @Override
-    protected Runnable doRegister() throws Exception {
+    protected void doRegister() throws Exception {
         boolean selected = false;
         for (;;) {
             try {
                 selectionKey = javaChannel().register(eventLoop().selector, 0, this);
-                return null;
+                return;
             } catch (CancelledKeyException e) {
                 if (!selected) {
                     // Force the Selector to select now  as the "canceled" SelectionKey may still be
