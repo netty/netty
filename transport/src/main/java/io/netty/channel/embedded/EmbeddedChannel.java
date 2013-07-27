@@ -271,9 +271,8 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    protected Runnable doRegister() throws Exception {
+    protected void doRegister() throws Exception {
         state = 1;
-        return null;
     }
 
     @Override
