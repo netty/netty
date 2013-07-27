@@ -428,13 +428,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 if (!ensureOpen(promise)) {
                     return;
                 }
-                Runnable postRegisterTask = doRegister();
+                doRegister();
                 registered = true;
                 promise.setSuccess();
                 pipeline.fireChannelRegistered();
-                if (postRegisterTask != null) {
-                    postRegisterTask.run();
-                }
                 if (isActive()) {
                     pipeline.fireChannelActive();
                 }
@@ -731,12 +728,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     /**
      * Is called after the {@link Channel} is registered with its {@link EventLoop} as part of the register process.
-     * You can return a {@link Runnable} which will be run as post-task of the registration process.
      *
-     * Sub-classes may override this method as it will just return {@code null}
+     * Sub-classes may override this method
      */
-    protected Runnable doRegister() throws Exception {
-        return null;
+    protected void doRegister() throws Exception {
+        // NOOP
     }
 
     /**
