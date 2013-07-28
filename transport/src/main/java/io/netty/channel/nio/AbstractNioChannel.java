@@ -285,7 +285,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                 return;
             } catch (CancelledKeyException e) {
                 if (!selected) {
-                    // Force the Selector to select now  as the "canceled" SelectionKey may still be
+                    // Force the Selector to select now as the "canceled" SelectionKey may still be
                     // cached and not removed because no Select.select(..) operation was called yet.
                     eventLoop().selectNow();
                     selected = true;
