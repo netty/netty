@@ -412,7 +412,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     });
                 } catch (Throwable t) {
                     logger.warn(
-                            "Force-closing a channel whose registration task was unaccepted by an event loop: {}",
+                            "Force-closing a channel whose registration task was not accepted by an event loop: {}",
                             AbstractChannel.this, t);
                     closeForcibly();
                     closeFuture.setClosed();
@@ -453,51 +453,58 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
-            try {
-                boolean wasActive = isActive();
-
-                // See: https://github.com/netty/netty/issues/576
-                if (!PlatformDependent.isWindows() && !PlatformDependent.isRoot() &&
-                    Boolean.TRUE.equals(config().getOption(ChannelOption.SO_BROADCAST)) &&
-                    localAddress instanceof InetSocketAddress &&
-                    !((InetSocketAddress) localAddress).getAddress().isAnyLocalAddress()) {
-                    // Warn a user about the fact that a non-root user can't receive a
-                    // broadcast packet on *nix if the socket is bound on non-wildcard address.
-                    logger.warn(
-                            "A non-root user can't receive a broadcast packet if the socket " +
-                            "is not bound to a wildcard address; binding to a non-wildcard " +
-                            "address (" + localAddress + ") anyway as requested.");
-                }
-
-                doBind(localAddress);
-                promise.setSuccess();
-                if (!wasActive && isActive()) {
-                    pipeline.fireChannelActive();
-                }
-            } catch (Throwable t) {
-                promise.setFailure(t);
-                closeIfClosed();
+            // See: https://github.com/netty/netty/issues/576
+            if (!PlatformDependent.isWindows() && !PlatformDependent.isRoot() &&
+                Boolean.TRUE.equals(config().getOption(ChannelOption.SO_BROADCAST)) &&
+                localAddress instanceof InetSocketAddress &&
+                !((InetSocketAddress) localAddress).getAddress().isAnyLocalAddress()) {
+                // Warn a user about the fact that a non-root user can't receive a
+                // broadcast packet on *nix if the socket is bound on non-wildcard address.
+                logger.warn(
+                        "A non-root user can't receive a broadcast packet if the socket " +
+                        "is not bound to a wildcard address; binding to a non-wildcard " +
+                        "address (" + localAddress + ") anyway as requested.");
             }
+
+            boolean wasActive = isActive();
+            try {
+                doBind(localAddress);
+            } catch (Throwable t) {
+                closeIfClosed();
+                promise.setFailure(t);
+                return;
+            }
+            if (!wasActive && isActive()) {
+                invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        pipeline.fireChannelActive();
+                    }
+                });
+            }
+            promise.setSuccess();
         }
 
         @Override
         public final void disconnect(final ChannelPromise promise) {
+            boolean wasActive = isActive();
             try {
-                boolean wasActive = isActive();
                 doDisconnect();
-                promise.setSuccess();
-                if (wasActive && !isActive()) {
-                    invokeLater(new Runnable() {
-                        @Override
-                        public void run() {
-                            pipeline.fireChannelInactive();
-                        }
-                    });
-                }
             } catch (Throwable t) {
-                promise.setFailure(t);
                 closeIfClosed();
+                promise.setFailure(t);
+                return;
             }
+            if (wasActive && !isActive()) {
+                invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        pipeline.fireChannelInactive();
+                    }
+                });
+            }
+            closeIfClosed(); // doDisconnect() might have closed the channel
+            promise.setSuccess();
         }
 
         @Override
