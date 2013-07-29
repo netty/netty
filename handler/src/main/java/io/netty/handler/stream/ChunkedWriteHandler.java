@@ -15,6 +15,7 @@
  */
 package io.netty.handler.stream;
 
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
@@ -258,6 +259,12 @@ public class ChunkedWriteHandler
                     // not reached at the end of input. Let's wait until
                     // more chunks arrive. Nothing to write or notify.
                     break;
+                }
+
+                if (message == null) {
+                    // If message is null write an empty ByteBuf.
+                    // See https://github.com/netty/netty/issues/1671
+                    message = Unpooled.EMPTY_BUFFER;
                 }
 
                 pendingWrites.incrementAndGet();
