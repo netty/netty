@@ -98,7 +98,7 @@ class SpdyHeaderBlockJZlibEncoder extends SpdyHeaderBlockRawEncoder {
     }
 
     @Override
-    public synchronized ByteBuf encode(ChannelHandlerContext ctx, SpdyHeadersFrame frame) throws Exception {
+    public ByteBuf encode(ChannelHandlerContext ctx, SpdyHeadersFrame frame) throws Exception {
         if (frame == null) {
             throw new IllegalArgumentException("frame");
         }
@@ -119,7 +119,7 @@ class SpdyHeaderBlockJZlibEncoder extends SpdyHeaderBlockRawEncoder {
     }
 
     @Override
-    public synchronized void end() {
+    public void end() {
         if (finished) {
             return;
         }
