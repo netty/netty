@@ -321,7 +321,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
         if (msg instanceof ByteBuf) {
             return formatByteBuf(eventName, (ByteBuf) msg);
         } else if (msg instanceof ByteBufHolder) {
-          return formatByteBufHolder(eventName, (ByteBufHolder) msg);
+            return formatByteBufHolder(eventName, (ByteBufHolder) msg);
         } else {
             return formatNonByteBuf(eventName, msg);
         }
