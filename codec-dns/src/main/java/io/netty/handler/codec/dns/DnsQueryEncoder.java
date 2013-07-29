@@ -39,7 +39,7 @@ public class DnsQueryEncoder extends MessageToByteEncoder<DnsQuery> {
      * @param buf
      *            the buffer the encoded data should be written to
      */
-    public static void encodeHeader(DnsQueryHeader header, ByteBuf buf) {
+    private static void encodeHeader(DnsQueryHeader header, ByteBuf buf) {
         buf.writeShort(header.getId());
         int flags = 0;
         flags |= header.getType() << 15;
@@ -53,7 +53,7 @@ public class DnsQueryEncoder extends MessageToByteEncoder<DnsQuery> {
     }
 
     /**
-     * Encodes the information in a {@link Question} and writes it to the
+     * Encodes the information in a {@link DnsQuestion} and writes it to the
      * specified {@link ByteBuf}.
      *
      * @param question
@@ -63,7 +63,7 @@ public class DnsQueryEncoder extends MessageToByteEncoder<DnsQuery> {
      * @param buf
      *            the buffer the encoded data should be written to
      */
-    public static void encodeQuestion(Question question, Charset charset, ByteBuf buf) {
+    private static void encodeQuestion(DnsQuestion question, Charset charset, ByteBuf buf) {
         String[] parts = question.name().split("\\.");
         for (int i = 0; i < parts.length; i++) {
             buf.writeByte(parts[i].length());
@@ -82,10 +82,10 @@ public class DnsQueryEncoder extends MessageToByteEncoder<DnsQuery> {
      * @param buf
      *            the {@link ByteBuf} the query will be written to
      */
-    public static void encodeQuery(DnsQuery query, ByteBuf buf) {
+    protected static void encodeQuery(DnsQuery query, ByteBuf buf) {
         encodeHeader(query.getHeader(), buf);
-        List<Question> questions = query.getQuestions();
-        for (Question question : questions) {
+        List<DnsQuestion> questions = query.getQuestions();
+        for (DnsQuestion question : questions) {
             encodeQuestion(question, CharsetUtil.UTF_8, buf);
         }
     }

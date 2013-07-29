@@ -13,25 +13,28 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.dns;
+package io.netty.dns;
 
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.dns.DnsQueryEncoder;
 import io.netty.handler.codec.dns.DnsResponseDecoder;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 
-/**
- * Initializes a DNS client that can encode and decode DNS response and query
- * packets. Has a default timeout of 30 seconds when no data is read, in which
- * case the client is shutdown. Each DNS server gets its own DNS client.
- */
-public class DnsClientInitializer extends ChannelInitializer<NioDatagramChannel> {
+import org.junit.Test;
 
-    @Override
-    protected void initChannel(NioDatagramChannel channel) throws Exception {
-        channel.pipeline().addLast("timeout", new ReadTimeoutHandler(30)).addLast("decoder", new DnsResponseDecoder())
-                .addLast("encoder", new DnsQueryEncoder()).addLast("handler", new InboundDnsMessageHandler());
+public class DnsImplTest {
+
+    // TODO: !!NOT FINISHED!!
+    @Test
+    public void implTest() throws Exception {
+        byte[] server = null;
+        while ((server = DnsExchangeFactory.getDnsServer(0)) != null) {
+            DnsExchangeFactory.removeDnsServer(server);
+        }
+        DnsExchangeFactory.addDnsServer(new byte[] { 127, 0, 0, 1 });
+        EmbeddedChannel embedded = new EmbeddedChannel(new ReadTimeoutHandler(30), new DnsResponseDecoder(),
+                new DnsQueryEncoder(), new DnsInboundMessageHandler());
+        DnsExchangeFactory.addChannel(new byte[] { 127, 0, 0, 1 }, embedded);
     }
 
 }

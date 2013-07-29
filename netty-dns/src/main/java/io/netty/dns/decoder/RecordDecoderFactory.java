@@ -13,11 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.dns.decoder;
+package io.netty.dns.decoder;
 
 import io.netty.handler.codec.dns.DnsEntry;
 import io.netty.handler.codec.dns.DnsResponse;
-import io.netty.handler.codec.dns.Resource;
+import io.netty.handler.codec.dns.DnsResource;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -118,7 +118,7 @@ public final class RecordDecoderFactory {
      * @return the decoded resource record
      */
     @SuppressWarnings("unchecked")
-    public <T> T decode(int type, DnsResponse response, Resource resource) {
+    public <T> T decode(int type, DnsResponse response, DnsResource resource) {
         RecordDecoder<?> decoder = decoders.get(type);
         if (decoder == null) {
             throw new IllegalStateException("Unsupported resource record type [id: " + type + "].");

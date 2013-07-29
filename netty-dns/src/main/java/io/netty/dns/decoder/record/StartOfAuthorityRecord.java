@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.dns.decoder.record;
+package io.netty.dns.decoder.record;
 
 /**
  * Represents an SOA (start of authority) record, which defines global

@@ -22,7 +22,7 @@ import io.netty.buffer.ByteBufHolder;
  * Represents any resource record (answer, authority, or additional resource
  * records).
  */
-public class Resource extends DnsEntry implements ByteBufHolder {
+public class DnsResource extends DnsEntry implements ByteBufHolder {
 
     private final int contentIndex;
     private final long ttl;
@@ -45,7 +45,7 @@ public class Resource extends DnsEntry implements ByteBufHolder {
      * @param content
      *            the data contained in this record
      */
-    public Resource(String name, int type, int aClass, long ttl, int contentIndex, ByteBuf content) {
+    public DnsResource(String name, int type, int aClass, long ttl, int contentIndex, ByteBuf content) {
         super(name, type, aClass);
         this.ttl = ttl;
         this.contentIndex = contentIndex;
@@ -86,8 +86,8 @@ public class Resource extends DnsEntry implements ByteBufHolder {
      * Returns a deep copy of this resource record.
      */
     @Override
-    public Resource copy() {
-        return new Resource(name(), type(), dnsClass(), ttl, contentIndex, content.copy());
+    public DnsResource copy() {
+        return new DnsResource(name(), type(), dnsClass(), ttl, contentIndex, content.copy());
     }
 
     /**
@@ -95,7 +95,7 @@ public class Resource extends DnsEntry implements ByteBufHolder {
      */
     @Override
     public ByteBufHolder duplicate() {
-        return new Resource(name(), type(), dnsClass(), ttl, contentIndex, content.duplicate());
+        return new DnsResource(name(), type(), dnsClass(), ttl, contentIndex, content.duplicate());
     }
 
     @Override
@@ -104,13 +104,13 @@ public class Resource extends DnsEntry implements ByteBufHolder {
     }
 
     @Override
-    public Resource retain() {
+    public DnsResource retain() {
         content.retain();
         return this;
     }
 
     @Override
-    public Resource retain(int increment) {
+    public DnsResource retain(int increment) {
         content.retain(increment);
         return this;
     }

@@ -21,7 +21,7 @@ package io.netty.handler.codec.dns;
  * Usually a message contains a single question, and DNS servers often don't
  * support multiple questions in a single query.
  */
-public class Question extends DnsEntry {
+public class DnsQuestion extends DnsEntry {
 
     /**
      * Constructs a question with the default class IN (Internet).
@@ -30,9 +30,9 @@ public class Question extends DnsEntry {
      *            the domain name being queried i.e. "www.example.com"
      * @param type
      *            the question type, which represents the type of
-     *            {@link Resource} record that should be returned
+     *            {@link DnsResource} record that should be returned
      */
-    public Question(String name, int type) {
+    public DnsQuestion(String name, int type) {
         this(name, type, CLASS_IN);
     }
 
@@ -43,11 +43,11 @@ public class Question extends DnsEntry {
      *            the domain name being queried i.e. "www.example.com"
      * @param type
      *            the question type, which represents the type of
-     *            {@link Resource} record that should be returned
+     *            {@link DnsResource} record that should be returned
      * @param qClass
      *            the class of a DNS record
      */
-    public Question(String name, int type, int qClass) {
+    public DnsQuestion(String name, int type, int qClass) {
         super(name, type, qClass);
     }
 
@@ -56,8 +56,8 @@ public class Question extends DnsEntry {
         if (other == this) {
             return true;
         }
-        if (other instanceof Question) {
-            Question question = (Question) other;
+        if (other instanceof DnsQuestion) {
+            DnsQuestion question = (DnsQuestion) other;
             return question.name().equals(name()) && question.type() == type() && question.dnsClass() == dnsClass();
         }
         return false;

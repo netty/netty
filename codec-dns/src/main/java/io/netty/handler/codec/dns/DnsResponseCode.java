@@ -19,7 +19,7 @@ package io.netty.handler.codec.dns;
  * Represents the possible response codes a server may send after receiving a
  * query. A response code of 0 indicates no error.
  */
-public enum ResponseCode {
+public enum DnsResponseCode {
 
     /**
      * ID 0, no error
@@ -100,26 +100,41 @@ public enum ResponseCode {
     private final String message;
 
     /**
-     * Returns a formated message for an error received given an ID, or unknown
-     * if the error is unsupported.
+     * Returns the {@link DnsResponseCode} that corresponds with the given
+     * {@code responseCode}.
      *
      * @param responseCode
      *            the error code's id
-     * @return formatted error message
+     * @return corresponding {@link DnsResponseCode}
      */
-    public static String obtainError(int responseCode) {
-        ResponseCode[] errors = ResponseCode.values();
-        for (ResponseCode e : errors) {
+    public static DnsResponseCode valueOf(int responseCode) {
+        DnsResponseCode[] errors = DnsResponseCode.values();
+        for (DnsResponseCode e : errors) {
             if (e.errorCode == responseCode) {
-                return e.name() + ": type " + e.errorCode + ", " + e.message;
+                return e;
             }
         }
-        return "UNKNOWN: unknown error";
+        return null;
     }
 
-    private ResponseCode(int errorCode, String message) {
+    private DnsResponseCode(int errorCode, String message) {
         this.errorCode = errorCode;
         this.message = message;
+    }
+
+    /**
+     * Returns the error code for this {@link DnsResponseCode}.
+     */
+    public int code() {
+        return errorCode;
+    }
+
+    /**
+     * Returns a formatted error message for this {@link DnsResponseCode}.
+     */
+    @Override
+    public String toString() {
+        return name() + ": type " + errorCode + ", " + message;
     }
 
 }

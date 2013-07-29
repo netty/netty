@@ -13,11 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.dns.decoder;
+package io.netty.dns.decoder;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.dns.DnsResponse;
-import io.netty.handler.codec.dns.Resource;
+import io.netty.handler.codec.dns.DnsResource;
 import io.netty.util.CharsetUtil;
 
 import java.util.ArrayList;
@@ -39,7 +39,7 @@ public class TextDecoder implements RecordDecoder<List<String>> {
      *            the resource record being decoded
      */
     @Override
-    public List<String> decode(DnsResponse response, Resource resource) {
+    public List<String> decode(DnsResponse response, DnsResource resource) {
         List<String> list = new ArrayList<String>();
         ByteBuf data = resource.content().readerIndex(response.originalIndex());
         int index = data.readerIndex();

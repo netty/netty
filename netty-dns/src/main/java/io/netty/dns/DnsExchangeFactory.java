@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.dns;
+package io.netty.dns;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
@@ -22,11 +22,11 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.dns.decoder.record.MailExchangerRecord;
+import io.netty.dns.decoder.record.ServiceRecord;
 import io.netty.handler.codec.dns.DnsEntry;
 import io.netty.handler.codec.dns.DnsQuery;
-import io.netty.handler.codec.dns.Question;
-import io.netty.handler.dns.decoder.record.MailExchangerRecord;
-import io.netty.handler.dns.decoder.record.ServiceRecord;
+import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
@@ -113,7 +113,7 @@ public final class DnsExchangeFactory {
      *            the DNS server being checked
      * @return {@code true} if the DNS server provides a valid response
      */
-    public static boolean validAddress(byte[] address) {
+    private static boolean validAddress(byte[] address) {
         try {
             int id = obtainId();
             Channel channel = channelForAddress(address);
@@ -134,9 +134,9 @@ public final class DnsExchangeFactory {
     }
 
     /**
-     * Returns an id in the range 0-65536 while reducing collisions.
+     * Returns an id in the range 0-65536.
      */
-    public static int obtainId() {
+    private static int obtainId() {
         synchronized (idxLock) {
             return idx = idx + 1 & 0xffff;
         }
@@ -158,7 +158,7 @@ public final class DnsExchangeFactory {
      */
     private static DnsQuery sendQuery(int type, String domain, int id, Channel channel) throws InterruptedException {
         DnsQuery query = new DnsQuery(id);
-        query.addQuestion(new Question(domain, type));
+        query.addQuestion(new DnsQuestion(domain, type));
         channel.writeAndFlush(query).sync();
         return query;
     }
@@ -286,7 +286,7 @@ public final class DnsExchangeFactory {
     public static <T> Future<T> resolveSingle(String domain, byte[] dnsServerAddress, int... types)
             throws UnknownHostException, SocketException, InterruptedException {
         for (int i = 0; i < types.length; i++) {
-            T result = ResourceCache.getRecord(domain, types[i]);
+            T result = DnsResourceCache.getRecord(domain, types[i]);
             if (result != null) {
                 return executor.next().newSucceededFuture(result);
             }
@@ -297,7 +297,7 @@ public final class DnsExchangeFactory {
         for (int i = 0; i < types.length; i++) {
             queries[i] = sendQuery(types[i], domain, id, channel);
         }
-        return executor.submit(new SingleResultCallback<T>(new DnsCallback<List<T>>(dnsServers
+        return executor.submit(new DnsSingleResultCallback<T>(new DnsCallback<List<T>>(dnsServers
                 .indexOf(dnsServerAddress), queries)));
     }
 
@@ -323,7 +323,7 @@ public final class DnsExchangeFactory {
             throws UnknownHostException, SocketException, InterruptedException {
         for (int i = 0; i < types.length; i++) {
             @SuppressWarnings("unchecked")
-            T result = (T) ResourceCache.getRecords(domain, types[i]);
+            T result = (T) DnsResourceCache.getRecords(domain, types[i]);
             if (result != null) {
                 return executor.next().newSucceededFuture(result);
             }
@@ -469,6 +469,18 @@ public final class DnsExchangeFactory {
     }
 
     /**
+     * Adds a channel with a corresponding IP address. Internal use only.
+     *
+     * @param channel
+     *            the channel to be added
+     */
+    protected static void addChannel(byte[] address, Channel channel) {
+        synchronized (dnsServerChannels) {
+            dnsServerChannels.put(address, channel);
+        }
+    }
+
+    /**
      * Removes an inactive channel after timing out. Internal use only.
      *
      * @param channel
@@ -489,7 +501,9 @@ public final class DnsExchangeFactory {
                                 for (int i = 0; i < address.length; i++) {
                                     string.append(address[i]).append(".");
                                 }
-                                logger.error("Could not close channel for address " + string.substring(0, string.length() - 1), e);
+                                logger.error(
+                                        "Could not close channel for address "
+                                                + string.substring(0, string.length() - 1), e);
                             }
                         } finally {
                             channel.eventLoop().shutdownGracefully();

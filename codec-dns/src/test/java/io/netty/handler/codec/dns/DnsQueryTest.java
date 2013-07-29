@@ -31,23 +31,23 @@ public class DnsQueryTest {
             switch (i) {
 
             case 0:
-                query.addQuestion(new Question("1.0.0.127.in-addr.arpa", DnsEntry.TYPE_PTR));
+                query.addQuestion(new DnsQuestion("1.0.0.127.in-addr.arpa", DnsEntry.TYPE_PTR));
                 break;
 
             case 1:
-                query.addQuestion(new Question("www.example.com", DnsEntry.TYPE_A));
+                query.addQuestion(new DnsQuestion("www.example.com", DnsEntry.TYPE_A));
                 break;
 
             case 2:
-                query.addQuestion(new Question("example.com", DnsEntry.TYPE_AAAA));
+                query.addQuestion(new DnsQuestion("example.com", DnsEntry.TYPE_AAAA));
                 break;
 
             case 3:
-                query.addQuestion(new Question("example.com", DnsEntry.TYPE_MX));
+                query.addQuestion(new DnsQuestion("example.com", DnsEntry.TYPE_MX));
                 break;
 
             case 4:
-                query.addQuestion(new Question("example.com", DnsEntry.TYPE_CNAME));
+                query.addQuestion(new DnsQuestion("example.com", DnsEntry.TYPE_CNAME));
                 break;
 
             }

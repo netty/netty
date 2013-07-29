@@ -13,22 +13,22 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.dns.decoder;
+package io.netty.dns.decoder;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.dns.decoder.record.ServiceRecord;
+import io.netty.handler.codec.dns.DnsResource;
 import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.DnsResponseDecoder;
-import io.netty.handler.codec.dns.Resource;
-import io.netty.handler.dns.decoder.record.StartOfAuthorityRecord;
 
 /**
- * Decodes SOA (start of authority) resource records.
+ * Decodes SRV (service) resource records.
  */
-public class StartOfAuthorityDecoder implements RecordDecoder<StartOfAuthorityRecord> {
+public class ServiceDecoder implements RecordDecoder<ServiceRecord> {
 
     /**
-     * Returns a decoded SOA (start of authority) resource record, stored as an
-     * instance of {@link StartOfAuthorityRecord}.
+     * Returns a decoded SRV (service) resource record, stored as an instance of
+     * {@link ServiceRecord}.
      *
      * @param response
      *            the DNS response that contains the resource record being
@@ -37,16 +37,13 @@ public class StartOfAuthorityDecoder implements RecordDecoder<StartOfAuthorityRe
      *            the resource record being decoded
      */
     @Override
-    public StartOfAuthorityRecord decode(DnsResponse response, Resource resource) {
+    public ServiceRecord decode(DnsResponse response, DnsResource resource) {
         ByteBuf packet = response.content().readerIndex(resource.contentIndex());
-        String mName = DnsResponseDecoder.readName(packet);
-        String rName = DnsResponseDecoder.readName(packet);
-        long serial = packet.readUnsignedInt();
-        int refresh = packet.readInt();
-        int retry = packet.readInt();
-        int expire = packet.readInt();
-        long minimum = packet.readUnsignedInt();
-        return new StartOfAuthorityRecord(mName, rName, serial, refresh, retry, expire, minimum);
+        int priority = packet.readShort();
+        int weight = packet.readShort();
+        int port = packet.readUnsignedShort();
+        String target = DnsResponseDecoder.readName(packet);
+        return new ServiceRecord(resource.name(), priority, weight, port, target);
     }
 
 }

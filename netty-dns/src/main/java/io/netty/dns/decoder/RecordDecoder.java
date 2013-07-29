@@ -13,12 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.dns.decoder;
+package io.netty.dns.decoder;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.dns.DnsResponse;
-import io.netty.handler.codec.dns.Resource;
+import io.netty.handler.codec.dns.DnsResource;
 
 /**
  * Used for decoding resource records.
@@ -40,6 +40,6 @@ public interface RecordDecoder<T> {
      * @param resource
      *            the resource record being decoded
      */
-    T decode(DnsResponse response, Resource resource) throws DecoderException;
+    T decode(DnsResponse response, DnsResource resource) throws DecoderException;
 
 }

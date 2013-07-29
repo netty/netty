@@ -18,4 +18,4 @@
  * Some DNS response packets contain numerous pieces of data that cannot be
  * decoded into a single object such as a {@link String}.
  */
-package io.netty.handler.dns.decoder.record;
+package io.netty.dns.decoder.record;

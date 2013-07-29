@@ -25,10 +25,10 @@ import java.util.List;
  */
 public abstract class DnsMessage<H extends DnsHeader> {
 
-    private final List<Question> questions = new ArrayList<Question>();
-    private final List<Resource> answers = new ArrayList<Resource>();
-    private final List<Resource> authority = new ArrayList<Resource>();
-    private final List<Resource> additional = new ArrayList<Resource>();
+    private final List<DnsQuestion> questions = new ArrayList<DnsQuestion>();
+    private final List<DnsResource> answers = new ArrayList<DnsResource>();
+    private final List<DnsResource> authority = new ArrayList<DnsResource>();
+    private final List<DnsResource> additional = new ArrayList<DnsResource>();
 
     private H header;
 
@@ -44,28 +44,28 @@ public abstract class DnsMessage<H extends DnsHeader> {
     /**
      * Returns a list of all the questions in this message.
      */
-    public List<Question> getQuestions() {
+    public List<DnsQuestion> getQuestions() {
         return Collections.unmodifiableList(questions);
     }
 
     /**
      * Returns a list of all the answer resource records in this message.
      */
-    public List<Resource> getAnswers() {
+    public List<DnsResource> getAnswers() {
         return Collections.unmodifiableList(answers);
     }
 
     /**
      * Returns a list of all the authority resource records in this message.
      */
-    public List<Resource> getAuthorityResources() {
+    public List<DnsResource> getAuthorityResources() {
         return Collections.unmodifiableList(authority);
     }
 
     /**
      * Returns a list of all the additional resource records in this message.
      */
-    public List<Resource> getAdditionalResources() {
+    public List<DnsResource> getAdditionalResources() {
         return Collections.unmodifiableList(additional);
     }
 
@@ -76,7 +76,7 @@ public abstract class DnsMessage<H extends DnsHeader> {
      *            the answer resource record to be added
      * @return the message to allow method chaining
      */
-    public DnsMessage<H> addAnswer(Resource answer) {
+    public DnsMessage<H> addAnswer(DnsResource answer) {
         answers.add(answer);
         return this;
     }
@@ -88,7 +88,7 @@ public abstract class DnsMessage<H extends DnsHeader> {
      *            the question to be added
      * @return the message to allow method chaining
      */
-    public DnsMessage<H> addQuestion(Question question) {
+    public DnsMessage<H> addQuestion(DnsQuestion question) {
         questions.add(question);
         return this;
     }
@@ -100,7 +100,7 @@ public abstract class DnsMessage<H extends DnsHeader> {
      *            the authority resource record to be added
      * @return the message to allow method chaining
      */
-    public DnsMessage<H> addAuthorityResource(Resource resource) {
+    public DnsMessage<H> addAuthorityResource(DnsResource resource) {
         authority.add(resource);
         return this;
     }
@@ -112,7 +112,7 @@ public abstract class DnsMessage<H extends DnsHeader> {
      *            the additional resource record to be added
      * @return the message to allow method chaining
      */
-    public DnsMessage<H> addAdditionalResource(Resource resource) {
+    public DnsMessage<H> addAdditionalResource(DnsResource resource) {
         additional.add(resource);
         return this;
     }

@@ -13,15 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.dns;
+package io.netty.dns;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.dns.decoder.RecordDecoderFactory;
 import io.netty.handler.codec.dns.DnsQuery;
+import io.netty.handler.codec.dns.DnsQuestion;
+import io.netty.handler.codec.dns.DnsResource;
 import io.netty.handler.codec.dns.DnsResponse;
-import io.netty.handler.codec.dns.Question;
-import io.netty.handler.codec.dns.Resource;
-import io.netty.handler.dns.decoder.RecordDecoderFactory;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -46,7 +46,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * AAAA records when a user wants to connect to a server and either an IPv4 or
  * IPv6 address is sufficient). If a {@link DnsCallback} fails, null will be
  * returned. For obtaining single values, as opposed to a {@link List},
- * {@link SingleResultCallback} is used.
+ * {@link DnsSingleResultCallback} is used.
  *
  * @param <T>
  *            a {@link List} of all answers for a specified type (i.e. if type
@@ -59,7 +59,7 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
     private static final Map<Integer, DnsCallback<?>> callbacks = new HashMap<Integer, DnsCallback<?>>();
 
     /**
-     * Called by the {@link InboundDnsMessageHandler} when a {@link DnsResponse}
+     * Called by the {@link DnsInboundMessageHandler} when a {@link DnsResponse}
      * is received from a DNS server. This method checks all existing
      * {@link DnsCallback}s for a callback with an id matching the
      * {@link DnsResponse}s id and sets the value for the callback as one or
@@ -80,16 +80,16 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
                     return;
                 }
             }
-            List<Resource> resources = new ArrayList<Resource>();
+            List<DnsResource> resources = new ArrayList<DnsResource>();
             resources.addAll(response.getAnswers());
             resources.addAll(response.getAuthorityResources());
             resources.addAll(response.getAdditionalResources());
             for (int i = 0; i < resources.size(); i++) {
-                Resource resource = resources.get(i);
+                DnsResource resource = resources.get(i);
                 for (int n = 0; n < callback.queries.length; n++) {
                     Object result = RecordDecoderFactory.getFactory().decode(resource.type(), response, resource);
                     if (result != null) {
-                        ResourceCache.submitRecord(resource.name(), resource.type(), resource.timeToLive(), result);
+                        DnsResourceCache.submitRecord(resource.name(), resource.type(), resource.timeToLive(), result);
                         if (callback.queries[n].getQuestions().get(0).type() == resource.type()) {
                             callbacks.remove(response.getHeader().getId());
                             callback.flagValid(resource.type());
@@ -152,8 +152,8 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
     @SuppressWarnings("unchecked")
     private void complete() {
         if (validType != -1) {
-            Question question = queries[0].getQuestions().get(0);
-            result = (T) ResourceCache.getRecords(question.name(), validType);
+            DnsQuestion question = queries[0].getQuestions().get(0);
+            result = (T) DnsResourceCache.getRecords(question.name(), validType);
         } else {
             result = null;
         }

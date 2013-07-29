@@ -13,11 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.dns.decoder;
+package io.netty.dns.decoder;
 
 import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.DnsResponseDecoder;
-import io.netty.handler.codec.dns.Resource;
+import io.netty.handler.codec.dns.DnsResource;
 
 /**
  * Decodes any record that simply returns a domain name, such as NS (name
@@ -32,10 +32,10 @@ public class DomainDecoder implements RecordDecoder<String> {
      *            the {@link DnsResponse} received that contained the resource
      *            record being decoded
      * @param resource
-     *            the {@link Resource} being decoded
+     *            the {@link DnsResource} being decoded
      */
     @Override
-    public String decode(DnsResponse response, Resource resource) {
+    public String decode(DnsResponse response, DnsResource resource) {
         return DnsResponseDecoder.getName(response.content(), resource.contentIndex());
     }
 

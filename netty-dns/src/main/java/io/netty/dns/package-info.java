@@ -15,7 +15,7 @@
  */
 
 /**
- * Handles the decoding of DNS response packets from {@link ByteBuf}s to other
- * data structures.
+ * Netty implements its own DNS codec to perform asynchronous DNS queries via
+ * {@link DnsExchangeFactory}.
  */
-package io.netty.handler.dns.decoder;
+package io.netty.dns;

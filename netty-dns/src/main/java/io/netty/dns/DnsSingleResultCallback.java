@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.dns;
+package io.netty.dns;
 
 import io.netty.buffer.ByteBuf;
 
@@ -28,18 +28,18 @@ import java.util.concurrent.Callable;
  *            a single result for a specified type (i.e. if type is A, result
  *            would be a {@link ByteBuf})
  */
-public class SingleResultCallback<T> implements Callable<T> {
+public class DnsSingleResultCallback<T> implements Callable<T> {
 
     private final DnsCallback<List<T>> parent;
 
     /**
-     * Constructs a {@link SingleResultCallback} by passing it a
+     * Constructs a {@link DnsSingleResultCallback} by passing it a
      * {@link DnsCallback}.
      *
      * @param parent
      *            the {@link DnsCallback}
      */
-    public SingleResultCallback(DnsCallback<List<T>> parent) {
+    public DnsSingleResultCallback(DnsCallback<List<T>> parent) {
         this.parent = parent;
     }
 

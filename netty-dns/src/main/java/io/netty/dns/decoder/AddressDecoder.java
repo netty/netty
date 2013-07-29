@@ -13,12 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.dns.decoder;
+package io.netty.dns.decoder;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.dns.DnsResponse;
-import io.netty.handler.codec.dns.Resource;
+import io.netty.handler.codec.dns.DnsResource;
 
 /**
  * Decodes A and AAAA resource records into IPv4 and IPv6 addresses,
@@ -48,10 +48,10 @@ public class AddressDecoder implements RecordDecoder<ByteBuf> {
      *            the {@link DnsResponse} received that contained the resource
      *            record being decoded
      * @param resource
-     *            the {@link Resource} being decoded
+     *            the {@link DnsResource} being decoded
      */
     @Override
-    public ByteBuf decode(DnsResponse response, Resource resource) {
+    public ByteBuf decode(DnsResponse response, DnsResource resource) {
         ByteBuf data = resource.content().copy().readerIndex(response.originalIndex());
         int size = data.writerIndex() - data.readerIndex();
         if (data.readerIndex() != 0 || size != octets) {

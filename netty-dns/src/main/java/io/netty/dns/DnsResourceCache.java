@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.dns;
+package io.netty.dns;
 
 import io.netty.buffer.ByteBuf;
 
@@ -28,7 +28,7 @@ import java.util.Set;
 /**
  * Handles the caching of all resource records for DNS queries.
  */
-public final class ResourceCache {
+public final class DnsResourceCache {
 
     private static final Map<String, Map<Integer, Set<Record<?>>>> recordCache
             = new HashMap<String, Map<Integer, Set<Record<?>>>>();
@@ -78,7 +78,7 @@ public final class ResourceCache {
         return results;
     }
 
-    private ResourceCache() {
+    private DnsResourceCache() {
     }
 
     /**

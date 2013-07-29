@@ -13,13 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.dns.decoder;
+package io.netty.dns.decoder;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.dns.decoder.record.MailExchangerRecord;
+import io.netty.handler.codec.dns.DnsResource;
 import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.DnsResponseDecoder;
-import io.netty.handler.codec.dns.Resource;
-import io.netty.handler.dns.decoder.record.MailExchangerRecord;
 
 /**
  * Decodes MX (mail exchanger) resource records.
@@ -34,10 +34,10 @@ public class MailExchangerDecoder implements RecordDecoder<MailExchangerRecord> 
      *            the {@link DnsResponse} received that contained the resource
      *            record being decoded
      * @param resource
-     *            the {@link Resource} being decoded
+     *            the {@link DnsResource} being decoded
      */
     @Override
-    public MailExchangerRecord decode(DnsResponse response, Resource resource) {
+    public MailExchangerRecord decode(DnsResponse response, DnsResource resource) {
         ByteBuf packet = response.content().readerIndex(resource.contentIndex());
         int priority = packet.readShort();
         String name = DnsResponseDecoder.readName(packet);

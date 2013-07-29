@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.dns;
+package io.netty.dns;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -25,7 +25,7 @@ import io.netty.handler.timeout.ReadTimeoutException;
  * Handles listening for messages for a single DNS server and passes messages to
  * the {@link DnsCallback} class to be linked to their callback.
  */
-public class InboundDnsMessageHandler extends SimpleChannelInboundHandler<DnsResponse> {
+public class DnsInboundMessageHandler extends SimpleChannelInboundHandler<DnsResponse> {
 
     /**
      * When a {@link ReadTimeoutException} is caught, this means a DNS client

@@ -97,13 +97,13 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
      *
      * @param buf
      *            the byte buffer containing the DNS packet
-     * @return a decoded {@link Question}
+     * @return a decoded {@link DnsQuestion}
      */
-    public static Question decodeQuestion(ByteBuf buf) {
+    private static DnsQuestion decodeQuestion(ByteBuf buf) {
         String name = readName(buf);
         int type = buf.readUnsignedShort();
         int qClass = buf.readUnsignedShort();
-        return new Question(name, type, qClass);
+        return new DnsQuestion(name, type, qClass);
     }
 
     /**
@@ -111,9 +111,9 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
      *
      * @param buf
      *            the byte buffer containing the DNS packet
-     * @return a {@link Resource} record containing response data
+     * @return a {@link DnsResource} record containing response data
      */
-    public static Resource decodeResource(ByteBuf buf, ByteBufAllocator allocator) {
+    private static DnsResource decodeResource(ByteBuf buf, ByteBufAllocator allocator) {
         String name = readName(buf);
         int type = buf.readUnsignedShort();
         int aClass = buf.readUnsignedShort();
@@ -122,7 +122,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
         ByteBuf resourceData = allocator.buffer(len);
         int contentIndex = buf.readerIndex();
         resourceData.writeBytes(buf, len);
-        return new Resource(name, type, aClass, ttl, contentIndex, resourceData);
+        return new DnsResource(name, type, aClass, ttl, contentIndex, resourceData);
     }
 
     /**
@@ -135,7 +135,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
      * @return a {@link DnsResponseHeader} containing the response's header
      *         information
      */
-    public static DnsResponseHeader decodeHeader(DnsResponse parent, ByteBuf buf) {
+    private static DnsResponseHeader decodeHeader(DnsResponse parent, ByteBuf buf) {
         int id = buf.readUnsignedShort();
         DnsResponseHeader header = new DnsResponseHeader(parent, id);
         int flags = buf.readUnsignedShort();
@@ -161,7 +161,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
      *            the raw DNS response packet
      * @return the decoded {@link DnsResponse}
      */
-    public static DnsResponse decodeResponse(ByteBuf buf, ByteBufAllocator allocator) {
+    protected static DnsResponse decodeResponse(ByteBuf buf, ByteBufAllocator allocator) {
         DnsResponse response = new DnsResponse(buf);
         DnsResponseHeader header = decodeHeader(response, buf);
         response.setHeader(header);
@@ -171,7 +171,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
         if (header.getResponseCode() != 0) {
             System.err.println("Encountered error decoding DNS response for domain \""
                     + response.getQuestions().get(0).name() + "\": "
-                    + ResponseCode.obtainError(header.getResponseCode()));
+                    + DnsResponseCode.valueOf(header.getResponseCode()));
         }
         for (int i = 0; i < header.getReadAnswers(); i++) {
             response.addAnswer(decodeResource(buf, allocator));
