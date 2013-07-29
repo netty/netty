@@ -65,9 +65,7 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyFrame> {
         ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
-                synchronized (headerBlockEncoder) {
-                    headerBlockEncoder.end();
-                }
+                headerBlockEncoder.end();
             }
         });
     }
