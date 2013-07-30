@@ -51,14 +51,35 @@ public class HttpVersion implements Comparable<HttpVersion> {
             throw new NullPointerException("text");
         }
 
-        text = text.trim().toUpperCase();
+        text = text.trim();
+        // Try to match without convert to uppercase first as this is what 99% of all clients
+        // will send anyway. Also there is a change to the RFC to make it clear that it is
+        // expected to be case-sensitive
+        //
+        // See:
+        // * http://trac.tools.ietf.org/wg/httpbis/trac/ticket/1
+        // * http://trac.tools.ietf.org/wg/httpbis/trac/wiki
+        HttpVersion version = version0(text);
+        if (version == null) {
+            text = text.toUpperCase();
+            // try again after convert to uppercase
+            version = version0(text);
+            if (version == null) {
+                // still no match, construct a new one
+                version = new HttpVersion(text, true);
+            }
+        }
+        return version;
+    }
+
+    private static HttpVersion version0(String text) {
         if ("HTTP/1.1".equals(text)) {
             return HTTP_1_1;
         }
         if ("HTTP/1.0".equals(text)) {
             return HTTP_1_0;
         }
-        return new HttpVersion(text, true);
+        return null;
     }
 
     private final String protocolName;
