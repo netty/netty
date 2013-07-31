@@ -239,7 +239,6 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
      */
     protected abstract int doWriteBytes(ByteBuf buf) throws Exception;
 
-
     protected final void setOpWrite() {
         final SelectionKey key = selectionKey();
         final int interestOps = key.interestOps();
