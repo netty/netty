@@ -506,14 +506,16 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private void callHandlerRemoved(final DefaultChannelHandlerContext ctx) {
-        if (ctx.channel().isRegistered() && !ctx.executor().inEventLoop()) {
-            ctx.executor().execute(new Runnable() {
+        if (ctx.channel().isRegistered()) {
+            if (!ctx.executor().inEventLoop() || ctx.isRunning()) {
+                ctx.executor().execute(new Runnable() {
                 @Override
                 public void run() {
                     callHandlerRemoved0(ctx);
                 }
             });
-            return;
+                return;
+            }
         }
         callHandlerRemoved0(ctx);
     }
