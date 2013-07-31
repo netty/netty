@@ -102,6 +102,20 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
     private final int maxHeaderSize;
     private final int maxChunkSize;
     private final boolean chunkedSupported;
+    private static final ThreadLocal<StringBuilder> BUILDERS = new ThreadLocal<StringBuilder>() {
+        @Override
+        protected StringBuilder initialValue() {
+            return new StringBuilder(512);
+        }
+
+        @Override
+        public StringBuilder get() {
+            StringBuilder builder = super.get();
+            builder.setLength(0);
+            return builder;
+        }
+    };
+
     private ByteBuf content;
     private HttpMessage message;
     private long chunkSize;
@@ -315,8 +329,8 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
          * read chunk, read and ignore the CRLF and repeat until 0
          */
         case READ_CHUNK_SIZE: try {
-            String line = readLine(buffer, maxInitialLineLength);
-            int chunkSize = getChunkSize(line);
+            StringBuilder line = readLine(buffer, maxInitialLineLength);
+            int chunkSize = getChunkSize(line.toString());
             this.chunkSize = chunkSize;
             if (chunkSize == 0) {
                 checkpoint(State.READ_CHUNK_FOOTER);
@@ -565,15 +579,15 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         final HttpMessage message = this.message;
         final HttpHeaders headers = message.headers();
 
-        String line = readHeader(buffer);
+        StringBuilder line = readHeader(buffer);
         String name = null;
         String value = null;
-        if (!line.isEmpty()) {
+        if (line.length() > 0) {
             headers.clear();
             do {
                 char firstChar = line.charAt(0);
                 if (name != null && (firstChar == ' ' || firstChar == '\t')) {
-                    value = value + ' ' + line.trim();
+                    value = value + ' ' + line.toString().trim();
                 } else {
                     if (name != null) {
                         headers.add(name, value);
@@ -584,7 +598,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                 }
 
                 line = readHeader(buffer);
-            } while (!line.isEmpty());
+            } while (line.length() > 0);
 
             // Add the last header.
             if (name != null) {
@@ -609,9 +623,9 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
 
     private LastHttpContent readTrailingHeaders(ByteBuf buffer) {
         headerSize = 0;
-        String line = readHeader(buffer);
+        StringBuilder line = readHeader(buffer);
         String lastHeader = null;
-        if (!line.isEmpty()) {
+        if (line.length() > 0) {
             LastHttpContent trailer = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER);
             do {
                 char firstChar = line.charAt(0);
@@ -619,7 +633,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                     List<String> current = trailer.trailingHeaders().getAll(lastHeader);
                     if (!current.isEmpty()) {
                         int lastPos = current.size() - 1;
-                        String newString = current.get(lastPos) + line.trim();
+                        String newString = current.get(lastPos) + line.toString().trim();
                         current.set(lastPos, newString);
                     } else {
                         // Content-Length, Transfer-Encoding, or Trailer
@@ -636,7 +650,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                 }
 
                 line = readHeader(buffer);
-            } while (!line.isEmpty());
+            } while (line.length() > 0);
 
             return trailer;
         }
@@ -644,8 +658,8 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         return LastHttpContent.EMPTY_LAST_CONTENT;
     }
 
-    private String readHeader(ByteBuf buffer) {
-        StringBuilder sb = new StringBuilder(64);
+    private StringBuilder readHeader(ByteBuf buffer) {
+        StringBuilder sb = BUILDERS.get();
         int headerSize = this.headerSize;
 
         loop:
@@ -680,7 +694,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         }
 
         this.headerSize = headerSize;
-        return sb.toString();
+        return sb;
     }
 
     protected abstract boolean isDecodingRequest();
@@ -700,18 +714,18 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         return Integer.parseInt(hex, 16);
     }
 
-    private static String readLine(ByteBuf buffer, int maxLineLength) {
-        StringBuilder sb = new StringBuilder(64);
+    private StringBuilder readLine(ByteBuf buffer, int maxLineLength) {
+        StringBuilder sb = BUILDERS.get();
         int lineLength = 0;
         while (true) {
             byte nextByte = buffer.readByte();
             if (nextByte == HttpConstants.CR) {
                 nextByte = buffer.readByte();
                 if (nextByte == HttpConstants.LF) {
-                    return sb.toString();
+                    return sb;
                 }
             } else if (nextByte == HttpConstants.LF) {
-                return sb.toString();
+                return sb;
             } else {
                 if (lineLength >= maxLineLength) {
                     // TODO: Respond with Bad Request and discard the traffic
@@ -728,7 +742,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         }
     }
 
-    private static String[] splitInitialLine(String sb) {
+    private static String[] splitInitialLine(StringBuilder sb) {
         int aStart;
         int aEnd;
         int bStart;
@@ -751,7 +765,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                 cStart < cEnd? sb.substring(cStart, cEnd) : "" };
     }
 
-    private static String[] splitHeader(String sb) {
+    private static String[] splitHeader(StringBuilder sb) {
         final int length = sb.length();
         int nameStart;
         int nameEnd;
@@ -789,7 +803,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         };
     }
 
-    private static int findNonWhitespace(String sb, int offset) {
+    private static int findNonWhitespace(CharSequence sb, int offset) {
         int result;
         for (result = offset; result < sb.length(); result ++) {
             if (!Character.isWhitespace(sb.charAt(result))) {
@@ -799,7 +813,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         return result;
     }
 
-    private static int findWhitespace(String sb, int offset) {
+    private static int findWhitespace(CharSequence sb, int offset) {
         int result;
         for (result = offset; result < sb.length(); result ++) {
             if (Character.isWhitespace(sb.charAt(result))) {
@@ -809,7 +823,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         return result;
     }
 
-    private static int findEndOfString(String sb) {
+    private static int findEndOfString(CharSequence sb) {
         int result;
         for (result = sb.length(); result > 0; result --) {
             if (!Character.isWhitespace(sb.charAt(result - 1))) {
