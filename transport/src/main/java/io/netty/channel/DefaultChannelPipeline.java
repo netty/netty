@@ -737,11 +737,20 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     public ChannelPipeline fireChannelUnregistered() {
         head.fireChannelUnregistered();
 
-        // Free all buffers if channel is closed and unregistered.
+        // Remove all handlers sequentially if channel is closed and unregistered.
         if (!channel.isOpen()) {
-            head.freeInbound();
+            teardownAll();
         }
         return this;
+    }
+
+    /**
+     * Removes all handlers from the pipeline one by one from tail (exclusive) to head (inclusive) to trigger
+     * handlerRemoved().  Note that the tail handler is excluded because it's neither an outbound handler nor it
+     * does anything in handlerRemoved().
+     */
+    private void teardownAll() {
+        tail.prev.teardown();
     }
 
     @Override
