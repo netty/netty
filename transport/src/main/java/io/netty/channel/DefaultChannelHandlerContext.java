@@ -82,39 +82,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         return callDepth != 0;
     }
 
-    void freeInbound() {
-        EventExecutor executor = executor();
-        if (executor.inEventLoop()) {
-            freeInbound0();
-        } else {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    freeInbound0();
-                }
-            });
-        }
-    }
-
-    private void freeInbound0() {
-        if (next != null) {
-            DefaultChannelHandlerContext nextCtx = findContextInbound();
-            nextCtx.freeInbound();
-        } else {
-            // Freed all inbound buffers. Remove all handlers from the pipeline one by one from tail (exclusive)
-            // to head (inclusive) to trigger handlerRemoved(). If the removed handler has an outbound buffer, free it,
-            // too.  Note that the tail handler is excluded because it's neither an outbound buffer and it doesn't
-            // do anything in handlerRemoved().
-            pipeline.tail.prev.teardown();
-        }
-    }
-
-    void teardownAll() {
-        pipeline.tail.prev.teardown();
-    }
-
-    /** Invocation initiated by {@link #freeInbound0()} after freeing all inbound buffers. */
-    private void teardown() {
+    /** Invocation initiated by {@link DefaultChannelPipeline#teardownAll()}}. */
+    void teardown() {
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
             teardown0();
