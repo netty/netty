@@ -34,7 +34,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private final DefaultChannelPipeline pipeline;
     private final String name;
     private final ChannelHandler handler;
-    private int callDepth;
     private boolean removed;
 
     // Will be set to null if no child executor should be used, otherwise it will be set to the
@@ -76,10 +75,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         } else {
             executor = null;
         }
-    }
-
-    boolean isRunning() {
-        return callDepth != 0;
     }
 
     /** Invocation initiated by {@link DefaultChannelPipeline#teardownAll()}}. */
@@ -160,12 +155,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void invokeChannelRegistered() {
         try {
-            callDepth ++;
-            try {
-                ((ChannelInboundHandler) handler).channelRegistered(this);
-            } finally {
-                callDepth --;
-            }
+            ((ChannelInboundHandler) handler).channelRegistered(this);
         } catch (Throwable t) {
             notifyHandlerException(t);
         }
@@ -190,12 +180,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void invokeChannelUnregistered() {
         try {
-            callDepth ++;
-            try {
-                ((ChannelInboundHandler) handler).channelUnregistered(this);
-            } finally {
-                callDepth --;
-            }
+            ((ChannelInboundHandler) handler).channelUnregistered(this);
         } catch (Throwable t) {
             notifyHandlerException(t);
         }
@@ -220,12 +205,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void invokeChannelActive() {
         try {
-            callDepth ++;
-            try {
-                ((ChannelInboundHandler) handler).channelActive(this);
-            } finally {
-                callDepth --;
-            }
+            ((ChannelInboundHandler) handler).channelActive(this);
         } catch (Throwable t) {
             notifyHandlerException(t);
         }
@@ -250,12 +230,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void invokeChannelInactive() {
         try {
-            callDepth ++;
-            try {
-                ((ChannelInboundHandler) handler).channelInactive(this);
-            } finally {
-                callDepth --;
-            }
+            ((ChannelInboundHandler) handler).channelInactive(this);
         } catch (Throwable t) {
             notifyHandlerException(t);
         }
@@ -293,12 +268,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void invokeExceptionCaught(final Throwable cause) {
         try {
-            callDepth ++;
-            try {
-                handler.exceptionCaught(this, cause);
-            } finally {
-                callDepth --;
-            }
+            handler.exceptionCaught(this, cause);
         } catch (Throwable t) {
             if (logger.isWarnEnabled()) {
                 logger.warn(
@@ -331,12 +301,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void invokeUserEventTriggered(Object event) {
         try {
-            callDepth ++;
-            try {
-                ((ChannelInboundHandler) handler).userEventTriggered(this, event);
-            } finally {
-                callDepth --;
-            }
+            ((ChannelInboundHandler) handler).userEventTriggered(this, event);
         } catch (Throwable t) {
             notifyHandlerException(t);
         }
@@ -365,12 +330,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void invokeChannelRead(Object msg) {
         try {
-            callDepth ++;
-            try {
-                ((ChannelInboundHandler) handler).channelRead(this, msg);
-            } finally {
-                callDepth --;
-            }
+            ((ChannelInboundHandler) handler).channelRead(this, msg);
         } catch (Throwable t) {
             notifyHandlerException(t);
         }
@@ -399,12 +359,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void invokeChannelReadComplete() {
         try {
-            callDepth ++;
-            try {
-                ((ChannelInboundHandler) handler).channelReadComplete(this);
-            } finally {
-                callDepth --;
-            }
+            ((ChannelInboundHandler) handler).channelReadComplete(this);
         } catch (Throwable t) {
             notifyHandlerException(t);
         }
@@ -433,12 +388,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void invokeChannelWritabilityChanged() {
         try {
-            callDepth ++;
-            try {
-                ((ChannelInboundHandler) handler).channelWritabilityChanged(this);
-            } finally {
-                callDepth --;
-            }
+            ((ChannelInboundHandler) handler).channelWritabilityChanged(this);
         } catch (Throwable t) {
             notifyHandlerException(t);
         }
@@ -499,12 +449,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void invokeBind(SocketAddress localAddress, ChannelPromise promise) {
         try {
-            callDepth ++;
-            try {
-                ((ChannelOutboundHandler) handler).bind(this, localAddress, promise);
-            } finally {
-                callDepth --;
-            }
+            ((ChannelOutboundHandler) handler).bind(this, localAddress, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
         }
@@ -542,12 +487,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void invokeConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
         try {
-            callDepth ++;
-            try {
-                ((ChannelOutboundHandler) handler).connect(this, remoteAddress, localAddress, promise);
-            } finally {
-                callDepth --;
-            }
+            ((ChannelOutboundHandler) handler).connect(this, remoteAddress, localAddress, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
         }
@@ -582,12 +522,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void invokeDisconnect(ChannelPromise promise) {
         try {
-            callDepth ++;
-            try {
-                ((ChannelOutboundHandler) handler).disconnect(this, promise);
-            } finally {
-                callDepth --;
-            }
+            ((ChannelOutboundHandler) handler).disconnect(this, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
         }
@@ -615,12 +550,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void invokeClose(ChannelPromise promise) {
         try {
-            callDepth ++;
-            try {
-                ((ChannelOutboundHandler) handler).close(this, promise);
-            } finally {
-                callDepth --;
-            }
+            ((ChannelOutboundHandler) handler).close(this, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
         }
@@ -648,12 +578,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void invokeDeregister(ChannelPromise promise) {
         try {
-            callDepth ++;
-            try {
-                ((ChannelOutboundHandler) handler).deregister(this, promise);
-            } finally {
-                callDepth --;
-            }
+            ((ChannelOutboundHandler) handler).deregister(this, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
         }
@@ -683,12 +608,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void invokeRead() {
         try {
-            callDepth ++;
-            try {
-                ((ChannelOutboundHandler) handler).read(this);
-            } finally {
-                callDepth --;
-            }
+            ((ChannelOutboundHandler) handler).read(this);
         } catch (Throwable t) {
             notifyHandlerException(t);
         }
@@ -724,12 +644,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void invokeWrite(Object msg, ChannelPromise promise) {
         try {
-            callDepth ++;
-            try {
-                ((ChannelOutboundHandler) handler).write(this, msg, promise);
-            } finally {
-                callDepth --;
-            }
+            ((ChannelOutboundHandler) handler).write(this, msg, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
         }
@@ -759,12 +674,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     private void invokeFlush() {
         try {
-            callDepth ++;
-            try {
-                ((ChannelOutboundHandler) handler).flush(this);
-            } finally {
-                callDepth --;
-            }
+            ((ChannelOutboundHandler) handler).flush(this);
         } catch (Throwable t) {
             notifyHandlerException(t);
         }

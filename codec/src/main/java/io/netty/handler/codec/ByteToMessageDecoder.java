@@ -229,6 +229,15 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 int outSize = out.size();
                 int oldInputLength = in.readableBytes();
                 decode(ctx, in, out);
+
+                // Check if this handler was removed before try to continue the loop.
+                // If it was removed it is not safe to continue to operate on the buffer
+                //
+                // See https://github.com/netty/netty/issues/1664
+                if (ctx.isRemoved()) {
+                    break;
+                }
+
                 if (outSize == out.size()) {
                     if (oldInputLength == in.readableBytes()) {
                         break;
