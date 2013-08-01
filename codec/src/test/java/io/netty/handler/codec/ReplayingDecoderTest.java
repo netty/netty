@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.List;
@@ -102,5 +103,48 @@ public class ReplayingDecoderTest {
         ch.finish();
         assertEquals(Unpooled.wrappedBuffer(new byte[] {'B' }), ch.readInbound());
         assertNull(ch.readInbound());
+    }
+
+    @Test
+    public void testRemoveItself() {
+        EmbeddedChannel channel = new EmbeddedChannel(new ReplayingDecoder() {
+            private boolean removed;
+
+            @Override
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+                assertFalse(removed);
+                in.readByte();
+                ctx.pipeline().remove(this);
+                removed = true;
+            }
+        });
+
+        ByteBuf buf = Unpooled.wrappedBuffer(new byte[] {'a', 'b', 'c'});
+        channel.writeInbound(buf.copy());
+        ByteBuf b = (ByteBuf) channel.readInbound();
+        assertEquals(b, buf.skipBytes(1));
+    }
+
+    @Test
+    public void testRemoveItselfWithReplayError() {
+        EmbeddedChannel channel = new EmbeddedChannel(new ReplayingDecoder() {
+            private boolean removed;
+
+            @Override
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+                assertFalse(removed);
+                ctx.pipeline().remove(this);
+
+                in.readBytes(1000);
+
+                removed = true;
+            }
+        });
+
+        ByteBuf buf = Unpooled.wrappedBuffer(new byte[] {'a', 'b', 'c'});
+        channel.writeInbound(buf.copy());
+        ByteBuf b = (ByteBuf) channel.readInbound();
+
+        assertEquals("Expect to have still all bytes in the buffer", b, buf);
     }
 }
