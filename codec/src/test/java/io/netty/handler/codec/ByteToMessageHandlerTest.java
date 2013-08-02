@@ -45,4 +45,27 @@ public class ByteToMessageHandlerTest {
         ByteBuf b = (ByteBuf) channel.readInbound();
         Assert.assertEquals(b, buf.skipBytes(1));
     }
+
+    @Test
+    public void testRemoveItselfWriteBuffer() {
+        final ByteBuf buf = Unpooled.buffer().writeBytes(new byte[] {'a', 'b', 'c'});
+        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder() {
+            private boolean removed;
+
+            @Override
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+                Assert.assertFalse(removed);
+                in.readByte();
+                ctx.pipeline().remove(this);
+
+                // This should not let it keep call decode
+                buf.writeByte('d');
+                removed = true;
+            }
+        });
+
+        channel.writeInbound(buf.copy());
+        ByteBuf b = (ByteBuf) channel.readInbound();
+        Assert.assertEquals(b, Unpooled.wrappedBuffer(new byte[] { 'b', 'c'}));
+    }
 }

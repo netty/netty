@@ -20,7 +20,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.List;
@@ -146,5 +145,28 @@ public class ReplayingDecoderTest {
         ByteBuf b = (ByteBuf) channel.readInbound();
 
         assertEquals("Expect to have still all bytes in the buffer", b, buf);
+    }
+
+    @Test
+    public void testRemoveItselfWriteBuffer() {
+        final ByteBuf buf = Unpooled.buffer().writeBytes(new byte[] {'a', 'b', 'c'});
+        EmbeddedChannel channel = new EmbeddedChannel(new ReplayingDecoder() {
+            private boolean removed;
+
+            @Override
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+                assertFalse(removed);
+                in.readByte();
+                ctx.pipeline().remove(this);
+
+                // This should not let it keep call decode
+                buf.writeByte('d');
+                removed = true;
+            }
+        });
+
+        channel.writeInbound(buf.copy());
+        ByteBuf b = (ByteBuf) channel.readInbound();
+        assertEquals(b, Unpooled.wrappedBuffer(new byte[] { 'b', 'c'}));
     }
 }
