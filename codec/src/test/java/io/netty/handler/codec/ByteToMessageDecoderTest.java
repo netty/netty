@@ -24,7 +24,7 @@ import org.junit.Test;
 
 import java.util.List;
 
-public class ByteToMessageHandlerTest {
+public class ByteToMessageDecoderTest {
 
     @Test
     public void testRemoveItself() {
@@ -48,7 +48,7 @@ public class ByteToMessageHandlerTest {
 
     @Test
     public void testRemoveItselfWriteBuffer() {
-        final ByteBuf buf = Unpooled.buffer().writeBytes(new byte[] {'a', 'b', 'c'});
+        final ByteBuf buf = Unpooled.buffer().writeBytes(new byte[]{'a', 'b', 'c'});
         EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder() {
             private boolean removed;
 
