@@ -17,6 +17,7 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.DefaultAttributeMap;
+import io.netty.util.Recycler;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.internal.StringUtil;
@@ -631,12 +632,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (executor.inEventLoop()) {
             next.invokeWrite(msg, promise);
         } else {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    next.invokeWrite(msg, promise);
-                }
-            });
+            executor.execute(WriteTask.newInstance(next, msg, promise));
         }
 
         return promise;
@@ -820,5 +816,46 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public boolean isRemoved() {
         return removed;
+    }
+
+    static final class WriteTask implements Runnable {
+        private DefaultChannelHandlerContext ctx;
+        private Object msg;
+        private ChannelPromise promise;
+
+        private static final Recycler<WriteTask> RECYCLER = new Recycler<WriteTask>() {
+            @Override
+            protected WriteTask newObject(Handle handle) {
+                return new WriteTask(handle);
+            }
+        };
+
+        private static WriteTask newInstance(DefaultChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            WriteTask task = RECYCLER.get();
+            task.ctx = ctx;
+            task.msg = msg;
+            task.promise = promise;
+            return task;
+        }
+
+        private final Recycler.Handle handle;
+
+        private WriteTask(Recycler.Handle handle) {
+            this.handle = handle;
+        }
+
+        @Override
+        public void run() {
+            try {
+                ctx.invokeWrite(msg, promise);
+            } finally {
+                // Set to null so the GC can collect them directly
+                ctx = null;
+                msg = null;
+                promise = null;
+
+                RECYCLER.recycle(this, handle);
+            }
+        }
     }
 }
