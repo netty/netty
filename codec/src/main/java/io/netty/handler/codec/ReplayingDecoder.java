@@ -359,8 +359,8 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                 try {
                     decode(ctx, replayable, out);
 
-                    // Check if this handler was removed before try to continue the loop.
-                    // If it was removed it is not safe to continue to operate on the buffer
+                    // Check if this handler was removed before continuing the loop.
+                    // If it was removed, it is not safe to continue to operate on the buffer.
                     //
                     // See https://github.com/netty/netty/issues/1664
                     if (ctx.isRemoved()) {
@@ -381,8 +381,8 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                 } catch (Signal replay) {
                     replay.expect(REPLAY);
 
-                    // Check if this handler was removed before try to continue the loop.
-                    // If it was removed it is not safe to continue to operate on the buffer
+                    // Check if this handler was removed before continuing the loop.
+                    // If it was removed, it is not safe to continue to operate on the buffer.
                     //
                     // See https://github.com/netty/netty/issues/1664
                     if (ctx.isRemoved()) {
