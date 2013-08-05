@@ -28,9 +28,9 @@ import java.util.Set;
 /**
  * Handles the caching of all resource records for DNS queries.
  */
-public final class DnsResourceCache {
+public final class DnsDefaultCache implements DnsCachingStrategy {
 
-    private static final Map<String, Map<Integer, Set<Record<?>>>> recordCache
+    private final Map<String, Map<Integer, Set<Record<?>>>> recordCache
             = new HashMap<String, Map<Integer, Set<Record<?>>>>();
 
     /**
@@ -38,8 +38,9 @@ public final class DnsResourceCache {
      * {@code name} and record {@code type}, or null if this record does not
      * exist.
      */
+    @Override
     @SuppressWarnings("unchecked")
-    public static <T> T getRecord(String name, int type) {
+    public <T> T getRecord(String name, int type) {
         List<?> records = getRecords(name, type);
         if (records == null) {
             return null;
@@ -51,8 +52,9 @@ public final class DnsResourceCache {
      * Returns a <strong>{@code List}</strong> of records for the given domain
      * {@code name} and record {@code type}, or null if no records exist.
      */
+    @Override
     @SuppressWarnings("unchecked")
-    public static <T> List<T> getRecords(String name, int type) {
+    public <T> List<T> getRecords(String name, int type) {
         Map<Integer, Set<Record<?>>> records = recordCache.get(name);
         if (records == null || records.isEmpty()) {
             return null;
@@ -78,9 +80,6 @@ public final class DnsResourceCache {
         return results;
     }
 
-    private DnsResourceCache() {
-    }
-
     /**
      * Submits a record to the cache.
      *
@@ -94,7 +93,8 @@ public final class DnsResourceCache {
      *            the record (i.e. for A records, this would be a
      *            {@link ByteBuf})
      */
-    public static <T> void submitRecord(String name, int type, long ttl, T content) {
+    @Override
+    public <T> void submitRecord(String name, int type, long ttl, T content) {
         Map<Integer, Set<Record<?>>> records = recordCache.get(name);
         if (records == null) {
             recordCache.put(name, records = new HashMap<Integer, Set<Record<?>>>());
@@ -115,7 +115,7 @@ public final class DnsResourceCache {
      *            the type of record (i.e. for A records, this would be
      *            {@link ByteBuf})
      */
-    static class Record<T> {
+    class Record<T> {
 
         private final T content;
         private final long expiration;

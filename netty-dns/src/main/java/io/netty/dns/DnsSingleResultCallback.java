@@ -45,7 +45,8 @@ public class DnsSingleResultCallback<T> implements Callable<T> {
 
     /**
      * Invokes the {@link DnsCallback}'s {@link DnsCallback#call()} method and
-     * returns the first result, if it exists, or else {@code null}.
+     * returns a result based on the resolver's {@link DnsSelectionStrategy}, if
+     * it exists, or else {@code null}.
      */
     @Override
     public T call() throws InterruptedException {
@@ -53,7 +54,7 @@ public class DnsSingleResultCallback<T> implements Callable<T> {
         if (list == null || list.isEmpty()) {
             return null;
         }
-        return list.get(0);
+        return parent.resolver().selector().selectRecord(list);
     }
 
 }

@@ -15,10 +15,7 @@
  */
 package io.netty.dns;
 
-import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.dns.DnsQueryEncoder;
-import io.netty.handler.codec.dns.DnsResponseDecoder;
-import io.netty.handler.timeout.ReadTimeoutHandler;
+import io.netty.buffer.ByteBuf;
 
 import org.junit.Test;
 
@@ -27,14 +24,9 @@ public class DnsImplTest {
     // TODO: !!NOT FINISHED!!
     @Test
     public void implTest() throws Exception {
-        byte[] server = null;
-        while ((server = DnsExchangeFactory.getDnsServer(0)) != null) {
-            DnsExchangeFactory.removeDnsServer(server);
-        }
-        DnsExchangeFactory.addDnsServer(new byte[] { 127, 0, 0, 1 });
-        EmbeddedChannel embedded = new EmbeddedChannel(new ReadTimeoutHandler(30), new DnsResponseDecoder(),
-                new DnsQueryEncoder(), new DnsInboundMessageHandler());
-        DnsExchangeFactory.addChannel(new byte[] { 127, 0, 0, 1 }, embedded);
+        DnsResolver resolver = new DnsResolver();
+        ByteBuf address = (ByteBuf) resolver.lookup("google.com").get();
+        System.out.println(address);
     }
 
 }

@@ -89,7 +89,8 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
                 for (int n = 0; n < callback.queries.length; n++) {
                     Object result = RecordDecoderFactory.getFactory().decode(resource.type(), response, resource);
                     if (result != null) {
-                        DnsResourceCache.submitRecord(resource.name(), resource.type(), resource.timeToLive(), result);
+                        callback.resolver.cache().submitRecord(resource.name(), resource.type(), resource.timeToLive(),
+                                result);
                         if (callback.queries[n].getQuestions().get(0).type() == resource.type()) {
                             callbacks.remove(response.getHeader().getId());
                             callback.flagValid(resource.type());
@@ -102,6 +103,7 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
     }
 
     private final AtomicInteger fails = new AtomicInteger();
+    private final DnsResolver resolver;
     private final DnsQuery[] queries;
 
     @SuppressWarnings("unchecked")
@@ -111,18 +113,20 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
     private int validType = -1;
 
     /**
-     * Constructs a {@link DnsCallback} with a specified DNS server index, and
-     * an array of (or a single) query.
+     * Constructs a {@link DnsCallback} with a specified DNS resolver, DNS
+     * server index, and an array of (or a single) query.
      *
+     * @param resolver
+     *            the {@link DnsResolver} making the query
      * @param serverIndex
      *            the index at which the DNS server address is located in
-     *            {@link DnsExchangeFactory#dnsServers}, or -1 if it is not in
-     *            the {@link List}
+     *            {@link DnsResolver#dnsServers}, or -1 if it is not in the
+     *            {@link List}
      * @param queries
      *            the {@link DnsQuery}(s) this callback is listening to for
      *            responses
      */
-    DnsCallback(int serverIndex, DnsQuery... queries) {
+    DnsCallback(DnsResolver resolver, int serverIndex, DnsQuery... queries) {
         if (queries == null) {
             throw new NullPointerException("Argument 'queries' cannot be null.");
         }
@@ -130,8 +134,16 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
             throw new IllegalArgumentException("Argument 'queries' must contain minimum one valid DnsQuery.");
         }
         callbacks.put(queries[0].getHeader().getId(), this);
+        this.resolver = resolver;
         this.queries = queries;
         this.serverIndex = serverIndex;
+    }
+
+    /**
+     * Returns the {@link DnsResolver} attached to this {@link DnsCallback}.
+     */
+    public DnsResolver resolver() {
+        return resolver;
     }
 
     /**
@@ -153,7 +165,7 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
     private void complete() {
         if (validType != -1) {
             DnsQuestion question = queries[0].getQuestions().get(0);
-            result = (T) DnsResourceCache.getRecords(question.name(), validType);
+            result = (T) resolver.cache().getRecords(question.name(), validType);
         } else {
             result = null;
         }
@@ -183,12 +195,12 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
         if (serverIndex == -1) {
             result = null;
         } else {
-            byte[] dnsServerAddress = DnsExchangeFactory.getDnsServer(++serverIndex);
+            byte[] dnsServerAddress = resolver.getDnsServer(++serverIndex);
             if (dnsServerAddress == null) {
                 result = null;
             } else {
                 try {
-                    Channel channel = DnsExchangeFactory.channelForAddress(dnsServerAddress);
+                    Channel channel = resolver.channelForAddress(dnsServerAddress);
                     for (int i = 0; i < queries.length; i++) {
                         channel.write(queries[i]).sync();
                     }
@@ -198,7 +210,9 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
                         for (int i = 0; i < dnsServerAddress.length; i++) {
                             string.append(dnsServerAddress[i]).append(".");
                         }
-                        logger.error("Failed to write to next DNS server in queue with address " + string.substring(0, string.length() - 1), e);
+                        logger.error(
+                                "Failed to write to next DNS server in queue with address "
+                                        + string.substring(0, string.length() - 1), e);
                     }
                     result = null;
                 }
@@ -216,7 +230,7 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
         while (result == DEFAULT) {
             synchronized (this) {
                 if (result == DEFAULT) {
-                    wait(DnsExchangeFactory.REQUEST_TIMEOUT);
+                    wait(DnsResolver.REQUEST_TIMEOUT);
                 }
             }
             if (result == DEFAULT) {

@@ -19,27 +19,12 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.dns.DnsMessage;
 import io.netty.handler.codec.dns.DnsResponse;
-import io.netty.handler.timeout.ReadTimeoutException;
 
 /**
  * Handles listening for messages for a single DNS server and passes messages to
  * the {@link DnsCallback} class to be linked to their callback.
  */
 public class DnsInboundMessageHandler extends SimpleChannelInboundHandler<DnsResponse> {
-
-    /**
-     * When a {@link ReadTimeoutException} is caught, this means a DNS client
-     * has been active for a period of 30 seconds, and will be removed from the
-     * list of active channels.
-     */
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        if (cause instanceof ReadTimeoutException) {
-            DnsExchangeFactory.removeChannel(ctx.channel());
-            return;
-        }
-        ctx.fireExceptionCaught(cause);
-    }
 
     /**
      * Called when a new {@link DnsMessage} is received. The callback

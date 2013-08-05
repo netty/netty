@@ -15,6 +15,7 @@
  */
 package io.netty.dns;
 
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.codec.dns.DnsQueryEncoder;
@@ -28,10 +29,21 @@ import io.netty.handler.timeout.ReadTimeoutHandler;
  */
 public class DnsClientInitializer extends ChannelInitializer<NioDatagramChannel> {
 
+    private final DnsResolver resolver;
+
+    public DnsClientInitializer(DnsResolver resolver) {
+        this.resolver = resolver;
+    }
+
     @Override
     protected void initChannel(NioDatagramChannel channel) throws Exception {
-        channel.pipeline().addLast("timeout", new ReadTimeoutHandler(30)).addLast("decoder", new DnsResponseDecoder())
-                .addLast("encoder", new DnsQueryEncoder()).addLast("handler", new DnsInboundMessageHandler());
+        channel.pipeline().addLast("timeout", new ReadTimeoutHandler(30) {
+            @Override
+            public void readTimedOut(ChannelHandlerContext ctx) {
+                resolver.removeChannel(ctx.channel());
+            }
+        }).addLast("decoder", new DnsResponseDecoder()).addLast("encoder", new DnsQueryEncoder())
+                .addLast("handler", new DnsInboundMessageHandler());
     }
 
 }

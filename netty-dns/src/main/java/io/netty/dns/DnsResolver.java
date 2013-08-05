@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoop;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.dns.decoder.record.MailExchangerRecord;
@@ -50,7 +51,7 @@ import java.util.concurrent.Callable;
  * servers. The class attempts to load user's default DNS servers, but also
  * includes Google and OpenDNS DNS servers.
  */
-public final class DnsExchangeFactory {
+public class DnsResolver {
 
     /**
      * How long to wait for an answer from a DNS server after sending a query
@@ -59,14 +60,39 @@ public final class DnsExchangeFactory {
     public static final long REQUEST_TIMEOUT = 2000;
 
     private static final EventExecutorGroup executor = new DefaultEventExecutorGroup(2);
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsExchangeFactory.class);
-    private static final List<byte[]> dnsServers = new ArrayList<byte[]>();
-    private static final Map<byte[], Channel> dnsServerChannels = new HashMap<byte[], Channel>();
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsResolver.class);
     private static final Object idxLock = new Object();
 
     private static int idx;
 
-    static {
+    /**
+     * Returns an id in the range 0-65536.
+     */
+    private static int obtainId() {
+        synchronized (idxLock) {
+            return idx = idx + 1 & 0xffff;
+        }
+    }
+
+    private final List<byte[]> dnsServers = new ArrayList<byte[]>();
+    private final Map<byte[], Channel> dnsServerChannels = new HashMap<byte[], Channel>();
+
+    private final EventLoop eventLoop;
+    private final DnsCachingStrategy cache;
+    private final DnsSelectionStrategy selector;
+
+    public DnsResolver() {
+        this(null, new DnsDefaultCache(), new DnsRoundRobinStrategy());
+    }
+
+    public DnsResolver(EventLoop eventLoop, DnsCachingStrategy cache, DnsSelectionStrategy selector) {
+        this.eventLoop = eventLoop;
+        this.cache = cache;
+        this.selector = selector;
+        init();
+    }
+
+    private void init() {
         dnsServers.add(new byte[] { 8, 8, 8, 8 }); // Google DNS servers
         dnsServers.add(new byte[] { 8, 8, 4, 4 });
         dnsServers.add(new byte[] { -48, 67, -34, -34 }); // OpenDNS servers
@@ -105,6 +131,22 @@ public final class DnsExchangeFactory {
     }
 
     /**
+     * Returns the {@link DnsCachingStrategy} that this resolver uses for
+     * caching responses.
+     */
+    public DnsCachingStrategy cache() {
+        return cache;
+    }
+
+    /**
+     * Returns the {@link DnsSelectionStrategy} that this resolver uses for
+     * picking a single resource record from a {@link List}.
+     */
+    public DnsSelectionStrategy selector() {
+        return selector;
+    }
+
+    /**
      * Checks if a DNS server can actually be connected to and queried for
      * information by running through a request. This is a
      * <strong>blocking</strong> method.
@@ -113,11 +155,11 @@ public final class DnsExchangeFactory {
      *            the DNS server being checked
      * @return {@code true} if the DNS server provides a valid response
      */
-    private static boolean validAddress(byte[] address) {
+    private boolean validAddress(byte[] address) {
         try {
             int id = obtainId();
             Channel channel = channelForAddress(address);
-            Callable<List<ByteBuf>> callback = new DnsCallback<List<ByteBuf>>(-1, sendQuery(DnsEntry.TYPE_A,
+            Callable<List<ByteBuf>> callback = new DnsCallback<List<ByteBuf>>(this, -1, sendQuery(DnsEntry.TYPE_A,
                     "google.com", id, channel));
             return callback.call() != null;
         } catch (Exception e) {
@@ -130,15 +172,6 @@ public final class DnsExchangeFactory {
                 logger.warn("Failed to add DNS server " + string.substring(0, string.length() - 1), e);
             }
             return false;
-        }
-    }
-
-    /**
-     * Returns an id in the range 0-65536.
-     */
-    private static int obtainId() {
-        synchronized (idxLock) {
-            return idx = idx + 1 & 0xffff;
         }
     }
 
@@ -156,7 +189,7 @@ public final class DnsExchangeFactory {
      * @return the {@link DnsQuery} being written
      * @throws InterruptedException
      */
-    private static DnsQuery sendQuery(int type, String domain, int id, Channel channel) throws InterruptedException {
+    private DnsQuery sendQuery(int type, String domain, int id, Channel channel) throws InterruptedException {
         DnsQuery query = new DnsQuery(id);
         query.addQuestion(new DnsQuestion(domain, type));
         channel.writeAndFlush(query).sync();
@@ -170,7 +203,7 @@ public final class DnsExchangeFactory {
      *            the DNS server being added
      * @return {@code true} if the DNS server was added successfully
      */
-    public static boolean addDnsServer(byte[] dnsServerAddress) {
+    public boolean addDnsServer(byte[] dnsServerAddress) {
         return dnsServers.add(dnsServerAddress);
     }
 
@@ -181,7 +214,7 @@ public final class DnsExchangeFactory {
      *            the DNS server being removed
      * @return {@code true} if the DNS server was removed successfully
      */
-    public static boolean removeDnsServer(byte[] dnsServerAddress) {
+    public boolean removeDnsServer(byte[] dnsServerAddress) {
         return dnsServers.remove(dnsServerAddress);
     }
 
@@ -189,7 +222,7 @@ public final class DnsExchangeFactory {
      * Returns the DNS server address at the specified {@code index} in the
      * {@link List}.
      */
-    public static byte[] getDnsServer(int index) {
+    public byte[] getDnsServer(int index) {
         if (index > -1 && index < dnsServers.size()) {
             return dnsServers.get(index);
         }
@@ -207,7 +240,7 @@ public final class DnsExchangeFactory {
      * @throws SocketException
      * @throws InterruptedException
      */
-    protected static Channel channelForAddress(byte[] dnsServerAddress) throws UnknownHostException, SocketException,
+    protected Channel channelForAddress(byte[] dnsServerAddress) throws UnknownHostException, SocketException,
             InterruptedException {
         Channel channel = null;
         if ((channel = dnsServerChannels.get(dnsServerAddress)) != null) {
@@ -217,9 +250,14 @@ public final class DnsExchangeFactory {
                 if ((channel = dnsServerChannels.get(dnsServerAddress)) == null) {
                     InetAddress address = InetAddress.getByAddress(dnsServerAddress);
                     Bootstrap b = new Bootstrap();
-                    b.group(new NioEventLoopGroup()).channel(NioDatagramChannel.class).remoteAddress(address, 53)
+                    if (eventLoop == null) {
+                        b.group(new NioEventLoopGroup());
+                    } else {
+                        b.group(eventLoop);
+                    }
+                    b.channel(NioDatagramChannel.class).remoteAddress(address, 53)
                             .option(ChannelOption.SO_BROADCAST, true).option(ChannelOption.SO_SNDBUF, 1048576)
-                            .option(ChannelOption.SO_RCVBUF, 1048576).handler(new DnsClientInitializer());
+                            .option(ChannelOption.SO_RCVBUF, 1048576).handler(new DnsClientInitializer(this));
                     dnsServerChannels.put(dnsServerAddress, channel = b.connect().sync().channel());
                 }
                 return channel;
@@ -235,8 +273,7 @@ public final class DnsExchangeFactory {
      * @throws SocketException
      * @throws InterruptedException
      */
-    public static <T> Future<T> lookup(String domain) throws UnknownHostException, SocketException,
-            InterruptedException {
+    public <T> Future<T> lookup(String domain) throws UnknownHostException, SocketException, InterruptedException {
         return resolveSingle(domain, dnsServers.get(0), DnsEntry.TYPE_A, DnsEntry.TYPE_AAAA);
     }
 
@@ -252,8 +289,8 @@ public final class DnsExchangeFactory {
      * @throws SocketException
      * @throws InterruptedException
      */
-    public static <T> Future<List<T>> lookup(String domain, Integer family) throws UnknownHostException,
-            SocketException, InterruptedException {
+    public <T> Future<List<T>> lookup(String domain, Integer family) throws UnknownHostException, SocketException,
+            InterruptedException {
         if (family != null && family != 4 && family != 6) {
             throw new IllegalArgumentException("Family must be 4, 6, or null to indicate both 4 and 6.");
         }
@@ -283,12 +320,12 @@ public final class DnsExchangeFactory {
      * @throws SocketException
      * @throws InterruptedException
      */
-    public static <T> Future<T> resolveSingle(String domain, byte[] dnsServerAddress, int... types)
+    public <T> Future<T> resolveSingle(String domain, byte[] dnsServerAddress, int... types)
             throws UnknownHostException, SocketException, InterruptedException {
         for (int i = 0; i < types.length; i++) {
-            T result = DnsResourceCache.getRecord(domain, types[i]);
-            if (result != null) {
-                return executor.next().newSucceededFuture(result);
+            List<T> results = cache.getRecords(domain, types[i]);
+            if (results != null) {
+                return executor.next().newSucceededFuture(selector.selectRecord(results));
             }
         }
         int id = obtainId();
@@ -297,7 +334,7 @@ public final class DnsExchangeFactory {
         for (int i = 0; i < types.length; i++) {
             queries[i] = sendQuery(types[i], domain, id, channel);
         }
-        return executor.submit(new DnsSingleResultCallback<T>(new DnsCallback<List<T>>(dnsServers
+        return executor.submit(new DnsSingleResultCallback<T>(new DnsCallback<List<T>>(this, dnsServers
                 .indexOf(dnsServerAddress), queries)));
     }
 
@@ -319,13 +356,12 @@ public final class DnsExchangeFactory {
      * @throws SocketException
      * @throws InterruptedException
      */
-    public static <T extends List<?>> Future<T> resolve(String domain, byte[] dnsServerAddress, int... types)
+    public <T extends List<?>> Future<T> resolve(String domain, byte[] dnsServerAddress, int... types)
             throws UnknownHostException, SocketException, InterruptedException {
         for (int i = 0; i < types.length; i++) {
-            @SuppressWarnings("unchecked")
-            T result = (T) DnsResourceCache.getRecords(domain, types[i]);
-            if (result != null) {
-                return executor.next().newSucceededFuture(result);
+            List<T> results = cache.getRecords(domain, types[i]);
+            if (results != null) {
+                return executor.next().newSucceededFuture(selector.selectRecord(results));
             }
         }
         int id = obtainId();
@@ -334,7 +370,7 @@ public final class DnsExchangeFactory {
         for (int i = 0; i < types.length; i++) {
             queries[i] = sendQuery(types[i], domain, id, channel);
         }
-        return executor.submit(new DnsCallback<T>(dnsServers.indexOf(dnsServerAddress), queries));
+        return executor.submit(new DnsCallback<T>(this, dnsServers.indexOf(dnsServerAddress), queries));
     }
 
     /**
@@ -345,7 +381,7 @@ public final class DnsExchangeFactory {
      * @throws SocketException
      * @throws InterruptedException
      */
-    public static Future<List<ByteBuf>> resolve4(String domain) throws UnknownHostException, SocketException,
+    public Future<List<ByteBuf>> resolve4(String domain) throws UnknownHostException, SocketException,
             InterruptedException {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_A);
     }
@@ -358,7 +394,7 @@ public final class DnsExchangeFactory {
      * @throws SocketException
      * @throws InterruptedException
      */
-    public static Future<List<ByteBuf>> resolve6(String domain) throws UnknownHostException, SocketException,
+    public Future<List<ByteBuf>> resolve6(String domain) throws UnknownHostException, SocketException,
             InterruptedException {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_AAAA);
     }
@@ -371,8 +407,8 @@ public final class DnsExchangeFactory {
      * @throws SocketException
      * @throws InterruptedException
      */
-    public static Future<List<MailExchangerRecord>> resolveMx(String domain) throws UnknownHostException,
-            SocketException, InterruptedException {
+    public Future<List<MailExchangerRecord>> resolveMx(String domain) throws UnknownHostException, SocketException,
+            InterruptedException {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_MX);
     }
 
@@ -384,7 +420,7 @@ public final class DnsExchangeFactory {
      * @throws SocketException
      * @throws InterruptedException
      */
-    public static Future<List<ServiceRecord>> resolveSrv(String domain) throws UnknownHostException, SocketException,
+    public Future<List<ServiceRecord>> resolveSrv(String domain) throws UnknownHostException, SocketException,
             InterruptedException {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_SRV);
     }
@@ -397,7 +433,7 @@ public final class DnsExchangeFactory {
      * @throws SocketException
      * @throws InterruptedException
      */
-    public static Future<List<List<String>>> resolveTxt(String domain) throws UnknownHostException, SocketException,
+    public Future<List<List<String>>> resolveTxt(String domain) throws UnknownHostException, SocketException,
             InterruptedException {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_TXT);
     }
@@ -410,7 +446,7 @@ public final class DnsExchangeFactory {
      * @throws SocketException
      * @throws InterruptedException
      */
-    public static Future<List<String>> resolveCname(String domain) throws UnknownHostException, SocketException,
+    public Future<List<String>> resolveCname(String domain) throws UnknownHostException, SocketException,
             InterruptedException {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_CNAME);
     }
@@ -423,7 +459,7 @@ public final class DnsExchangeFactory {
      * @throws SocketException
      * @throws InterruptedException
      */
-    public static Future<List<String>> resolveNs(String domain) throws UnknownHostException, SocketException,
+    public Future<List<String>> resolveNs(String domain) throws UnknownHostException, SocketException,
             InterruptedException {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_NS);
     }
@@ -439,7 +475,7 @@ public final class DnsExchangeFactory {
      * @throws SocketException
      * @throws InterruptedException
      */
-    public static Future<List<String>> reverse(byte[] ipAddress) throws UnknownHostException, SocketException,
+    public Future<List<String>> reverse(byte[] ipAddress) throws UnknownHostException, SocketException,
             InterruptedException {
         ByteBuf buf = Unpooled.wrappedBuffer(ipAddress);
         Future<List<String>> future = reverse(buf);
@@ -458,7 +494,7 @@ public final class DnsExchangeFactory {
      * @throws SocketException
      * @throws InterruptedException
      */
-    public static Future<List<String>> reverse(ByteBuf ipAddress) throws UnknownHostException, SocketException,
+    public Future<List<String>> reverse(ByteBuf ipAddress) throws UnknownHostException, SocketException,
             InterruptedException {
         int size = ipAddress.writerIndex() - ipAddress.readerIndex();
         StringBuilder domain = new StringBuilder();
@@ -474,7 +510,7 @@ public final class DnsExchangeFactory {
      * @param channel
      *            the channel to be added
      */
-    protected static void addChannel(byte[] address, Channel channel) {
+    protected void addChannel(byte[] address, Channel channel) {
         synchronized (dnsServerChannels) {
             dnsServerChannels.put(address, channel);
         }
@@ -486,7 +522,7 @@ public final class DnsExchangeFactory {
      * @param channel
      *            the channel to be removed
      */
-    protected static void removeChannel(Channel channel) {
+    protected void removeChannel(Channel channel) {
         synchronized (dnsServerChannels) {
             for (Iterator<Map.Entry<byte[], Channel>> iter = dnsServerChannels.entrySet().iterator(); iter.hasNext();) {
                 Map.Entry<byte[], Channel> entry = iter.next();
@@ -514,9 +550,6 @@ public final class DnsExchangeFactory {
                 }
             }
         }
-    }
-
-    private DnsExchangeFactory() {
     }
 
 }
