@@ -345,19 +345,17 @@ Again, _maxStreamingByteSize_ is used for just this purpose.
 #### WebSocket
 WebSockets come in two forms in SockJS, one is where you connect using the uri pattern that we have been using so far:
 
-    http://host/echo/serverId/sessionId/websocket
+    https://host:port/echo/serverId/sessionId/websocket
     
 This should be used by any SockJS clients. But it is also possible that non SockJS clients would like to interact with 
 the SockJS server but use _raw_ websockets. This is done but connecting using the uri:
 
-    http://host/echo/websocket
+    wss://host:port/echo/websocket
     
 This is referred to as _raw_ websockets as the normal SockJS protocol is not in effect. This is intended for non-browser 
 clients that might connect with a WebSocket library. 
 
-For the WebSocket transport we don't need the concept of a session, as the life time of a WebSocket connection is the 
-life time of the session. 
 The initial request to the server will perform the HTTP upgrade requet to web sockets and from there on the client and 
-the server maitain a bi-directional connection on which they can both send and receive data. When the server is sent 
+the server maintain a bi-directional connection on which they can both send and receive data. When the server is sent 
 data it will extract the messages and the SockJS service will be invoked. The WebSocketTransport will also handle SockJS 
-frames that are to be written to the client
+frames that are to be written to the client.
