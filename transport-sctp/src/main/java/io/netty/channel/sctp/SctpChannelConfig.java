@@ -18,6 +18,7 @@ package io.netty.channel.sctp;
 import com.sun.nio.sctp.SctpStandardSocketOptions.InitMaxStreams;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
+import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 
 /**
@@ -113,4 +114,13 @@ public interface SctpChannelConfig extends ChannelConfig {
 
     @Override
     SctpChannelConfig setAutoRead(boolean autoRead);
+
+    @Override
+    SctpChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
+
+    @Override
+    SctpChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
+
+    @Override
+    SctpChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator);
 }
