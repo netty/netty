@@ -764,10 +764,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelPipeline fireChannelInactive() {
-        // Some implementations such as EmbeddedChannel can trigger inboundBufferUpdated()
-        // after deactivation, so it's safe not to revert the firedChannelActive flag here.
-        // Also, all known transports never get re-activated.
-        //firedChannelActive = false;
         head.fireChannelInactive();
         return this;
     }
