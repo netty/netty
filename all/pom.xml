@@ -347,6 +347,24 @@
           <locale>en_US</locale>
         </configuration>
       </plugin>
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>clean-source-directory</id>
+            <phase>package</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <target>
+            <delete dir="${project.build.directory}/src" quiet="true"/>
+            <delete dir="${project.build.directory}/classes" quiet="true"/>
+          </target>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 </project>
