@@ -103,4 +103,70 @@ public class ReplayingDecoderTest {
         assertEquals(Unpooled.wrappedBuffer(new byte[] {'B' }), ch.readInbound());
         assertNull(ch.readInbound());
     }
+
+    @Test
+    public void testRemoveItself() {
+        EmbeddedChannel channel = new EmbeddedChannel(new ReplayingDecoder() {
+            private boolean removed;
+
+            @Override
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+                assertFalse(removed);
+                in.readByte();
+                ctx.pipeline().remove(this);
+                removed = true;
+            }
+        });
+
+        ByteBuf buf = Unpooled.wrappedBuffer(new byte[] {'a', 'b', 'c'});
+        channel.writeInbound(buf.copy());
+        ByteBuf b = (ByteBuf) channel.readInbound();
+        assertEquals(b, buf.skipBytes(1));
+    }
+
+    @Test
+    public void testRemoveItselfWithReplayError() {
+        EmbeddedChannel channel = new EmbeddedChannel(new ReplayingDecoder() {
+            private boolean removed;
+
+            @Override
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+                assertFalse(removed);
+                ctx.pipeline().remove(this);
+
+                in.readBytes(1000);
+
+                removed = true;
+            }
+        });
+
+        ByteBuf buf = Unpooled.wrappedBuffer(new byte[] {'a', 'b', 'c'});
+        channel.writeInbound(buf.copy());
+        ByteBuf b = (ByteBuf) channel.readInbound();
+
+        assertEquals("Expect to have still all bytes in the buffer", b, buf);
+    }
+
+    @Test
+    public void testRemoveItselfWriteBuffer() {
+        final ByteBuf buf = Unpooled.buffer().writeBytes(new byte[] {'a', 'b', 'c'});
+        EmbeddedChannel channel = new EmbeddedChannel(new ReplayingDecoder() {
+            private boolean removed;
+
+            @Override
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+                assertFalse(removed);
+                in.readByte();
+                ctx.pipeline().remove(this);
+
+                // This should not let it keep call decode
+                buf.writeByte('d');
+                removed = true;
+            }
+        });
+
+        channel.writeInbound(buf.copy());
+        ByteBuf b = (ByteBuf) channel.readInbound();
+        assertEquals(b, Unpooled.wrappedBuffer(new byte[] { 'b', 'c'}));
+    }
 }

@@ -16,6 +16,7 @@
 package io.netty.handler.traffic;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -205,7 +206,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
             // Time is too short, so just lets continue
             return 0;
         }
-        return (bytes * 1000 / limit - interval / 10) * 10;
+        return (bytes * 1000 / limit - interval) / 10 * 10;
     }
 
     @Override
@@ -276,12 +277,12 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, final Object msg, ChannelPromise promise)
+    public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise)
             throws Exception {
         long curtime = System.currentTimeMillis();
-        long size = ((ByteBuf) msg).readableBytes();
+        long size = calculateSize(msg);
 
-        if (trafficCounter != null) {
+        if (size > -1 && trafficCounter != null) {
             trafficCounter.bytesWriteFlowControl(size);
             if (writeLimit == 0) {
                 ctx.write(msg);
@@ -296,7 +297,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                 ctx.executor().schedule(new Runnable() {
                     @Override
                     public void run() {
-                        ctx.write(msg);
+                        ctx.write(msg, promise);
                     }
                 }, wait, TimeUnit.MILLISECONDS);
                 return;
@@ -326,5 +327,22 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
         return "TrafficShaping with Write Limit: " + writeLimit +
                 " Read Limit: " + readLimit + " and Counter: " +
                 (trafficCounter != null? trafficCounter.toString() : "none");
+    }
+
+    /**
+     * Calculate the size of the given {@link Object}.
+     *
+     * This implementation supports {@link ByteBuf} and {@link ByteBufHolder}. Sub-classes may override this.
+     * @param msg       the msg for which the size should be calculated
+     * @return size     the size of the msg or {@code -1} if unknown.
+     */
+    protected long calculateSize(Object msg) {
+        if (msg instanceof ByteBuf) {
+            return ((ByteBuf) msg).readableBytes();
+        }
+        if (msg instanceof ByteBufHolder) {
+            return ((ByteBufHolder) msg).content().readableBytes();
+        }
+        return -1;
     }
 }

@@ -412,9 +412,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     });
                 } catch (Throwable t) {
                     logger.warn(
-                            "Force-closing a channel whose registration task was unaccepted by an event loop: {}",
+                            "Force-closing a channel whose registration task was not accepted by an event loop: {}",
                             AbstractChannel.this, t);
                     closeForcibly();
+                    closeFuture.setClosed();
                     promise.setFailure(t);
                 }
             }
@@ -427,25 +428,22 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 if (!ensureOpen(promise)) {
                     return;
                 }
-                Runnable postRegisterTask = doRegister();
+                doRegister();
                 registered = true;
                 promise.setSuccess();
                 pipeline.fireChannelRegistered();
-                if (postRegisterTask != null) {
-                    postRegisterTask.run();
-                }
                 if (isActive()) {
                     pipeline.fireChannelActive();
                 }
             } catch (Throwable t) {
                 // Close the channel directly to avoid FD leak.
                 closeForcibly();
+                closeFuture.setClosed();
                 if (!promise.tryFailure(t)) {
                     logger.warn(
                             "Tried to fail the registration promise, but it is complete already. " +
                                     "Swallowing the cause of the registration failure:", t);
                 }
-                closeFuture.setClosed();
             }
         }
 
@@ -455,51 +453,58 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
-            try {
-                boolean wasActive = isActive();
-
-                // See: https://github.com/netty/netty/issues/576
-                if (!PlatformDependent.isWindows() && !PlatformDependent.isRoot() &&
-                    Boolean.TRUE.equals(config().getOption(ChannelOption.SO_BROADCAST)) &&
-                    localAddress instanceof InetSocketAddress &&
-                    !((InetSocketAddress) localAddress).getAddress().isAnyLocalAddress()) {
-                    // Warn a user about the fact that a non-root user can't receive a
-                    // broadcast packet on *nix if the socket is bound on non-wildcard address.
-                    logger.warn(
-                            "A non-root user can't receive a broadcast packet if the socket " +
-                            "is not bound to a wildcard address; binding to a non-wildcard " +
-                            "address (" + localAddress + ") anyway as requested.");
-                }
-
-                doBind(localAddress);
-                promise.setSuccess();
-                if (!wasActive && isActive()) {
-                    pipeline.fireChannelActive();
-                }
-            } catch (Throwable t) {
-                promise.setFailure(t);
-                closeIfClosed();
+            // See: https://github.com/netty/netty/issues/576
+            if (!PlatformDependent.isWindows() && !PlatformDependent.isRoot() &&
+                Boolean.TRUE.equals(config().getOption(ChannelOption.SO_BROADCAST)) &&
+                localAddress instanceof InetSocketAddress &&
+                !((InetSocketAddress) localAddress).getAddress().isAnyLocalAddress()) {
+                // Warn a user about the fact that a non-root user can't receive a
+                // broadcast packet on *nix if the socket is bound on non-wildcard address.
+                logger.warn(
+                        "A non-root user can't receive a broadcast packet if the socket " +
+                        "is not bound to a wildcard address; binding to a non-wildcard " +
+                        "address (" + localAddress + ") anyway as requested.");
             }
+
+            boolean wasActive = isActive();
+            try {
+                doBind(localAddress);
+            } catch (Throwable t) {
+                closeIfClosed();
+                promise.setFailure(t);
+                return;
+            }
+            if (!wasActive && isActive()) {
+                invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        pipeline.fireChannelActive();
+                    }
+                });
+            }
+            promise.setSuccess();
         }
 
         @Override
         public final void disconnect(final ChannelPromise promise) {
+            boolean wasActive = isActive();
             try {
-                boolean wasActive = isActive();
                 doDisconnect();
-                promise.setSuccess();
-                if (wasActive && !isActive()) {
-                    invokeLater(new Runnable() {
-                        @Override
-                        public void run() {
-                            pipeline.fireChannelInactive();
-                        }
-                    });
-                }
             } catch (Throwable t) {
-                promise.setFailure(t);
                 closeIfClosed();
+                promise.setFailure(t);
+                return;
             }
+            if (wasActive && !isActive()) {
+                invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        pipeline.fireChannelInactive();
+                    }
+                });
+            }
+            closeIfClosed(); // doDisconnect() might have closed the channel
+            promise.setSuccess();
         }
 
         @Override
@@ -514,38 +519,41 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
-            boolean wasActive = isActive();
-            if (closeFuture.setClosed()) {
-                ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
-                this.outboundBuffer = null; // Disallow adding any messages and flushes to outboundBuffer.
-
-                try {
-                    doClose();
-                    promise.setSuccess();
-                } catch (Throwable t) {
-                    promise.setFailure(t);
-                }
-
-                // Fail all the queued messages
-                try {
-                    outboundBuffer.failFlushed(CLOSED_CHANNEL_EXCEPTION);
-                    outboundBuffer.close(CLOSED_CHANNEL_EXCEPTION);
-                } finally {
-
-                    if (wasActive && !isActive()) {
-                        invokeLater(new Runnable() {
-                            @Override
-                            public void run() {
-                                pipeline.fireChannelInactive();
-                            }
-                        });
-                    }
-
-                    deregister(voidPromise());
-                }
-            } else {
+            if (closeFuture.isDone()) {
                 // Closed already.
                 promise.setSuccess();
+                return;
+            }
+
+            boolean wasActive = isActive();
+            ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+            this.outboundBuffer = null; // Disallow adding any messages and flushes to outboundBuffer.
+
+            try {
+                doClose();
+                closeFuture.setClosed();
+                promise.setSuccess();
+            } catch (Throwable t) {
+                closeFuture.setClosed();
+                promise.setFailure(t);
+            }
+
+            // Fail all the queued messages
+            try {
+                outboundBuffer.failFlushed(CLOSED_CHANNEL_EXCEPTION);
+                outboundBuffer.close(CLOSED_CHANNEL_EXCEPTION);
+            } finally {
+
+                if (wasActive && !isActive()) {
+                    invokeLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            pipeline.fireChannelInactive();
+                        }
+                    });
+                }
+
+                deregister(voidPromise());
             }
         }
 
@@ -565,9 +573,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
-            Runnable postTask = null;
             try {
-                postTask = doDeregister();
+                doDeregister();
             } catch (Throwable t) {
                 logger.warn("Unexpected exception occurred while deregistering a channel.", t);
             } finally {
@@ -585,10 +592,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     // an open channel.  Their doDeregister() calls close().  Consequently,
                     // close() calls deregister() again - no need to fire channelUnregistered.
                     promise.setSuccess();
-                }
-
-                if (postTask != null) {
-                    postTask.run();
                 }
             }
         }
@@ -732,12 +735,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     /**
      * Is called after the {@link Channel} is registered with its {@link EventLoop} as part of the register process.
-     * You can return a {@link Runnable} which will be run as post-task of the registration process.
      *
-     * Sub-classes may override this method as it will just return {@code null}
+     * Sub-classes may override this method
      */
-    protected Runnable doRegister() throws Exception {
-        return null;
+    protected void doRegister() throws Exception {
+        // NOOP
     }
 
     /**
@@ -751,26 +753,17 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected abstract void doDisconnect() throws Exception;
 
     /**
-     * Will be called before the actual close operation will be performed. Sub-classes may override this as the default
-     * is to do nothing.
-     */
-    protected void doPreClose() throws Exception {
-        // NOOP by default
-    }
-
-    /**
      * Close the {@link Channel}
      */
     protected abstract void doClose() throws Exception;
 
     /**
      * Deregister the {@link Channel} from its {@link EventLoop}.
-     * You can return a {@link Runnable} which will be run as post-task of the registration process.
      *
      * Sub-classes may override this method
      */
-    protected Runnable doDeregister() throws Exception {
-        return null;
+    protected void doDeregister() throws Exception {
+        // NOOP
     }
 
     /**
@@ -780,8 +773,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     /**
      * Flush the content of the given buffer to the remote peer.
-     *
-     * Sub-classes may override this as this implementation will just thrown an {@link UnsupportedOperationException}
      */
     protected abstract void doWrite(ChannelOutboundBuffer in) throws Exception;
 
@@ -834,11 +825,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         boolean setClosed() {
-            try {
-                doPreClose();
-            } catch (Exception e) {
-                logger.warn("doPreClose() raised an exception.", e);
-            }
             return super.trySuccess();
         }
     }

@@ -142,15 +142,13 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        final SelectionKey key = selectionKey();
-        final int interestOps = key.interestOps();
+        int writeSpinCount = -1;
+
         for (;;) {
             Object msg = in.current();
             if (msg == null) {
                 // Wrote all messages.
-                if ((interestOps & SelectionKey.OP_WRITE) != 0) {
-                    key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
-                }
+                clearOpWrite();
                 break;
             }
 
@@ -163,7 +161,10 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
                 boolean done = false;
                 long flushedAmount = 0;
-                for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
+                if (writeSpinCount == -1) {
+                    writeSpinCount = config().getWriteSpinCount();
+                }
+                for (int i = writeSpinCount - 1; i >= 0; i --) {
                     int localFlushedAmount = doWriteBytes(buf);
                     if (localFlushedAmount == 0) {
                         break;
@@ -181,16 +182,17 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 } else {
                     // Did not write completely.
                     in.progress(flushedAmount);
-                    if ((interestOps & SelectionKey.OP_WRITE) == 0) {
-                        key.interestOps(interestOps | SelectionKey.OP_WRITE);
-                    }
+                    setOpWrite();
                     break;
                 }
             } else if (msg instanceof FileRegion) {
                 FileRegion region = (FileRegion) msg;
                 boolean done = false;
                 long flushedAmount = 0;
-                for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
+                if (writeSpinCount == -1) {
+                    writeSpinCount = config().getWriteSpinCount();
+                }
+                for (int i = writeSpinCount - 1; i >= 0; i --) {
                     long localFlushedAmount = doWriteFileRegion(region);
                     if (localFlushedAmount == 0) {
                         break;
@@ -208,9 +210,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 } else {
                     // Did not write completely.
                     in.progress(flushedAmount);
-                    if ((interestOps & SelectionKey.OP_WRITE) == 0) {
-                        key.interestOps(interestOps | SelectionKey.OP_WRITE);
-                    }
+                    setOpWrite();
                     break;
                 }
             } else {
@@ -239,26 +239,19 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
      */
     protected abstract int doWriteBytes(ByteBuf buf) throws Exception;
 
-    protected final void updateOpWrite(long expectedWrittenBytes, long writtenBytes, boolean lastSpin) {
-        if (writtenBytes >= expectedWrittenBytes) {
-            final SelectionKey key = selectionKey();
-            final int interestOps = key.interestOps();
-            // Wrote the outbound buffer completely - clear OP_WRITE.
-            if ((interestOps & SelectionKey.OP_WRITE) != 0) {
-                key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
-            }
-        } else {
-            // 1) Wrote nothing: buffer is full obviously - set OP_WRITE
-            // 2) Wrote partial data:
-            //    a) lastSpin is false: no need to set OP_WRITE because the caller will try again immediately.
-            //    b) lastSpin is true: set OP_WRITE because the caller will not try again.
-            if (writtenBytes == 0 || lastSpin) {
-                final SelectionKey key = selectionKey();
-                final int interestOps = key.interestOps();
-                if ((interestOps & SelectionKey.OP_WRITE) == 0) {
-                    key.interestOps(interestOps | SelectionKey.OP_WRITE);
-                }
-            }
+    protected final void setOpWrite() {
+        final SelectionKey key = selectionKey();
+        final int interestOps = key.interestOps();
+        if ((interestOps & SelectionKey.OP_WRITE) == 0) {
+            key.interestOps(interestOps | SelectionKey.OP_WRITE);
+        }
+    }
+
+    protected final void clearOpWrite() {
+        final SelectionKey key = selectionKey();
+        final int interestOps = key.interestOps();
+        if ((interestOps & SelectionKey.OP_WRITE) != 0) {
+            key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
         }
     }
 }
