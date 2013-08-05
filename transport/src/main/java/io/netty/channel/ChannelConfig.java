@@ -219,4 +219,16 @@ public interface ChannelConfig {
      * {@code true} again.
      */
     ChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
+
+    /**
+     * Returns {@link MessageSizeEstimator} which is used for the channel
+     * to detect the size of a message.
+     */
+    MessageSizeEstimator getMessageSizeEstimator();
+
+    /**
+     * Set the {@link ByteBufAllocator} which is used for the channel
+     * to detect the size of a message.
+     */
+    ChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator);
 }

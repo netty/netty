@@ -32,12 +32,16 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     private static final ByteBufAllocator DEFAULT_ALLOCATOR = UnpooledByteBufAllocator.DEFAULT;
     private static final RecvByteBufAllocator DEFAULT_RCVBUF_ALLOCATOR = AdaptiveRecvByteBufAllocator.DEFAULT;
+    private static final MessageSizeEstimator DEFAULT_MSG_SIZE_ESTIMATOR = DefaultMessageSizeEstimator.DEFAULT;
+
     private static final int DEFAULT_CONNECT_TIMEOUT = 30000;
 
     protected final Channel channel;
 
     private volatile ByteBufAllocator allocator = DEFAULT_ALLOCATOR;
     private volatile RecvByteBufAllocator rcvBufAllocator = DEFAULT_RCVBUF_ALLOCATOR;
+    private volatile MessageSizeEstimator msgSizeEstimator = DEFAULT_MSG_SIZE_ESTIMATOR;
+
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
     private volatile int maxMessagesPerRead;
     private volatile int writeSpinCount = 16;
@@ -280,6 +284,20 @@ public class DefaultChannelConfig implements ChannelConfig {
                     "writeBufferLowWaterMark must be >= 0");
         }
         this.writeBufferLowWaterMark = writeBufferLowWaterMark;
+        return this;
+    }
+
+    @Override
+    public MessageSizeEstimator getMessageSizeEstimator() {
+        return msgSizeEstimator;
+    }
+
+    @Override
+    public ChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
+        if (estimator == null) {
+            throw new NullPointerException("estimator");
+        }
+        msgSizeEstimator = estimator;
         return this;
     }
 }

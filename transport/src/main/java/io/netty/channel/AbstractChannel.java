@@ -15,9 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufHolder;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
@@ -47,6 +45,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         CLOSED_CHANNEL_EXCEPTION.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
         NOT_YET_CONNECTED_EXCEPTION.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
     }
+
+    private MessageSizeEstimator.Handle estimatorHandle;
 
     private final Channel parent;
     private final long hashCode = ThreadLocalRandom.current().nextLong();
@@ -358,6 +358,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     @Override
     public final ChannelPromise voidPromise() {
         return voidPromise;
+    }
+
+    final MessageSizeEstimator.Handle estimatorHandle() {
+        if (estimatorHandle == null) {
+            estimatorHandle = config().getMessageSizeEstimator().newHandle();
+        }
+        return estimatorHandle;
     }
 
     /**
@@ -782,20 +789,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     + region.count() + " bytes, but only wrote "
                     + region.transfered());
         }
-    }
-
-    /**
-     * Calculate the number of bytes a message takes up in memory. Sub-classes may override this if they use different
-     * messages then {@link ByteBuf} or {@link ByteBufHolder}. If the size can not be calculated 0 should be returned.
-     */
-    protected int calculateMessageSize(Object message) {
-        if (message instanceof ByteBuf) {
-            return ((ByteBuf) message).readableBytes();
-        }
-        if (message instanceof ByteBufHolder) {
-            return ((ByteBufHolder) message).content().readableBytes();
-        }
-        return 0;
     }
 
     final class CloseFuture extends DefaultChannelPromise {
