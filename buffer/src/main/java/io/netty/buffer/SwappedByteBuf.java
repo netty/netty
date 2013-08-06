@@ -497,7 +497,7 @@ public final class SwappedByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf readSlice(int length) {
-        return buf.readSlice(length);
+        return buf.readSlice(length).order(order);
     }
 
     @Override
