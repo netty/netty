@@ -221,14 +221,16 @@ public class DefaultHttpHeaders extends HttpHeaders {
         int h = hash(name);
         int i = index(h);
         HeaderEntry e = entries[i];
+        String value = null;
+        // loop until the first header was found
         while (e != null) {
             if (e.hash == h && eq(name, e.key)) {
-                return e.value;
+                value = e.value;
             }
 
             e = e.next;
         }
-        return null;
+        return value;
     }
 
     @Override
