@@ -17,6 +17,7 @@ package io.netty.channel.socket.oio;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ServerSocketChannelConfig;
 
@@ -79,4 +80,13 @@ public interface OioServerSocketChannelConfig extends ServerSocketChannelConfig 
 
     @Override
     OioServerSocketChannelConfig setAutoRead(boolean autoRead);
+
+    @Override
+    OioServerSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
+
+    @Override
+    OioServerSocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
+
+    @Override
+    OioServerSocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator);
 }
