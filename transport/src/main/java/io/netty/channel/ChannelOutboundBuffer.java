@@ -570,6 +570,9 @@ public final class ChannelOutboundBuffer {
             inFail = false;
         }
         RECYCLER.recycle(this, handle);
+
+        // Set the channel to null so it can be GC'ed ASAP
+        channel = null;
     }
 
     private static void safeRelease(Object message) {
