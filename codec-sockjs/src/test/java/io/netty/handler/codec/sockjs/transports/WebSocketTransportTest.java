@@ -52,14 +52,14 @@ public class WebSocketTransportTest {
     @Test
     public void upgradeRequest() throws Exception {
         final SockJsConfig config = SockJsConfig.withPrefix("/echo").build();
-        final EmbeddedChannel ch = createWebsocketChannel(config);
+        final EmbeddedChannel ch = createWebSocketChannel(config);
         assertUpgradeRequest(ch);
     }
 
     @Test
     public void invalidHttpMethod() throws Exception {
         final SockJsConfig config = SockJsConfig.withPrefix("/echo").build();
-        final EmbeddedChannel ch = createWebsocketChannel(config);
+        final EmbeddedChannel ch = createWebSocketChannel(config);
         final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, "dummy");
         ch.writeInbound(request);
         final FullHttpResponse response = (FullHttpResponse) ch.readOutbound();
@@ -70,7 +70,7 @@ public class WebSocketTransportTest {
     @Test
     public void nonUpgradeRequest() throws Exception {
         final SockJsConfig config = SockJsConfig.withPrefix("/echo").build();
-        final EmbeddedChannel ch = createWebsocketChannel(config);
+        final EmbeddedChannel ch = createWebSocketChannel(config);
         final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, "/websocket");
         ch.writeInbound(request);
         final FullHttpResponse response = (FullHttpResponse) ch.readOutbound();
@@ -82,8 +82,8 @@ public class WebSocketTransportTest {
     @Test
     public void invalidConnectionHeader() throws Exception {
         final SockJsConfig config = SockJsConfig.withPrefix("/echo").build();
-        final EmbeddedChannel ch = createWebsocketChannel(config);
-        final FullHttpRequest request = websocketUpgradeRequest("/websocket", WebSocketVersion.V13);
+        final EmbeddedChannel ch = createWebSocketChannel(config);
+        final FullHttpRequest request = webSocketUpgradeRequest("/websocket", WebSocketVersion.V13);
         request.headers().set(Names.UPGRADE, "WebSocket");
         request.headers().set(Names.CONNECTION, "close");
         ch.writeInbound(request);
@@ -95,7 +95,7 @@ public class WebSocketTransportTest {
     @Test
     public void invalidJsonInWebSocketFrame() throws Exception {
         final SockJsConfig config = SockJsConfig.withPrefix("/echo").build();
-        final EmbeddedChannel ch = createWebsocketChannel(config);
+        final EmbeddedChannel ch = createWebSocketChannel(config);
         assertUpgradeRequest(ch);
 
         ch.writeInbound(new TextWebSocketFrame("[invalidJson"));
@@ -105,7 +105,7 @@ public class WebSocketTransportTest {
     @Test
     public void writeJsonArray() throws Exception {
         final SockJsConfig config = SockJsConfig.withPrefix("/echo").build();
-        final EmbeddedChannel ch = createWebsocketChannel(config);
+        final EmbeddedChannel ch = createWebSocketChannel(config);
         assertUpgradeRequest(ch);
 
         ch.writeInbound(new TextWebSocketFrame("[\"x\",\"y\"]"));
@@ -120,7 +120,7 @@ public class WebSocketTransportTest {
     @Test
     public void writeJsonString() throws Exception {
         final SockJsConfig config = SockJsConfig.withPrefix("/echo").build();
-        final EmbeddedChannel ch = createWebsocketChannel(config);
+        final EmbeddedChannel ch = createWebSocketChannel(config);
         assertUpgradeRequest(ch);
 
         ch.writeInbound(new TextWebSocketFrame("\"x\""));
@@ -133,8 +133,8 @@ public class WebSocketTransportTest {
     @Test
     public void firefox602ConnectionHeader() throws Exception {
         final SockJsConfig config = SockJsConfig.withPrefix("/echo").build();
-        final EmbeddedChannel ch = createWebsocketChannel(config);
-        final FullHttpRequest request = websocketUpgradeRequest("/websocket", WebSocketVersion.V08);
+        final EmbeddedChannel ch = createWebSocketChannel(config);
+        final FullHttpRequest request = webSocketUpgradeRequest("/websocket", WebSocketVersion.V08);
         request.headers().set(Names.CONNECTION, "keep-alive, Upgrade");
         ch.writeInbound(request);
         final FullHttpResponse response = (FullHttpResponse) ch.readOutbound();
@@ -151,8 +151,8 @@ public class WebSocketTransportTest {
 
     private void verifyHeaders(final WebSocketVersion version) throws Exception {
         final SockJsConfig config = SockJsConfig.withPrefix("/echo").build();
-        final EmbeddedChannel ch = createWebsocketChannel(config);
-        final FullHttpRequest request = websocketUpgradeRequest("/websocket", version);
+        final EmbeddedChannel ch = createWebSocketChannel(config);
+        final FullHttpRequest request = webSocketUpgradeRequest("/websocket", version);
         ch.writeInbound(request);
         final FullHttpResponse response = (FullHttpResponse) ch.readOutbound();
         assertThat(response.getStatus(), is(HttpResponseStatus.SWITCHING_PROTOCOLS));
@@ -162,21 +162,21 @@ public class WebSocketTransportTest {
     }
 
     private void assertUpgradeRequest(final EmbeddedChannel ch) {
-        final FullHttpRequest request = websocketUpgradeRequest("/websocket", WebSocketVersion.V13);
+        final FullHttpRequest request = webSocketUpgradeRequest("/websocket", WebSocketVersion.V13);
         ch.writeInbound(request);
         final FullHttpResponse response = (FullHttpResponse) ch.readOutbound();
         assertThat(response.getStatus(), is(HttpResponseStatus.SWITCHING_PROTOCOLS));
         assertThat(response.headers().get(HttpHeaders.Names.UPGRADE), equalTo("websocket"));
     }
 
-    private EmbeddedChannel createWebsocketChannel(final SockJsConfig config) throws Exception {
+    private EmbeddedChannel createWebSocketChannel(final SockJsConfig config) throws Exception {
         return new EmbeddedChannel(
                 new WebSocket13FrameEncoder(true),
                 new WebSocket13FrameDecoder(true, false, 2048),
                 new WebSocketTransport(config));
     }
 
-    private FullHttpRequest websocketUpgradeRequest(final String path, final WebSocketVersion version) {
+    private FullHttpRequest webSocketUpgradeRequest(final String path, final WebSocketVersion version) {
         final FullHttpRequest req = new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, path);
         req.headers().set(Names.HOST, "server.test.com");
         req.headers().set(Names.UPGRADE, WEBSOCKET.toLowerCase());

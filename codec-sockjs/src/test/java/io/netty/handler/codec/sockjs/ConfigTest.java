@@ -26,25 +26,25 @@ import org.junit.Test;
 public class ConfigTest {
 
     @Test
-    public void websocketProtocols() {
-        final SockJsConfig config = SockJsConfig.withPrefix("/echo").websocketProtocols("one", "two").build();
-        assertThat(config.websocketProtocol().size(), is(2));
-        assertThat(config.websocketProtocol(), hasItems("one", "two"));
+    public void webSocketProtocols() {
+        final SockJsConfig config = SockJsConfig.withPrefix("/echo").webSocketProtocols("one", "two").build();
+        assertThat(config.webSocketProtocol().size(), is(2));
+        assertThat(config.webSocketProtocol(), hasItems("one", "two"));
     }
 
     @Test
-    public void websocketProtocolsAsCSV() {
-        final SockJsConfig config = SockJsConfig.withPrefix("/echo").websocketProtocols("one", "two").build();
-        assertThat(config.websocketProtocol().size(), is(2));
-        assertThat(config.websocketProtocolCSV(), containsString("one"));
-        assertThat(config.websocketProtocolCSV(), containsString("two"));
+    public void webSocketProtocolsAsCSV() {
+        final SockJsConfig config = SockJsConfig.withPrefix("/echo").webSocketProtocols("one", "two").build();
+        assertThat(config.webSocketProtocol().size(), is(2));
+        assertThat(config.webSocketProtocolCSV(), containsString("one"));
+        assertThat(config.webSocketProtocolCSV(), containsString("two"));
     }
 
     @Test
-    public void websocketProtocolsAsCSVNoProtocols() {
+    public void webSocketProtocolsAsCSVNoProtocols() {
         final SockJsConfig config = SockJsConfig.withPrefix("/echo").build();
-        assertThat(config.websocketProtocol().size(), is(0));
-        assertThat(config.websocketProtocolCSV(), is(nullValue()));
+        assertThat(config.webSocketProtocol().size(), is(0));
+        assertThat(config.webSocketProtocolCSV(), is(nullValue()));
     }
 
 }

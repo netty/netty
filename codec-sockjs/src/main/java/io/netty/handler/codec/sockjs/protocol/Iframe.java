@@ -84,7 +84,7 @@ public final class Iframe {
             response.headers().set(HttpHeaders.Names.SET_COOKIE, "JSESSIONID=dummy; path=/");
             return response;
         } else {
-            final String content = createContent(config.sockjsUrl());
+            final String content = createContent(config.sockJsUrl());
             final FullHttpResponse response = createResponse(request, OK, copiedBuffer(content, UTF_8));
             response.headers().set(HttpHeaders.Names.CONTENT_TYPE, "text/html; charset=UTF-8");
             response.headers().set(HttpHeaders.Names.CACHE_CONTROL, "max-age=31536000, public");

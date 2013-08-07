@@ -28,9 +28,9 @@ import io.netty.handler.codec.sockjs.util.ArgumentUtil;
 public final class SockJsConfig {
 
     private final String prefix;
-    private final boolean websocketEnabled;
-    private final long websocketHeartbeatInterval;
-    private final Set<String> websocketProtocols;
+    private final boolean webSocketEnabled;
+    private final long webSocketHeartbeatInterval;
+    private final Set<String> webSocketProtocols;
     private final boolean cookiesNeeded;
     private final String sockjsUrl;
     private final long sessionTimeout;
@@ -40,11 +40,11 @@ public final class SockJsConfig {
 
     private SockJsConfig(final Builder builder) {
         prefix = builder.prefix;
-        websocketEnabled = builder.websocketEnabled;
-        websocketProtocols = builder.websocketProtocols;
-        websocketHeartbeatInterval = builder.websocketHeartbeatInterval;
+        webSocketEnabled = builder.webSocketEnabled;
+        webSocketProtocols = builder.webSocketProtocols;
+        webSocketHeartbeatInterval = builder.webSocketHeartbeatInterval;
         cookiesNeeded = builder.cookiesNeeded;
-        sockjsUrl = builder.sockjsUrl;
+        sockjsUrl = builder.sockJsUrl;
         sessionTimeout = builder.sessionTimeout;
         heartbeatInterval = builder.heartbeatInterval;
         maxStreamingBytesSize = builder.maxStreamingBytesSize;
@@ -66,8 +66,8 @@ public final class SockJsConfig {
      *
      * @return {@code true} if WebSocket support is enabled.
      */
-    public boolean isWebsocketEnabled() {
-        return websocketEnabled;
+    public boolean isWebSocketEnabled() {
+        return webSocketEnabled;
     }
 
     /**
@@ -80,8 +80,8 @@ public final class SockJsConfig {
      *
      * @return {@code long} how often, in ms, that a WebSocket heartbeat should be sent
      */
-    public long websocketHeartbeatInterval() {
-        return websocketHeartbeatInterval;
+    public long webSocketHeartbeatInterval() {
+        return webSocketHeartbeatInterval;
     }
 
     /**
@@ -91,8 +91,8 @@ public final class SockJsConfig {
      *
      * @return {@code Set<String>} of WebSocket protocols supported.
      */
-    public Set<String> websocketProtocol() {
-        return websocketProtocols;
+    public Set<String> webSocketProtocol() {
+        return webSocketProtocols;
     }
 
     /**
@@ -102,12 +102,12 @@ public final class SockJsConfig {
     *
     * @return {@code String} A comma separated value String with the WebSocket protocols supported
     */
-   public String websocketProtocolCSV() {
-       if (websocketProtocols.isEmpty()) {
+   public String webSocketProtocolCSV() {
+       if (webSocketProtocols.isEmpty()) {
            return null;
        }
        final StringBuilder sb = new StringBuilder();
-       final Iterator<String> iterator = websocketProtocols.iterator();
+       final Iterator<String> iterator = webSocketProtocols.iterator();
        if (iterator.hasNext()) {
            sb.append(iterator.next());
            while (iterator.hasNext()) {
@@ -134,7 +134,7 @@ public final class SockJsConfig {
      *
      * @return {@code String} the url to the sockjs version to be used.
      */
-    public String sockjsUrl() {
+    public String sockJsUrl() {
         return sockjsUrl;
     }
 
@@ -180,10 +180,11 @@ public final class SockJsConfig {
 
     public String toString() {
         return new StringBuilder("Config[prefix=").append(prefix)
-            .append(", websocketEnabled=").append(websocketEnabled)
-            .append(", websocketProtocols=").append(websocketProtocols)
+            .append(", webSocketEnabled=").append(webSocketEnabled)
+            .append(", webSocketProtocols=").append(webSocketProtocols)
+            .append(", webSocketHeartbeatInterval=").append(webSocketHeartbeatInterval)
             .append(", cookiesNeeded=").append(cookiesNeeded)
-            .append(", sockjsUrl=").append(sockjsUrl)
+            .append(", sockJsUrl=").append(sockjsUrl)
             .append(", sessionTimeout=").append(sessionTimeout)
             .append(", heartbeatInterval=").append(heartbeatInterval)
             .append(", maxStreamingBytesSize=").append(maxStreamingBytesSize)
@@ -204,11 +205,11 @@ public final class SockJsConfig {
 
     public static class Builder {
         private final String prefix;
-        private boolean websocketEnabled = true;
-        private long websocketHeartbeatInterval = -1;
-        private Set<String> websocketProtocols = new HashSet<String>();
+        private boolean webSocketEnabled = true;
+        private long webSocketHeartbeatInterval = -1;
+        private Set<String> webSocketProtocols = new HashSet<String>();
         private boolean cookiesNeeded;
-        private String sockjsUrl = "http://cdn.sockjs.org/sockjs-0.3.4.min.js" ;
+        private String sockJsUrl = "http://cdn.sockjs.org/sockjs-0.3.4.min.js" ;
         private long sessionTimeout = 5000;
         private long heartbeatInterval = 25000;
         private int maxStreamingBytesSize = 128 * 1024;
@@ -227,8 +228,8 @@ public final class SockJsConfig {
         /**
          * Will disable WebSocket suppport.
          */
-        public Builder disableWebsocket() {
-            this.websocketEnabled = false;
+        public Builder disableWebSocket() {
+            this.webSocketEnabled = false;
             return this;
         }
 
@@ -241,8 +242,8 @@ public final class SockJsConfig {
          *
          * @param ms how often that a WebSocket heartbeat should be sent
          */
-        public Builder websocketHeartbeatInterval(final long ms) {
-            this.websocketHeartbeatInterval = ms;
+        public Builder webSocketHeartbeatInterval(final long ms) {
+            this.webSocketHeartbeatInterval = ms;
             return this;
         }
 
@@ -252,8 +253,8 @@ public final class SockJsConfig {
          *
          * @param protocols the protocols that are supported.
          */
-        public Builder websocketProtocols(final String... protocols) {
-            websocketProtocols.addAll(Arrays.asList(protocols));
+        public Builder webSocketProtocols(final String... protocols) {
+            webSocketProtocols.addAll(Arrays.asList(protocols));
             return this;
         }
 
@@ -273,8 +274,8 @@ public final class SockJsConfig {
          *
          * @param sockjsUrl the url to the sockjs version to be used.
          */
-        public Builder sockjsUrl(final String sockjsUrl) {
-            this.sockjsUrl = sockjsUrl;
+        public Builder sockJsUrl(final String sockjsUrl) {
+            this.sockJsUrl = sockjsUrl;
             return this;
         }
 

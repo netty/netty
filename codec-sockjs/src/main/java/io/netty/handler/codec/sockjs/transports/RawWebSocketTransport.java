@@ -105,7 +105,7 @@ public class RawWebSocketTransport extends SimpleChannelInboundHandler<Object> {
         ctx.attr(REQUEST_KEY).set(req);
         final String wsUrl = getWebSocketLocation(config.isTls(), req, Transports.Types.WEBSOCKET.path());
         final WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(wsUrl,
-                config.websocketProtocolCSV(), false);
+                config.webSocketProtocolCSV(), false);
         handshaker = wsFactory.newHandshaker(req);
         if (handshaker == null) {
             WebSocketServerHandshakerFactory.sendUnsupportedWebSocketVersionResponse(ctx.channel());

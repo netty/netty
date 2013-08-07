@@ -73,7 +73,7 @@ public class NettySockJsServer {
     }
 
     private static SockJsServiceFactory wsDisabledService() {
-        final SockJsConfig config = SockJsConfig.withPrefix("/disabled_websocket_echo").disableWebsocket().build();
+        final SockJsConfig config = SockJsConfig.withPrefix("/disabled_websocket_echo").disableWebSocket().build();
         return new AbstractSockJsServiceFactory(config) {
             @Override
             public SockJsService create() {

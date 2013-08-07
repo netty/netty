@@ -46,7 +46,7 @@ public final class Info {
     }
 
     private static String infoContent(final SockJsConfig config) {
-        final StringBuilder sb = new StringBuilder("{\"websocket\": ").append(config.isWebsocketEnabled());
+        final StringBuilder sb = new StringBuilder("{\"websocket\": ").append(config.isWebSocketEnabled());
         sb.append(", \"origins\": [\"*:*\"]");
         sb.append(", \"cookie_needed\": ").append(config.areCookiesNeeded());
         sb.append(", \"entropy\": ").append(RANDOM.nextInt(Integer.MAX_VALUE) + 1);

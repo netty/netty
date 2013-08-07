@@ -40,7 +40,7 @@ class WebSocketSessionState implements SessionState {
     }
 
     private void startHeartbeatTimer(final ChannelHandlerContext ctx, final SockJsSession session) {
-        final long interval = session.config().websocketHeartbeatInterval();
+        final long interval = session.config().webSocketHeartbeatInterval();
         if (interval > 0) {
             logger.info("Starting heartbeat with interval : " + interval);
             heartbeatFuture = ctx.executor().scheduleAtFixedRate(new Runnable() {

@@ -102,7 +102,7 @@ public class IframeTest {
     }
 
     private SockJsConfig config() {
-        return SockJsConfig.withPrefix("/simplepush").sockjsUrl("http://cdn.sockjs.org/sockjs-0.3.4.min.js").build();
+        return SockJsConfig.withPrefix("/simplepush").sockJsUrl("http://cdn.sockjs.org/sockjs-0.3.4.min.js").build();
     }
 
     private HttpRequest createHttpRequest(final String path) {

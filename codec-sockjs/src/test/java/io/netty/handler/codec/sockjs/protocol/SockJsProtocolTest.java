@@ -257,7 +257,7 @@ public class SockJsProtocolTest {
      */
     @Test
     public void infoTestDisabledWebsocket() throws Exception {
-        final SockJsServiceFactory factory = echoService(SockJsConfig.withPrefix("echo").disableWebsocket().build());
+        final SockJsServiceFactory factory = echoService(SockJsConfig.withPrefix("echo").disableWebSocket().build());
         final EmbeddedChannel ch = channelForMockService(factory.config());
         ch.writeInbound(httpRequest(factory.config().prefix() + "/info"));
         final FullHttpResponse response = (FullHttpResponse) ch.readOutbound();
@@ -370,7 +370,7 @@ public class SockJsProtocolTest {
         final EmbeddedChannel ch = channelForService(echoFactory);
         removeLastInboundMessageHandlers(ch);
 
-        final FullHttpRequest request = websocketUpgradeRequest(sessionUrl + "/websocket");
+        final FullHttpRequest request = webSocketUpgradeRequest(sessionUrl + "/websocket");
         request.headers().set(Names.UPGRADE, "websocket");
         request.headers().set(Names.CONNECTION, "close");
         ch.writeInbound(request);
@@ -383,13 +383,13 @@ public class SockJsProtocolTest {
      * Equivalent to WebsocketHttpErrors.test_invalidMethod in sockjs-protocol-0.3.3.py.
      */
     @Test
-    public void websocketHttpErrorsTestInvalidMethod() throws Exception {
+    public void webSocketHttpErrorsTestInvalidMethod() throws Exception {
         final SockJsServiceFactory echoFactory = echoService();
         final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID().toString();
         final EmbeddedChannel ch = channelForService(echoFactory);
         removeLastInboundMessageHandlers(ch);
 
-        final FullHttpRequest request = websocketUpgradeRequest(sessionUrl + "/websocket");
+        final FullHttpRequest request = webSocketUpgradeRequest(sessionUrl + "/websocket");
         request.setMethod(POST);
         ch.writeInbound(request);
         final FullHttpResponse response =  (FullHttpResponse) ch.readOutbound();
@@ -400,12 +400,12 @@ public class SockJsProtocolTest {
      * Equivalent to WebsocketHixie76.test_transport in sockjs-protocol-0.3.3.py.
      */
     @Test
-    public void websocketHixie76TestTransport() throws Exception {
+    public void webSocketHixie76TestTransport() throws Exception {
         final SockJsServiceFactory echoFactory = echoService();
         final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID().toString();
         final EmbeddedChannel ch = wsChannelForService(echoFactory);
 
-        final FullHttpRequest request = websocketUpgradeRequest(sessionUrl + "/websocket", WebSocketVersion.V00);
+        final FullHttpRequest request = webSocketUpgradeRequest(sessionUrl + "/websocket", WebSocketVersion.V00);
         ch.writeInbound(request);
         // Discard the HTTP Response (this will be a ByteBuf and not an object
         // as we have a HttpEncoder is in the pipeline to start with.
@@ -429,14 +429,14 @@ public class SockJsProtocolTest {
      * Equivalent to WebsocketHixie76.test_close in sockjs-protocol-0.3.3.py.
      */
     @Test
-    public void websocketHixie76TestClose() throws Exception {
+    public void webSocketHixie76TestClose() throws Exception {
         final String serviceName = "/close";
         final String sessionUrl = serviceName + "/222/" + UUID.randomUUID().toString();
         final SockJsConfig config = SockJsConfig.withPrefix(serviceName).build();
         final SockJsServiceFactory service = closeService(config);
         final EmbeddedChannel ch = wsChannelForService(service);
 
-        final FullHttpRequest request = websocketUpgradeRequest(sessionUrl + "/websocket", WebSocketVersion.V00);
+        final FullHttpRequest request = webSocketUpgradeRequest(sessionUrl + "/websocket", WebSocketVersion.V00);
         ch.writeInbound(request);
 
         // read and discard the HTTP Response (this will be a ByteBuf and not an object
@@ -452,19 +452,19 @@ public class SockJsProtocolTest {
         final TextWebSocketFrame closeFrame = (TextWebSocketFrame) ch.readOutbound();
         assertThat(closeFrame.content().toString(UTF_8), equalTo("c[3000,\"Go away!\"]"));
         assertThat(ch.isActive(), is(false));
-        websocketTestClose(WebSocketVersion.V13);
+        webSocketTestClose(WebSocketVersion.V13);
     }
 
     /*
      * Equivalent to WebsocketHixie76.test_empty_frame in sockjs-protocol-0.3.3.py.
      */
     @Test
-    public void websocketHixie76TestEmptyFrame() throws Exception {
+    public void webSocketHixie76TestEmptyFrame() throws Exception {
         final SockJsServiceFactory echoFactory = echoService();
         final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID().toString();
         final EmbeddedChannel ch = wsChannelForService(echoFactory);
 
-        final FullHttpRequest request = websocketUpgradeRequest(sessionUrl + "/websocket", WebSocketVersion.V00);
+        final FullHttpRequest request = webSocketUpgradeRequest(sessionUrl + "/websocket", WebSocketVersion.V00);
         ch.writeInbound(request);
 
         // read and discard the HTTP Response (this will be a ByteBuf and not an object
@@ -491,17 +491,17 @@ public class SockJsProtocolTest {
      * Equivalent to WebsocketHixie76.test_reuseSessionId in sockjs-protocol-0.3.3.py.
      */
     @Test
-    public void websocketHixie76TestReuseSessionId() throws Exception {
+    public void webSocketHixie76TestReuseSessionId() throws Exception {
         final SockJsServiceFactory echoFactory = echoService();
         final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID().toString();
         final EmbeddedChannel ch1 = wsChannelForService(echoFactory);
         final EmbeddedChannel ch2 = wsChannelForService(echoFactory);
 
-        ch1.writeInbound(websocketUpgradeRequest(sessionUrl + "/websocket", WebSocketVersion.V00));
+        ch1.writeInbound(webSocketUpgradeRequest(sessionUrl + "/websocket", WebSocketVersion.V00));
         // read and discard the HTTP Response (this will be a ByteBuf and not an object
         // as we have a HttpEncoder in the pipeline to start with.
         ch1.readOutbound();
-        ch2.writeInbound(websocketUpgradeRequest(sessionUrl + "/websocket", WebSocketVersion.V00));
+        ch2.writeInbound(webSocketUpgradeRequest(sessionUrl + "/websocket", WebSocketVersion.V00));
         // read and discard the HTTP Response (this will be a ByteBuf and not an object
         // as we have a HttpEncoder in the pipeline to start with.
         ch2.readOutbound();
@@ -523,7 +523,7 @@ public class SockJsProtocolTest {
 
         final EmbeddedChannel newCh = wsChannelForService(echoFactory);
 
-        newCh.writeInbound(websocketUpgradeRequest(sessionUrl + "/websocket"));
+        newCh.writeInbound(webSocketUpgradeRequest(sessionUrl + "/websocket"));
         // read and discard the HTTP Response (this will be a ByteBuf and not an object
         // as we have a HttpEncoder in the pipeline to start with.
         newCh.readOutbound();
@@ -538,7 +538,7 @@ public class SockJsProtocolTest {
      * Equivalent to WebsocketHixie76.test_haproxy in sockjs-protocol-0.3.3.py.
      */
     @Test
-    public void websocketHixie76TestHAProxy() throws Exception {
+    public void webSocketHixie76TestHAProxy() throws Exception {
         final SockJsServiceFactory echoFactory = echoService();
         final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID().toString();
         final EmbeddedChannel ch = wsChannelForService(echoFactory);
@@ -580,13 +580,13 @@ public class SockJsProtocolTest {
      * Equivalent to WebsocketHixie76.test_broken_json in sockjs-protocol-0.3.3.py.
      */
     @Test
-    public void websocketHixie76TestBrokenJSON() throws Exception {
+    public void webSocketHixie76TestBrokenJSON() throws Exception {
         final String serviceName = "/close";
         final String sessionUrl = serviceName + "/222/" + UUID.randomUUID().toString();
         final SockJsConfig config = SockJsConfig.withPrefix(serviceName).build();
         final EmbeddedChannel ch = wsChannelForService(echoService(config));
 
-        final FullHttpRequest request = websocketUpgradeRequest(sessionUrl + "/websocket", WebSocketVersion.V00);
+        final FullHttpRequest request = webSocketUpgradeRequest(sessionUrl + "/websocket", WebSocketVersion.V00);
         ch.writeInbound(request);
 
         // read and discard the HTTP Response (this will be a ByteBuf and not an object
@@ -599,30 +599,30 @@ public class SockJsProtocolTest {
         final TextWebSocketFrame webSocketFrame = new TextWebSocketFrame("[\"a\"");
         ch.writeInbound(webSocketFrame);
         assertThat(ch.isActive(), is(false));
-        websocketTestBrokenJSON(WebSocketVersion.V13);
+        webSocketTestBrokenJSON(WebSocketVersion.V13);
     }
 
     /*
      * Equivalent to WebsocketHybi10.test_transport in sockjs-protocol-0.3.3.py.
      */
     @Test
-    public void websocketHybi10TestTransport() throws Exception {
-        websocketTestTransport(WebSocketVersion.V08);
+    public void webSocketHybi10TestTransport() throws Exception {
+        webSocketTestTransport(WebSocketVersion.V08);
     }
 
     /*
      * Equivalent to WebsocketHybi10.test_close in sockjs-protocol-0.3.3.py.
      */
     @Test
-    public void websocketHybi10TestClose() throws Exception {
-        websocketTestClose(WebSocketVersion.V08);
+    public void webSocketHybi10TestClose() throws Exception {
+        webSocketTestClose(WebSocketVersion.V08);
     }
 
     /*
      * Equivalent to WebsocketHybi10.test_headersSantity in sockjs-protocol-0.3.3.py.
      */
     @Test
-    public void websocketHybi10TestHeadersSanity() throws Exception {
+    public void webSocketHybi10TestHeadersSanity() throws Exception {
         verifyHeaders(WebSocketVersion.V07);
         verifyHeaders(WebSocketVersion.V08);
         verifyHeaders(WebSocketVersion.V13);
@@ -632,18 +632,18 @@ public class SockJsProtocolTest {
      * Equivalent to WebsocketHybi10.test_broken_json in sockjs-protocol-0.3.3.py.
      */
     @Test
-    public void websocketHybi10TestBrokenJSON() throws Exception {
-        websocketTestBrokenJSON(WebSocketVersion.V08);
+    public void webSocketHybi10TestBrokenJSON() throws Exception {
+        webSocketTestBrokenJSON(WebSocketVersion.V08);
     }
 
     /*
      * Equivalent to WebsocketHybi10.test_firefox_602_connection_header in sockjs-protocol-0.3.3.py.
      */
     @Test
-    public void websocketHybi10Firefox602ConnectionHeader() throws Exception {
+    public void webSocketHybi10Firefox602ConnectionHeader() throws Exception {
         final SockJsServiceFactory echoFactory = echoService();
-        final EmbeddedChannel ch = createWebsocketChannel(echoFactory.config());
-        final FullHttpRequest request = websocketUpgradeRequest("/websocket", WebSocketVersion.V08);
+        final EmbeddedChannel ch = createWebSocketChannel(echoFactory.config());
+        final FullHttpRequest request = webSocketUpgradeRequest("/websocket", WebSocketVersion.V08);
         request.headers().set(Names.CONNECTION, "keep-alive, Upgrade");
         ch.writeInbound(request);
         final FullHttpResponse response = (FullHttpResponse) ch.readOutbound();
@@ -1194,7 +1194,7 @@ public class SockJsProtocolTest {
         final SockJsServiceFactory echoServiceFactory = echoService();
         final EmbeddedChannel ch = wsChannelForService(echoServiceFactory);
 
-        ch.writeInbound(websocketUpgradeRequest(serviceName + "/websocket"));
+        ch.writeInbound(webSocketUpgradeRequest(serviceName + "/websocket"));
         // Discard Switching Protocols response
         ch.readOutbound();
         ch.writeInbound(new TextWebSocketFrame("Hello world!\uffff"));
@@ -1210,7 +1210,7 @@ public class SockJsProtocolTest {
     public void rawWebsocketTestClose() throws Exception {
         final SockJsServiceFactory closeFactory = closeService();
         final EmbeddedChannel ch = wsChannelForService(closeFactory);
-        ch.writeInbound(websocketUpgradeRequest(closeFactory.config().prefix() + "/websocket"));
+        ch.writeInbound(webSocketUpgradeRequest(closeFactory.config().prefix() + "/websocket"));
         assertThat(ch.isActive(), is(false));
         ch.finish();
     }
@@ -1707,8 +1707,8 @@ public class SockJsProtocolTest {
 
     private void verifyHeaders(final WebSocketVersion version) throws Exception {
         final SockJsConfig config = SockJsConfig.withPrefix("/echo").build();
-        final EmbeddedChannel ch = createWebsocketChannel(config);
-        final FullHttpRequest request = websocketUpgradeRequest("/websocket", version);
+        final EmbeddedChannel ch = createWebSocketChannel(config);
+        final FullHttpRequest request = webSocketUpgradeRequest("/websocket", version);
         ch.writeInbound(request);
         final FullHttpResponse response = (FullHttpResponse) ch.readOutbound();
         assertThat(response.getStatus(), is(HttpResponseStatus.SWITCHING_PROTOCOLS));
@@ -1717,7 +1717,7 @@ public class SockJsProtocolTest {
         assertThat(response.headers().get(CONTENT_LENGTH), is(nullValue()));
     }
 
-    private FullHttpRequest websocketUpgradeRequest(final String path, final WebSocketVersion version) {
+    private FullHttpRequest webSocketUpgradeRequest(final String path, final WebSocketVersion version) {
         final FullHttpRequest req = new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, path);
         req.headers().set(Names.HOST, "server.test.com");
         req.headers().set(Names.UPGRADE, WEBSOCKET.toLowerCase());
@@ -1775,14 +1775,14 @@ public class SockJsProtocolTest {
         };
     }
 
-    private void websocketTestTransport(final WebSocketVersion version) throws Exception {
+    private void webSocketTestTransport(final WebSocketVersion version) throws Exception {
         final String serviceName = "/echo";
         final String sessionUrl = serviceName + "/222/" + UUID.randomUUID().toString();
         final SockJsConfig config = SockJsConfig.withPrefix(serviceName).build();
         final SockJsServiceFactory service = echoService(config);
         final EmbeddedChannel ch = wsChannelForService(service);
 
-        final FullHttpRequest request = websocketUpgradeRequest(sessionUrl + "/websocket", version);
+        final FullHttpRequest request = webSocketUpgradeRequest(sessionUrl + "/websocket", version);
         ch.writeInbound(request);
         // Discard the HTTP Response (this will be a ByteBuf and not an object
         // as we have a HttpEncoder is in the pipeline to start with.
@@ -1799,14 +1799,14 @@ public class SockJsProtocolTest {
         assertThat(textFrame.content().toString(UTF_8), equalTo("a[\"a\"]"));
     }
 
-    private void websocketTestClose(final WebSocketVersion version) throws Exception {
+    private void webSocketTestClose(final WebSocketVersion version) throws Exception {
         final String serviceName = "/close";
         final String sessionUrl = serviceName + "/222/" + UUID.randomUUID().toString();
         final SockJsConfig config = SockJsConfig.withPrefix(serviceName).build();
         final SockJsServiceFactory service = closeService(config);
         final EmbeddedChannel ch = wsChannelForService(service);
 
-        final FullHttpRequest request = websocketUpgradeRequest(sessionUrl + "/websocket", version.toHttpHeaderValue());
+        final FullHttpRequest request = webSocketUpgradeRequest(sessionUrl + "/websocket", version.toHttpHeaderValue());
         ch.writeInbound(request);
 
         // read and discard the HTTP Response (this will be a ByteBuf and not an object
@@ -1821,13 +1821,13 @@ public class SockJsProtocolTest {
         assertThat(ch.isActive(), is(false));
     }
 
-    private void websocketTestBrokenJSON(final WebSocketVersion version) throws Exception {
+    private void webSocketTestBrokenJSON(final WebSocketVersion version) throws Exception {
         final String serviceName = "/close";
         final String sessionUrl = serviceName + "/222/" + UUID.randomUUID().toString();
         final SockJsConfig config = SockJsConfig.withPrefix(serviceName).build();
         final EmbeddedChannel ch = wsChannelForService(echoService(config));
 
-        final FullHttpRequest request = websocketUpgradeRequest(sessionUrl + "/websocket", version.toHttpHeaderValue());
+        final FullHttpRequest request = webSocketUpgradeRequest(sessionUrl + "/websocket", version.toHttpHeaderValue());
         ch.writeInbound(request);
 
         // read and discard the HTTP Response (this will be a ByteBuf and not an object
@@ -1841,11 +1841,11 @@ public class SockJsProtocolTest {
         assertThat(ch.isActive(), is(false));
     }
 
-    private FullHttpRequest websocketUpgradeRequest(final String path) {
-        return websocketUpgradeRequest(path, "13");
+    private FullHttpRequest webSocketUpgradeRequest(final String path) {
+        return webSocketUpgradeRequest(path, "13");
     }
 
-    private FullHttpRequest websocketUpgradeRequest(final String path, final String version) {
+    private FullHttpRequest webSocketUpgradeRequest(final String path, final String version) {
         final FullHttpRequest req = new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, path);
         req.headers().set(Names.HOST, "server.test.com");
         req.headers().set(Names.UPGRADE, WEBSOCKET.toLowerCase());
@@ -2017,7 +2017,7 @@ public class SockJsProtocolTest {
         assertThat(response.headers().get(EXPIRES), is(notNullValue()));
         verifyNoSET_COOKIE(response);
         assertThat(response.headers().get(ETAG), is(notNullValue()));
-        assertThat(response.content().toString(UTF_8), equalTo(iframeHtml(config.sockjsUrl())));
+        assertThat(response.content().toString(UTF_8), equalTo(iframeHtml(config.sockJsUrl())));
     }
 
     private void verifyContentType(final HttpResponse response, final String contentType) {
@@ -2101,7 +2101,7 @@ public class SockJsProtocolTest {
         return ch;
     }
 
-    private EmbeddedChannel createWebsocketChannel(final SockJsConfig config) throws Exception {
+    private EmbeddedChannel createWebSocketChannel(final SockJsConfig config) throws Exception {
         return new TestEmbeddedChannel(
                 new WebSocket13FrameEncoder(true),
                 new WebSocket13FrameDecoder(true, false, 2048),
