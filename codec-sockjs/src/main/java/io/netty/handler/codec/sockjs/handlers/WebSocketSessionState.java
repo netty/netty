@@ -35,11 +35,11 @@ class WebSocketSessionState implements SessionState {
     private ScheduledFuture<?> heartbeatFuture;
 
     @Override
-    public void onConnect(final SockJSSession session, final ChannelHandlerContext ctx) {
+    public void onConnect(final SockJsSession session, final ChannelHandlerContext ctx) {
         startHeartbeatTimer(ctx, session);
     }
 
-    private void startHeartbeatTimer(final ChannelHandlerContext ctx, final SockJSSession session) {
+    private void startHeartbeatTimer(final ChannelHandlerContext ctx, final SockJsSession session) {
         final long interval = session.config().websocketHeartbeatInterval();
         if (interval > 0) {
             logger.info("Starting heartbeat with interval : " + interval);
@@ -56,16 +56,16 @@ class WebSocketSessionState implements SessionState {
     }
 
     @Override
-    public void onOpen(final SockJSSession session, final ChannelHandlerContext ctx) {
+    public void onOpen(final SockJsSession session, final ChannelHandlerContext ctx) {
     }
 
     @Override
-    public boolean isInUse(final SockJSSession session) {
+    public boolean isInUse(final SockJsSession session) {
         return session.context().channel().isActive();
     }
 
     @Override
-    public void onSockJSServerInitiatedClose(final SockJSSession session) {
+    public void onSockJSServerInitiatedClose(final SockJsSession session) {
         shutdownHearbeat();
     }
 

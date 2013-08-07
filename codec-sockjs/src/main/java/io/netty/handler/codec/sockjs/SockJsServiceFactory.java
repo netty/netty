@@ -16,24 +16,24 @@
 package io.netty.handler.codec.sockjs;
 
 /**
- * A factory for creating {@link SockJSService} instances.
+ * A factory for creating {@link SockJsService} instances.
  */
-public interface SockJSServiceFactory {
+public interface SockJsServiceFactory {
 
     /**
      * Creates a new instance, or reuse and existing instance, of the service.
      * Allows for either creating new instances for every session of to use
      * a single instance, whatever is appropriate for the use case.
      *
-     * @return {@link SockJSService} the service instance.
+     * @return {@link SockJsService} the service instance.
      */
-    SockJSService create();
+    SockJsService create();
 
     /**
-     * The {@link Config} for the session itself.
+     * The {@link SockJsConfig} for the session itself.
      *
      * @return Config the configuration for the session.
      */
-    Config config();
+    SockJsConfig config();
 
 }

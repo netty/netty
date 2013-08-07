@@ -19,7 +19,7 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.sockjs.Config;
+import io.netty.handler.codec.sockjs.SockJsConfig;
 import io.netty.handler.codec.sockjs.transports.Transports;
 
 import java.util.Random;
@@ -34,7 +34,7 @@ public final class Info {
         return path.startsWith("/info");
     }
 
-    public static FullHttpResponse response(final Config config, final HttpRequest request) throws Exception {
+    public static FullHttpResponse response(final SockJsConfig config, final HttpRequest request) throws Exception {
         final FullHttpResponse response = createResponse(request);
         Transports.setNoCacheHeaders(response);
         Transports.writeContent(response, infoContent(config), "application/json; charset=UTF-8");
@@ -45,7 +45,7 @@ public final class Info {
         return new DefaultFullHttpResponse(request.getProtocolVersion(), HttpResponseStatus.OK);
     }
 
-    private static String infoContent(final Config config) {
+    private static String infoContent(final SockJsConfig config) {
         final StringBuilder sb = new StringBuilder("{\"websocket\": ").append(config.isWebsocketEnabled());
         sb.append(", \"origins\": [\"*:*\"]");
         sb.append(", \"cookie_needed\": ").append(config.areCookiesNeeded());

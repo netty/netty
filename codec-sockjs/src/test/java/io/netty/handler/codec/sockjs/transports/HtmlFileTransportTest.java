@@ -20,7 +20,7 @@ import static io.netty.handler.codec.http.HttpMethod.GET;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static io.netty.handler.codec.sockjs.SockJSTestUtil.verifyNoCacheHeaders;
+import static io.netty.handler.codec.sockjs.SockJsTestUtil.verifyNoCacheHeaders;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -35,7 +35,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.sockjs.Config;
+import io.netty.handler.codec.sockjs.SockJsConfig;
 import io.netty.handler.codec.sockjs.protocol.MessageFrame;
 import io.netty.handler.codec.sockjs.protocol.OpenFrame;
 
@@ -81,10 +81,10 @@ public class HtmlFileTransportTest {
     }
 
     private EmbeddedChannel newHtmlFileChannel(final String path) {
-        return newStreamingChannel(Config.prefix("/test").cookiesNeeded().build(), path);
+        return newStreamingChannel(SockJsConfig.prefix("/test").cookiesNeeded().build(), path);
     }
 
-    private EmbeddedChannel newStreamingChannel(final Config config, final String path) {
+    private EmbeddedChannel newStreamingChannel(final SockJsConfig config, final String path) {
         final HttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, path);
         final HtmlFileTransport transport = new HtmlFileTransport(config, request);
         final EmbeddedChannel ch = new EmbeddedChannel(transport);

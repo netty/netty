@@ -15,19 +15,19 @@
  */
 package io.netty.handler.codec.sockjs;
 
-public abstract class AbstractServiceFactory implements SockJSServiceFactory {
+public abstract class AbstractSockJsServiceFactory implements SockJsServiceFactory {
 
-    private final Config config;
+    private final SockJsConfig config;
 
-    public AbstractServiceFactory(final Config config) {
+    public AbstractSockJsServiceFactory(final SockJsConfig config) {
         this.config = config;
     }
 
     @Override
-    public abstract SockJSService create();
+    public abstract SockJsService create();
 
     @Override
-    public Config config() {
+    public SockJsConfig config() {
         return config;
     }
 

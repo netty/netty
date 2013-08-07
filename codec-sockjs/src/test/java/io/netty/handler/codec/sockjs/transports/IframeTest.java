@@ -28,7 +28,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.sockjs.Config;
+import io.netty.handler.codec.sockjs.SockJsConfig;
 import io.netty.handler.codec.sockjs.protocol.Iframe;
 
 import java.nio.charset.Charset;
@@ -39,7 +39,7 @@ public class IframeTest {
 
     @Test
     public void iframeHtm() throws Exception {
-        final Config config = config();
+        final SockJsConfig config = config();
         final String path = config.prefix() + "/iframe.htm";
         final FullHttpResponse response = Iframe.response(config, createHttpRequest(path));
         assertThat(response.getStatus().code(), is(HttpResponseStatus.NOT_FOUND.code()));
@@ -47,7 +47,7 @@ public class IframeTest {
 
     @Test
     public void iframeHTML() throws Exception {
-        final Config config = config();
+        final SockJsConfig config = config();
         final String path = config.prefix() + "/iframe.HTML";
         final FullHttpResponse response = Iframe.response(config, createHttpRequest(path));
         assertThat(response.getStatus().code(), is(HttpResponseStatus.NOT_FOUND.code()));
@@ -55,7 +55,7 @@ public class IframeTest {
 
     @Test
     public void iframeHtmlUppercase() throws Exception {
-        final Config config = config();
+        final SockJsConfig config = config();
         final String path = config.prefix() + "/IFRAME.HTML";
         final FullHttpResponse response = Iframe.response(config, createHttpRequest(path));
         assertThat(response.getStatus().code(), is(HttpResponseStatus.NOT_FOUND.code()));
@@ -63,7 +63,7 @@ public class IframeTest {
 
     @Test
     public void iframeXml() throws Exception {
-        final Config config = config();
+        final SockJsConfig config = config();
         final String path = config.prefix() + "/iframe.xml";
         final FullHttpResponse response = Iframe.response(config, createHttpRequest(path));
         assertThat(response.getStatus().code(), is(HttpResponseStatus.NOT_FOUND.code()));
@@ -71,7 +71,7 @@ public class IframeTest {
 
     @Test
     public void iframeUppercase() throws Exception {
-        final Config config = config();
+        final SockJsConfig config = config();
         final String path = config.prefix() + "/IFRAME";
         final FullHttpResponse response = Iframe.response(config, createHttpRequest(path));
         assertThat(response.getStatus().code(), is(HttpResponseStatus.NOT_FOUND.code()));
@@ -79,7 +79,7 @@ public class IframeTest {
 
     @Test
     public void ifNoneMatchHeader() throws Exception {
-        final Config config = config();
+        final SockJsConfig config = config();
         final String path = config.prefix() + "/iframe.html";
         final HttpRequest httpRequest = createHttpRequest(path);
         httpRequest.headers().set(HttpHeaders.Names.IF_NONE_MATCH, "*");
@@ -90,7 +90,7 @@ public class IframeTest {
 
     @Test
     public void iframeHtml() throws Exception {
-        final Config config = config();
+        final SockJsConfig config = config();
         final String path = config.prefix() + "/iframe.html";
         final FullHttpResponse response = Iframe.response(config, createHttpRequest(path));
         assertThat(response.getStatus().code(), is(HttpResponseStatus.OK.code()));
@@ -101,8 +101,8 @@ public class IframeTest {
         assertThat(response.headers().get(HttpHeaders.Names.ETAG), is(notNullValue()));
     }
 
-    private Config config() {
-        return Config.prefix("/simplepush").sockjsUrl("http://cdn.sockjs.org/sockjs-0.3.4.min.js").build();
+    private SockJsConfig config() {
+        return SockJsConfig.prefix("/simplepush").sockjsUrl("http://cdn.sockjs.org/sockjs-0.3.4.min.js").build();
     }
 
     private HttpRequest createHttpRequest(final String path) {

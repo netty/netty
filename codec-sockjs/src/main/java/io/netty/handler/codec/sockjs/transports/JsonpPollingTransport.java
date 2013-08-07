@@ -34,7 +34,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.QueryStringDecoder;
-import io.netty.handler.codec.sockjs.Config;
+import io.netty.handler.codec.sockjs.SockJsConfig;
 import io.netty.handler.codec.sockjs.handlers.SessionHandler.Events;
 import io.netty.handler.codec.sockjs.protocol.Frame;
 import io.netty.util.ReferenceCountUtil;
@@ -56,10 +56,10 @@ import java.util.List;
 public class JsonpPollingTransport extends ChannelDuplexHandler {
 
     private final FullHttpRequest request;
-    private final Config config;
+    private final SockJsConfig config;
     private String callback;
 
-    public JsonpPollingTransport(final Config config, final FullHttpRequest request) {
+    public JsonpPollingTransport(final SockJsConfig config, final FullHttpRequest request) {
         this.request = request;
         this.request.retain();
         this.config = config;

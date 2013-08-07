@@ -28,7 +28,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.sockjs.Config;
+import io.netty.handler.codec.sockjs.SockJsConfig;
 import io.netty.handler.codec.sockjs.protocol.Frame;
 import io.netty.handler.codec.sockjs.util.ArgumentUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -49,16 +49,16 @@ public class XhrPollingTransport extends ChannelOutboundHandlerAdapter {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(XhrPollingTransport.class);
 
-    private final Config config;
+    private final SockJsConfig config;
     private final FullHttpRequest request;
 
     /**
      * Sole constructor.
      *
-     * @param config the SockJS {@link Config} instance.
+     * @param config the SockJS {@link SockJsConfig} instance.
      * @param request the {@link FullHttpRequest} which can be used get information like the HTTP version.
      */
-    public XhrPollingTransport(final Config config, final FullHttpRequest request) {
+    public XhrPollingTransport(final SockJsConfig config, final FullHttpRequest request) {
         ArgumentUtil.checkNotNull(config, "config");
         ArgumentUtil.checkNotNull(request, "request");
         this.config = config;

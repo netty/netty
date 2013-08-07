@@ -21,11 +21,16 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
-public class NettySockJSServer {
+/**
+ * A SockJS server that will start the services required for the
+ * <a href="http://sockjs.github.io/sockjs-protocol/sockjs-protocol-0.3.3.html">sockjs-protocol</a> test suite,
+ * enabling the python test suite to be run against Netty's SockJS implementation.
+ */
+public class NettySockJsServer {
 
     private final int port;
 
-    public NettySockJSServer(final int port) {
+    public NettySockJsServer(final int port) {
         this.port = port;
     }
 
@@ -33,12 +38,12 @@ public class NettySockJSServer {
         final EventLoopGroup bossGroup = new NioEventLoopGroup();
         final EventLoopGroup workerGroup = new NioEventLoopGroup();
         try {
-            final SockJSServiceFactory echoService = echoService();
-            final SockJSServiceFactory wsDisabled = wsDisabledService();
-            final SockJSServiceFactory closeService = closeService();
-            final SockJSServiceFactory cookieNeededService = cookieService();
+            final SockJsServiceFactory echoService = echoService();
+            final SockJsServiceFactory wsDisabled = wsDisabledService();
+            final SockJsServiceFactory closeService = closeService();
+            final SockJsServiceFactory cookieNeededService = cookieService();
             final ServerBootstrap sb = new ServerBootstrap().channel(NioServerSocketChannel.class);
-            final SockJSChannelInitializer chInit = new SockJSChannelInitializer(echoService,
+            final SockJsChannelInitializer chInit = new SockJsChannelInitializer(echoService,
                     wsDisabled,
                     closeService,
                     cookieNeededService);
@@ -52,46 +57,46 @@ public class NettySockJSServer {
         }
     }
 
-    private static SockJSServiceFactory echoService() {
-        final Config config = Config.prefix("/echo")
+    private static SockJsServiceFactory echoService() {
+        final SockJsConfig config = SockJsConfig.prefix("/echo")
                 .cookiesNeeded()
                 .heartbeatInterval(25000)
                 .sessionTimeout(5000)
                 .maxStreamingBytesSize(4096)
                 .build();
-        return new AbstractServiceFactory(config) {
+        return new AbstractSockJsServiceFactory(config) {
             @Override
-            public SockJSService create() {
+            public SockJsService create() {
                 return new EchoService(config);
             }
         };
     }
 
-    private static SockJSServiceFactory wsDisabledService() {
-        final Config config = Config.prefix("/disabled_websocket_echo").disableWebsocket().build();
-        return new AbstractServiceFactory(config) {
+    private static SockJsServiceFactory wsDisabledService() {
+        final SockJsConfig config = SockJsConfig.prefix("/disabled_websocket_echo").disableWebsocket().build();
+        return new AbstractSockJsServiceFactory(config) {
             @Override
-            public SockJSService create() {
+            public SockJsService create() {
                 return new EchoService(config);
             }
         };
     }
 
-    private static SockJSServiceFactory closeService() {
-        final Config config = Config.prefix("/close").build();
-        return new AbstractServiceFactory(config) {
+    private static SockJsServiceFactory closeService() {
+        final SockJsConfig config = SockJsConfig.prefix("/close").build();
+        return new AbstractSockJsServiceFactory(config) {
             @Override
-            public SockJSService create() {
+            public SockJsService create() {
                 return new CloseService(config);
             }
         };
     }
 
-    private static SockJSServiceFactory cookieService() {
-        final Config config = Config.prefix("/cookie_needed_echo").cookiesNeeded().build();
-        return new AbstractServiceFactory(config) {
+    private static SockJsServiceFactory cookieService() {
+        final SockJsConfig config = SockJsConfig.prefix("/cookie_needed_echo").cookiesNeeded().build();
+        return new AbstractSockJsServiceFactory(config) {
             @Override
-            public SockJSService create() {
+            public SockJsService create() {
                 return new CloseService(config);
             }
         };
@@ -99,7 +104,7 @@ public class NettySockJSServer {
 
     public static void main(final String[] args) throws Exception {
         final int port = args.length > 0 ? Integer.parseInt(args[0]) : 8090;
-        new NettySockJSServer(port).run();
+        new NettySockJsServer(port).run();
     }
 
 }

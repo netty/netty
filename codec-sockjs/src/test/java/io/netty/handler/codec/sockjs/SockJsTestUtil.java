@@ -23,9 +23,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponse;
 
-public final class SockJSTestUtil {
+public final class SockJsTestUtil {
 
-    private SockJSTestUtil() {
+    private SockJsTestUtil() {
     }
 
     public static void verifyDefaultResponseHeaders(final HttpResponse response, final String contentType) {

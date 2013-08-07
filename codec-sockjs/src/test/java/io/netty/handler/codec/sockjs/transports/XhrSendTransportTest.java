@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.sockjs.transports;
 
-import static io.netty.handler.codec.sockjs.SockJSTestUtil.verifyDefaultResponseHeaders;
-import static io.netty.handler.codec.sockjs.SockJSTestUtil.verifyContentType;
+import static io.netty.handler.codec.sockjs.SockJsTestUtil.verifyDefaultResponseHeaders;
+import static io.netty.handler.codec.sockjs.SockJsTestUtil.verifyContentType;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -30,7 +30,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.sockjs.Config;
+import io.netty.handler.codec.sockjs.SockJsConfig;
 import io.netty.util.CharsetUtil;
 
 import org.junit.Test;
@@ -107,7 +107,7 @@ public class XhrSendTransportTest {
     }
 
     private FullHttpResponse processHttpRequest(final FullHttpRequest request) {
-        final XhrSendTransport transport = new XhrSendTransport(Config.prefix("/test").cookiesNeeded().build());
+        final XhrSendTransport transport = new XhrSendTransport(SockJsConfig.prefix("/test").cookiesNeeded().build());
         final EmbeddedChannel channel = new EmbeddedChannel(transport);
         channel.writeInbound(request);
         final FullHttpResponse response = (FullHttpResponse) channel.readOutbound();

@@ -27,7 +27,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.sockjs.Config;
+import io.netty.handler.codec.sockjs.SockJsConfig;
 import io.netty.util.CharsetUtil;
 
 import java.nio.charset.Charset;
@@ -40,42 +40,42 @@ public class InfoTest {
 
     @Test
     public void webSocketSupported() throws Exception {
-        final Config config = Config.prefix("/simplepush").build();
+        final SockJsConfig config = SockJsConfig.prefix("/simplepush").build();
         final FullHttpResponse response = Info.response(config, createHttpRequest("/simplepush"));
         assertThat(infoAsJson(response).get("websocket").asBoolean(), is(true));
     }
 
     @Test
     public void webSocketNotSupported() throws Exception {
-        final Config config = Config.prefix("/simplepush").disableWebsocket().build();
+        final SockJsConfig config = SockJsConfig.prefix("/simplepush").disableWebsocket().build();
         final FullHttpResponse response = Info.response(config, createHttpRequest("/simplepush"));
         assertThat(infoAsJson(response).get("websocket").asBoolean(), is(false));
     }
 
     @Test
     public void cookiesNeeded() throws Exception {
-        final Config config = Config.prefix("/simplepush").disableWebsocket().cookiesNeeded().build();
+        final SockJsConfig config = SockJsConfig.prefix("/simplepush").disableWebsocket().cookiesNeeded().build();
         final FullHttpResponse response = Info.response(config, createHttpRequest("/simplepush"));
         assertThat(infoAsJson(response).get("cookie_needed").asBoolean(), is(true));
     }
 
     @Test
     public void cookiesNotNeeded() throws Exception {
-        final Config config = Config.prefix("/simplepush").disableWebsocket().build();
+        final SockJsConfig config = SockJsConfig.prefix("/simplepush").disableWebsocket().build();
         final FullHttpResponse response = Info.response(config, createHttpRequest("/simplepush"));
         assertThat(infoAsJson(response).get("cookie_needed").asBoolean(), is(false));
     }
 
     @Test
     public void origins() throws Exception {
-        final Config config = Config.prefix("/simplepush").disableWebsocket().build();
+        final SockJsConfig config = SockJsConfig.prefix("/simplepush").disableWebsocket().build();
         final FullHttpResponse response = Info.response(config, createHttpRequest("/simplepush"));
         assertThat(infoAsJson(response).get("origins").get(0).asText(), is("*:*"));
     }
 
     @Test
     public void entropy() throws Exception {
-        final Config config = Config.prefix("/simplepush").disableWebsocket().build();
+        final SockJsConfig config = SockJsConfig.prefix("/simplepush").disableWebsocket().build();
         final FullHttpResponse response = Info.response(config, createHttpRequest("/simplepush"));
         assertThat(infoAsJson(response).get("entropy").asLong(), is(notNullValue()));
     }
@@ -115,7 +115,7 @@ public class InfoTest {
     }
 
     private HttpHeaders headersFromInfo() throws Exception {
-        final Config config = Config.prefix("/simplepush").disableWebsocket().build();
+        final SockJsConfig config = SockJsConfig.prefix("/simplepush").disableWebsocket().build();
         final FullHttpResponse response = Info.response(config, createHttpRequest("/simplepush"));
         return response.headers();
     }

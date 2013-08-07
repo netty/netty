@@ -24,36 +24,36 @@ import java.util.concurrent.ConcurrentMap;
 
 /**
  * A sending session state is conserned about dealing with session interactions
- * for sending data to a SockJSSession/SockJSService.
+ * for sending data to a SockJsSession/SockJsService.
  *
  */
 class SendingSessionState implements SessionState {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SendingSessionState.class);
-    private final ConcurrentMap<String, SockJSSession> sessions;
+    private final ConcurrentMap<String, SockJsSession> sessions;
 
-    public SendingSessionState(final ConcurrentMap<String, SockJSSession> sessions) {
+    public SendingSessionState(final ConcurrentMap<String, SockJsSession> sessions) {
         ArgumentUtil.checkNotNull(sessions, "sessions");
         this.sessions = sessions;
     }
 
     @Override
-    public void onConnect(final SockJSSession session, final ChannelHandlerContext ctx) {
+    public void onConnect(final SockJsSession session, final ChannelHandlerContext ctx) {
     }
 
     @Override
-    public void onOpen(final SockJSSession session, final ChannelHandlerContext ctx) {
+    public void onOpen(final SockJsSession session, final ChannelHandlerContext ctx) {
     }
 
     @Override
-    public void onSockJSServerInitiatedClose(final SockJSSession session) {
+    public void onSockJSServerInitiatedClose(final SockJsSession session) {
         logger.debug("Will close session context " + session.context());
         session.context().close();
         sessions.remove(session.sessionId());
     }
 
     @Override
-    public boolean isInUse(final SockJSSession session) {
+    public boolean isInUse(final SockJsSession session) {
         return false;
     }
 

@@ -27,14 +27,14 @@ public class ConfigTest {
 
     @Test
     public void websocketProtocols() {
-        final Config config = Config.prefix("/echo").websocketProtocols("one", "two").build();
+        final SockJsConfig config = SockJsConfig.prefix("/echo").websocketProtocols("one", "two").build();
         assertThat(config.websocketProtocol().size(), is(2));
         assertThat(config.websocketProtocol(), hasItems("one", "two"));
     }
 
     @Test
     public void websocketProtocolsAsCSV() {
-        final Config config = Config.prefix("/echo").websocketProtocols("one", "two").build();
+        final SockJsConfig config = SockJsConfig.prefix("/echo").websocketProtocols("one", "two").build();
         assertThat(config.websocketProtocol().size(), is(2));
         assertThat(config.websocketProtocolCSV(), containsString("one"));
         assertThat(config.websocketProtocolCSV(), containsString("two"));
@@ -42,7 +42,7 @@ public class ConfigTest {
 
     @Test
     public void websocketProtocolsAsCSVNoProtocols() {
-        final Config config = Config.prefix("/echo").build();
+        final SockJsConfig config = SockJsConfig.prefix("/echo").build();
         assertThat(config.websocketProtocol().size(), is(0));
         assertThat(config.websocketProtocolCSV(), is(nullValue()));
     }

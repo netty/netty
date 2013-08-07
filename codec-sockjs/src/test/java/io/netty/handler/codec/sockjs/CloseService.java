@@ -20,16 +20,16 @@ package io.netty.handler.codec.sockjs;
  * <a href="http://sockjs.github.io/sockjs-protocol/sockjs-protocol-0.3.3.html">sockjs-protocol</a>
  * which will close the session as soon as a message is received.
  */
-public final class CloseService implements SockJSService {
+public final class CloseService implements SockJsService {
 
-    private final Config config;
+    private final SockJsConfig config;
 
-    public CloseService(final Config config) {
+    public CloseService(final SockJsConfig config) {
         this.config = config;
     }
 
     @Override
-    public Config config() {
+    public SockJsConfig config() {
         return config;
     }
 
@@ -38,7 +38,7 @@ public final class CloseService implements SockJSService {
     }
 
     @Override
-    public void onOpen(final SessionContext session) {
+    public void onOpen(final SockJsSessionContext session) {
         session.close();
     }
 

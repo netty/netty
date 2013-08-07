@@ -30,23 +30,23 @@ interface SessionState {
     /**
      * Called when a new session is connecting.
      *
-     * @param session the {@link SockJSSession}.
+     * @param session the {@link SockJsSession}.
      * @param ctx the {@link ChannelHandlerContext} for the current connection/channel
      */
-    void onConnect(final SockJSSession session, final ChannelHandlerContext ctx);
+    void onConnect(final SockJsSession session, final ChannelHandlerContext ctx);
 
     /**
      * Called when a request for a connected session is received.
      *
-     * @param session the {@link SockJSSession}.
+     * @param session the {@link SockJsSession}.
      * @param ctx the {@link ChannelHandlerContext} for the current connection/channel. Note
      *            that this ChannelHandlerContext is different from the one that opened the
      *            the sesssion and was passed to the onConnect method.
      */
-    void onOpen(final SockJSSession session, final ChannelHandlerContext ctx);
+    void onOpen(final SockJsSession session, final ChannelHandlerContext ctx);
 
     /**
-     * Called after the {@link SockJSSession#onClose()} method has been called enabling
+     * Called after the {@link SockJsSession#onClose()} method has been called enabling
      * this SessionState to perform any clean up actions requried.
      */
     void onClose();
@@ -54,13 +54,13 @@ interface SessionState {
     /**
      * Called when the SockJS server has initiated a close of the session.
      */
-    void onSockJSServerInitiatedClose(final SockJSSession session);
+    void onSockJSServerInitiatedClose(final SockJsSession session);
 
     /**
      * Indicates if this session is in use.
      *
      * @return {@code true} if the session is in use.
      */
-    boolean isInUse(SockJSSession session);
+    boolean isInUse(SockJsSession session);
 
 }

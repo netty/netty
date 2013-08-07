@@ -27,7 +27,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.QueryStringDecoder;
-import io.netty.handler.codec.sockjs.Config;
+import io.netty.handler.codec.sockjs.SockJsConfig;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -71,7 +71,7 @@ public final class Iframe {
         return path.startsWith("/iframe");
     }
 
-    public static FullHttpResponse response(final Config config, final HttpRequest request) throws Exception {
+    public static FullHttpResponse response(final SockJsConfig config, final HttpRequest request) throws Exception {
         final QueryStringDecoder qsd = new QueryStringDecoder(request.getUri());
         final String path = qsd.path();
 

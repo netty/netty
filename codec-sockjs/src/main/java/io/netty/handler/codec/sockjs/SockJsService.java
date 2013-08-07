@@ -18,21 +18,21 @@ package io.netty.handler.codec.sockjs;
 /**
  * Represents the server side business application server in SockJS.
  */
-public interface SockJSService {
+public interface SockJsService {
 
     /**
-     * The {@link Config} for this service
+     * The {@link SockJsConfig} for this service
      *
-     * @return {@link Config} this services configuration.
+     * @return {@link SockJsConfig} this services configuration.
      */
-    Config config();
+    SockJsConfig config();
 
     /**
      * Will be called when a new session is opened.
      *
-     * @param session the {@link SessionContext} which can be stored and used for sending/closing.
+     * @param session the {@link SockJsSessionContext} which can be stored and used for sending/closing.
      */
-    void onOpen(SessionContext session);
+    void onOpen(SockJsSessionContext session);
 
     /**
      * Will be called when a message is sent to the service.

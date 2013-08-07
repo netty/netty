@@ -21,17 +21,17 @@ package io.netty.handler.codec.sockjs;
  * <a href="http://sockjs.github.io/sockjs-protocol/sockjs-protocol-0.3.3.html">sockjs-protocol</a>
  * which will send back message it receives.
  */
-public class EchoService implements SockJSService {
+public class EchoService implements SockJsService {
 
-    private final Config config;
-    private SessionContext session;
+    private final SockJsConfig config;
+    private SockJsSessionContext session;
 
-    public EchoService(final Config config) {
+    public EchoService(final SockJsConfig config) {
         this.config = config;
     }
 
     @Override
-    public Config config() {
+    public SockJsConfig config() {
         return config;
     }
 
@@ -41,7 +41,7 @@ public class EchoService implements SockJSService {
     }
 
     @Override
-    public void onOpen(final SessionContext session) {
+    public void onOpen(final SockJsSessionContext session) {
         this.session = session;
     }
 

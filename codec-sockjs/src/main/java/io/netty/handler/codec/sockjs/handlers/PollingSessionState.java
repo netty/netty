@@ -41,19 +41,19 @@ import java.util.concurrent.ConcurrentMap;
  */
 class PollingSessionState extends AbstractTimersSessionState {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PollingSessionState.class);
-    private final ConcurrentMap<String, SockJSSession> sessions;
+    private final ConcurrentMap<String, SockJsSession> sessions;
 
-    public PollingSessionState(final ConcurrentMap<String, SockJSSession> sessions) {
+    public PollingSessionState(final ConcurrentMap<String, SockJsSession> sessions) {
         super(sessions);
         this.sessions = sessions;
     }
 
     @Override
-    public void onOpen(final SockJSSession session, final ChannelHandlerContext ctx) {
+    public void onOpen(final SockJsSession session, final ChannelHandlerContext ctx) {
         flushMessages(ctx, session);
     }
 
-    private void flushMessages(final ChannelHandlerContext ctx, final SockJSSession session) {
+    private void flushMessages(final ChannelHandlerContext ctx, final SockJsSession session) {
         final String[] allMessages = session.getAllMessages();
         if (allMessages.length == 0) {
             return;
@@ -70,12 +70,12 @@ class PollingSessionState extends AbstractTimersSessionState {
     }
 
     @Override
-    public boolean isInUse(final SockJSSession session) {
+    public boolean isInUse(final SockJsSession session) {
         return session.context().channel().isActive() || session.inuse();
     }
 
     @Override
-    public void onSockJSServerInitiatedClose(final SockJSSession session) {
+    public void onSockJSServerInitiatedClose(final SockJsSession session) {
         final ChannelHandlerContext context = session.context();
         if (context != null) { //could be null if the request is aborted, for example due to missing callback.
             logger.debug("Will close session context " + session.context());

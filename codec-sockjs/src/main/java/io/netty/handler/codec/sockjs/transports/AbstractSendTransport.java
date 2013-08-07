@@ -27,7 +27,7 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.QueryStringDecoder;
-import io.netty.handler.codec.sockjs.Config;
+import io.netty.handler.codec.sockjs.SockJsConfig;
 import io.netty.handler.codec.sockjs.util.ArgumentUtil;
 import io.netty.handler.codec.sockjs.util.JsonUtil;
 import io.netty.util.CharsetUtil;
@@ -41,9 +41,9 @@ import org.codehaus.jackson.JsonParseException;
  */
 public abstract class AbstractSendTransport extends SimpleChannelInboundHandler<FullHttpRequest> {
 
-    protected Config config;
+    protected SockJsConfig config;
 
-    public AbstractSendTransport(final Config config) {
+    public AbstractSendTransport(final SockJsConfig config) {
         ArgumentUtil.checkNotNull(config, "config");
         this.config = config;
     }

@@ -18,7 +18,7 @@ package io.netty.handler.codec.sockjs.transports;
 import static io.netty.handler.codec.http.HttpResponseStatus.NO_CONTENT;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.sockjs.Config;
+import io.netty.handler.codec.sockjs.SockJsConfig;
 
 /**
  * XMLHttpRequest (XHR) streaming transport is a transport where a persistent
@@ -32,7 +32,7 @@ import io.netty.handler.codec.sockjs.Config;
  */
 public class XhrSendTransport extends AbstractSendTransport {
 
-    public XhrSendTransport(final Config config) {
+    public XhrSendTransport(final SockJsConfig config) {
         super(config);
     }
 

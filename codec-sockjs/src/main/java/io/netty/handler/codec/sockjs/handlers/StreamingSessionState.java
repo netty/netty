@@ -38,16 +38,16 @@ import java.util.concurrent.ConcurrentMap;
 class StreamingSessionState extends AbstractTimersSessionState {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(StreamingSessionState.class);
 
-    public StreamingSessionState(final ConcurrentMap<String, SockJSSession> sessions) {
+    public StreamingSessionState(final ConcurrentMap<String, SockJsSession> sessions) {
         super(sessions);
     }
 
     @Override
-    public void onOpen(final SockJSSession session, final ChannelHandlerContext ctx) {
+    public void onOpen(final SockJsSession session, final ChannelHandlerContext ctx) {
         flushMessages(ctx, session);
     }
 
-    private void flushMessages(final ChannelHandlerContext ignored, final SockJSSession session) {
+    private void flushMessages(final ChannelHandlerContext ignored, final SockJsSession session) {
         final Channel channel = session.context().channel();
         if (channel.isActive() && channel.isRegistered()) {
             final String[] allMessages = session.getAllMessages();
@@ -69,7 +69,7 @@ class StreamingSessionState extends AbstractTimersSessionState {
     }
 
     @Override
-    public void onSockJSServerInitiatedClose(final SockJSSession session) {
+    public void onSockJSServerInitiatedClose(final SockJsSession session) {
         final ChannelHandlerContext context = session.context();
         if (context != null) { //could be null if the request is aborted, for example due to missing callback.
             logger.debug("Will close session context " + session.context());
@@ -78,7 +78,7 @@ class StreamingSessionState extends AbstractTimersSessionState {
     }
 
     @Override
-    public boolean isInUse(final SockJSSession session) {
+    public boolean isInUse(final SockJsSession session) {
         return session.context().channel().isActive();
     }
 

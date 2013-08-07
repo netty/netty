@@ -40,7 +40,7 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.ServerCookieEncoder;
-import io.netty.handler.codec.sockjs.Config;
+import io.netty.handler.codec.sockjs.SockJsConfig;
 import io.netty.util.CharsetUtil;
 
 import java.util.Set;
@@ -126,14 +126,14 @@ public final class Transports {
 
     /**
      * Sets the following Http response headers
-     * - SET_COOKIE  if {@link Config#areCookiesNeeded()} is true
+     * - SET_COOKIE  if {@link SockJsConfig#areCookiesNeeded()} is true
      * - CACHE_CONTROL to {@link Transports#setNoCacheHeaders(HttpResponse)}
      * - CORS Headers to {@link Transports#setCORSHeaders(HttpResponse)}
      *
      * @param response the Http Response.
      * @param config the SockJS configuration.
      */
-    public static void setDefaultHeaders(final HttpResponse response, final Config config) {
+    public static void setDefaultHeaders(final HttpResponse response, final SockJsConfig config) {
         if (config.areCookiesNeeded()) {
             response.headers().set(SET_COOKIE, Transports.DEFAULT_COOKIE);
         }
@@ -143,14 +143,15 @@ public final class Transports {
 
     /**
      * Sets the following Http response headers
-     * - SET_COOKIE  if {@link Config#areCookiesNeeded()} is true, and uses the requests cookie.
+     * - SET_COOKIE  if {@link SockJsConfig#areCookiesNeeded()} is true, and uses the requests cookie.
      * - CACHE_CONTROL to {@link Transports#setNoCacheHeaders(HttpResponse)}
      * - CORS Headers to {@link Transports#setCORSHeaders(HttpResponse)}
      *
      * @param response the Http Response.
      * @param config the SockJS configuration.
      */
-    public static void setDefaultHeaders(final FullHttpResponse response, final Config config, HttpRequest request) {
+    public static void setDefaultHeaders(final FullHttpResponse response, final SockJsConfig config,
+            final HttpRequest request) {
         if (config.areCookiesNeeded()) {
             response.headers().set(SET_COOKIE, encodeSessionIdCookie(request));
         }
@@ -159,13 +160,14 @@ public final class Transports {
     }
 
     /**
-     * Sets the Http response header SET_COOKIE if {@link Config#areCookiesNeeded()} is true.
+     * Sets the Http response header SET_COOKIE if {@link SockJsConfig#areCookiesNeeded()} is true.
      *
      * @param response the Http Response.
      * @param config the SockJS configuration.
      * @param request the Http request which will be inspected for the existence of a JSESSIONID cookie.
      */
-    public static void setSessionIdCookie(final FullHttpResponse response, final Config config, HttpRequest request) {
+    public static void setSessionIdCookie(final FullHttpResponse response, final SockJsConfig config,
+            final HttpRequest request) {
         if (config.areCookiesNeeded()) {
             response.headers().set(SET_COOKIE, encodeSessionIdCookie(request));
         }

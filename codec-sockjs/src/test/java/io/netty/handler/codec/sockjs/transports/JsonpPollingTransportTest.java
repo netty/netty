@@ -17,14 +17,14 @@ package io.netty.handler.codec.sockjs.transports;
 
 import static io.netty.handler.codec.http.HttpMethod.GET;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static io.netty.handler.codec.sockjs.SockJSTestUtil.verifyNoCacheHeaders;
+import static io.netty.handler.codec.sockjs.SockJsTestUtil.verifyNoCacheHeaders;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.sockjs.Config;
+import io.netty.handler.codec.sockjs.SockJsConfig;
 import io.netty.handler.codec.sockjs.protocol.CloseFrame;
 import io.netty.handler.codec.sockjs.protocol.Frame;
 import io.netty.handler.codec.sockjs.protocol.HeartbeatFrame;
@@ -82,7 +82,7 @@ public class JsonpPollingTransportTest {
     private FullHttpResponse writeFrame(final Frame frame, final boolean withCallback) {
         final String queryUrl = withCallback ? "/jsonp?c=callback" : "/jsonp";
         final DefaultFullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, queryUrl);
-        final Config config = Config.prefix(queryUrl).cookiesNeeded().build();
+        final SockJsConfig config = SockJsConfig.prefix(queryUrl).cookiesNeeded().build();
         final JsonpPollingTransport jsonpPollingOutbound = new JsonpPollingTransport(config, request);
         final EmbeddedChannel ch = new EmbeddedChannel(jsonpPollingOutbound);
         ch.writeInbound(request);

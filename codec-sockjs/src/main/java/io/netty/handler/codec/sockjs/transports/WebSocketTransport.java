@@ -35,11 +35,11 @@ import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
-import io.netty.handler.codec.sockjs.Config;
+import io.netty.handler.codec.sockjs.SockJsConfig;
 import io.netty.handler.codec.sockjs.handlers.CorsInboundHandler;
 import io.netty.handler.codec.sockjs.handlers.CorsOutboundHandler;
 import io.netty.handler.codec.sockjs.handlers.SessionHandler.Events;
-import io.netty.handler.codec.sockjs.handlers.SockJSHandler;
+import io.netty.handler.codec.sockjs.handlers.SockJsHandler;
 import io.netty.handler.codec.sockjs.util.JsonUtil;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.logging.InternalLogger;
@@ -55,11 +55,11 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketTransport.class);
     private static final AttributeKey<HttpRequest> REQUEST_KEY = new AttributeKey<HttpRequest>("request.key");
-    private final Config config;
+    private final SockJsConfig config;
     private WebSocketServerHandshaker handshaker;
     private boolean passMessage = true;
 
-    public WebSocketTransport(final Config config) {
+    public WebSocketTransport(final SockJsConfig config) {
         this.config = config;
     }
 
@@ -122,7 +122,7 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
                 public void operationComplete(final ChannelFuture future) throws Exception {
                     if (future.isSuccess()) {
                         final ChannelPipeline pipeline = future.channel().pipeline();
-                        pipeline.remove(SockJSHandler.class);
+                        pipeline.remove(SockJsHandler.class);
                         pipeline.remove(CorsInboundHandler.class);
                         pipeline.remove(CorsOutboundHandler.class);
                         pipeline.replace(WebSocketTransport.class, "websocket-ha-proxy",
@@ -147,7 +147,7 @@ public class WebSocketTransport extends SimpleChannelInboundHandler<Object> {
                 @Override
                 public void operationComplete(final ChannelFuture future) throws Exception {
                     if (future.isSuccess()) {
-                        ctx.pipeline().remove(SockJSHandler.class);
+                        ctx.pipeline().remove(SockJsHandler.class);
                         ctx.pipeline().remove(CorsInboundHandler.class);
                         ctx.pipeline().remove(CorsOutboundHandler.class);
                         ctx.pipeline().addLast(new WebSocketSendHandler());

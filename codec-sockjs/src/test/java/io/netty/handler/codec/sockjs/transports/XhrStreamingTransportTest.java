@@ -17,8 +17,8 @@ package io.netty.handler.codec.sockjs.transports;
 
 import static io.netty.handler.codec.http.HttpMethod.GET;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static io.netty.handler.codec.sockjs.SockJSTestUtil.assertCORSHeaders;
-import static io.netty.handler.codec.sockjs.SockJSTestUtil.verifyNoCacheHeaders;
+import static io.netty.handler.codec.sockjs.SockJsTestUtil.assertCORSHeaders;
+import static io.netty.handler.codec.sockjs.SockJsTestUtil.verifyNoCacheHeaders;
 import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 import static io.netty.handler.codec.http.HttpHeaders.Values.*;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -31,7 +31,7 @@ import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.sockjs.Config;
+import io.netty.handler.codec.sockjs.SockJsConfig;
 import io.netty.handler.codec.sockjs.protocol.OpenFrame;
 import io.netty.handler.codec.sockjs.protocol.PreludeFrame;
 import io.netty.util.CharsetUtil;
@@ -62,10 +62,10 @@ public class XhrStreamingTransportTest {
     }
 
     private EmbeddedChannel newStreamingChannel() {
-        return newStreamingChannel(Config.prefix("/test").cookiesNeeded().build());
+        return newStreamingChannel(SockJsConfig.prefix("/test").cookiesNeeded().build());
     }
 
-    private EmbeddedChannel newStreamingChannel(final Config config) {
+    private EmbeddedChannel newStreamingChannel(final SockJsConfig config) {
         final HttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/xhr-streaming");
         final XhrStreamingTransport transport = new XhrStreamingTransport(config, request);
         final EmbeddedChannel ch = new EmbeddedChannel(transport);

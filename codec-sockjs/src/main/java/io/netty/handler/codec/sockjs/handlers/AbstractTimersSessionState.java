@@ -35,22 +35,22 @@ abstract class AbstractTimersSessionState implements SessionState {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractTimersSessionState.class);
 
-    private final ConcurrentMap<String, SockJSSession> sessions;
+    private final ConcurrentMap<String, SockJsSession> sessions;
     private ScheduledFuture<?> heartbeatFuture;
     private ScheduledFuture<?> sessionTimer;
 
-    public AbstractTimersSessionState(final ConcurrentMap<String, SockJSSession> sessions) {
+    public AbstractTimersSessionState(final ConcurrentMap<String, SockJsSession> sessions) {
         ArgumentUtil.checkNotNull(sessions, "sessions");
         this.sessions = sessions;
     }
 
     @Override
-    public void onConnect(final SockJSSession session, final ChannelHandlerContext ctx) {
+    public void onConnect(final SockJsSession session, final ChannelHandlerContext ctx) {
         startSessionTimer(ctx, session);
         startHeartbeatTimer(ctx, session);
     }
 
-    private void startSessionTimer(final ChannelHandlerContext ctx, final SockJSSession session) {
+    private void startSessionTimer(final ChannelHandlerContext ctx, final SockJsSession session) {
         if (sessionTimer == null) {
             sessionTimer = ctx.executor().scheduleAtFixedRate(new Runnable() {
                 @Override
@@ -60,7 +60,7 @@ abstract class AbstractTimersSessionState implements SessionState {
                         return;
                     }
                     if (session.timestamp() + session.config().sessionTimeout() < now) {
-                        final SockJSSession removed = sessions.remove(session.sessionId());
+                        final SockJsSession removed = sessions.remove(session.sessionId());
                         session.context().close();
                         sessionTimer.cancel(true);
                         heartbeatFuture.cancel(true);
@@ -71,7 +71,7 @@ abstract class AbstractTimersSessionState implements SessionState {
         }
     }
 
-    private void startHeartbeatTimer(final ChannelHandlerContext ctx, final SockJSSession session) {
+    private void startHeartbeatTimer(final ChannelHandlerContext ctx, final SockJsSession session) {
         heartbeatFuture = ctx.executor().scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {

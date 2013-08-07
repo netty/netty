@@ -31,7 +31,7 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
-import io.netty.handler.codec.sockjs.Config;
+import io.netty.handler.codec.sockjs.SockJsConfig;
 import io.netty.handler.codec.sockjs.protocol.CloseFrame;
 import io.netty.handler.codec.sockjs.protocol.Frame;
 import io.netty.handler.codec.sockjs.protocol.PreludeFrame;
@@ -56,16 +56,16 @@ public class XhrStreamingTransport extends ChannelOutboundHandlerAdapter {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(XhrStreamingTransport.class);
     private final AtomicBoolean headerSent = new AtomicBoolean(false);
     private final AtomicInteger bytesSent = new AtomicInteger(0);
-    private final Config config;
+    private final SockJsConfig config;
     private final HttpRequest request;
 
     /**
      * Sole constructor.
      *
-     * @param config the SockJS {@link Config} instance.
+     * @param config the SockJS {@link SockJsConfig} instance.
      * @param request the {@link FullHttpRequest} which can be used get information like the HTTP version.
      */
-    public XhrStreamingTransport(final Config config, final HttpRequest request) {
+    public XhrStreamingTransport(final SockJsConfig config, final HttpRequest request) {
         this.config = config;
         this.request = request;
     }

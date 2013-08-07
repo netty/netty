@@ -16,28 +16,28 @@
 package io.netty.handler.codec.sockjs.handlers;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.sockjs.Config;
-import io.netty.handler.codec.sockjs.SessionContext;
-import io.netty.handler.codec.sockjs.SockJSService;
+import io.netty.handler.codec.sockjs.SockJsConfig;
+import io.netty.handler.codec.sockjs.SockJsSessionContext;
+import io.netty.handler.codec.sockjs.SockJsService;
 
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-class SockJSSession {
+class SockJsSession {
 
     enum States { CONNECTING, OPEN, CLOSED, INTERRUPTED }
 
     private States state = States.CONNECTING;
     private final String sessionId;
-    private final SockJSService service;
+    private final SockJsService service;
     private final LinkedList<String> messages = new LinkedList<String>();
     private final AtomicLong timestamp = new AtomicLong();
     private final AtomicBoolean inuse = new AtomicBoolean();
     private ChannelHandlerContext ctx;
 
-    public SockJSSession(final String sessionId, final SockJSService service) {
+    public SockJsSession(final String sessionId, final SockJsService service) {
         this.sessionId = sessionId;
         this.service = service;
     }
@@ -76,7 +76,7 @@ class SockJSSession {
         inuse.set(false);
     }
 
-    public Config config() {
+    public SockJsConfig config() {
         return service.config();
     }
 
@@ -89,7 +89,7 @@ class SockJSSession {
         updateTimestamp();
     }
 
-    public synchronized void onOpen(final SessionContext session) {
+    public synchronized void onOpen(final SockJsSessionContext session) {
         setState(States.OPEN);
         service.onOpen(session);
         updateTimestamp();

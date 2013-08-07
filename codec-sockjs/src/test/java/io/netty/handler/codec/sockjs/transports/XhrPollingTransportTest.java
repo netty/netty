@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.sockjs.transports;
 
-import static io.netty.handler.codec.sockjs.SockJSTestUtil.verifyDefaultResponseHeaders;
+import static io.netty.handler.codec.sockjs.SockJsTestUtil.verifyDefaultResponseHeaders;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
@@ -27,7 +27,7 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.sockjs.Config;
+import io.netty.handler.codec.sockjs.SockJsConfig;
 import io.netty.handler.codec.sockjs.protocol.OpenFrame;
 import io.netty.util.CharsetUtil;
 
@@ -42,12 +42,12 @@ public class XhrPollingTransportTest {
 
     @Test (expected = NullPointerException.class)
     public void constructWithNullRequest() {
-        new XhrPollingTransport(Config.prefix("/test").build(), null);
+        new XhrPollingTransport(SockJsConfig.prefix("/test").build(), null);
     }
 
     @Test
     public void flush() {
-        final Config config = Config.prefix("/test").cookiesNeeded().build();
+        final SockJsConfig config = SockJsConfig.prefix("/test").cookiesNeeded().build();
         final XhrPollingTransport transport = new XhrPollingTransport(config, request("", HttpVersion.HTTP_1_1));
         final EmbeddedChannel channel = new EmbeddedChannel(transport);
         channel.writeOutbound(new OpenFrame());

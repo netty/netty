@@ -22,17 +22,17 @@ import io.netty.handler.codec.sockjs.transports.Transports;
 
 import org.junit.Test;
 
-public class SockJSHandlerTest {
+public class SockJsHandlerTest {
 
     @Test
     public void nonMatch() {
-        final SockJSHandler.PathParams sessionPath = SockJSHandler.matches("/xhr_send");
+        final SockJsHandler.PathParams sessionPath = SockJsHandler.matches("/xhr_send");
         assertThat(sessionPath.matches(), is(false));
     }
 
     @Test
     public void matches() {
-        final SockJSHandler.PathParams sessionPath = SockJSHandler.matches("/000/123/xhr_send");
+        final SockJsHandler.PathParams sessionPath = SockJsHandler.matches("/000/123/xhr_send");
         assertThat(sessionPath.matches(), is(true));
         assertThat(sessionPath.serverId(), equalTo("000"));
         assertThat(sessionPath.sessionId(), equalTo("123"));

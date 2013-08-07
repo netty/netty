@@ -25,7 +25,7 @@ import io.netty.handler.codec.sockjs.util.ArgumentUtil;
 /**
  * Configuration for a SockJS Session.
  */
-public final class Config {
+public final class SockJsConfig {
 
     private final String prefix;
     private final boolean websocketEnabled;
@@ -38,7 +38,7 @@ public final class Config {
     private final int maxStreamingBytesSize;
     private final boolean tls;
 
-    private Config(final Builder builder) {
+    private SockJsConfig(final Builder builder) {
         prefix = builder.prefix;
         websocketEnabled = builder.websocketEnabled;
         websocketProtocols = builder.websocketProtocols;
@@ -199,7 +199,7 @@ public final class Config {
      */
     public static Builder prefix(final String prefix) {
         ArgumentUtil.checkNotNullAndNotEmpty(prefix, "prefix");
-        return new Config.Builder(prefix);
+        return new SockJsConfig.Builder(prefix);
     }
 
     public static class Builder {
@@ -328,10 +328,10 @@ public final class Config {
         /**
          * Builds Config with the previously set values.
          *
-         * @return {@link Config} the configuration for the SockJS service.
+         * @return {@link SockJsConfig} the configuration for the SockJS service.
          */
-        public Config build() {
-            return new Config(this);
+        public SockJsConfig build() {
+            return new SockJsConfig(this);
         }
     }
 

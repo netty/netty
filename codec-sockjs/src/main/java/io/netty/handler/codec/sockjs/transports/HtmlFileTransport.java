@@ -38,7 +38,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.QueryStringDecoder;
-import io.netty.handler.codec.sockjs.Config;
+import io.netty.handler.codec.sockjs.SockJsConfig;
 import io.netty.handler.codec.sockjs.handlers.SessionHandler.Events;
 import io.netty.handler.codec.sockjs.protocol.Frame;
 import io.netty.util.CharsetUtil;
@@ -84,13 +84,13 @@ public class HtmlFileTransport extends ChannelDuplexHandler {
     private static final ByteBuf POSTFIX = unreleasableBuffer(copiedBuffer("\");\n</script>\r\n", CharsetUtil.UTF_8));
     private static final ByteBuf END_HEADER = unreleasableBuffer(copiedBuffer(new byte[] {CR, LF, CR, LF}));
 
-    private final Config config;
+    private final SockJsConfig config;
     private final HttpRequest request;
     private final AtomicBoolean headerSent = new AtomicBoolean(false);
     private final AtomicInteger bytesSent = new AtomicInteger(0);
     private String callback;
 
-    public HtmlFileTransport(final Config config, final HttpRequest request) {
+    public HtmlFileTransport(final SockJsConfig config, final HttpRequest request) {
         this.config = config;
         this.request = request;
     }

@@ -23,17 +23,17 @@ import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.sockjs.handlers.CorsInboundHandler;
 import io.netty.handler.codec.sockjs.handlers.CorsOutboundHandler;
-import io.netty.handler.codec.sockjs.handlers.SockJSHandler;
+import io.netty.handler.codec.sockjs.handlers.SockJsHandler;
 
 /**
  * {@link ChannelInitializer} for Sockjs.
  *
  */
-public class SockJSChannelInitializer extends ChannelInitializer<Channel> {
+public class SockJsChannelInitializer extends ChannelInitializer<Channel> {
 
-    private final SockJSServiceFactory[] services;
+    private final SockJsServiceFactory[] services;
 
-    public SockJSChannelInitializer(final SockJSServiceFactory... services) {
+    public SockJsChannelInitializer(final SockJsServiceFactory... services) {
         this.services = services;
     }
 
@@ -44,7 +44,7 @@ public class SockJSChannelInitializer extends ChannelInitializer<Channel> {
         pipeline.addLast("chunkAggregator", new HttpObjectAggregator(130 * 1024));
         pipeline.addLast("encoder", new HttpResponseEncoder());
         pipeline.addLast("corsInbound", new CorsInboundHandler());
-        pipeline.addLast("sockjs", new SockJSHandler(services));
+        pipeline.addLast("sockjs", new SockJsHandler(services));
         pipeline.addLast("corsOutbound", new CorsOutboundHandler());
     }
 

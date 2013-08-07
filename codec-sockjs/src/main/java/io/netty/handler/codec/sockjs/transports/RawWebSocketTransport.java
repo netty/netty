@@ -34,12 +34,12 @@ import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
-import io.netty.handler.codec.sockjs.Config;
-import io.netty.handler.codec.sockjs.SessionContext;
-import io.netty.handler.codec.sockjs.SockJSService;
+import io.netty.handler.codec.sockjs.SockJsConfig;
+import io.netty.handler.codec.sockjs.SockJsSessionContext;
+import io.netty.handler.codec.sockjs.SockJsService;
 import io.netty.handler.codec.sockjs.handlers.CorsInboundHandler;
 import io.netty.handler.codec.sockjs.handlers.CorsOutboundHandler;
-import io.netty.handler.codec.sockjs.handlers.SockJSHandler;
+import io.netty.handler.codec.sockjs.handlers.SockJsHandler;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -51,11 +51,11 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 public class RawWebSocketTransport extends SimpleChannelInboundHandler<Object> {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(RawWebSocketTransport.class);
     private static final AttributeKey<HttpRequest> REQUEST_KEY = new AttributeKey<HttpRequest>("raw.ws.request.key");
-    private final Config config;
-    private final SockJSService service;
+    private final SockJsConfig config;
+    private final SockJsService service;
     private WebSocketServerHandshaker handshaker;
 
-    public RawWebSocketTransport(final Config config, final SockJSService service) {
+    public RawWebSocketTransport(final SockJsConfig config, final SockJsService service) {
         this.config = config;
         this.service = service;
     }
@@ -115,11 +115,11 @@ public class RawWebSocketTransport extends SimpleChannelInboundHandler<Object> {
                 @Override
                 public void operationComplete(final ChannelFuture future) throws Exception {
                     if (future.isSuccess()) {
-                        ctx.pipeline().remove(SockJSHandler.class);
+                        ctx.pipeline().remove(SockJsHandler.class);
                         ctx.pipeline().remove(CorsInboundHandler.class);
                         ctx.pipeline().remove(CorsOutboundHandler.class);
                         ctx.pipeline().addLast(new RawWebSocketSendHandler());
-                        service.onOpen(new SessionContext() {
+                        service.onOpen(new SockJsSessionContext() {
                             @Override
                             public void send(String message) {
                                 ctx.writeAndFlush(new TextWebSocketFrame(message));

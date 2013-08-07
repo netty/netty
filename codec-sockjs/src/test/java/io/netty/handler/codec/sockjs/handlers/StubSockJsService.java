@@ -15,29 +15,29 @@
  */
 package io.netty.handler.codec.sockjs.handlers;
 
-import io.netty.handler.codec.sockjs.Config;
-import io.netty.handler.codec.sockjs.SessionContext;
-import io.netty.handler.codec.sockjs.SockJSService;
+import io.netty.handler.codec.sockjs.SockJsConfig;
+import io.netty.handler.codec.sockjs.SockJsSessionContext;
+import io.netty.handler.codec.sockjs.SockJsService;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-public class StubSockJSService implements SockJSService {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(StubSockJSService.class);
+public class StubSockJsService implements SockJsService {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(StubSockJsService.class);
 
-    private SessionContext session;
-    private final Config config;
+    private SockJsSessionContext session;
+    private final SockJsConfig config;
 
-    public StubSockJSService(final Config config) {
+    public StubSockJsService(final SockJsConfig config) {
         this.config = config;
     }
 
     @Override
-    public Config config() {
+    public SockJsConfig config() {
         return config;
     }
 
     @Override
-    public void onOpen(SessionContext session) {
+    public void onOpen(SockJsSessionContext session) {
         logger.info("onOpen : " + session);
         this.session = session;
     }

@@ -33,7 +33,7 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.QueryStringDecoder;
-import io.netty.handler.codec.sockjs.SockJSServiceFactory;
+import io.netty.handler.codec.sockjs.SockJsServiceFactory;
 import io.netty.handler.codec.sockjs.protocol.Greeting;
 import io.netty.handler.codec.sockjs.protocol.Iframe;
 import io.netty.handler.codec.sockjs.protocol.Info;
@@ -66,11 +66,11 @@ import java.util.regex.Pattern;
  * different transport protocols that SockJS support. Once this has been done this
  * handler will be removed from the channel pipeline.
  */
-public class SockJSHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
+public class SockJsHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(SockJSHandler.class);
-    private final Map<String, SockJSServiceFactory> factories = new LinkedHashMap<String, SockJSServiceFactory>();
-    private static final ConcurrentMap<String, SockJSSession> sessions = new ConcurrentHashMap<String, SockJSSession>();
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(SockJsHandler.class);
+    private final Map<String, SockJsServiceFactory> factories = new LinkedHashMap<String, SockJsServiceFactory>();
+    private static final ConcurrentMap<String, SockJsSession> sessions = new ConcurrentHashMap<String, SockJsSession>();
     private static final PathParams NON_SUPPORTED_PATH = new NonSupportedPath();
     private static final Pattern SERVER_SESSION_PATTERN = Pattern.compile("^/([^/.]+)/([^/.]+)/([^/.]+)");
 
@@ -78,10 +78,10 @@ public class SockJSHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
      * Sole constructor which takes one or more {@code SockJSServiceFactory}. These factories will
      * later be used by the server to create the SockJS services that will be exposed by this server
      *
-     * @param factories one or more {@link SockJSServiceFactory}s.
+     * @param factories one or more {@link SockJsServiceFactory}s.
      */
-    public SockJSHandler(final SockJSServiceFactory... factories) {
-        for (SockJSServiceFactory factory : factories) {
+    public SockJsHandler(final SockJsServiceFactory... factories) {
+        for (SockJsServiceFactory factory : factories) {
             this.factories.put(factory.config().prefix(), factory);
         }
     }
@@ -89,7 +89,7 @@ public class SockJSHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     @Override
     public void channelRead0(final ChannelHandlerContext ctx, final FullHttpRequest request) throws Exception {
         final String path = new QueryStringDecoder(request.getUri()).path();
-        for (SockJSServiceFactory factory : factories.values()) {
+        for (SockJsServiceFactory factory : factories.values()) {
             if (path.startsWith(factory.config().prefix())) {
                 handleService(factory, request, ctx);
                 return;
@@ -98,7 +98,7 @@ public class SockJSHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         writeNotFoundResponse(request, ctx);
     }
 
-    private void handleService(final SockJSServiceFactory factory,
+    private void handleService(final SockJsServiceFactory factory,
             final FullHttpRequest request,
             final ChannelHandlerContext ctx) throws Exception {
         logger.debug("RequestUri : [" + request.getUri() + "]");
@@ -125,7 +125,7 @@ public class SockJSHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
 
     private void handleSession(final ChannelHandlerContext ctx,
             final FullHttpRequest request,
-            final SockJSServiceFactory factory,
+            final SockJsServiceFactory factory,
             final PathParams pathParams) throws Exception {
         switch (pathParams.transport()) {
         case XHR:
@@ -160,7 +160,7 @@ public class SockJSHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
             break;
         case WEBSOCKET:
             addTransportHandler(new WebSocketTransport(factory.config()), ctx);
-            addSessionHandler(new WebSocketSessionState(), new SockJSSession(randomUUID().toString(), factory.create()),
+            addSessionHandler(new WebSocketSessionState(), new SockJsSession(randomUUID().toString(), factory.create()),
                     ctx);
             break;
         }
@@ -171,7 +171,7 @@ public class SockJSHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         ctx.pipeline().addLast(transportHandler);
     }
 
-    private void addSessionHandler(final SessionState sessionState, final SockJSSession session,
+    private void addSessionHandler(final SessionState sessionState, final SockJsSession session,
             final ChannelHandlerContext ctx) {
         ctx.pipeline().addLast(new SessionHandler(sessionState, session));
     }
@@ -182,10 +182,10 @@ public class SockJSHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         }
     }
 
-    private SockJSSession getSession(final SockJSServiceFactory factory, final String sessionId) {
-        SockJSSession session = sessions.get(sessionId);
+    private SockJsSession getSession(final SockJsServiceFactory factory, final String sessionId) {
+        SockJsSession session = sessions.get(sessionId);
         if (session == null) {
-            final SockJSSession newSession = new SockJSSession(sessionId, factory.create());
+            final SockJsSession newSession = new SockJsSession(sessionId, factory.create());
             session = sessions.putIfAbsent(sessionId, newSession);
             if (session == null) {
                 session = newSession;
