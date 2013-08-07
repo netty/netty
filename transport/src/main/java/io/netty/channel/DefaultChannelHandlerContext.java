@@ -632,15 +632,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (executor.inEventLoop()) {
             next.invokeWrite(msg, promise);
         } else {
-            final int size = channel.estimatorHandle().size(msg);
-            if (size > 0) {
-                ChannelOutboundBuffer buffer = channel.unsafe().outboundBuffer();
-                // Check for null as it may be set to null if the channel is closed already
-                if (buffer != null) {
-                    buffer.incrementPendingOutboundBytes(size);
-                }
-            }
-            executor.execute(WriteTask.newInstance(next, msg, size, false, promise));
+            submitWriteTask(next, executor, msg, false, promise);
         }
 
         return promise;
@@ -697,18 +689,23 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
             next.invokeWrite(msg, promise);
             next.invokeFlush();
         } else {
-            final int size = channel.estimatorHandle().size(msg);
-            if (size > 0) {
-                ChannelOutboundBuffer buffer = channel.unsafe().outboundBuffer();
-                // Check for null as it may be set to null if the channel is closed already
-                if (buffer != null) {
-                    buffer.incrementPendingOutboundBytes(size);
-                }
-            }
-            executor.execute(WriteTask.newInstance(next, msg, size, true, promise));
+            submitWriteTask(next, executor, msg, true, promise);
         }
 
         return promise;
+    }
+
+    private void submitWriteTask(DefaultChannelHandlerContext next, EventExecutor executor,
+                                 Object msg, boolean flush, ChannelPromise promise) {
+        final int size = channel.estimatorHandle().size(msg);
+        if (size > 0) {
+            ChannelOutboundBuffer buffer = channel.unsafe().outboundBuffer();
+            // Check for null as it may be set to null if the channel is closed already
+            if (buffer != null) {
+                buffer.incrementPendingOutboundBytes(size);
+            }
+        }
+        executor.execute(WriteTask.newInstance(next, msg, size, flush, promise));
     }
 
     @Override
