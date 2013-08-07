@@ -58,7 +58,7 @@ public class NettySockJsServer {
     }
 
     private static SockJsServiceFactory echoService() {
-        final SockJsConfig config = SockJsConfig.prefix("/echo")
+        final SockJsConfig config = SockJsConfig.withPrefix("/echo")
                 .cookiesNeeded()
                 .heartbeatInterval(25000)
                 .sessionTimeout(5000)
@@ -73,7 +73,7 @@ public class NettySockJsServer {
     }
 
     private static SockJsServiceFactory wsDisabledService() {
-        final SockJsConfig config = SockJsConfig.prefix("/disabled_websocket_echo").disableWebsocket().build();
+        final SockJsConfig config = SockJsConfig.withPrefix("/disabled_websocket_echo").disableWebsocket().build();
         return new AbstractSockJsServiceFactory(config) {
             @Override
             public SockJsService create() {
@@ -83,7 +83,7 @@ public class NettySockJsServer {
     }
 
     private static SockJsServiceFactory closeService() {
-        final SockJsConfig config = SockJsConfig.prefix("/close").build();
+        final SockJsConfig config = SockJsConfig.withPrefix("/close").build();
         return new AbstractSockJsServiceFactory(config) {
             @Override
             public SockJsService create() {
@@ -93,7 +93,7 @@ public class NettySockJsServer {
     }
 
     private static SockJsServiceFactory cookieService() {
-        final SockJsConfig config = SockJsConfig.prefix("/cookie_needed_echo").cookiesNeeded().build();
+        final SockJsConfig config = SockJsConfig.withPrefix("/cookie_needed_echo").cookiesNeeded().build();
         return new AbstractSockJsServiceFactory(config) {
             @Override
             public SockJsService create() {

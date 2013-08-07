@@ -52,7 +52,7 @@ public class EventSourceTransportTest {
     }
 
     private EmbeddedChannel newEventSourceChannel() {
-        return newStreamingChannel(SockJsConfig.prefix("/test").cookiesNeeded().build());
+        return newStreamingChannel(SockJsConfig.withPrefix("/test").cookiesNeeded().build());
     }
 
     private EmbeddedChannel newStreamingChannel(final SockJsConfig config) {

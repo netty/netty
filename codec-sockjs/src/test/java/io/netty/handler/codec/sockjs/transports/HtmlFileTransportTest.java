@@ -81,7 +81,7 @@ public class HtmlFileTransportTest {
     }
 
     private EmbeddedChannel newHtmlFileChannel(final String path) {
-        return newStreamingChannel(SockJsConfig.prefix("/test").cookiesNeeded().build(), path);
+        return newStreamingChannel(SockJsConfig.withPrefix("/test").cookiesNeeded().build(), path);
     }
 
     private EmbeddedChannel newStreamingChannel(final SockJsConfig config, final String path) {

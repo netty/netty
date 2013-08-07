@@ -257,7 +257,7 @@ public class SockJsProtocolTest {
      */
     @Test
     public void infoTestDisabledWebsocket() throws Exception {
-        final SockJsServiceFactory factory = echoService(SockJsConfig.prefix("echo").disableWebsocket().build());
+        final SockJsServiceFactory factory = echoService(SockJsConfig.withPrefix("echo").disableWebsocket().build());
         final EmbeddedChannel ch = channelForMockService(factory.config());
         ch.writeInbound(httpRequest(factory.config().prefix() + "/info"));
         final FullHttpResponse response = (FullHttpResponse) ch.readOutbound();
@@ -432,7 +432,7 @@ public class SockJsProtocolTest {
     public void websocketHixie76TestClose() throws Exception {
         final String serviceName = "/close";
         final String sessionUrl = serviceName + "/222/" + UUID.randomUUID().toString();
-        final SockJsConfig config = SockJsConfig.prefix(serviceName).build();
+        final SockJsConfig config = SockJsConfig.withPrefix(serviceName).build();
         final SockJsServiceFactory service = closeService(config);
         final EmbeddedChannel ch = wsChannelForService(service);
 
@@ -583,7 +583,7 @@ public class SockJsProtocolTest {
     public void websocketHixie76TestBrokenJSON() throws Exception {
         final String serviceName = "/close";
         final String sessionUrl = serviceName + "/222/" + UUID.randomUUID().toString();
-        final SockJsConfig config = SockJsConfig.prefix(serviceName).build();
+        final SockJsConfig config = SockJsConfig.withPrefix(serviceName).build();
         final EmbeddedChannel ch = wsChannelForService(echoService(config));
 
         final FullHttpRequest request = websocketUpgradeRequest(sessionUrl + "/websocket", WebSocketVersion.V00);
@@ -831,7 +831,7 @@ public class SockJsProtocolTest {
      */
     @Test
     public void xhrStreamingTestResponseLimit() throws Exception {
-        final SockJsConfig config = SockJsConfig.prefix("/echo").maxStreamingBytesSize(4096).build();
+        final SockJsConfig config = SockJsConfig.withPrefix("/echo").maxStreamingBytesSize(4096).build();
         final SockJsServiceFactory echoFactory = echoService(config);
         final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID().toString();
         final EmbeddedChannel ch = channelForService(echoFactory);
@@ -869,7 +869,7 @@ public class SockJsProtocolTest {
      */
     @Test
     public void eventSourceTestResponseLimit() throws Exception {
-        final SockJsConfig config = SockJsConfig.prefix("/echo").maxStreamingBytesSize(4096).build();
+        final SockJsConfig config = SockJsConfig.withPrefix("/echo").maxStreamingBytesSize(4096).build();
         final SockJsServiceFactory echoFactory = echoService(config);
         final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID().toString();
         final EmbeddedChannel ch = channelForService(echoFactory);
@@ -901,7 +901,7 @@ public class SockJsProtocolTest {
      */
     @Test
     public void eventSourceTestTransport() throws Exception {
-        final SockJsConfig config = SockJsConfig.prefix("/echo").maxStreamingBytesSize(4096).build();
+        final SockJsConfig config = SockJsConfig.withPrefix("/echo").maxStreamingBytesSize(4096).build();
         final SockJsServiceFactory echoFactory = echoService(config);
         final String sessionUrl = echoFactory.config().prefix() + "/222/" + UUID.randomUUID().toString();
         final EmbeddedChannel ch = channelForService(echoFactory);
@@ -934,7 +934,7 @@ public class SockJsProtocolTest {
     public void htmlFileTestTransport() throws Exception {
         final String serviceName = "/echo";
         final String sessionUrl = serviceName + "/222/" + UUID.randomUUID().toString();
-        final SockJsConfig config = SockJsConfig.prefix(serviceName).maxStreamingBytesSize(4096).build();
+        final SockJsConfig config = SockJsConfig.withPrefix(serviceName).maxStreamingBytesSize(4096).build();
         final SockJsServiceFactory service = echoService(config);
         final EmbeddedChannel ch = channelForService(service);
         removeLastInboundMessageHandlers(ch);
@@ -967,7 +967,7 @@ public class SockJsProtocolTest {
     public void htmlFileTestNoCallback() throws Exception {
         final String serviceName = "/echo";
         final String sessionUrl = serviceName + "/222/" + UUID.randomUUID().toString();
-        final SockJsConfig config = SockJsConfig.prefix(serviceName).maxStreamingBytesSize(4096).build();
+        final SockJsConfig config = SockJsConfig.withPrefix(serviceName).maxStreamingBytesSize(4096).build();
         final SockJsServiceFactory service = echoService(config);
         final EmbeddedChannel ch = channelForService(service);
         removeLastInboundMessageHandlers(ch);
@@ -986,7 +986,7 @@ public class SockJsProtocolTest {
     public void htmlFileTestResponseLimit() throws Exception {
         final String serviceName = "/echo";
         final String sessionUrl = serviceName + "/222/" + UUID.randomUUID().toString();
-        final SockJsConfig config = SockJsConfig.prefix(serviceName).maxStreamingBytesSize(4096).build();
+        final SockJsConfig config = SockJsConfig.withPrefix(serviceName).maxStreamingBytesSize(4096).build();
         final SockJsServiceFactory service = echoService(config);
         final EmbeddedChannel ch = channelForService(service);
         removeLastInboundMessageHandlers(ch);
@@ -1125,7 +1125,7 @@ public class SockJsProtocolTest {
      */
     @Test
     public void jsessionIdCookieTestBasic() throws Exception {
-        final SockJsConfig config = SockJsConfig.prefix("/cookie_needed_echo").cookiesNeeded().build();
+        final SockJsConfig config = SockJsConfig.withPrefix("/cookie_needed_echo").cookiesNeeded().build();
         SockJsServiceFactory serviceFactory = echoService(config);
         final FullHttpResponse response = infoRequest(config.prefix(), serviceFactory);
         assertThat(response.getStatus(), is(HttpResponseStatus.OK));
@@ -1141,7 +1141,7 @@ public class SockJsProtocolTest {
         assertSetCookie(Transports.Types.XHR.path());
 
         final String serviceName = "/cookie_needed_echo";
-        final SockJsConfig config = SockJsConfig.prefix(serviceName).cookiesNeeded().build();
+        final SockJsConfig config = SockJsConfig.withPrefix(serviceName).cookiesNeeded().build();
         final EmbeddedChannel ch = channelForService(echoService(config));
         removeLastInboundMessageHandlers(ch);
         final String sessionUrl = serviceName + "/abc/" + UUID.randomUUID().toString();
@@ -1549,7 +1549,7 @@ public class SockJsProtocolTest {
 
     @Test
     public void prefixNotFound() throws Exception {
-        final SockJsConfig config = SockJsConfig.prefix("/simplepush").cookiesNeeded().build();
+        final SockJsConfig config = SockJsConfig.withPrefix("/simplepush").cookiesNeeded().build();
         final EmbeddedChannel ch = channelForMockService(config);
         ch.writeInbound(httpRequest("/missing"));
         final FullHttpResponse response = (FullHttpResponse) ch.readOutbound();
@@ -1678,7 +1678,7 @@ public class SockJsProtocolTest {
     private void assertSetCookie(final String transportPath) throws Exception {
         final String serviceName = "/cookie_needed_echo";
         final String sessionUrl = serviceName + "/abc/" + UUID.randomUUID().toString();
-        final SockJsConfig config = SockJsConfig.prefix(serviceName).cookiesNeeded().build();
+        final SockJsConfig config = SockJsConfig.withPrefix(serviceName).cookiesNeeded().build();
         final EmbeddedChannel ch = channelForService(echoService(config));
         removeLastInboundMessageHandlers(ch);
         final FullHttpRequest request = httpRequest(sessionUrl + transportPath, GET);
@@ -1706,7 +1706,7 @@ public class SockJsProtocolTest {
     }
 
     private void verifyHeaders(final WebSocketVersion version) throws Exception {
-        final SockJsConfig config = SockJsConfig.prefix("/echo").build();
+        final SockJsConfig config = SockJsConfig.withPrefix("/echo").build();
         final EmbeddedChannel ch = createWebsocketChannel(config);
         final FullHttpRequest request = websocketUpgradeRequest("/websocket", version);
         ch.writeInbound(request);
@@ -1738,7 +1738,7 @@ public class SockJsProtocolTest {
     }
 
     private SockJsServiceFactory closeService() {
-        final SockJsConfig config = SockJsConfig.prefix("/close").build();
+        final SockJsConfig config = SockJsConfig.withPrefix("/close").build();
         return new AbstractSockJsServiceFactory(config) {
             @Override
             public SockJsService create() {
@@ -1757,7 +1757,7 @@ public class SockJsProtocolTest {
     }
 
     private SockJsServiceFactory echoService() {
-        final SockJsConfig config = SockJsConfig.prefix("/echo").cookiesNeeded().build();
+        final SockJsConfig config = SockJsConfig.withPrefix("/echo").cookiesNeeded().build();
         return new AbstractSockJsServiceFactory(config) {
             @Override
             public SockJsService create() {
@@ -1778,7 +1778,7 @@ public class SockJsProtocolTest {
     private void websocketTestTransport(final WebSocketVersion version) throws Exception {
         final String serviceName = "/echo";
         final String sessionUrl = serviceName + "/222/" + UUID.randomUUID().toString();
-        final SockJsConfig config = SockJsConfig.prefix(serviceName).build();
+        final SockJsConfig config = SockJsConfig.withPrefix(serviceName).build();
         final SockJsServiceFactory service = echoService(config);
         final EmbeddedChannel ch = wsChannelForService(service);
 
@@ -1802,7 +1802,7 @@ public class SockJsProtocolTest {
     private void websocketTestClose(final WebSocketVersion version) throws Exception {
         final String serviceName = "/close";
         final String sessionUrl = serviceName + "/222/" + UUID.randomUUID().toString();
-        final SockJsConfig config = SockJsConfig.prefix(serviceName).build();
+        final SockJsConfig config = SockJsConfig.withPrefix(serviceName).build();
         final SockJsServiceFactory service = closeService(config);
         final EmbeddedChannel ch = wsChannelForService(service);
 
@@ -1824,7 +1824,7 @@ public class SockJsProtocolTest {
     private void websocketTestBrokenJSON(final WebSocketVersion version) throws Exception {
         final String serviceName = "/close";
         final String sessionUrl = serviceName + "/222/" + UUID.randomUUID().toString();
-        final SockJsConfig config = SockJsConfig.prefix(serviceName).build();
+        final SockJsConfig config = SockJsConfig.withPrefix(serviceName).build();
         final EmbeddedChannel ch = wsChannelForService(echoService(config));
 
         final FullHttpRequest request = websocketUpgradeRequest(sessionUrl + "/websocket", version.toHttpHeaderValue());
@@ -1981,7 +1981,7 @@ public class SockJsProtocolTest {
     }
 
     private void assertOKResponse(final String sessionPart) {
-        final SockJsConfig config = SockJsConfig.prefix("/echo").cookiesNeeded().build();
+        final SockJsConfig config = SockJsConfig.withPrefix("/echo").cookiesNeeded().build();
         final EmbeddedChannel ch = channelForMockService(config);
         removeLastInboundMessageHandlers(ch);
         ch.writeInbound(httpRequest("/echo" + sessionPart + Transports.Types.XHR.path()));
@@ -2007,7 +2007,7 @@ public class SockJsProtocolTest {
     }
 
     private void verifyIframe(final String service, final String path) {
-        final SockJsConfig config = SockJsConfig.prefix(service).cookiesNeeded().build();
+        final SockJsConfig config = SockJsConfig.withPrefix(service).cookiesNeeded().build();
         final EmbeddedChannel ch = channelForMockService(config);
         ch.writeInbound(httpRequest(config.prefix() + path));
         final FullHttpResponse response = (FullHttpResponse) ch.readOutbound();
@@ -2040,7 +2040,7 @@ public class SockJsProtocolTest {
     }
 
     private void assertNotFoundResponse(final String service, final String path) {
-        final SockJsConfig config = SockJsConfig.prefix(service).cookiesNeeded().build();
+        final SockJsConfig config = SockJsConfig.withPrefix(service).cookiesNeeded().build();
         final EmbeddedChannel ch = channelForMockService(config);
         ch.writeInbound(httpRequest("/" + service + path));
         final FullHttpResponse response = (FullHttpResponse) ch.readOutbound();

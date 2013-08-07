@@ -51,14 +51,14 @@ public class WebSocketTransportTest {
 
     @Test
     public void upgradeRequest() throws Exception {
-        final SockJsConfig config = SockJsConfig.prefix("/echo").build();
+        final SockJsConfig config = SockJsConfig.withPrefix("/echo").build();
         final EmbeddedChannel ch = createWebsocketChannel(config);
         assertUpgradeRequest(ch);
     }
 
     @Test
     public void invalidHttpMethod() throws Exception {
-        final SockJsConfig config = SockJsConfig.prefix("/echo").build();
+        final SockJsConfig config = SockJsConfig.withPrefix("/echo").build();
         final EmbeddedChannel ch = createWebsocketChannel(config);
         final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, "dummy");
         ch.writeInbound(request);
@@ -69,7 +69,7 @@ public class WebSocketTransportTest {
 
     @Test
     public void nonUpgradeRequest() throws Exception {
-        final SockJsConfig config = SockJsConfig.prefix("/echo").build();
+        final SockJsConfig config = SockJsConfig.withPrefix("/echo").build();
         final EmbeddedChannel ch = createWebsocketChannel(config);
         final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, "/websocket");
         ch.writeInbound(request);
@@ -81,7 +81,7 @@ public class WebSocketTransportTest {
 
     @Test
     public void invalidConnectionHeader() throws Exception {
-        final SockJsConfig config = SockJsConfig.prefix("/echo").build();
+        final SockJsConfig config = SockJsConfig.withPrefix("/echo").build();
         final EmbeddedChannel ch = createWebsocketChannel(config);
         final FullHttpRequest request = websocketUpgradeRequest("/websocket", WebSocketVersion.V13);
         request.headers().set(Names.UPGRADE, "WebSocket");
@@ -94,7 +94,7 @@ public class WebSocketTransportTest {
 
     @Test
     public void invalidJsonInWebSocketFrame() throws Exception {
-        final SockJsConfig config = SockJsConfig.prefix("/echo").build();
+        final SockJsConfig config = SockJsConfig.withPrefix("/echo").build();
         final EmbeddedChannel ch = createWebsocketChannel(config);
         assertUpgradeRequest(ch);
 
@@ -104,7 +104,7 @@ public class WebSocketTransportTest {
 
     @Test
     public void writeJsonArray() throws Exception {
-        final SockJsConfig config = SockJsConfig.prefix("/echo").build();
+        final SockJsConfig config = SockJsConfig.withPrefix("/echo").build();
         final EmbeddedChannel ch = createWebsocketChannel(config);
         assertUpgradeRequest(ch);
 
@@ -119,7 +119,7 @@ public class WebSocketTransportTest {
 
     @Test
     public void writeJsonString() throws Exception {
-        final SockJsConfig config = SockJsConfig.prefix("/echo").build();
+        final SockJsConfig config = SockJsConfig.withPrefix("/echo").build();
         final EmbeddedChannel ch = createWebsocketChannel(config);
         assertUpgradeRequest(ch);
 
@@ -132,7 +132,7 @@ public class WebSocketTransportTest {
 
     @Test
     public void firefox602ConnectionHeader() throws Exception {
-        final SockJsConfig config = SockJsConfig.prefix("/echo").build();
+        final SockJsConfig config = SockJsConfig.withPrefix("/echo").build();
         final EmbeddedChannel ch = createWebsocketChannel(config);
         final FullHttpRequest request = websocketUpgradeRequest("/websocket", WebSocketVersion.V08);
         request.headers().set(Names.CONNECTION, "keep-alive, Upgrade");
@@ -150,7 +150,7 @@ public class WebSocketTransportTest {
     }
 
     private void verifyHeaders(final WebSocketVersion version) throws Exception {
-        final SockJsConfig config = SockJsConfig.prefix("/echo").build();
+        final SockJsConfig config = SockJsConfig.withPrefix("/echo").build();
         final EmbeddedChannel ch = createWebsocketChannel(config);
         final FullHttpRequest request = websocketUpgradeRequest("/websocket", version);
         ch.writeInbound(request);

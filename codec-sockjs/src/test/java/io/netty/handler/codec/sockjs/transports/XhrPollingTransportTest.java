@@ -42,12 +42,12 @@ public class XhrPollingTransportTest {
 
     @Test (expected = NullPointerException.class)
     public void constructWithNullRequest() {
-        new XhrPollingTransport(SockJsConfig.prefix("/test").build(), null);
+        new XhrPollingTransport(SockJsConfig.withPrefix("/test").build(), null);
     }
 
     @Test
     public void flush() {
-        final SockJsConfig config = SockJsConfig.prefix("/test").cookiesNeeded().build();
+        final SockJsConfig config = SockJsConfig.withPrefix("/test").cookiesNeeded().build();
         final XhrPollingTransport transport = new XhrPollingTransport(config, request("", HttpVersion.HTTP_1_1));
         final EmbeddedChannel channel = new EmbeddedChannel(transport);
         channel.writeOutbound(new OpenFrame());

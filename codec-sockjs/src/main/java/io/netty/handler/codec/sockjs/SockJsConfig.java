@@ -197,7 +197,7 @@ public final class SockJsConfig {
      *
      * @param prefix the prefix/name of the SockJS service.
      */
-    public static Builder prefix(final String prefix) {
+    public static Builder withPrefix(final String prefix) {
         ArgumentUtil.checkNotNullAndNotEmpty(prefix, "prefix");
         return new SockJsConfig.Builder(prefix);
     }

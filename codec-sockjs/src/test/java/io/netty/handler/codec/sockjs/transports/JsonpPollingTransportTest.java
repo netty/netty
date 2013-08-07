@@ -82,7 +82,7 @@ public class JsonpPollingTransportTest {
     private FullHttpResponse writeFrame(final Frame frame, final boolean withCallback) {
         final String queryUrl = withCallback ? "/jsonp?c=callback" : "/jsonp";
         final DefaultFullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, queryUrl);
-        final SockJsConfig config = SockJsConfig.prefix(queryUrl).cookiesNeeded().build();
+        final SockJsConfig config = SockJsConfig.withPrefix(queryUrl).cookiesNeeded().build();
         final JsonpPollingTransport jsonpPollingOutbound = new JsonpPollingTransport(config, request);
         final EmbeddedChannel ch = new EmbeddedChannel(jsonpPollingOutbound);
         ch.writeInbound(request);

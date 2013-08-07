@@ -107,7 +107,8 @@ public class XhrSendTransportTest {
     }
 
     private FullHttpResponse processHttpRequest(final FullHttpRequest request) {
-        final XhrSendTransport transport = new XhrSendTransport(SockJsConfig.prefix("/test").cookiesNeeded().build());
+        final XhrSendTransport transport = new XhrSendTransport(SockJsConfig.withPrefix("/test")
+                .cookiesNeeded().build());
         final EmbeddedChannel channel = new EmbeddedChannel(transport);
         channel.writeInbound(request);
         final FullHttpResponse response = (FullHttpResponse) channel.readOutbound();

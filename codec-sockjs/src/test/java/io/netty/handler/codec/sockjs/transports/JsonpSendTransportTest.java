@@ -84,7 +84,7 @@ public class JsonpSendTransportTest {
     }
 
     private FullHttpResponse processHttpRequest(final FullHttpRequest request) {
-        final JsonpSendTransport transport = new JsonpSendTransport(SockJsConfig.prefix("/test")
+        final JsonpSendTransport transport = new JsonpSendTransport(SockJsConfig.withPrefix("/test")
                 .cookiesNeeded().build());
         final EmbeddedChannel channel = new EmbeddedChannel(transport);
         channel.writeInbound(request);
