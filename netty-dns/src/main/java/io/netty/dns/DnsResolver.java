@@ -59,7 +59,7 @@ public class DnsResolver {
      */
     public static final long REQUEST_TIMEOUT = 2000;
 
-    private static final EventExecutorGroup executor = new DefaultEventExecutorGroup(2);
+    private static final EventExecutorGroup executor = new DefaultEventExecutorGroup(1);
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsResolver.class);
     private static final Object idxLock = new Object();
 
@@ -82,7 +82,7 @@ public class DnsResolver {
     private final DnsSelectionStrategy selector;
 
     public DnsResolver() {
-        this(null, new DnsDefaultCache(), new DnsRoundRobinStrategy());
+        this(null, new DnsDefaultCache(), new DnsRoundRobinSelectionStrategy());
     }
 
     public DnsResolver(EventLoop eventLoop, DnsCachingStrategy cache, DnsSelectionStrategy selector) {
@@ -325,7 +325,8 @@ public class DnsResolver {
         for (int i = 0; i < types.length; i++) {
             List<T> results = cache.getRecords(domain, types[i]);
             if (results != null) {
-                return executor.next().newSucceededFuture(selector.selectRecord(results));
+                return (eventLoop == null ? executor.next() : eventLoop).newSucceededFuture(selector
+                        .selectRecord(results));
             }
         }
         int id = obtainId();
@@ -334,8 +335,8 @@ public class DnsResolver {
         for (int i = 0; i < types.length; i++) {
             queries[i] = sendQuery(types[i], domain, id, channel);
         }
-        return executor.submit(new DnsSingleResultCallback<T>(new DnsCallback<List<T>>(this, dnsServers
-                .indexOf(dnsServerAddress), queries)));
+        return (eventLoop == null ? executor : eventLoop).submit(new DnsSingleResultCallback<T>(
+                new DnsCallback<List<T>>(this, dnsServers.indexOf(dnsServerAddress), queries)));
     }
 
     /**
@@ -361,7 +362,8 @@ public class DnsResolver {
         for (int i = 0; i < types.length; i++) {
             List<T> results = cache.getRecords(domain, types[i]);
             if (results != null) {
-                return executor.next().newSucceededFuture(selector.selectRecord(results));
+                return (eventLoop == null ? executor.next() : eventLoop).newSucceededFuture(selector
+                        .selectRecord(results));
             }
         }
         int id = obtainId();
@@ -370,7 +372,8 @@ public class DnsResolver {
         for (int i = 0; i < types.length; i++) {
             queries[i] = sendQuery(types[i], domain, id, channel);
         }
-        return executor.submit(new DnsCallback<T>(this, dnsServers.indexOf(dnsServerAddress), queries));
+        return (eventLoop == null ? executor : eventLoop).submit(new DnsCallback<T>(this, dnsServers
+                .indexOf(dnsServerAddress), queries));
     }
 
     /**
@@ -542,7 +545,9 @@ public class DnsResolver {
                                                 + string.substring(0, string.length() - 1), e);
                             }
                         } finally {
-                            channel.eventLoop().shutdownGracefully();
+                            if (eventLoop == null) {
+                                channel.eventLoop().shutdownGracefully();
+                            }
                         }
                     }
                     iter.remove();
