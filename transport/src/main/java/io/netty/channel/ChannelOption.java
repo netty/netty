@@ -39,6 +39,8 @@ public class ChannelOption<T> extends UniqueName {
             new ChannelOption<ByteBufAllocator>("ALLOCATOR");
     public static final ChannelOption<RecvByteBufAllocator> RCVBUF_ALLOCATOR =
             new ChannelOption<RecvByteBufAllocator>("RCVBUF_ALLOCATOR");
+    public static final ChannelOption<MessageSizeEstimator> MESSAGE_SIZE_ESTIMATOR =
+            new ChannelOption<MessageSizeEstimator>("MESSAGE_SIZE_ESTIMATOR");
 
     public static final ChannelOption<Integer> CONNECT_TIMEOUT_MILLIS =
             new ChannelOption<Integer>("CONNECT_TIMEOUT_MILLIS");
