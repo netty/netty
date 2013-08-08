@@ -288,12 +288,8 @@ public class DnsResolver {
     /**
      * Returns a {@link Future} which can be used to obtain a {@link List}
      * either an IPv4 or IPv6 address for the specified domain.
-     *
-     * @throws UnknownHostException
-     * @throws SocketException
-     * @throws InterruptedException
      */
-    public <T> Future<T> lookup(String domain) throws UnknownHostException, SocketException, InterruptedException {
+    public <T> Future<T> lookup(String domain) {
         return resolveSingle(domain, dnsServers.get(0), DnsEntry.TYPE_A, DnsEntry.TYPE_AAAA);
     }
 
@@ -305,12 +301,8 @@ public class DnsResolver {
      * @param family
      *            {@code 4} for IPv4 addresses, {@code 6} for IPv6 addresses, or
      *            {@code null} for both
-     * @throws UnknownHostException
-     * @throws SocketException
-     * @throws InterruptedException
      */
-    public <T> Future<List<T>> lookup(String domain, Integer family) throws UnknownHostException, SocketException,
-            InterruptedException {
+    public <T> Future<List<T>> lookup(String domain, Integer family) {
         if (family != null && family != 4 && family != 6) {
             throw new IllegalArgumentException("Family must be 4, 6, or null to indicate both 4 and 6.");
         }
@@ -336,12 +328,8 @@ public class DnsResolver {
      *            and one record can be returned in a single method call. The
      *            first valid resource record in the array of types will be
      *            returned)
-     * @throws UnknownHostException
-     * @throws SocketException
-     * @throws InterruptedException
      */
-    public <T> Future<T> resolveSingle(String domain, InetAddress dnsServerAddress, int... types)
-            throws UnknownHostException, SocketException, InterruptedException {
+    public <T> Future<T> resolveSingle(String domain, InetAddress dnsServerAddress, int... types) {
         for (int i = 0; i < types.length; i++) {
             List<T> results = cache.getRecords(domain, types[i]);
             if (results != null) {
@@ -350,13 +338,17 @@ public class DnsResolver {
             }
         }
         int id = obtainId();
-        Channel channel = channelForAddress(dnsServerAddress);
-        DnsQuery[] queries = new DnsQuery[types.length];
-        for (int i = 0; i < types.length; i++) {
-            queries[i] = sendQuery(types[i], domain, id, channel);
+        try {
+            Channel channel = channelForAddress(dnsServerAddress);
+            DnsQuery[] queries = new DnsQuery[types.length];
+            for (int i = 0; i < types.length; i++) {
+                queries[i] = sendQuery(types[i], domain, id, channel);
+            }
+            return (eventLoop == null ? executor : eventLoop).submit(new DnsSingleResultCallback<T>(
+                    new DnsCallback<List<T>>(this, dnsServers.indexOf(dnsServerAddress), queries)));
+        } catch (Exception e) {
+            return (eventLoop == null ? executor.next() : eventLoop).newFailedFuture(e);
         }
-        return (eventLoop == null ? executor : eventLoop).submit(new DnsSingleResultCallback<T>(
-                new DnsCallback<List<T>>(this, dnsServers.indexOf(dnsServerAddress), queries)));
     }
 
     /**
@@ -373,12 +365,8 @@ public class DnsResolver {
      *            can be returned, but multiple resource records, in a single
      *            method call. The first valid type of resource records will be
      *            returned in a {@link List})
-     * @throws UnknownHostException
-     * @throws SocketException
-     * @throws InterruptedException
      */
-    public <T extends List<?>> Future<T> resolve(String domain, InetAddress dnsServerAddress, int... types)
-            throws UnknownHostException, SocketException, InterruptedException {
+    public <T extends List<?>> Future<T> resolve(String domain, InetAddress dnsServerAddress, int... types) {
         for (int i = 0; i < types.length; i++) {
             List<T> results = cache.getRecords(domain, types[i]);
             if (results != null) {
@@ -386,39 +374,33 @@ public class DnsResolver {
                         .selectRecord(results));
             }
         }
-        int id = obtainId();
-        Channel channel = channelForAddress(dnsServerAddress);
-        DnsQuery[] queries = new DnsQuery[types.length];
-        for (int i = 0; i < types.length; i++) {
-            queries[i] = sendQuery(types[i], domain, id, channel);
+        try {
+            int id = obtainId();
+            Channel channel = channelForAddress(dnsServerAddress);
+            DnsQuery[] queries = new DnsQuery[types.length];
+            for (int i = 0; i < types.length; i++) {
+                queries[i] = sendQuery(types[i], domain, id, channel);
+            }
+            return (eventLoop == null ? executor : eventLoop).submit(new DnsCallback<T>(this, dnsServers
+                    .indexOf(dnsServerAddress), queries));
+        } catch (Exception e) {
+            return (eventLoop == null ? executor.next() : eventLoop).newFailedFuture(e);
         }
-        return (eventLoop == null ? executor : eventLoop).submit(new DnsCallback<T>(this, dnsServers
-                .indexOf(dnsServerAddress), queries));
     }
 
     /**
      * Returns a {@link Future} which can be used to obtain a {@link List} of
      * IPv4 addresses as {@link ByteBuf}s.
-     *
-     * @throws UnknownHostException
-     * @throws SocketException
-     * @throws InterruptedException
      */
-    public Future<List<ByteBuf>> resolve4(String domain) throws UnknownHostException, SocketException,
-            InterruptedException {
+    public Future<List<ByteBuf>> resolve4(String domain) {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_A);
     }
 
     /**
      * Returns a {@link Future} which can be used to obtain a {@link List} of
      * IPv6 addresses as {@link ByteBuf}s.
-     *
-     * @throws UnknownHostException
-     * @throws SocketException
-     * @throws InterruptedException
      */
-    public Future<List<ByteBuf>> resolve6(String domain) throws UnknownHostException, SocketException,
-            InterruptedException {
+    public Future<List<ByteBuf>> resolve6(String domain) {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_AAAA);
     }
 
@@ -430,60 +412,39 @@ public class DnsResolver {
      * @throws SocketException
      * @throws InterruptedException
      */
-    public Future<List<MailExchangerRecord>> resolveMx(String domain) throws UnknownHostException, SocketException,
-            InterruptedException {
+    public Future<List<MailExchangerRecord>> resolveMx(String domain) {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_MX);
     }
 
     /**
      * Returns a {@link Future} which can be used to obtain a {@link List} of
      * service records as {@link ServiceRecord}s.
-     *
-     * @throws UnknownHostException
-     * @throws SocketException
-     * @throws InterruptedException
      */
-    public Future<List<ServiceRecord>> resolveSrv(String domain) throws UnknownHostException, SocketException,
-            InterruptedException {
+    public Future<List<ServiceRecord>> resolveSrv(String domain) {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_SRV);
     }
 
     /**
      * Returns a {@link Future} which can be used to obtain a {@link List} of
      * text records as {@link String}s in a {@link List}.
-     *
-     * @throws UnknownHostException
-     * @throws SocketException
-     * @throws InterruptedException
      */
-    public Future<List<List<String>>> resolveTxt(String domain) throws UnknownHostException, SocketException,
-            InterruptedException {
+    public Future<List<List<String>>> resolveTxt(String domain) {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_TXT);
     }
 
     /**
      * Returns a {@link Future} which can be used to obtain a {@link List} of
      * canonical name records as {@link String}s.
-     *
-     * @throws UnknownHostException
-     * @throws SocketException
-     * @throws InterruptedException
      */
-    public Future<List<String>> resolveCname(String domain) throws UnknownHostException, SocketException,
-            InterruptedException {
+    public Future<List<String>> resolveCname(String domain) {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_CNAME);
     }
 
     /**
      * Returns a {@link Future} which can be used to obtain a {@link List} of
      * name server records as {@link String}s.
-     *
-     * @throws UnknownHostException
-     * @throws SocketException
-     * @throws InterruptedException
      */
-    public Future<List<String>> resolveNs(String domain) throws UnknownHostException, SocketException,
-            InterruptedException {
+    public Future<List<String>> resolveNs(String domain) {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_NS);
     }
 
@@ -493,15 +454,15 @@ public class DnsResolver {
      * address.
      *
      * @param ipAddress
-     *            the ip address to perform a reverse lookup on
-     * @throws UnknownHostException
-     * @throws SocketException
-     * @throws InterruptedException
+     *            the IP address to perform a reverse lookup on
      */
-    public Future<List<String>> reverse(byte[] ipAddress) throws UnknownHostException, SocketException,
-            InterruptedException {
+    public Future<List<String>> reverse(ByteBuf ipAddress) {
         ByteBuf buf = Unpooled.wrappedBuffer(ipAddress);
-        Future<List<String>> future = reverse(buf);
+        StringBuilder builder = new StringBuilder();
+        for (int i = ipAddress.readerIndex(); i < ipAddress.writerIndex(); i++) {
+            builder.append(ipAddress.getUnsignedByte(i)).append(".");
+        }
+        Future<List<String>> future = reverse(builder.substring(0, builder.length() - 1));
         buf.release();
         return future;
     }
@@ -512,17 +473,13 @@ public class DnsResolver {
      * address.
      *
      * @param ipAddress
-     *            the ip address to perform a reverse lookup on
-     * @throws UnknownHostException
-     * @throws SocketException
-     * @throws InterruptedException
+     *            the IP address to perform a reverse lookup on
      */
-    public Future<List<String>> reverse(ByteBuf ipAddress) throws UnknownHostException, SocketException,
-            InterruptedException {
-        int size = ipAddress.writerIndex() - ipAddress.readerIndex();
+    public Future<List<String>> reverse(String ipAddress) {
+        String[] octets = ipAddress.split("\\.");
         StringBuilder domain = new StringBuilder();
-        for (int i = size - 1; i > -1; i--) {
-            domain.append(ipAddress.getUnsignedByte(i)).append(".");
+        for (int i = octets.length - 1; i > -1; i--) {
+            domain.append(octets[i]).append(".");
         }
         return resolve(domain.append("in-addr.arpa").toString(), dnsServers.get(0), DnsEntry.TYPE_PTR);
     }
