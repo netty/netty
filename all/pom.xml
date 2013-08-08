@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.0.7.Final-SNAPSHOT</version>
+    <version>4.0.7.Final</version>
   </parent>
 
   <artifactId>netty-all</artifactId>
@@ -360,8 +360,8 @@
         </executions>
         <configuration>
           <target>
-            <delete dir="${project.build.directory}/src" quiet="true"/>
-            <delete dir="${project.build.directory}/classes" quiet="true"/>
+            <delete dir="${project.build.directory}/src" quiet="true" />
+            <delete dir="${project.build.directory}/classes" quiet="true" />
           </target>
         </configuration>
       </plugin>
