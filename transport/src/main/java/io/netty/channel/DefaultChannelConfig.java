@@ -69,7 +69,7 @@ public class DefaultChannelConfig implements ChannelConfig {
                 null,
                 CONNECT_TIMEOUT_MILLIS, MAX_MESSAGES_PER_READ, WRITE_SPIN_COUNT,
                 ALLOCATOR, AUTO_READ, RCVBUF_ALLOCATOR, WRITE_BUFFER_HIGH_WATER_MARK,
-                WRITE_BUFFER_LOW_WATER_MARK);
+                WRITE_BUFFER_LOW_WATER_MARK, MESSAGE_SIZE_ESTIMATOR);
     }
 
     protected Map<ChannelOption<?>, Object> getOptions(
@@ -131,7 +131,9 @@ public class DefaultChannelConfig implements ChannelConfig {
         if (option == WRITE_BUFFER_LOW_WATER_MARK) {
             return (T) Integer.valueOf(getWriteBufferLowWaterMark());
         }
-
+        if (option == MESSAGE_SIZE_ESTIMATOR) {
+            return (T) getMessageSizeEstimator();
+        }
         return null;
     }
 
@@ -155,6 +157,8 @@ public class DefaultChannelConfig implements ChannelConfig {
             setWriteBufferHighWaterMark((Integer) value);
         } else if (option == WRITE_BUFFER_LOW_WATER_MARK) {
             setWriteBufferLowWaterMark((Integer) value);
+        } else if (option == MESSAGE_SIZE_ESTIMATOR) {
+            setMessageSizeEstimator((MessageSizeEstimator) value);
         } else {
             return false;
         }
