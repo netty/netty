@@ -68,7 +68,8 @@ public class DefaultChannelConfig implements ChannelConfig {
         return getOptions(
                 null,
                 CONNECT_TIMEOUT_MILLIS, MAX_MESSAGES_PER_READ, WRITE_SPIN_COUNT,
-                ALLOCATOR, AUTO_READ, RCVBUF_ALLOCATOR);
+                ALLOCATOR, AUTO_READ, RCVBUF_ALLOCATOR, WRITE_BUFFER_HIGH_WATER_MARK,
+                WRITE_BUFFER_LOW_WATER_MARK);
     }
 
     protected Map<ChannelOption<?>, Object> getOptions(
@@ -124,6 +125,12 @@ public class DefaultChannelConfig implements ChannelConfig {
         if (option == AUTO_READ) {
             return (T) Boolean.valueOf(isAutoRead());
         }
+        if (option == WRITE_BUFFER_HIGH_WATER_MARK) {
+            return (T) Integer.valueOf(getWriteBufferHighWaterMark());
+        }
+        if (option == WRITE_BUFFER_LOW_WATER_MARK) {
+            return (T) Integer.valueOf(getWriteBufferLowWaterMark());
+        }
 
         return null;
     }
@@ -144,6 +151,10 @@ public class DefaultChannelConfig implements ChannelConfig {
             setRecvByteBufAllocator((RecvByteBufAllocator) value);
         } else if (option == AUTO_READ) {
             setAutoRead((Boolean) value);
+        } else if (option == WRITE_BUFFER_HIGH_WATER_MARK) {
+            setWriteBufferHighWaterMark((Integer) value);
+        } else if (option == WRITE_BUFFER_LOW_WATER_MARK) {
+            setWriteBufferLowWaterMark((Integer) value);
         } else {
             return false;
         }
