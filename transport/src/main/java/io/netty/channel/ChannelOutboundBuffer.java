@@ -53,6 +53,8 @@ public final class ChannelOutboundBuffer {
     static ChannelOutboundBuffer newInstance(AbstractChannel channel) {
         ChannelOutboundBuffer buffer = RECYCLER.get();
         buffer.channel = channel;
+        buffer.totalPendingSize = 0;
+        buffer.writable = 1;
         return buffer;
     }
 
@@ -283,7 +285,10 @@ public final class ChannelOutboundBuffer {
      * This method is thread-safe!
      */
     void incrementPendingOutboundBytes(int size) {
-        if (size == 0) {
+        // Cache the channel and check for null to make sure we not produce a NPE in case of the Channel gets
+        // recycled while process this method.
+        Channel channel = this.channel;
+        if (size == 0 || channel == null) {
             return;
         }
 
@@ -308,7 +313,10 @@ public final class ChannelOutboundBuffer {
      * This method is thread-safe!
      */
     void decrementPendingOutboundBytes(int size) {
-        if (size == 0) {
+        // Cache the channel and check for null to make sure we not produce a NPE in case of the Channel gets
+        // recycled while process this method.
+        Channel channel = this.channel;
+        if (size == 0 || channel == null) {
             return;
         }
 
