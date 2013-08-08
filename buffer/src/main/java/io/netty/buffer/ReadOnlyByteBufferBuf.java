@@ -45,7 +45,7 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
 
         this.allocator = allocator;
         this.buffer = buffer.slice().order(ByteOrder.BIG_ENDIAN);
-        writerIndex(buffer.limit());
+        writerIndex(this.buffer.limit());
         leak = leakDetector.open(this);
     }
 
