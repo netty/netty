@@ -25,6 +25,7 @@ import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -195,7 +196,7 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
         if (serverIndex == -1) {
             result = null;
         } else {
-            byte[] dnsServerAddress = resolver.getDnsServer(++serverIndex);
+            InetAddress dnsServerAddress = resolver.getDnsServer(++serverIndex);
             if (dnsServerAddress == null) {
                 result = null;
             } else {
@@ -206,13 +207,9 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
                     }
                 } catch (Exception e) {
                     if (logger.isErrorEnabled()) {
-                        StringBuilder string = new StringBuilder();
-                        for (int i = 0; i < dnsServerAddress.length; i++) {
-                            string.append(dnsServerAddress[i]).append(".");
-                        }
                         logger.error(
                                 "Failed to write to next DNS server in queue with address "
-                                        + string.substring(0, string.length() - 1), e);
+                                        + dnsServerAddress.getHostAddress(), e);
                     }
                     result = null;
                 }

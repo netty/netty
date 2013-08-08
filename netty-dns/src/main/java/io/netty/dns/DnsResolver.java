@@ -74,60 +74,110 @@ public class DnsResolver {
         }
     }
 
-    private final List<byte[]> dnsServers = new ArrayList<byte[]>();
-    private final Map<byte[], Channel> dnsServerChannels = new HashMap<byte[], Channel>();
+    private final List<InetAddress> dnsServers = new ArrayList<InetAddress>();
+    private final Map<InetAddress, Channel> dnsServerChannels = new HashMap<InetAddress, Channel>();
 
     private final EventLoop eventLoop;
     private final DnsCachingStrategy cache;
     private final DnsSelectionStrategy selector;
 
+    /**
+     * Constructs a new {@link DnsResolver} with the system's default DNS
+     * servers, a new {@link NioEventLoopGroup} for every DNS server
+     * {@link Channel} created, a {@link DnsDefaultCache} caching strategy and a
+     * {@link DnsRoundRobinSelectionStrategy}.
+     */
     public DnsResolver() {
-        this(null, new DnsDefaultCache(), new DnsRoundRobinSelectionStrategy());
+        this(null, null, new DnsDefaultCache(), new DnsRoundRobinSelectionStrategy());
     }
 
-    public DnsResolver(EventLoop eventLoop, DnsCachingStrategy cache, DnsSelectionStrategy selector) {
+    /**
+     * Constructs a new {@link DnsResolver}.
+     *
+     * @param dnsServers
+     *            an array of DNS server addresses to use
+     * @param eventLoop
+     *            an {@link EventLoop} to use for all DNS server {@link Channel}
+     *            s. If left {@code null}, a new {@link NioEventLoopGroup} will
+     *            be used for every {@link Channel}.
+     * @param cache
+     *            the caching strategy to use
+     * @param selector
+     *            the selecting strategy to use for single results
+     */
+    public DnsResolver(InetAddress[] dnsServers, EventLoop eventLoop, DnsCachingStrategy cache,
+            DnsSelectionStrategy selector) {
+        if (cache == null) {
+            throw new NullPointerException("The caching strategy cannot be null.");
+        }
+        if (selector == null) {
+            throw new NullPointerException("The selection strategy cannot be null.");
+        }
         this.eventLoop = eventLoop;
         this.cache = cache;
         this.selector = selector;
-        init();
-    }
-
-    private void init() {
-        dnsServers.add(new byte[] { 8, 8, 8, 8 }); // Google DNS servers
-        dnsServers.add(new byte[] { 8, 8, 4, 4 });
-        dnsServers.add(new byte[] { -48, 67, -34, -34 }); // OpenDNS servers
-        dnsServers.add(new byte[] { -48, 67, -36, -36 });
-        Thread thread = new Thread() {
-
-            @Override
-            public void run() {
-                try {
-                    Class<?> configClass = Class.forName("sun.net.dns.ResolverConfiguration");
-                    Method open = configClass.getMethod("open");
-                    Method nameservers = configClass.getMethod("nameservers");
-                    Object instance = open.invoke(null);
-                    @SuppressWarnings("unchecked")
-                    List<String> list = (List<String>) nameservers.invoke(instance);
-                    for (String dns : list) {
-                        String[] parts = dns.split("\\.");
-                        if (parts.length == 4 || parts.length == 16) {
-                            byte[] address = new byte[parts.length];
-                            for (int i = 0; i < address.length; i++) {
-                                address[i] = (byte) Integer.parseInt(parts[i]);
-                            }
-                            if (validAddress(address)) {
-                                dnsServers.add(address);
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    logger.warn("Failed to obtain system's DNS server addresses, using defaults only.", e);
+        if (dnsServers == null || dnsServers.length == 0) {
+            useSystemDefault();
+        } else {
+            for (int i = 0; i < dnsServers.length; i++) {
+                if (validAddress(dnsServers[i])) {
+                    this.dnsServers.add(dnsServers[i]);
                 }
             }
-        };
-        thread.setDaemon(true);
-        thread.setPriority(Thread.MIN_PRIORITY);
-        thread.start();
+        }
+    }
+
+    /**
+     * Loads system's default DNS server settings and validates servers before
+     * adding them to the list of servers to use for this {@link DnsResolver }.
+     */
+    private void useSystemDefault() {
+        try {
+            Class<?> configClass = Class.forName("sun.net.dns.ResolverConfiguration");
+            Method open = configClass.getMethod("open");
+            Method nameservers = configClass.getMethod("nameservers");
+            Object instance = open.invoke(null);
+            @SuppressWarnings("unchecked")
+            List<String> list = (List<String>) nameservers.invoke(instance);
+            for (String dns : list) {
+                InetAddress address = InetAddress.getByName(dns);
+                if (validAddress(address)) {
+                    dnsServers.add(address);
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Failed to obtain system's DNS server addresses.", e);
+        }
+    }
+
+    /**
+     * Checks if a DNS server can actually be connected to and queried for
+     * information by running through a request. This is a
+     * <strong>blocking</strong> method.
+     *
+     * @param address
+     *            the DNS server being checked
+     * @return {@code true} if the DNS server provides a valid response
+     */
+    private boolean validAddress(InetAddress address) {
+        try {
+            int id = obtainId();
+            Channel channel = channelForAddress(address);
+            Callable<List<ByteBuf>> callback = new DnsCallback<List<ByteBuf>>(this, -1, sendQuery(DnsEntry.TYPE_A,
+                    "google.com", id, channel));
+            return callback.call() != null;
+        } catch (Exception e) {
+            removeChannel(dnsServerChannels.get(address));
+            if (logger.isWarnEnabled()) {
+                StringBuilder string = new StringBuilder();
+                byte[] raw = address.getAddress();
+                for (int i = 0; i < raw.length; i++) {
+                    string.append(raw[i]).append(".");
+                }
+                logger.warn("Failed to add DNS server " + string.substring(0, string.length() - 1), e);
+            }
+            return false;
+        }
     }
 
     /**
@@ -144,35 +194,6 @@ public class DnsResolver {
      */
     public DnsSelectionStrategy selector() {
         return selector;
-    }
-
-    /**
-     * Checks if a DNS server can actually be connected to and queried for
-     * information by running through a request. This is a
-     * <strong>blocking</strong> method.
-     *
-     * @param address
-     *            the DNS server being checked
-     * @return {@code true} if the DNS server provides a valid response
-     */
-    private boolean validAddress(byte[] address) {
-        try {
-            int id = obtainId();
-            Channel channel = channelForAddress(address);
-            Callable<List<ByteBuf>> callback = new DnsCallback<List<ByteBuf>>(this, -1, sendQuery(DnsEntry.TYPE_A,
-                    "google.com", id, channel));
-            return callback.call() != null;
-        } catch (Exception e) {
-            removeChannel(dnsServerChannels.get(address));
-            if (logger.isWarnEnabled()) {
-                StringBuilder string = new StringBuilder();
-                for (int i = 0; i < address.length; i++) {
-                    string.append(address[i]).append(".");
-                }
-                logger.warn("Failed to add DNS server " + string.substring(0, string.length() - 1), e);
-            }
-            return false;
-        }
     }
 
     /**
@@ -203,7 +224,7 @@ public class DnsResolver {
      *            the DNS server being added
      * @return {@code true} if the DNS server was added successfully
      */
-    public boolean addDnsServer(byte[] dnsServerAddress) {
+    public boolean addDnsServer(InetAddress dnsServerAddress) {
         return dnsServers.add(dnsServerAddress);
     }
 
@@ -214,7 +235,7 @@ public class DnsResolver {
      *            the DNS server being removed
      * @return {@code true} if the DNS server was removed successfully
      */
-    public boolean removeDnsServer(byte[] dnsServerAddress) {
+    public boolean removeDnsServer(InetAddress dnsServerAddress) {
         return dnsServers.remove(dnsServerAddress);
     }
 
@@ -222,7 +243,7 @@ public class DnsResolver {
      * Returns the DNS server address at the specified {@code index} in the
      * {@link List}.
      */
-    public byte[] getDnsServer(int index) {
+    public InetAddress getDnsServer(int index) {
         if (index > -1 && index < dnsServers.size()) {
             return dnsServers.get(index);
         }
@@ -240,7 +261,7 @@ public class DnsResolver {
      * @throws SocketException
      * @throws InterruptedException
      */
-    protected Channel channelForAddress(byte[] dnsServerAddress) throws UnknownHostException, SocketException,
+    protected Channel channelForAddress(InetAddress dnsServerAddress) throws UnknownHostException, SocketException,
             InterruptedException {
         Channel channel = null;
         if ((channel = dnsServerChannels.get(dnsServerAddress)) != null) {
@@ -248,14 +269,13 @@ public class DnsResolver {
         } else {
             synchronized (dnsServerChannels) {
                 if ((channel = dnsServerChannels.get(dnsServerAddress)) == null) {
-                    InetAddress address = InetAddress.getByAddress(dnsServerAddress);
                     Bootstrap b = new Bootstrap();
                     if (eventLoop == null) {
                         b.group(new NioEventLoopGroup());
                     } else {
                         b.group(eventLoop);
                     }
-                    b.channel(NioDatagramChannel.class).remoteAddress(address, 53)
+                    b.channel(NioDatagramChannel.class).remoteAddress(dnsServerAddress, 53)
                             .option(ChannelOption.SO_BROADCAST, true).option(ChannelOption.SO_SNDBUF, 1048576)
                             .option(ChannelOption.SO_RCVBUF, 1048576).handler(new DnsClientInitializer(this));
                     dnsServerChannels.put(dnsServerAddress, channel = b.connect().sync().channel());
@@ -320,7 +340,7 @@ public class DnsResolver {
      * @throws SocketException
      * @throws InterruptedException
      */
-    public <T> Future<T> resolveSingle(String domain, byte[] dnsServerAddress, int... types)
+    public <T> Future<T> resolveSingle(String domain, InetAddress dnsServerAddress, int... types)
             throws UnknownHostException, SocketException, InterruptedException {
         for (int i = 0; i < types.length; i++) {
             List<T> results = cache.getRecords(domain, types[i]);
@@ -357,7 +377,7 @@ public class DnsResolver {
      * @throws SocketException
      * @throws InterruptedException
      */
-    public <T extends List<?>> Future<T> resolve(String domain, byte[] dnsServerAddress, int... types)
+    public <T extends List<?>> Future<T> resolve(String domain, InetAddress dnsServerAddress, int... types)
             throws UnknownHostException, SocketException, InterruptedException {
         for (int i = 0; i < types.length; i++) {
             List<T> results = cache.getRecords(domain, types[i]);
@@ -513,7 +533,7 @@ public class DnsResolver {
      * @param channel
      *            the channel to be added
      */
-    protected void addChannel(byte[] address, Channel channel) {
+    protected void addChannel(InetAddress address, Channel channel) {
         synchronized (dnsServerChannels) {
             dnsServerChannels.put(address, channel);
         }
@@ -527,22 +547,17 @@ public class DnsResolver {
      */
     protected void removeChannel(Channel channel) {
         synchronized (dnsServerChannels) {
-            for (Iterator<Map.Entry<byte[], Channel>> iter = dnsServerChannels.entrySet().iterator(); iter.hasNext();) {
-                Map.Entry<byte[], Channel> entry = iter.next();
+            for (Iterator<Map.Entry<InetAddress, Channel>> iter = dnsServerChannels.entrySet().iterator(); iter
+                    .hasNext();) {
+                Map.Entry<InetAddress, Channel> entry = iter.next();
                 if (entry.getValue() == channel) {
                     if (channel.isOpen()) {
                         try {
                             channel.close().sync();
                         } catch (Exception e) {
                             if (logger.isErrorEnabled()) {
-                                byte[] address = entry.getKey();
-                                StringBuilder string = new StringBuilder();
-                                for (int i = 0; i < address.length; i++) {
-                                    string.append(address[i]).append(".");
-                                }
-                                logger.error(
-                                        "Could not close channel for address "
-                                                + string.substring(0, string.length() - 1), e);
+                                logger.error("Could not close channel for address " + entry.getKey().getHostAddress(),
+                                        e);
                             }
                         } finally {
                             if (eventLoop == null) {
