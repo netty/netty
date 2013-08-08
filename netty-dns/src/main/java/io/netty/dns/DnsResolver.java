@@ -213,7 +213,7 @@ public class DnsResolver {
     private DnsQuery sendQuery(int type, String domain, int id, Channel channel) throws InterruptedException {
         DnsQuery query = new DnsQuery(id);
         query.addQuestion(new DnsQuestion(domain, type));
-        channel.writeAndFlush(query).sync();
+        channel.writeAndFlush(query);
         return query;
     }
 
