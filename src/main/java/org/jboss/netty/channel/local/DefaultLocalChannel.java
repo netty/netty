@@ -171,9 +171,9 @@ final class DefaultLocalChannel extends AbstractChannel implements LocalChannel 
                                 break;
                             }
 
-                            e.getFuture().setSuccess();
                             fireMessageReceived(pairedChannel, e.getMessage());
                             fireWriteComplete(this, 1);
+                            e.getFuture().setSuccess();
                         }
                     } finally {
                         delivering.set(false);
@@ -198,8 +198,8 @@ final class DefaultLocalChannel extends AbstractChannel implements LocalChannel 
                     break;
                 }
 
-                e.getFuture().setFailure(cause);
                 fireExceptionCaught(this, cause);
+                e.getFuture().setFailure(cause);
             }
         }
     }
