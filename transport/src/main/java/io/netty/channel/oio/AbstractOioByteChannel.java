@@ -156,9 +156,6 @@ public abstract class AbstractOioByteChannel extends AbstractOioChannel {
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         for (;;) {
             Object msg = in.current();
-            if (in == null) {
-                break;
-            }
 
             if (msg instanceof ByteBuf) {
                 ByteBuf buf = (ByteBuf) msg;
