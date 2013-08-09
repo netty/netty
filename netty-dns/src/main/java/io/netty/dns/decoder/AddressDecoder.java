@@ -17,14 +17,18 @@ package io.netty.dns.decoder;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.DecoderException;
-import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.DnsResource;
+import io.netty.handler.codec.dns.DnsResponse;
+import io.netty.util.CharsetUtil;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 /**
  * Decodes A and AAAA resource records into IPv4 and IPv6 addresses,
  * respectively.
  */
-public class AddressDecoder implements RecordDecoder<ByteBuf> {
+public class AddressDecoder implements RecordDecoder<InetAddress> {
 
     private final int octets;
 
@@ -41,7 +45,7 @@ public class AddressDecoder implements RecordDecoder<ByteBuf> {
     }
 
     /**
-     * Returns a {@link ByteBuf} containing a decoded address from either an A
+     * Returns an {@link InetAddress} containing a decoded address from either an A
      * or AAAA resource record.
      *
      * @param response
@@ -51,14 +55,21 @@ public class AddressDecoder implements RecordDecoder<ByteBuf> {
      *            the {@link DnsResource} being decoded
      */
     @Override
-    public ByteBuf decode(DnsResponse response, DnsResource resource) {
+    public InetAddress decode(DnsResponse response, DnsResource resource) {
         ByteBuf data = resource.content().copy().readerIndex(response.originalIndex());
         int size = data.writerIndex() - data.readerIndex();
         if (data.readerIndex() != 0 || size != octets) {
             throw new DecoderException("Invalid content length, or reader index when decoding address [index: "
                     + data.readerIndex() + ", expected length: " + octets + ", actual: " + size + "].");
         }
-        return data;
+        byte[] address = new byte[octets];
+        data.getBytes(data.readerIndex(), address);
+        try {
+            return InetAddress.getByAddress(address);
+        } catch (UnknownHostException e) {
+            throw new DecoderException("Could not convert address "
+                    + data.toString(data.readerIndex(), size, CharsetUtil.UTF_8) + " to InetAddress.");
+        }
     }
 
 }

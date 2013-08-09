@@ -35,6 +35,8 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.lang.reflect.Method;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
@@ -286,32 +288,33 @@ public class DnsResolver {
     }
 
     /**
-     * Returns a {@link Future} which can be used to obtain a {@link List}
-     * either an IPv4 or IPv6 address for the specified domain.
+     * Returns a {@link Future} which can be used to obtain either an IPv4 or
+     * IPv6 {@link InetAddress} for the specified domain.
      */
-    public <T> Future<T> lookup(String domain) {
+    public Future<InetAddress> lookup(String domain) {
         return resolveSingle(domain, dnsServers.get(0), DnsEntry.TYPE_A, DnsEntry.TYPE_AAAA);
     }
 
     /**
-     * Returns a {@link Future} which can be used to obtain a {@link List} of
-     * either an IPv4 or IPv6 address for the specified domain, depending on the
+     * Returns a {@link Future} which can be used to obtain either an IPv4 or
+     * IPv6 {@link InetAddress} for the specified domain depending on the
      * {@code family}.
      *
      * @param family
      *            {@code 4} for IPv4 addresses, {@code 6} for IPv6 addresses, or
-     *            {@code null} for both
+     *            {@code null} for one of the two (based on which is first
+     *            received)
      */
-    public <T> Future<List<T>> lookup(String domain, Integer family) {
+    public Future<InetAddress> lookup(String domain, Integer family) {
         if (family != null && family != 4 && family != 6) {
             throw new IllegalArgumentException("Family must be 4, 6, or null to indicate both 4 and 6.");
         }
         if (family == null) {
-            return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_A, DnsEntry.TYPE_AAAA);
+            return resolveSingle(domain, dnsServers.get(0), DnsEntry.TYPE_A, DnsEntry.TYPE_AAAA);
         } else if (family == 4) {
-            return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_A);
+            return resolveSingle(domain, dnsServers.get(0), DnsEntry.TYPE_A);
         }
-        return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_AAAA);
+        return resolveSingle(domain, dnsServers.get(0), DnsEntry.TYPE_AAAA);
     }
 
     /**
@@ -390,17 +393,17 @@ public class DnsResolver {
 
     /**
      * Returns a {@link Future} which can be used to obtain a {@link List} of
-     * IPv4 addresses as {@link ByteBuf}s.
+     * {@link Inet4Address}es.
      */
-    public Future<List<ByteBuf>> resolve4(String domain) {
+    public Future<List<Inet4Address>> resolve4(String domain) {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_A);
     }
 
     /**
      * Returns a {@link Future} which can be used to obtain a {@link List} of
-     * IPv6 addresses as {@link ByteBuf}s.
+     * {@link Inet6Address}es.
      */
-    public Future<List<ByteBuf>> resolve6(String domain) {
+    public Future<List<Inet6Address>> resolve6(String domain) {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_AAAA);
     }
 
