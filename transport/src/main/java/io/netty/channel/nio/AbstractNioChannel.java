@@ -261,16 +261,16 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             // directly call super.flush0() to force a flush now
             super.flush0();
         }
+
+        private boolean isFlushPending() {
+            SelectionKey selectionKey = selectionKey();
+            return selectionKey.isValid() && (selectionKey.interestOps() & SelectionKey.OP_WRITE) != 0;
+        }
     }
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
         return loop instanceof NioEventLoop;
-    }
-
-    private boolean isFlushPending() {
-        SelectionKey selectionKey = this.selectionKey;
-        return selectionKey.isValid() && (selectionKey.interestOps() & SelectionKey.OP_WRITE) != 0;
     }
 
     @Override
