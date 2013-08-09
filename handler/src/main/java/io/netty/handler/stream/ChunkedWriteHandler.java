@@ -26,6 +26,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PendingWrite;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -214,6 +215,7 @@ public class ChunkedWriteHandler
             }
             needsFlush = true;
             final PendingWrite currentWrite = this.currentWrite;
+            final Promise<Void> currentPromise = this.currentWrite.promise();
             final Object pendingMessage = currentWrite.msg();
 
             if (pendingMessage instanceof ChunkedInput) {
@@ -281,7 +283,16 @@ public class ChunkedWriteHandler
                         @Override
                         public void operationComplete(ChannelFuture future) throws Exception {
                             pendingWrites.decrementAndGet();
-                            currentWrite.successAndRecycle();
+                            if (future.isSuccess()) {
+                                if (!currentPromise.isDone()) {
+                                    currentWrite.successAndRecycle();
+                                }
+                            } else {
+                                if (!currentPromise.isDone()) {
+                                    currentWrite.failAndRecycle(future.cause());
+                                }
+                            }
+
                             closeInput(chunks);
                         }
                     });
@@ -292,7 +303,10 @@ public class ChunkedWriteHandler
                             pendingWrites.decrementAndGet();
                             if (!future.isSuccess()) {
                                 closeInput((ChunkedInput<?>) pendingMessage);
-                                currentWrite.failAndRecycle(future.cause());
+                                if (!currentPromise.isDone()) {
+                                    // only recycle if not done before
+                                    currentWrite.failAndRecycle(future.cause());
+                                }
                             } else {
                                 progress((ChannelPromise) currentWrite.promise());
                             }
@@ -305,7 +319,10 @@ public class ChunkedWriteHandler
                             pendingWrites.decrementAndGet();
                             if (!future.isSuccess()) {
                                 closeInput((ChunkedInput<?>) pendingMessage);
-                                currentWrite.failAndRecycle(future.cause());
+                                if (!currentPromise.isDone()) {
+                                    // only recycle if not done before
+                                    currentWrite.failAndRecycle(future.cause());
+                                }
                             } else {
                                 progress((ChannelPromise) currentWrite.promise());
                                 if (isWritable()) {
