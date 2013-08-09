@@ -165,14 +165,14 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
         } catch (Throwable t) {
             throw new DecoderException(t);
         } finally {
-            if (out.isEmpty()) {
+            int size = out.size();
+            if (size == 0) {
                 decodeWasNull = true;
+            } else {
+                for (int i = 0; i < size; i ++) {
+                    ctx.fireChannelRead(out.get(i));
+                }
             }
-
-            for (int i = 0; i < out.size(); i ++) {
-                ctx.fireChannelRead(out.get(i));
-            }
-
             out.recycle();
         }
     }
@@ -207,8 +207,8 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 cumulation.release();
                 cumulation = null;
             }
-
-            for (int i = 0; i < out.size(); i ++) {
+            int size = out.size();
+            for (int i = 0; i < size; i ++) {
                 ctx.fireChannelRead(out.get(i));
             }
             ctx.fireChannelInactive();
