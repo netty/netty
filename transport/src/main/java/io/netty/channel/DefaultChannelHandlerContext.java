@@ -498,22 +498,25 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     public ChannelFuture disconnect(final ChannelPromise promise) {
         validatePromise(promise, false);
 
-        // Translate disconnect to close if the channel has no notion of disconnect-reconnect.
-        // So far, UDP/IP is the only transport that has such behavior.
-        if (!channel().metadata().hasDisconnect()) {
-            findContextOutbound().invokeClose(promise);
-            return promise;
-        }
-
         final DefaultChannelHandlerContext next = findContextOutbound();
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            next.invokeDisconnect(promise);
+            // Translate disconnect to close if the channel has no notion of disconnect-reconnect.
+            // So far, UDP/IP is the only transport that has such behavior.
+            if (!channel().metadata().hasDisconnect()) {
+                next.invokeClose(promise);
+            } else {
+                next.invokeDisconnect(promise);
+            }
         } else {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    next.invokeDisconnect(promise);
+                    if (!channel().metadata().hasDisconnect()) {
+                        next.invokeClose(promise);
+                    } else {
+                        next.invokeDisconnect(promise);
+                    }
                 }
             });
         }
