@@ -48,8 +48,10 @@ public class FactorialServerHandler extends SimpleChannelInboundHandler<BigInteg
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        logger.info(new Formatter().format(
+        Formatter fmt = new Formatter();
+        logger.info(fmt.format(
                 "Factorial of %,d is: %,d", lastMultiplier, factorial).toString());
+        fmt.close();
     }
 
     @Override
