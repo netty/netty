@@ -172,8 +172,8 @@ final class DefaultLocalChannel extends AbstractChannel implements LocalChannel 
                             }
 
                             fireMessageReceived(pairedChannel, e.getMessage());
-                            fireWriteComplete(this, 1);
                             e.getFuture().setSuccess();
+                            fireWriteComplete(this, 1);
                         }
                     } finally {
                         delivering.set(false);
