@@ -55,7 +55,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    final Channel channel;
+    final AbstractChannel channel;
 
     final DefaultChannelHandlerContext head;
     final DefaultChannelHandlerContext tail;
@@ -66,7 +66,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     final Map<EventExecutorGroup, EventExecutor> childExecutors =
             new IdentityHashMap<EventExecutorGroup, EventExecutor>();
 
-    public DefaultChannelPipeline(Channel channel) {
+    public DefaultChannelPipeline(AbstractChannel channel) {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
@@ -511,7 +511,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
                 @Override
                 public void run() {
                     callHandlerRemoved0(ctx);
-                }
+                 }
             });
             return;
         }
@@ -735,11 +735,20 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     public ChannelPipeline fireChannelUnregistered() {
         head.fireChannelUnregistered();
 
-        // Free all buffers if channel is closed and unregistered.
+        // Remove all handlers sequentially if channel is closed and unregistered.
         if (!channel.isOpen()) {
-            head.freeInbound();
+            teardownAll();
         }
         return this;
+    }
+
+    /**
+     * Removes all handlers from the pipeline one by one from tail (exclusive) to head (inclusive) to trigger
+     * handlerRemoved().  Note that the tail handler is excluded because it's neither an outbound handler nor it
+     * does anything in handlerRemoved().
+     */
+    private void teardownAll() {
+        tail.prev.teardown();
     }
 
     @Override
@@ -755,10 +764,6 @@ final class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelPipeline fireChannelInactive() {
-        // Some implementations such as EmbeddedChannel can trigger inboundBufferUpdated()
-        // after deactivation, so it's safe not to revert the firedChannelActive flag here.
-        // Also, all known transports never get re-activated.
-        //firedChannelActive = false;
         head.fireChannelInactive();
         return this;
     }

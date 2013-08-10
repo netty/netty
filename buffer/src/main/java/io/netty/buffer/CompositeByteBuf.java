@@ -45,6 +45,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     private final boolean direct;
     private final List<Component> components = new ArrayList<Component>();
     private final int maxNumComponents;
+    private static final ByteBuffer FULL_BYTEBUFFER = (ByteBuffer) ByteBuffer.allocate(1).position(1);
 
     private boolean freed;
 
@@ -698,6 +699,10 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public CompositeByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
         checkDstIndex(index, length, dstIndex, dst.capacity());
+        if (length == 0) {
+            return this;
+        }
+
         int i = toComponentIndex(index);
         while (length > 0) {
             Component c = components.get(i);
@@ -842,6 +847,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public CompositeByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
         checkSrcIndex(index, length, srcIndex, src.length);
+        if (length == 0) {
+            return this;
+        }
 
         int i = toComponentIndex(index);
         while (length > 0) {
@@ -864,6 +872,10 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
         int length = src.remaining();
 
         checkIndex(index, length);
+        if (length == 0) {
+            return this;
+        }
+
         int i = toComponentIndex(index);
         try {
             while (length > 0) {
@@ -886,6 +898,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public CompositeByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         checkSrcIndex(index, length, srcIndex, src.capacity());
+        if (length == 0) {
+            return this;
+        }
 
         int i = toComponentIndex(index);
         while (length > 0) {
@@ -905,6 +920,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public int setBytes(int index, InputStream in, int length) throws IOException {
         checkIndex(index, length);
+        if (length == 0) {
+            return in.read(EmptyArrays.EMPTY_BYTES);
+        }
 
         int i = toComponentIndex(index);
         int readBytes = 0;
@@ -941,6 +959,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
         checkIndex(index, length);
+        if (length == 0) {
+            return in.read(FULL_BYTEBUFFER);
+        }
 
         int i = toComponentIndex(index);
         int readBytes = 0;
@@ -982,7 +1003,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     public ByteBuf copy(int index, int length) {
         checkIndex(index, length);
         ByteBuf dst = Unpooled.buffer(length);
-        copyTo(index, length, toComponentIndex(index), dst);
+        if (length != 0) {
+            copyTo(index, length, toComponentIndex(index), dst);
+        }
         return dst;
     }
 
@@ -1568,7 +1591,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
             c.freeIfNecessary();
         }
 
-        leak.close();
+        if (leak != null) {
+            leak.close();
+        }
     }
 
     @Override

@@ -15,6 +15,7 @@
  */
 package io.netty.handler.stream;
 
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
@@ -25,6 +26,8 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.PendingWrite;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -75,6 +78,8 @@ public class ChunkedWriteHandler
     private volatile ChannelHandlerContext ctx;
     private final AtomicInteger pendingWrites = new AtomicInteger();
     private PendingWrite currentWrite;
+    private int progress;
+
     public ChunkedWriteHandler() {
         this(4);
     }
@@ -137,7 +142,7 @@ public class ChunkedWriteHandler
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        queue.add(new PendingWrite(msg, promise));
+        queue.add(PendingWrite.newInstance(msg, promise));
     }
 
     @Override
@@ -166,7 +171,7 @@ public class ChunkedWriteHandler
             if (currentWrite == null) {
                 break;
             }
-            Object message = currentWrite.msg;
+            Object message = currentWrite.msg();
             if (message instanceof ChunkedInput) {
                 ChunkedInput<?> in = (ChunkedInput<?>) message;
                 try {
@@ -174,13 +179,13 @@ public class ChunkedWriteHandler
                         if (cause == null) {
                             cause = new ClosedChannelException();
                         }
-                        currentWrite.fail(cause);
+                        currentWrite.failAndRecycle(cause);
                     } else {
-                        currentWrite.promise.setSuccess();
+                        currentWrite.successAndRecycle();
                     }
                     closeInput(in);
                 } catch (Exception e) {
-                    currentWrite.fail(e);
+                    currentWrite.failAndRecycle(e);
                     logger.warn(ChunkedInput.class.getSimpleName() + ".isEndOfInput() failed", e);
                     closeInput(in);
                 }
@@ -188,7 +193,7 @@ public class ChunkedWriteHandler
                 if (cause == null) {
                     cause = new ClosedChannelException();
                 }
-                currentWrite.fail(cause);
+                currentWrite.failAndRecycle(cause);
             }
         }
     }
@@ -210,7 +215,8 @@ public class ChunkedWriteHandler
             }
             needsFlush = true;
             final PendingWrite currentWrite = this.currentWrite;
-            final Object pendingMessage = currentWrite.msg;
+            final Promise<Void> currentPromise = this.currentWrite.promise();
+            final Object pendingMessage = currentWrite.msg();
 
             if (pendingMessage instanceof ChunkedInput) {
                 final ChunkedInput<?> chunks = (ChunkedInput<?>) pendingMessage;
@@ -234,18 +240,7 @@ public class ChunkedWriteHandler
                         ReferenceCountUtil.release(message);
                     }
 
-                    currentWrite.fail(t);
-                    if (ctx.executor().inEventLoop()) {
-                        ctx.fireExceptionCaught(t);
-                    } else {
-                        ctx.executor().execute(new Runnable() {
-                            @Override
-                            public void run() {
-                                ctx.fireExceptionCaught(t);
-                            }
-                        });
-                    }
-
+                    currentWrite.failAndRecycle(t);
                     closeInput(chunks);
                     break;
                 }
@@ -255,6 +250,12 @@ public class ChunkedWriteHandler
                     // not reached at the end of input. Let's wait until
                     // more chunks arrive. Nothing to write or notify.
                     break;
+                }
+
+                if (message == null) {
+                    // If message is null write an empty ByteBuf.
+                    // See https://github.com/netty/netty/issues/1671
+                    message = Unpooled.EMPTY_BUFFER;
                 }
 
                 pendingWrites.incrementAndGet();
@@ -271,7 +272,16 @@ public class ChunkedWriteHandler
                         @Override
                         public void operationComplete(ChannelFuture future) throws Exception {
                             pendingWrites.decrementAndGet();
-                            currentWrite.promise.setSuccess();
+                            if (future.isSuccess()) {
+                                if (!currentPromise.isDone()) {
+                                    currentWrite.successAndRecycle();
+                                }
+                            } else {
+                                if (!currentPromise.isDone()) {
+                                    currentWrite.failAndRecycle(future.cause());
+                                }
+                            }
+
                             closeInput(chunks);
                         }
                     });
@@ -282,9 +292,12 @@ public class ChunkedWriteHandler
                             pendingWrites.decrementAndGet();
                             if (!future.isSuccess()) {
                                 closeInput((ChunkedInput<?>) pendingMessage);
-                                currentWrite.fail(future.cause());
+                                if (!currentPromise.isDone()) {
+                                    // only recycle if not done before
+                                    currentWrite.failAndRecycle(future.cause());
+                                }
                             } else {
-                                currentWrite.progress();
+                                progress((ChannelPromise) currentWrite.promise());
                             }
                         }
                     });
@@ -295,9 +308,12 @@ public class ChunkedWriteHandler
                             pendingWrites.decrementAndGet();
                             if (!future.isSuccess()) {
                                 closeInput((ChunkedInput<?>) pendingMessage);
-                                currentWrite.fail(future.cause());
+                                if (!currentPromise.isDone()) {
+                                    // only recycle if not done before
+                                    currentWrite.failAndRecycle(future.cause());
+                                }
                             } else {
-                                currentWrite.progress();
+                                progress((ChannelPromise) currentWrite.promise());
                                 if (isWritable()) {
                                     resumeTransfer();
                                 }
@@ -306,7 +322,7 @@ public class ChunkedWriteHandler
                     });
                 }
             } else {
-                ctx.write(pendingMessage, currentWrite.promise);
+                ctx.write(pendingMessage, (ChannelPromise) currentWrite.recycleAndGet());
                 this.currentWrite = null;
             }
 
@@ -320,7 +336,7 @@ public class ChunkedWriteHandler
         }
     }
 
-    static void closeInput(ChunkedInput<?> chunks) {
+    void closeInput(ChunkedInput<?> chunks) {
         try {
             chunks.close();
         } catch (Throwable t) {
@@ -328,30 +344,13 @@ public class ChunkedWriteHandler
                 logger.warn("Failed to close a chunked input.", t);
             }
         }
+        progress = 0;
     }
 
-    private static final class PendingWrite {
-        final Object msg;
-        final ChannelPromise promise;
-        private long progress;
-
-        PendingWrite(Object msg, ChannelPromise promise) {
-            this.msg = msg;
-            this.promise = promise;
-        }
-
-        void fail(Throwable cause) {
-            ReferenceCountUtil.release(msg);
-            if (promise != null) {
-                promise.setFailure(cause);
-            }
-        }
-
-        void progress() {
-            progress ++;
-            if (promise instanceof ChannelProgressivePromise) {
-                ((ChannelProgressivePromise) promise).tryProgress(progress, -1);
-            }
+    void progress(ChannelPromise promise) {
+        progress ++;
+        if (promise instanceof ChannelProgressivePromise) {
+            ((ChannelProgressivePromise) promise).tryProgress(progress, -1);
         }
     }
 }

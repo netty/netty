@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,26 +16,24 @@
 package io.netty.channel;
 
 /**
- * Special {@link ChannelException} which will be thrown by {@link EventLoop} and {@link EventLoopGroup}
- * implementations when an error occurs.
+ * Responsible to estimate size of a message. The size represent how much memory the message will ca. reserve in
+ * memory.
  */
-public class EventLoopException extends ChannelException {
+public interface MessageSizeEstimator {
 
-    private static final long serialVersionUID = -8969100344583703616L;
+    /**
+     * Creates a new handle. The handle provides the actual operations.
+     */
+    Handle newHandle();
 
-    public EventLoopException() {
+    interface Handle {
+
+        /**
+         * Calculate the size of the given message.
+         *
+         * @param msg       The message for which the size should be calculated
+         * @return size     The size in bytes. The returned size must be >= 0
+         */
+        int size(Object msg);
     }
-
-    public EventLoopException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    public EventLoopException(String message) {
-        super(message);
-    }
-
-    public EventLoopException(Throwable cause) {
-        super(cause);
-    }
-
 }

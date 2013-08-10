@@ -552,4 +552,18 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         buf.removeComponent(0);
         assertEquals(0, buf.numComponents());
     }
+
+    @Test
+    public void testCopyEmpty() {
+        CompositeByteBuf buf = freeLater(compositeBuffer());
+        assertEquals(0, buf.numComponents());
+        assertEquals(0, freeLater(buf.copy()).readableBytes());
+    }
+
+    @Test
+    public void testDuplicateEmpty() {
+        CompositeByteBuf buf = freeLater(compositeBuffer());
+        assertEquals(0, buf.numComponents());
+        assertEquals(0, freeLater(buf.duplicate()).readableBytes());
+    }
 }

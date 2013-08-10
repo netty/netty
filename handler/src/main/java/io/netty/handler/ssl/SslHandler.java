@@ -34,6 +34,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.PendingWrite;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
@@ -354,7 +355,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             if (write == null) {
                 break;
             }
-            write.fail(new ChannelException("Pending write on removal of SslHandler"));
+            write.failAndRecycle(new ChannelException("Pending write on removal of SslHandler"));
         }
     }
 
@@ -393,7 +394,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     @Override
     public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        pendingUnencryptedWrites.add(new PendingWrite((ByteBuf) msg, promise));
+        pendingUnencryptedWrites.add(PendingWrite.newInstance((ByteBuf) msg, promise));
     }
 
     @Override
@@ -407,13 +408,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 if (pendingWrite == null) {
                     break;
                 }
-                ctx.write(pendingWrite.buf, pendingWrite.promise);
+                ctx.write(pendingWrite.msg(), (ChannelPromise) pendingWrite.recycleAndGet());
             }
             ctx.flush();
             return;
         }
         if (pendingUnencryptedWrites.isEmpty()) {
-            pendingUnencryptedWrites.add(new PendingWrite(Unpooled.EMPTY_BUFFER, null));
+            pendingUnencryptedWrites.add(PendingWrite.newInstance(Unpooled.EMPTY_BUFFER, null));
         }
         flush0(ctx);
     }
@@ -430,11 +431,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 if (out == null) {
                     out = ctx.alloc().buffer();
                 }
-                SSLEngineResult result = wrap(engine, pending.buf, out);
+                ByteBuf buf = (ByteBuf) pending.msg();
+                SSLEngineResult result = wrap(engine, buf, out);
 
-                if (!pending.buf.isReadable()) {
-                    pending.buf.release();
-                    promise = pending.promise;
+                if (!buf.isReadable()) {
+                    buf.release();
+                    promise = (ChannelPromise) pending.recycleAndGet();
                     pendingUnencryptedWrites.remove();
                 } else {
                     promise = null;
@@ -448,7 +450,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         if (w == null) {
                             break;
                         }
-                        w.fail(SSLENGINE_CLOSED);
+                        w.failAndRecycle(SSLENGINE_CLOSED);
                     }
                     return;
                 } else {
@@ -934,7 +936,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             if (write == null) {
                 break;
             }
-            write.fail(cause);
+            write.failAndRecycle(cause);
         }
     }
 
@@ -1078,27 +1080,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 throw new IllegalStateException();
             }
             return ctx.executor();
-        }
-    }
-
-    private static final class PendingWrite {
-        final ByteBuf buf;
-        final ChannelPromise promise;
-
-        PendingWrite(ByteBuf buf, ChannelPromise promise) {
-            this.buf = buf;
-            this.promise = promise;
-        }
-
-        PendingWrite(ByteBuf buf) {
-            this(buf, null);
-        }
-
-        void fail(Throwable cause) {
-            buf.release();
-            if (promise != null) {
-                promise.setFailure(cause);
-            }
         }
     }
 }

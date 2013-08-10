@@ -39,6 +39,8 @@ public class ChannelOption<T> extends UniqueName {
             new ChannelOption<ByteBufAllocator>("ALLOCATOR");
     public static final ChannelOption<RecvByteBufAllocator> RCVBUF_ALLOCATOR =
             new ChannelOption<RecvByteBufAllocator>("RCVBUF_ALLOCATOR");
+    public static final ChannelOption<MessageSizeEstimator> MESSAGE_SIZE_ESTIMATOR =
+            new ChannelOption<MessageSizeEstimator>("MESSAGE_SIZE_ESTIMATOR");
 
     public static final ChannelOption<Integer> CONNECT_TIMEOUT_MILLIS =
             new ChannelOption<Integer>("CONNECT_TIMEOUT_MILLIS");
@@ -87,8 +89,10 @@ public class ChannelOption<T> extends UniqueName {
     public static final ChannelOption<Boolean> TCP_NODELAY =
             new ChannelOption<Boolean>("TCP_NODELAY");
 
+    @Deprecated
     public static final ChannelOption<Long> AIO_READ_TIMEOUT =
             new ChannelOption<Long>("AIO_READ_TIMEOUT");
+    @Deprecated
     public static final ChannelOption<Long> AIO_WRITE_TIMEOUT =
             new ChannelOption<Long>("AIO_WRITE_TIMEOUT");
 

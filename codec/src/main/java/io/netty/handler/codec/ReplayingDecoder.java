@@ -340,7 +340,8 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                 cumulation = null;
             }
 
-            for (int i = 0; i < out.size(); i ++) {
+            int size = out.size();
+            for (int i = 0; i < size; i ++) {
                 ctx.fireChannelRead(out.get(i));
             }
             ctx.fireChannelInactive();
@@ -358,6 +359,15 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                 int oldInputLength = in.readableBytes();
                 try {
                     decode(ctx, replayable, out);
+
+                    // Check if this handler was removed before continuing the loop.
+                    // If it was removed, it is not safe to continue to operate on the buffer.
+                    //
+                    // See https://github.com/netty/netty/issues/1664
+                    if (ctx.isRemoved()) {
+                        break;
+                    }
+
                     if (outSize == out.size()) {
                         if (oldInputLength == in.readableBytes() && oldState == state) {
                             throw new DecoderException(
@@ -371,6 +381,15 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                     }
                 } catch (Signal replay) {
                     replay.expect(REPLAY);
+
+                    // Check if this handler was removed before continuing the loop.
+                    // If it was removed, it is not safe to continue to operate on the buffer.
+                    //
+                    // See https://github.com/netty/netty/issues/1664
+                    if (ctx.isRemoved()) {
+                        break;
+                    }
+
                     // Return to the checkpoint (or oldPosition) and retry.
                     int checkpoint = this.checkpoint;
                     if (checkpoint >= 0) {

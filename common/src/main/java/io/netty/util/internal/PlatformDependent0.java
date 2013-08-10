@@ -97,6 +97,9 @@ final class PlatformDependent0 {
                 } catch (NoSuchMethodError t) {
                     logger.debug("sun.misc.Unsafe.copyMemory: unavailable");
                     throw t;
+                } catch (NoSuchMethodException e) {
+                    logger.debug("sun.misc.Unsafe.copyMemory: unavailable");
+                    throw e;
                 }
             } catch (Throwable cause) {
                 unsafe = null;

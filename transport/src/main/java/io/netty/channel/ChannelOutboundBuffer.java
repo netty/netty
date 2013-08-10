@@ -29,8 +29,9 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
+import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 /**
  * (Transport implementors only) an internal data structure used by {@link AbstractChannel} to store its pending
@@ -52,6 +53,8 @@ public final class ChannelOutboundBuffer {
     static ChannelOutboundBuffer newInstance(AbstractChannel channel) {
         ChannelOutboundBuffer buffer = RECYCLER.get();
         buffer.channel = channel;
+        buffer.totalPendingSize = 0;
+        buffer.writable = 1;
         return buffer;
     }
 
@@ -79,7 +82,12 @@ public final class ChannelOutboundBuffer {
     private int unflushedCount;
 
     private boolean inFail;
-    private long totalPendingSize;
+
+    private static final AtomicLongFieldUpdater<ChannelOutboundBuffer> TOTAL_PENDING_SIZE_UPDATER =
+            AtomicLongFieldUpdater.newUpdater(ChannelOutboundBuffer.class, "totalPendingSize");
+
+    @SuppressWarnings({ "unused", "FieldMayBeFinal" })
+    private volatile long totalPendingSize;
 
     private static final AtomicIntegerFieldUpdater<ChannelOutboundBuffer> WRITABLE_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(ChannelOutboundBuffer.class, "writable");
@@ -128,20 +136,6 @@ public final class ChannelOutboundBuffer {
         unflushedTotals = new long[initialCapacity];
     }
 
-    void recycle() {
-        if (head != tail) {
-            throw new IllegalStateException();
-        }
-        if (unflushedCount != 0) {
-            throw new IllegalStateException();
-        }
-        if (totalPendingSize != 0) {
-            throw new IllegalStateException();
-        }
-
-        RECYCLER.recycle(this, handle);
-    }
-
     void addMessage(Object msg, ChannelPromise promise) {
         Object[] unflushed = this.unflushed;
         int unflushedCount = this.unflushedCount;
@@ -150,7 +144,10 @@ public final class ChannelOutboundBuffer {
             unflushed = this.unflushed;
         }
 
-        final int size = channel.calculateMessageSize(msg);
+        int size = channel.estimatorHandle().size(msg);
+        if (size < 0) {
+            size = 0;
+        }
         unflushed[unflushedCount] = msg;
         unflushedPendingSizes[unflushedCount] = size;
         unflushedPromises[unflushedCount] = promise;
@@ -221,7 +218,9 @@ public final class ChannelOutboundBuffer {
 
         for (int i = 0; i < unflushedCount; i ++) {
             flushed[tail] = unflushed[i];
+            unflushed[i] = null;
             flushedPromises[tail] = unflushedPromises[i];
+            unflushedPromises[i] = null;
             flushedPendingSizes[tail] = unflushedPendingSizes[i];
             flushedProgresses[tail] = 0;
             flushedTotals[tail] = unflushedTotals[i];
@@ -238,8 +237,6 @@ public final class ChannelOutboundBuffer {
             }
         }
 
-        Arrays.fill(unflushed, 0, unflushedCount, null);
-        Arrays.fill(unflushedPromises, 0, unflushedCount, null);
         this.unflushedCount = 0;
 
         this.tail = tail;
@@ -283,12 +280,25 @@ public final class ChannelOutboundBuffer {
         tail = n;
     }
 
-    private void incrementPendingOutboundBytes(int size) {
-        if (size == 0) {
+    /**
+     * Increment the pending bytes which will be written at some point.
+     * This method is thread-safe!
+     */
+    void incrementPendingOutboundBytes(int size) {
+        // Cache the channel and check for null to make sure we not produce a NPE in case of the Channel gets
+        // recycled while process this method.
+        Channel channel = this.channel;
+        if (size == 0 || channel == null) {
             return;
         }
 
-        long newWriteBufferSize = totalPendingSize += size;
+        long oldValue = totalPendingSize;
+        long newWriteBufferSize = oldValue + size;
+        while (!TOTAL_PENDING_SIZE_UPDATER.compareAndSet(this, oldValue, newWriteBufferSize)) {
+            oldValue = totalPendingSize;
+            newWriteBufferSize = oldValue + size;
+        }
+
         int highWaterMark = channel.config().getWriteBufferHighWaterMark();
 
         if (newWriteBufferSize > highWaterMark) {
@@ -298,12 +308,25 @@ public final class ChannelOutboundBuffer {
         }
     }
 
-    private void decrementPendingOutboundBytes(int size) {
-        if (size == 0) {
+    /**
+     * Decrement the pending bytes which will be written at some point.
+     * This method is thread-safe!
+     */
+    void decrementPendingOutboundBytes(int size) {
+        // Cache the channel and check for null to make sure we not produce a NPE in case of the Channel gets
+        // recycled while process this method.
+        Channel channel = this.channel;
+        if (size == 0 || channel == null) {
             return;
         }
 
-        long newWriteBufferSize = totalPendingSize -= size;
+        long oldValue = totalPendingSize;
+        long newWriteBufferSize = oldValue - size;
+        while (!TOTAL_PENDING_SIZE_UPDATER.compareAndSet(this, oldValue, newWriteBufferSize)) {
+            oldValue = totalPendingSize;
+            newWriteBufferSize = oldValue - size;
+        }
+
         int lowWaterMark = channel.config().getWriteBufferLowWaterMark();
 
         if (newWriteBufferSize == 0 || newWriteBufferSize < lowWaterMark) {
@@ -339,13 +362,16 @@ public final class ChannelOutboundBuffer {
         flushed[head] = null;
 
         ChannelPromise promise = flushedPromises[head];
-        promise.trySuccess();
         flushedPromises[head] = null;
 
-        decrementPendingOutboundBytes(flushedPendingSizes[head]);
+        int size = flushedPendingSizes[head];
         flushedPendingSizes[head] = 0;
 
         this.head = head + 1 & flushed.length - 1;
+
+        promise.trySuccess();
+        decrementPendingOutboundBytes(size);
+
         return true;
     }
 
@@ -360,13 +386,17 @@ public final class ChannelOutboundBuffer {
         safeRelease(msg);
         flushed[head] = null;
 
-        safeFail(flushedPromises[head], cause);
+        ChannelPromise promise = flushedPromises[head];
         flushedPromises[head] = null;
 
-        decrementPendingOutboundBytes(flushedPendingSizes[head]);
+        int size = flushedPendingSizes[head];
         flushedPendingSizes[head] = 0;
 
         this.head = head + 1 & flushed.length - 1;
+
+        safeFail(promise, cause);
+        decrementPendingOutboundBytes(size);
+
         return true;
     }
 
@@ -466,7 +496,7 @@ public final class ChannelOutboundBuffer {
     }
 
     boolean getWritable() {
-        return WRITABLE_UPDATER.get(this) != 0;
+        return writable != 0;
     }
 
     public int size() {
@@ -475,33 +505,6 @@ public final class ChannelOutboundBuffer {
 
     public boolean isEmpty() {
         return head == tail;
-    }
-
-    void failUnflushed(Throwable cause) {
-        if (inFail) {
-            return;
-        }
-
-        inFail = true;
-
-        // Release all unflushed messages.
-        Object[] unflushed = this.unflushed;
-        ChannelPromise[] unflushedPromises = this.unflushedPromises;
-        int[] unflushedPendingSizes = this.unflushedPendingSizes;
-        final int unflushedCount = this.unflushedCount;
-        try {
-            for (int i = 0; i < unflushedCount; i++) {
-                safeRelease(unflushed[i]);
-                unflushed[i] = null;
-                safeFail(unflushedPromises[i], cause);
-                unflushedPromises[i] = null;
-                decrementPendingOutboundBytes(unflushedPendingSizes[i]);
-                unflushedPendingSizes[i] = 0;
-            }
-        } finally {
-            this.unflushedCount = 0;
-            inFail = false;
-        }
     }
 
     void failFlushed(Throwable cause) {
@@ -524,6 +527,60 @@ public final class ChannelOutboundBuffer {
         } finally {
             inFail = false;
         }
+    }
+
+    void close(final ClosedChannelException cause) {
+        if (inFail) {
+            channel.eventLoop().execute(new Runnable() {
+                @Override
+                public void run() {
+                    close(cause);
+                }
+            });
+            return;
+        }
+
+        inFail = true;
+
+        if (channel.isOpen()) {
+            throw new IllegalStateException("close() must be invoked after the channel is closed.");
+        }
+
+        if (head != tail) {
+            throw new IllegalStateException("close() must be invoked after all flushed writes are handled.");
+        }
+
+        // Release all unflushed messages.
+        Object[] unflushed = this.unflushed;
+        ChannelPromise[] unflushedPromises = this.unflushedPromises;
+        int[] unflushedPendingSizes = this.unflushedPendingSizes;
+        final int unflushedCount = this.unflushedCount;
+        try {
+            for (int i = 0; i < unflushedCount; i++) {
+                safeRelease(unflushed[i]);
+                unflushed[i] = null;
+                safeFail(unflushedPromises[i], cause);
+                unflushedPromises[i] = null;
+
+                // Just decrease; do not trigger any events via decrementPendingOutboundBytes()
+                int size = unflushedPendingSizes[i];
+                long oldValue = totalPendingSize;
+                long newWriteBufferSize = oldValue - size;
+                while (!TOTAL_PENDING_SIZE_UPDATER.compareAndSet(this, oldValue, newWriteBufferSize)) {
+                    oldValue = totalPendingSize;
+                    newWriteBufferSize = oldValue - size;
+                }
+
+                unflushedPendingSizes[i] = 0;
+            }
+        } finally {
+            this.unflushedCount = 0;
+            inFail = false;
+        }
+        RECYCLER.recycle(this, handle);
+
+        // Set the channel to null so it can be GC'ed ASAP
+        channel = null;
     }
 
     private static void safeRelease(Object message) {

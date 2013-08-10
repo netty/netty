@@ -150,39 +150,26 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected Runnable doRegister() throws Exception {
-        final LocalChannel peer = this.peer;
-        Runnable postRegisterTask;
-
+    protected void doRegister() throws Exception {
         if (peer != null) {
             state = 2;
 
             peer.remoteAddress = parent().localAddress();
             peer.state = 2;
 
-            // Ensure the peer's channelActive event is triggered *after* this channel's
-            // channelRegistered event is triggered, so that this channel's pipeline is fully
-            // initialized by ChannelInitializer.
-            final EventLoop peerEventLoop = peer.eventLoop();
-            postRegisterTask = new Runnable() {
+            // Always call peer.eventLoop().execute() even if peer.eventLoop().inEventLoop() is true.
+            // This ensures that if both channels are on the same event loop, the peer's channelActive
+            // event is triggered *after* this channel's channelRegistered event, so that this channel's
+            // pipeline is fully initialized by ChannelInitializer before any channelRead events.
+            peer.eventLoop().execute(new Runnable() {
                 @Override
                 public void run() {
-                    peerEventLoop.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            peer.connectPromise.setSuccess();
-                            peer.pipeline().fireChannelActive();
-                        }
-                    });
+                    peer.pipeline().fireChannelActive();
+                    peer.connectPromise.setSuccess();
                 }
-            };
-        } else {
-            postRegisterTask = null;
+            });
         }
-
         ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
-
-        return postRegisterTask;
     }
 
     @Override
@@ -199,24 +186,18 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doPreClose() throws Exception {
-        if (state > 2) {
-            // Closed already
-            return;
-        }
-
-        // Update all internal state before the closeFuture is notified.
-        if (localAddress != null) {
-            if (parent() == null) {
-                LocalChannelRegistry.unregister(localAddress);
-            }
-            localAddress = null;
-        }
-        state = 3;
-    }
-
-    @Override
     protected void doClose() throws Exception {
+        if (state <= 2) {
+            // Update all internal state before the closeFuture is notified.
+            if (localAddress != null) {
+                if (parent() == null) {
+                    LocalChannelRegistry.unregister(localAddress);
+                }
+                localAddress = null;
+            }
+            state = 3;
+        }
+
         LocalChannel peer = this.peer;
         if (peer != null && peer.isActive()) {
             peer.unsafe().close(unsafe().voidPromise());
@@ -225,12 +206,11 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected Runnable doDeregister() throws Exception {
+    protected void doDeregister() throws Exception {
         if (isOpen()) {
             unsafe().close(unsafe().voidPromise());
         }
         ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
-        return null;
     }
 
     @Override
