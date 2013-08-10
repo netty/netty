@@ -64,7 +64,7 @@ public class DnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> 
         return name.substring(0, name.length() - 1);
     }
 
-    /** A test
+    /**
      * Retrieves a domain name given a buffer containing a DNS packet without
      * advancing the readerIndex for the buffer.
      *
