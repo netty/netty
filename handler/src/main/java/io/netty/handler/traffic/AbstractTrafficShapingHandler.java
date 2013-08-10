@@ -211,8 +211,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
 
     @Override
     public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
-        ByteBuf buf = (ByteBuf) msg;
-        long size = buf.readableBytes();
+        long size = calculateSize(msg);
         long curtime = System.currentTimeMillis();
 
         if (trafficCounter != null) {
