@@ -186,7 +186,7 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
                     if (remoteAddress instanceof Future) {
                         try {
                             remote = new InetSocketAddress(((Future<InetAddress>) remoteAddress).get(), remotePort);
-                        } catch (InterruptedException | ExecutionException e) {
+                        } catch (Exception e) {
                             remote = null;
                             logger.error("Future failed when resolving address", e);
                         }
