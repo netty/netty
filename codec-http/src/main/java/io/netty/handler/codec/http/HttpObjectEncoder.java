@@ -16,16 +16,15 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.FileRegion;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.CharsetUtil;
-import io.netty.util.ReferenceCountUtil;
 
 import java.util.List;
 import java.util.Map;
 
+import static io.netty.buffer.Unpooled.*;
 import static io.netty.handler.codec.http.HttpConstants.*;
 
 /**
@@ -45,7 +44,10 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     private static final byte[] CRLF = { CR, LF };
     private static final byte[] ZERO_CRLF = { '0', CR, LF };
     private static final byte[] ZERO_CRLF_CRLF = { '0', CR, LF, CR, LF };
-    private static final byte[] HEADER_SEPARATOR = { COLON, SP};
+    private static final byte[] HEADER_SEPARATOR = { COLON, SP };
+    private static final ByteBuf CRLF_BUF = unreleasableBuffer(directBuffer(ZERO_CRLF.length).writeBytes(ZERO_CRLF));
+    private static final ByteBuf ZERO_CRLF_CRLF_BUF = unreleasableBuffer(directBuffer(ZERO_CRLF_CRLF.length)
+            .writeBytes(ZERO_CRLF_CRLF));
 
     private static final int ST_INIT = 0;
     private static final int ST_CONTENT_NON_CHUNK = 1;
@@ -83,8 +85,8 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                     out.add(encodeAndRetain(msg));
                 } else {
                     // Need to produce some output otherwise an
-                    // IllegalstateException will be thrown
-                    out.add(Unpooled.EMPTY_BUFFER);
+                    // IllegalStateException will be thrown
+                    out.add(EMPTY_BUFFER);
                 }
 
                 if (msg instanceof LastHttpContent) {
@@ -98,13 +100,13 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                     buf.writeBytes(CRLF);
                     out.add(buf);
                     out.add(encodeAndRetain(msg));
-                    out.add(ctx.alloc().buffer(CRLF.length).writeBytes(CRLF));
+                    out.add(CRLF_BUF.duplicate());
                 }
 
                 if (msg instanceof LastHttpContent) {
                     HttpHeaders headers = ((LastHttpContent) msg).trailingHeaders();
                     if (headers.isEmpty()) {
-                        out.add(ctx.alloc().buffer(ZERO_CRLF_CRLF.length).writeBytes(ZERO_CRLF_CRLF));
+                        out.add(ZERO_CRLF_CRLF_BUF.duplicate());
                     } else {
                         ByteBuf buf = ctx.alloc().buffer();
                         buf.writeBytes(ZERO_CRLF);
@@ -118,7 +120,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                   if (contentLength == 0) {
                       // Need to produce some output otherwise an
                       // IllegalstateException will be thrown
-                      out.add(Unpooled.EMPTY_BUFFER);
+                      out.add(EMPTY_BUFFER);
                   }
                 }
             } else {
