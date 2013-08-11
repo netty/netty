@@ -30,13 +30,11 @@ import java.util.Set;
  */
 public final class DnsDefaultCache implements DnsCachingStrategy {
 
-    private final Map<String, Map<Integer, Set<Record<?>>>> recordCache
-            = new HashMap<String, Map<Integer, Set<Record<?>>>>();
+    private final Map<String, Map<Integer, Set<Record<?>>>> recordCache = new HashMap<String, Map<Integer, Set<Record<?>>>>();
 
     /**
-     * Returns a <strong>single</strong> record for the given domain
-     * {@code name} and record {@code type}, or null if this record does not
-     * exist.
+     * Returns a <strong>single</strong> record for the given domain {@code name} and record {@code type}, or null if
+     * this record does not exist.
      */
     @Override
     @SuppressWarnings("unchecked")
@@ -49,8 +47,8 @@ public final class DnsDefaultCache implements DnsCachingStrategy {
     }
 
     /**
-     * Returns a <strong>{@code List}</strong> of records for the given domain
-     * {@code name} and record {@code type}, or null if no records exist.
+     * Returns a <strong>{@code List}</strong> of records for the given domain {@code name} and record {@code type}, or
+     * null if no records exist.
      */
     @Override
     @SuppressWarnings("unchecked")
@@ -90,8 +88,7 @@ public final class DnsDefaultCache implements DnsCachingStrategy {
      * @param ttl
      *            the time to live for the record
      * @param content
-     *            the record (i.e. for A records, this would be a
-     *            {@link ByteBuf})
+     *            the record (i.e. for A records, this would be a {@link ByteBuf})
      */
     @Override
     public <T> void submitRecord(String name, int type, long ttl, T content) {
@@ -112,8 +109,7 @@ public final class DnsDefaultCache implements DnsCachingStrategy {
      * Represents a single resource record.
      *
      * @param <T>
-     *            the type of record (i.e. for A records, this would be
-     *            {@link ByteBuf})
+     *            the type of record (i.e. for A records, this would be {@link ByteBuf})
      */
     class Record<T> {
 
@@ -134,8 +130,7 @@ public final class DnsDefaultCache implements DnsCachingStrategy {
         }
 
         /**
-         * Returns when this record will expire in milliseconds, based on the
-         * machine's time.
+         * Returns when this record will expire in milliseconds, based on the machine's time.
          */
         public long expiration() {
             return expiration;

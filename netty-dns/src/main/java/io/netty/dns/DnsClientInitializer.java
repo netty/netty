@@ -23,15 +23,14 @@ import io.netty.handler.codec.dns.DnsResponseDecoder;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 
 /**
- * Initializes a DNS client that can encode and decode DNS response and query
- * packets. Has a default timeout of 30 seconds when no data is read, in which
- * case the client is shutdown. Each DNS server gets its own DNS client.
+ * Initializes a DNS client that can encode and decode DNS response and query packets. Has a default timeout of 30
+ * seconds when no data is read, in which case the client is shutdown. Each DNS server gets its own DNS client.
  */
 public class DnsClientInitializer extends ChannelInitializer<NioDatagramChannel> {
 
-    private final DnsResolver resolver;
+    private final DnsAsynchronousResolver resolver;
 
-    public DnsClientInitializer(DnsResolver resolver) {
+    public DnsClientInitializer(DnsAsynchronousResolver resolver) {
         this.resolver = resolver;
     }
 

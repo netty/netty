@@ -48,21 +48,20 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 
 /**
- * This is the main class for looking up information from DNS servers. Users
- * should call the methods in this class to query and receive answers from DNS
- * servers. The class attempts to load user's default DNS servers, but also
- * includes Google and OpenDNS DNS servers.
+ * This is the main class for looking up information from DNS servers. Users should call the methods in this class to
+ * query and receive answers from DNS servers. The class attempts to load user's default DNS servers, but also includes
+ * Google and OpenDNS DNS servers.
  */
-public class DnsResolver {
+public class DnsAsynchronousResolver {
 
     /**
-     * How long to wait for an answer from a DNS server after sending a query
-     * before timing out and moving on to the next DNS server.
+     * How long to wait for an answer from a DNS server after sending a query before timing out and moving on to the
+     * next DNS server.
      */
     public static final long REQUEST_TIMEOUT = 2000;
 
     private static final EventExecutorGroup executor = new DefaultEventExecutorGroup(1);
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsResolver.class);
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsAsynchronousResolver.class);
     private static final Object idxLock = new Object();
 
     private static int idx;
@@ -84,30 +83,28 @@ public class DnsResolver {
     private final DnsSelectionStrategy selector;
 
     /**
-     * Constructs a new {@link DnsResolver} with the system's default DNS
-     * servers, a new {@link NioEventLoopGroup} for every DNS server
-     * {@link Channel} created, a {@link DnsDefaultCache} caching strategy and a
-     * {@link DnsRoundRobinSelectionStrategy}.
+     * Constructs a new {@link DnsAsynchronousResolver} with the system's default DNS servers, a new
+     * {@link NioEventLoopGroup} for every DNS server {@link Channel} created, a {@link DnsDefaultCache} caching
+     * strategy and a {@link DnsRoundRobinSelectionStrategy}.
      */
-    public DnsResolver() {
+    public DnsAsynchronousResolver() {
         this(null, null, new DnsDefaultCache(), new DnsRoundRobinSelectionStrategy());
     }
 
     /**
-     * Constructs a new {@link DnsResolver}.
+     * Constructs a new {@link DnsAsynchronousResolver}.
      *
      * @param dnsServers
      *            an array of DNS server addresses to use
      * @param eventLoop
-     *            an {@link EventLoop} to use for all DNS server {@link Channel}
-     *            s. If left {@code null}, a new {@link NioEventLoopGroup} will
-     *            be used for every {@link Channel}.
+     *            an {@link EventLoop} to use for all DNS server {@link Channel} s. If left {@code null}, a new
+     *            {@link NioEventLoopGroup} will be used for every {@link Channel}.
      * @param cache
      *            the caching strategy to use
      * @param selector
      *            the selecting strategy to use for single results
      */
-    public DnsResolver(InetAddress[] dnsServers, EventLoop eventLoop, DnsCachingStrategy cache,
+    public DnsAsynchronousResolver(InetAddress[] dnsServers, EventLoop eventLoop, DnsCachingStrategy cache,
             DnsSelectionStrategy selector) {
         if (cache == null) {
             throw new NullPointerException("The caching strategy cannot be null.");
@@ -130,8 +127,8 @@ public class DnsResolver {
     }
 
     /**
-     * Loads system's default DNS server settings and validates servers before
-     * adding them to the list of servers to use for this {@link DnsResolver }.
+     * Loads system's default DNS server settings and validates servers before adding them to the list of servers to use
+     * for this {@link DnsAsynchronousResolver }.
      */
     private void useSystemDefault() {
         try {
@@ -153,9 +150,8 @@ public class DnsResolver {
     }
 
     /**
-     * Checks if a DNS server can actually be connected to and queried for
-     * information by running through a request. This is a
-     * <strong>blocking</strong> method.
+     * Checks if a DNS server can actually be connected to and queried for information by running through a request.
+     * This is a <strong>blocking</strong> method.
      *
      * @param address
      *            the DNS server being checked
@@ -183,16 +179,15 @@ public class DnsResolver {
     }
 
     /**
-     * Returns the {@link DnsCachingStrategy} that this resolver uses for
-     * caching responses.
+     * Returns the {@link DnsCachingStrategy} that this resolver uses for caching responses.
      */
     public DnsCachingStrategy cache() {
         return cache;
     }
 
     /**
-     * Returns the {@link DnsSelectionStrategy} that this resolver uses for
-     * picking a single resource record from a {@link List}.
+     * Returns the {@link DnsSelectionStrategy} that this resolver uses for picking a single resource record from a
+     * {@link List}.
      */
     public DnsSelectionStrategy selector() {
         return selector;
@@ -242,8 +237,7 @@ public class DnsResolver {
     }
 
     /**
-     * Returns the DNS server address at the specified {@code index} in the
-     * {@link List}.
+     * Returns the DNS server address at the specified {@code index} in the {@link List}.
      */
     public InetAddress getDnsServer(int index) {
         if (index > -1 && index < dnsServers.size()) {
@@ -253,8 +247,8 @@ public class DnsResolver {
     }
 
     /**
-     * Creates a channel for a DNS server if it does not already exist, or else
-     * returns the existing channel. Internal use only.
+     * Creates a channel for a DNS server if it does not already exist, or else returns the existing channel. Internal
+     * use only.
      *
      * @param dnsServerAddress
      *            the address of the DNS server
@@ -288,22 +282,20 @@ public class DnsResolver {
     }
 
     /**
-     * Returns a {@link Future} which can be used to obtain either an IPv4 or
-     * IPv6 {@link InetAddress} for the specified domain.
+     * Returns a {@link Future} which can be used to obtain either an IPv4 or IPv6 {@link InetAddress} for the specified
+     * domain.
      */
     public Future<InetAddress> lookup(String domain) {
         return resolveSingle(domain, dnsServers.get(0), DnsEntry.TYPE_A, DnsEntry.TYPE_AAAA);
     }
 
     /**
-     * Returns a {@link Future} which can be used to obtain either an IPv4 or
-     * IPv6 {@link InetAddress} for the specified domain depending on the
-     * {@code family}.
+     * Returns a {@link Future} which can be used to obtain either an IPv4 or IPv6 {@link InetAddress} for the specified
+     * domain depending on the {@code family}.
      *
      * @param family
-     *            {@code 4} for IPv4 addresses, {@code 6} for IPv6 addresses, or
-     *            {@code null} for one of the two (based on which is first
-     *            received)
+     *            {@code 4} for IPv4 addresses, {@code 6} for IPv6 addresses, or {@code null} for one of the two (based
+     *            on which is first received)
      */
     public Future<InetAddress> lookup(String domain, Integer family) {
         if (family != null && family != 4 && family != 6) {
@@ -318,19 +310,16 @@ public class DnsResolver {
     }
 
     /**
-     * Returns a {@link Future} which can be used to obtain a
-     * <strong>single</strong> resource record with one of the specified
-     * {@code types}.
+     * Returns a {@link Future} which can be used to obtain a <strong>single</strong> resource record with one of the
+     * specified {@code types}.
      *
      * @param domain
      *            the domain name being queried
      * @param dnsServerAddress
      *            the DNS server to use
      * @param types
-     *            the desired resource record (only <strong>one</strong> type
-     *            and one record can be returned in a single method call. The
-     *            first valid resource record in the array of types will be
-     *            returned)
+     *            the desired resource record (only <strong>one</strong> type and one record can be returned in a single
+     *            method call. The first valid resource record in the array of types will be returned)
      */
     public <T> Future<T> resolveSingle(String domain, InetAddress dnsServerAddress, int... types) {
         for (int i = 0; i < types.length; i++) {
@@ -355,19 +344,17 @@ public class DnsResolver {
     }
 
     /**
-     * Returns a {@link Future} which can be used to obtain a <strong>
-     * {@link List}</strong> of resource records with one of the specified
-     * {@code types}.
+     * Returns a {@link Future} which can be used to obtain a <strong> {@link List}</strong> of resource records with
+     * one of the specified {@code types}.
      *
      * @param domain
      *            the domain name being queried
      * @param dnsServerAddress
      *            the DNS server to use
      * @param types
-     *            the desired resource records (only <strong>one</strong> type
-     *            can be returned, but multiple resource records, in a single
-     *            method call. The first valid type of resource records will be
-     *            returned in a {@link List})
+     *            the desired resource records (only <strong>one</strong> type can be returned, but multiple resource
+     *            records, in a single method call. The first valid type of resource records will be returned in a
+     *            {@link List})
      */
     public <T extends List<?>> Future<T> resolve(String domain, InetAddress dnsServerAddress, int... types) {
         for (int i = 0; i < types.length; i++) {
@@ -392,24 +379,22 @@ public class DnsResolver {
     }
 
     /**
-     * Returns a {@link Future} which can be used to obtain a {@link List} of
-     * {@link Inet4Address}es.
+     * Returns a {@link Future} which can be used to obtain a {@link List} of {@link Inet4Address}es.
      */
     public Future<List<Inet4Address>> resolve4(String domain) {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_A);
     }
 
     /**
-     * Returns a {@link Future} which can be used to obtain a {@link List} of
-     * {@link Inet6Address}es.
+     * Returns a {@link Future} which can be used to obtain a {@link List} of {@link Inet6Address}es.
      */
     public Future<List<Inet6Address>> resolve6(String domain) {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_AAAA);
     }
 
     /**
-     * Returns a {@link Future} which can be used to obtain a {@link List} of
-     * mail exchanger records as {@link MailExchangerRecord}s.
+     * Returns a {@link Future} which can be used to obtain a {@link List} of mail exchanger records as
+     * {@link MailExchangerRecord}s.
      *
      * @throws UnknownHostException
      * @throws SocketException
@@ -420,41 +405,37 @@ public class DnsResolver {
     }
 
     /**
-     * Returns a {@link Future} which can be used to obtain a {@link List} of
-     * service records as {@link ServiceRecord}s.
+     * Returns a {@link Future} which can be used to obtain a {@link List} of service records as {@link ServiceRecord}s.
      */
     public Future<List<ServiceRecord>> resolveSrv(String domain) {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_SRV);
     }
 
     /**
-     * Returns a {@link Future} which can be used to obtain a {@link List} of
-     * text records as {@link String}s in a {@link List}.
+     * Returns a {@link Future} which can be used to obtain a {@link List} of text records as {@link String}s in a
+     * {@link List}.
      */
     public Future<List<List<String>>> resolveTxt(String domain) {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_TXT);
     }
 
     /**
-     * Returns a {@link Future} which can be used to obtain a {@link List} of
-     * canonical name records as {@link String}s.
+     * Returns a {@link Future} which can be used to obtain a {@link List} of canonical name records as {@link String}s.
      */
     public Future<List<String>> resolveCname(String domain) {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_CNAME);
     }
 
     /**
-     * Returns a {@link Future} which can be used to obtain a {@link List} of
-     * name server records as {@link String}s.
+     * Returns a {@link Future} which can be used to obtain a {@link List} of name server records as {@link String}s.
      */
     public Future<List<String>> resolveNs(String domain) {
         return resolve(domain, dnsServers.get(0), DnsEntry.TYPE_NS);
     }
 
     /**
-     * Returns a {@link Future} which can be used to obtain a {@link List} of
-     * domain names as {@link String}s when given their corresponding IP
-     * address.
+     * Returns a {@link Future} which can be used to obtain a {@link List} of domain names as {@link String}s when given
+     * their corresponding IP address.
      *
      * @param ipAddress
      *            the IP address to perform a reverse lookup on
@@ -471,9 +452,8 @@ public class DnsResolver {
     }
 
     /**
-     * Returns a {@link Future} which can be used to obtain a {@link List} of
-     * domain names as {@link String}s when given their corresponding IP
-     * address.
+     * Returns a {@link Future} which can be used to obtain a {@link List} of domain names as {@link String}s when given
+     * their corresponding IP address.
      *
      * @param ipAddress
      *            the IP address to perform a reverse lookup on

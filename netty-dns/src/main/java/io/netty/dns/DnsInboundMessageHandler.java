@@ -21,14 +21,14 @@ import io.netty.handler.codec.dns.DnsMessage;
 import io.netty.handler.codec.dns.DnsResponse;
 
 /**
- * Handles listening for messages for a single DNS server and passes messages to
- * the {@link DnsCallback} class to be linked to their callback.
+ * Handles listening for messages for a single DNS server and passes messages to the {@link DnsCallback} class to be
+ * linked to their callback.
  */
 public class DnsInboundMessageHandler extends SimpleChannelInboundHandler<DnsResponse> {
 
     /**
-     * Called when a new {@link DnsMessage} is received. The callback
-     * corresponding to this message is found and finished.
+     * Called when a new {@link DnsMessage} is received. The callback corresponding to this message is found and
+     * finished.
      */
     @Override
     public void channelRead0(ChannelHandlerContext ctx, DnsResponse response) throws Exception {

@@ -2,7 +2,7 @@ package io.netty.dns;
 
 import java.util.List;
 
-public class DnsRoundRobinStrategy implements DnsSelectionStrategy {
+public class DnsRoundRobinSelectionStrategy implements DnsSelectionStrategy {
 
     private int index;
 

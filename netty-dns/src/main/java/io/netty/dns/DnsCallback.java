@@ -34,24 +34,19 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * A {@link DnsCallback} can represent a single {@link DnsQuery} or a group of
- * queries, and when called returns a {@link List} of all cached responses that
- * answer the first query that is responded to. This class is only used for new
- * queries, which are created when desired information has not been cached or
- * has expired. If multiple queries are using a single instance of
- * {@link DnsCallback} this means that all the {@link DnsQuery}s have the same
- * id. {@link DnsCallback} will listen for the first {@link DnsResponse} with
- * the shared id, and will return the result of this {@link DnsResponse}
- * (assuming it is valid) when called. This is useful when multiple queries can
- * be used to receive one similar piece of data (i.e. querying for both A and
- * AAAA records when a user wants to connect to a server and either an IPv4 or
- * IPv6 address is sufficient). If a {@link DnsCallback} fails, null will be
- * returned. For obtaining single values, as opposed to a {@link List},
- * {@link DnsSingleResultCallback} is used.
+ * A {@link DnsCallback} can represent a single {@link DnsQuery} or a group of queries, and when called returns a
+ * {@link List} of all cached responses that answer the first query that is responded to. This class is only used for
+ * new queries, which are created when desired information has not been cached or has expired. If multiple queries are
+ * using a single instance of {@link DnsCallback} this means that all the {@link DnsQuery}s have the same id.
+ * {@link DnsCallback} will listen for the first {@link DnsResponse} with the shared id, and will return the result of
+ * this {@link DnsResponse} (assuming it is valid) when called. This is useful when multiple queries can be used to
+ * receive one similar piece of data (i.e. querying for both A and AAAA records when a user wants to connect to a server
+ * and either an IPv4 or IPv6 address is sufficient). If a {@link DnsCallback} fails, null will be returned. For
+ * obtaining single values, as opposed to a {@link List}, {@link DnsSingleResultCallback} is used.
  *
  * @param <T>
- *            a {@link List} of all answers for a specified type (i.e. if type
- *            is A, the {@link List} would be for {@link ByteBuf}s)
+ *            a {@link List} of all answers for a specified type (i.e. if type is A, the {@link List} would be for
+ *            {@link ByteBuf}s)
  */
 public class DnsCallback<T extends List<?>> implements Callable<T> {
 
@@ -60,16 +55,13 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
     private static final Map<Integer, DnsCallback<?>> callbacks = new HashMap<Integer, DnsCallback<?>>();
 
     /**
-     * Called by the {@link DnsInboundMessageHandler} when a {@link DnsResponse}
-     * is received from a DNS server. This method checks all existing
-     * {@link DnsCallback}s for a callback with an id matching the
-     * {@link DnsResponse}s id and sets the value for the callback as one or
-     * more of the response's resource records (if the response contains valid
-     * resource records).
+     * Called by the {@link DnsInboundMessageHandler} when a {@link DnsResponse} is received from a DNS server. This
+     * method checks all existing {@link DnsCallback}s for a callback with an id matching the {@link DnsResponse}s id
+     * and sets the value for the callback as one or more of the response's resource records (if the response contains
+     * valid resource records).
      *
      * @param response
-     *            the {@link DnsResponse} received from the DNS server when
-     *            queried
+     *            the {@link DnsResponse} received from the DNS server when queried
      */
     static void finish(DnsResponse response) {
         DnsCallback<?> callback = callbacks.get(response.getHeader().getId());
@@ -104,7 +96,7 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
     }
 
     private final AtomicInteger fails = new AtomicInteger();
-    private final DnsResolver resolver;
+    private final DnsAsynchronousResolver resolver;
     private final DnsQuery[] queries;
 
     @SuppressWarnings("unchecked")
@@ -114,20 +106,18 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
     private int validType = -1;
 
     /**
-     * Constructs a {@link DnsCallback} with a specified DNS resolver, DNS
-     * server index, and an array of (or a single) query.
+     * Constructs a {@link DnsCallback} with a specified DNS resolver, DNS server index, and an array of (or a single)
+     * query.
      *
      * @param resolver
-     *            the {@link DnsResolver} making the query
+     *            the {@link DnsAsynchronousResolver} making the query
      * @param serverIndex
-     *            the index at which the DNS server address is located in
-     *            {@link DnsResolver#dnsServers}, or -1 if it is not in the
-     *            {@link List}
+     *            the index at which the DNS server address is located in {@link DnsAsynchronousResolver#dnsServers}, or
+     *            -1 if it is not in the {@link List}
      * @param queries
-     *            the {@link DnsQuery}(s) this callback is listening to for
-     *            responses
+     *            the {@link DnsQuery}(s) this callback is listening to for responses
      */
-    DnsCallback(DnsResolver resolver, int serverIndex, DnsQuery... queries) {
+    DnsCallback(DnsAsynchronousResolver resolver, int serverIndex, DnsQuery... queries) {
         if (queries == null) {
             throw new NullPointerException("Argument 'queries' cannot be null.");
         }
@@ -141,26 +131,23 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
     }
 
     /**
-     * Returns the {@link DnsResolver} attached to this {@link DnsCallback}.
+     * Returns the {@link DnsAsynchronousResolver} attached to this {@link DnsCallback}.
      */
-    public DnsResolver resolver() {
+    public DnsAsynchronousResolver resolver() {
         return resolver;
     }
 
     /**
-     * Called when a {@link DnsResponse} contains an invalid response code (not
-     * 0). Increments a counter, and cancels this callback when the counter
-     * equals the total number of {@link DnsQuery}s (meaning all queries have
-     * failed).
+     * Called when a {@link DnsResponse} contains an invalid response code (not 0). Increments a counter, and cancels
+     * this callback when the counter equals the total number of {@link DnsQuery}s (meaning all queries have failed).
      */
     private synchronized int failsIncremented() {
         return fails.getAndIncrement();
     }
 
     /**
-     * Called when a response has been decided for this callback. Sets the
-     * response and notifies the callback that a response has been set so that
-     * it may stop blocking on {@link #call()}.
+     * Called when a response has been decided for this callback. Sets the response and notifies the callback that a
+     * response has been set so that it may stop blocking on {@link #call()}.
      */
     @SuppressWarnings("unchecked")
     private void complete() {
@@ -176,21 +163,18 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
     }
 
     /**
-     * Notifies {@link DnsCallback} that a query returned a valid result for the
-     * given resource record type.
+     * Notifies {@link DnsCallback} that a query returned a valid result for the given resource record type.
      *
      * @param validType
-     *            the resource record type that should be returned by this
-     *            {@link DnsCallback} (i.e. AAAA)
+     *            the resource record type that should be returned by this {@link DnsCallback} (i.e. AAAA)
      */
     private void flagValid(int validType) {
         this.validType = validType;
     }
 
     /**
-     * Called in the event that a response from a DNS server times out. This
-     * method uses the next DNS server in line, if one exists, and attempts to
-     * re-send all queries and listen again for a response.
+     * Called in the event that a response from a DNS server times out. This method uses the next DNS server in line, if
+     * one exists, and attempts to re-send all queries and listen again for a response.
      */
     private void nextDns() {
         if (serverIndex == -1) {
@@ -218,16 +202,15 @@ public class DnsCallback<T extends List<?>> implements Callable<T> {
     }
 
     /**
-     * Returns the result for a the queries when it is sent from a DNS server.
-     * Blocks until this response has been sent, or all DNS servers have failed,
-     * in which case null is returned.
+     * Returns the result for a the queries when it is sent from a DNS server. Blocks until this response has been sent,
+     * or all DNS servers have failed, in which case null is returned.
      */
     @Override
     public T call() throws InterruptedException {
         while (result == DEFAULT) {
             synchronized (this) {
                 if (result == DEFAULT) {
-                    wait(DnsResolver.REQUEST_TIMEOUT);
+                    wait(DnsAsynchronousResolver.REQUEST_TIMEOUT);
                 }
             }
             if (result == DEFAULT) {

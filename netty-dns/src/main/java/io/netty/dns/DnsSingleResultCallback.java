@@ -21,20 +21,17 @@ import java.util.List;
 import java.util.concurrent.Callable;
 
 /**
- * Returns a single result, as opposed to a {@link List} of results in a
- * {@link DnsCallback}.
+ * Returns a single result, as opposed to a {@link List} of results in a {@link DnsCallback}.
  *
  * @param <T>
- *            a single result for a specified type (i.e. if type is A, result
- *            would be a {@link ByteBuf})
+ *            a single result for a specified type (i.e. if type is A, result would be a {@link ByteBuf})
  */
 public class DnsSingleResultCallback<T> implements Callable<T> {
 
     private final DnsCallback<List<T>> parent;
 
     /**
-     * Constructs a {@link DnsSingleResultCallback} by passing it a
-     * {@link DnsCallback}.
+     * Constructs a {@link DnsSingleResultCallback} by passing it a {@link DnsCallback}.
      *
      * @param parent
      *            the {@link DnsCallback}
@@ -44,9 +41,8 @@ public class DnsSingleResultCallback<T> implements Callable<T> {
     }
 
     /**
-     * Invokes the {@link DnsCallback}'s {@link DnsCallback#call()} method and
-     * returns a result based on the resolver's {@link DnsSelectionStrategy}, if
-     * it exists, or else {@code null}.
+     * Invokes the {@link DnsCallback}'s {@link DnsCallback#call()} method and returns a result based on the resolver's
+     * {@link DnsSelectionStrategy}, if it exists, or else {@code null}.
      */
     @Override
     public T call() throws InterruptedException {
