@@ -376,7 +376,7 @@ abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C extends Ch
                     if (localAddress instanceof Future) {
                         try {
                             address = new InetSocketAddress(((Future<InetAddress>) localAddress).get(), port);
-                        } catch (InterruptedException | ExecutionException e) {
+                        } catch (Exception e) {
                             address = null;
                             e.printStackTrace();
                         }

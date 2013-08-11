@@ -200,7 +200,7 @@ public final class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
                         if (localAddress instanceof Future) {
                             try {
                                 local = new InetSocketAddress(((Future<InetAddress>) localAddress).get(), localPort);
-                            } catch (InterruptedException | ExecutionException e) {
+                            } catch (Exception e) {
                                 local = null;
                                 logger.error("Future failed when resolving address", e);
                             }
