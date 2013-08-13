@@ -211,8 +211,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
 
     @Override
     public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
-        ByteBuf buf = (ByteBuf) msg;
-        long size = buf.readableBytes();
+        long size = calculateSize(msg);
         long curtime = System.currentTimeMillis();
 
         if (trafficCounter != null) {
@@ -285,7 +284,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
         if (size > -1 && trafficCounter != null) {
             trafficCounter.bytesWriteFlowControl(size);
             if (writeLimit == 0) {
-                ctx.write(msg);
+                ctx.write(msg, promise);
                 return;
             }
             // compute the number of ms to wait before continue with the
@@ -313,13 +312,6 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
      */
     public TrafficCounter trafficCounter() {
         return trafficCounter;
-    }
-
-    @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        if (trafficCounter != null) {
-            trafficCounter.stop();
-        }
     }
 
     @Override

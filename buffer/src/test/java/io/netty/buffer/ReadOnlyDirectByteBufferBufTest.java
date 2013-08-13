@@ -184,4 +184,14 @@ public class ReadOnlyDirectByteBufferBufTest {
 
         Assert.assertEquals(buf.slice(1, 9), copy);
     }
+
+    // Test for https://github.com/netty/netty/issues/1708
+    @Test
+    public void testWrapBufferWithNonZeroPosition() {
+        ByteBuf buf = buffer(((ByteBuffer) allocate(16).putLong(1).flip().position(1)).asReadOnlyBuffer());
+        buffers.add(buf);
+
+        ByteBuf slice = buf.slice();
+        Assert.assertEquals(buf, slice);
+    }
 }

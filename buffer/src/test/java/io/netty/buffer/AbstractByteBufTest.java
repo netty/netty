@@ -1254,6 +1254,7 @@ public abstract class AbstractByteBufTest {
             assertEquals(i, buffer.readerIndex());
             assertEquals(CAPACITY, buffer.writerIndex());
             ByteBuf actualValue = buffer.readSlice(BLOCK_SIZE);
+            assertEquals(buffer.order(), actualValue.order());
             assertEquals(wrappedBuffer(expectedValue), actualValue);
 
             // Make sure if it is a sliced buffer.

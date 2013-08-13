@@ -190,13 +190,12 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, ByteBuf uncompressed, ByteBuf out) throws Exception {
         if (finished) {
-            out.writeBytes(in);
+            out.writeBytes(uncompressed);
             return;
         }
 
-        ByteBuf uncompressed = in;
         byte[] inAry = new byte[uncompressed.readableBytes()];
         uncompressed.readBytes(inAry);
 

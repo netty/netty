@@ -51,22 +51,9 @@ import java.util.List;
 public class ByteArrayDecoder extends MessageToMessageDecoder<ByteBuf> {
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out) throws Exception {
-        byte[] array;
-        if (msg.hasArray()) {
-            if (msg.arrayOffset() == 0 && msg.readableBytes() == msg.capacity()) {
-                // we have no offset and the length is the same as the capacity. Its safe to reuse
-                // the array without copy it first
-                array = msg.array();
-            } else {
-                // copy the ChannelBuffer to a byte array
-                array = new byte[msg.readableBytes()];
-                msg.getBytes(0, array);
-            }
-        } else {
-            // copy the ChannelBuffer to a byte array
-            array = new byte[msg.readableBytes()];
-            msg.getBytes(0, array);
-        }
+         // copy the ByteBuf content to a byte array
+        byte[] array = new byte[msg.readableBytes()];
+        msg.getBytes(0, array);
 
         out.add(array);
     }

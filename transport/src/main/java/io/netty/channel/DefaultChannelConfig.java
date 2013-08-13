@@ -32,12 +32,16 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     private static final ByteBufAllocator DEFAULT_ALLOCATOR = UnpooledByteBufAllocator.DEFAULT;
     private static final RecvByteBufAllocator DEFAULT_RCVBUF_ALLOCATOR = AdaptiveRecvByteBufAllocator.DEFAULT;
+    private static final MessageSizeEstimator DEFAULT_MSG_SIZE_ESTIMATOR = DefaultMessageSizeEstimator.DEFAULT;
+
     private static final int DEFAULT_CONNECT_TIMEOUT = 30000;
 
     protected final Channel channel;
 
     private volatile ByteBufAllocator allocator = DEFAULT_ALLOCATOR;
     private volatile RecvByteBufAllocator rcvBufAllocator = DEFAULT_RCVBUF_ALLOCATOR;
+    private volatile MessageSizeEstimator msgSizeEstimator = DEFAULT_MSG_SIZE_ESTIMATOR;
+
     private volatile int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
     private volatile int maxMessagesPerRead;
     private volatile int writeSpinCount = 16;
@@ -64,7 +68,8 @@ public class DefaultChannelConfig implements ChannelConfig {
         return getOptions(
                 null,
                 CONNECT_TIMEOUT_MILLIS, MAX_MESSAGES_PER_READ, WRITE_SPIN_COUNT,
-                ALLOCATOR, AUTO_READ, RCVBUF_ALLOCATOR);
+                ALLOCATOR, AUTO_READ, RCVBUF_ALLOCATOR, WRITE_BUFFER_HIGH_WATER_MARK,
+                WRITE_BUFFER_LOW_WATER_MARK, MESSAGE_SIZE_ESTIMATOR);
     }
 
     protected Map<ChannelOption<?>, Object> getOptions(
@@ -120,7 +125,15 @@ public class DefaultChannelConfig implements ChannelConfig {
         if (option == AUTO_READ) {
             return (T) Boolean.valueOf(isAutoRead());
         }
-
+        if (option == WRITE_BUFFER_HIGH_WATER_MARK) {
+            return (T) Integer.valueOf(getWriteBufferHighWaterMark());
+        }
+        if (option == WRITE_BUFFER_LOW_WATER_MARK) {
+            return (T) Integer.valueOf(getWriteBufferLowWaterMark());
+        }
+        if (option == MESSAGE_SIZE_ESTIMATOR) {
+            return (T) getMessageSizeEstimator();
+        }
         return null;
     }
 
@@ -140,6 +153,12 @@ public class DefaultChannelConfig implements ChannelConfig {
             setRecvByteBufAllocator((RecvByteBufAllocator) value);
         } else if (option == AUTO_READ) {
             setAutoRead((Boolean) value);
+        } else if (option == WRITE_BUFFER_HIGH_WATER_MARK) {
+            setWriteBufferHighWaterMark((Integer) value);
+        } else if (option == WRITE_BUFFER_LOW_WATER_MARK) {
+            setWriteBufferLowWaterMark((Integer) value);
+        } else if (option == MESSAGE_SIZE_ESTIMATOR) {
+            setMessageSizeEstimator((MessageSizeEstimator) value);
         } else {
             return false;
         }
@@ -280,6 +299,20 @@ public class DefaultChannelConfig implements ChannelConfig {
                     "writeBufferLowWaterMark must be >= 0");
         }
         this.writeBufferLowWaterMark = writeBufferLowWaterMark;
+        return this;
+    }
+
+    @Override
+    public MessageSizeEstimator getMessageSizeEstimator() {
+        return msgSizeEstimator;
+    }
+
+    @Override
+    public ChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
+        if (estimator == null) {
+            throw new NullPointerException("estimator");
+        }
+        msgSizeEstimator = estimator;
         return this;
     }
 }

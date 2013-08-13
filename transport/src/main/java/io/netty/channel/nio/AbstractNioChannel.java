@@ -32,8 +32,6 @@ import java.net.SocketAddress;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -49,7 +47,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     protected final int readInterestOp;
     private volatile SelectionKey selectionKey;
     private volatile boolean inputShutdown;
-    final Queue<NioTask<SelectableChannel>> writableTasks = new ConcurrentLinkedQueue<NioTask<SelectableChannel>>();
 
     /**
      * The future of the current connection attempt.  If not null, subsequent
@@ -264,16 +261,16 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             // directly call super.flush0() to force a flush now
             super.flush0();
         }
+
+        private boolean isFlushPending() {
+            SelectionKey selectionKey = selectionKey();
+            return selectionKey.isValid() && (selectionKey.interestOps() & SelectionKey.OP_WRITE) != 0;
+        }
     }
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
         return loop instanceof NioEventLoop;
-    }
-
-    private boolean isFlushPending() {
-        SelectionKey selectionKey = this.selectionKey;
-        return selectionKey.isValid() && (selectionKey.interestOps() & SelectionKey.OP_WRITE) != 0;
     }
 
     @Override

@@ -17,6 +17,7 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.DefaultAttributeMap;
+import io.netty.util.Recycler;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.internal.StringUtil;
@@ -30,7 +31,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     volatile DefaultChannelHandlerContext next;
     volatile DefaultChannelHandlerContext prev;
 
-    private final Channel channel;
+    private final AbstractChannel channel;
     private final DefaultChannelPipeline pipeline;
     private final String name;
     private final ChannelHandler handler;
@@ -497,22 +498,25 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     public ChannelFuture disconnect(final ChannelPromise promise) {
         validatePromise(promise, false);
 
-        // Translate disconnect to close if the channel has no notion of disconnect-reconnect.
-        // So far, UDP/IP is the only transport that has such behavior.
-        if (!channel().metadata().hasDisconnect()) {
-            findContextOutbound().invokeClose(promise);
-            return promise;
-        }
-
         final DefaultChannelHandlerContext next = findContextOutbound();
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            next.invokeDisconnect(promise);
+            // Translate disconnect to close if the channel has no notion of disconnect-reconnect.
+            // So far, UDP/IP is the only transport that has such behavior.
+            if (!channel().metadata().hasDisconnect()) {
+                next.invokeClose(promise);
+            } else {
+                next.invokeDisconnect(promise);
+            }
         } else {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    next.invokeDisconnect(promise);
+                    if (!channel().metadata().hasDisconnect()) {
+                        next.invokeClose(promise);
+                    } else {
+                        next.invokeDisconnect(promise);
+                    }
                 }
             });
         }
@@ -631,12 +635,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (executor.inEventLoop()) {
             next.invokeWrite(msg, promise);
         } else {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    next.invokeWrite(msg, promise);
-                }
-            });
+            submitWriteTask(next, executor, msg, false, promise);
         }
 
         return promise;
@@ -682,9 +681,34 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
 
     @Override
     public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
-        ChannelFuture future = write(msg, promise);
-        flush();
-        return future;
+        if (msg == null) {
+            throw new NullPointerException("msg");
+        }
+        validatePromise(promise, true);
+
+        final DefaultChannelHandlerContext next = findContextOutbound();
+        EventExecutor executor = next.executor();
+        if (executor.inEventLoop()) {
+            next.invokeWrite(msg, promise);
+            next.invokeFlush();
+        } else {
+            submitWriteTask(next, executor, msg, true, promise);
+        }
+
+        return promise;
+    }
+
+    private void submitWriteTask(DefaultChannelHandlerContext next, EventExecutor executor,
+                                 Object msg, boolean flush, ChannelPromise promise) {
+        final int size = channel.estimatorHandle().size(msg);
+        if (size > 0) {
+            ChannelOutboundBuffer buffer = channel.unsafe().outboundBuffer();
+            // Check for null as it may be set to null if the channel is closed already
+            if (buffer != null) {
+                buffer.incrementPendingOutboundBytes(size);
+            }
+        }
+        executor.execute(WriteTask.newInstance(next, msg, size, flush, promise));
     }
 
     @Override
@@ -820,5 +844,61 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     @Override
     public boolean isRemoved() {
         return removed;
+    }
+
+    static final class WriteTask implements Runnable {
+        private DefaultChannelHandlerContext ctx;
+        private Object msg;
+        private ChannelPromise promise;
+        private int size;
+        private boolean flush;
+
+        private static final Recycler<WriteTask> RECYCLER = new Recycler<WriteTask>() {
+            @Override
+            protected WriteTask newObject(Handle handle) {
+                return new WriteTask(handle);
+            }
+        };
+
+        private static WriteTask newInstance(
+                DefaultChannelHandlerContext ctx, Object msg, int size, boolean flush, ChannelPromise promise) {
+            WriteTask task = RECYCLER.get();
+            task.ctx = ctx;
+            task.msg = msg;
+            task.promise = promise;
+            task.size = size;
+            task.flush = flush;
+            return task;
+        }
+
+        private final Recycler.Handle handle;
+
+        private WriteTask(Recycler.Handle handle) {
+            this.handle = handle;
+        }
+
+        @Override
+        public void run() {
+            try {
+                if (size > 0) {
+                    ChannelOutboundBuffer buffer = ctx.channel.unsafe().outboundBuffer();
+                    // Check for null as it may be set to null if the channel is closed already
+                    if (buffer != null) {
+                        buffer.decrementPendingOutboundBytes(size);
+                    }
+                }
+                ctx.invokeWrite(msg, promise);
+                if (flush) {
+                    ctx.invokeFlush();
+                }
+            } finally {
+                // Set to null so the GC can collect them directly
+                ctx = null;
+                msg = null;
+                promise = null;
+
+                RECYCLER.recycle(this, handle);
+            }
+        }
     }
 }
