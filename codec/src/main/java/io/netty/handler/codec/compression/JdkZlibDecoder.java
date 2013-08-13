@@ -49,6 +49,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
         SKIP_FNAME,
         SKIP_COMMENT,
         PROCESS_FHCRC,
+        FOOTER_START,
     }
 
     private GzipState gzipState = GzipState.HEADER_START;
@@ -112,13 +113,23 @@ public class JdkZlibDecoder extends ZlibDecoder {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        if (!in.isReadable()) {
+        if (!in.isReadable() && finished) {
             return;
         }
 
-        if (crc != null && gzipState != GzipState.HEADER_END) {
-            if (!readGZIPHeader(in)) {
-                return;
+        if (crc != null) {
+            switch (gzipState) {
+                case FOOTER_START:
+                    if (readGZIPFooter(in)) {
+                        finished = true;
+                    }
+                    return;
+                default:
+                    if (gzipState != GzipState.HEADER_END) {
+                        if (!readGZIPHeader(in)) {
+                            return;
+                        }
+                    }
             }
         }
 
@@ -134,17 +145,19 @@ public class JdkZlibDecoder extends ZlibDecoder {
         int maxOutputLength = inflater.getRemaining() << 1;
         ByteBuf decompressed = ctx.alloc().heapBuffer(maxOutputLength);
         try {
+            boolean readFooter = false;
             while (!inflater.needsInput()) {
                 byte[] outArray = decompressed.array();
                 int outIndex = decompressed.arrayOffset() + decompressed.writerIndex();
                 int length = outArray.length - outIndex;
 
                 int outputLength =  inflater.inflate(outArray, outIndex, length);
-                if (crc != null) {
-                    crc.update(outArray, outIndex, length);
-                }
+
                 if (outputLength > 0) {
                     decompressed.writerIndex(decompressed.writerIndex() + outputLength);
+                    if (crc != null) {
+                        crc.update(outArray, outIndex, length);
+                    }
                 } else {
                     if (inflater.needsDictionary()) {
                         if (dictionary == null) {
@@ -156,14 +169,27 @@ public class JdkZlibDecoder extends ZlibDecoder {
                 }
 
                 if (inflater.finished()) {
-                    finished = true; // Do not decode anymore.
+                    if (crc == null) {
+                        finished = true; // Do not decode anymore.
+                    } else {
+                        readFooter = true;
+                    }
                     break;
+                }
+            }
+
+            in.skipBytes(readableBytes - inflater.getRemaining());
+
+            if (readFooter) {
+                gzipState = GzipState.FOOTER_START;
+                if (readGZIPFooter(in)) {
+                    finished = true;
                 }
             }
         } catch (DataFormatException e) {
             throw new DecompressionException("decompression failure", e);
         } finally {
-            in.skipBytes(readableBytes - inflater.getRemaining());
+
             if (decompressed.isReadable()) {
                 out.add(decompressed);
             } else {
@@ -289,5 +315,25 @@ public class JdkZlibDecoder extends ZlibDecoder {
             default:
                 throw new IllegalStateException();
         }
+    }
+
+    private boolean readGZIPFooter(ByteBuf buf) {
+        if (buf.readableBytes() < 8) {
+            return false;
+        }
+        int dataCrc = buf.readInt();
+        int readCrc = (int) crc.getValue() & 0xffff;
+        if (dataCrc != readCrc) {
+            throw new CompressionException(
+                    "Data CRC value missmatch. Expected: " + dataCrc + ", Got: " + readCrc);
+        }
+
+        int dataLength = buf.readInt();
+        int readLength = inflater.getTotalOut();
+        if (dataLength != readLength) {
+            throw new CompressionException(
+                    "Number of bytes missmatch. Expected: " + dataLength + ", Got: " + readLength);
+        }
+        return true;
     }
 }
