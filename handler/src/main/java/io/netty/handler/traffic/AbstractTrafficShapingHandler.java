@@ -284,7 +284,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
         if (size > -1 && trafficCounter != null) {
             trafficCounter.bytesWriteFlowControl(size);
             if (writeLimit == 0) {
-                ctx.write(msg);
+                ctx.write(msg, promise);
                 return;
             }
             // compute the number of ms to wait before continue with the
