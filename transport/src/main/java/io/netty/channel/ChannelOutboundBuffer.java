@@ -41,7 +41,7 @@ public final class ChannelOutboundBuffer {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelOutboundBuffer.class);
 
-    private static final int MIN_INITIAL_CAPACITY = 8;
+    private static final int INITIAL_CAPACITY = 16;
 
     private static final Recycler<ChannelOutboundBuffer> RECYCLER = new Recycler<ChannelOutboundBuffer>() {
         @Override
@@ -96,44 +96,20 @@ public final class ChannelOutboundBuffer {
     private volatile int writable = 1;
 
     private ChannelOutboundBuffer(Handle handle) {
-        this(handle, MIN_INITIAL_CAPACITY << 1);
-    }
-
-    private ChannelOutboundBuffer(Handle handle, int initialCapacity) {
-        if (initialCapacity < 0) {
-            throw new IllegalArgumentException("initialCapacity: " + initialCapacity + " (expected: >= 0)");
-        }
-        // Find the best power of two to hold elements.
-        // Tests "<=" because arrays aren't kept full.
-        if (initialCapacity >= MIN_INITIAL_CAPACITY) {
-            initialCapacity |= initialCapacity >>>  1;
-            initialCapacity |= initialCapacity >>>  2;
-            initialCapacity |= initialCapacity >>>  4;
-            initialCapacity |= initialCapacity >>>  8;
-            initialCapacity |= initialCapacity >>> 16;
-            initialCapacity ++;
-
-            if (initialCapacity < 0) {  // Too many elements, must back off
-                initialCapacity >>>= 1; // Good luck allocating 2 ^ 30 elements
-            }
-        } else {
-            initialCapacity = MIN_INITIAL_CAPACITY;
-        }
-
         this.handle = handle;
 
-        flushed = new Object[initialCapacity];
-        flushedPromises = new ChannelPromise[initialCapacity];
-        flushedPendingSizes = new int[initialCapacity];
-        flushedProgresses = new long[initialCapacity];
-        flushedTotals = new long[initialCapacity];
+        flushed = new Object[INITIAL_CAPACITY];
+        flushedPromises = new ChannelPromise[INITIAL_CAPACITY];
+        flushedPendingSizes = new int[INITIAL_CAPACITY];
+        flushedProgresses = new long[INITIAL_CAPACITY];
+        flushedTotals = new long[INITIAL_CAPACITY];
 
-        nioBuffers = new ByteBuffer[initialCapacity];
+        nioBuffers = new ByteBuffer[INITIAL_CAPACITY];
 
-        unflushed = new Object[initialCapacity];
-        unflushedPromises = new ChannelPromise[initialCapacity];
-        unflushedPendingSizes = new int[initialCapacity];
-        unflushedTotals = new long[initialCapacity];
+        unflushed = new Object[INITIAL_CAPACITY];
+        unflushedPromises = new ChannelPromise[INITIAL_CAPACITY];
+        unflushedPendingSizes = new int[INITIAL_CAPACITY];
+        unflushedTotals = new long[INITIAL_CAPACITY];
     }
 
     void addMessage(Object msg, ChannelPromise promise) {
