@@ -315,13 +315,6 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
     }
 
     @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        if (trafficCounter != null) {
-            trafficCounter.stop();
-        }
-    }
-
-    @Override
     public String toString() {
         return "TrafficShaping with Write Limit: " + writeLimit +
                 " Read Limit: " + readLimit + " and Counter: " +
