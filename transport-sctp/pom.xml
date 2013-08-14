@@ -29,11 +29,6 @@
   <name>Netty/Transport/SCTP</name>
 
   <dependencies>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>netty-buffer</artifactId>
-      <version>${project.version}</version>
-    </dependency>
       <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-codec</artifactId>

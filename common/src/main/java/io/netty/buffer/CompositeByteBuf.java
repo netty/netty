@@ -57,7 +57,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
         this.alloc = alloc;
         this.direct = direct;
         this.maxNumComponents = maxNumComponents;
-        leak = leakDetector.open(this);
+        leak = AbstractByteBuf.leakDetector.open(this);
     }
 
     public CompositeByteBuf(ByteBufAllocator alloc, boolean direct, int maxNumComponents, ByteBuf... buffers) {
@@ -77,7 +77,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
         addComponents0(0, buffers);
         consolidateIfNeeded();
         setIndex(0, capacity());
-        leak = leakDetector.open(this);
+        leak = AbstractByteBuf.leakDetector.open(this);
     }
 
     public CompositeByteBuf(
@@ -97,7 +97,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
         addComponents0(0, buffers);
         consolidateIfNeeded();
         setIndex(0, capacity());
-        leak = leakDetector.open(this);
+        leak = AbstractByteBuf.leakDetector.open(this);
     }
 
     /**

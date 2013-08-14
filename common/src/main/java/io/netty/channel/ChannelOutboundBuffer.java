@@ -21,7 +21,6 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
 import io.netty.util.ReferenceCountUtil;

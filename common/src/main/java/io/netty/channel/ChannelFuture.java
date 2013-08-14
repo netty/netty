@@ -15,7 +15,6 @@
  */
 package io.netty.channel;
 
-import io.netty.bootstrap.Bootstrap;
 import io.netty.util.concurrent.BlockingOperationException;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;

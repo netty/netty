@@ -21,8 +21,11 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+import io.netty.util.internal.logging.InternalLogger;
 
 import java.util.Set;
+
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
@@ -33,7 +36,6 @@ public class SpdyFrameEncoder extends MessageToByteEncoder<SpdyFrame> {
 
     private final int version;
     private final SpdyHeaderBlockEncoder headerBlockEncoder;
-
     /**
      * Creates a new instance with the specified {@code version} and the
      * default {@code compressionLevel (6)}, {@code windowBits (15)},

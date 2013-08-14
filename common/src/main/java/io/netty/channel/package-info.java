@@ -13,29 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.buffer;
-
-import java.nio.ByteOrder;
-
-import static org.junit.Assert.*;
 
 /**
- * Tests big-endian direct channel buffers
+ * The core channel API which is asynchronous and event-driven abstraction of
+ * various transports such as a
+ * <a href="http://en.wikipedia.org/wiki/New_I/O#Channels">NIO Channel</a>.
  */
-public class PooledBigEndianDirectByteBufTest extends AbstractByteBufTest {
-
-    private ByteBuf buffer;
-
-    @Override
-    protected ByteBuf newBuffer(int length) {
-        buffer = PooledByteBufAllocator.DEFAULT.directBuffer(length);
-        assertSame(ByteOrder.BIG_ENDIAN, buffer.order());
-        assertEquals(0, buffer.writerIndex());
-        return buffer;
-    }
-
-    @Override
-    protected ByteBuf[] components() {
-        return new ByteBuf[] { buffer };
-    }
-}
+package io.netty.channel;

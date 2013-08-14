@@ -16,7 +16,6 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.socket.SocketChannelConfig;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;

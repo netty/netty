@@ -17,7 +17,6 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
-import io.netty.channel.socket.SocketChannelConfig;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
