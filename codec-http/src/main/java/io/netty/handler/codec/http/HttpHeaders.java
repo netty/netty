@@ -546,12 +546,14 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      */
     public static boolean isKeepAlive(HttpMessage message) {
         String connection = message.headers().get(Names.CONNECTION);
-        if (Values.CLOSE.equalsIgnoreCase(connection)) {
+
+        boolean close = Values.CLOSE.equalsIgnoreCase(connection);
+        if (close) {
             return false;
         }
 
         if (message.getProtocolVersion().isKeepAliveDefault()) {
-            return !Values.CLOSE.equalsIgnoreCase(connection);
+            return !close;
         } else {
             return Values.KEEP_ALIVE.equalsIgnoreCase(connection);
         }
