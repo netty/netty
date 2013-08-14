@@ -30,8 +30,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 /**
  * (Transport implementors only) an internal data structure used by {@link AbstractChannel} to store its pending
@@ -53,8 +51,6 @@ public final class ChannelOutboundBuffer {
     static ChannelOutboundBuffer newInstance(AbstractChannel channel) {
         ChannelOutboundBuffer buffer = RECYCLER.get();
         buffer.channel = channel;
-        buffer.totalPendingSize = 0;
-        buffer.writable = 1;
         return buffer;
     }
 
@@ -70,23 +66,15 @@ public final class ChannelOutboundBuffer {
     private int unflushed;
     private int tail;
 
+    // Unflushed messages are stored in an array.
+    Entry[] unflushed;
+    private int unflushedCount;
+
     private ByteBuffer[] nioBuffers;
     private int nioBufferCount;
     private long nioBufferSize;
 
     private boolean inFail;
-
-    private static final AtomicLongFieldUpdater<ChannelOutboundBuffer> TOTAL_PENDING_SIZE_UPDATER =
-            AtomicLongFieldUpdater.newUpdater(ChannelOutboundBuffer.class, "totalPendingSize");
-
-    @SuppressWarnings({ "unused", "FieldMayBeFinal" })
-    private volatile long totalPendingSize;
-
-    private static final AtomicIntegerFieldUpdater<ChannelOutboundBuffer> WRITABLE_UPDATER =
-            AtomicIntegerFieldUpdater.newUpdater(ChannelOutboundBuffer.class, "writable");
-
-    @SuppressWarnings({ "unused", "FieldMayBeFinal" })
-    private volatile int writable = 1;
 
     private ChannelOutboundBuffer(Handle handle) {
         this.handle = handle;
@@ -116,10 +104,6 @@ public final class ChannelOutboundBuffer {
         if (tail == flushed) {
             addCapacity();
         }
-
-        // increment pending bytes after adding message to the unflushed arrays.
-        // See https://github.com/netty/netty/issues/1619
-        incrementPendingOutboundBytes(size);
     }
 
     private void addCapacity() {
@@ -150,62 +134,6 @@ public final class ChannelOutboundBuffer {
         this.unflushed = this.tail;
     }
 
-    /**
-     * Increment the pending bytes which will be written at some point.
-     * This method is thread-safe!
-     */
-    void incrementPendingOutboundBytes(int size) {
-        // Cache the channel and check for null to make sure we not produce a NPE in case of the Channel gets
-        // recycled while process this method.
-        Channel channel = this.channel;
-        if (size == 0 || channel == null) {
-            return;
-        }
-
-        long oldValue = totalPendingSize;
-        long newWriteBufferSize = oldValue + size;
-        while (!TOTAL_PENDING_SIZE_UPDATER.compareAndSet(this, oldValue, newWriteBufferSize)) {
-            oldValue = totalPendingSize;
-            newWriteBufferSize = oldValue + size;
-        }
-
-        int highWaterMark = channel.config().getWriteBufferHighWaterMark();
-
-        if (newWriteBufferSize > highWaterMark) {
-            if (WRITABLE_UPDATER.compareAndSet(this, 1, 0)) {
-                channel.pipeline().fireChannelWritabilityChanged();
-            }
-        }
-    }
-
-    /**
-     * Decrement the pending bytes which will be written at some point.
-     * This method is thread-safe!
-     */
-    void decrementPendingOutboundBytes(int size) {
-        // Cache the channel and check for null to make sure we not produce a NPE in case of the Channel gets
-        // recycled while process this method.
-        Channel channel = this.channel;
-        if (size == 0 || channel == null) {
-            return;
-        }
-
-        long oldValue = totalPendingSize;
-        long newWriteBufferSize = oldValue - size;
-        while (!TOTAL_PENDING_SIZE_UPDATER.compareAndSet(this, oldValue, newWriteBufferSize)) {
-            oldValue = totalPendingSize;
-            newWriteBufferSize = oldValue - size;
-        }
-
-        int lowWaterMark = channel.config().getWriteBufferLowWaterMark();
-
-        if (newWriteBufferSize == 0 || newWriteBufferSize < lowWaterMark) {
-            if (WRITABLE_UPDATER.compareAndSet(this, 0, 1)) {
-                channel.pipeline().fireChannelWritabilityChanged();
-            }
-        }
-    }
-
     private static long total(Object msg) {
         if (msg instanceof ByteBuf) {
             return ((ByteBuf) msg).readableBytes();
@@ -231,9 +159,8 @@ public final class ChannelOutboundBuffer {
         Entry e = buffer[flushed];
         ChannelPromise p = e.promise;
         if (p instanceof ChannelProgressivePromise) {
-            long progress = e.progress + amount;
-            e.progress = progress;
-            ((ChannelProgressivePromise) p).tryProgress(progress, e.total);
+            e.progress += amount;
+            ((ChannelProgressivePromise) p).tryProgress(e.progress, e.total);
         }
     }
 
@@ -258,7 +185,7 @@ public final class ChannelOutboundBuffer {
         safeRelease(msg);
 
         promise.trySuccess();
-        decrementPendingOutboundBytes(size);
+        this.channel.decrementPendingOutboundBytes(size, true);
 
         return true;
     }
@@ -284,7 +211,7 @@ public final class ChannelOutboundBuffer {
         safeRelease(msg);
 
         safeFail(promise, cause);
-        decrementPendingOutboundBytes(size);
+        this.channel.decrementPendingOutboundBytes(size, true);
 
         return true;
     }
@@ -384,10 +311,6 @@ public final class ChannelOutboundBuffer {
         return nioBufferSize;
     }
 
-    boolean getWritable() {
-        return writable != 0;
-    }
-
     public int size() {
         return unflushed - flushed & buffer.length - 1;
     }
@@ -450,14 +373,7 @@ public final class ChannelOutboundBuffer {
                 e.promise = null;
 
                 // Just decrease; do not trigger any events via decrementPendingOutboundBytes()
-                int size = e.pendingSize;
-                long oldValue = totalPendingSize;
-                long newWriteBufferSize = oldValue - size;
-                while (!TOTAL_PENDING_SIZE_UPDATER.compareAndSet(this, oldValue, newWriteBufferSize)) {
-                    oldValue = totalPendingSize;
-                    newWriteBufferSize = oldValue - size;
-                }
-
+                this.channel.decrementPendingOutboundBytes(e.pendingSize, false);
                 e.pendingSize = 0;
             }
         } finally {
