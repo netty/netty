@@ -28,11 +28,39 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
 
     private final HttpHeaders trailingHeaders = new DefaultHttpHeaders() {
         @Override
+        public HttpHeaders add(String name, Object value) {
+            validateName(name);
+            return super.add(name, value);
+        }
+
+        @Override
+        public HttpHeaders add(String name, Iterable<?> values) {
+            validateName(name);
+            return super.add(name, values);
+        }
+
+        @Override
+        public HttpHeaders set(String name, Iterable<?> values) {
+            validateName(name);
+            return super.set(name, values);
+        }
+
+        @Override
+        public HttpHeaders set(String name, Object value) {
+            validateName(name);
+            return super.set(name, value);
+        }
+
+        @Override
         void validateHeaderName0(String name) {
             super.validateHeaderName0(name);
+            validateName(name);
+        }
+
+        private void validateName(String name) {
             if (name.equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH) ||
-                name.equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING) ||
-                name.equalsIgnoreCase(HttpHeaders.Names.TRAILER)) {
+                    name.equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING) ||
+                    name.equalsIgnoreCase(HttpHeaders.Names.TRAILER)) {
                 throw new IllegalArgumentException(
                         "prohibited trailing header: " + name);
             }

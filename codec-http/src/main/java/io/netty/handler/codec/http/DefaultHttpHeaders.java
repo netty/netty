@@ -29,10 +29,14 @@ public class DefaultHttpHeaders extends HttpHeaders {
 
     private static final int BUCKET_SIZE = 17;
 
-    private static int hash(String name) {
+    private static int hash(String name, boolean validate) {
         int h = 0;
         for (int i = name.length() - 1; i >= 0; i --) {
-            char c = toLowerCase(name.charAt(i));
+            char c = name.charAt(i);
+            if (validate) {
+                valideHeaderNameChar(c);
+            }
+            c = toLowerCase(c);
             h = 31 * h + c;
         }
 
@@ -89,12 +93,15 @@ public class DefaultHttpHeaders extends HttpHeaders {
         validateHeaderName(headerName);
     }
 
+    void validateHeaderValue0(String headerValue) {
+        validateHeaderValue(headerValue);
+    }
+
     @Override
     public HttpHeaders add(final String name, final Object value) {
-        validateHeaderName0(name);
         String strVal = toString(value);
-        validateHeaderValue(strVal);
-        int h = hash(name);
+        validateHeaderValue0(strVal);
+        int h = hash(name, true);
         int i = index(h);
         add0(h, i, name, strVal);
         return this;
@@ -102,12 +109,11 @@ public class DefaultHttpHeaders extends HttpHeaders {
 
     @Override
     public HttpHeaders add(String name, Iterable<?> values) {
-        validateHeaderName0(name);
-        int h = hash(name);
+        int h = hash(name, true);
         int i = index(h);
         for (Object v: values) {
             String vstr = toString(v);
-            validateHeaderValue(vstr);
+            validateHeaderValue0(vstr);
             add0(h, i, name, vstr);
         }
         return this;
@@ -129,7 +135,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
         if (name == null) {
             throw new NullPointerException("name");
         }
-        int h = hash(name);
+        int h = hash(name, false);
         int i = index(h);
         remove0(h, i, name);
         return this;
@@ -173,10 +179,9 @@ public class DefaultHttpHeaders extends HttpHeaders {
 
     @Override
     public HttpHeaders set(final String name, final Object value) {
-        validateHeaderName0(name);
         String strVal = toString(value);
-        validateHeaderValue(strVal);
-        int h = hash(name);
+        validateHeaderValue0(strVal);
+        int h = hash(name, true);
         int i = index(h);
         remove0(h, i, name);
         add0(h, i, name, strVal);
@@ -189,9 +194,9 @@ public class DefaultHttpHeaders extends HttpHeaders {
             throw new NullPointerException("values");
         }
 
-        validateHeaderName0(name);
+        //validateHeaderName0(name);
 
-        int h = hash(name);
+        int h = hash(name, false);
         int i = index(h);
 
         remove0(h, i, name);
@@ -200,7 +205,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
                 break;
             }
             String strVal = toString(v);
-            validateHeaderValue(strVal);
+            validateHeaderValue0(strVal);
             add0(h, i, name, strVal);
         }
 
@@ -224,7 +229,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
             throw new NullPointerException("name");
         }
 
-        int h = hash(name);
+        int h = hash(name, false);
         int i = index(h);
         HeaderEntry e = entries[i];
         String value = null;
@@ -250,7 +255,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
 
         LinkedList<String> values = new LinkedList<String>();
 
-        int h = hash(name);
+        int h = hash(name, false);
         int i = index(h);
         HeaderEntry e = entries[i];
         while (e != null) {
@@ -322,7 +327,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
         return value.toString();
     }
 
-    private static final class HeaderEntry implements Map.Entry<String, String> {
+    private final class HeaderEntry implements Map.Entry<String, String> {
         final int hash;
         final String key;
         String value;
@@ -362,7 +367,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
             if (value == null) {
                 throw new NullPointerException("value");
             }
-            validateHeaderValue(value);
+            validateHeaderValue0(value);
             String oldValue = this.value;
             this.value = value;
             return oldValue;
