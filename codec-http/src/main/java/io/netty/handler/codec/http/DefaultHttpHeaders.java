@@ -343,6 +343,10 @@ public class DefaultHttpHeaders extends HttpHeaders {
 
     @Override
     public String get(final String name) {
+        return get(name, false);
+    }
+
+    private String get(final String name, boolean last) {
         if (name == null) {
             throw new NullPointerException("name");
         }
@@ -363,6 +367,9 @@ public class DefaultHttpHeaders extends HttpHeaders {
         while (e != null) {
             if (e.hash == h && eq(name, e.key)) {
                 value = e.value;
+                if (last) {
+                    break;
+                }
             }
 
             e = e.next;
@@ -419,7 +426,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
 
     @Override
     public boolean contains(String name) {
-        return get(name) != null;
+        return get(name, true) != null;
     }
 
     @Override
