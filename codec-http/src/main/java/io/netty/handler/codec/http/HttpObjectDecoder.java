@@ -122,6 +122,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
     private long chunkSize;
     private int headerSize;
     private int contentRead;
+    private long contentLength = Long.MIN_VALUE;
 
     /**
      * The internal state of {@link HttpObjectDecoder}.
@@ -223,7 +224,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                 reset(out);
                 return;
             }
-            long contentLength = HttpHeaders.getContentLength(message, -1);
+            long contentLength = contentLength();
             if (contentLength == 0 || contentLength == -1 && isDecodingRequest()) {
                 content = Unpooled.EMPTY_BUFFER;
                 reset(out);
@@ -237,7 +238,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                     checkpoint(State.READ_FIXED_LENGTH_CONTENT_AS_CHUNKS);
                     // chunkSize will be decreased as the READ_FIXED_LENGTH_CONTENT_AS_CHUNKS
                     // state reads data chunk by chunk.
-                    chunkSize = HttpHeaders.getContentLength(message, -1);
+                    chunkSize = contentLength;
                     out.add(message);
                     return;
                 }
@@ -284,7 +285,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             return;
         }
         case READ_FIXED_LENGTH_CONTENT: {
-            readFixedLengthContent(buffer, out);
+            readFixedLengthContent(buffer, contentLength(), out);
             return;
         }
         case READ_FIXED_LENGTH_CONTENT_AS_CHUNKS: {
@@ -434,6 +435,13 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         }
     }
 
+    private long contentLength() {
+        if (contentLength == Long.MIN_VALUE) {
+            contentLength = HttpHeaders.getContentLength(message, -1);
+        }
+        return contentLength;
+    }
+
     @Override
     protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         decode(ctx, in, out);
@@ -458,7 +466,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                 // Compare the length of the received content and the 'Content-Length' header.
                 // If the 'Content-Length' header is absent, the length of the content is determined by the end of the
                 // connection, so it is perfectly fine.
-                long expectedContentLength = HttpHeaders.getContentLength(message, -1);
+                long expectedContentLength = contentLength();
                 prematureClosure = expectedContentLength >= 0 && actualContentLength != expectedContentLength;
             }
 
@@ -520,6 +528,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
 
         content = null;
         message = null;
+        contentLength = Long.MIN_VALUE;
 
         checkpoint(State.SKIP_CONTROL_CHARS);
     }
@@ -553,9 +562,8 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         }
     }
 
-    private void readFixedLengthContent(ByteBuf buffer, List<Object> out) {
+    private void readFixedLengthContent(ByteBuf buffer, long length, List<Object> out) {
         //we have a content-length so we just read the correct number of bytes
-        long length = HttpHeaders.getContentLength(message, -1);
         assert length <= Integer.MAX_VALUE;
         int toRead = (int) length - contentRead;
         if (toRead > actualReadableBytes()) {
@@ -614,7 +622,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             nextState = State.SKIP_CONTROL_CHARS;
         } else if (HttpHeaders.isTransferEncodingChunked(message)) {
             nextState = State.READ_CHUNK_SIZE;
-        } else if (HttpHeaders.getContentLength(message, -1) >= 0) {
+        } else if (contentLength() >= 0) {
             nextState = State.READ_FIXED_LENGTH_CONTENT;
         } else {
             nextState = State.READ_VARIABLE_LENGTH_CONTENT;
