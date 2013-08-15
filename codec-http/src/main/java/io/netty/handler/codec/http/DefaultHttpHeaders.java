@@ -32,10 +32,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
     private static int hash(String name) {
         int h = 0;
         for (int i = name.length() - 1; i >= 0; i --) {
-            char c = name.charAt(i);
-            if (c >= 'A' && c <= 'Z') {
-                c += 32;
-            }
+            char c = toLowerCase(name.charAt(i));
             h = 31 * h + c;
         }
 
@@ -62,18 +59,19 @@ public class DefaultHttpHeaders extends HttpHeaders {
             char c1 = name1.charAt(i);
             char c2 = name2.charAt(i);
             if (c1 != c2) {
-                if (c1 >= 'A' && c1 <= 'Z') {
-                    c1 += 32;
-                }
-                if (c2 >= 'A' && c2 <= 'Z') {
-                    c2 += 32;
-                }
-                if (c1 != c2) {
+                if (toLowerCase(c1) != toLowerCase(c2)) {
                     return false;
                 }
             }
         }
         return true;
+    }
+
+    private static char toLowerCase(char c) {
+        if (c >= 'A' && c <= 'Z') {
+            c += 32;
+        }
+        return c;
     }
 
     private static int index(int hash) {
