@@ -49,6 +49,10 @@ public class DefaultHttpHeaders extends HttpHeaders {
     }
 
     private static boolean eq(String name1, String name2) {
+        if (name1 == name2) {
+            // check for object equality as the user may reuse our static fields in HttpHeaders.Names
+            return true;
+        }
         int nameLen = name1.length();
         if (nameLen != name2.length()) {
             return false;
