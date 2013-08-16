@@ -35,12 +35,6 @@
 
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-buffer</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>${project.groupId}</groupId>
       <artifactId>netty-transport</artifactId>
       <version>${project.version}</version>
     </dependency>

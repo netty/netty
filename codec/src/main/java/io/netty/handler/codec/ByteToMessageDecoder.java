@@ -25,8 +25,8 @@ import io.netty.util.internal.StringUtil;
 import java.util.List;
 
 /**
- * {@link ChannelInboundHandlerAdapter} which decodes bytes in a stream-like fashion from one {@link ByteBuf} to an
- * other Message type.
+ * {@link io.netty.channel.ChannelInboundHandlerAdapter} which decodes bytes in a stream-like fashion from one
+ * {@link ByteBuf} to an other Message type.
  *
  * For example here is an implementation which reads all readable bytes from
  * the input {@link ByteBuf} and create a new {@link ByteBuf}.
@@ -34,7 +34,9 @@ import java.util.List;
  * <pre>
  *     public class SquareDecoder extends {@link ByteToMessageDecoder} {
  *         {@code @Override}
- *         public void decode({@link ChannelHandlerContext} ctx, {@link ByteBuf} in, List&lt;Object&gt; out)
+ *         public void decode({@link io.netty.channel.ChannelHandlerContext} ctx,
+ *                            {@link ByteBuf} in,
+ *                            List&lt;Object&gt; out)
  *                 throws {@link Exception} {
  *             out.add(in.readBytes(in.readableBytes()));
  *         }
@@ -57,7 +59,8 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     }
 
     /**
-     * If set then only one message is decoded on each {@link #channelRead(ChannelHandlerContext, Object)}
+     * If set then only one message is decoded on each {@link #channelRead(io.netty.channel.ChannelHandlerContext,
+     *                                                                     Object)}
      * call. This may be useful if you need to do some protocol upgrade and want to make sure nothing is mixed up.
      *
      * Default is {@code false} as this has performance impacts.
@@ -68,7 +71,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
 
     /**
      * If {@code true} then only one message is decoded on each
-     * {@link #channelRead(ChannelHandlerContext, Object)} call.
+     * {@link #channelRead(io.netty.channel.ChannelHandlerContext, Object)} call.
      *
      * Default is {@code false} as this has performance impacts.
      */

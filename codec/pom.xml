@@ -31,7 +31,7 @@
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-transport</artifactId>
+      <artifactId>netty-common</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
