@@ -51,12 +51,6 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
             return super.set(name, value);
         }
 
-        @Override
-        void validateHeaderName0(String name) {
-            super.validateHeaderName0(name);
-            validateName(name);
-        }
-
         private void validateName(String name) {
             if (name.equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH) ||
                     name.equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING) ||

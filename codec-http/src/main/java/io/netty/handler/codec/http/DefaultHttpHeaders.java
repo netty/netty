@@ -15,9 +15,12 @@
  */
 package io.netty.handler.codec.http;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -28,6 +31,27 @@ import java.util.TreeSet;
 public class DefaultHttpHeaders extends HttpHeaders {
 
     private static final int BUCKET_SIZE = 17;
+
+    private static final Set<String> KNOWN_NAMES = createSet(Names.class);
+    private static final Set<String> KNOWN_VALUES = createSet(Values.class);
+
+    private static Set<String> createSet(Class<?> clazz) {
+        Set<String> set = new HashSet<String>();
+        Field[] fields = clazz.getDeclaredFields();
+
+        for (Field f: fields) {
+            int m = f.getModifiers();
+            if (Modifier.isPublic(m) && Modifier.isFinal(m) && Modifier.isFinal(m)
+                    && f.getType().isAssignableFrom(String.class)) {
+                try {
+                    set.add((String) f.get(null));
+                } catch (Throwable cause) {
+                    // ignore
+                }
+            }
+        }
+        return set;
+    }
 
     private static int hash(String name, boolean validate) {
         int h = 0;
@@ -89,11 +113,10 @@ public class DefaultHttpHeaders extends HttpHeaders {
         head.before = head.after = head;
     }
 
-    void validateHeaderName0(String headerName) {
-        validateHeaderName(headerName);
-    }
-
     void validateHeaderValue0(String headerValue) {
+        if (KNOWN_VALUES.contains(headerValue)) {
+            return;
+        }
         validateHeaderValue(headerValue);
     }
 
@@ -101,7 +124,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
     public HttpHeaders add(final String name, final Object value) {
         String strVal = toString(value);
         validateHeaderValue0(strVal);
-        int h = hash(name, true);
+        int h = hash(name, !KNOWN_NAMES.contains(name));
         int i = index(h);
         add0(h, i, name, strVal);
         return this;
@@ -109,7 +132,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
 
     @Override
     public HttpHeaders add(String name, Iterable<?> values) {
-        int h = hash(name, true);
+        int h = hash(name, !KNOWN_NAMES.contains(name));
         int i = index(h);
         for (Object v: values) {
             String vstr = toString(v);
@@ -181,7 +204,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
     public HttpHeaders set(final String name, final Object value) {
         String strVal = toString(value);
         validateHeaderValue0(strVal);
-        int h = hash(name, true);
+        int h = hash(name, !KNOWN_NAMES.contains(name));
         int i = index(h);
         remove0(h, i, name);
         add0(h, i, name, strVal);
@@ -193,8 +216,6 @@ public class DefaultHttpHeaders extends HttpHeaders {
         if (values == null) {
             throw new NullPointerException("values");
         }
-
-        //validateHeaderName0(name);
 
         int h = hash(name, false);
         int i = index(h);
