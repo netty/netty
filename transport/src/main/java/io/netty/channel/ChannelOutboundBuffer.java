@@ -92,7 +92,7 @@ public final class ChannelOutboundBuffer {
         this.handle = handle;
 
         buffer = new Entry[INITIAL_CAPACITY];
-        for (int i = 0; i < INITIAL_CAPACITY; i++) {
+        for (int i = 0; i < buffer.length; i++) {
             buffer[i] = new Entry();
         }
 
