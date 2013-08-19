@@ -103,13 +103,6 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         protected StringBuilder initialValue() {
             return new StringBuilder(512);
         }
-
-        @Override
-        public StringBuilder get() {
-            StringBuilder builder = super.get();
-            builder.setLength(0);
-            return builder;
-        }
     };
 
     private final int maxInitialLineLength;
@@ -209,7 +202,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             return;
         }
         case READ_HEADER: try {
-            State nextState = readHeaders(buffer);
+            State nextState = readHeaders(buffer, BUILDERS.get());
             checkpoint(nextState);
             if (nextState == State.READ_CHUNK_SIZE) {
                 if (!chunkedSupported) {
@@ -409,7 +402,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             }
         }
         case READ_CHUNK_FOOTER: try {
-            LastHttpContent trailer = readTrailingHeaders(buffer);
+            LastHttpContent trailer = readTrailingHeaders(buffer, BUILDERS.get());
             if (maxChunkSize == 0) {
                 // Chunked encoding disabled.
                 reset(out);
@@ -583,7 +576,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         reset(out);
     }
 
-    private State readHeaders(ByteBuf buffer) {
+    private State readHeaders(ByteBuf buffer, StringBuilder sb) {
         headerSize = 0;
         final HttpMessage message = this.message;
         final HttpHeaders headers = message.headers();
@@ -594,7 +587,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
             defaultHeaders = null;
         }
 
-        StringBuilder line = readHeader(buffer);
+        StringBuilder line = readHeader(buffer, sb);
         String name = null;
         String value = null;
         if (line.length() > 0) {
@@ -616,7 +609,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                     value = header[1];
                 }
 
-                line = readHeader(buffer);
+                line = readHeader(buffer, sb);
             } while (line.length() > 0);
 
             // Add the last header.
@@ -644,9 +637,9 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         return nextState;
     }
 
-    private LastHttpContent readTrailingHeaders(ByteBuf buffer) {
+    private LastHttpContent readTrailingHeaders(ByteBuf buffer, StringBuilder sb) {
         headerSize = 0;
-        StringBuilder line = readHeader(buffer);
+        StringBuilder line = readHeader(buffer, sb);
         String lastHeader = null;
         if (line.length() > 0) {
             LastHttpContent trailer = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER);
@@ -684,7 +677,7 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                     lastHeader = name;
                 }
 
-                line = readHeader(buffer);
+                line = readHeader(buffer,sb);
             } while (line.length() > 0);
 
             return trailer;
@@ -693,8 +686,8 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         return LastHttpContent.EMPTY_LAST_CONTENT;
     }
 
-    private StringBuilder readHeader(ByteBuf buffer) {
-        StringBuilder sb = BUILDERS.get();
+    private StringBuilder readHeader(ByteBuf buffer, StringBuilder sb) {
+        sb.setLength(0);
         int headerSize = this.headerSize;
 
         loop:
