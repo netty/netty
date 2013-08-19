@@ -101,6 +101,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         }
         try {
             size = buffer.readableBytes();
+            checkSize(size);
             if (definedSize > 0 && definedSize < size) {
                 throw new IOException("Out of size: " + size + " > " + definedSize);
             }
@@ -137,6 +138,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         if (buffer != null) {
             try {
                 int localsize = buffer.readableBytes();
+                checkSize(size + localsize);
                 if (definedSize > 0 && definedSize < size + localsize) {
                     throw new IOException("Out of size: " + (size + localsize) +
                             " > " + definedSize);
@@ -187,6 +189,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         }
         this.file = file;
         size = file.length();
+        checkSize(size);
         isRenamed = true;
         completed = true;
     }
@@ -209,6 +212,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         while (read > 0) {
             byteBuffer.position(read).flip();
             written += localfileChannel.write(byteBuffer);
+            checkSize(written);
             read = inputStream.read(bytes);
         }
         localfileChannel.force(false);
