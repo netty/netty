@@ -37,6 +37,7 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
     protected long size;
     protected Charset charset = HttpConstants.DEFAULT_CHARSET;
     protected boolean completed;
+    protected long maxSize = DefaultHttpDataFactory.MAXSIZE;
 
     protected AbstractHttpData(String name, Charset charset, long size) {
         if (name == null) {
@@ -55,6 +56,16 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
             setCharset(charset);
         }
         definedSize = size;
+    }
+
+    public void setMaxSize(long maxSize) {
+        this.maxSize = maxSize;
+    }
+
+    public void checkSize(long newSize) throws IOException {
+        if (maxSize >= 0 && newSize > maxSize) {
+            throw new IOException("Size exceed allowed maximum capacity");
+        }
     }
 
     @Override
