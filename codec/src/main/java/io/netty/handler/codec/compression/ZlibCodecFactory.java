@@ -79,15 +79,32 @@ public final class ZlibCodecFactory {
     }
 
     public static ZlibDecoder newZlibDecoder() {
-        return new JZlibDecoder();
+        if (PlatformDependent.javaVersion() < 7) {
+            return new JZlibDecoder();
+        } else {
+            return new JdkZlibDecoder();
+        }
     }
 
     public static ZlibDecoder newZlibDecoder(ZlibWrapper wrapper) {
-        return new JZlibDecoder(wrapper);
+        switch (wrapper) {
+            case ZLIB_OR_NONE:
+                return new JZlibDecoder(wrapper);
+            default:
+                if (PlatformDependent.javaVersion() < 7) {
+                    return new JZlibDecoder(wrapper);
+                } else {
+                    return new JdkZlibDecoder(wrapper);
+                }
+        }
     }
 
     public static ZlibDecoder newZlibDecoder(byte[] dictionary) {
-        return new JZlibDecoder(dictionary);
+        if (PlatformDependent.javaVersion() < 7) {
+            return new JZlibDecoder(dictionary);
+        } else {
+            return new JdkZlibDecoder(dictionary);
+        }
     }
 
     private ZlibCodecFactory() {

@@ -102,12 +102,10 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
             if (acceptOutboundMessage(msg)) {
                 @SuppressWarnings("unchecked")
                 I cast = (I) msg;
-                if (buf == null) {
-                    if (preferDirect) {
-                        buf = ctx.alloc().ioBuffer();
-                    } else {
-                        buf = ctx.alloc().heapBuffer();
-                    }
+                if (preferDirect) {
+                    buf = ctx.alloc().ioBuffer();
+                } else {
+                    buf = ctx.alloc().heapBuffer();
                 }
                 try {
                     encode(ctx, cast, buf);

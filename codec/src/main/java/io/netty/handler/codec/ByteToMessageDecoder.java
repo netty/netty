@@ -165,14 +165,14 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
         } catch (Throwable t) {
             throw new DecoderException(t);
         } finally {
-            if (out.isEmpty()) {
+            int size = out.size();
+            if (size == 0) {
                 decodeWasNull = true;
+            } else {
+                for (int i = 0; i < size; i ++) {
+                    ctx.fireChannelRead(out.get(i));
+                }
             }
-
-            for (int i = 0; i < out.size(); i ++) {
-                ctx.fireChannelRead(out.get(i));
-            }
-
             out.recycle();
         }
     }
@@ -207,11 +207,12 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 cumulation.release();
                 cumulation = null;
             }
-
-            for (int i = 0; i < out.size(); i ++) {
+            int size = out.size();
+            for (int i = 0; i < size; i ++) {
                 ctx.fireChannelRead(out.get(i));
             }
             ctx.fireChannelInactive();
+            out.recycle();
         }
     }
 
@@ -229,6 +230,15 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 int outSize = out.size();
                 int oldInputLength = in.readableBytes();
                 decode(ctx, in, out);
+
+                // Check if this handler was removed before continuing the loop.
+                // If it was removed, it is not safe to continue to operate on the buffer.
+                //
+                // See https://github.com/netty/netty/issues/1664
+                if (ctx.isRemoved()) {
+                    break;
+                }
+
                 if (outSize == out.size()) {
                     if (oldInputLength == in.readableBytes()) {
                         break;

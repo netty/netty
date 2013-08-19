@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Iterator;
@@ -206,9 +207,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
 
     @Override
     public HttpHeaders clear() {
-        for (int i = 0; i < entries.length; i ++) {
-            entries[i] = null;
-        }
+        Arrays.fill(entries, null);
         head.before = head.after = head;
         return this;
     }
@@ -222,14 +221,16 @@ public class DefaultHttpHeaders extends HttpHeaders {
         int h = hash(name);
         int i = index(h);
         HeaderEntry e = entries[i];
+        String value = null;
+        // loop until the first header was found
         while (e != null) {
             if (e.hash == h && eq(name, e.key)) {
-                return e.value;
+                value = e.value;
             }
 
             e = e.next;
         }
-        return null;
+        return value;
     }
 
     @Override

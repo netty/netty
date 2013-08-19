@@ -16,6 +16,7 @@
 package io.netty.handler.logging;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
@@ -319,6 +320,8 @@ public class LoggingHandler extends ChannelDuplexHandler {
     protected String formatMessage(String eventName, Object msg) {
         if (msg instanceof ByteBuf) {
             return formatByteBuf(eventName, (ByteBuf) msg);
+        } else if (msg instanceof ByteBufHolder) {
+            return formatByteBufHolder(eventName, (ByteBufHolder) msg);
         } else {
             return formatNonByteBuf(eventName, msg);
         }
@@ -383,5 +386,15 @@ public class LoggingHandler extends ChannelDuplexHandler {
      */
     protected String formatNonByteBuf(String eventName, Object msg) {
         return eventName + ": " + msg;
+    }
+
+    /**
+     * Returns a String which contains all details to log the {@link ByteBufHolder}.
+     *
+     * By default this method just delegates to {@link #formatByteBuf(String, ByteBuf)},
+     * using the content of the {@link ByteBufHolder}. Sub-classes may override this.
+     */
+    protected String formatByteBufHolder(String eventName, ByteBufHolder msg) {
+        return formatByteBuf(eventName, msg.content());
     }
 }
