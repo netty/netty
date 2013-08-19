@@ -587,6 +587,12 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         headerSize = 0;
         final HttpMessage message = this.message;
         final HttpHeaders headers = message.headers();
+        final DefaultHttpHeaders defaultHeaders;
+        if (headers instanceof DefaultHttpHeaders) {
+            defaultHeaders = (DefaultHttpHeaders) headers;
+        } else {
+            defaultHeaders = null;
+        }
 
         StringBuilder line = readHeader(buffer);
         String name = null;
@@ -599,7 +605,11 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                     value = value + ' ' + line.toString().trim();
                 } else {
                     if (name != null) {
-                        headers.add(name, value);
+                        if (defaultHeaders != null) {
+                            defaultHeaders.addWithoutValidate(name, value);
+                        } else {
+                            headers.add(name, value);
+                        }
                     }
                     String[] header = splitHeader(line);
                     name = header[0];
@@ -611,7 +621,11 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
 
             // Add the last header.
             if (name != null) {
-                headers.add(name, value);
+                if (defaultHeaders != null) {
+                    defaultHeaders.addWithoutValidate(name, value);
+                } else {
+                    headers.add(name, value);
+                }
             }
         }
 
@@ -636,10 +650,17 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
         String lastHeader = null;
         if (line.length() > 0) {
             LastHttpContent trailer = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER);
+            final HttpHeaders headers = trailer.trailingHeaders();
+            final DefaultHttpHeaders defaultHeaders;
+            if (headers instanceof DefaultHttpHeaders) {
+                defaultHeaders = (DefaultHttpHeaders) headers;
+            } else {
+                defaultHeaders = null;
+            }
             do {
                 char firstChar = line.charAt(0);
                 if (lastHeader != null && (firstChar == ' ' || firstChar == '\t')) {
-                    List<String> current = trailer.trailingHeaders().getAll(lastHeader);
+                    List<String> current = headers.getAll(lastHeader);
                     if (!current.isEmpty()) {
                         int lastPos = current.size() - 1;
                         String newString = current.get(lastPos) + line.toString().trim();
@@ -653,6 +674,11 @@ public abstract class HttpObjectDecoder extends ReplayingDecoder<HttpObjectDecod
                     if (!name.equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH) &&
                         !name.equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING) &&
                         !name.equalsIgnoreCase(HttpHeaders.Names.TRAILER)) {
+                        if (defaultHeaders != null) {
+                            defaultHeaders.addWithoutValidate(name, header[1]);
+                        } else {
+                            headers.add(name, header[1]);
+                        }
                         trailer.trailingHeaders().add(name, header[1]);
                     }
                     lastHeader = name;

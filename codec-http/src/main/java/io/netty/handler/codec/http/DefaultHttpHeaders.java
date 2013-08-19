@@ -130,6 +130,13 @@ public class DefaultHttpHeaders extends HttpHeaders {
         return this;
     }
 
+    HttpHeaders addWithoutValidate(final String name, final String strVal) {
+        int h = hash(name, false);
+        int i = index(h);
+        add0(h, i, name, strVal);
+        return this;
+    }
+
     @Override
     public HttpHeaders add(String name, Iterable<?> values) {
         int h = hash(name, !KNOWN_NAMES.contains(name));
