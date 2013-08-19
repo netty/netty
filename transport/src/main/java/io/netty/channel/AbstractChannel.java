@@ -30,8 +30,8 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 /**
  * A skeletal {@link Channel} implementation.
@@ -68,9 +68,17 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private boolean strValActive;
     private String strVal;
 
-    private final AtomicLong totalPendingSize = new AtomicLong(0);
+    private static final AtomicLongFieldUpdater<AbstractChannel> TOTAL_PENDING_SIZE_UPDATER =
+            AtomicLongFieldUpdater.newUpdater(AbstractChannel.class, "totalPendingSize");
 
-    private final AtomicBoolean writable = new AtomicBoolean(true);
+    @SuppressWarnings({ "unused", "FieldMayBeFinal" })
+    private volatile long totalPendingSize;
+
+    private static final AtomicIntegerFieldUpdater<AbstractChannel> WRITABLE_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(AbstractChannel.class, "writable");
+
+    @SuppressWarnings({ "unused", "FieldMayBeFinal" })
+    private volatile int writable = 1;
 
     /**
      * Creates a new instance.
@@ -86,7 +94,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public boolean isWritable() {
-        return this.writable.get();
+        return writable != 0;
     }
 
     @Override
@@ -253,13 +261,18 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             return;
         }
 
-        long newWriteBufferSize = totalPendingSize.addAndGet(size);
+        long oldValue = totalPendingSize;
+        long newWriteBufferSize = oldValue + size;
+        while (!TOTAL_PENDING_SIZE_UPDATER.compareAndSet(this, oldValue, newWriteBufferSize)) {
+            oldValue = totalPendingSize;
+            newWriteBufferSize = oldValue + size;
+        }
 
         int highWaterMark = config().getWriteBufferHighWaterMark();
 
         if (newWriteBufferSize > highWaterMark) {
-            if (writable.compareAndSet(true, false)) {
-                pipeline().fireChannelWritabilityChanged();
+            if (WRITABLE_UPDATER.compareAndSet(this, 1, 0)) {
+                pipeline.fireChannelWritabilityChanged();
             }
         }
     }
@@ -273,13 +286,20 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             return;
         }
 
-        long newWriteBufferSize = totalPendingSize.addAndGet(-size);
+        long oldValue = totalPendingSize;
+        long newWriteBufferSize = oldValue - size;
+        while (!TOTAL_PENDING_SIZE_UPDATER.compareAndSet(this, oldValue, newWriteBufferSize)) {
+            oldValue = totalPendingSize;
+            newWriteBufferSize = oldValue - size;
+        }
 
         int lowWaterMark = config().getWriteBufferLowWaterMark();
 
         if (newWriteBufferSize == 0 || newWriteBufferSize < lowWaterMark) {
-            if (writable.compareAndSet(false, true) && fireEvent) {
-                pipeline().fireChannelWritabilityChanged();
+            if (WRITABLE_UPDATER.compareAndSet(this, 0, 1)) {
+                if (fireEvent) {
+                    pipeline.fireChannelWritabilityChanged();
+                }
             }
         }
     }
