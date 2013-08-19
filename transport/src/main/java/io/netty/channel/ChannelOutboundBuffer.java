@@ -66,6 +66,10 @@ public final class ChannelOutboundBuffer {
     private int unflushed;
     private int tail;
 
+    // Unflushed messages are stored in an array.
+    Entry[] unflushed;
+    private int unflushedCount;
+
     private ByteBuffer[] nioBuffers;
     private int nioBufferCount;
     private long nioBufferSize;
