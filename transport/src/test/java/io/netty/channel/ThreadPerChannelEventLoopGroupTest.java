@@ -98,7 +98,7 @@ public class ThreadPerChannelEventLoopGroupTest {
 
         @Override
         protected void run() {
-            for (; ; ) {
+            for (;;) {
                 Runnable task = takeTask();
                 if (task != null) {
                     task.run();
