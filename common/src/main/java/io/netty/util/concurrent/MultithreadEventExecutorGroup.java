@@ -19,6 +19,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Set;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -39,22 +40,33 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
      *
      * @param nThreads          the number of threads that will be used by this instance.
      * @param threadFactory     the ThreadFactory to use, or {@code null} if the default should be used.
-     * @param args              arguments which will passed to each {@link #newChild(ThreadFactory, Object...)} call
+     * @param args              arguments which will passed to each {@link #newChild(Executor, Object...)} call
      */
     protected MultithreadEventExecutorGroup(int nThreads, ThreadFactory threadFactory, Object... args) {
+        this(nThreads, threadFactory == null ? null : new ThreadPerTaskExecutor(threadFactory), args);
+    }
+
+    /**
+     * Create a new instance.
+     *
+     * @param nThreads          the number of threads that will be used by this instance.
+     * @param executor          the Executor to use, or {@code null} if the default should be used.
+     * @param args              arguments which will passed to each {@link #newChild(Executor, Object...)} call
+     */
+    protected MultithreadEventExecutorGroup(int nThreads, Executor executor, Object... args) {
         if (nThreads <= 0) {
             throw new IllegalArgumentException(String.format("nThreads: %d (expected: > 0)", nThreads));
         }
 
-        if (threadFactory == null) {
-            threadFactory = newDefaultThreadFactory();
+        if (executor == null) {
+            executor = new ThreadPerTaskExecutor(newDefaultThreadFactory());
         }
 
         children = new SingleThreadEventExecutor[nThreads];
         for (int i = 0; i < nThreads; i ++) {
             boolean success = false;
             try {
-                children[i] = newChild(threadFactory, args);
+                children[i] = newChild(executor, args);
                 success = true;
             } catch (Exception e) {
                 // TODO: Think about if this is a good exception type
@@ -130,8 +142,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
      * called for each thread that will serve this {@link MultithreadEventExecutorGroup}.
      *
      */
-    protected abstract EventExecutor newChild(
-            ThreadFactory threadFactory, Object... args) throws Exception;
+    protected abstract EventExecutor newChild(Executor executor, Object... args) throws Exception;
 
     @Override
     public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
