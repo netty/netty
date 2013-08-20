@@ -23,6 +23,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.ThreadPerTaskExecutor;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ReadOnlyIterator;
@@ -32,9 +33,9 @@ import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -44,7 +45,7 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
 
     private final Object[] childArgs;
     private final int maxChannels;
-    final ThreadFactory threadFactory;
+    final Executor executor;
     final Set<ThreadPerChannelEventLoop> activeChildren =
             Collections.newSetFromMap(PlatformDependent.<ThreadPerChannelEventLoop, Boolean>newConcurrentHashMap());
     final Queue<ThreadPerChannelEventLoop> idleChildren = new ConcurrentLinkedQueue<ThreadPerChannelEventLoop>();
@@ -79,7 +80,7 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
      *                          Use {@code 0} to use no limit
      */
     protected ThreadPerChannelEventLoopGroup(int maxChannels) {
-        this(maxChannels, Executors.defaultThreadFactory());
+        this(maxChannels, new ThreadPerTaskExecutor(Executors.defaultThreadFactory()));
     }
 
     /**
@@ -90,16 +91,16 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
      *                          {@link ChannelException} on the {@link #register(Channel)} and
      *                          {@link #register(Channel, ChannelPromise)} method.
      *                          Use {@code 0} to use no limit
-     * @param threadFactory     the {@link ThreadFactory} used to create new {@link Thread} instances that handle the
+     * @param executor     the {@link Executor} used to create new {@link Thread} instances that handle the
      *                          registered {@link Channel}s
      * @param args              arguments which will passed to each {@link #newChild(Object...)} call.
      */
-    protected ThreadPerChannelEventLoopGroup(int maxChannels, ThreadFactory threadFactory, Object... args) {
+    protected ThreadPerChannelEventLoopGroup(int maxChannels, Executor executor, Object... args) {
         if (maxChannels < 0) {
             throw new IllegalArgumentException(String.format(
                     "maxChannels: %d (expected: >= 0)", maxChannels));
         }
-        if (threadFactory == null) {
+        if (executor == null) {
             throw new NullPointerException("threadFactory");
         }
 
@@ -110,7 +111,7 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
         }
 
         this.maxChannels = maxChannels;
-        this.threadFactory = threadFactory;
+        this.executor = executor;
 
         tooManyChannels = new ChannelException("too many channels (max: " + maxChannels + ')');
         tooManyChannels.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);

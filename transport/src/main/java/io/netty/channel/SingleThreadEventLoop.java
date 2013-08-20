@@ -18,7 +18,7 @@ package io.netty.channel;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 
-import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.Executor;
 
 /**
  * Abstract base class for {@link EventLoop}'s that execute all its submitted tasks in a single thread.
@@ -27,10 +27,10 @@ import java.util.concurrent.ThreadFactory;
 public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor implements EventLoop {
 
     /**
-     * @see {@link SingleThreadEventExecutor#SingleThreadEventExecutor(EventExecutorGroup, ThreadFactory, boolean)}
+     * @see {@link SingleThreadEventExecutor#SingleThreadEventExecutor(EventExecutorGroup, Executor, boolean)}
      */
-    protected SingleThreadEventLoop(EventLoopGroup parent, ThreadFactory threadFactory, boolean addTaskWakesUp) {
-        super(parent, threadFactory, addTaskWakesUp);
+    protected SingleThreadEventLoop(EventLoopGroup parent, Executor executor, boolean addTaskWakesUp) {
+        super(parent, executor, addTaskWakesUp);
     }
 
     @Override

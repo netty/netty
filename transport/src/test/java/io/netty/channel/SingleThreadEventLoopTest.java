@@ -17,6 +17,7 @@ package io.netty.channel;
 
 import io.netty.channel.local.LocalChannel;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.ThreadPerTaskExecutor;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -32,7 +33,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
 
 public class SingleThreadEventLoopTest {
@@ -400,7 +402,7 @@ public class SingleThreadEventLoopTest {
         final AtomicInteger cleanedUp = new AtomicInteger();
 
         SingleThreadEventLoopA() {
-            super(null, Executors.defaultThreadFactory(), true);
+            super(null, new ThreadPerTaskExecutor(Executors.defaultThreadFactory()), true);
         }
 
         @Override
@@ -427,7 +429,7 @@ public class SingleThreadEventLoopTest {
     private static class SingleThreadEventLoopB extends SingleThreadEventLoop {
 
         SingleThreadEventLoopB() {
-            super(null, Executors.defaultThreadFactory(), false);
+            super(null, new ThreadPerTaskExecutor(Executors.defaultThreadFactory()), false);
         }
 
         @Override
