@@ -57,7 +57,7 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
         public void operationComplete(Future<Object> future) throws Exception {
             // Inefficient, but works.
             if (isTerminated()) {
-                terminationFuture.setSuccess(null);
+                terminationFuture.trySuccess(null);
             }
         }
     };
