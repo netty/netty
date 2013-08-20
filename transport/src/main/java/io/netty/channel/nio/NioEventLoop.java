@@ -39,7 +39,7 @@ import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -111,8 +111,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     private int cancelledKeys;
     private boolean needsToSelectAgain;
 
-    NioEventLoop(NioEventLoopGroup parent, ThreadFactory threadFactory, SelectorProvider selectorProvider) {
-        super(parent, threadFactory, false);
+    NioEventLoop(NioEventLoopGroup parent, Executor executor, SelectorProvider selectorProvider) {
+        super(parent, executor, false);
         if (selectorProvider == null) {
             throw new NullPointerException("selectorProvider");
         }
