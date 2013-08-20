@@ -88,7 +88,7 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
             EventExecutorGroup parent, Executor executor, boolean addTaskWakesUp) {
 
         if (executor == null) {
-            throw new NullPointerException("threadFactory");
+            throw new NullPointerException("executor");
         }
 
         this.parent = parent;

@@ -35,6 +35,13 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
     private final AtomicInteger terminatedChildren = new AtomicInteger();
     private final Promise<?> terminationFuture = new DefaultPromise(GlobalEventExecutor.INSTANCE);
 
+    /**
+     * Create a new instance.
+     *
+     * @param nThreads          the number of threads that will be used by this instance.
+     * @param threadFactory     the ThreadFactory to use, or {@code null} if the default should be used.
+     * @param args              arguments which will passed to each {@link #newChild(Executor, Object...)} call
+     */
     protected MultithreadEventExecutorGroup(int nThreads, ThreadFactory threadFactory, Object... args) {
         this(nThreads, threadFactory == null ? null : new ThreadPerTaskExecutor(threadFactory), args);
     }
