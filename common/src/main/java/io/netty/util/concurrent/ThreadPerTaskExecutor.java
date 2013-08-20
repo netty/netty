@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2013 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,30 +16,20 @@
 package io.netty.util.concurrent;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.ThreadFactory;
 
-/**
- * Default {@link SingleThreadEventExecutor} implementation which just execute all submitted task in a
- * serial fashion
- *
- */
-final class DefaultEventExecutor extends SingleThreadEventExecutor {
+public final class ThreadPerTaskExecutor implements Executor {
+    private final ThreadFactory threadFactory;
 
-    DefaultEventExecutor(DefaultEventExecutorGroup parent, Executor executor) {
-        super(parent, executor, true);
+    public ThreadPerTaskExecutor(ThreadFactory threadFactory) {
+        if (threadFactory == null) {
+            throw new NullPointerException("threadFactory");
+        }
+        this.threadFactory = threadFactory;
     }
 
     @Override
-    protected void run() {
-        for (;;) {
-            Runnable task = takeTask();
-            if (task != null) {
-                task.run();
-                updateLastExecutionTime();
-            }
-
-            if (confirmShutdown()) {
-                break;
-            }
-        }
+    public void execute(Runnable command) {
+        threadFactory.newThread(command).start();
     }
 }
