@@ -30,6 +30,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
@@ -463,6 +464,10 @@ public final class ChannelOutboundBuffer {
         } finally {
             tail = unflushed;
             inFail = false;
+
+            // null out the nio buffers array so the can be GC'ed
+            // https://github.com/netty/netty/issues/1763
+            Arrays.fill(nioBuffers, null);
         }
 
         RECYCLER.recycle(this, handle);
