@@ -30,6 +30,8 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 /**
  * A skeletal {@link Channel} implementation.
@@ -66,6 +68,18 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private boolean strValActive;
     private String strVal;
 
+    private static final AtomicLongFieldUpdater<AbstractChannel> TOTAL_PENDING_SIZE_UPDATER =
+            AtomicLongFieldUpdater.newUpdater(AbstractChannel.class, "totalPendingSize");
+
+    @SuppressWarnings({ "unused", "FieldMayBeFinal" })
+    private volatile long totalPendingSize;
+
+    private static final AtomicIntegerFieldUpdater<AbstractChannel> WRITABLE_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(AbstractChannel.class, "writable");
+
+    @SuppressWarnings({ "unused", "FieldMayBeFinal" })
+    private volatile int writable = 1;
+
     /**
      * Creates a new instance.
      *
@@ -80,8 +94,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public boolean isWritable() {
-        ChannelOutboundBuffer buf = unsafe.outboundBuffer();
-        return buf != null && buf.getWritable();
+        return writable != 0;
     }
 
     @Override
@@ -226,12 +239,69 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public ChannelFuture write(Object msg) {
-        return pipeline.write(msg);
+        ChannelFuture ret = pipeline.write(msg);
+        incrementPendingOutboundBytes(msg);
+        return ret;
     }
 
     @Override
     public ChannelFuture write(Object msg, ChannelPromise promise) {
-        return pipeline.write(msg, promise);
+        ChannelFuture ret = pipeline.write(msg, promise);
+        incrementPendingOutboundBytes(msg);
+        return ret;
+    }
+
+    /**
+     * Increment the pending bytes which will be written at some point.
+     * This method is thread-safe!
+     */
+    final void incrementPendingOutboundBytes(Object msg) {
+        int size = estimatorHandle().size(msg);
+        if (size == 0) {
+            return;
+        }
+
+        long oldValue = totalPendingSize;
+        long newWriteBufferSize = oldValue + size;
+        while (!TOTAL_PENDING_SIZE_UPDATER.compareAndSet(this, oldValue, newWriteBufferSize)) {
+            oldValue = totalPendingSize;
+            newWriteBufferSize = oldValue + size;
+        }
+
+        int highWaterMark = config().getWriteBufferHighWaterMark();
+
+        if (newWriteBufferSize > highWaterMark) {
+            if (WRITABLE_UPDATER.compareAndSet(this, 1, 0)) {
+                pipeline.fireChannelWritabilityChanged();
+            }
+        }
+    }
+
+    /**
+     * Decrement the pending bytes which will be written at some point.
+     * This method is thread-safe!
+     */
+    final void decrementPendingOutboundBytes(int size, boolean fireEvent) {
+        if (size == 0) {
+            return;
+        }
+
+        long oldValue = totalPendingSize;
+        long newWriteBufferSize = oldValue - size;
+        while (!TOTAL_PENDING_SIZE_UPDATER.compareAndSet(this, oldValue, newWriteBufferSize)) {
+            oldValue = totalPendingSize;
+            newWriteBufferSize = oldValue - size;
+        }
+
+        int lowWaterMark = config().getWriteBufferLowWaterMark();
+
+        if (newWriteBufferSize == 0 || newWriteBufferSize < lowWaterMark) {
+            if (WRITABLE_UPDATER.compareAndSet(this, 0, 1)) {
+                if (fireEvent) {
+                    pipeline.fireChannelWritabilityChanged();
+                }
+            }
+        }
     }
 
     @Override
@@ -821,4 +891,5 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             return super.trySuccess();
         }
     }
+
 }
