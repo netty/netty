@@ -189,12 +189,13 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             state = State.READ_INITIAL;
         }
         case READ_INITIAL: try {
-            StringBuilder line = readLine(buffer, maxInitialLineLength);
-            if (line == null) {
-                // not enough data to read the line
+            StringBuilder sb = BUILDERS.get();
+
+            String[] initialLine = splitInitialLine(sb, buffer, maxInitialLineLength);
+            if (initialLine == null) {
+                // not enough data
                 return;
             }
-            String[] initialLine = splitInitialLine(line);
             if (initialLine.length < 3) {
                 // Invalid initial line - ignore.
                 state = State.SKIP_CONTROL_CHARS;
@@ -851,27 +852,104 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         return null;
     }
 
-    private static String[] splitInitialLine(StringBuilder sb) {
-        int aStart;
-        int aEnd;
-        int bStart;
-        int bEnd;
-        int cStart;
-        int cEnd;
+    private enum InitalLineState {
+        START_A,
+        END_A,
+        START_B,
+        END_B,
+        START_C,
+        END_C
+    }
 
-        aStart = findNonWhitespace(sb, 0);
-        aEnd = findWhitespace(sb, aStart);
+    private static String[] splitInitialLine(StringBuilder sb, ByteBuf buffer, int maxLineLength) {
+        InitalLineState state = InitalLineState.START_A;
+        int aStart = 0;
+        int aEnd = 0;
+        int bStart = 0;
+        int bEnd = 0;
+        int cStart = 0;
+        int cEnd = 0;
 
-        bStart = findNonWhitespace(sb, aEnd);
-        bEnd = findWhitespace(sb, bStart);
+        sb.setLength(0);
+        int index = 0;
+        int lineLength = 0;
 
-        cStart = findNonWhitespace(sb, bEnd);
-        cEnd = findEndOfString(sb);
+        buffer.markReaderIndex();
 
-        return new String[] {
-                sb.substring(aStart, aEnd),
-                sb.substring(bStart, bEnd),
-                cStart < cEnd? sb.substring(cStart, cEnd) : "" };
+        while (buffer.isReadable()) {
+            char next = (char) buffer.readByte();
+
+            switch (state) {
+                case START_A:
+                case START_B:
+                case START_C:
+                    if (!Character.isWhitespace(next)) {
+                        if (state == InitalLineState.START_A) {
+                            aStart = index;
+                            state = InitalLineState.END_A;
+                        } else if (state == InitalLineState.START_B) {
+                            bStart = index;
+                            state = InitalLineState.END_B;
+                        } else {
+                            cStart = index;
+                            state = InitalLineState.END_C;
+                        }
+                    }
+                    break;
+                case END_A:
+                case END_B:
+                    if (Character.isWhitespace(next)) {
+                        if (state == InitalLineState.END_A) {
+                            aEnd = index;
+                            state = InitalLineState.START_B;
+                        } else {
+                            bEnd = index;
+                            state = InitalLineState.START_C;
+                        }
+                    }
+                    break;
+                case END_C:
+                    if (HttpConstants.CR == next) {
+                        if (!buffer.isReadable()) {
+                            buffer.resetReaderIndex();
+                            return null;
+                        }
+                        next = (char) buffer.readByte();
+                        if (HttpConstants.LF == next) {
+                            cEnd = index;
+                            return new String[] {
+                                    sb.substring(aStart, aEnd),
+                                    sb.substring(bStart, bEnd),
+                                    cStart < cEnd? sb.substring(cStart, cEnd) : "" };
+                        }
+                        index ++;
+
+                        break;
+                    }
+                    if (HttpConstants.LF == next) {
+                        cEnd = index;
+                        return new String[] {
+                                sb.substring(aStart, aEnd),
+                                sb.substring(bStart, bEnd),
+                                cStart < cEnd? sb.substring(cStart, cEnd) : "" };
+                    }
+                    break;
+
+            }
+            if (lineLength >= maxLineLength) {
+                // TODO: Respond with Bad Request and discard the traffic
+                //    or close the connection.
+                //       No need to notify the upstream handlers - just log.
+                //       If decoding a response, just throw an exception.
+                throw new TooLongFrameException(
+                        "An HTTP line is larger than " + maxLineLength +
+                                " bytes.");
+            }
+            lineLength ++;
+            index ++;
+            sb.append(next);
+        }
+        return null;
     }
 
     private static String[] splitHeader(StringBuilder sb) {
@@ -916,16 +994,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         int result;
         for (result = offset; result < sb.length(); result ++) {
             if (!Character.isWhitespace(sb.charAt(result))) {
-                break;
-            }
-        }
-        return result;
-    }
-
-    private static int findWhitespace(CharSequence sb, int offset) {
-        int result;
-        for (result = offset; result < sb.length(); result ++) {
-            if (Character.isWhitespace(sb.charAt(result))) {
                 break;
             }
         }
