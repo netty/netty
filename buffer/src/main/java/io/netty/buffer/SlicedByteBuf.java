@@ -271,7 +271,7 @@ public class SlicedByteBuf extends AbstractDerivedByteBuf {
     @Override
     public ByteBuffer internalNioBuffer(int index, int length) {
         checkIndex(index, length);
-        return buffer.internalNioBuffer(index + adjustment, length);
+        return buffer.internalNioBuffer(index + adjustment, length).duplicate();
     }
 
     @Override

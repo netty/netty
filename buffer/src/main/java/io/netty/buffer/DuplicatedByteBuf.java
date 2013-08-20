@@ -289,7 +289,7 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public ByteBuffer internalNioBuffer(int index, int length) {
-        return buffer.internalNioBuffer(index, length);
+        return buffer.internalNioBuffer(index, length).duplicate();
     }
 
     @Override
