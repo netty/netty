@@ -40,7 +40,7 @@ public final class LocalAddress extends SocketAddress implements Comparable<Loca
     LocalAddress(Channel channel) {
         StringBuilder buf = new StringBuilder(16);
         buf.append("local:E");
-        buf.append(Long.toHexString(channel.hashCode() & 0xFFFFFFFFL | 0x100000000L));
+        buf.append(UUID.randomUUID().toString().replace('-', ':'));
         buf.setCharAt(7, ':');
         id = buf.substring(6);
         strVal = buf.toString();
