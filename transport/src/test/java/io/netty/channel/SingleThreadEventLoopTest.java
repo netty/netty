@@ -17,7 +17,6 @@ package io.netty.channel;
 
 import io.netty.channel.local.LocalChannel;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.ThreadPerTaskExecutor;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -402,7 +401,7 @@ public class SingleThreadEventLoopTest {
         final AtomicInteger cleanedUp = new AtomicInteger();
 
         SingleThreadEventLoopA() {
-            super(null, new ThreadPerTaskExecutor(Executors.defaultThreadFactory()), true);
+            super(null, Executors.defaultThreadFactory(), true);
         }
 
         @Override
@@ -429,7 +428,7 @@ public class SingleThreadEventLoopTest {
     private static class SingleThreadEventLoopB extends SingleThreadEventLoop {
 
         SingleThreadEventLoopB() {
-            super(null, new ThreadPerTaskExecutor(Executors.defaultThreadFactory()), false);
+            super(null, Executors.defaultThreadFactory(), false);
         }
 
         @Override

@@ -22,7 +22,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ThreadPerChannelEventLoopGroup;
-import io.netty.util.concurrent.ThreadPerTaskExecutor;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -81,6 +80,6 @@ public class OioEventLoopGroup extends ThreadPerChannelEventLoopGroup {
      *                          registered {@link Channel}s
      */
     public OioEventLoopGroup(int maxChannels, ThreadFactory threadFactory) {
-        super(maxChannels, new ThreadPerTaskExecutor(threadFactory));
+        super(maxChannels, threadFactory);
     }
 }

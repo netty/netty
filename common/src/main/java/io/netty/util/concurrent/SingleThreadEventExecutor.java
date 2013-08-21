@@ -32,6 +32,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -75,6 +76,19 @@ public abstract class SingleThreadEventExecutor extends AbstractEventExecutor {
     private long gracefulShutdownStartTime;
 
     private final Promise<?> terminationFuture = new DefaultPromise<Void>(GlobalEventExecutor.INSTANCE);
+
+    /**
+     * Create a new instance
+     *
+     * @param parent            the {@link EventExecutorGroup} which is the parent of this instance and belongs to it
+     * @param threadFactory     the {@link ThreadFactory} which will be used for the used {@link Thread}
+     * @param addTaskWakesUp    {@code true} if and only if invocation of {@link #addTask(Runnable)} will wake up the
+     *                          executor thread
+     */
+    protected SingleThreadEventExecutor(
+            EventExecutorGroup parent, ThreadFactory threadFactory, boolean addTaskWakesUp) {
+        this(parent, new ThreadPerTaskExecutor(threadFactory), addTaskWakesUp);
+    }
 
     /**
      * Create a new instance
