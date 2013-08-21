@@ -120,7 +120,7 @@ public final class ChannelOutboundBuffer {
 
         // increment pending bytes after adding message to the unflushed arrays.
         // See https://github.com/netty/netty/issues/1619
-        incrementPendingOutboundBytes(size);
+        incrementPendingOutboundBytes(size, true);
     }
 
     private void addCapacity() {
@@ -155,7 +155,7 @@ public final class ChannelOutboundBuffer {
      * Increment the pending bytes which will be written at some point.
      * This method is thread-safe!
      */
-    void incrementPendingOutboundBytes(int size) {
+    void incrementPendingOutboundBytes(int size, boolean fireEvent) {
         // Cache the channel and check for null to make sure we not produce a NPE in case of the Channel gets
         // recycled while process this method.
         Channel channel = this.channel;
@@ -174,7 +174,9 @@ public final class ChannelOutboundBuffer {
 
         if (newWriteBufferSize > highWaterMark) {
             if (WRITABLE_UPDATER.compareAndSet(this, 1, 0)) {
-                channel.pipeline().fireChannelWritabilityChanged();
+                if (fireEvent) {
+                    channel.pipeline().fireChannelWritabilityChanged();
+                }
             }
         }
     }
@@ -183,7 +185,7 @@ public final class ChannelOutboundBuffer {
      * Decrement the pending bytes which will be written at some point.
      * This method is thread-safe!
      */
-    void decrementPendingOutboundBytes(int size) {
+    void decrementPendingOutboundBytes(int size, boolean fireEvent) {
         // Cache the channel and check for null to make sure we not produce a NPE in case of the Channel gets
         // recycled while process this method.
         Channel channel = this.channel;
@@ -202,7 +204,9 @@ public final class ChannelOutboundBuffer {
 
         if (newWriteBufferSize == 0 || newWriteBufferSize < lowWaterMark) {
             if (WRITABLE_UPDATER.compareAndSet(this, 0, 1)) {
-                channel.pipeline().fireChannelWritabilityChanged();
+                if (fireEvent) {
+                    channel.pipeline().fireChannelWritabilityChanged();
+                }
             }
         }
     }
@@ -259,7 +263,7 @@ public final class ChannelOutboundBuffer {
         safeRelease(msg);
 
         promise.trySuccess();
-        decrementPendingOutboundBytes(size);
+        decrementPendingOutboundBytes(size, true);
 
         return true;
     }
@@ -285,7 +289,7 @@ public final class ChannelOutboundBuffer {
         safeRelease(msg);
 
         safeFail(promise, cause);
-        decrementPendingOutboundBytes(size);
+        decrementPendingOutboundBytes(size, true);
 
         return true;
     }
