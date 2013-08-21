@@ -191,18 +191,13 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         case READ_INITIAL: try {
             StringBuilder sb = BUILDERS.get();
 
-            String[] initialLine = splitInitialLine(sb, buffer, maxInitialLineLength);
-            if (initialLine == null) {
+            HttpMessage msg = splitInitialLine(sb, buffer, maxInitialLineLength);
+            if (msg == null) {
                 // not enough data
                 return;
             }
-            if (initialLine.length < 3) {
-                // Invalid initial line - ignore.
-                state = State.SKIP_CONTROL_CHARS;
-                return;
-            }
 
-            message = createMessage(initialLine);
+            message = msg;
             state = State.READ_HEADER;
 
         } catch (Exception e) {
@@ -943,7 +938,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     }
 
     protected abstract boolean isDecodingRequest();
-    protected abstract HttpMessage createMessage(String[] initialLine) throws Exception;
+    protected abstract HttpMessage createMessage(String first, String second, String third) throws Exception;
     protected abstract HttpMessage createInvalidMessage();
 
     private static int getChunkSize(String hex) {
@@ -1005,7 +1000,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         END_C
     }
 
-    private static String[] splitInitialLine(StringBuilder sb, ByteBuf buffer, int maxLineLength) {
+    private HttpMessage splitInitialLine(StringBuilder sb, ByteBuf buffer, int maxLineLength) throws Exception {
         InitalLineState state = InitalLineState.START_A;
         int aStart = 0;
         int aEnd = 0;
@@ -1061,10 +1056,10 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                         next = (char) buffer.readByte();
                         if (HttpConstants.LF == next) {
                             cEnd = index;
-                            return new String[] {
+                            return createMessage(
                                     sb.substring(aStart, aEnd),
                                     sb.substring(bStart, bEnd),
-                                    cStart < cEnd? sb.substring(cStart, cEnd) : "" };
+                                    cStart < cEnd? sb.substring(cStart, cEnd) : "");
                         }
                         index ++;
 
@@ -1072,10 +1067,10 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     }
                     if (HttpConstants.LF == next) {
                         cEnd = index;
-                        return new String[] {
+                        return createMessage(
                                 sb.substring(aStart, aEnd),
                                 sb.substring(bStart, bEnd),
-                                cStart < cEnd? sb.substring(cStart, cEnd) : "" };
+                                cStart < cEnd? sb.substring(cStart, cEnd) : "");
                     }
                     break;
             }
