@@ -614,8 +614,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         if (toRead > readableBytes) {
             toRead = readableBytes;
         }
+
         contentRead += toRead;
-        if (length < contentRead) {
+        if (contentRead < length) {
             // TODO: Slice
             out.add(new DefaultHttpContent(buffer.readBytes(toRead)));
             return;
@@ -623,9 +624,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         ByteBuf content = this.content;
         if (content == null || !content.isReadable()) {
             // TODO: Slice
-            content = buffer.readBytes((int) length);
+            content = buffer.readBytes(toRead);
         } else {
-            content.writeBytes(buffer, (int) length);
+            content.writeBytes(buffer, toRead);
         }
         reset();
         out.add(new DefaultLastHttpContent(content));
@@ -848,6 +849,10 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     }
     private LastHttpContent readTrailingHeaders(ByteBuf buffer, StringBuilder sb) {
         StringBuilder line = readHeader(buffer, sb);
+        if (line == null) {
+            // not enough data
+            return null;
+        }
         // this means we consumed the header completly
         String lastHeader = null;
         if (line.length() > 0) {
@@ -885,7 +890,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                         } else {
                             headers.add(name, header[1]);
                         }
-                        trailer.trailingHeaders().add(name, header[1]);
                     }
                     lastHeader = name;
                 }
@@ -907,13 +911,14 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     private StringBuilder readHeader(ByteBuf buffer, StringBuilder sb) {
         sb.setLength(0);
         int headerSize = this.headerSize;
+        buffer.markReaderIndex();
         while (buffer.isReadable()) {
             char nextByte = (char) buffer.readByte();
             headerSize ++;
-
             switch (nextByte) {
             case HttpConstants.CR:
                 if (!buffer.isReadable()) {
+                    buffer.resetReaderIndex();
                     return null;
                 }
                 nextByte = (char) buffer.readByte();
@@ -941,6 +946,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
             sb.append(nextByte);
         }
+        buffer.resetReaderIndex();
         return null;
     }
 

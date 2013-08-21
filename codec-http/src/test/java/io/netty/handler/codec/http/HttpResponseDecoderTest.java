@@ -20,6 +20,8 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
+import java.util.List;
+
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
@@ -88,4 +90,61 @@ public class HttpResponseDecoderTest {
 
         assertThat(ch.readInbound(), is(nullValue()));
     }
+
+    @Test
+    public void testLastResponseWithTrailingHeader() {
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
+        ch.writeInbound(Unpooled.copiedBuffer(
+                "HTTP/1.1 200 OK\r\n" +
+                        "Transfer-Encoding: chunked\r\n" +
+                        "\r\n" +
+                        "0\r\n" +
+                        "Set-Cookie: t1=t1v1\r\n" +
+                        "Set-Cookie: t2=t2v2; Expires=Wed, 09-Jun-2021 10:18:14 GMT\r\n" +
+                        "\r\n",
+                CharsetUtil.US_ASCII));
+
+        HttpResponse res = (HttpResponse) ch.readInbound();
+        assertThat(res.getProtocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.getStatus(), is(HttpResponseStatus.OK));
+
+        LastHttpContent lastContent = (LastHttpContent) ch.readInbound();
+        assertThat(lastContent.content().isReadable(), is(false));
+        HttpHeaders headers = lastContent.trailingHeaders();
+        assertEquals(1, headers.names().size());
+        List<String> values = headers.getAll("Set-Cookie");
+        assertEquals(2, values.size());
+        assertTrue(values.contains("t1=t1v1"));
+        assertTrue(values.contains("t2=t2v2; Expires=Wed, 09-Jun-2021 10:18:14 GMT"));
+
+        assertThat(ch.finish(), is(false));
+        assertThat(ch.readInbound(), is(nullValue()));
+    }
+
+    @Test
+    public void testResponseWithContentLength() {
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
+        ch.writeInbound(Unpooled.copiedBuffer(
+                "HTTP/1.1 200 OK\r\n" +
+                        "Content-Length: 10\r\n" +
+                        "\r\n", CharsetUtil.US_ASCII));
+
+        HttpResponse res = (HttpResponse) ch.readInbound();
+        assertThat(res.getProtocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.getStatus(), is(HttpResponseStatus.OK));
+        byte[] data = new byte[10];
+        for (int i = 0; i < data.length; i++) {
+            data[i] = (byte) i;
+        }
+        ch.writeInbound(Unpooled.wrappedBuffer(data, 0, data.length / 2));
+        HttpContent content = (HttpContent) ch.readInbound();
+        assertEquals(content.content().readableBytes(), 5);
+
+        ch.writeInbound(Unpooled.wrappedBuffer(data, 5, data.length / 2));
+        LastHttpContent lastContent = (LastHttpContent) ch.readInbound();
+        assertEquals(lastContent.content().readableBytes(), 5);
+        assertThat(ch.finish(), is(false));
+        assertThat(ch.readInbound(), is(nullValue()));
+    }
+
 }
