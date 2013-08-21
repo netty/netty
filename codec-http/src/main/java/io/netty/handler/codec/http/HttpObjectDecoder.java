@@ -203,7 +203,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             }
 
             message = createMessage(initialLine);
-            state =State.READ_HEADER;
+            state = State.READ_HEADER;
 
         } catch (Exception e) {
             out.add(invalidMessage(e));
@@ -211,6 +211,10 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         }
         case READ_HEADER: try {
             State nextState = readHeaders(buffer, BUILDERS.get());
+            if (nextState == state) {
+                // was not able to consume whole header
+                return;
+            }
             state = nextState;
             if (nextState == State.READ_CHUNK_SIZE) {
                 if (!chunkedSupported) {
@@ -407,7 +411,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             return;
         }
         case READ_CHUNK_DELIMITER: {
-            if (buffer.isReadable()) {
+            if (!buffer.isReadable()) {
                 // nothing left to read
                 return;
             }
@@ -622,10 +626,37 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         reset(out);
     }
 
+    private enum HeaderParseState {
+        LINE_START,
+        VALUE_START,
+        VALUE_END,
+        COMMA_END,
+        NAME_START,
+        NAME_END,
+        HEADERS_END
+    }
+
     private State readHeaders(ByteBuf buffer, StringBuilder sb) {
-        headerSize = 0;
         final HttpMessage message = this.message;
-        final HttpHeaders headers = message.headers();
+        if (!parseHeaders(message.headers(), buffer, sb)) {
+            return state;
+        }
+        // this means we consumed the header completly
+        System.out.println(message.headers().names().toString() + " " + message.headers().get("Transfer-Encoding"));
+
+        if (isContentAlwaysEmpty(message)) {
+            HttpHeaders.removeTransferEncodingChunked(message);
+            return State.SKIP_CONTROL_CHARS;
+        } else if (HttpHeaders.isTransferEncodingChunked(message)) {
+            return State.READ_CHUNK_SIZE;
+        } else if (contentLength() >= 0) {
+            return State.READ_FIXED_LENGTH_CONTENT;
+        } else {
+            return State.READ_VARIABLE_LENGTH_CONTENT;
+        }
+    }
+
+    private boolean parseHeaders(HttpHeaders headers, ByteBuf buffer, StringBuilder sb) {
         final DefaultHttpHeaders defaultHeaders;
         if (headers instanceof DefaultHttpHeaders) {
             defaultHeaders = (DefaultHttpHeaders) headers;
@@ -633,77 +664,179 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             defaultHeaders = null;
         }
 
+        // mark the index before try to start parsing and reset the StringBuilder
         buffer.markReaderIndex();
 
-        StringBuilder line = readHeader(buffer, sb);
-        if (line == null) {
-            buffer.resetReaderIndex();
-
-            // not enough data to process
-            return state;
-        }
         String name = null;
-        String value = null;
-        if (line.length() > 0) {
-            headers.clear();
-            do {
-                char firstChar = line.charAt(0);
-                if (name != null && (firstChar == ' ' || firstChar == '\t')) {
-                    value = value + ' ' + line.toString().trim();
-                } else {
-                    if (name != null) {
-                        if (defaultHeaders != null) {
-                            defaultHeaders.addWithoutValidate(name, value);
+        HeaderParseState parseState = HeaderParseState.LINE_START;
+        loop:
+        for (;;) {
+            if (!buffer.isReadable()) {
+                break;
+            }
+            // Abort decoding if the header part is too large.
+            if (headerSize++ >= maxHeaderSize) {
+                // TODO: Respond with Bad Request and discard the traffic
+                //    or close the connection.
+                //       No need to notify the upstream handlers - just log.
+                //       If decoding a response, just throw an exception.
+                throw new TooLongFrameException(
+                        "HTTP header is larger than " +
+                                maxHeaderSize + " bytes.");
+            }
+
+            char next = (char) buffer.readByte();
+
+            switch (parseState) {
+                case LINE_START:
+                    if (HttpConstants.CR == next) {
+                        if (buffer.isReadable()) {
+                            next = (char) buffer.readByte();
+                            if (HttpConstants.LF == next) {
+                                parseState = HeaderParseState.HEADERS_END;
+                                break loop;
+                            } else {
+                                // consume
+                            }
                         } else {
-                            headers.add(name, value);
+                            // not enough data
+                            break loop;
                         }
+                        break;
                     }
-                    String[] header = splitHeader(line);
-                    name = header[0];
-                    value = header[1];
-                }
+                    if (HttpConstants.LF == next) {
+                        parseState = HeaderParseState.HEADERS_END;
+                        break loop;
+                    }
+                    parseState = HeaderParseState.NAME_START;
+                    // FALL THROUGH
+                case NAME_START:
+                    if (next != ' ' && next != '\t') {
+                        // reset StringBuilder so it can be used to store the header name
+                        sb.setLength(0);
+                        parseState = HeaderParseState.NAME_END;
+                        sb.append(next);
+                    }
+                    break;
+                case NAME_END:
+                    if (next == ':') {
+                        // store current content of StringBuilder as header name and reset it
+                        // so it can be used to store the header name
+                        name = sb.toString();
+                        sb.setLength(0);
 
-                line = readHeader(buffer, sb);
-                if (line == null) {
-                    // not enough data so reset the reader index and try again later
-                    // TODO: Optimize this so not the whole header needs to get re-read all the time
-                    buffer.resetReaderIndex();
-                    return state;
-                }
-            } while (line.length() > 0);
+                        parseState = HeaderParseState.VALUE_START;
+                    } else if (next == ' ') {
+                        // store current content of StringBuilder as header name and reset it
+                        // so it can be used to store the header name
+                        name = sb.toString();
+                        sb.setLength(0);
 
-            // Add the last header.
-            if (name != null) {
-                if (defaultHeaders != null) {
-                    defaultHeaders.addWithoutValidate(name, value);
-                } else {
-                    headers.add(name, value);
-                }
+                        parseState = HeaderParseState.COMMA_END;
+                    } else {
+                        sb.append(next);
+                    }
+                    break;
+                case COMMA_END:
+                    if (next == ':') {
+                        parseState = HeaderParseState.VALUE_START;
+                    }
+                    break;
+                case VALUE_START:
+                    if (next != ' ' && next != '\t') {
+                        parseState = HeaderParseState.VALUE_END;
+                        sb.append(next);
+                    }
+                    break;
+                case VALUE_END:
+                    if (Character.isWhitespace(next)) {
+                        if (HttpConstants.CR == next) {
+                            if (buffer.isReadable()) {
+                                next = (char) buffer.readByte();
+                                if (HttpConstants.LF == next) {
+
+                                    // need to check for multi line header value
+                                    if (buffer.isReadable()) {
+                                        next = (char) buffer.getByte(buffer.readerIndex());
+                                        if (next == '\t' || next == ' ') {
+                                            // This is a multine line header
+                                            // skip char and move on
+                                            buffer.skipBytes(1);
+                                            sb.append(next);
+                                            parseState = HeaderParseState.VALUE_START;
+                                            break;
+                                        }
+                                    } else {
+                                        break loop;
+                                    }
+
+                                    if (defaultHeaders != null) {
+                                        // we can do this as we know it only contains ascii
+                                        defaultHeaders.addWithoutValidate(name, sb.toString());
+                                    } else {
+                                        headers.add(name, sb.toString());
+                                    }
+                                    parseState = HeaderParseState.LINE_START;
+                                    // mark the reader index on each line start so we can preserve already
+                                    // parsed headers
+                                    buffer.markReaderIndex();
+                                } else {
+                                    // just consume
+                                }
+                            } else {
+                                // not enough data
+                                break loop;
+                            }
+                        } else if (HttpConstants.LF == next) {
+                            // need to check for multi line header value
+                            if (buffer.isReadable()) {
+                                next = (char) buffer.getByte(buffer.readerIndex());
+                                if (next == '\t' || next == ' ') {
+                                    // This is a multine line header
+                                    // skip char and move on
+                                    buffer.skipBytes(1);
+                                    sb.append(next);
+                                    parseState = HeaderParseState.VALUE_START;
+                                    break;
+                                }
+                            } else {
+                                break loop;
+                            }
+
+                            if (defaultHeaders != null) {
+                                // we can do this as we know it only contains ascii
+                                defaultHeaders.addWithoutValidate(name, sb.toString());
+                            } else {
+                                headers.add(name, sb.toString());
+                            }
+                            parseState = HeaderParseState.LINE_START;
+                            // mark the reader index on each line start so we can preserve already parsed headers
+                            buffer.markReaderIndex();
+                        }  else {
+                            // just consume
+                        }
+                        break;
+                    }
+                    sb.append(next);
+                    break;
+                case HEADERS_END:
+                    break;
             }
         }
 
-        State nextState;
 
-        if (isContentAlwaysEmpty(message)) {
-            HttpHeaders.removeTransferEncodingChunked(message);
-            nextState = State.SKIP_CONTROL_CHARS;
-        } else if (HttpHeaders.isTransferEncodingChunked(message)) {
-            nextState = State.READ_CHUNK_SIZE;
-        } else if (contentLength() >= 0) {
-            nextState = State.READ_FIXED_LENGTH_CONTENT;
+        if (parseState != HeaderParseState.HEADERS_END) {
+            // not enough data try again later
+            buffer.resetReaderIndex();
+            return false;
         } else {
-            nextState = State.READ_VARIABLE_LENGTH_CONTENT;
+            buffer.markReaderIndex();
+            return true;
         }
-        return nextState;
     }
-
     private LastHttpContent readTrailingHeaders(ByteBuf buffer, StringBuilder sb) {
-        headerSize = 0;
         StringBuilder line = readHeader(buffer, sb);
-        if (line == null) {
-            // not enough data
-            return null;
-        }
+        // this means we consumed the header completly
         String lastHeader = null;
         if (line.length() > 0) {
             buffer.markReaderIndex();
@@ -745,7 +878,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     lastHeader = name;
                 }
 
-                line = readHeader(buffer,sb);
+                line = readHeader(buffer, sb);
                 if (line == null) {
                     // not enough data
                     buffer.resetReaderIndex();
@@ -818,6 +951,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
     private static StringBuilder readLine(ByteBuf buffer, int maxLineLength) {
         StringBuilder sb = BUILDERS.get();
+        sb.setLength(0);
         int lineLength = 0;
         buffer.markReaderIndex();
 
@@ -934,7 +1068,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                                 cStart < cEnd? sb.substring(cStart, cEnd) : "" };
                     }
                     break;
-
             }
             if (lineLength >= maxLineLength) {
                 // TODO: Respond with Bad Request and discard the traffic
