@@ -236,7 +236,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 out.add(message);
 
                 if (contentLength > maxChunkSize || HttpHeaders.is100ContinueExpected(message)) {
-                    // Generate FullHttpMessage first.  HttpChunks will follow.
                     state = State.READ_FIXED_LENGTH_CONTENT_AS_CHUNKS;
                     // chunkSize will be decreased as the READ_FIXED_LENGTH_CONTENT_AS_CHUNKS
                     // state reads data chunk by chunk.
@@ -248,7 +247,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 out.add(message);
 
                 if (buffer.readableBytes() > maxChunkSize || HttpHeaders.is100ContinueExpected(message)) {
-                    // Generate FullHttpMessage first.  HttpChunks will follow.
                     state = State.READ_VARIABLE_LENGTH_CONTENT_AS_CHUNKS;
                     return;
                 }
@@ -301,7 +299,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         }
         case READ_FIXED_LENGTH_CONTENT_AS_CHUNKS: {
             long chunkSize = this.chunkSize;
-            int readLimit = buffer.readableBytes();
+            int toRead = buffer.readableBytes();
 
             // Check if the buffer is readable first as we use the readable byte count
             // to create the HttpChunk. This is needed as otherwise we may end up with
@@ -309,11 +307,10 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             // handled like it is the last HttpChunk.
             //
             // See https://github.com/netty/netty/issues/433
-            if (readLimit == 0) {
+            if (toRead == 0) {
                 return;
             }
 
-            int toRead = readLimit;
             if (toRead > maxChunkSize) {
                 toRead = maxChunkSize;
             }
@@ -379,7 +376,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         case READ_CHUNKED_CONTENT_AS_CHUNKS: {
             assert chunkSize <= Integer.MAX_VALUE;
             int chunkSize = (int) this.chunkSize;
-            int readLimit = buffer.readableBytes();
+            int toRead = buffer.readableBytes();
 
             // Check if the buffer is readable first as we use the readable byte count
             // to create the HttpChunk. This is needed as otherwise we may end up with
@@ -387,17 +384,14 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             // handled like it is the last HttpChunk.
             //
             // See https://github.com/netty/netty/issues/433
-            if (readLimit == 0) {
+            if (toRead == 0) {
                 return;
             }
 
-            int toRead = chunkSize;
             if (toRead > maxChunkSize) {
                 toRead = maxChunkSize;
             }
-            if (toRead > readLimit) {
-                toRead = readLimit;
-            }
+
             HttpContent chunk = new DefaultHttpContent(buffer.readBytes(toRead));
             if (chunkSize > toRead) {
                 chunkSize -= toRead;
