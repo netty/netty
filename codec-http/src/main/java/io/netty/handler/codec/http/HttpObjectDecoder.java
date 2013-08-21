@@ -238,21 +238,23 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
             switch (nextState) {
             case READ_FIXED_LENGTH_CONTENT:
+                out.add(message);
+
                 if (contentLength > maxChunkSize || HttpHeaders.is100ContinueExpected(message)) {
                     // Generate FullHttpMessage first.  HttpChunks will follow.
                     state = State.READ_FIXED_LENGTH_CONTENT_AS_CHUNKS;
                     // chunkSize will be decreased as the READ_FIXED_LENGTH_CONTENT_AS_CHUNKS
                     // state reads data chunk by chunk.
                     chunkSize = contentLength;
-                    out.add(message);
                     return;
                 }
                 break;
             case READ_VARIABLE_LENGTH_CONTENT:
+                out.add(message);
+
                 if (buffer.readableBytes() > maxChunkSize || HttpHeaders.is100ContinueExpected(message)) {
                     // Generate FullHttpMessage first.  HttpChunks will follow.
                     state = State.READ_VARIABLE_LENGTH_CONTENT_AS_CHUNKS;
-                    out.add(message);
                     return;
                 }
                 break;
@@ -267,10 +269,13 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         }
         case READ_VARIABLE_LENGTH_CONTENT: {
             int toRead = buffer.readableBytes();
+            if (toRead == 0) {
+                // nothing to read
+                return;
+            }
             if (toRead > maxChunkSize) {
                 toRead = maxChunkSize;
             }
-            out.add(message);
             // TODO: Slice
             out.add(new DefaultHttpContent(buffer.readBytes(toRead)));
             return;
@@ -278,6 +283,10 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         case READ_VARIABLE_LENGTH_CONTENT_AS_CHUNKS: {
             // Keep reading data as a chunk until the end of connection is reached.
             int toRead = buffer.readableBytes();
+            if (toRead == 0) {
+                // nothing to read
+                return;
+            }
             if (toRead > maxChunkSize) {
                 toRead = maxChunkSize;
             }
@@ -612,18 +621,19 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         }
         contentRead += toRead;
         if (length < contentRead) {
-            out.add(message);
             // TODO: Slice
             out.add(new DefaultHttpContent(buffer.readBytes(toRead)));
             return;
         }
-        if (content == null) {
+        ByteBuf content = this.content;
+        if (content == null || !content.isReadable()) {
             // TODO: Slice
             content = buffer.readBytes((int) length);
         } else {
             content.writeBytes(buffer, (int) length);
         }
-        reset(out);
+        reset();
+        out.add(new DefaultLastHttpContent(content));
     }
 
     private enum HeaderParseState {
@@ -642,7 +652,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             return state;
         }
         // this means we consumed the header completly
-        System.out.println(message.headers().names().toString() + " " + message.headers().get("Transfer-Encoding"));
 
         if (isContentAlwaysEmpty(message)) {
             HttpHeaders.removeTransferEncodingChunked(message);
@@ -823,7 +832,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     break;
             }
         }
-
 
         if (parseState != HeaderParseState.HEADERS_END) {
             // not enough data try again later
