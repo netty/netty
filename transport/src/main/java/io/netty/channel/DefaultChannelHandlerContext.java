@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import static io.netty.channel.DefaultChannelPipeline.logger;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.Recycler;
@@ -23,8 +24,6 @@ import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.internal.StringUtil;
 
 import java.net.SocketAddress;
-
-import static io.netty.channel.DefaultChannelPipeline.*;
 
 final class DefaultChannelHandlerContext extends DefaultAttributeMap implements ChannelHandlerContext {
 
@@ -48,9 +47,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private Runnable invokeFlushTask;
     private Runnable invokeChannelWritableStateChangedTask;
 
-    @SuppressWarnings("unchecked")
-    DefaultChannelHandlerContext(
-            DefaultChannelPipeline pipeline, EventExecutorGroup group, String name, ChannelHandler handler) {
+    DefaultChannelHandlerContext(DefaultChannelPipeline pipeline, EventExecutorGroup group, String name,
+            ChannelHandler handler) {
 
         if (name == null) {
             throw new NullPointerException("name");
@@ -628,15 +626,10 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (msg == null) {
             throw new NullPointerException("msg");
         }
+
         validatePromise(promise, true);
 
-        final DefaultChannelHandlerContext next = findContextOutbound();
-        EventExecutor executor = next.executor();
-        if (executor.inEventLoop()) {
-            next.invokeWrite(msg, promise);
-        } else {
-            submitWriteTask(next, executor, msg, false, promise);
-        }
+        write(msg, false, promise);
 
         return promise;
     }
@@ -684,31 +677,34 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
         if (msg == null) {
             throw new NullPointerException("msg");
         }
+
         validatePromise(promise, true);
 
-        final DefaultChannelHandlerContext next = findContextOutbound();
-        EventExecutor executor = next.executor();
-        if (executor.inEventLoop()) {
-            next.invokeWrite(msg, promise);
-            next.invokeFlush();
-        } else {
-            submitWriteTask(next, executor, msg, true, promise);
-        }
+        write(msg, true, promise);
 
         return promise;
     }
 
-    private void submitWriteTask(DefaultChannelHandlerContext next, EventExecutor executor,
-                                 Object msg, boolean flush, ChannelPromise promise) {
-        final int size = channel.estimatorHandle().size(msg);
-        if (size > 0) {
-            ChannelOutboundBuffer buffer = channel.unsafe().outboundBuffer();
-            // Check for null as it may be set to null if the channel is closed already
-            if (buffer != null) {
-                buffer.incrementPendingOutboundBytes(size);
+    private void write(Object msg, boolean flush, ChannelPromise promise) {
+
+        DefaultChannelHandlerContext next = findContextOutbound();
+        EventExecutor executor = next.executor();
+        if (executor.inEventLoop()) {
+            next.invokeWrite(msg, promise);
+            if (flush) {
+                next.invokeFlush();
             }
+        } else {
+            int size = channel.estimatorHandle().size(msg);
+            if (size > 0) {
+                ChannelOutboundBuffer buffer = channel.unsafe().outboundBuffer();
+                // Check for null as it may be set to null if the channel is closed already
+                if (buffer != null) {
+                    buffer.incrementPendingOutboundBytes(size, false);
+                }
+            }
+            executor.execute(WriteTask.newInstance(next, msg, size, flush, promise));
         }
-        executor.execute(WriteTask.newInstance(next, msg, size, flush, promise));
     }
 
     @Override
@@ -884,7 +880,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
                     ChannelOutboundBuffer buffer = ctx.channel.unsafe().outboundBuffer();
                     // Check for null as it may be set to null if the channel is closed already
                     if (buffer != null) {
-                        buffer.decrementPendingOutboundBytes(size);
+                        buffer.decrementPendingOutboundBytes(size, false);
                     }
                 }
                 ctx.invokeWrite(msg, promise);
