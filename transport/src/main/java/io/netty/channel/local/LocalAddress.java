@@ -18,6 +18,7 @@ package io.netty.channel.local;
 import io.netty.channel.Channel;
 
 import java.net.SocketAddress;
+import java.util.UUID;
 
 /**
  * An endpoint in the local transport.  Each endpoint is identified by a unique
