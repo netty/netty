@@ -80,13 +80,11 @@ public final class ChannelOutboundBuffer {
     private static final AtomicLongFieldUpdater<ChannelOutboundBuffer> TOTAL_PENDING_SIZE_UPDATER =
             AtomicLongFieldUpdater.newUpdater(ChannelOutboundBuffer.class, "totalPendingSize");
 
-    @SuppressWarnings({ "unused", "FieldMayBeFinal" })
     private volatile long totalPendingSize;
 
     private static final AtomicIntegerFieldUpdater<ChannelOutboundBuffer> WRITABLE_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(ChannelOutboundBuffer.class, "writable");
 
-    @SuppressWarnings({ "unused", "FieldMayBeFinal" })
     private volatile int writable = 1;
 
     private ChannelOutboundBuffer(Handle handle) {
@@ -468,16 +466,9 @@ public final class ChannelOutboundBuffer {
         } finally {
             tail = unflushed;
             inFail = false;
-
-            // null out the nio buffers array so the can be GC'ed
-            // https://github.com/netty/netty/issues/1763
-            Arrays.fill(nioBuffers, null);
         }
 
-        RECYCLER.recycle(this, handle);
-
-        // Set the channel to null so it can be GC'ed ASAP
-        channel = null;
+        recycle();
     }
 
     private static void safeRelease(Object message) {
@@ -492,6 +483,27 @@ public final class ChannelOutboundBuffer {
         if (!(promise instanceof VoidChannelPromise) && !promise.tryFailure(cause)) {
             logger.warn("Promise done already: {} - new exception is:", promise, cause);
         }
+    }
+
+    public void recycle() {
+        if (this.buffer.length > INITIAL_CAPACITY) {
+            Entry[] e = new Entry[INITIAL_CAPACITY];
+            System.arraycopy(this.buffer, 0, e, 0, INITIAL_CAPACITY);
+            this.buffer = e;
+        }
+
+        if (this.nioBuffers.length > INITIAL_CAPACITY) {
+            this.nioBuffers = new ByteBuffer[INITIAL_CAPACITY];
+        } else {
+            // null out the nio buffers array so the can be GC'ed
+            // https://github.com/netty/netty/issues/1763
+            Arrays.fill(nioBuffers, null);
+        }
+
+        // Set the channel to null so it can be GC'ed ASAP
+        channel = null;
+
+        RECYCLER.recycle(this, handle);
     }
 
     private static final class Entry {
