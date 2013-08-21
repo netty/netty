@@ -838,6 +838,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             buffer.resetReaderIndex();
             return false;
         } else {
+            // reset header size
+            headerSize = 0;
             buffer.markReaderIndex();
             return true;
         }
