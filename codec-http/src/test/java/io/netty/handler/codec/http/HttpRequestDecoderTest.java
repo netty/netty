@@ -92,6 +92,20 @@ public class HttpRequestDecoderTest {
 
     private static void testDecodeWholeRequestInMultipleSteps(byte[] content) {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        int headerLength = content.length - 8;
+
+        // split up the header
+        for (int a = 0; a < headerLength;) {
+            int amount = 10;
+            boolean done = false;
+            if (a + amount > headerLength) {
+                amount = headerLength -  a;
+                done = true;
+            }
+            Assert.assertEquals(done, channel.writeInbound(Unpooled.wrappedBuffer(content, a, amount)));
+            a += amount;
+        }
+
         channel.writeInbound(Unpooled.wrappedBuffer(content, 0, content.length - 8));
 
         for (int i = 8; i > 0; i--) {
