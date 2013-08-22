@@ -240,7 +240,11 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                 connectPromise.setFailure(t);
                 closeIfClosed();
             } finally {
-                connectTimeoutFuture.cancel(false);
+                // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
+                // See https://github.com/netty/netty/issues/1770
+                if (connectTimeoutFuture != null) {
+                    connectTimeoutFuture.cancel(false);
+                }
                 connectPromise = null;
             }
         }
