@@ -22,6 +22,8 @@ import io.netty.util.CharsetUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.List;
+
 public class HttpRequestDecoderTest {
     private static final byte[] CONTENT_CRLF_DELIMITERS = createContent("\r\n");
     private static final byte[] CONTENT_LF_DELIMITERS = createContent("\n");
@@ -32,12 +34,12 @@ public class HttpRequestDecoderTest {
         String lineDelimiter2;
         if (lineDelimiters.length == 2) {
             lineDelimiter = lineDelimiters[0];
-            lineDelimiter2= lineDelimiters[1];
+            lineDelimiter2 = lineDelimiters[1];
         } else {
             lineDelimiter = lineDelimiters[0];
-            lineDelimiter2= lineDelimiters[0];
+            lineDelimiter2 = lineDelimiters[0];
         }
-        return ("GET /some/path?foo=bar&wibble=eek HTTP/1.1" + lineDelimiter +
+        return ("GET /some/path?foo=bar&wibble=eek HTTP/1.1" + "\r\n" +
                 "Upgrade: WebSocket" + lineDelimiter2 +
                 "Connection: Upgrade" + lineDelimiter +
                 "Host: localhost" + lineDelimiter2 +
@@ -45,7 +47,7 @@ public class HttpRequestDecoderTest {
                 "Sec-WebSocket-Key1: 10  28 8V7 8 48     0" + lineDelimiter2 +
                 "Sec-WebSocket-Key2: 8 Xt754O3Q3QW 0   _60" + lineDelimiter +
                 "Content-Length: 8" + lineDelimiter2 +
-                lineDelimiter +
+                "\r\n"  +
                 "12345678").getBytes(CharsetUtil.US_ASCII);
     }
 
@@ -69,10 +71,28 @@ public class HttpRequestDecoderTest {
         channel.writeInbound(Unpooled.wrappedBuffer(content));
         HttpRequest req = (HttpRequest) channel.readInbound();
         Assert.assertNotNull(req);
+        checkHeaders(req.headers());
         LastHttpContent c = (LastHttpContent) channel.readInbound();
         Assert.assertEquals(8, c.content().readableBytes());
         Assert.assertEquals(Unpooled.wrappedBuffer(content, content.length - 8, 8), c.content().readBytes(8));
         Assert.assertFalse(channel.finish());
+    }
+
+    private static void checkHeaders(HttpHeaders headers) {
+        Assert.assertEquals(7, headers.names().size());
+        checkHeader(headers, "Upgrade", "WebSocket");
+        checkHeader(headers, "Connection", "Upgrade");
+        checkHeader(headers, "Host", "localhost");
+        checkHeader(headers, "Origin", "http://localhost:8080");
+        checkHeader(headers, "Sec-WebSocket-Key1", "10  28 8V7 8 48     0");
+        checkHeader(headers, "Sec-WebSocket-Key2", "8 Xt754O3Q3QW 0   _60");
+        checkHeader(headers, "Content-Length", "8");
+    }
+
+    private static void checkHeader(HttpHeaders headers, String name, String value) {
+        List<String> header1 = headers.getAll(name);
+        Assert.assertEquals(1, header1.size());
+        Assert.assertEquals(value, header1.get(0));
     }
 
     @Test
@@ -97,12 +117,10 @@ public class HttpRequestDecoderTest {
         // split up the header
         for (int a = 0; a < headerLength;) {
             int amount = 10;
-            boolean done = false;
             if (a + amount > headerLength) {
                 amount = headerLength -  a;
-                done = true;
             }
-            Assert.assertEquals(done, channel.writeInbound(Unpooled.wrappedBuffer(content, a, amount)));
+            channel.writeInbound(Unpooled.wrappedBuffer(content, a, amount));
             a += amount;
         }
 
@@ -114,6 +132,8 @@ public class HttpRequestDecoderTest {
 
         HttpRequest req = (HttpRequest) channel.readInbound();
         Assert.assertNotNull(req);
+        checkHeaders(req.headers());
+
         for (int i = 8; i > 1; i--) {
             HttpContent c = (HttpContent) channel.readInbound();
             Assert.assertEquals(1, c.content().readableBytes());

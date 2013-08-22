@@ -626,16 +626,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         out.add(new DefaultLastHttpContent(content));
     }
 
-    private enum HeaderParseState {
-        LINE_START,
-        VALUE_START,
-        VALUE_END,
-        COMMA_END,
-        NAME_START,
-        NAME_END,
-        HEADERS_END
-    }
-
     private State readHeaders(ByteBuf buffer, StringBuilder sb) {
         final HttpMessage message = this.message;
         if (!parseHeaders(message.headers(), buffer, sb)) {
@@ -655,6 +645,17 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         }
     }
 
+    private enum HeaderParseState {
+        LINE_START,
+        LINE_END,
+        VALUE_START,
+        VALUE_END,
+        COMMA_END,
+        NAME_START,
+        NAME_END,
+        HEADERS_END
+    }
+
     private boolean parseHeaders(HttpHeaders headers, ByteBuf buffer, StringBuilder sb) {
         final DefaultHttpHeaders defaultHeaders;
         if (headers instanceof DefaultHttpHeaders) {
@@ -668,11 +669,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
         String name = null;
         HeaderParseState parseState = HeaderParseState.LINE_START;
+
         loop:
-        for (;;) {
-            if (!buffer.isReadable()) {
-                break;
-            }
+        while (buffer.isReadable()) {
             // Abort decoding if the header part is too large.
             if (headerSize++ >= maxHeaderSize) {
                 // TODO: Respond with Bad Request and discard the traffic
@@ -749,82 +748,43 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     break;
                 case VALUE_END:
                     if (HttpConstants.CR == next) {
-                        if (buffer.isReadable()) {
-                            next = (char) buffer.readByte();
-                            if (HttpConstants.LF == next) {
-
-                                // need to check for multi line header value
-                                if (buffer.isReadable()) {
-                                    next = (char) buffer.getByte(buffer.readerIndex());
-                                    if (next == '\t' || next == ' ') {
-                                        // This is a multine line header
-                                        // skip char and move on
-                                        buffer.skipBytes(1);
-                                        sb.append(next);
-                                        parseState = HeaderParseState.VALUE_START;
-                                        break;
-                                    }
-                                } else {
-                                    break loop;
-                                }
-
-                                // remove trailing white spaces
-                                int end = findEndOfString(sb);
-                                if (end + 1 < sb.length()) {
-                                    sb.setLength(end);
-                                }
-
-                                if (defaultHeaders != null) {
-                                    // we can do this as we know it only contains ascii
-                                    defaultHeaders.addWithoutValidate(name, sb.toString());
-                                } else {
-                                    headers.add(name, sb.toString());
-                                }
-                                parseState = HeaderParseState.LINE_START;
-                                // mark the reader index on each line start so we can preserve already
-                                // parsed headers
-                                buffer.markReaderIndex();
-                            } else {
-                                // just consume
-                            }
-                        } else {
-                            // not enough data
-                            break loop;
-                        }
-                    } else if (HttpConstants.LF == next) {
+                        // ignore CR and use LF to detect line delimiter
+                        // http://www.w3.org/Protocols/rfc2616/rfc2616-sec19.html#sec19.3
+                        break;
+                    }
+                    if (HttpConstants.LF == next) {
                         // need to check for multi line header value
-                        if (buffer.isReadable()) {
-                            next = (char) buffer.getByte(buffer.readerIndex());
-                            if (next == '\t' || next == ' ') {
-                                // This is a multine line header
-                                // skip char and move on
-                                buffer.skipBytes(1);
-                                sb.append(next);
-                                parseState = HeaderParseState.VALUE_START;
-                                break;
-                            }
-                        } else {
-                            break loop;
-                        }
-
-                        // remove trailing white spaces
-                        int end = findEndOfString(sb);
-                        if (end + 1 < sb.length()) {
-                            sb.setLength(end);
-                        }
-
-                        if (defaultHeaders != null) {
-                            // we can do this as we know it only contains ascii
-                            defaultHeaders.addWithoutValidate(name, sb.toString());
-                        } else {
-                            headers.add(name, sb.toString());
-                        }
-                        parseState = HeaderParseState.LINE_START;
-                        // mark the reader index on each line start so we can preserve already parsed headers
-                        buffer.markReaderIndex();
+                        parseState = HeaderParseState.LINE_END;
+                        break;
                     }
                     sb.append(next);
                     break;
+                case LINE_END:
+                    if (next == '\t' || next == ' ') {
+                        // This is a multine line header
+                        // skip char and move on
+                        sb.append(next);
+                        parseState = HeaderParseState.VALUE_START;
+                        break;
+                    }
+
+                    // remove trailing white spaces
+                    int end = findEndOfString(sb);
+                    if (end + 1 < sb.length()) {
+                        sb.setLength(end);
+                    }
+
+                    if (defaultHeaders != null) {
+                        // we can do this as we know it only contains ascii
+                        defaultHeaders.addWithoutValidate(name, sb.toString());
+                    } else {
+                        headers.add(name, sb.toString());
+                    }
+                    parseState = HeaderParseState.LINE_START;
+                    // unread one byte to process it in LINE_START
+                    buffer.readerIndex(buffer.readerIndex() - 1);
+                    // mark the reader index on each line start so we can preserve already parsed headers
+                    buffer.markReaderIndex();
                 case HEADERS_END:
                     break;
             }
