@@ -28,11 +28,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutorGroup;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
 
 import java.util.Deque;
 import java.util.LinkedList;
@@ -40,6 +35,12 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedDeque;
+
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
 
 public class LocalTransportThreadModelTest3 {
 
@@ -49,7 +50,6 @@ public class LocalTransportThreadModelTest3 {
         MESSAGE_RECEIVED_LAST,
         INACTIVE,
         ACTIVE,
-        UNREGISTERED,
         REGISTERED,
         MESSAGE_RECEIVED,
         WRITE,
@@ -198,14 +198,9 @@ public class LocalTransportThreadModelTest3 {
 
             ch.close().sync();
 
-            while (events.peekLast() != EventType.UNREGISTERED) {
-                Thread.sleep(10);
-            }
-
             expectedEvents.addFirst(EventType.ACTIVE);
             expectedEvents.addFirst(EventType.REGISTERED);
             expectedEvents.addLast(EventType.INACTIVE);
-            expectedEvents.addLast(EventType.UNREGISTERED);
 
             for (;;) {
                 EventType event = events.poll();
@@ -290,11 +285,6 @@ public class LocalTransportThreadModelTest3 {
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             events.add(EventType.ACTIVE);
-        }
-
-        @Override
-        public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
-            events.add(EventType.UNREGISTERED);
         }
 
         @Override

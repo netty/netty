@@ -161,31 +161,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public ChannelHandlerContext fireChannelUnregistered() {
-        final DefaultChannelHandlerContext next = findContextInbound();
-        EventExecutor executor = next.executor();
-        if (executor.inEventLoop()) {
-            next.invokeChannelUnregistered();
-        } else {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    next.invokeChannelUnregistered();
-                }
-            });
-        }
-        return this;
-    }
-
-    private void invokeChannelUnregistered() {
-        try {
-            ((ChannelInboundHandler) handler).channelUnregistered(this);
-        } catch (Throwable t) {
-            notifyHandlerException(t);
-        }
-    }
-
-    @Override
     public ChannelHandlerContext fireChannelActive() {
         final DefaultChannelHandlerContext next = findContextInbound();
         EventExecutor executor = next.executor();
@@ -419,11 +394,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     }
 
     @Override
-    public ChannelFuture deregister() {
-        return deregister(newPromise());
-    }
-
-    @Override
     public ChannelFuture bind(final SocketAddress localAddress, final ChannelPromise promise) {
         if (localAddress == null) {
             throw new NullPointerException("localAddress");
@@ -553,34 +523,6 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap implements 
     private void invokeClose(ChannelPromise promise) {
         try {
             ((ChannelOutboundHandler) handler).close(this, promise);
-        } catch (Throwable t) {
-            notifyOutboundHandlerException(t, promise);
-        }
-    }
-
-    @Override
-    public ChannelFuture deregister(final ChannelPromise promise) {
-        validatePromise(promise, false);
-
-        final DefaultChannelHandlerContext next = findContextOutbound();
-        EventExecutor executor = next.executor();
-        if (executor.inEventLoop()) {
-            next.invokeDeregister(promise);
-        } else {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    next.invokeDeregister(promise);
-                }
-            });
-        }
-
-        return promise;
-    }
-
-    private void invokeDeregister(ChannelPromise promise) {
-        try {
-            ((ChannelOutboundHandler) handler).deregister(this, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
         }

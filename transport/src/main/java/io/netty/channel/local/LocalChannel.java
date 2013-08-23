@@ -154,7 +154,7 @@ public class LocalChannel extends AbstractChannel {
         if (peer != null) {
             state = 2;
 
-            peer.remoteAddress = parent().localAddress();
+            peer.remoteAddress = parent() == null ? null : parent().localAddress();
             peer.state = 2;
 
             // Always call peer.eventLoop().execute() even if peer.eventLoop().inEventLoop() is true.
@@ -219,9 +219,6 @@ public class LocalChannel extends AbstractChannel {
 
     @Override
     protected void doDeregister() throws Exception {
-        if (isOpen()) {
-            unsafe().close(unsafe().voidPromise());
-        }
         ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
     }
 

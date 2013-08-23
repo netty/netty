@@ -16,7 +16,7 @@
 package io.netty.channel;
 
 /**
- * Abstract base class for {@link ChannelInboundHandler} implementations which provide
+ * Abstract base class for {@link ChannelInboundHandler} implementations that provides
  * implementations of all of their methods.
  *
  * <p>
@@ -40,17 +40,6 @@ public class ChannelInboundHandlerAdapter extends ChannelHandlerAdapter implemen
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
         ctx.fireChannelRegistered();
-    }
-
-    /**
-     * Calls {@link ChannelHandlerContext#fireChannelUnregistered()} to forward
-     * to the next {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
-     *
-     * Sub-classes may override this method to change behavior.
-     */
-    @Override
-    public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
-        ctx.fireChannelUnregistered();
     }
 
     /**

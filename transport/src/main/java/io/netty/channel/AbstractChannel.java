@@ -30,6 +30,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  * A skeletal {@link Channel} implementation.
@@ -65,6 +66,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     /** Cache for the string representation of this channel */
     private boolean strValActive;
     private String strVal;
+
+    private static final AtomicReferenceFieldUpdater<AbstractChannel, EventLoop> EVENT_LOOP_UPDATER =
+            AtomicReferenceFieldUpdater.newUpdater(AbstractChannel.class, EventLoop.class, "eventLoop");
 
     /**
      * Creates a new instance.
@@ -178,11 +182,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelFuture deregister() {
-        return pipeline.deregister();
-    }
-
-    @Override
     public Channel flush() {
         pipeline.flush();
         return this;
@@ -211,11 +210,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     @Override
     public ChannelFuture close(ChannelPromise promise) {
         return pipeline.close(promise);
-    }
-
-    @Override
-    public ChannelFuture deregister(ChannelPromise promise) {
-        return pipeline.deregister(promise);
     }
 
     @Override
@@ -395,17 +389,16 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             if (eventLoop == null) {
                 throw new NullPointerException("eventLoop");
             }
-            if (isRegistered()) {
-                promise.setFailure(new IllegalStateException("registered to an event loop already"));
-                return;
-            }
+
             if (!isCompatible(eventLoop)) {
-                promise.setFailure(
-                        new IllegalStateException("incompatible event loop type: " + eventLoop.getClass().getName()));
+                promise.setFailure(new IllegalStateException("incompatible event loop type: " +
+                        eventLoop.getClass().getName()));
                 return;
             }
 
-            AbstractChannel.this.eventLoop = eventLoop;
+            if (!AbstractChannel.EVENT_LOOP_UPDATER.compareAndSet(AbstractChannel.this, null, eventLoop)) {
+                return;
+            }
 
             if (eventLoop.inEventLoop()) {
                 register0(promise);
@@ -560,7 +553,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     });
                 }
 
-                deregister(voidPromise());
+                deregister();
             }
         }
 
@@ -573,10 +566,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
         }
 
-        @Override
-        public final void deregister(final ChannelPromise promise) {
+        private void deregister() {
             if (!registered) {
-                promise.setSuccess();
                 return;
             }
 
@@ -587,18 +578,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             } finally {
                 if (registered) {
                     registered = false;
-                    promise.setSuccess();
-                    invokeLater(new Runnable() {
-                        @Override
-                        public void run() {
-                            pipeline.fireChannelUnregistered();
-                        }
-                    });
-                } else {
-                    // Some transports like local and AIO does not allow the deregistration of
-                    // an open channel.  Their doDeregister() calls close().  Consequently,
-                    // close() calls deregister() again - no need to fire channelUnregistered.
-                    promise.setSuccess();
                 }
             }
         }

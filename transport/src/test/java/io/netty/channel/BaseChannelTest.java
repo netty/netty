@@ -25,6 +25,8 @@ import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalServerChannel;
 
+import java.io.UnsupportedEncodingException;
+
 class BaseChannelTest {
 
     private final LoggingHandler loggingHandler;
@@ -62,6 +64,18 @@ class BaseChannelTest {
         ByteBuf buf = Unpooled.buffer(len, len);
         buf.setIndex(0, len);
         return buf;
+    }
+
+    static Object createTestBuf(String string) throws UnsupportedEncodingException {
+        byte[] buf = string.getBytes("US-ASCII");
+        return createTestBuf(buf);
+    }
+
+    static Object createTestBuf(byte[] buf) {
+        ByteBuf ret = createTestBuf(buf.length);
+        ret.clear();
+        ret.writeBytes(buf);
+        return ret;
     }
 
     void assertLog(String expected) {
