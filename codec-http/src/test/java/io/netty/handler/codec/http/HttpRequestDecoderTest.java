@@ -112,12 +112,18 @@ public class HttpRequestDecoderTest {
     }
 
     private static void testDecodeWholeRequestInMultipleSteps(byte[] content) {
+        for (int i = 1; i < content.length; i++) {
+            testDecodeWholeRequestInMultipleSteps(content, i);
+        }
+    }
+
+    private static void testDecodeWholeRequestInMultipleSteps(byte[] content, int fragmentSize) {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
         int headerLength = content.length - 8;
 
         // split up the header
         for (int a = 0; a < headerLength;) {
-            int amount = 10;
+            int amount = fragmentSize;
             if (a + amount > headerLength) {
                 amount = headerLength -  a;
             }
