@@ -110,7 +110,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     private final int maxChunkSize;
     private final boolean chunkedSupported;
 
-    private ByteBuf content;
     private HttpMessage message;
     private long chunkSize;
     private int headerSize;
@@ -176,6 +175,14 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
     private State state() {
         return state;
+    }
+
+    @Override
+    public boolean isSingleDecode() {
+        if (message == null && super.isSingleDecode()) {
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -476,13 +483,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         if (message != null) {
             // Get the length of the content received so far for the last message.
             HttpMessage message = this.message;
-            int actualContentLength;
-            if (content != null) {
-                actualContentLength = content.readableBytes();
-            } else {
-                actualContentLength = 0;
-            }
 
+            int readable = in.readableBytes();
             // Check if the closure of the connection signifies the end of the content.
             boolean prematureClosure;
             if (isDecodingRequest()) {
@@ -493,14 +495,14 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 // If the 'Content-Length' header is absent, the length of the content is determined by the end of the
                 // connection, so it is perfectly fine.
                 long expectedContentLength = contentLength();
-                prematureClosure = expectedContentLength >= 0 && actualContentLength != expectedContentLength;
+                prematureClosure = expectedContentLength >= 0 && contentRead + readable != expectedContentLength;
             }
 
             if (!prematureClosure) {
-                if (actualContentLength == 0) {
+                if (readable == 0) {
                     out.add(LastHttpContent.EMPTY_LAST_CONTENT);
                 } else {
-                    out.add(new DefaultLastHttpContent(content));
+                    out.add(new DefaultLastHttpContent(in.readBytes(readable)));
                 }
             }
         }
@@ -533,10 +535,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     }
 
     private void reset() {
-        content = null;
         message = null;
         contentLength = Long.MIN_VALUE;
-
+        contentRead = 0;
         state = State.SKIP_CONTROL_CHARS;
     }
 
@@ -571,8 +572,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     }
 
     private void readFixedLengthContent(ByteBuf buffer, long length, List<Object> out) {
-        //we have a content-length so we just read the correct number of bytes
         assert length <= Integer.MAX_VALUE;
+
+        //we have a content-length so we just read the correct number of bytes
         int toRead = (int) length - contentRead;
 
         int readableBytes = buffer.readableBytes();
@@ -586,15 +588,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             out.add(new DefaultHttpContent(buffer.readBytes(toRead)));
             return;
         }
-        ByteBuf content = this.content;
-        if (content == null || !content.isReadable()) {
-            // TODO: Slice
-            content = buffer.readBytes(toRead);
-        } else {
-            content.writeBytes(buffer, toRead);
-        }
+
         reset();
-        out.add(new DefaultLastHttpContent(content));
+        out.add(new DefaultLastHttpContent(buffer.readBytes(toRead)));
     }
 
     private State readHeaders(ByteBuf buffer, StringBuilder sb) {
