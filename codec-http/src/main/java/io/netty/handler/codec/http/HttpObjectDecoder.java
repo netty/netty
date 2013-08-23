@@ -181,294 +181,283 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
         switch (state()) {
-        case SKIP_CONTROL_CHARS: {
-            if (!skipControlCharacters(buffer)) {
-                // not enough data to skip all
-                return;
-            }
-            state = State.READ_INITIAL;
-        }
-        case READ_INITIAL: try {
-            StringBuilder sb = BUILDERS.get();
-
-            HttpMessage msg = splitInitialLine(sb, buffer, maxInitialLineLength);
-            if (msg == null) {
-                // not enough data
-                return;
-            }
-
-            message = msg;
-            state = State.READ_HEADER;
-
-        } catch (Exception e) {
-            out.add(invalidMessage(e));
-            return;
-        }
-        case READ_HEADER: try {
-            State nextState = readHeaders(buffer, BUILDERS.get());
-            if (nextState == state) {
-                // was not able to consume whole header
-                return;
-            }
-            state = nextState;
-            if (nextState == State.READ_CHUNK_SIZE) {
-                if (!chunkedSupported) {
-                    throw new IllegalArgumentException("Chunked messages not supported");
-                }
-                // Chunked encoding - generate HttpMessage first.  HttpChunks will follow.
-                out.add(message);
-                return;
-            }
-            if (nextState == State.SKIP_CONTROL_CHARS) {
-                // No content is expected.
-                reset(out);
-                return;
-            }
-            long contentLength = contentLength();
-            if (contentLength == 0 || contentLength == -1 && isDecodingRequest()) {
-                content = Unpooled.EMPTY_BUFFER;
-                reset(out);
-                return;
-            }
-
-            switch (nextState) {
-            case READ_FIXED_LENGTH_CONTENT:
-                out.add(message);
-
-                if (contentLength > maxChunkSize || HttpHeaders.is100ContinueExpected(message)) {
-                    state = State.READ_FIXED_LENGTH_CONTENT_AS_CHUNKS;
-                    // chunkSize will be decreased as the READ_FIXED_LENGTH_CONTENT_AS_CHUNKS
-                    // state reads data chunk by chunk.
-                    chunkSize = contentLength;
+            case SKIP_CONTROL_CHARS: {
+                if (!skipControlCharacters(buffer)) {
                     return;
                 }
-                break;
-            case READ_VARIABLE_LENGTH_CONTENT:
-                out.add(message);
+                state = State.READ_INITIAL;
+                // FALL THROUGH
+            }
+            case READ_INITIAL: try {
+                StringBuilder sb = BUILDERS.get();
 
-                if (buffer.readableBytes() > maxChunkSize || HttpHeaders.is100ContinueExpected(message)) {
-                    state = State.READ_VARIABLE_LENGTH_CONTENT_AS_CHUNKS;
+                HttpMessage msg = splitInitialLine(sb, buffer, maxInitialLineLength);
+                if (msg == null) {
+                    // not enough data
                     return;
                 }
-                break;
-            default:
-                throw new IllegalStateException("Unexpected state: " + nextState);
-            }
-            // We return here, this forces decode to be called again where we will decode the content
-            return;
-        } catch (Exception e) {
-            out.add(invalidMessage(e));
-            return;
-        }
-        case READ_VARIABLE_LENGTH_CONTENT: {
-            int toRead = buffer.readableBytes();
-            if (toRead == 0) {
-                // nothing to read
-                return;
-            }
-            if (toRead > maxChunkSize) {
-                toRead = maxChunkSize;
-            }
-            // TODO: Slice
-            out.add(new DefaultHttpContent(buffer.readBytes(toRead)));
-            return;
-        }
-        case READ_VARIABLE_LENGTH_CONTENT_AS_CHUNKS: {
-            // Keep reading data as a chunk until the end of connection is reached.
-            int toRead = buffer.readableBytes();
-            if (toRead == 0) {
-                // nothing to read
-                return;
-            }
-            if (toRead > maxChunkSize) {
-                toRead = maxChunkSize;
-            }
-            // TODO: Slice
-            ByteBuf content = buffer.readBytes(toRead);
-            if (!buffer.isReadable()) {
-                reset();
-                out.add(new DefaultLastHttpContent(content));
-                return;
-            }
-            out.add(new DefaultHttpContent(content));
-            return;
-        }
-        case READ_FIXED_LENGTH_CONTENT: {
-            readFixedLengthContent(buffer, contentLength(), out);
-            return;
-        }
-        case READ_FIXED_LENGTH_CONTENT_AS_CHUNKS: {
-            long chunkSize = this.chunkSize;
-            int toRead = buffer.readableBytes();
 
-            // Check if the buffer is readable first as we use the readable byte count
-            // to create the HttpChunk. This is needed as otherwise we may end up with
-            // create a HttpChunk instance that contains an empty buffer and so is
-            // handled like it is the last HttpChunk.
-            //
-            // See https://github.com/netty/netty/issues/433
-            if (toRead == 0) {
+                message = msg;
+                state = State.READ_HEADER;
+                return;
+            } catch (Exception e) {
+                out.add(invalidMessage(e));
                 return;
             }
+            case READ_HEADER: try {
+                State nextState = readHeaders(buffer, BUILDERS.get());
+                if (nextState == state) {
+                    // was not able to consume whole header
+                    return;
+                }
+                state = nextState;
+                out.add(message);
 
-            if (toRead > maxChunkSize) {
-                toRead = maxChunkSize;
-            }
-            if (toRead > chunkSize) {
-                toRead = (int) chunkSize;
-            }
-            // TODO: Slice
-            ByteBuf content = buffer.readBytes(toRead);
-            if (chunkSize > toRead) {
-                chunkSize -= toRead;
-            } else {
-                chunkSize = 0;
-            }
-            this.chunkSize = chunkSize;
+                if (nextState == State.READ_CHUNK_SIZE) {
+                    if (!chunkedSupported) {
+                        throw new IllegalArgumentException("Chunked messages not supported");
+                    }
+                    // Chunked encoding - generate HttpMessage first.  HttpChunks will follow.
+                    return;
+                }
+                if (nextState == State.SKIP_CONTROL_CHARS) {
+                    // No content is expected.
+                    out.add(LastHttpContent.EMPTY_LAST_CONTENT);
+                    reset();
+                    return;
+                }
+                long contentLength = contentLength();
+                if (contentLength == 0 || contentLength == -1 && isDecodingRequest()) {
+                    out.add(LastHttpContent.EMPTY_LAST_CONTENT);
+                    reset();
+                    return;
+                }
 
-            if (chunkSize == 0) {
-                // Read all content.
-                reset();
-                out.add(new DefaultLastHttpContent(content));
+                switch (nextState) {
+                    case READ_FIXED_LENGTH_CONTENT:
+                        if (contentLength > maxChunkSize || HttpHeaders.is100ContinueExpected(message)) {
+                            state = State.READ_FIXED_LENGTH_CONTENT_AS_CHUNKS;
+                            // chunkSize will be decreased as the READ_FIXED_LENGTH_CONTENT_AS_CHUNKS
+                            // state reads data chunk by chunk.
+                            chunkSize = contentLength;
+                        }
+                        return;
+                    case READ_VARIABLE_LENGTH_CONTENT:
+                        if (buffer.readableBytes() > maxChunkSize || HttpHeaders.is100ContinueExpected(message)) {
+                            state = State.READ_VARIABLE_LENGTH_CONTENT_AS_CHUNKS;
+                        }
+                        return;
+                    default:
+                        throw new IllegalStateException("Unexpected state: " + nextState);
+                }
+            } catch (Exception e) {
+                out.add(invalidMessage(e));
                 return;
             }
-            out.add(new DefaultHttpContent(content));
-            return;
-        }
-        /**
-         * everything else after this point takes care of reading chunked content. basically, read chunk size,
-         * read chunk, read and ignore the CRLF and repeat until 0
-         */
-        case READ_CHUNK_SIZE: try {
-            StringBuilder line = readLine(buffer, maxInitialLineLength);
-            if (line == null) {
-                // Not enough data
-                // TODO: Fix me
+            case READ_VARIABLE_LENGTH_CONTENT: {
+                int toRead = buffer.readableBytes();
+                if (toRead == 0) {
+                    // nothing to read
+                    return;
+                }
+                if (toRead > maxChunkSize) {
+                    toRead = maxChunkSize;
+                }
+                // TODO: Slice
+                out.add(new DefaultHttpContent(buffer.readBytes(toRead)));
                 return;
             }
-            int chunkSize = getChunkSize(line.toString());
-            this.chunkSize = chunkSize;
-            if (chunkSize == 0) {
-                state = State.READ_CHUNK_FOOTER;
-                return;
-            } else if (chunkSize > maxChunkSize) {
-                // A chunk is too large. Split them into multiple chunks again.
-                state = State.READ_CHUNKED_CONTENT_AS_CHUNKS;
-            } else {
-                state = State.READ_CHUNKED_CONTENT;
-            }
-        } catch (Exception e) {
-            out.add(invalidChunk(e));
-            return;
-        }
-        case READ_CHUNKED_CONTENT: {
-            assert chunkSize <= Integer.MAX_VALUE;
-            if (buffer.readableBytes() < chunkSize) {
-                // not enough data
-                return;
-            }
-            // TODO: Slice
-            HttpContent chunk = new DefaultHttpContent(buffer.readBytes((int) chunkSize));
-            state = State.READ_CHUNK_DELIMITER;
-            out.add(chunk);
-            return;
-        }
-        case READ_CHUNKED_CONTENT_AS_CHUNKS: {
-            assert chunkSize <= Integer.MAX_VALUE;
-            int chunkSize = (int) this.chunkSize;
-            int toRead = buffer.readableBytes();
-
-            // Check if the buffer is readable first as we use the readable byte count
-            // to create the HttpChunk. This is needed as otherwise we may end up with
-            // create a HttpChunk instance that contains an empty buffer and so is
-            // handled like it is the last HttpChunk.
-            //
-            // See https://github.com/netty/netty/issues/433
-            if (toRead == 0) {
+            case READ_VARIABLE_LENGTH_CONTENT_AS_CHUNKS: {
+                // Keep reading data as a chunk until the end of connection is reached.
+                int toRead = buffer.readableBytes();
+                if (toRead == 0) {
+                    // nothing to read
+                    return;
+                }
+                if (toRead > maxChunkSize) {
+                    toRead = maxChunkSize;
+                }
+                // TODO: Slice
+                ByteBuf content = buffer.readBytes(toRead);
+                if (!buffer.isReadable()) {
+                    reset();
+                    out.add(new DefaultLastHttpContent(content));
+                    return;
+                }
+                out.add(new DefaultHttpContent(content));
                 return;
             }
-
-            if (toRead > maxChunkSize) {
-                toRead = maxChunkSize;
+            case READ_FIXED_LENGTH_CONTENT: {
+                readFixedLengthContent(buffer, contentLength(), out);
+                return;
             }
+            case READ_FIXED_LENGTH_CONTENT_AS_CHUNKS: {
+                long chunkSize = this.chunkSize;
+                int toRead = buffer.readableBytes();
 
-            HttpContent chunk = new DefaultHttpContent(buffer.readBytes(toRead));
-            if (chunkSize > toRead) {
-                chunkSize -= toRead;
-            } else {
-                chunkSize = 0;
+                // Check if the buffer is readable first as we use the readable byte count
+                // to create the HttpChunk. This is needed as otherwise we may end up with
+                // create a HttpChunk instance that contains an empty buffer and so is
+                // handled like it is the last HttpChunk.
+                //
+                // See https://github.com/netty/netty/issues/433
+                if (toRead == 0) {
+                    return;
+                }
+
+                if (toRead > maxChunkSize) {
+                    toRead = maxChunkSize;
+                }
+                if (toRead > chunkSize) {
+                    toRead = (int) chunkSize;
+                }
+                // TODO: Slice
+                ByteBuf content = buffer.readBytes(toRead);
+                if (chunkSize > toRead) {
+                    chunkSize -= toRead;
+                } else {
+                    chunkSize = 0;
+                }
+                this.chunkSize = chunkSize;
+
+                if (chunkSize == 0) {
+                    // Read all content.
+                    reset();
+                    out.add(new DefaultLastHttpContent(content));
+                    return;
+                }
+                out.add(new DefaultHttpContent(content));
+                return;
             }
-            this.chunkSize = chunkSize;
+            /**
+             * everything else after this point takes care of reading chunked content. basically, read chunk size,
+             * read chunk, read and ignore the CRLF and repeat until 0
+             */
+            case READ_CHUNK_SIZE: try {
+                StringBuilder line = readLine(buffer, maxInitialLineLength);
 
-            if (chunkSize == 0) {
-                // Read all content.
+                if (line == null) {
+                    // Not enough data
+                    // TODO: Fix me
+                    return;
+                }
+
+                int chunkSize = getChunkSize(line.toString());
+                this.chunkSize = chunkSize;
+                if (chunkSize == 0) {
+                    state = State.READ_CHUNK_FOOTER;
+                } else if (chunkSize > maxChunkSize) {
+                    // A chunk is too large. Split them into multiple chunks again.
+                    state = State.READ_CHUNKED_CONTENT_AS_CHUNKS;
+                } else {
+                    state = State.READ_CHUNKED_CONTENT;
+                }
+                return;
+            } catch (Exception e) {
+                out.add(invalidChunk(e));
+                return;
+            }
+            case READ_CHUNKED_CONTENT: {
+                assert chunkSize <= Integer.MAX_VALUE;
+                if (buffer.readableBytes() < chunkSize) {
+                    // not enough data
+                    return;
+                }
+                // TODO: Slice
+                HttpContent chunk = new DefaultHttpContent(buffer.readBytes((int) chunkSize));
                 state = State.READ_CHUNK_DELIMITER;
-            }
-
-            out.add(chunk);
-            return;
-        }
-        case READ_CHUNK_DELIMITER: {
-            if (!buffer.isReadable()) {
-                // nothing left to read
+                out.add(chunk);
                 return;
             }
-            buffer.markReaderIndex();
-            do {
-                byte next = buffer.readByte();
-                if (next == HttpConstants.CR) {
-                    if (!buffer.isReadable()) {
-                        // break now
+            case READ_CHUNKED_CONTENT_AS_CHUNKS: {
+                int toRead = buffer.readableBytes();
+
+                // Check if the buffer is readable first as we use the readable byte count
+                // to create the HttpChunk. This is needed as otherwise we may end up with
+                // create a HttpChunk instance that contains an empty buffer and so is
+                // handled like it is the last HttpChunk.
+                //
+                // See https://github.com/netty/netty/issues/433
+                if (toRead == 0) {
+                    return;
+                }
+
+                assert chunkSize <= Integer.MAX_VALUE;
+                int chunkSize = (int) this.chunkSize;
+                if (toRead > maxChunkSize) {
+                    toRead = maxChunkSize;
+                }
+
+                HttpContent chunk = new DefaultHttpContent(buffer.readBytes(toRead));
+                if (chunkSize > toRead) {
+                    chunkSize -= toRead;
+                } else {
+                    chunkSize = 0;
+                }
+                this.chunkSize = chunkSize;
+
+                if (chunkSize == 0) {
+                    // Read all content.
+                    state = State.READ_CHUNK_DELIMITER;
+                }
+
+                out.add(chunk);
+                return;
+            }
+            case READ_CHUNK_DELIMITER: {
+                buffer.markReaderIndex();
+                do {
+                    byte next = buffer.readByte();
+                    if (next == HttpConstants.CR) {
+                        if (!buffer.isReadable()) {
+                            // break now
+                            return;
+                        }
+                        if (buffer.readByte() == HttpConstants.LF) {
+                            state = State.READ_CHUNK_SIZE;
+                            break;
+                        }
+                    } else if (next == HttpConstants.LF) {
+                        state = State.READ_CHUNK_SIZE;
                         break;
                     }
-                    if (buffer.readByte() == HttpConstants.LF) {
-                        state = State.READ_CHUNK_SIZE;
-                        return;
-                    }
-                } else if (next == HttpConstants.LF) {
-                    state = State.READ_CHUNK_SIZE;
+                } while (buffer.isReadable());
+
+                if (state == State.READ_CHUNK_DELIMITER) {
+                    // Try again later with more data
+                    // TODO: Optimize
+                    buffer.resetReaderIndex();
                     return;
-                } else {
-                    buffer.markReaderIndex();
                 }
-            } while (buffer.isReadable());
-
-            if (state == State.READ_CHUNK_DELIMITER) {
-                // Try again later with more data
-                // TODO: Optimize
-                buffer.resetReaderIndex();
                 return;
             }
-        }
-        case READ_CHUNK_FOOTER: try {
-            LastHttpContent trailer = readTrailingHeaders(buffer, BUILDERS.get());
-            if (trailer == null) {
-                // not enough data
-                return;
-            }
-
-            if (maxChunkSize == 0) {
-                // Chunked encoding disabled.
-                reset(out);
-                return;
-            } else {
+            case READ_CHUNK_FOOTER: try {
+                LastHttpContent trailer = readTrailingHeaders(buffer, BUILDERS.get());
+                if (trailer == null) {
+                    // not enough data
+                    return;
+                }
                 reset();
-                // The last chunk, which is empty
-                out.add(trailer);
+
+                if (maxChunkSize == 0) {
+                    // Chunked encoding disabled.
+                } else {
+                    // The last chunk, which is empty
+                    out.add(trailer);
+                }
+                return;
+            } catch (Exception e) {
+                out.add(invalidChunk(e));
                 return;
             }
-        } catch (Exception e) {
-            out.add(invalidChunk(e));
-            return;
-        }
-        case BAD_MESSAGE: {
-            // Keep discarding until disconnection.
-            buffer.skipBytes(buffer.readableBytes());
-            return;
-        }
-        default: {
-            throw new Error("Shouldn't reach here.");
-        }
+            case BAD_MESSAGE: {
+                // Keep discarding until disconnection.
+                buffer.skipBytes(buffer.readableBytes());
+                return;
+            }
+            default: {
+                throw new Error("Shouldn't reach here.");
+            }
         }
     }
 
@@ -544,25 +533,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     }
 
     private void reset() {
-        reset(null);
-    }
-
-    private void reset(List<Object> out) {
-        if (out != null) {
-            HttpMessage message = this.message;
-            ByteBuf content = this.content;
-            LastHttpContent httpContent;
-
-            if (content == null || !content.isReadable()) {
-                httpContent = LastHttpContent.EMPTY_LAST_CONTENT;
-            } else {
-                httpContent = new DefaultLastHttpContent(content);
-            }
-
-            out.add(message);
-            out.add(httpContent);
-        }
-
         content = null;
         message = null;
         contentLength = Long.MIN_VALUE;
@@ -604,6 +574,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         //we have a content-length so we just read the correct number of bytes
         assert length <= Integer.MAX_VALUE;
         int toRead = (int) length - contentRead;
+
         int readableBytes = buffer.readableBytes();
         if (toRead > readableBytes) {
             toRead = readableBytes;
