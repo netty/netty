@@ -139,7 +139,7 @@ abstract class AbstractNioSelector implements NioSelector {
         }
 
         try {
-            newSelector = Selector.open();
+            newSelector = SelectorUtil.open();
         } catch (Exception e) {
             logger.warn("Failed to create a new Selector.", e);
             return;
@@ -332,7 +332,7 @@ abstract class AbstractNioSelector implements NioSelector {
      */
     private void openSelector(ThreadNameDeterminer determiner) {
         try {
-            selector = Selector.open();
+            selector = SelectorUtil.open();
         } catch (Throwable t) {
             throw new ChannelException("Failed to create a selector.", t);
         }

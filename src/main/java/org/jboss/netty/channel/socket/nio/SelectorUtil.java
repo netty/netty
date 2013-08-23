@@ -15,14 +15,14 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.internal.SystemPropertyUtil;
+
 import java.io.IOException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.Selector;
 import java.util.concurrent.TimeUnit;
-
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.internal.SystemPropertyUtil;
 
 final class SelectorUtil {
     private static final InternalLogger logger =
@@ -57,6 +57,10 @@ final class SelectorUtil {
             logger.debug("Using select timeout of " + SELECT_TIMEOUT);
             logger.debug("Epoll-bug workaround enabled = " + EPOLL_BUG_WORKAROUND);
         }
+    }
+
+    static Selector open() throws IOException {
+        return Selector.open();
     }
 
     static int select(Selector selector) throws IOException {
