@@ -146,7 +146,7 @@ public final class ChannelOutboundBuffer {
     }
 
     void addFlush() {
-        this.unflushed = this.tail;
+        unflushed = tail;
     }
 
     /**
@@ -271,7 +271,7 @@ public final class ChannelOutboundBuffer {
             return false;
         }
 
-        Entry e = buffer[this.flushed];
+        Entry e = buffer[flushed];
         Object msg = e.msg;
         if (msg == null) {
             return false;
@@ -282,7 +282,7 @@ public final class ChannelOutboundBuffer {
 
         e.clear();
 
-        this.flushed = flushed + 1 & buffer.length - 1;
+        flushed = flushed + 1 & buffer.length - 1;
 
         safeRelease(msg);
 
@@ -443,7 +443,7 @@ public final class ChannelOutboundBuffer {
         }
 
         // Release all unflushed messages.
-        final int unflushedCount = this.tail - this.unflushed & buffer.length - 1;
+        final int unflushedCount = tail - unflushed & buffer.length - 1;
         try {
             for (int i = 0; i < unflushedCount; i++) {
                 Entry e = buffer[unflushed + i & buffer.length - 1];
@@ -486,19 +486,25 @@ public final class ChannelOutboundBuffer {
     }
 
     public void recycle() {
-        if (this.buffer.length > INITIAL_CAPACITY) {
+        if (buffer.length > INITIAL_CAPACITY) {
             Entry[] e = new Entry[INITIAL_CAPACITY];
-            System.arraycopy(this.buffer, 0, e, 0, INITIAL_CAPACITY);
-            this.buffer = e;
+            System.arraycopy(buffer, 0, e, 0, INITIAL_CAPACITY);
+            buffer = e;
         }
 
-        if (this.nioBuffers.length > INITIAL_CAPACITY) {
-            this.nioBuffers = new ByteBuffer[INITIAL_CAPACITY];
+        if (nioBuffers.length > INITIAL_CAPACITY) {
+            nioBuffers = new ByteBuffer[INITIAL_CAPACITY];
         } else {
             // null out the nio buffers array so the can be GC'ed
             // https://github.com/netty/netty/issues/1763
             Arrays.fill(nioBuffers, null);
         }
+
+        // reset flushed, unflushed and tail
+        // See https://github.com/netty/netty/issues/1772
+        flushed = 0;
+        unflushed = 0;
+        tail = 0;
 
         // Set the channel to null so it can be GC'ed ASAP
         channel = null;
