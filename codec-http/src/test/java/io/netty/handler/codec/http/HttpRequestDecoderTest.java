@@ -123,11 +123,10 @@ public class HttpRequestDecoderTest {
             }
 
             // if header is done it should produce a HttpRequest
-            boolean headerDone = (a + amount == headerLength);
+            boolean headerDone = a + amount == headerLength;
             Assert.assertEquals(headerDone, channel.writeInbound(Unpooled.wrappedBuffer(content, a, amount)));
             a += amount;
         }
-
 
         for (int i = 8; i > 0; i--) {
             // Should produce HttpContent
