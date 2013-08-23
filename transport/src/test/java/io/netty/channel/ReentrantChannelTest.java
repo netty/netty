@@ -82,7 +82,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         assertTrue(clientChannel.isWritable());
         clientChannel.write(createTestBuf(2000)).sync();
-        assertTrue(clientChannel.isWritable());
+        clientChannel.close().sync();
 
         assertLog(
             "WRITE\n" +
