@@ -124,7 +124,6 @@ public class HttpRequestDecoderTest {
             a += amount;
         }
 
-        channel.writeInbound(Unpooled.wrappedBuffer(content, 0, content.length - 8));
 
         for (int i = 8; i > 0; i--) {
             channel.writeInbound(Unpooled.wrappedBuffer(content, content.length - i, 1));

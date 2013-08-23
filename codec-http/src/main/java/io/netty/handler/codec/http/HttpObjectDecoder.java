@@ -1054,6 +1054,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             index ++;
             sb.append(next);
         }
+        // reset index as we need to parse the line again once more data was received
+        buffer.resetReaderIndex();
         return null;
     }
 
