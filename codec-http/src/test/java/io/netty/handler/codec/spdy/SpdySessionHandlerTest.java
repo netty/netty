@@ -126,10 +126,23 @@ public class SpdySessionHandlerTest {
         assertNull(sessionHandler.readOutbound());
         remoteStreamId += 2;
 
-        // Check if session handler returns PROTOCOL_ERROR if it receives
-        // multiple SYN_REPLY frames for the same active Stream-ID
+        // Check if session handler correctly limits the number of
+        // concurrent streams in the SETTINGS frame
+        SpdySettingsFrame spdySettingsFrame = new DefaultSpdySettingsFrame();
+        spdySettingsFrame.setValue(SpdySettingsFrame.SETTINGS_MAX_CONCURRENT_STREAMS, 0);
+        sessionHandler.writeInbound(spdySettingsFrame);
+        assertNull(sessionHandler.readOutbound());
+        sessionHandler.writeInbound(spdySynStreamFrame);
+        assertRstStream(sessionHandler.readOutbound(), localStreamId, SpdyStreamStatus.REFUSED_STREAM);
+        assertNull(sessionHandler.readOutbound());
+        spdySettingsFrame.setValue(SpdySettingsFrame.SETTINGS_MAX_CONCURRENT_STREAMS, 100);
+        sessionHandler.writeInbound(spdySettingsFrame);
+        assertNull(sessionHandler.readOutbound());
         sessionHandler.writeInbound(new DefaultSpdySynReplyFrame(remoteStreamId));
         assertNull(sessionHandler.readOutbound());
+
+        // Check if session handler returns PROTOCOL_ERROR if it receives
+        // multiple SYN_REPLY frames for the same active Stream-ID
         sessionHandler.writeInbound(new DefaultSpdySynReplyFrame(remoteStreamId));
         assertRstStream(sessionHandler.readOutbound(), remoteStreamId, SpdyStreamStatus.STREAM_IN_USE);
         assertNull(sessionHandler.readOutbound());
@@ -187,9 +200,8 @@ public class SpdySessionHandlerTest {
         assertNull(sessionHandler.readOutbound());
         spdySynStreamFrame.setStreamId(localStreamId);
 
-        // Check if session handler correctly limits the number of
+        // Check if session handler correctly handles updates to the max
         // concurrent streams in the SETTINGS frame
-        SpdySettingsFrame spdySettingsFrame = new DefaultSpdySettingsFrame();
         spdySettingsFrame.setValue(SpdySettingsFrame.SETTINGS_MAX_CONCURRENT_STREAMS, 2);
         sessionHandler.writeInbound(spdySettingsFrame);
         assertNull(sessionHandler.readOutbound());
