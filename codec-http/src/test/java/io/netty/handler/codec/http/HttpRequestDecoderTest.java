@@ -68,7 +68,7 @@ public class HttpRequestDecoderTest {
 
     private static void testDecodeWholeRequestAtOnce(byte[] content) {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
-        channel.writeInbound(Unpooled.wrappedBuffer(content));
+        Assert.assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(content)));
         HttpRequest req = (HttpRequest) channel.readInbound();
         Assert.assertNotNull(req);
         checkHeaders(req.headers());
@@ -76,6 +76,7 @@ public class HttpRequestDecoderTest {
         Assert.assertEquals(8, c.content().readableBytes());
         Assert.assertEquals(Unpooled.wrappedBuffer(content, content.length - 8, 8), c.content().readBytes(8));
         Assert.assertFalse(channel.finish());
+        Assert.assertNull(channel.readInbound());
     }
 
     private static void checkHeaders(HttpHeaders headers) {
@@ -120,13 +121,17 @@ public class HttpRequestDecoderTest {
             if (a + amount > headerLength) {
                 amount = headerLength -  a;
             }
-            channel.writeInbound(Unpooled.wrappedBuffer(content, a, amount));
+
+            // if header is done it should produce a HttpRequest
+            boolean headerDone = (a + amount == headerLength);
+            Assert.assertEquals(headerDone, channel.writeInbound(Unpooled.wrappedBuffer(content, a, amount)));
             a += amount;
         }
 
 
         for (int i = 8; i > 0; i--) {
-            channel.writeInbound(Unpooled.wrappedBuffer(content, content.length - i, 1));
+            // Should produce HttpContent
+            Assert.assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(content, content.length - i, 1)));
         }
 
         HttpRequest req = (HttpRequest) channel.readInbound();
@@ -142,5 +147,6 @@ public class HttpRequestDecoderTest {
         Assert.assertEquals(1, c.content().readableBytes());
         Assert.assertEquals(content[content.length - 1], c.content().readByte());
         Assert.assertFalse(channel.finish());
+        Assert.assertNull(channel.readInbound());
     }
 }
