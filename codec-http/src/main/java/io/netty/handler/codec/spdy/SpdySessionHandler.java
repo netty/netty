@@ -41,12 +41,13 @@ public class SpdySessionHandler
     private final SpdySession spdySession = new SpdySession();
     private int lastGoodStreamId;
 
-    private int remoteConcurrentStreams;
-    private int localConcurrentStreams;
-    private int maxConcurrentStreams;
+    private static final int DEFAULT_MAX_CONCURRENT_STREAMS = Integer.MAX_VALUE;
+    private int remoteConcurrentStreams = DEFAULT_MAX_CONCURRENT_STREAMS;
+    private int localConcurrentStreams  = DEFAULT_MAX_CONCURRENT_STREAMS;
+    private int maxConcurrentStreams    = DEFAULT_MAX_CONCURRENT_STREAMS;
 
     private static final int DEFAULT_WINDOW_SIZE = 64 * 1024; // 64 KB default initial window size
-    private int initialSendWindowSize = DEFAULT_WINDOW_SIZE;
+    private int initialSendWindowSize    = DEFAULT_WINDOW_SIZE;
     private int initialReceiveWindowSize = DEFAULT_WINDOW_SIZE;
 
     private final Object flowControlLock = new Object();
@@ -664,23 +665,7 @@ public class SpdySessionHandler
         } else {
             localConcurrentStreams = newConcurrentStreams;
         }
-        if (localConcurrentStreams == remoteConcurrentStreams) {
-            maxConcurrentStreams = localConcurrentStreams;
-            return;
-        }
-        if (localConcurrentStreams == 0) {
-            maxConcurrentStreams = remoteConcurrentStreams;
-            return;
-        }
-        if (remoteConcurrentStreams == 0) {
-            maxConcurrentStreams = localConcurrentStreams;
-            return;
-        }
-        if (localConcurrentStreams > remoteConcurrentStreams) {
-            maxConcurrentStreams = remoteConcurrentStreams;
-        } else {
-            maxConcurrentStreams = localConcurrentStreams;
-        }
+        maxConcurrentStreams = Math.min(localConcurrentStreams, remoteConcurrentStreams);
     }
 
     // need to synchronize to prevent new streams from being created while updating active streams
@@ -705,9 +690,7 @@ public class SpdySessionHandler
             return false;
         }
 
-        int maxConcurrentStreams = this.maxConcurrentStreams;
-        if (maxConcurrentStreams != 0 &&
-           spdySession.numActiveStreams() >= maxConcurrentStreams) {
+        if (spdySession.numActiveStreams() >= maxConcurrentStreams) {
             return false;
         }
         spdySession.acceptStream(
