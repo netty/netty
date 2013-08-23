@@ -15,15 +15,16 @@
  */
 package io.netty.channel;
 
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertSame;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
-import org.junit.Test;
 
-import static org.junit.Assert.*;
+import org.junit.Test;
 
 public abstract class AbstractEventLoopTest {
 
@@ -53,7 +54,6 @@ public abstract class AbstractEventLoopTest {
 
         EventExecutor executor = future.channel().pipeline().context(TestChannelHandler2.class).executor();
         EventExecutor executor1 = future.channel().pipeline().context(TestChannelHandler.class).executor();
-        future.channel().deregister().awaitUninterruptibly();
         Channel channel = group2.register(future.channel()).awaitUninterruptibly().channel();
         EventExecutor executorNew = channel.pipeline().context(TestChannelHandler.class).executor();
         assertNotSame(executor1, executorNew);

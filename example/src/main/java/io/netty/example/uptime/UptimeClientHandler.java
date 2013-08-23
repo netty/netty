@@ -68,13 +68,9 @@ public class UptimeClientHandler extends SimpleChannelInboundHandler<Object> {
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
         println("Disconnected from: " + ctx.channel().remoteAddress());
-    }
 
-    @Override
-    public void channelUnregistered(final ChannelHandlerContext ctx)
-            throws Exception {
         println("Sleeping for: " + UptimeClient.RECONNECT_DELAY + 's');
 
         final EventLoop loop = ctx.channel().eventLoop();

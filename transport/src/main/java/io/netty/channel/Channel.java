@@ -223,13 +223,6 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, ChannelPr
         void closeForcibly();
 
         /**
-         * Deregister the {@link Channel} of the {@link ChannelPromise} from {@link EventLoop} and notify the
-         * {@link ChannelPromise} once the operation was complete.
-         */
-        @Deprecated
-        void deregister(ChannelPromise promise);
-
-        /**
          * Schedules a read operation that fills the inbound buffer of the first {@link ChannelInboundHandler} in the
          * {@link ChannelPipeline}.  If there's already a pending read operation, this method does nothing.
          */
