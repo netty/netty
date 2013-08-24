@@ -336,7 +336,7 @@ public final class ChannelOutboundBuffer {
                         nioBuffers[nioBufferCount ++] = buf.internalNioBuffer(readerIndex, readableBytes);
                     } else {
                         ByteBuffer[] nioBufs = buf.nioBuffers();
-                        if (nioBufferCount + nioBufs.length == nioBuffers.length + 1) {
+                        if (nioBufferCount + nioBufs.length > nioBuffers.length) {
                             this.nioBuffers = nioBuffers = doubleNioBufferArray(nioBuffers, nioBufferCount);
                         }
                         for (ByteBuffer nioBuf: nioBufs) {
