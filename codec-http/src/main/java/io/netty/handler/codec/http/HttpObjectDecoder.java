@@ -173,10 +173,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         this.chunkedSupported = chunkedSupported;
     }
 
-    private State state() {
-        return state;
-    }
-
     @Override
     public boolean isSingleDecode() {
         if (message == null && super.isSingleDecode()) {
@@ -187,7 +183,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
-        switch (state()) {
+        switch (state) {
             case SKIP_CONTROL_CHARS: {
                 if (!skipControlCharacters(buffer)) {
                     return;
@@ -349,7 +345,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
                 if (line == null) {
                     // Not enough data
-                    // TODO: Fix me
                     return;
                 }
 
@@ -397,6 +392,10 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 int chunkSize = (int) this.chunkSize;
                 if (toRead > maxChunkSize) {
                     toRead = maxChunkSize;
+                }
+
+                if (toRead > chunkSize) {
+                    toRead = chunkSize;
                 }
 
                 HttpContent chunk = new DefaultHttpContent(buffer.readBytes(toRead));

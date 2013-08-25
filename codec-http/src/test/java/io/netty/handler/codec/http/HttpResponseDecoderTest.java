@@ -63,6 +63,47 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
+    public void testResponseChunkedExceedMaxChunkSize() {
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder(4096, 8192, 32));
+        ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n",
+                CharsetUtil.US_ASCII));
+
+        HttpResponse res = (HttpResponse) ch.readInbound();
+        assertThat(res.getProtocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.getStatus(), is(HttpResponseStatus.OK));
+
+        byte[] data = new byte[64];
+        for (int i = 0; i < data.length; i++) {
+            data[i] = (byte) i;
+        }
+
+        for (int i = 0; i < 10; i++) {
+            assertFalse(ch.writeInbound(Unpooled.copiedBuffer(Integer.toHexString(data.length) + "\r\n",
+                    CharsetUtil.US_ASCII)));
+            assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(data)));
+
+            byte[] decodedData = new byte[data.length];
+            HttpContent content = (HttpContent) ch.readInbound();
+            assertEquals(32, content.content().readableBytes());
+            content.content().readBytes(decodedData, 0, 32);
+
+            content = (HttpContent) ch.readInbound();
+            assertEquals(32, content.content().readableBytes());
+
+            content.content().readBytes(decodedData, 32, 32);
+
+            assertArrayEquals(data, decodedData);
+            assertFalse(ch.writeInbound(Unpooled.copiedBuffer("\r\n", CharsetUtil.US_ASCII)));
+        }
+        assertTrue(ch.finish());
+
+        LastHttpContent content = (LastHttpContent) ch.readInbound();
+        assertFalse(content.content().isReadable());
+
+        assertNull(ch.readInbound());
+    }
+
+    @Test
     public void testLastResponseWithEmptyHeaderAndEmptyContent() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\n\r\n", CharsetUtil.US_ASCII));
