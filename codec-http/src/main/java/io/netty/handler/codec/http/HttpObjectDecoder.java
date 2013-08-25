@@ -417,29 +417,16 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             }
             case READ_CHUNK_DELIMITER: {
                 buffer.markReaderIndex();
-                do {
+                while (buffer.isReadable()) {
                     byte next = buffer.readByte();
-                    if (next == HttpConstants.CR) {
-                        if (!buffer.isReadable()) {
-                            // break now
-                            return;
-                        }
-                        if (buffer.readByte() == HttpConstants.LF) {
-                            state = State.READ_CHUNK_SIZE;
-                            break;
-                        }
-                    } else if (next == HttpConstants.LF) {
+                    if (next == HttpConstants.LF) {
                         state = State.READ_CHUNK_SIZE;
-                        break;
+                        return;
                     }
-                } while (buffer.isReadable());
-
-                if (state == State.READ_CHUNK_DELIMITER) {
-                    // Try again later with more data
-                    // TODO: Optimize
-                    buffer.resetReaderIndex();
-                    return;
                 }
+                // Try again later with more data
+                // TODO: Optimize
+                buffer.resetReaderIndex();
                 return;
             }
             case READ_CHUNK_FOOTER: try {
