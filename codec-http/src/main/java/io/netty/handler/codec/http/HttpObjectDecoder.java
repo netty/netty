@@ -218,23 +218,25 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     return;
                 }
                 state = nextState;
-                out.add(message);
 
                 if (nextState == State.READ_CHUNK_SIZE) {
                     if (!chunkedSupported) {
                         throw new IllegalArgumentException("Chunked messages not supported");
                     }
+                    out.add(message);
                     // Chunked encoding - generate HttpMessage first.  HttpChunks will follow.
                     return;
                 }
                 if (nextState == State.SKIP_CONTROL_CHARS) {
                     // No content is expected.
+                    out.add(message);
                     out.add(LastHttpContent.EMPTY_LAST_CONTENT);
                     reset();
                     return;
                 }
                 long contentLength = contentLength();
                 if (contentLength == 0 || contentLength == -1 && isDecodingRequest()) {
+                    out.add(message);
                     out.add(LastHttpContent.EMPTY_LAST_CONTENT);
                     reset();
                     return;
@@ -248,15 +250,17 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                             // state reads data chunk by chunk.
                             chunkSize = contentLength;
                         }
-                        return;
+                        break;
                     case READ_VARIABLE_LENGTH_CONTENT:
                         if (buffer.readableBytes() > maxChunkSize || HttpHeaders.is100ContinueExpected(message)) {
                             state = State.READ_VARIABLE_LENGTH_CONTENT_AS_CHUNKS;
                         }
-                        return;
+                        break;
                     default:
                         throw new IllegalStateException("Unexpected state: " + nextState);
                 }
+                out.add(message);
+                return;
             } catch (Exception e) {
                 out.add(invalidMessage(e));
                 return;
@@ -287,8 +291,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 // TODO: Slice
                 ByteBuf content = buffer.readBytes(toRead);
                 if (!buffer.isReadable()) {
-                    reset();
                     out.add(new DefaultLastHttpContent(content));
+                    reset();
                     return;
                 }
                 out.add(new DefaultHttpContent(content));
@@ -329,8 +333,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
                 if (chunkSize == 0) {
                     // Read all content.
-                    reset();
                     out.add(new DefaultLastHttpContent(content));
+                    reset();
                     return;
                 }
                 out.add(new DefaultHttpContent(content));
@@ -444,7 +448,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     // not enough data
                     return;
                 }
-                reset();
 
                 if (maxChunkSize == 0) {
                     // Chunked encoding disabled.
@@ -452,6 +455,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     // The last chunk, which is empty
                     out.add(trailer);
                 }
+                reset();
+
                 return;
             } catch (Exception e) {
                 out.add(invalidChunk(e));
@@ -583,14 +588,15 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         }
 
         contentRead += toRead;
+        // TODO: Slice
+        ByteBuf buf = buffer.readBytes(toRead);
         if (contentRead < length) {
-            // TODO: Slice
-            out.add(new DefaultHttpContent(buffer.readBytes(toRead)));
+            out.add(new DefaultHttpContent(buf));
             return;
         }
 
+        out.add(new DefaultLastHttpContent(buf));
         reset();
-        out.add(new DefaultLastHttpContent(buffer.readBytes(toRead)));
     }
 
     private State readHeaders(ByteBuf buffer, StringBuilder sb) {
@@ -925,7 +931,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         return null;
     }
 
-    private enum InitalLineState {
+    private enum InitialLineState {
         START_A,
         END_A,
         START_B,
@@ -935,7 +941,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     }
 
     private HttpMessage splitInitialLine(StringBuilder sb, ByteBuf buffer, int maxLineLength) throws Exception {
-        InitalLineState state = InitalLineState.START_A;
+        InitialLineState state = InitialLineState.START_A;
         int aStart = 0;
         int aEnd = 0;
         int bStart = 0;
@@ -957,27 +963,27 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 case START_B:
                 case START_C:
                     if (!Character.isWhitespace(next)) {
-                        if (state == InitalLineState.START_A) {
+                        if (state == InitialLineState.START_A) {
                             aStart = index;
-                            state = InitalLineState.END_A;
-                        } else if (state == InitalLineState.START_B) {
+                            state = InitialLineState.END_A;
+                        } else if (state == InitialLineState.START_B) {
                             bStart = index;
-                            state = InitalLineState.END_B;
+                            state = InitialLineState.END_B;
                         } else {
                             cStart = index;
-                            state = InitalLineState.END_C;
+                            state = InitialLineState.END_C;
                         }
                     }
                     break;
                 case END_A:
                 case END_B:
                     if (Character.isWhitespace(next)) {
-                        if (state == InitalLineState.END_A) {
+                        if (state == InitialLineState.END_A) {
                             aEnd = index;
-                            state = InitalLineState.START_B;
+                            state = InitialLineState.START_B;
                         } else {
                             bEnd = index;
-                            state = InitalLineState.START_C;
+                            state = InitialLineState.START_C;
                         }
                     }
                     break;
