@@ -791,7 +791,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
     }
 
-    final class CloseFuture extends DefaultChannelPromise {
+    static final class CloseFuture extends DefaultChannelPromise {
 
         CloseFuture(AbstractChannel ch) {
             super(ch);

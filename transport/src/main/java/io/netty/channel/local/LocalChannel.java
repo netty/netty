@@ -293,8 +293,8 @@ public class LocalChannel extends AbstractChannel {
             peerLoop.execute(new Runnable() {
                 @Override
                 public void run() {
-                    for (Object o: msgsCopy) {
-                        peer.inboundBuffer.add(o);
+                    for (int i = 0;  i < msgsCopy.length; i++) {
+                        peer.inboundBuffer.add(msgsCopy[i]);
                     }
                     finishPeerRead(peer, peerPipeline);
                 }

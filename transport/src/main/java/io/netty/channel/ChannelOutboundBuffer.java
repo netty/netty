@@ -245,7 +245,7 @@ public final class ChannelOutboundBuffer {
             return false;
         }
 
-        Entry e = buffer[this.flushed];
+        Entry e = buffer[flushed];
         Object msg = e.msg;
         if (msg == null) {
             return false;
@@ -256,7 +256,7 @@ public final class ChannelOutboundBuffer {
 
         e.clear();
 
-        this.flushed = flushed + 1 & buffer.length - 1;
+        flushed = flushed + 1 & buffer.length - 1;
 
         safeRelease(msg);
 
