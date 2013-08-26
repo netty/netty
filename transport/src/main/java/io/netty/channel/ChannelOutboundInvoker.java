@@ -97,7 +97,9 @@ interface ChannelOutboundInvoker {
      * {@link ChannelOutboundHandler#deregister(ChannelHandlerContext, ChannelPromise)}
      * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
+     *
      */
+    @Deprecated
     ChannelFuture deregister();
 
     /**
@@ -185,6 +187,7 @@ interface ChannelOutboundInvoker {
      * method called of the next {@link ChannelOutboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
+    @Deprecated
     ChannelFuture deregister(ChannelPromise promise);
 
     /**
